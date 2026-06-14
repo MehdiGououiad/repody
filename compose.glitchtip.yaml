@@ -1,0 +1,60 @@
+# GlitchTip — Sentry-compatible error tracking (optional profile)
+# Official install: https://glitchtip.com/documentation/install
+# Usage: pnpm docker:glitchtip:up  →  http://localhost:8090
+
+x-glitchtip-environment: &glitchtip-environment
+  SECRET_KEY: ${GLITCHTIP_SECRET_KEY:-change-me-glitchtip-dev-only}
+  DATABASE_URL: postgres://glitchtip:glitchtip@glitchtip-postgres:5432/glitchtip
+  VALKEY_URL: redis://glitchtip-valkey:6379
+  GLITCHTIP_DOMAIN: ${GLITCHTIP_DOMAIN:-http://localhost:8090}
+  DEFAULT_FROM_EMAIL: ${GLITCHTIP_DEFAULT_FROM_EMAIL:-noreply@localhost}
+  EMAIL_URL: ${GLITCHTIP_EMAIL_URL:-consolemail://}
+  ENABLE_USER_REGISTRATION: "true"
+  ENABLE_ORGANIZATION_CREATION: "true"
+  CSRF_TRUSTED_ORIGINS: ${GLITCHTIP_DOMAIN:-http://localhost:8090}
+  GLITCHTIP_EMBED_WORKER: "true"
+  PORT: "8080"
+
+services:
+  glitchtip-postgres:
+    profiles:
+      - glitchtip
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: glitchtip
+      POSTGRES_PASSWORD: glitchtip
+      POSTGRES_DB: glitchtip
+    volumes:
+      - glitchtip_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U glitchtip -d glitchtip"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  glitchtip-valkey:
+    profiles:
+      - glitchtip
+    image: valkey/valkey:9-alpine
+    restart: unless-stopped
+
+  glitchtip:
+    profiles:
+      - glitchtip
+    image: glitchtip/glitchtip:v6
+    depends_on:
+      glitchtip-postgres:
+        condition: service_healthy
+      glitchtip-valkey:
+        condition: service_started
+    ports:
+      - "8090:8080"
+    environment: *glitchtip-environment
+    volumes:
+      - glitchtip_uploads:/code/uploads
+    restart: unless-stopped
+
+volumes:
+  glitchtip_pgdata:
+  glitchtip_uploads:

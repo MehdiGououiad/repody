@@ -1,0 +1,60 @@
+name: E2E smoke
+
+# Long-running Docker + Playwright stack — nightly and manual only (not on every push/PR).
+on:
+  schedule:
+    # Nightly 04:00 UTC
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  playwright-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install frontend deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
+      - name: Start stack (API + web, stub extraction)
+        env:
+          DOCKER_BUILDKIT: "1"
+          COMPOSE_DOCKER_CLI_BUILD: "1"
+        run: |
+          docker compose -f compose.yaml -f compose.e2e.yaml up -d --build --wait
+
+      - name: Playwright smoke
+        run: pnpm test:e2e:smoke
+        env:
+          E2E_API_URL: http://localhost:8000
+          E2E_WEB_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/report/
+          retention-days: 7
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f compose.yaml -f compose.e2e.yaml down -v

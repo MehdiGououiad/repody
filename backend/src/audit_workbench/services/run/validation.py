@@ -1,0 +1,183 @@
+"""Rule validation and run finalization phase."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+
+import structlog
+from sqlalchemy import delete, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from audit_workbench.db.models import OverallStatus, RuleResult, Run, RunDocument, RunStatus
+from audit_workbench.extraction.processing_paths import validation_mode_label
+from audit_workbench.services.audit_pipeline import extract_and_validate
+from audit_workbench.services.mappers import duration_ms_between
+from audit_workbench.services.run.helpers import new_id
+from audit_workbench.services.run.phase_state import (
+    ExtractionPhaseResult,
+    RunPhaseState,
+)
+from audit_workbench.services.run_progress import (
+    mark_step_done,
+    progress_snapshot,
+    set_run_progress,
+)
+from audit_workbench.settings import get_settings
+
+log = structlog.get_logger()
+
+
+async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> None:
+    """Validate rules and finalize run (expects extraction_results in state)."""
+    run_id = state.run_id
+    rules_payload = state.rules_payload
+    progress_steps = state.progress_steps
+
+    validation_started: float | None = None
+    validation_ms = 0
+
+    if state.extraction_results and rules_payload:
+        state.step_index += 1
+        validation_started = datetime.now(UTC).timestamp()
+        val_label = validation_mode_label(state.validation_mode)
+        await set_run_progress(
+            session,
+            run_id,
+            progress_steps,
+            state.step_index,
+            f"Validating rules ({val_label})…",
+            force=True,
+        )
+
+    async def on_rule_start(rule: dict) -> None:
+        kind = (rule.get("kind") or "logic").lower()
+        if kind != "llm":
+            return
+        state.step_index += 1
+        name = rule.get("name") or "Rule"
+        rule_id = rule.get("id") or "rule"
+        for step in progress_steps:
+            if step.get("id") == f"rule-{rule_id}":
+                step["detail"] = "Evaluating LLM rule against extracted fields"
+                break
+        await set_run_progress(
+            session, run_id, progress_steps, state.step_index, f"LLM rule · {name}…"
+        )
+
+    _field_values, rule_evals = await extract_and_validate(
+        extractions=state.extraction_results,
+        rules=rules_payload,
+        multi_document=state.multi_document,
+        validation_mode=state.validation_mode,
+        on_rule_start=on_rule_start,
+        llm_model=None,
+        precomputed_llm=state.precomputed_llm or None,
+    )
+
+    if validation_started is not None:
+        validation_ms = int((datetime.now(UTC).timestamp() - validation_started) * 1000)
+
+    for rule in rules_payload:
+        eval_rows = [
+            row
+            for row in rule_evals
+            if row.id == (rule.get("id") or "rule")
+            or row.id.startswith(f"{rule.get('id') or 'rule'}-c")
+        ]
+        for eval_row in eval_rows:
+            mark_step_done(
+                progress_steps,
+                f"rule-{eval_row.id}",
+                detail=f"Status: {eval_row.status} — {eval_row.detail or 'OK'}",
+            )
+
+    state.step_index += 1
+    await set_run_progress(
+        session, run_id, progress_steps, state.step_index, "Saving audit report…", force=True
+    )
+
+    run = (
+        await session.execute(
+            select(Run)
+            .where(Run.id == run_id)
+            .options(selectinload(Run.documents).selectinload(RunDocument.fields))
+        )
+    ).scalar_one()
+
+    failed_field_keys: set[str] = set()
+    for row in rule_evals:
+        if row.status in ("failed", "error"):
+            failed_field_keys.update(row.affected_fields)
+            failed_field_keys.update(k.lower() for k in row.affected_fields)
+
+    for run_doc in run.documents:
+        for fld in run_doc.fields:
+            norm = fld.key.strip().lower().replace(" ", "_")
+            fld.flagged = fld.key in failed_field_keys or norm in failed_field_keys
+
+    await session.execute(delete(RuleResult).where(RuleResult.run_id == run_id))
+    for row in rule_evals:
+        session.add(
+            RuleResult(
+                id=new_id("rr"),
+                run_id=run.id,
+                rule_id=row.id,
+                name=row.name,
+                kind=row.kind,
+                scope=row.scope,
+                status=row.status,
+                severity=row.severity,
+                expression=row.expression,
+                affected_fields=row.affected_fields,
+                detail=row.detail,
+                expected_value=row.expected_value,
+                actual_value=row.actual_value,
+            )
+        )
+
+    failed_count = sum(1 for row in rule_evals if row.status in ("failed", "error"))
+    has_reject = any(
+        row.status in ("failed", "error") and row.severity == "reject" for row in rule_evals
+    )
+    if failed_count == 0:
+        overall = OverallStatus.passed.value
+    elif has_reject:
+        overall = OverallStatus.failed.value
+    else:
+        overall = OverallStatus.warning.value
+
+    run.status = RunStatus.done.value
+    run.overall_status = overall
+    run.summary_total = len(rule_evals)
+    run.summary_passed = sum(1 for row in rule_evals if row.status == "passed")
+    run.summary_failed = failed_count
+    run.fields_extracted = state.fields_extracted
+    run.finished_at = datetime.now(UTC)
+    duration_ms = duration_ms_between(run.started_at, run.finished_at)
+    run.run_metadata = {
+        "startedAt": run.started_at.isoformat() if run.started_at else None,
+        "finishedAt": run.finished_at.isoformat() if run.finished_at else None,
+        "durationMs": duration_ms,
+        "extractionMs": state.extraction_total_ms,
+        "validationMs": validation_ms,
+        "validationMode": state.validation_mode,
+        "validationLabel": validation_mode_label(state.validation_mode),
+        "llmModel": get_settings().validation_model,
+    }
+    if progress_steps:
+        run.progress = progress_snapshot(progress_steps, len(progress_steps) - 1, "Complete")
+        for step in run.progress["steps"]:
+            step["status"] = "done"
+    await session.commit()
+    log.info(
+        "run_validation_completed",
+        event_domain="audit_run",
+        run_id=run_id,
+        overall_status=overall,
+        rules_total=len(rule_evals),
+        rules_failed=failed_count,
+    )
+    from audit_workbench.services.run_events import publish_run_terminal
+
+    await publish_run_terminal(run_id, status=RunStatus.done.value)

@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: audit-workbench
+    orgId: 1
+    folder: Repody
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json

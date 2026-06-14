@@ -1,0 +1,166 @@
+# Default: in-cluster data plane + self-hosted Hatchet (per ADR 004).
+# Override for managed RDS/S3: set postgresql.enabled=false and externalDatabase.*
+
+global:
+  imagePullSecrets: []
+  deploymentEnvironment: production
+
+images:
+  api:
+    repository: audit-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  worker:
+    repository: audit-worker
+    tag: latest
+    pullPolicy: IfNotPresent
+  web:
+    repository: audit-web
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# ── Bitnami data plane (in-cluster) ───────────────────────────────────────────
+postgresql:
+  enabled: true
+  auth:
+    username: audit
+    database: audit_workbench
+    existingSecret: ""
+    password: ""
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    rootUser: minioadmin
+    rootPassword: ""
+  defaultBuckets: audit-documents
+  persistence:
+    enabled: true
+    size: 50Gi
+
+# ── External data plane (disable subcharts above, set URLs) ───────────────────
+externalDatabase:
+  enabled: false
+  url: ""
+
+externalRedis:
+  enabled: false
+  url: ""
+
+externalObjectStorage:
+  enabled: false
+  endpoint: ""
+  bucket: audit-documents
+  accessKey: ""
+  secretKey: ""
+  secure: true
+  publicEndpoint: ""
+
+# ── Hatchet (self-hosted, mirrors Compose hatchet-lite) ───────────────────────
+hatchet:
+  enabled: true
+  image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest
+  adminImage: ghcr.io/hatchet-dev/hatchet/hatchet-admin:latest
+  postgresPassword: hatchet
+  # Set after first install, or leave empty and enable bootstrapToken job.
+  clientToken: ""
+  bootstrapToken: true
+
+# ── Control plane (api) ───────────────────────────────────────────────────────
+api:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+# ── Worker plane (scale here first) ───────────────────────────────────────────
+workerOcr:
+  replicas: 2
+  pool: ocr
+  maxJobs: 1
+  warmupOnStart: true
+  resources:
+    requests:
+      cpu: 500m
+      memory: 2Gi
+    limits:
+      memory: 8Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 75
+
+workerFast:
+  replicas: 2
+  pool: fast
+  maxJobs: 8
+  warmupOnStart: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+# ── Edge (web) ────────────────────────────────────────────────────────────────
+web:
+  replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.example.com
+  filesHost: files.example.com
+  tls:
+    enabled: true
+    secretName: audit-platform-tls
+
+# ── Platform secrets & config ─────────────────────────────────────────────────
+secrets:
+  adminApiToken: ""
+  create: true
+
+config:
+  authEnabled: true
+  inferenceMode: vllm
+  vllmBaseUrl: http://vllm.inference.svc.cluster.local:8000/v1
+  vllmServedModel: numind/NuExtract3
+  corsOrigins: '["https://app.example.com"]'
+  logJson: true
+  directUploadEnabled: true
+
+observability:
+  sentryDsn: ""
+  otelEnabled: false
+  otelEndpoint: ""

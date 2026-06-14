@@ -1,0 +1,196 @@
+from __future__ import annotations
+
+import asyncio
+import time
+
+import structlog
+
+from audit_workbench.extraction.base import (
+    DocumentExtractor,
+    ExtractionMetadata,
+    ExtractionResult,
+    SchemaFieldSpec,
+    truncate_ocr_text,
+)
+from audit_workbench.extraction.cache import (
+    cache_key,
+    cache_key_from_storage,
+    get_cached,
+    hash_bytes,
+    schema_fingerprint,
+    set_cached,
+)
+from audit_workbench.extraction.document_bundle import load_document_bundle
+from audit_workbench.extraction.document_models import DocumentModelExtractor
+from audit_workbench.extraction.gpu_cold_start import gpu_cold_start_likely
+from audit_workbench.extraction.model_registry import normalize_model_id, parse_document_model
+from audit_workbench.extraction.processing_paths import (
+    parse_read_path,
+    parse_validation_mode,
+    read_path_used_label,
+    validation_mode_label,
+)
+from audit_workbench.extraction.schema_fields import empty_fields_from_schema
+from audit_workbench.observability.tracing import start_span
+from audit_workbench.settings import get_settings
+
+log = structlog.get_logger()
+
+
+class PipelineExtractor(DocumentExtractor):
+    """Cache-aware extraction through the document model registry."""
+
+    def __init__(self) -> None:
+        self._settings = get_settings()
+        self._models = DocumentModelExtractor()
+
+    async def extract(
+        self,
+        document_bytes: bytes | None,
+        mime_type: str,
+        document_type: str,
+        schema: list[SchemaFieldSpec],
+        *,
+        extraction_mode: str = "document_model",
+        ocr_model: str | None = None,
+        storage_key: str | None = None,
+        file_size: int | None = None,
+        validation_mode: str = "logic_only",
+        llm_rules: list[dict] | None = None,
+        llm_model: str | None = None,
+        allow_combined_llm: bool = True,
+    ) -> ExtractionResult:
+        read_path = parse_read_path(extraction_mode)
+        val_mode = parse_validation_mode(validation_mode, extraction_mode=extraction_mode)
+        if not document_bytes or not schema:
+            return ExtractionResult(
+                fields=empty_fields_from_schema(schema),
+                raw_text=None,
+            )
+
+        settings = self._settings
+        model_id = normalize_model_id(ocr_model or settings.default_ocr_model)
+        model_spec = parse_document_model(model_id)
+        cache_mode = f"read:{read_path.id}:val:{val_mode}"
+        content_hash = await asyncio.to_thread(hash_bytes, document_bytes)
+        schema_fp = schema_fingerprint(schema)
+
+        if storage_key and file_size is not None:
+            ck = cache_key_from_storage(
+                storage_key=storage_key,
+                file_size=file_size,
+                content_hash=content_hash,
+                schema_fp=schema_fp,
+                extraction_mode=cache_mode,
+                ocr_model=model_id,
+                extractor=settings.extractor,
+            )
+            content_ck = cache_key(
+                content_hash=content_hash,
+                schema_fp=schema_fp,
+                extraction_mode=cache_mode,
+                ocr_model=model_id,
+                extractor=settings.extractor,
+            )
+        else:
+            ck = cache_key(
+                content_hash=content_hash,
+                schema_fp=schema_fp,
+                extraction_mode=cache_mode,
+                ocr_model=model_id,
+                extractor=settings.extractor,
+            )
+            content_ck = ck
+
+        cached = await get_cached(ck)
+        if cached is None and content_ck != ck:
+            cached = await get_cached(content_ck)
+        if cached is not None:
+            used = cached.read_path_used or read_path.id
+            log.info(
+                "extraction_cache_hit",
+                document_type=document_type,
+                content_hash=content_hash[:12],
+                fields=sum(1 for f in cached.fields if f.extracted),
+            )
+            cached.meta = ExtractionMetadata(
+                read_path_config=read_path.id,
+                read_path_used=used,
+                read_path_label=read_path_used_label(used),
+                validation_mode=val_mode,
+                validation_label=validation_mode_label(val_mode),
+                ocr_model=model_id,
+                llm_model=llm_model,
+                extraction_ms=0,
+                combined_llm=False,
+                cache_hit=True,
+                fields_extracted=sum(1 for f in cached.fields if f.extracted),
+                ocr_text=truncate_ocr_text(cached.ocr_text or cached.raw_text),
+            )
+            return cached
+
+        t0 = time.perf_counter()
+        bundle_ms = 0
+        extract_ms = 0
+        async with start_span(
+            "extraction.pipeline",
+            {
+                "path": read_path.id,
+                "model": model_id,
+                "validation": val_mode,
+                "document_type": document_type,
+            },
+        ):
+            tb = time.perf_counter()
+            bundle = await asyncio.to_thread(
+                load_document_bundle,
+                document_bytes,
+                mime_type,
+                settings=settings,
+            )
+            bundle_ms = int((time.perf_counter() - tb) * 1000)
+            te = time.perf_counter()
+            result = await self._models.extract(
+                document_bytes,
+                mime_type,
+                document_type,
+                schema,
+                ocr_model=model_spec.id,
+                bundle=bundle,
+                extraction_mode=read_path.id,
+                validation_mode=val_mode,
+            )
+            extract_ms = int((time.perf_counter() - te) * 1000)
+
+        extraction_ms = int((time.perf_counter() - t0) * 1000)
+        used = result.read_path_used or read_path.id
+        result.meta = ExtractionMetadata(
+            read_path_config=read_path.id,
+            read_path_used=used,
+            read_path_label=read_path_used_label(used),
+            validation_mode=val_mode,
+            validation_label=validation_mode_label(val_mode),
+            ocr_model=model_id,
+            llm_model=llm_model,
+            extraction_ms=extraction_ms,
+            combined_llm=False,
+            cache_hit=False,
+            gpu_cold_start_likely=gpu_cold_start_likely(extraction_ms),
+            fields_extracted=sum(1 for f in result.fields if f.extracted),
+            ocr_text=truncate_ocr_text(result.ocr_text or result.raw_text),
+            ocr_skipped=result.ocr_skipped,
+        )
+        log.info(
+            "pipeline_extracted",
+            path=read_path.id,
+            model=model_id,
+            document_type=document_type,
+            ms=extraction_ms,
+            bundle_ms=bundle_ms,
+            extract_ms=extract_ms,
+            cache_hit=False,
+        )
+        await set_cached(ck, result)
+        if content_ck != ck:
+            await set_cached(content_ck, result)
+        return result

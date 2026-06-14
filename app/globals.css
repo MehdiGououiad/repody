@@ -1,0 +1,383 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "./theme.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Repody design tokens — ported from Stitch DESIGN.md.
+  Two layers:
+    1. Stitch-named tokens (surface, on-surface, surface-container-*, primary, etc.)
+       drive component code that mirrors the original markup.
+    2. shadcn-style semantic tokens (background, foreground, card, muted, etc.)
+       drive the shadcn primitives.
+*/
+
+:root {
+  color-scheme: light;
+  --surface: var(--brand-surface);
+  --surface-dim: #e8ece9;
+  --surface-bright: var(--brand-surface);
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f0f5f2;
+  --surface-container: #e8f0eb;
+  --surface-container-high: #dfe9e3;
+  --surface-container-highest: #d4e0da;
+  --on-surface: var(--brand-on-surface);
+  --on-surface-variant: var(--brand-on-surface-muted);
+  --inverse-surface: var(--brand-secondary);
+  --inverse-on-surface: #f0f5f2;
+  --outline: #6b7c73;
+  --outline-variant: #c5d4cb;
+  --surface-tint: var(--brand-primary);
+  --primary-stitch: var(--brand-secondary);
+  --on-primary-stitch: var(--brand-on-primary);
+  --primary-container: var(--brand-sidebar);
+  --on-primary-container: #a8c9b8;
+  --secondary: #3d5248;
+  --on-secondary: #ffffff;
+  --secondary-container: var(--brand-primary-soft);
+  --on-secondary-container: var(--brand-primary-dark);
+  --tertiary-container: var(--brand-primary-dark);
+  --on-tertiary-container: var(--brand-primary-light);
+  --primary-fixed: var(--brand-primary-soft);
+  --primary-fixed-dim: #b8d9c8;
+  --on-primary-fixed-variant: var(--brand-primary-dark);
+  --tertiary-fixed: #c4e7d8;
+  --tertiary-fixed-dim: var(--brand-primary-light);
+  --on-tertiary-fixed: var(--brand-primary-dark);
+  --on-tertiary-fixed-variant: #004d32;
+
+  /* Accent + semantic — driven by brand preset (app/theme.css) */
+  --accent-blue: var(--brand-primary);
+  --accent-blue-soft: var(--brand-primary-soft);
+  --accent-blue-glow: var(--brand-primary-glow);
+  --success: var(--brand-success);
+  --success-soft: #d4ede3;
+  --success-strong: var(--brand-primary-dark);
+  --warning: var(--brand-warning);
+  --warning-soft: #fdebd0;
+  --warning-strong: #a04000;
+  --danger: var(--brand-danger);
+  --danger-soft: #fadbd8;
+  --danger-strong: #922b21;
+  --info: var(--brand-info);
+  --info-soft: var(--brand-primary-soft);
+
+  /* shadcn semantic mapping (light) */
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --card: var(--surface-container-lowest);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface-container-lowest);
+  --popover-foreground: var(--on-surface);
+  --primary: var(--primary-stitch);
+  --primary-foreground: var(--on-primary-stitch);
+  --secondary-bg: var(--surface-container-low);
+  --secondary-foreground: var(--on-surface);
+  --muted: var(--surface-container-low);
+  --muted-foreground: var(--on-surface-variant);
+  --accent: var(--surface-container-low);
+  --accent-foreground: var(--on-surface);
+  --destructive: var(--danger);
+  --destructive-foreground: #ffffff;
+  --border: #d4e0da;
+  --input: #b8c9bf;
+  --ring: var(--brand-primary);
+  --radius: 0.5rem;
+
+  /* Motion tokens (ui-ux-pro-max: 150–300ms micro-interactions) */
+  --motion-fast: 150ms;
+  --motion-normal: 200ms;
+  --motion-slow: 300ms;
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /* Sidebar palette (always dark, brand green) */
+  --sidebar: var(--brand-sidebar);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-on-primary);
+  --sidebar-accent: var(--brand-sidebar-accent);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--brand-sidebar-border);
+  --sidebar-ring: var(--brand-primary);
+}
+
+.dark {
+  color-scheme: dark;
+  --surface: var(--brand-surface);
+  --surface-bright: var(--brand-surface);
+  --surface-dim: #142019;
+  --surface-container-lowest: #0d1812;
+  --surface-container-low: #121f18;
+  --surface-container: #18261e;
+  --surface-container-high: #1e2e24;
+  --surface-container-highest: #24362a;
+  --on-surface: var(--brand-on-surface);
+  --on-surface-variant: var(--brand-on-surface-muted);
+  --outline: #6b8a7a;
+  --outline-variant: #2a4034;
+
+  --background: var(--surface);
+  --foreground: var(--on-surface);
+  --card: var(--surface-container-lowest);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface-container-lowest);
+  --popover-foreground: var(--on-surface);
+  --primary: var(--brand-primary-light);
+  --primary-foreground: var(--brand-on-primary);
+  --secondary-bg: var(--surface-container);
+  --secondary-foreground: var(--on-surface);
+  --muted: var(--surface-container);
+  --muted-foreground: var(--on-surface-variant);
+  --accent: var(--surface-container);
+  --accent-foreground: var(--on-surface);
+  --destructive: var(--brand-danger);
+  --destructive-foreground: #ffffff;
+  --border: #2a4034;
+  --input: #345042;
+  --ring: var(--brand-primary);
+
+  --sidebar: var(--brand-sidebar);
+  --sidebar-foreground: #e8f2ed;
+  --sidebar-primary: var(--brand-primary);
+  --sidebar-primary-foreground: var(--brand-on-primary);
+  --sidebar-accent: var(--brand-sidebar-accent);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: var(--brand-sidebar-border);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary-bg);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --color-accent-blue: var(--accent-blue);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-strong: var(--success-strong);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-strong: var(--warning-strong);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-strong: var(--danger-strong);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --font-sans: var(--font-brand-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-brand-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "Fira Code", monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  summary,
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    touch-action: manipulation;
+  }
+  .font-mono,
+  .font-code {
+    font-family: var(--font-mono);
+  }
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer-line {
+  from {
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  to {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+.page-enter {
+  animation: page-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter,
+  .page-enter-stagger > *,
+  .accent-rule {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.page-enter-stagger > * {
+  animation: page-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.page-enter-stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.page-enter-stagger > *:nth-child(2) { animation-delay: 0.09s; }
+.page-enter-stagger > *:nth-child(3) { animation-delay: 0.14s; }
+.page-enter-stagger > *:nth-child(4) { animation-delay: 0.19s; }
+.page-enter-stagger > *:nth-child(5) { animation-delay: 0.24s; }
+.page-enter-stagger > *:nth-child(6) { animation-delay: 0.29s; }
+
+.app-mesh {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    radial-gradient(ellipse 90% 60% at 8% -15%, var(--accent-blue-glow), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 95% 105%, color-mix(in srgb, var(--success) 7%, transparent), transparent 50%),
+    linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--surface-container-low) 40%, transparent) 100%);
+}
+
+.app-grain::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.dark .app-grain::after {
+  opacity: 0.05;
+}
+
+@utility panel-elevated {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent-blue) 20%);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--accent-blue) 12%, transparent),
+    0 12px 40px -18px color-mix(in srgb, var(--primary-stitch) 18%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+@utility accent-rule {
+  height: 2px;
+  width: 3rem;
+  background: linear-gradient(90deg, var(--accent-blue), transparent);
+  animation: shimmer-line 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@utility util-border {
+  border: 1px solid color-mix(in srgb, var(--border) 85%, var(--accent-blue) 15%);
+}
+
+@utility builder-panel {
+  border: 1px solid color-mix(in srgb, var(--border) 80%, var(--accent-blue) 20%);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+@utility util-shadow {
+  box-shadow: 0px 4px 6px -1px rgba(15, 23, 42, 0.1);
+}
+
+@media print {
+  @page {
+    margin: 16mm;
+  }
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  /* Sidebar/topbar are hidden on print */
+  aside, nav, header {
+    display: none !important;
+  }
+  /* Recharts SVG and other dynamic charts can render unpredictably on paper */
+  .recharts-wrapper,
+  .recharts-responsive-container {
+    display: none !important;
+  }
+  /* Keep table rows from splitting across pages */
+  tr, .print-keep {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Bordered cards still render with visible outlines */
+  .border, [class*="border-"] {
+    border-color: #cbd5e1 !important;
+  }
+}
