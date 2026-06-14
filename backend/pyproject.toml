@@ -1,0 +1,105 @@
+[project]
+name = "audit-workbench"
+version = "0.1.0"
+description = "Smart Audit Workbench — production backend"
+requires-python = ">=3.12"
+dependencies = [
+  # Core API
+  "fastapi>=0.115.12",
+  "uvicorn[standard]>=0.34.0",
+  "pydantic>=2.11.0",
+  "pydantic-settings>=2.8.0",
+  "python-multipart>=0.0.20",
+  "sse-starlette>=2.3.3",
+  "asgi-correlation-id>=4.3.4",
+
+  # Database
+  "sqlalchemy[asyncio]>=2.0.40",
+  "asyncpg>=0.30.0",
+  "aiosqlite>=0.21.0",
+  "alembic>=1.15.0",
+
+  # Queue + cache
+  "hatchet-sdk>=1.0.0",
+  "redis>=5.2.0",
+  "limits[async-redis]>=4.4.1",
+
+  # Structured LLM
+  "instructor>=1.7.0",
+  "openai>=1.68.0",
+
+  # HTTP + storage
+  "httpx>=0.28.0",
+  "boto3>=1.37.0",
+  "botocore>=1.37.0",
+  "filetype>=1.2.0",
+
+  # Rules
+  "simpleeval>=1.0.3",
+
+  # Observability + reliability
+  "structlog>=25.1.0",
+  "sentry-sdk[fastapi]>=2.20.0",
+  "opentelemetry-api>=1.31.0",
+  "tenacity>=9.0.0",
+
+  # Document preprocessing
+  "pillow>=11.1.0",
+  "pymupdf>=1.25.0",
+]
+
+[project.optional-dependencies]
+ocr = [
+  "paddleocr==3.7.0",
+  "paddlex[ocr]==3.7.1",
+  "setuptools>=75.0",
+  "numpy>=2.0",
+]
+ml = [
+  "torch>=2.5",
+  "transformers>=4.46",
+  "accelerate>=1.1",
+]
+dev = [
+  "ruff>=0.11.0",
+  "pyright>=1.1.389",
+  "pytest>=8.3.0",
+  "pytest-asyncio>=0.25.0",
+  "respx>=0.22.0",
+  "aiosqlite>=0.21.0",
+  "httpx>=0.28.0",
+]
+otel = [
+  "opentelemetry-sdk>=1.31.0",
+  "opentelemetry-exporter-otlp-proto-http>=1.31.0",
+  "opentelemetry-instrumentation-fastapi>=0.52b0",
+  "opentelemetry-instrumentation-httpx>=0.52b0",
+  "opentelemetry-instrumentation-sqlalchemy>=0.52b0",
+  "opentelemetry-instrumentation-logging>=0.52b0",
+]
+
+[tool.uv]
+package = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/audit_workbench"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "ASYNC"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "live: requires running API at E2E_API_URL (default http://localhost:8000)",
+  "e2e_facture: Facture.pdf path tests (text / paddle / llm / optional vlm)",
+  "vlm: LightOn vision path — slow, opt-in with RUN_VLM_E2E=1",
+]

@@ -1,0 +1,4965 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Repody",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/v1/healthz": {
+      "get": {
+        "summary": "Healthz",
+        "operationId": "healthz_v1_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows": {
+      "get": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "List Workflows",
+        "operationId": "list_workflows_v1_workflows_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Create Workflow",
+        "operationId": "create_workflow_v1_workflows_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflowBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/bulk-delete": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Bulk Delete Workflows",
+        "operationId": "bulk_delete_workflows_v1_workflows_bulk_delete_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkDeleteWorkflowsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}": {
+      "get": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Get Workflow",
+        "operationId": "get_workflow_v1_workflows__workflow_id__get",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Update Workflow",
+        "operationId": "update_workflow_v1_workflows__workflow_id__put",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowSchema"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Delete Workflow",
+        "operationId": "delete_workflow_v1_workflows__workflow_id__delete",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/deploy": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Deploy Workflow",
+        "operationId": "deploy_workflow_v1_workflows__workflow_id__deploy_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeployWorkflowBody"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/dry-run": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Dry Run",
+        "operationId": "dry_run_v1_workflows__workflow_id__dry_run_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DryRunBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DryRunResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/{run_id}/status": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run Status",
+        "description": "Lightweight poll \u2014 status + progress only (no full audit payload).",
+        "operationId": "get_run_status_v1_runs__run_id__status_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/{run_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_v1_runs__run_id__get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "full",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "If false, same as /status (lightweight).",
+              "default": true,
+              "title": "Full"
+            },
+            "description": "If false, same as /status (lightweight)."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunPollResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/{run_id}/events": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Stream Run Events",
+        "description": "Server-Sent Events stream for live run progress (Redis pub/sub).",
+        "operationId": "stream_run_events_v1_runs__run_id__events_get",
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/runs/json": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run Json",
+        "description": "Create a run with files already uploaded to storage (presigned PUT flow).",
+        "operationId": "create_run_json_v1_workflows__workflow_id__runs_json_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "inline",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Process synchronously (test/dev only).",
+              "default": false,
+              "title": "Inline"
+            },
+            "description": "Process synchronously (test/dev only)."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunJsonBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCreatedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunPollResponse"
+                    }
+                  ],
+                  "title": "Response Create Run Json V1 Workflows  Workflow Id  Runs Json Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/runs": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_v1_workflows__workflow_id__runs_post",
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mode"
+            }
+          },
+          {
+            "name": "inline",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Process synchronously (test/dev only).",
+              "default": false,
+              "title": "Inline"
+            },
+            "description": "Process synchronously (test/dev only)."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_run_v1_workflows__workflow_id__runs_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCreatedResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RunPollResponse"
+                    }
+                  ],
+                  "title": "Response Create Run V1 Workflows  Workflow Id  Runs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/run": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run Legacy",
+        "operationId": "create_run_legacy_v1_workflows__workflow_id__run_post",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_run_legacy_v1_workflows__workflow_id__run_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunCreatedResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/test-run": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Test Run",
+        "description": "Deprecated \u2014 use POST /runs/json?mode=test&inline=true.",
+        "operationId": "test_run_v1_workflows__workflow_id__test_run_post",
+        "deprecated": true,
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Workflow Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RunSnapshotBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/audits": {
+      "get": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "List Audits",
+        "operationId": "list_audits_v1_audits_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditListResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/audits/{audit_id}": {
+      "get": {
+        "tags": [
+          "audits"
+        ],
+        "summary": "Get Audit",
+        "operationId": "get_audit_v1_audits__audit_id__get",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunAuditDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/metrics": {
+      "get": {
+        "tags": [
+          "metrics"
+        ],
+        "summary": "Get Metrics",
+        "operationId": "get_metrics_v1_metrics_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rules/library": {
+      "get": {
+        "tags": [
+          "rules"
+        ],
+        "summary": "Rules Library",
+        "operationId": "rules_library_v1_rules_library_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleLibraryResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads/capabilities": {
+      "get": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Upload Capabilities",
+        "operationId": "upload_capabilities_v1_uploads_capabilities_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Upload Capabilities V1 Uploads Capabilities Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads/presign": {
+      "post": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Presign Uploads",
+        "operationId": "presign_uploads_v1_uploads_presign_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PresignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads/confirm": {
+      "post": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Confirm Uploads",
+        "operationId": "confirm_uploads_v1_uploads_confirm_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmUploadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmUploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/uploads": {
+      "post": {
+        "tags": [
+          "uploads"
+        ],
+        "summary": "Upload Files",
+        "operationId": "upload_files_v1_uploads_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_files_v1_uploads_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/diagnostics/ocr": {
+      "get": {
+        "tags": [
+          "diagnostics"
+        ],
+        "summary": "Ocr Diagnostic",
+        "description": "Document model runtime status (Docker Model Runner or vLLM).",
+        "operationId": "ocr_diagnostic_v1_diagnostics_ocr_get",
+        "parameters": [
+          {
+            "name": "run_infer",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "description": "Run a short Repody VLM probe.",
+              "default": false,
+              "title": "Run Infer"
+            },
+            "description": "Run a short Repody VLM probe."
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrDiagnosticResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/platform/config": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Get Platform Config",
+        "operationId": "get_platform_config_v1_platform_config_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformConfigResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/inference/models": {
+      "get": {
+        "tags": [
+          "inference"
+        ],
+        "summary": "List Inference Models",
+        "operationId": "list_inference_models_v1_inference_models_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InferenceModelsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/ocr/models": {
+      "get": {
+        "tags": [
+          "ocr"
+        ],
+        "summary": "List Ocr Models",
+        "operationId": "list_ocr_models_v1_ocr_models_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OcrModelsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/processing-paths": {
+      "get": {
+        "tags": [
+          "processing-paths"
+        ],
+        "summary": "Get Processing Paths",
+        "operationId": "get_processing_paths_v1_processing_paths_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessingPathsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/status": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Operator Status",
+        "operationId": "operator_status_v1_operator_status_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Operator Status V1 Operator Status Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/jobs": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Operator Jobs",
+        "operationId": "operator_jobs_v1_operator_jobs_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Operator Jobs V1 Operator Jobs Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Operator Job",
+        "operationId": "operator_job_v1_operator_jobs__job_id__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Operator Job V1 Operator Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/jobs/{job_id}/report": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Operator Job Report",
+        "operationId": "operator_job_report_v1_operator_jobs__job_id__report_get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Operator Job Report V1 Operator Jobs  Job Id  Report Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/jobs/{job_id}/artifacts/{artifact}": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Operator Job Artifact",
+        "operationId": "operator_job_artifact_v1_operator_jobs__job_id__artifacts__artifact__get",
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          },
+          {
+            "name": "artifact",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Artifact"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/benchmarks/latest": {
+      "get": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Latest Benchmark",
+        "operationId": "latest_benchmark_v1_operator_benchmarks_latest_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Latest Benchmark V1 Operator Benchmarks Latest Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/models/pull": {
+      "post": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Pull Model",
+        "operationId": "pull_model_v1_operator_models_pull_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Pull Model V1 Operator Models Pull Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/models/warmup": {
+      "post": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Warmup Model",
+        "operationId": "warmup_model_v1_operator_models_warmup_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelActionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Warmup Model V1 Operator Models Warmup Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operator/benchmarks": {
+      "post": {
+        "tags": [
+          "operator"
+        ],
+        "summary": "Start Benchmark",
+        "operationId": "start_benchmark_v1_operator_benchmarks_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_start_benchmark_v1_operator_benchmarks_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Start Benchmark V1 Operator Benchmarks Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AuditListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "type": "string",
+            "title": "Workflowname"
+          },
+          "entity": {
+            "type": "string",
+            "title": "Entity"
+          },
+          "timestamp": {
+            "type": "string",
+            "title": "Timestamp"
+          },
+          "rows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rows"
+          },
+          "failedRules": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failedrules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "workflowId",
+          "workflowName",
+          "entity",
+          "timestamp"
+        ],
+        "title": "AuditListItem"
+      },
+      "AuditListResponse": {
+        "properties": {
+          "audits": {
+            "items": {
+              "$ref": "#/components/schemas/AuditListItem"
+            },
+            "type": "array",
+            "title": "Audits"
+          }
+        },
+        "type": "object",
+        "required": [
+          "audits"
+        ],
+        "title": "AuditListResponse"
+      },
+      "Body_create_run_legacy_v1_workflows__workflow_id__run_post": {
+        "properties": {
+          "files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "contentMediaType": "application/octet-stream"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "document_ids": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ids"
+          }
+        },
+        "type": "object",
+        "title": "Body_create_run_legacy_v1_workflows__workflow_id__run_post"
+      },
+      "Body_create_run_v1_workflows__workflow_id__runs_post": {
+        "properties": {
+          "files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "contentMediaType": "application/octet-stream"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "document_ids": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ids"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "title": "Body_create_run_v1_workflows__workflow_id__runs_post"
+      },
+      "Body_start_benchmark_v1_operator_benchmarks_post": {
+        "properties": {
+          "document": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document"
+          },
+          "manifest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "contentMediaType": "application/octet-stream"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manifest"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": "models"
+          },
+          "models": {
+            "type": "string",
+            "title": "Models",
+            "default": "[]"
+          },
+          "validation_mode": {
+            "type": "string",
+            "title": "Validation Mode",
+            "default": "logic_only"
+          },
+          "warm_runs": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Warm Runs",
+            "default": 1
+          },
+          "minimum_accuracy": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Minimum Accuracy",
+            "default": 1.0
+          },
+          "cache_check": {
+            "type": "boolean",
+            "title": "Cache Check",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "Body_start_benchmark_v1_operator_benchmarks_post"
+      },
+      "Body_upload_files_v1_uploads_post": {
+        "properties": {
+          "files": {
+            "items": {
+              "type": "string",
+              "contentMediaType": "application/octet-stream"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "Body_upload_files_v1_uploads_post"
+      },
+      "BulkDeleteWorkflowsBody": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Ids"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "title": "BulkDeleteWorkflowsBody"
+      },
+      "CallSeriesPointSchema": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "calls": {
+            "type": "integer",
+            "title": "Calls"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "calls"
+        ],
+        "title": "CallSeriesPointSchema"
+      },
+      "ConfirmUploadItem": {
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "title": "Storagekey"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "storageKey",
+          "fileName",
+          "mimeType",
+          "size"
+        ],
+        "title": "ConfirmUploadItem"
+      },
+      "ConfirmUploadRequest": {
+        "properties": {
+          "storageKeys": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Storagekeys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "storageKeys"
+        ],
+        "title": "ConfirmUploadRequest"
+      },
+      "ConfirmUploadResponse": {
+        "properties": {
+          "uploads": {
+            "items": {
+              "$ref": "#/components/schemas/ConfirmUploadItem"
+            },
+            "type": "array",
+            "title": "Uploads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uploads"
+        ],
+        "title": "ConfirmUploadResponse"
+      },
+      "CreateRunJsonBody": {
+        "properties": {
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSnapshotBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunSnapshotBody"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fileBindings": {
+            "items": {
+              "$ref": "#/components/schemas/StoredFileBinding"
+            },
+            "type": "array",
+            "title": "Filebindings",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "CreateRunJsonBody"
+      },
+      "CreateWorkflowBody": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "Untitled workflow"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner",
+            "default": "Me"
+          }
+        },
+        "type": "object",
+        "title": "CreateWorkflowBody"
+      },
+      "DeployWorkflowBody": {
+        "properties": {
+          "apiKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikey"
+          }
+        },
+        "type": "object",
+        "title": "DeployWorkflowBody"
+      },
+      "DocumentDefSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype",
+            "default": ""
+          },
+          "extractionMode": {
+            "type": "string",
+            "title": "Extractionmode",
+            "description": "Read path id from GET /processing-paths (document_model).",
+            "default": "document_model"
+          },
+          "validationMode": {
+            "type": "string",
+            "title": "Validationmode",
+            "description": "logic_only",
+            "default": "logic_only"
+          },
+          "ocrModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrmodel",
+            "default": "repody:vlm"
+          },
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaFieldSchema"
+            },
+            "type": "array",
+            "title": "Schema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "DocumentDefSchema"
+      },
+      "DocumentModelSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime"
+          },
+          "runtimeModel": {
+            "type": "string",
+            "title": "Runtimemodel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "runtime",
+          "runtimeModel"
+        ],
+        "title": "DocumentModelSummary"
+      },
+      "DryRunBody": {
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/DryRunFieldInput"
+            },
+            "type": "array",
+            "title": "Fields",
+            "default": []
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/DryRunRuleInput"
+            },
+            "type": "array",
+            "title": "Rules",
+            "default": []
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentDefSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
+          },
+          "rulesFull": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/WorkflowRuleSchema"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rulesfull"
+          }
+        },
+        "type": "object",
+        "title": "DryRunBody"
+      },
+      "DryRunExtracted": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "title": "Field"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "matched": {
+            "type": "boolean",
+            "title": "Matched"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "value",
+          "matched"
+        ],
+        "title": "DryRunExtracted"
+      },
+      "DryRunFieldInput": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "sampleValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samplevalue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "DryRunFieldInput"
+      },
+      "DryRunResponse": {
+        "properties": {
+          "extracted": {
+            "items": {
+              "$ref": "#/components/schemas/DryRunExtracted"
+            },
+            "type": "array",
+            "title": "Extracted"
+          },
+          "ruleResults": {
+            "items": {
+              "$ref": "#/components/schemas/DryRunRuleResult"
+            },
+            "type": "array",
+            "title": "Ruleresults"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extracted",
+          "ruleResults"
+        ],
+        "title": "DryRunResponse"
+      },
+      "DryRunRuleInput": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "reject"
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditions"
+          },
+          "conditionJunction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditionjunction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "DryRunRuleInput"
+      },
+      "DryRunRuleResult": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "status",
+          "detail"
+        ],
+        "title": "DryRunRuleResult"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthAlert": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "titleKey": {
+            "type": "string",
+            "title": "Titlekey"
+          },
+          "detailKey": {
+            "type": "string",
+            "title": "Detailkey"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "severity",
+          "titleKey",
+          "detailKey"
+        ],
+        "title": "HealthAlert"
+      },
+      "InferenceModelSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": "docker_model_runner"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "Isdefault",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind"
+        ],
+        "title": "InferenceModelSchema"
+      },
+      "InferenceModelsResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/InferenceModelSchema"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "defaultDocumentModel": {
+            "type": "string",
+            "title": "Defaultdocumentmodel"
+          },
+          "defaultValidationModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalidationmodel"
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "defaultDocumentModel",
+          "inferenceMode"
+        ],
+        "title": "InferenceModelsResponse"
+      },
+      "KpiMetric": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "rawValue": {
+            "type": "number",
+            "title": "Rawvalue"
+          },
+          "delta": {
+            "type": "number",
+            "title": "Delta"
+          },
+          "deltaUnit": {
+            "type": "string",
+            "title": "Deltaunit"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "positive": {
+            "type": "boolean",
+            "title": "Positive"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/KpiSeriesPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "value",
+          "rawValue",
+          "delta",
+          "deltaUnit",
+          "direction",
+          "positive",
+          "series",
+          "icon"
+        ],
+        "title": "KpiMetric"
+      },
+      "KpiSeriesPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "value"
+        ],
+        "title": "KpiSeriesPoint"
+      },
+      "MetricsResponse": {
+        "properties": {
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/KpiMetric"
+            },
+            "type": "array",
+            "title": "Kpis"
+          },
+          "performanceSeries": {
+            "items": {
+              "$ref": "#/components/schemas/PerformancePoint"
+            },
+            "type": "array",
+            "title": "Performanceseries"
+          },
+          "violationBreakdown": {
+            "items": {
+              "$ref": "#/components/schemas/ViolationBreakdown"
+            },
+            "type": "array",
+            "title": "Violationbreakdown"
+          },
+          "healthAlerts": {
+            "items": {
+              "$ref": "#/components/schemas/HealthAlert"
+            },
+            "type": "array",
+            "title": "Healthalerts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kpis",
+          "performanceSeries",
+          "violationBreakdown"
+        ],
+        "title": "MetricsResponse"
+      },
+      "ModelActionRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "maxLength": 180,
+            "minLength": 1,
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model"
+        ],
+        "title": "ModelActionRequest"
+      },
+      "OcrDiagnosticResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": ""
+          },
+          "inferenceReachable": {
+            "type": "boolean",
+            "title": "Inferencereachable",
+            "default": false
+          },
+          "modelRunnerReachable": {
+            "type": "boolean",
+            "title": "Modelrunnerreachable",
+            "default": false
+          },
+          "modelInRegistry": {
+            "type": "boolean",
+            "title": "Modelinregistry",
+            "default": false
+          },
+          "modelLoaded": {
+            "type": "boolean",
+            "title": "Modelloaded",
+            "default": false
+          },
+          "extractor": {
+            "type": "string",
+            "title": "Extractor",
+            "default": ""
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode",
+            "default": ""
+          },
+          "inferMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inferms"
+          },
+          "sampleExtracted": {
+            "type": "boolean",
+            "title": "Sampleextracted",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "hint": {
+            "type": "string",
+            "title": "Hint",
+            "default": ""
+          },
+          "settings": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Settings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "model"
+        ],
+        "title": "OcrDiagnosticResponse"
+      },
+      "OcrModelOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
+          "availabilityNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availabilitynote"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "Isdefault",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "engine",
+          "runtime"
+        ],
+        "title": "OcrModelOption"
+      },
+      "OcrModelsResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/OcrModelOption"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "defaultModel": {
+            "type": "string",
+            "title": "Defaultmodel"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "defaultModel"
+        ],
+        "title": "OcrModelsResponse"
+      },
+      "PerformancePoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "prevRuns": {
+            "type": "integer",
+            "title": "Prevruns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "runs",
+          "prevRuns"
+        ],
+        "title": "PerformancePoint"
+      },
+      "PlatformConfigResponse": {
+        "properties": {
+          "appName": {
+            "type": "string",
+            "title": "Appname"
+          },
+          "extractor": {
+            "type": "string",
+            "title": "Extractor"
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode"
+          },
+          "storageBackend": {
+            "type": "string",
+            "title": "Storagebackend"
+          },
+          "queueBackend": {
+            "type": "string",
+            "title": "Queuebackend"
+          },
+          "runJobsInline": {
+            "type": "boolean",
+            "title": "Runjobsinline"
+          },
+          "directUploadEnabled": {
+            "type": "boolean",
+            "title": "Directuploadenabled"
+          },
+          "cacheEnabled": {
+            "type": "boolean",
+            "title": "Cacheenabled"
+          },
+          "rateLimitEnabled": {
+            "type": "boolean",
+            "title": "Ratelimitenabled"
+          },
+          "structuredLlm": {
+            "type": "boolean",
+            "title": "Structuredllm"
+          },
+          "defaultOcrModel": {
+            "type": "string",
+            "title": "Defaultocrmodel"
+          },
+          "defaultReadPath": {
+            "type": "string",
+            "title": "Defaultreadpath"
+          },
+          "documentModels": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentModelSummary"
+            },
+            "type": "array",
+            "title": "Documentmodels"
+          },
+          "ocrMaxPages": {
+            "type": "integer",
+            "title": "Ocrmaxpages"
+          },
+          "dockerModelRunnerBaseUrl": {
+            "type": "string",
+            "title": "Dockermodelrunnerbaseurl"
+          },
+          "vllmBaseUrl": {
+            "type": "string",
+            "title": "Vllmbaseurl"
+          },
+          "maxUploadBytes": {
+            "type": "integer",
+            "title": "Maxuploadbytes"
+          },
+          "maxUploadFiles": {
+            "type": "integer",
+            "title": "Maxuploadfiles"
+          },
+          "staleRunTimeoutMinutes": {
+            "type": "integer",
+            "title": "Staleruntimeoutminutes"
+          },
+          "queuedStaleTimeoutMinutes": {
+            "type": "integer",
+            "title": "Queuedstaletimeoutminutes"
+          },
+          "hatchetTaskTimeoutMinutes": {
+            "type": "integer",
+            "title": "Hatchettasktimeoutminutes"
+          },
+          "maintenanceIntervalSeconds": {
+            "type": "integer",
+            "title": "Maintenanceintervalseconds"
+          },
+          "workerPools": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Workerpools"
+          },
+          "hatchetConfigured": {
+            "type": "boolean",
+            "title": "Hatchetconfigured",
+            "default": false
+          },
+          "llmValidationEnabled": {
+            "type": "boolean",
+            "title": "Llmvalidationenabled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "appName",
+          "extractor",
+          "inferenceMode",
+          "storageBackend",
+          "queueBackend",
+          "runJobsInline",
+          "directUploadEnabled",
+          "cacheEnabled",
+          "rateLimitEnabled",
+          "structuredLlm",
+          "defaultOcrModel",
+          "defaultReadPath",
+          "documentModels",
+          "ocrMaxPages",
+          "dockerModelRunnerBaseUrl",
+          "vllmBaseUrl",
+          "maxUploadBytes",
+          "maxUploadFiles",
+          "staleRunTimeoutMinutes",
+          "queuedStaleTimeoutMinutes",
+          "hatchetTaskTimeoutMinutes",
+          "maintenanceIntervalSeconds"
+        ],
+        "title": "PlatformConfigResponse"
+      },
+      "PresignFileRequest": {
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Size"
+          },
+          "documentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentid"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fileName",
+          "mimeType",
+          "size"
+        ],
+        "title": "PresignFileRequest"
+      },
+      "PresignRequest": {
+        "properties": {
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/PresignFileRequest"
+            },
+            "type": "array",
+            "title": "Files"
+          }
+        },
+        "type": "object",
+        "required": [
+          "files"
+        ],
+        "title": "PresignRequest"
+      },
+      "PresignResponse": {
+        "properties": {
+          "uploadMode": {
+            "type": "string",
+            "title": "Uploadmode",
+            "description": "presigned | api"
+          },
+          "uploads": {
+            "items": {
+              "$ref": "#/components/schemas/PresignedUploadItem"
+            },
+            "type": "array",
+            "title": "Uploads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uploadMode",
+          "uploads"
+        ],
+        "title": "PresignResponse"
+      },
+      "PresignedUploadItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "storageKey": {
+            "type": "string",
+            "title": "Storagekey"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          },
+          "documentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentid"
+          },
+          "uploadUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploadurl"
+          },
+          "method": {
+            "type": "string",
+            "title": "Method",
+            "default": "PUT"
+          },
+          "headers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Headers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "storageKey",
+          "fileName",
+          "mimeType",
+          "size"
+        ],
+        "title": "PresignedUploadItem"
+      },
+      "ProcessingPathsResponse": {
+        "properties": {
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/ReadPathOption"
+            },
+            "type": "array",
+            "title": "Paths"
+          },
+          "validationModes": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationModeOption"
+            },
+            "type": "array",
+            "title": "Validationmodes"
+          },
+          "defaultPath": {
+            "type": "string",
+            "title": "Defaultpath"
+          },
+          "defaultValidationMode": {
+            "type": "string",
+            "title": "Defaultvalidationmode",
+            "default": "logic_only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "paths",
+          "validationModes",
+          "defaultPath"
+        ],
+        "title": "ProcessingPathsResponse"
+      },
+      "ReadPathOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "readKind": {
+            "type": "string",
+            "title": "Readkind"
+          },
+          "showOcrModel": {
+            "type": "boolean",
+            "title": "Showocrmodel"
+          },
+          "ocrEngine": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrengine"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "readKind",
+          "showOcrModel"
+        ],
+        "title": "ReadPathOption"
+      },
+      "RuleLibraryResponse": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleTemplateSchema"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "title": "RuleLibraryResponse"
+      },
+      "RuleTemplateSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "scope",
+          "description",
+          "body",
+          "severity"
+        ],
+        "title": "RuleTemplateSchema"
+      },
+      "RunAuditDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "type": "string",
+            "title": "Workflowname"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "createdAt": {
+            "type": "string",
+            "title": "Createdat"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/RunAuditDocument"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "ruleResults": {
+            "items": {
+              "$ref": "#/components/schemas/RunAuditRule"
+            },
+            "type": "array",
+            "title": "Ruleresults"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunAuditMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "status",
+          "source",
+          "createdAt",
+          "documents",
+          "ruleResults",
+          "summary"
+        ],
+        "title": "RunAuditDetail"
+      },
+      "RunAuditDocument": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype"
+          },
+          "fileName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filename"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/RunAuditField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "extraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunDocumentExtractionMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "documentType",
+          "fields"
+        ],
+        "title": "RunAuditDocument"
+      },
+      "RunAuditField": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "value": {
+            "type": "string",
+            "title": "Value",
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "title": "Type",
+            "default": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "extracted": {
+            "type": "boolean",
+            "title": "Extracted",
+            "default": true
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "RunAuditField"
+      },
+      "RunAuditMetadata": {
+        "properties": {
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "finishedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finishedat"
+          },
+          "durationMs": {
+            "type": "integer",
+            "title": "Durationms",
+            "default": 0
+          },
+          "extractionMs": {
+            "type": "integer",
+            "title": "Extractionms",
+            "default": 0
+          },
+          "validationMs": {
+            "type": "integer",
+            "title": "Validationms",
+            "default": 0
+          },
+          "validationMode": {
+            "type": "string",
+            "title": "Validationmode",
+            "default": "logic_only"
+          },
+          "validationLabel": {
+            "type": "string",
+            "title": "Validationlabel",
+            "default": ""
+          },
+          "llmModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llmmodel"
+          }
+        },
+        "type": "object",
+        "title": "RunAuditMetadata"
+      },
+      "RunAuditRule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": "intra"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "expression": {
+            "type": "string",
+            "title": "Expression",
+            "default": ""
+          },
+          "affectedFields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affectedfields",
+            "default": []
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "expectedValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expectedvalue"
+          },
+          "actualValue": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actualvalue"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "status",
+          "severity"
+        ],
+        "title": "RunAuditRule"
+      },
+      "RunCreatedResponse": {
+        "properties": {
+          "runId": {
+            "type": "string",
+            "title": "Runid"
+          },
+          "jobId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jobid"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runId"
+        ],
+        "title": "RunCreatedResponse"
+      },
+      "RunDocumentExtractionMeta": {
+        "properties": {
+          "readPathConfig": {
+            "type": "string",
+            "title": "Readpathconfig"
+          },
+          "readPathUsed": {
+            "type": "string",
+            "title": "Readpathused"
+          },
+          "readPathLabel": {
+            "type": "string",
+            "title": "Readpathlabel"
+          },
+          "validationMode": {
+            "type": "string",
+            "title": "Validationmode"
+          },
+          "validationLabel": {
+            "type": "string",
+            "title": "Validationlabel"
+          },
+          "ocrModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrmodel"
+          },
+          "llmModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llmmodel"
+          },
+          "extractionMs": {
+            "type": "integer",
+            "title": "Extractionms",
+            "default": 0
+          },
+          "combinedLlm": {
+            "type": "boolean",
+            "title": "Combinedllm",
+            "default": false
+          },
+          "cacheHit": {
+            "type": "boolean",
+            "title": "Cachehit",
+            "default": false
+          },
+          "ocrSkipped": {
+            "type": "boolean",
+            "title": "Ocrskipped",
+            "default": false
+          },
+          "fieldsExtracted": {
+            "type": "integer",
+            "title": "Fieldsextracted",
+            "default": 0
+          },
+          "ocrText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrtext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "readPathConfig",
+          "readPathUsed",
+          "readPathLabel",
+          "validationMode",
+          "validationLabel"
+        ],
+        "title": "RunDocumentExtractionMeta"
+      },
+      "RunPollResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunProgressSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunAuditDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "RunPollResponse"
+      },
+      "RunProgressSchema": {
+        "properties": {
+          "currentIndex": {
+            "type": "integer",
+            "title": "Currentindex"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunProgressStepSchema"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "queuePosition": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queueposition"
+          },
+          "queueDepth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queuedepth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "currentIndex",
+          "steps",
+          "label"
+        ],
+        "title": "RunProgressSchema"
+      },
+      "RunProgressStepSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "readPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readpath"
+          },
+          "validationMode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validationmode"
+          },
+          "ocrModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrmodel"
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Durationms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "status"
+        ],
+        "title": "RunProgressStepSchema"
+      },
+      "RunSnapshotBody": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDefSchema"
+            },
+            "type": "array",
+            "title": "Documents",
+            "default": []
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRuleSchema"
+            },
+            "type": "array",
+            "title": "Rules",
+            "default": []
+          },
+          "workflow_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workflow Name"
+          }
+        },
+        "type": "object",
+        "title": "RunSnapshotBody",
+        "description": "Ephemeral workflow config for this run only \u2014 does not mutate the saved workflow."
+      },
+      "RunSummary": {
+        "properties": {
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          },
+          "fieldsExtracted": {
+            "type": "integer",
+            "title": "Fieldsextracted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total",
+          "passed",
+          "failed",
+          "fieldsExtracted"
+        ],
+        "title": "RunSummary"
+      },
+      "SchemaFieldSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SchemaFieldSchema"
+      },
+      "StoredFileBinding": {
+        "properties": {
+          "documentId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentid"
+          },
+          "storageKey": {
+            "type": "string",
+            "title": "Storagekey"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          }
+        },
+        "type": "object",
+        "required": [
+          "storageKey",
+          "mimeType",
+          "fileName"
+        ],
+        "title": "StoredFileBinding"
+      },
+      "TopFailingRuleSchema": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "count",
+          "severity"
+        ],
+        "title": "TopFailingRuleSchema"
+      },
+      "UploadItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "storageKey": {
+            "type": "string",
+            "title": "Storagekey"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "mimeType": {
+            "type": "string",
+            "title": "Mimetype"
+          },
+          "size": {
+            "type": "integer",
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "storageKey",
+          "fileName",
+          "mimeType",
+          "size"
+        ],
+        "title": "UploadItem"
+      },
+      "UploadResponse": {
+        "properties": {
+          "uploads": {
+            "items": {
+              "$ref": "#/components/schemas/UploadItem"
+            },
+            "type": "array",
+            "title": "Uploads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "uploads"
+        ],
+        "title": "UploadResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "ValidationModeOption": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description"
+        ],
+        "title": "ValidationModeOption"
+      },
+      "ViolationBreakdown": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "share",
+          "color"
+        ],
+        "title": "ViolationBreakdown"
+      },
+      "WorkflowApiStatsSchema": {
+        "properties": {
+          "apiCallsToday": {
+            "type": "integer",
+            "title": "Apicallstoday"
+          },
+          "apiCallsTotal": {
+            "type": "integer",
+            "title": "Apicallstotal"
+          },
+          "avgLatencyMs": {
+            "type": "integer",
+            "title": "Avglatencyms"
+          },
+          "callSeries": {
+            "items": {
+              "$ref": "#/components/schemas/CallSeriesPointSchema"
+            },
+            "type": "array",
+            "title": "Callseries"
+          },
+          "topFailingRules": {
+            "items": {
+              "$ref": "#/components/schemas/TopFailingRuleSchema"
+            },
+            "type": "array",
+            "title": "Topfailingrules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "apiCallsToday",
+          "apiCallsTotal",
+          "avgLatencyMs",
+          "callSeries",
+          "topFailingRules"
+        ],
+        "title": "WorkflowApiStatsSchema"
+      },
+      "WorkflowListResponse": {
+        "properties": {
+          "workflows": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSchema"
+            },
+            "type": "array",
+            "title": "Workflows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflows"
+        ],
+        "title": "WorkflowListResponse"
+      },
+      "WorkflowResponse": {
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflow"
+        ],
+        "title": "WorkflowResponse"
+      },
+      "WorkflowRuleSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "logic"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": "intra"
+          },
+          "appliesTo": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Appliesto",
+            "default": []
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditions"
+          },
+          "conditionJunction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditionjunction"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "reject"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "WorkflowRuleSchema"
+      },
+      "WorkflowSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "draft"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner",
+            "default": "Me"
+          },
+          "lastRun": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastrun"
+          },
+          "successRate": {
+            "type": "number",
+            "title": "Successrate",
+            "default": 0.0
+          },
+          "totalRuns": {
+            "type": "integer",
+            "title": "Totalruns",
+            "default": 0
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDefSchema"
+            },
+            "type": "array",
+            "title": "Documents",
+            "default": []
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRuleSchema"
+            },
+            "type": "array",
+            "title": "Rules",
+            "default": []
+          },
+          "deployedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployedat"
+          },
+          "apiKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikey",
+            "description": "Plaintext key \u2014 returned only once on deploy."
+          },
+          "apiKeyHint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikeyhint",
+            "description": "Masked hint for deployed workflows."
+          },
+          "defaultLlmModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultllmmodel"
+          },
+          "apiStats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowApiStatsSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "WorkflowSchema"
+      }
+    }
+  }
+}

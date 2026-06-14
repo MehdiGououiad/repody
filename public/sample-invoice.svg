@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#eceef0" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="1000" fill="#ffffff"/>
+  <rect width="800" height="1000" fill="url(#grid)"/>
+  <text x="48" y="60" font-family="Inter, sans-serif" font-size="32" font-weight="700" fill="#0f172a">INVOICE</text>
+  <text x="48" y="92" font-family="Inter, sans-serif" font-size="14" fill="#45464d">Acme Corp Ltd.</text>
+  <text x="48" y="112" font-family="Inter, sans-serif" font-size="12" fill="#76777d">221 Production Way, Sector 7</text>
+  <text x="500" y="92" font-family="Inter, sans-serif" font-size="12" fill="#76777d">Invoice #</text>
+  <text x="500" y="112" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0f172a">INV-002418</text>
+  <text x="500" y="142" font-family="Inter, sans-serif" font-size="12" fill="#76777d">Date</text>
+  <text x="500" y="162" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#0f172a">2023-10-15</text>
+  <line x1="48" y1="220" x2="752" y2="220" stroke="#e2e8f0"/>
+  <text x="48" y="250" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#45464d" letter-spacing="1">DESCRIPTION</text>
+  <text x="500" y="250" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#45464d">QTY</text>
+  <text x="600" y="250" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#45464d">RATE</text>
+  <text x="720" y="250" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#45464d" text-anchor="end">AMOUNT</text>
+  <line x1="48" y1="260" x2="752" y2="260" stroke="#e2e8f0"/>
+  <text x="48" y="300" font-family="Inter, sans-serif" font-size="13" fill="#0f172a">Widget Assembly — Industrial grade</text>
+  <text x="500" y="300" font-family="Inter, sans-serif" font-size="13" fill="#0f172a">450</text>
+  <text x="600" y="300" font-family="Inter, sans-serif" font-size="13" fill="#0f172a">$12.50</text>
+  <text x="720" y="300" font-family="Inter, sans-serif" font-size="13" fill="#0f172a" text-anchor="end">$5,625.00</text>
+  <line x1="48" y1="320" x2="752" y2="320" stroke="#e2e8f0"/>
+  <text x="560" y="620" font-family="Inter, sans-serif" font-size="12" fill="#76777d">Subtotal</text>
+  <text x="720" y="620" font-family="Inter, sans-serif" font-size="13" fill="#0f172a" text-anchor="end">$5,625.00</text>
+  <text x="560" y="680" font-family="Inter, sans-serif" font-size="12" fill="#76777d">Tax (8.5%)</text>
+  <text x="720" y="680" font-family="Inter, sans-serif" font-size="13" fill="#0f172a" text-anchor="end">$478.13</text>
+  <line x1="500" y1="700" x2="752" y2="700" stroke="#e2e8f0"/>
+  <text x="560" y="740" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="#0f172a">TOTAL DUE</text>
+  <text x="720" y="740" font-family="Inter, sans-serif" font-size="16" font-weight="700" fill="#0f172a" text-anchor="end">$6,200.00</text>
+  <text x="48" y="860" font-family="Inter, sans-serif" font-size="12" fill="#76777d">Payment Terms</text>
+  <text x="48" y="880" font-family="Inter, sans-serif" font-size="13" fill="#0f172a">Net 30</text>
+  <text x="48" y="960" font-family="Inter, sans-serif" font-size="10" fill="#76777d">Page 1 of 1 • Generated mock invoice for Workbench demo</text>
+</svg>

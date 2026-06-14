@@ -1,0 +1,49 @@
+# Cloud VPS hardening — only Caddy (80/443) is reachable from the internet.
+# Chain: compose.yaml + compose.cpu.yaml + compose.prod.yaml + compose.public.yaml + this file
+# Deploy on server: pnpm docker:deploy:cloud  (or see DEPLOY-CLOUD.md)
+
+x-cloud-db-url: &cloud-db-url postgresql+asyncpg://audit:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/audit_workbench
+
+services:
+  postgres:
+    ports: !reset []
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+
+  redis:
+    ports: !reset []
+
+  hatchet-postgres:
+    ports: !reset []
+
+  hatchet-lite:
+    ports: !reset []
+
+  minio:
+    ports: !reset []
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+
+  api:
+    ports: !reset []
+    environment:
+      AUDIT_DATABASE_URL: *cloud-db-url
+      AUDIT_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      AUDIT_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+      AUDIT_MINIO_SECURE: "true"
+
+  web:
+    ports: !reset []
+
+  worker:
+    environment:
+      AUDIT_DATABASE_URL: *cloud-db-url
+      AUDIT_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      AUDIT_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
+
+  worker-fast:
+    environment:
+      AUDIT_DATABASE_URL: *cloud-db-url
+      AUDIT_MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      AUDIT_MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}

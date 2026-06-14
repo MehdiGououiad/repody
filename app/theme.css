@@ -1,0 +1,35 @@
+/*
+  Brand theme layer — edit these tokens to re-skin the app.
+  Preset source of truth (TS): lib/theme/presets/bnp-paribas.ts
+  Future user theming: override these CSS variables at runtime (e.g. from settings).
+*/
+:root {
+  --brand-primary: #00965e;
+  --brand-primary-dark: #007348;
+  --brand-primary-light: #39a87b;
+  --brand-primary-soft: #d4ede3;
+  --brand-primary-glow: rgba(0, 150, 94, 0.22);
+  --brand-on-primary: #ffffff;
+  --brand-secondary: #1a1a1a;
+  --brand-surface: #f7faf8;
+  --brand-on-surface: #1a1a1a;
+  --brand-on-surface-muted: #4a4a4a;
+  --brand-sidebar: #003d27;
+  --brand-sidebar-accent: #005c3a;
+  --brand-sidebar-border: #005c3a;
+  --brand-success: #00965e;
+  --brand-warning: #e67e22;
+  --brand-danger: #c0392b;
+  --brand-info: #007348;
+}
+
+.dark {
+  --brand-surface: #0a1410;
+  --brand-on-surface: #e8f2ed;
+  --brand-on-surface-muted: #9cb8ab;
+  --brand-sidebar: #051a11;
+  --brand-sidebar-accent: #003d27;
+  --brand-sidebar-border: #003d27;
+  --brand-primary-soft: #0d2e22;
+  --brand-primary-glow: rgba(0, 150, 94, 0.15);
+}

@@ -1,0 +1,13 @@
+# Repody public edge — TLS via Caddy automatic HTTPS.
+# Env: PUBLIC_DOMAIN, FILES_DOMAIN, BASIC_AUTH_USER, BASIC_AUTH_HASH
+
+{$PUBLIC_DOMAIN} {
+	basic_auth {
+		{$BASIC_AUTH_USER} {$BASIC_AUTH_HASH}
+	}
+	reverse_proxy web:3000
+}
+
+{$FILES_DOMAIN} {
+	reverse_proxy minio:9000
+}

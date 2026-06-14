@@ -1,0 +1,30 @@
+# Minimal stack for Playwright smoke in CI — no Model Runner / vLLM required.
+# Usage: docker compose -f compose.yaml -f compose.e2e.yaml up -d --build --wait
+
+services:
+  api:
+    environment:
+      AUDIT_EXTRACTOR: stub
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
+      AUDIT_RUN_JOBS_INLINE: "true"
+      AUDIT_SEED_ON_STARTUP: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+  web:
+    profiles: !reset []
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        BACKEND_URL: http://api:8000
+    environment:
+      BACKEND_URL: http://api:8000
+      INTERNAL_API_URL: http://api:8000
+    depends_on:
+      api:
+        condition: service_healthy

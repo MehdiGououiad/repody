@@ -1,0 +1,12 @@
+services:
+  api:
+    environment:
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "true"
+
+  worker:
+    environment:
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "true"
+
+  worker-fast:
+    environment:
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
