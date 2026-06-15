@@ -6,12 +6,11 @@ Single-page map for tech leads and new contributors. Operational how-tos live in
 
 | Name | Where | Meaning |
 |------|--------|---------|
-| **Repody** | Product / UI copy | What users see |
-| **agentcontrol** | Repo folder, npm package, Docker Compose project | Monorepo root |
-| **audit-workbench** | `backend/pyproject.toml` distribution name | Python package publish name |
-| **audit_workbench** | `backend/src/audit_workbench/` | Python import path |
+| **Repody** | Product, repo, npm package, Compose project | Public name everywhere |
+| **repody** | Python distribution (`backend/pyproject.toml`) | `pip install -e backend` |
+| **audit_workbench** | `backend/src/audit_workbench/` | Python import path (legacy; stable for migrations) |
 
-Model tags like `agentcontrol/repody-vlm:…` are Docker Model Runner image names (upstream GGUF weights), not a fourth product name.
+Docker Model Runner tags use the `repody/` namespace (e.g. `repody/repody-vlm:q4_k_m-16k`).
 
 ## Domain glossary
 
@@ -85,8 +84,8 @@ Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` →
 
 | `AUDIT_INFERENCE_MODE` | Deploy | Document extraction |
 |------------------------|--------|---------------------|
-| `docker_model_runner` | `pnpm docker:deploy` | Repody VLM GGUF via Docker Model Runner (CPU) |
-| `vllm` | `pnpm docker:deploy:gpu` | Repody VLM via vLLM (GPU) |
+| `docker_model_runner` | `pnpm compose up --stack=prod --build` | Repody VLM GGUF via Docker Model Runner (CPU) |
+| `vllm` | `pnpm compose up --stack=gpu --build` | Repody VLM via vLLM (GPU) |
 
 LLM **rule validation** uses a separate small text model on Docker Model Runner when `AUDIT_LLM_VALIDATION_ENABLED=true`. It never shares the document-model runtime.
 
@@ -104,32 +103,32 @@ Next.js 16 App Router at repo root (not under `frontend/`):
 
 ## Platform modules (deploy)
 
-Runtime is split into **modules** (`infra`, `control`, `workers`, `edge`, `obs`, `traces`, `errors`) composed via stack presets. See [docs/PLATFORM.md](./docs/PLATFORM.md) and [ADR 003](./docs/adr/003-modular-platform-modules.md).
+Runtime is split into **modules** (`infra`, `control`, `workers`, `edge`, `obs`, `traces`, `bugsink`) composed via stack presets. See [docs/PLATFORM.md](./docs/PLATFORM.md) and [ADR 003](./docs/adr/003-modular-platform-modules.md).
 
 | Term | Meaning |
 |------|---------|
 | **Platform module** | Independently deployable Compose service group (microservice seam) |
-| **Stack preset** | Base overlay chain (`dev`, `dev-warm`, `prod`, `prod-scale`, `gpu`) |
+| **Stack preset** | Base chain (`dev`, `prod`, `vps`, `gpu`) + overlays (`--warmup`, `--scale`, …) |
 | **Worker plane** | Horizontally scaled Hatchet workers (`worker`, `worker-fast`) |
 
 ## Compose file chain
 
-Legacy file chains still apply; prefer **`pnpm platform:*`** or module-aware dev flags:
+Prefer **`pnpm compose`** with stack presets and `--with` modules:
 
 | Goal | Command |
 |------|---------|
-| Dev + warmup + Loki + GlitchTip | `pnpm dev:warmup -- --logs --glitchtip` |
-| Prod scale + addons | `pnpm platform:up -- --stack=prod-scale --with=obs,errors` |
-| Scale OCR workers | `pnpm platform:scale -- --stack=prod-scale --worker=3` |
+| Dev + warmup + Loki | `pnpm dev -- --warmup --logs` |
+| Prod scale + addons | `pnpm compose up --stack=prod --scale --with=obs --build` |
+| Scale OCR workers | `pnpm compose scale --stack=prod --scale --worker=3` |
 
 | Goal | Files |
 |------|-------|
-| Dev (fast) | `compose.yaml` + `compose.cpu.yaml` + `compose.dev.yaml` |
-| Prod CPU | `compose.yaml` + `compose.cpu.yaml` + `compose.prod.yaml` |
-| Prod GPU | above + `compose.gpu.yaml` |
-| CI Playwright smoke | `compose.yaml` + `compose.e2e.yaml` |
+| Dev (fast) | `deploy/compose/base.yaml` + `cpu.yaml` + `dev.yaml` |
+| Prod CPU | `deploy/compose/base.yaml` + `cpu.yaml` + `prod.yaml` |
+| Prod GPU | above + `deploy/compose/gpu.yaml` |
+| CI Playwright smoke | `deploy/compose/base.yaml` + `e2e.yaml` |
 
-Module manifest: [deploy/platform-modules.mjs](./deploy/platform-modules.mjs). Legacy: [scripts/docker.mjs](./scripts/docker.mjs).
+Module manifest: [deploy/platform-modules.mjs](./deploy/platform-modules.mjs). CLI: [deploy/scripts/compose.mjs](./deploy/scripts/compose.mjs).
 
 ## Non-product paths
 

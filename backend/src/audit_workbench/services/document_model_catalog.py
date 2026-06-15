@@ -161,7 +161,7 @@ def unreachable_detail(runtime: str) -> tuple[str, str]:
     if runtime == "docker_model_runner":
         return (
             "Repody VLM is unavailable.",
-            "Run: pnpm docker:models:pull",
+            "Run: pnpm models:pull",
         )
     return (
         "Repody VLM is unavailable on the GPU inference service.",
@@ -183,7 +183,10 @@ def reachable_detail(runtime: str, *, live_probe: bool = True) -> str:
 def generation_failure_hint(runtime: str) -> str:
     if runtime == "docker_model_runner":
         return "Check Docker Model Runner logs with: docker model logs"
-    return "Check vLLM logs with: docker compose logs vllm"
+    return (
+        "Check vLLM logs with: docker compose -f deploy/compose/base.yaml "
+        "-f deploy/compose/gpu.yaml logs vllm"
+    )
 
 
 async def run_generation_probe(

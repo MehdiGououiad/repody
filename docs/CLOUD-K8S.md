@@ -19,17 +19,17 @@ See [ADR 004](./adr/004-cloud-kubernetes-packaging.md) for decisions.
 export REGISTRY=ghcr.io/YOUR_ORG
 export TAG=0.1.0
 
-pnpm platform:images:build
-pnpm platform:images:push
+pnpm images:build
+pnpm images:push
 ```
 
 Images:
 
 | Image | Role |
 |-------|------|
-| `audit-api` | FastAPI control plane |
-| `audit-worker` | Hatchet workers (ocr + fast pools) |
-| `audit-web` | Next.js edge |
+| `repody-api` | FastAPI control plane |
+| `repody-worker` | Hatchet workers (ocr + fast pools) |
+| `repody-web` | Next.js edge |
 
 ## 2. Fetch Helm dependencies
 
@@ -44,7 +44,7 @@ Downloads Bitnami subcharts (PostgreSQL, Redis, MinIO).
 Copy and edit production overrides:
 
 ```bash
-cp deploy/helm/audit-platform/values-production.yaml.example my-values.yaml
+cp deploy/helm/repody/values-production.yaml.example my-values.yaml
 ```
 
 Required settings:
@@ -58,13 +58,13 @@ Required settings:
 Optional:
 
 - `hatchet.clientToken` — skip bootstrap Job if you already have a token
-- `observability.sentryDsn` — GlitchTip / Sentry DSN
+- `observability.bugsinkDsn` — Bugsink DSN for api, workers, and web
 
 ## 4. Install
 
 ```bash
-helm upgrade --install audit deploy/helm/audit-platform \
-  -n audit --create-namespace \
+helm upgrade --install repody deploy/helm/repody \
+  -n repody --create-namespace \
   -f my-values.yaml \
   --set secrets.adminApiToken="$(openssl rand -hex 32)"
 ```
@@ -78,12 +78,12 @@ pnpm helm:template -- -f my-values.yaml
 ## 5. Verify
 
 ```bash
-kubectl -n audit get pods
-kubectl -n audit logs job/audit-audit-platform-hatchet-token-bootstrap  # if bootstrap enabled
-kubectl -n audit port-forward svc/audit-audit-platform-web 3000:3000
+kubectl -n repody get pods
+kubectl -n repody logs job/repody-hatchet-token-bootstrap  # if bootstrap enabled
+kubectl -n repody port-forward svc/repody-web 3000:3000
 ```
 
-Hatchet bootstrap Job creates `audit-audit-platform-hatchet-token` Secret. API and workers wait for this secret before starting.
+Hatchet bootstrap Job creates `repody-hatchet-token` Secret. API and workers wait for this secret before starting.
 
 ## Scaling
 
@@ -98,7 +98,7 @@ workerOcr:
 ```
 
 ```bash
-helm upgrade audit deploy/helm/audit-platform -f my-values.yaml \
+helm upgrade repody deploy/helm/repody -f my-values.yaml \
   --set workerOcr.replicas=5
 ```
 
@@ -137,15 +137,15 @@ externalObjectStorage:
 For Docker-based prod with split images:
 
 ```bash
-REGISTRY=ghcr.io/YOUR_ORG TAG=0.1.0 pnpm platform:up -- --stack=prod-scale --build
+REGISTRY=ghcr.io/YOUR_ORG TAG=0.1.0 pnpm compose up --stack=prod --scale --build
 ```
 
-Prod stacks include `compose.microservices.yaml` for separate `audit-api` / `audit-worker` tags.
+Prod stacks include `deploy/compose/microservices.yaml` for separate `repody-api` / `repody-worker` tags.
 
 ## Observability on K8s
 
 - **Logs**: ship container stdout to your cluster log stack (Loki, CloudWatch, etc.); `AUDIT_LOG_JSON=true` is set by default.
-- **Errors**: set `observability.sentryDsn` for GlitchTip/Sentry on api + web.
+- **Errors**: set `observability.bugsinkDsn` for Bugsink on api, workers, and web.
 - **Traces**: set `observability.otelEnabled=true` and `otelEndpoint` when you run an OTLP collector.
 
 ## Troubleshooting
@@ -160,5 +160,5 @@ Prod stacks include `compose.microservices.yaml` for separate `audit-api` / `aud
 ## Related
 
 - [PLATFORM.md](./PLATFORM.md) — Compose modules and stacks
-- [GLITCHTIP.md](./GLITCHTIP.md) — error tracking setup
+- [BUGSINK.md](./BUGSINK.md) — error tracking setup
 - [OBSERVABILITY.md](./OBSERVABILITY.md) — Loki/Grafana on Compose

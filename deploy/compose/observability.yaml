@@ -1,0 +1,51 @@
+# Centralized logs: Loki + Promtail + Grafana
+# Usage: pnpm compose ... (see deploy/scripts/compose.mjs) -f deploy/compose/observability.yaml --profile obs up -d
+# Traces (Tempo + OTEL): also merge deploy/compose/observability-traces.yaml --profile obs-traces
+
+services:
+  loki:
+    profiles:
+      - obs
+    image: grafana/loki:3.6.11
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../../observability/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - lokidata:/loki
+    restart: unless-stopped
+
+  promtail:
+    profiles:
+      - obs
+    image: grafana/promtail:3.6.11
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ../../observability/promtail-config.yaml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+  grafana:
+    profiles:
+      - obs
+    image: grafana/grafana:12.2.9
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: audit
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: http://localhost:3001
+    volumes:
+      - ../../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - loki
+    restart: unless-stopped
+
+volumes:
+  lokidata:
+  grafanadata:

@@ -2,10 +2,18 @@
  * Modular platform composition — single source of truth for deploy units.
  *
  * @see docs/PLATFORM.md
- * @see docs/adr/003-modular-platform-modules.md
+ * @see deploy/ENV.md
  */
+import { COMPOSE } from "./compose-paths.mjs";
 
-/** @typedef {"infra" | "control" | "workers" | "edge" | "obs" | "traces" | "errors"} ModuleId */
+/** @typedef {"infra" | "control" | "workers" | "edge" | "obs" | "traces" | "bugsink"} ModuleId */
+
+/** @typedef {{
+ *   warmup?: boolean;
+ *   lan?: boolean;
+ *   public?: boolean;
+ *   scale?: boolean;
+ * }} StackOverlays */
 
 /** @typedef {{
  *   id: ModuleId;
@@ -16,6 +24,7 @@
  *   profiles?: string[];
  *   requires?: ModuleId[];
  *   scalable?: boolean;
+ *   overlayOnly?: boolean;
  * }} PlatformModule */
 
 /** @typedef {{
@@ -25,20 +34,15 @@
  *   defaultModules: ModuleId[];
  * }} StackPreset */
 
+export const HATCHET_INIT_PROFILE = "init";
+
 /** @type {Record<ModuleId, PlatformModule>} */
 export const MODULES = {
   infra: {
     id: "infra",
     label: "Infrastructure",
     description: "Postgres, Redis, MinIO, Hatchet (data + queue plane)",
-    services: [
-      "postgres",
-      "redis",
-      "minio",
-      "hatchet-postgres",
-      "hatchet-lite",
-      "hatchet-init",
-    ],
+    services: ["postgres", "redis", "minio", "hatchet-postgres", "hatchet-lite"],
   },
   control: {
     id: "control",
@@ -65,7 +69,7 @@ export const MODULES = {
     label: "Observability (logs)",
     description: "Grafana + Loki + Promtail",
     services: ["loki", "grafana", "promtail"],
-    files: ["compose.observability.yaml"],
+    files: [COMPOSE.observability],
     profiles: ["obs"],
   },
   traces: {
@@ -73,17 +77,17 @@ export const MODULES = {
     label: "Observability (traces)",
     description: "Tempo + OTEL on api/workers",
     services: ["tempo"],
-    files: ["compose.observability-traces.yaml"],
+    files: [COMPOSE.observabilityTraces],
     profiles: ["obs-traces"],
     requires: ["obs"],
   },
-  errors: {
-    id: "errors",
-    label: "Error tracking",
-    description: "GlitchTip (Sentry-compatible)",
-    services: ["glitchtip", "glitchtip-postgres", "glitchtip-valkey"],
-    files: ["compose.glitchtip.yaml"],
-    profiles: ["glitchtip"],
+  bugsink: {
+    id: "bugsink",
+    label: "Bugsink (errors)",
+    description: "Self-hosted Sentry-compatible error tracking UI",
+    services: ["bugsink-db", "bugsink"],
+    files: [COMPOSE.bugsink],
+    profiles: ["bugsink"],
   },
 };
 
@@ -91,62 +95,45 @@ export const MODULES = {
 export const STACKS = {
   dev: {
     id: "dev",
-    label: "Development (fast boot)",
-    files: [
-      "compose.yaml",
-      "compose.cpu.yaml",
-      "compose.dev.yaml",
-      "compose.sentry.yaml",
-    ],
-    defaultModules: ["infra", "control", "workers"],
-  },
-  "dev-warm": {
-    id: "dev-warm",
-    label: "Development (Repody VLM warmup)",
-    files: [
-      "compose.yaml",
-      "compose.cpu.yaml",
-      "compose.warmup.yaml",
-      "compose.sentry.yaml",
-    ],
+    label: "Development",
+    files: [COMPOSE.base, COMPOSE.cpu, COMPOSE.dev],
     defaultModules: ["infra", "control", "workers"],
   },
   prod: {
     id: "prod",
-    label: "Production",
-    files: [
-      "compose.yaml",
-      "compose.cpu.yaml",
-      "compose.prod.yaml",
-      "compose.microservices.yaml",
-      "compose.sentry.yaml",
-    ],
+    label: "Production (local / single host)",
+    files: [COMPOSE.base, COMPOSE.cpu, COMPOSE.prod],
     defaultModules: ["infra", "control", "workers", "edge"],
   },
-  "prod-scale": {
-    id: "prod-scale",
-    label: "Production (horizontal worker scale)",
+  "prod-micro": {
+    id: "prod-micro",
+    label: "Production (separate image tags per role)",
+    files: [COMPOSE.base, COMPOSE.cpu, COMPOSE.prod, COMPOSE.microservices],
+    defaultModules: ["infra", "control", "workers", "edge"],
+  },
+  vps: {
+    id: "vps",
+    label: "Ubuntu VPS (HTTPS + cloud tuning)",
     files: [
-      "compose.yaml",
-      "compose.cpu.yaml",
-      "compose.prod.yaml",
-      "compose.scale.yaml",
-      "compose.microservices.yaml",
-      "compose.sentry.yaml",
+      COMPOSE.base,
+      COMPOSE.cpu,
+      COMPOSE.prod,
+      COMPOSE.public,
+      COMPOSE.cloud,
+      COMPOSE.vps,
     ],
     defaultModules: ["infra", "control", "workers", "edge"],
   },
   gpu: {
     id: "gpu",
     label: "Production + GPU vLLM",
-    files: [
-      "compose.yaml",
-      "compose.cpu.yaml",
-      "compose.gpu.yaml",
-      "compose.prod.yaml",
-      "compose.microservices.yaml",
-      "compose.sentry.yaml",
-    ],
+    files: [COMPOSE.base, COMPOSE.cpu, COMPOSE.gpu, COMPOSE.prod],
+    defaultModules: ["infra", "control", "workers", "edge"],
+  },
+  e2e: {
+    id: "e2e",
+    label: "CI / Playwright smoke",
+    files: [COMPOSE.base, COMPOSE.e2e],
     defaultModules: ["infra", "control", "workers", "edge"],
   },
   k8s: {
@@ -164,10 +151,10 @@ const MODULE_ORDER = /** @type {ModuleId[]} */ ([
   "edge",
   "obs",
   "traces",
-  "errors",
+  "bugsink",
 ]);
 
-export const INFRA_SERVICES = ["postgres", "redis", "minio"];
+export const INFRA_SERVICES = [...MODULES.infra.services];
 export const BACKEND_SERVICES = ["api", "worker", "worker-fast"];
 export const PLATFORM_LOG_SERVICES = [
   "web",
@@ -179,28 +166,66 @@ export const PLATFORM_LOG_SERVICES = [
   "minio",
   "hatchet-lite",
   "hatchet-postgres",
-  "hatchet-init",
 ];
+
+export const PROD_STACK_IDS = new Set(["prod", "prod-micro", "vps", "gpu"]);
 
 /**
  * @param {string | undefined} stackId
- * @returns {StackPreset}
+ * @param {StackOverlays} cliOverlays
  */
-export function resolveStack(stackId) {
+export function resolveStackRequest(stackId, cliOverlays = {}) {
   const id = stackId ?? "dev";
+  if (!STACKS[id]) {
+    throw new Error(
+      `Unknown stack "${stackId}". Available: ${Object.keys(STACKS).join(", ")}`
+    );
+  }
+  return { stackId: id, overlays: { ...cliOverlays }, extraModules: [] };
+}
+
+export function resolveStack(stackId) {
+  const { stackId: id } = resolveStackRequest(stackId);
   const stack = STACKS[id];
   if (!stack) {
     throw new Error(
-      `Unknown stack "${id}". Available: ${Object.keys(STACKS).join(", ")}`
+      `Unknown stack "${stackId}". Available: ${Object.keys(STACKS).join(", ")}`
     );
   }
   return stack;
 }
 
 /**
- * @param {ModuleId[]} moduleIds
- * @returns {ModuleId[]}
+ * @param {string[]} filePaths
+ * @param {string} stackId
+ * @param {StackOverlays} overlays
  */
+export function applyStackOverlays(filePaths, stackId, overlays) {
+  const paths = [...filePaths];
+
+  if (overlays.warmup && !paths.includes(COMPOSE.warmup)) {
+    paths.push(COMPOSE.warmup);
+  }
+
+  if (overlays.lan && !paths.includes(COMPOSE.lan)) paths.push(COMPOSE.lan);
+  if (overlays.public && !paths.includes(COMPOSE.public)) {
+    paths.push(COMPOSE.public);
+  }
+  if (overlays.scale && !paths.includes(COMPOSE.scale)) {
+    paths.push(COMPOSE.scale);
+  }
+
+  return paths;
+}
+
+export function stackFileArgs(stackId, overlays = {}) {
+  return buildPlatformSpec({ stack: stackId, overlays }).fileArgs;
+}
+
+export function stackFiles(stackId, overlays = {}) {
+  return [...buildPlatformSpec({ stack: stackId, overlays }).filePaths];
+}
+
 export function normalizeModules(moduleIds) {
   const set = new Set(moduleIds);
   for (const id of [...set]) {
@@ -211,41 +236,43 @@ export function normalizeModules(moduleIds) {
   return MODULE_ORDER.filter((id) => set.has(id));
 }
 
-/**
- * @param {string[]} paths
- * @returns {string[]}
- */
 export function composeFileArgs(paths) {
   const unique = [...new Set(paths)];
   return unique.flatMap((path) => ["-f", path]);
 }
 
-/**
- * @param {object} [options]
- * @param {string} [options.stack]
- * @param {ModuleId[]} [options.withModules]
- * @param {boolean} [options.modulesOnly] - Start only `withModules` (addon stacks)
- */
 export function buildPlatformSpec(options = {}) {
-  const stackId = options.stack ?? "dev";
-  const preset = resolveStack(stackId);
-  const withModules = options.withModules ?? [];
+  const { stackId, overlays, extraModules } = resolveStackRequest(
+    options.stack,
+    options.overlays ?? {}
+  );
+  const preset = STACKS[stackId];
+  if (!preset) {
+    throw new Error(
+      `Unknown stack "${options.stack}". Run: pnpm compose stacks`
+    );
+  }
+
+  const withModules = [
+    ...(extraModules ?? []),
+    ...(options.withModules ?? []),
+  ];
   const modules = normalizeModules(
-    options.modulesOnly ? withModules : [...preset.defaultModules, ...withModules]
+    options.modulesOnly
+      ? withModules
+      : [...preset.defaultModules, ...withModules]
   );
 
-  /** @type {string[]} */
   const filePaths = options.modulesOnly
     ? []
-    : [...preset.files];
-  /** @type {string[]} */
-  const profiles = [];
-  /** @type {string[]} */
+    : applyStackOverlays(preset.files, stackId, overlays);
+  const profiles = [HATCHET_INIT_PROFILE];
   const services = [];
 
   for (const id of modules) {
     const mod = MODULES[id];
     for (const file of mod.files ?? []) {
+      if (options.modulesOnly && mod.overlayOnly) continue;
       if (!filePaths.includes(file)) filePaths.push(file);
     }
     for (const profile of mod.profiles ?? []) {
@@ -256,6 +283,7 @@ export function buildPlatformSpec(options = {}) {
 
   return {
     stack: stackId,
+    overlays,
     modules,
     filePaths,
     fileArgs: composeFileArgs(filePaths),
@@ -264,10 +292,6 @@ export function buildPlatformSpec(options = {}) {
   };
 }
 
-/**
- * @param {string} csv
- * @returns {ModuleId[]}
- */
 export function parseModuleCsv(csv) {
   if (!csv?.trim()) return [];
   return csv
@@ -276,32 +300,22 @@ export function parseModuleCsv(csv) {
     .filter(Boolean)
     .map((id) => {
       if (!(id in MODULES)) {
-        throw new Error(`Unknown module "${id}". Run: node scripts/platform.mjs modules`);
+        throw new Error(`Unknown module "${id}". Run: pnpm compose modules`);
       }
       return /** @type {ModuleId} */ (id);
     });
 }
 
-/**
- * Map legacy AUDIT_DEV_OBS / flags to module ids.
- * @param {{ obs?: boolean; traces?: boolean; glitchtip?: boolean }} flags
- * @returns {ModuleId[]}
- */
-export function modulesFromFlags(flags) {
-  /** @type {ModuleId[]} */
-  const extra = [];
-  if (flags.obs || flags.traces) extra.push("obs");
-  if (flags.traces) extra.push("traces");
-  if (flags.glitchtip) extra.push("errors");
-  return extra;
+export function parseOverlayFlags(flags) {
+  /** @type {StackOverlays} */
+  const overlays = {};
+  if (flags.warmup) overlays.warmup = true;
+  if (flags.lan) overlays.lan = true;
+  if (flags.public) overlays.public = true;
+  if (flags.scale) overlays.scale = true;
+  return overlays;
 }
 
-/**
- * @param {object} scale
- * @param {number} [scale.worker]
- * @param {number} [scale.workerFast]
- * @returns {string[]}
- */
 export function scaleArgs(scale) {
   /** @type {string[]} */
   const args = [];

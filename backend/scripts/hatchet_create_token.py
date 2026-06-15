@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a Hatchet API token for audit-workbench workers (run once after hatchet-lite starts)."""
+"""Create a Hatchet API token for Repody workers (run once after hatchet-lite starts)."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Create Hatchet client token for workers/API")
     parser.add_argument("--url", default=os.getenv("HATCHET_SERVER_URL", "http://localhost:8888"))
     parser.add_argument("--config", default=os.getenv("HATCHET_CONFIG_DIR", "/config"))
-    parser.add_argument("--name", default="audit-workbench")
+    parser.add_argument("--name", default="repody")
     parser.add_argument("--out", default="", help="Write token to file (optional)")
     args = parser.parse_args()
 

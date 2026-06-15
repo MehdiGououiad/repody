@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const chartDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  "../deploy/helm/audit-platform"
+  "../deploy/helm/repody"
 );
 
 const result = spawnSync("helm", ["dependency", "update", chartDir], {

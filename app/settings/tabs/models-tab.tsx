@@ -5,11 +5,9 @@ import { Box, HardDriveDownload, LoaderCircle, RefreshCw, Zap } from "lucide-rea
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { InferenceModel } from "@/lib/api/inference";
-import type { OcrModelOption } from "@/lib/api/ocr";
 import { startModelAction, type OperatorJob } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
-import { useModelCatalog, useOcrModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { cn } from "@/lib/utils";
 import { ACTIVE_STATUSES } from "../settings-shared";
 
@@ -32,43 +30,26 @@ export function ModelsTab({
   jobs: OperatorJob[];
   onJobCreated: (job: OperatorJob) => void;
 }) {
-  const ocrQuery = useOcrModelsCatalog();
-  const inferenceQuery = useModelCatalog();
-  const loading = ocrQuery.isFetching || inferenceQuery.isFetching;
-  const ocrModels = ocrQuery.data?.models ?? [];
-  const inferenceModels = inferenceQuery.data?.models ?? [];
+  const catalogQuery = useUnifiedModelsCatalog();
+  const loading = catalogQuery.isFetching;
+  const catalog = catalogQuery.data;
 
   const refresh = () => {
-    void ocrQuery.refetch();
-    void inferenceQuery.refetch();
+    void catalogQuery.refetch();
   };
 
   const rows = useMemo<ModelRow[]>(() => {
-    const seen = new Set<string>();
-    const result: ModelRow[] = ocrModels.map((model) => {
-      seen.add(model.id);
-      return {
-        id: model.id,
-        label: model.label,
-        kind: "Document model",
-        runtime: model.runtime,
-        available: model.available !== false,
-        note: model.availabilityNote,
-        description: model.description,
-      };
-    });
-    for (const model of inferenceModels) {
-      if (seen.has(model.id)) continue;
-      result.push({
-        id: model.id,
-        label: model.label,
-        kind: model.kind === "llm" ? "Validation LLM" : "Document model",
-        runtime: model.runtime || REPODY_VLM_LABEL,
-        available: true,
-      });
-    }
-    return result;
-  }, [ocrModels, inferenceModels]);
+    if (!catalog?.models) return [];
+    return catalog.models.map((model) => ({
+      id: model.id,
+      label: model.label,
+      kind: model.kind === "validation" ? "Validation LLM" : "Document model",
+      runtime: model.runtime || REPODY_VLM_LABEL,
+      available: model.available !== false,
+      note: model.availabilityNote,
+      description: model.description,
+    }));
+  }, [catalog]);
 
   const runAction = async (action: "pull" | "warmup", model: string) => {
     try {

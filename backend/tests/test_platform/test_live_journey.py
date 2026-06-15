@@ -87,13 +87,32 @@ def test_dry_run_test_run_and_crud_deploy(client: httpx.Client):
     assert dry.json()["ruleResults"][0]["status"] == "failed"
 
     test_run = client.post(
-        f"/v1/workflows/{WF_ID}/test-run",
-        json={"documents": [], "rules": [], "workflowName": "Invoice Audit Pipeline"},
+        f"/v1/workflows/{WF_ID}/runs/json?mode=test",
+        json={
+            "snapshot": {
+                "documents": [],
+                "rules": [],
+                "workflowName": "Invoice Audit Pipeline",
+            }
+        },
     )
-    assert test_run.status_code == 200
-    body = test_run.json()
-    assert body["status"] in ("passed", "failed", "warning")
-    audit_id = body["id"]
+    assert test_run.status_code == 202
+    run_id = test_run.json()["runId"]
+
+    deadline = time.time() + 120
+    audit_id = None
+    while time.time() < deadline:
+        poll = client.get(f"/v1/runs/{run_id}")
+        assert poll.status_code == 200
+        body = poll.json()
+        if body["status"] == "done" and body.get("result"):
+            audit_id = body["result"]["id"]
+            assert body["result"]["status"] in ("passed", "failed", "warning")
+            break
+        if body["status"] == "failed":
+            pytest.fail(body.get("error") or "run failed")
+        time.sleep(0.5)
+    assert audit_id is not None
 
     detail = client.get(f"/v1/audits/{audit_id}")
     assert detail.status_code == 200

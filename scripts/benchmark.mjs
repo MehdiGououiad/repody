@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
+import { stackFileArgs } from "../deploy/platform-modules.mjs";
 
 const [profile = "full", ...rawExtra] = process.argv.slice(2);
 const extra = rawExtra[0] === "--" ? rawExtra.slice(1) : rawExtra;
-const compose = ["compose", "-f", "compose.yaml", "-f", "compose.cpu.yaml"];
+const compose = ["compose", ...stackFileArgs("dev")];
 
 const commands = {
   quick: [

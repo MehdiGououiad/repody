@@ -1,0 +1,47 @@
+# Public internet deployment — HTTPS reverse proxy + browser-reachable MinIO uploads.
+#
+# Prerequisites (.env):
+#   PUBLIC_DOMAIN=app.example.com
+#   FILES_DOMAIN=files.example.com   (DNS A/AAAA → same host as PUBLIC_DOMAIN)
+#   BASIC_AUTH_USER=repody
+#   BASIC_AUTH_HASH=<output of: docker run --rm caddy:2-alpine caddy hash-password>
+#
+# Deploy: pnpm compose up --stack=prod --public --build
+#
+# Users open: https://app.example.com  (basic auth gate — required; UI has no per-user login)
+
+services:
+  minio:
+    environment:
+      MINIO_API_CORS_ALLOW_ORIGIN: "https://${PUBLIC_DOMAIN}"
+
+  api:
+    environment:
+      AUDIT_CORS_ORIGINS: '["https://${PUBLIC_DOMAIN}"]'
+      AUDIT_MINIO_PUBLIC_ENDPOINT: ${FILES_DOMAIN}
+      AUDIT_MINIO_SECURE: "true"
+
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_DOMAIN: ${PUBLIC_DOMAIN:?Set PUBLIC_DOMAIN in .env}
+      FILES_DOMAIN: ${FILES_DOMAIN:?Set FILES_DOMAIN in .env}
+      BASIC_AUTH_USER: ${BASIC_AUTH_USER:?Set BASIC_AUTH_USER in .env}
+      BASIC_AUTH_HASH: ${BASIC_AUTH_HASH:?Set BASIC_AUTH_HASH in .env}
+    volumes:
+      - ../Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_started
+      minio:
+        condition: service_started
+
+volumes:
+  caddy_data:
+  caddy_config:

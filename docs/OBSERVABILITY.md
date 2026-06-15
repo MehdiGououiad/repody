@@ -1,45 +1,46 @@
 # Platform logs (Loki + Grafana + Tempo)
 
+> **Start:** `pnpm compose up --stack=prod --with=obs,traces --build` or `pnpm dev -- --logs`. See [PLATFORM.md](./PLATFORM.md).
+
 Self-hosted log aggregation and distributed tracing for Docker services (api, worker, worker-fast, web, vllm).
 
-For **browser and client-side errors** (events that never hit the API), see [GLITCHTIP.md](./GLITCHTIP.md).
+For **browser and client-side errors** (events that never hit the API), use **Bugsink** — see [BUGSINK.md](./BUGSINK.md).
 
 | Signal | Tool |
 |--------|------|
 | Full platform log stream (workers, api, `run_id`) | **Loki** (this doc) |
-| Exceptions + API warning/error lines | **GlitchTip** |
+| API/worker exceptions + warning/error lines | **Bugsink** (optional) + **Loki** logs |
+| Browser / React errors | **Bugsink** (optional) |
 | Distributed traces (optional) | **Tempo** (`deploy:obs`) |
 
 ## Start stack with logging + tracing
 
 ```powershell
-pnpm docker:up:obs
+pnpm compose up --stack=dev --with=obs --only=obs --detach
 ```
 
 Or production with logs and OTLP traces:
 
 ```powershell
-pnpm docker:deploy:obs
+pnpm compose up --stack=prod --with=obs,traces --build
 ```
 
-`compose.observability.yaml` — **Loki + Promtail + Grafana** (`--profile obs`).  
-`compose.observability-traces.yaml` — **Tempo + OTEL** on api/workers (`--profile obs-traces`).  
-`pnpm docker:deploy:obs` merges both.
+`deploy/compose/observability.yaml` — **Loki + Promtail + Grafana** (`--profile obs`).  
+`deploy/compose/observability-traces.yaml` — **Tempo + OTEL** on api/workers (`--profile obs-traces`).
 
 ### Dev stack flags
 
 ```powershell
-pnpm dev:warmup                  # no Grafana/Tempo
-pnpm dev:warmup -- --logs        # Grafana/Loki only
-pnpm dev:warmup -- --traces      # Grafana/Loki + Tempo/OTEL
+pnpm dev                         # no Grafana/Tempo
+pnpm dev -- --logs               # Grafana/Loki only
+pnpm dev -- --traces             # Grafana/Loki + Tempo/OTEL
+pnpm dev -- --warmup --logs      # warmup + observability
 ```
-
-Same flags work with `pnpm dev:nowarmup`.
 
 Observability only (if the app is already running):
 
 ```powershell
-pnpm docker:obs
+pnpm compose up --stack=dev --with=obs --only=obs --detach
 ```
 
 ## Structured JSON logs
@@ -54,7 +55,7 @@ API and workers call the same `configure_logging()` path. In production (`AUDIT_
 | `workflow_id` | `wf_123` | Workflow |
 | `request_id` | UUID | HTTP correlation id (API → Hatchet → worker) |
 | `trace_id` | hex | OpenTelemetry trace (when OTEL enabled) |
-| `service.name` | `audit-workbench-worker-ocr` | Process |
+| `service.name` | `repody-worker-ocr` | Process |
 
 Promtail parses JSON lines into Loki **structured metadata** (not high-cardinality labels). Sensitive keys (`token`, `password`, etc.) are redacted in the application before emit.
 
@@ -95,10 +96,10 @@ Pre-built dashboard: **Dashboards → Repody → Platform logs** (errors, docume
 | Label | Example | Meaning |
 |-------|---------|---------|
 | `service` | `worker`, `api`, `vllm` | Compose service name |
-| `container` | `agentcontrol-worker-1` | Container name |
+| `container` | `repody-worker-1` | Container name |
 | `stream` | `stdout` / `stderr` | Log stream |
 
-Only containers from the Compose project **`agentcontrol`** are collected (your folder name). If you use another project name, edit `observability/promtail-config.yaml` regex.
+Only containers from the Compose project **`repody`** are collected. If you use another project name, edit `observability/promtail-config.yaml` regex.
 
 ## Cursor / CLI
 
@@ -106,7 +107,7 @@ Grafana is the main UI. For the agent or terminal:
 
 ```powershell
 # Live tail (no Grafana)
-pnpm docker:logs:platform
+pnpm compose logs --stack=dev
 
 # Loki ready check
 curl.exe http://localhost:3100/ready
@@ -124,12 +125,16 @@ Loki keeps logs for **7 days** (`retention_period: 168h` in `observability/loki-
 
 ## Windows notes
 
-Promtail needs access to the Docker socket and container log files. **Docker Desktop** supports this; if Promtail shows no logs, ensure containers are running under the same Docker host and project name is `agentcontrol`.
+Promtail needs access to the Docker socket and container log files. **Docker Desktop** supports this; if Promtail shows no logs, ensure containers are running under the same Docker host and project name is `repody`.
 
 ## Stop observability only
 
 ```powershell
-docker compose -f compose.observability.yaml down
+pnpm compose down --stack=dev --with=obs --modules-only
 ```
 
 Data persists in volumes `lokidata` and `grafanadata` until removed with `docker volume rm`.
+
+## Error tracking (Bugsink)
+
+Exception reporting for the web UI, API, and workers uses **Bugsink** (Sentry-SDK compatible). Setup: [BUGSINK.md](./BUGSINK.md).

@@ -1,0 +1,70 @@
+name: Air-gap release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (e.g. 0.1.0)
+        required: true
+        type: string
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  airgap:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build air-gap bundle
+        env:
+          REPODY_AIRGAP_VERSION: ${{ steps.ver.outputs.version }}
+          AUDIT_ADMIN_API_TOKEN: airgap-ci-placeholder
+          AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
+        run: |
+          pnpm airgap:build -- --version "${{ steps.ver.outputs.version }}"
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repody-airgap-${{ steps.ver.outputs.version }}
+          path: |
+            dist/airgap/repody-airgap-${{ steps.ver.outputs.version }}/
+            dist/airgap/repody-airgap-${{ steps.ver.outputs.version }}.tar.gz
+          retention-days: 90
+
+      - name: Attach to GitHub Release (tags only)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/airgap/repody-airgap-${{ steps.ver.outputs.version }}.tar.gz
+          generate_release_notes: true

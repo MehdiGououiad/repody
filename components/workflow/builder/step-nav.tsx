@@ -22,6 +22,15 @@ export function stepComplete(
   return false;
 }
 
+/** A later step is blocked until step 0 (schema) is complete. */
+export function stepBlocked(
+  step: BuilderStep,
+  documents: DocumentDef[],
+  rules: WorkflowRule[]
+): boolean {
+  return (step === 1 || step === 2) && !stepComplete(0, documents, rules);
+}
+
 export const BUILDER_STEP_META = [
   { icon: Database, key: "extract" as const },
   { icon: ShieldCheck, key: "rules" as const },
@@ -48,9 +57,7 @@ export function BuilderStepNav({
   const steps = STEP_META.map(({ icon: Icon, key }, idx) => {
     const isActive = current === idx;
     const isDone = !isActive && stepComplete(idx as BuilderStep, documents, rules);
-    const isBlocked =
-      (idx === 1 && !stepComplete(0, documents, rules)) ||
-      (idx === 2 && !stepComplete(0, documents, rules));
+    const isBlocked = stepBlocked(idx as BuilderStep, documents, rules);
 
     return (
       <button

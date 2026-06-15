@@ -147,12 +147,12 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["audit-workbench"],
+  "tags": ["repody"],
   "templating": { "list": [] },
   "time": { "from": "now-1h", "to": "now" },
   "timepicker": {},
   "timezone": "browser",
   "title": "Platform logs",
-  "uid": "audit-platform-logs",
+  "uid": "repody-platform-logs",
   "version": 2
 }

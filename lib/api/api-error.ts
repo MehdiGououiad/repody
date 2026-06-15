@@ -53,10 +53,10 @@ export function humanizeRunError(raw: string, ctx?: RunErrorContext): string {
     return "The platform is at capacity — too many audits are queued. Wait a minute and try again.";
   }
   if (lower.includes("stayed queued")) {
-    return "The audit job never left the queue. Ensure Hatchet workers are running (`docker compose ps worker worker-fast`).";
+    return "The audit job never left the queue. Ensure Hatchet workers are running (`pnpm compose up --stack=dev --only=workers --detach`).";
   }
   if (lower.includes("stale running") || lower.includes("worker timeout")) {
-    return "The worker stopped responding. Restart workers (`pnpm docker:restart:workers`) and run the test again.";
+    return "The worker stopped responding. Restart workers (`pnpm compose restart workers --stack=dev`) and run the test again.";
   }
   if (lower.includes("run timed out")) {
     return "The audit run took too long (>5 min). Check worker and Docker Model Runner logs.";

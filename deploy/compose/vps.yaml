@@ -1,0 +1,17 @@
+# Linux VPS — reach Docker Model Runner on the host from containers.
+# Chain with cloud/public prod stacks. Harmless on Docker Desktop (host-gateway).
+# See deploy/cloud/deploy.sh and DEPLOY.md
+
+x-model-runner-hosts: &model-runner-hosts
+  extra_hosts:
+    - "model-runner.docker.internal:host-gateway"
+
+services:
+  api:
+    <<: *model-runner-hosts
+
+  worker:
+    <<: *model-runner-hosts
+
+  worker-fast:
+    <<: *model-runner-hosts

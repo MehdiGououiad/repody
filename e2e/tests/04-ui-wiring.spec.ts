@@ -66,20 +66,25 @@ test.describe("UI wiring", () => {
 
       await page.goto(`/workflows/${workflowId}/edit`);
       await page.getByRole("button", { name: /Test & Deploy/i }).click();
-      await page.getByRole("tab", { name: /Deploy & API/i }).click();
+      await expect(page.getByRole("heading", { name: /Deploy & API/i })).toBeVisible();
+
+      const docType = body.workflow.documents[0].documentType;
 
       await expect(
         page.locator("code").filter({
           hasText: `/api/v1/workflows/${workflowId}/runs`,
         }).first()
       ).toBeVisible();
-      await expect(page.getByText(/-F "files=@\/path\/to\/document\.pdf"/)).toBeVisible();
+      await expect(page.getByText(new RegExp(`document_types=\\["${docType}"\\]`))).toBeVisible();
+      await expect(page.getByText(/-F "files=@\/path\/to\/invoice\.pdf"/)).toBeVisible();
 
       await page.getByRole("tab", { name: "python" }).click();
-      await expect(page.getByText(/files=\{"files": document\}/)).toBeVisible();
+      await expect(page.getByText(/document_types/)).toBeVisible();
+      await expect(page.getByText(/invoice\.pdf/)).toBeVisible();
 
       await page.getByRole("tab", { name: "js" }).click();
-      await expect(page.getByText(/form\.append\("files", file\)/)).toBeVisible();
+      await expect(page.getByText(/form\.append\("document_types"/)).toBeVisible();
+      await expect(page.getByText(/form\.append\("files"/)).toBeVisible();
     } finally {
       await request.delete(`${API}/v1/workflows/${workflowId}`);
     }

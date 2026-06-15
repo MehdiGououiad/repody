@@ -24,7 +24,7 @@ def setup_tracing(settings: Settings) -> None:
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor
     except ImportError:
-        log.warning("otel_packages_missing", hint="pip install audit-workbench[otel]")
+        log.warning("otel_packages_missing", hint="pip install repody[otel]")
         return
 
     resource = Resource.create({"service.name": settings.otel_service_name})
@@ -70,7 +70,7 @@ def instrument_dependencies(settings: Settings) -> None:
     except ImportError:
         log.warning(
             "otel_logging_missing",
-            hint="pip install audit-workbench[otel] for log trace correlation",
+            hint="pip install repody[otel] for log trace correlation",
         )
     else:
         LoggingInstrumentor().instrument(set_logging_format=False)

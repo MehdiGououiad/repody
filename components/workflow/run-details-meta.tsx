@@ -3,8 +3,8 @@
 import { useLocale, useTranslations } from "next-intl";
 import { Brain, Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "lucide-react";
 
-import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/stores/audit-run-store";
-import { formatDurationMs } from "@/lib/stores/audit-run-store";
+import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/types/audit";
+import { formatDurationMs } from "@/lib/types/audit";
 import { OcrMarkdownPanel } from "@/components/workflow/ocr-markdown-panel";
 import { publicDocumentModelLabel } from "@/lib/document-model-branding";
 import { cn, formatExtractedFieldValue } from "@/lib/utils";

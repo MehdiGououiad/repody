@@ -129,7 +129,7 @@ async def pull_model(payload: ModelActionRequest) -> dict[str, Any]:
     _safe_model(payload.model)
     raise HTTPException(
         status_code=409,
-        detail="Install Repody VLM with: pnpm docker:models:pull",
+        detail="Install Repody VLM with: pnpm models:pull",
     )
 
 

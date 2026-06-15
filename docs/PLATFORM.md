@@ -1,110 +1,72 @@
 # Modular platform architecture
 
-Scale-first deployment model: **stack presets** + **optional modules**. Each module is an independently deployable unit (future microservice / Helm chart boundary).
+Stacks + optional modules. SSOT: [`deploy/platform-modules.mjs`](../deploy/platform-modules.mjs). CLI: `pnpm compose`.
 
 ## Modules
 
-```text
-┌─────────────┐     ┌─────────────┐     ┌──────────────────┐
-│    edge     │────▶│   control   │────▶│      infra       │
-│  (Next.js)  │     │  (FastAPI)  │     │ pg/redis/minio/  │
-└─────────────┘     └──────┬──────┘     │     hatchet      │
-                           │            └────────┬─────────┘
-                           ▼                     │
-                    ┌─────────────┐              │
-                    │   workers   │◀─────────────┘
-                    │ ocr + fast  │  (Hatchet pull)
-                    └─────────────┘
+| Module | CLI | Purpose |
+|--------|-----|---------|
+| `infra` | (core) | Postgres, Redis, MinIO, Hatchet |
+| `control` | (core) | FastAPI |
+| `workers` | (core) | OCR + fast Hatchet pools — **scale here first** |
+| `edge` | (core) | Next.js web |
+| `obs` | `--with=obs` | Grafana + Loki |
+| `traces` | `--with=traces` | Tempo + OTEL (requires obs) |
+| `bugsink` | `--with=bugsink` | Self-hosted Bugsink error tracking |
 
-Addons (optional):  obs (Loki)  |  traces (Tempo)  |  errors (GlitchTip)
-```
+`pnpm compose modules` · `pnpm compose stacks`
 
-| Module | CLI id | Purpose |
-|--------|--------|---------|
-| Infrastructure | `infra` | Data + queue plane |
-| Control plane | `control` | API, dispatch, auth |
-| Worker plane | `workers` | Run execution (**scale here first**) |
-| Edge | `edge` | Web UI |
-| Logs | `obs` | Grafana + Loki |
-| Traces | `traces` | Tempo + OTEL |
-| Errors | `errors` | GlitchTip |
+## Stacks
 
-List modules: `pnpm platform:modules`
+| Stack | When |
+|-------|------|
+| `dev` | Local development |
+| `prod` | Single-host production |
+| `prod-micro` | Split image tags (K8s / `pnpm images:build`) |
+| `vps` | Ubuntu VPS compose chain |
+| `gpu` | vLLM inference |
+| `e2e` | CI Playwright |
 
-## Stack presets
+## Overlays (flags on `compose up`)
 
-| Preset | Use |
-|--------|-----|
-| `dev` | Fast boot, host or Docker backend |
-| `dev-warm` | Repody VLM warmup |
-| `prod` | Production images + web |
-| `prod-scale` | Production + scale-friendly pool settings |
-| `gpu` | vLLM inference overlay |
+| Flag | Adds |
+|------|------|
+| `--warmup` | Repody VLM warmup (`warmup.yaml`; on `dev`, swaps out `dev.yaml`) |
+| `--lan` | Office LAN (`lan.yaml`) |
+| `--public` | Caddy HTTPS (`public.yaml`) |
+| `--scale` | Worker pool tuning (`scale.yaml`) |
 
-List stacks: `pnpm platform:stacks`
-
-## Common commands
-
-### Dev: warmup + Loki + GlitchTip (one command)
+## Examples
 
 ```powershell
-pnpm dev:warmup -- --logs --glitchtip
+pnpm dev -- --warmup --logs
+pnpm compose up --stack=prod --scale --scale-worker=3 --build
+pnpm compose up --stack=vps --with=obs,traces --build
+pnpm compose scale --stack=prod --scale --worker=3
 ```
 
-Set `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` in `.env` for error reporting.
+## Optional observability
 
-### Modular Docker up (prod-scale + observability + errors)
+**Logs/traces:** `pnpm compose up --stack=prod --with=obs,traces --build` or `pnpm dev -- --logs --traces`
 
-```powershell
-pnpm platform:up -- --stack=prod-scale --with=obs,errors --build
-```
+**Error tracking (Bugsink):** `pnpm compose up --modules-only --with=bugsink --detach` or set DSN in `.env` — [BUGSINK.md](./BUGSINK.md). Rebuild web after changing `NEXT_PUBLIC_BUGSINK_DSN`.
 
-### Scale workers only (no api/web rebuild)
-
-```powershell
-pnpm platform:scale -- --stack=prod-scale --worker=3 --worker-fast=2
-```
-
-### Addon only (GlitchTip)
-
-```powershell
-pnpm platform:up -- --modules-only --with=errors
-```
-
-### Logs
-
-```powershell
-pnpm platform:logs -- --stack=dev-warm --with=obs
-```
+Grafana: http://localhost:3001 (admin / audit)
 
 ## Scale priority
 
-1. **`workers` module** — `docker compose --scale worker=N` (OCR pool) and `worker-fast=N` (logic pool). Use `prod-scale` preset for tuned DB/Redis pools.
-2. **`control` module** — increase uvicorn workers in `compose.prod.yaml` (already `--workers 2`).
-3. **`infra` module** — managed Postgres/Redis/S3 before multi-node workers.
-4. **`edge` module** — CDN / multiple web replicas behind a load balancer.
+1. `workers` — `--scale-worker=N` with `--scale` overlay
+2. `control` — uvicorn workers in `deploy/compose/prod.yaml`
+3. `infra` — managed Postgres/Redis before multi-node workers
+4. `edge` — CDN / multiple web replicas
 
-Hatchet dispatches to labeled worker pools (`ocr`, `fast`); scaling replicas increases throughput without code changes.
+## Helm boundary
 
-## Microservices path
+| Compose module | Helm |
+|----------------|------|
+| control | `repody-api` |
+| workers | worker Deployments + HPA |
+| infra | Bitnami charts + Hatchet |
+| edge | `repody-web` + Ingress |
 
-| Today (Compose module) | Kubernetes (Helm) |
-|------------------------|-------------------|
-| `control` | `audit-api` Deployment |
-| `workers` | `audit-worker-ocr` / `audit-worker-fast` Deployments + HPA |
-| `infra` | Bitnami Postgres/Redis/MinIO + Hatchet Lite (or managed overrides) |
-| `edge` | `audit-web` Deployment + Ingress |
-| `obs` / `traces` / `errors` | Cluster logging + `observability.sentryDsn` |
-
-See [CLOUD-K8S.md](./CLOUD-K8S.md) for install steps. Prod Compose stacks include `compose.microservices.yaml` for split image tags (`audit-api`, `audit-worker`, `audit-web`).
-
-Module IDs and service lists are defined in `deploy/platform-modules.mjs`.
-
-## Related
-
-- [ADR 003](./adr/003-modular-platform-modules.md)
-- [ADR 004](./adr/004-cloud-kubernetes-packaging.md)
-- [CLOUD-K8S.md](./CLOUD-K8S.md)
-- [DEV.md](../DEV.md) — daily workflow
-- [OBSERVABILITY.md](./OBSERVABILITY.md) — Loki/Grafana
-- [GLITCHTIP.md](./GLITCHTIP.md) — error tracking
+[docs/CLOUD-K8S.md](./CLOUD-K8S.md) · [ADR 003](./adr/003-modular-platform-modules.md)

@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-worker-ocr
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker-ocr
+spec:
+  replicas: {{ .Values.workerOcr.replicas }}
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker-ocr
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker-ocr
+    spec:
+      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
+      initContainers:
+        {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
+      volumes:
+        - name: hatchet-client-token
+          secret:
+            secretName: {{ include "repody.fullname" . }}-hatchet-token
+            optional: true
+      {{- end }}
+      containers:
+        - name: worker
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "repody.fullname" . }}-config
+          env:
+            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
+              value: "false"
+            - name: AUDIT_WORKER_POOL
+              value: {{ .Values.workerOcr.pool | quote }}
+            - name: AUDIT_WORKER_OCR_MAX_JOBS
+              value: {{ .Values.workerOcr.maxJobs | quote }}
+            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
+              value: {{ .Values.workerOcr.warmupOnStart | quote }}
+            - name: AUDIT_OTEL_SERVICE_NAME
+              value: repody-worker-ocr
+            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+            {{- if .Values.observability.bugsinkDsn }}
+            - name: BUGSINK_DSN
+              value: {{ .Values.observability.bugsinkDsn | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.workerOcr.resources | nindent 12 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-worker-fast
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker-fast
+spec:
+  replicas: {{ .Values.workerFast.replicas }}
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker-fast
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker-fast
+    spec:
+      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
+      initContainers:
+        {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
+      volumes:
+        - name: hatchet-client-token
+          secret:
+            secretName: {{ include "repody.fullname" . }}-hatchet-token
+            optional: true
+      {{- end }}
+      containers:
+        - name: worker
+          image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
+          imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "repody.fullname" . }}-config
+          env:
+            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
+              value: "false"
+            - name: AUDIT_WORKER_POOL
+              value: {{ .Values.workerFast.pool | quote }}
+            - name: AUDIT_WORKER_FAST_MAX_JOBS
+              value: {{ .Values.workerFast.maxJobs | quote }}
+            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
+              value: {{ .Values.workerFast.warmupOnStart | quote }}
+            - name: AUDIT_OTEL_SERVICE_NAME
+              value: repody-worker-fast
+            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+            {{- if .Values.observability.bugsinkDsn }}
+            - name: BUGSINK_DSN
+              value: {{ .Values.observability.bugsinkDsn | quote }}
+            {{- end }}
+          resources:
+            {{- toYaml .Values.workerFast.resources | nindent 12 }}

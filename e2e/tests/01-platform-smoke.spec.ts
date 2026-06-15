@@ -11,7 +11,7 @@ test.describe("Platform smoke", () => {
 
   test("dashboard loads with KPIs and recent audits", async ({ page }) => {
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Control center/i })).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
     // Seeded workflow banner or KPI cards
     await expect(page.getByText(/audit|pass rate|workflow/i).first()).toBeVisible();

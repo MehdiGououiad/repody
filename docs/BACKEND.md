@@ -2,13 +2,13 @@
 
 Production backend for Repody (Phase 2).
 
-**Step-by-step build guide:** [BACKEND_STEPS.md](./BACKEND_STEPS.md)
+**Step-by-step history:** [BACKEND_STEPS.md](./BACKEND_STEPS.md) (archived)
 
 ## Quick start (local, inline jobs)
 
 ```bash
 # Terminal 1 — database
-docker compose up postgres -d
+pnpm compose up --stack=dev --only=infra --detach
 
 # Terminal 2 — API
 cd backend
@@ -26,7 +26,7 @@ pnpm dev
 ## Full stack (API + Hatchet workers + MinIO)
 
 ```bash
-docker compose -f compose.yaml -f compose.cpu.yaml up --build
+pnpm compose up --stack=dev --build
 ```
 
 Runs `api`, `worker`, `worker-fast`, and `hatchet-lite` with `AUDIT_RUN_JOBS_INLINE=false`. Upload files via `POST /v1/uploads` or multipart `POST /v1/workflows/{id}/runs`.

@@ -251,11 +251,15 @@ async def set_run_progress(
     label: str,
     *,
     force: bool = False,
+    event_type: str | None = None,
 ) -> None:
     """Publish live progress over SSE; persist to DB on an interval (or when forced)."""
     from sqlalchemy.ext.asyncio import AsyncSession
 
     progress = progress_snapshot(steps, current_index, label)
+    if event_type:
+        progress["lastEvent"] = event_type
+        progress["eventVersion"] = 1
 
     from audit_workbench.services.run_events import publish_run_progress
 
@@ -334,3 +338,48 @@ async def fail_run_progress(run_id: str, error: str) -> None:
             run.progress = progress
             await session.commit()
     clear_progress_commit_cache(run_id)
+
+
+async def publish_progress_event(
+    session: object,
+    event: "RunProgressEvent",
+    *,
+    steps: list[dict[str, Any]],
+    current_index: int,
+    force: bool = False,
+) -> None:
+    """Map a versioned domain event to UI progress and publish."""
+    from audit_workbench.services.run_progress_events import (
+        RunProgressEvent,
+        progress_dict_from_event,
+    )
+
+    progress = progress_dict_from_event(event, steps=steps, current_index=current_index)
+    from audit_workbench.services.run_events import publish_run_progress
+
+    await publish_run_progress(event.run_id, progress)
+
+    settings = get_settings()
+    interval_s = settings.progress_commit_interval_ms / 1000.0
+    now = time.monotonic()
+    last = _last_progress_commit.get(event.run_id, 0.0)
+    if not force and (now - last) < interval_s:
+        return
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from audit_workbench.db.base import async_session_factory
+
+    if isinstance(session, AsyncSession):
+        run = await session.get(Run, event.run_id)
+        if run:
+            run.progress = progress
+        _touch_progress_cache(event.run_id, now)
+        return
+
+    async with async_session_factory() as progress_session:
+        run = await progress_session.get(Run, event.run_id)
+        if not run:
+            return
+        run.progress = progress
+        await progress_session.commit()
+    _touch_progress_cache(event.run_id, now)

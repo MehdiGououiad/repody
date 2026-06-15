@@ -1,6 +1,4 @@
-import { browserApi, browserFetch, browserJson, throwOnApiError } from "@/lib/api/openapi-client";
-import type { InferenceModel } from "@/lib/api/inference";
-import type { OcrModelOption } from "@/lib/api/ocr";
+import { browserApi, browserFetch, throwOnApiError } from "@/lib/api/openapi-client";
 
 export type OperatorJob = {
   id: string;
@@ -73,14 +71,6 @@ export async function fetchOperatorJobs(): Promise<OperatorJob[]> {
   return (data as { jobs: OperatorJob[] }).jobs;
 }
 
-export async function fetchOperatorJob(jobId: string): Promise<OperatorJob> {
-  const { data, error, response } = await browserApi.GET("/v1/operator/jobs/{job_id}", {
-    params: { path: { job_id: jobId } },
-  });
-  if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as OperatorJob;
-}
-
 export async function fetchLatestBenchmark(): Promise<BenchmarkReport | null> {
   try {
     const { data, error, response } = await browserApi.GET("/v1/operator/benchmarks/latest");
@@ -97,17 +87,6 @@ export async function fetchJobReport(jobId: string): Promise<BenchmarkReport> {
   });
   if (error || !response.ok || !data) throwOnApiError(error, response);
   return data as BenchmarkReport;
-}
-
-export async function fetchModelCatalog(): Promise<{
-  ocrModels: OcrModelOption[];
-  inferenceModels: InferenceModel[];
-}> {
-  const [ocr, inference] = await Promise.all([
-    browserJson<{ models: OcrModelOption[] }>("/ocr/models"),
-    browserJson<{ models: InferenceModel[] }>("/inference/models"),
-  ]);
-  return { ocrModels: ocr.models, inferenceModels: inference.models };
 }
 
 export async function startModelAction(

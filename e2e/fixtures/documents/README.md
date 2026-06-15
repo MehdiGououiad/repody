@@ -30,9 +30,9 @@ pnpm test:e2e
 Stack must be running:
 
 ```powershell
-docker compose up -d postgres api
+pnpm compose up --stack=dev --detach
 pnpm dev
-# or: docker compose up
+# or full Docker web: pnpm compose up --stack=dev --only=web --profile=web-docker --build --detach
 ```
 
 Then:

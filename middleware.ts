@@ -3,9 +3,8 @@ import type { NextRequest } from "next/server";
 
 /**
  * Inject the admin API token for browser → backend rewrites on UI routes.
- * `/api/v1/*` is the public workflow API surface — keep the client's Bearer
- * (workflow key) so the API panel and copied curl examples work through :3000.
- * Token stays server-side (AUDIT_ADMIN_API_TOKEN is not NEXT_PUBLIC_*).
+ * Credential rules are documented in `lib/api/auth-policy.ts`.
+ * `/api/v1/*` keeps the client's Bearer (workflow key).
  */
 export function middleware(request: NextRequest) {
   const token = process.env.AUDIT_ADMIN_API_TOKEN;

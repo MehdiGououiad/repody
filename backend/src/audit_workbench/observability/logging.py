@@ -7,10 +7,6 @@ import sys
 
 import structlog
 
-from audit_workbench.observability.glitchtip_logs import (
-    glitchtip_logs_enabled,
-    structlog_glitchtip_processor,
-)
 from audit_workbench.settings import Settings
 
 _SENSITIVE_KEY_PARTS = (
@@ -95,9 +91,6 @@ def configure_logging(settings: Settings) -> None:
         structlog.processors.format_exc_info,
         _rename_event_to_body(),
     ]
-
-    if glitchtip_logs_enabled():
-        shared_processors.append(structlog_glitchtip_processor)
 
     if settings.log_json:
         renderer: structlog.types.Processor = structlog.processors.JSONRenderer()

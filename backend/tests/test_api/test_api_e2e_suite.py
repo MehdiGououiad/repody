@@ -1,4 +1,4 @@
-"""Comprehensive in-process API E2E suite (Hatchet dispatch mocked via inline runs)."""
+"""Comprehensive in-process API E2E suite (Hatchet dispatch simulated in conftest)."""
 
 from __future__ import annotations
 
@@ -144,26 +144,39 @@ async def test_workflow_lifecycle(client):
 @pytest.mark.asyncio
 async def test_run_status_lightweight_poll(client):
     res = await client.post(
-        "/v1/workflows/wf-invoice-audit/test-run",
-        json={"documents": [], "rules": [], "workflowName": "Invoice Audit Pipeline"},
+        "/v1/workflows/wf-invoice-audit/runs/json?mode=test",
+        json={
+            "snapshot": {
+                "documents": [],
+                "rules": [],
+                "workflowName": "Invoice Audit Pipeline",
+            }
+        },
     )
-    assert res.status_code == 200
-    run_id = res.json()["id"]
+    assert res.status_code == 202
+    run_id = res.json()["runId"]
 
     status = await client.get(f"/v1/runs/{run_id}/status")
     assert status.status_code == 200
     body = status.json()
-    assert body["status"] in ("done", "failed", "warning", "passed")
+    assert body["status"] in ("done", "failed", "warning", "passed", "queued", "running")
     assert body.get("progress") is not None or body["status"] == "done"
 
 
 @pytest.mark.asyncio
 async def test_run_events_sse_smoke(client):
     res = await client.post(
-        "/v1/workflows/wf-invoice-audit/test-run",
-        json={"documents": [], "rules": [], "workflowName": "Invoice Audit Pipeline"},
+        "/v1/workflows/wf-invoice-audit/runs/json?mode=test",
+        json={
+            "snapshot": {
+                "documents": [],
+                "rules": [],
+                "workflowName": "Invoice Audit Pipeline",
+            }
+        },
     )
-    run_id = res.json()["id"]
+    assert res.status_code == 202
+    run_id = res.json()["runId"]
 
     async with client.stream("GET", f"/v1/runs/{run_id}/events", timeout=10.0) as stream:
         assert stream.status_code == 200

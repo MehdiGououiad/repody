@@ -1,0 +1,204 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
+import {
+  normalizeReadPath,
+  normalizeValidationMode,
+} from "@/lib/api/processing-paths";
+import type { DocumentDef, ValidationModeId } from "@/lib/types";
+import type { ProcessingOptions } from "./processing-options";
+
+export function ProcessingSettings({
+  doc,
+  onChange,
+  t,
+  options,
+  onRetry,
+}: {
+  doc: DocumentDef;
+  onChange: (patch: Partial<DocumentDef>) => void;
+  t: ReturnType<typeof useTranslations>;
+  options: ProcessingOptions;
+  onRetry: () => void;
+}) {
+  const {
+    paths,
+    validationModes,
+    ocrModels,
+    defaultPath,
+    defaultOcr,
+    loaded,
+    error,
+  } = options;
+
+  const pathId = normalizeReadPath(doc.extractionMode ?? defaultPath);
+  const pathSpec = paths.find((p) => p.id === pathId);
+  const validationId = normalizeValidationMode(doc.validationMode, doc.extractionMode);
+  const validationSpec = validationModes.find((v) => v.id === validationId);
+  const documentModels = ocrModels.filter((m) => m.engine === "document_model");
+  const firstAvailable = documentModels.find((m) => m.available !== false);
+  const selectedOcr = doc.ocrModel ?? firstAvailable?.id ?? defaultOcr;
+  const selectedModel = documentModels.find((m) => m.id === selectedOcr);
+  const readPathId = `read-path-${doc.id}`;
+  const validationModeId = `validation-mode-${doc.id}`;
+  const extractionModelId = `extraction-model-${doc.id}`;
+  const validationHint =
+    validationSpec?.description ?? t("extraction.directModelLogicValidationHint");
+
+  const runtimeLabel =
+    selectedModel?.runtime === "docker_model_runner"
+      ? t("extraction.runtimeDirect")
+      : (selectedModel?.runtime ?? null);
+
+  const onPathChange = (v: string) => {
+    const firstModel = ocrModels.find((m) => m.available !== false);
+    onChange({
+      extractionMode: v,
+      ocrModel: firstModel?.id ?? doc.ocrModel,
+    });
+  };
+
+  const onValidationChange = (v: string) => {
+    onChange({ validationMode: v as ValidationModeId });
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
+      {error ? (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-danger">
+              {t("extraction.configurationUnavailable")}
+            </p>
+            <p className="mt-0.5 text-[11px] text-danger-strong">
+              {t("extraction.configurationUnavailableHint")}
+            </p>
+          </div>
+          <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px]" onClick={onRetry}>
+            <RefreshCw className="h-3 w-3" />
+            {t("extraction.retry")}
+          </Button>
+        </div>
+      ) : null}
+
+      <div className="space-y-1.5">
+        <Label htmlFor={readPathId} className="text-xs font-semibold">
+          {t("extraction.readPathLabel")}
+        </Label>
+        <Select value={pathId} onValueChange={onPathChange} disabled={!loaded || error}>
+          <SelectTrigger id={readPathId} className="h-9">
+            <SelectValue placeholder={t("extraction.readPathPlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            {paths.length === 0 ? (
+              <SelectItem value="document_model" disabled>
+                {t("extraction.pathLoading")}
+              </SelectItem>
+            ) : (
+              paths.map((p) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.label}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-on-surface-variant">
+          {pathSpec?.description ?? t("extraction.readPathHintDefault")}
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={validationModeId} className="text-xs font-semibold">
+          {t("extraction.validationModeLabel")}
+        </Label>
+        <Select
+          value={validationId}
+          onValueChange={onValidationChange}
+          disabled={!loaded || error}
+        >
+          <SelectTrigger id={validationModeId} className="h-9">
+            <SelectValue placeholder={t("extraction.validationModePlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            {validationModes.length === 0 ? (
+              <SelectItem value="logic_only" disabled>
+                {t("extraction.pathLoading")}
+              </SelectItem>
+            ) : (
+              validationModes.map((v) => (
+                <SelectItem key={v.id} value={v.id}>
+                  {v.label}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-on-surface-variant">{validationHint}</p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={extractionModelId} className="text-xs font-semibold">
+          {t("extraction.documentModelLabel")}
+        </Label>
+        <Select
+          value={selectedOcr}
+          onValueChange={(v) => onChange({ ocrModel: v })}
+          disabled={!loaded || error}
+        >
+          <SelectTrigger id={extractionModelId} className="h-9">
+            <SelectValue placeholder={t("extraction.ocrModelPlaceholder")} />
+          </SelectTrigger>
+          <SelectContent>
+            {documentModels.length === 0 ? (
+              <SelectItem value={REPODY_VLM_CATALOG_ID} disabled>
+                {t("extraction.ocrModelLoading")}
+              </SelectItem>
+            ) : (
+              documentModels.map((m) => (
+                <SelectItem key={m.id} value={m.id} disabled={m.available === false}>
+                  {m.available === false
+                    ? `${m.label} — ${t("extraction.unavailable")}`
+                    : m.label}
+                </SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+        {selectedModel?.description ? (
+          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2">
+            <div className="mb-1 flex items-center gap-2">
+              {runtimeLabel ? (
+                <Badge variant="info" className="text-[9px]">
+                  {runtimeLabel}
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-[11px] leading-relaxed text-on-surface-variant">
+              {selectedModel.description}
+              {selectedModel.available === false && selectedModel.availabilityNote
+                ? ` ${selectedModel.availabilityNote}`
+                : ""}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

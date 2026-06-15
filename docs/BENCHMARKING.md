@@ -7,10 +7,10 @@ latency while checking extracted values and rule outcomes.
 ## Start the platform
 
 ```powershell
-pnpm dev:nowarmup
+pnpm dev
 ```
 
-Use `pnpm dev:warmup` when you want Repody VLM warmed on worker start.
+Use `pnpm dev -- --warmup` when you want Repody VLM warmed on worker start.
 
 ## Run
 
@@ -44,7 +44,7 @@ Reports are written to `benchmark-reports/<timestamp>-<suite-id>/` as JSON, CSV,
 For a process-cold measurement, restart workers first:
 
 ```powershell
-pnpm docker:restart:workers
+pnpm compose restart workers --stack=dev
 pnpm benchmark:models
 ```
 

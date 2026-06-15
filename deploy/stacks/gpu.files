@@ -1,0 +1,4 @@
+deploy/compose/base.yaml
+deploy/compose/cpu.yaml
+deploy/compose/gpu.yaml
+deploy/compose/prod.yaml

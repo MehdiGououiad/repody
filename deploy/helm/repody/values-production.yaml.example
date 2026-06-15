@@ -1,0 +1,63 @@
+# Production overrides — copy to my-values.yaml and customize.
+# helm upgrade --install repody deploy/helm/repody -f my-values.yaml
+
+global:
+  deploymentEnvironment: production
+
+images:
+  api:
+    repository: ghcr.io/YOUR_ORG/repody-api
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: ghcr.io/YOUR_ORG/repody-worker
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  web:
+    repository: ghcr.io/YOUR_ORG/repody-web
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
+
+postgresql:
+  auth:
+    password: ""  # leave empty for Bitnami-generated secret, or set explicitly
+
+minio:
+  auth:
+    rootPassword: ""  # set for deterministic installs
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.yourdomain.com
+  filesHost: files.yourdomain.com
+  tls:
+    enabled: true
+    secretName: repody-tls
+
+secrets:
+  adminApiToken: ""  # REQUIRED — pass via --set or external secret manager
+
+config:
+  corsOrigins: '["https://app.yourdomain.com"]'
+  vllmBaseUrl: http://vllm.gpu.svc.cluster.local:8000/v1
+  vllmServedModel: numind/NuExtract3
+
+observability:
+  bugsinkDsn: ""  # optional Bugsink DSN (self-hosted or external)
+
+hatchet:
+  postgresPassword: ""  # set explicitly in production
+  bootstrapToken: true
+
+workerOcr:
+  replicas: 2
+  autoscaling:
+    enabled: true
+    maxReplicas: 15
+
+workerFast:
+  replicas: 2
+  autoscaling:
+    enabled: true
+    maxReplicas: 10

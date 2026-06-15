@@ -1,7 +1,7 @@
 import os
 
 os.environ["AUDIT_DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-os.environ["AUDIT_RUN_JOBS_INLINE"] = os.environ.get("AUDIT_RUN_JOBS_INLINE", "true")
+os.environ["AUDIT_RUN_JOBS_INLINE"] = os.environ.get("AUDIT_RUN_JOBS_INLINE", "false")
 os.environ["AUDIT_RUN_EVENTS_ENABLED"] = os.environ.get("AUDIT_RUN_EVENTS_ENABLED", "false")
 os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get("AUDIT_EXTRACTION_CACHE_ENABLED", "false")
 os.environ["AUDIT_AUTH_ENABLED"] = "false"
@@ -20,6 +20,21 @@ from audit_workbench.db.seed import seed_database
 from audit_workbench.main import create_app
 from audit_workbench.settings import get_settings
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
+
+
+@pytest.fixture(autouse=True)
+def simulate_hatchet_dispatch(monkeypatch):
+    """Exercise the Hatchet dispatch path; run worker logic in-process."""
+    from tests.helpers.hatchet_sim import dispatch_audit_run_simulated
+
+    monkeypatch.setattr(
+        "audit_workbench.services.run_dispatch.dispatch_audit_run",
+        dispatch_audit_run_simulated,
+    )
+    monkeypatch.setattr(
+        "audit_workbench.api.runs.dispatch_audit_run",
+        dispatch_audit_run_simulated,
+    )
 
 
 @pytest.fixture(autouse=True)

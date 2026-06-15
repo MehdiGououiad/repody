@@ -67,6 +67,7 @@ async def create_run(
     snapshot_rules: list[WorkflowRuleSchema] | None = None,
     snapshot_workflow_name: str | None = None,
     force_inline: bool = False,
+    worker_pool: str | None = None,
 ) -> Run:
     wf = await load_workflow(session, workflow_id)
     if not wf:
@@ -84,6 +85,7 @@ async def create_run(
         source=source,
         status=RunStatus.queued.value,
         run_snapshot=snapshot,
+        worker_pool=worker_pool,
     )
     session.add(run)
     await session.flush()
@@ -103,7 +105,8 @@ async def create_run(
     await session.flush()
 
     settings = get_settings()
-    inline = settings.run_jobs_inline or force_inline
+    # Test runs always queue through Hatchet; never use global inline dev mode.
+    inline = force_inline or (settings.run_jobs_inline and source != "test")
     if not inline:
         await init_queued_progress_with_position(session, run.id)
         await session.flush()

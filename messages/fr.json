@@ -4,7 +4,7 @@
     "tagline": "Audit d'entreprise"
   },
   "nav": {
-    "dashboard": "Tableau de bord",
+    "dashboard": "Centre de contrôle",
     "workflows": "Constructeur de workflow",
     "audits": "Rapports d'audit",
     "settings": "Console opérateur",
@@ -80,9 +80,14 @@
     "queueServerless": "Les exécutions sont traitées dans l'ordre. Les jobs GPU serverless peuvent aussi attendre 1 à 2 minutes sur la première requête après inactivité."
   },
   "dashboard": {
-    "title": "Vue d'ensemble",
+    "title": "Centre de contrôle",
     "description": "Activité d'audit, santé de la conformité et statut des workflows en un coup d'œil.",
-    "pageDescription": "Activité d'audit, santé de la conformité et statut des workflows en un coup d'œil.",
+    "pageDescription": "Votre centre de contrôle — santé plateforme, workflows, exécutions d'audit et outils opérateur au même endroit.",
+    "eyebrow": "Centre de contrôle",
+    "auditActivity": "Activité d'audit",
+    "offlineTitle": "Plateforme non connectée",
+    "offlineHint": "Démarrez la stack API pour charger les métriques. Vous pouvez toujours ouvrir le builder et configurer les schémas.",
+    "offlineCta": "Créer un workflow",
     "recentSubmissions": "Exécutions d'audit récentes",
     "workflowStatus": "Workflows",
     "workflowsTotal": "au total",
@@ -127,6 +132,69 @@
         "other": "Autre",
         "none": "Aucun échec"
       }
+    },
+    "getStarted": {
+      "title": "Lancez votre premier audit",
+      "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
+      "stepLabel": "Étape {number}",
+      "footerHint": "Une fois déployé, les appels API et les résultats de test apparaîtront ci-dessous."
+    },
+    "platform": {
+      "title": "Pouls plateforme",
+      "hint": "File d'attente, workers, runtime d'extraction et mode opérateur.",
+      "openConsole": "Console opérateur",
+      "queue": "Exécutions en cours",
+      "queueDetail": "{queued} en file · {inflight} en traitement",
+      "queueIdle": "Aucune exécution en attente ou en cours",
+      "workers": "Workers",
+      "workersReady": "Prêts",
+      "workersAttention": "Vérifier la file",
+      "extraction": "Extraction",
+      "operator": "Opérateur",
+      "operatorOn": "Actions actives",
+      "operatorReadOnly": "Lecture seule",
+      "cacheOn": "Cache actif · {backend}",
+      "cacheOff": "Cache d'extraction désactivé",
+      "statusOk": "sain",
+      "statusUnknown": "inconnu",
+      "llmOn": "Validation LLM active",
+      "llmOff": "Logique seule",
+      "runsInPipeline": "{count} en pipeline"
+    },
+    "fleet": {
+      "title": "Flotte de workflows",
+      "hint": "API déployées avec stats live, plus les brouillons à finaliser.",
+      "manageAll": "Tous les workflows",
+      "liveApis": "{count, plural, one {# API live} other {# API live}}",
+      "drafts": "{count, plural, one {# brouillon} other {# brouillons}}"
+    },
+    "extraction": {
+      "title": "Santé du modèle document",
+      "hint": "Accessibilité du runtime Repody VLM / inférence.",
+      "manageModels": "Paramètres modèles",
+      "unknownModel": "Modèle par défaut",
+      "runtimeUp": "Runtime accessible",
+      "runtimeDown": "Runtime inaccessible",
+      "modelLoaded": "Modèle chargé",
+      "modelNotLoaded": "Modèle non chargé"
+    },
+    "operator": {
+      "title": "Opérateur & benchmarks",
+      "hint": "Jobs de pull, warmup et benchmarks qualité.",
+      "openBenchmarks": "Benchmarks",
+      "latestBenchmark": "Dernier benchmark",
+      "passed": "Réussis",
+      "failed": "Échoués",
+      "fieldAccuracy": "Précision champs",
+      "profile": "Profil",
+      "recentJobs": "Jobs opérateur récents",
+      "noJobs": "Aucun job — lancez un benchmark depuis Paramètres."
+    },
+    "quickNav": {
+      "newWorkflow": "Nouveau workflow",
+      "workflows": "Workflow builder",
+      "audits": "Rapports d'audit",
+      "console": "Console opérateur"
     }
   },
   "audits": {
@@ -285,13 +353,22 @@
         "rules": "Règles de validation",
         "rulesHint": "Contrôles logiques et LLM sur les valeurs extraites",
         "upload": "Test & déploiement",
-        "uploadHint": "Échantillon → extraction → validation en une passe"
+        "uploadHint": "Échantillon → extraction → validation en une passe",
+        "back": "Retour",
+        "stepOf": "Étape {current} sur {total}",
+        "continueToRules": "Continuer vers les règles de validation",
+        "continueToTest": "Continuer vers test & déploiement",
+        "continueBlockedSchema": "Nommez chaque document et ajoutez au moins un champ avant de continuer.",
+        "continueRulesOptional": "Ajoutez des règles de validation, ou continuez — les règles sont optionnelles pour l'extraction seule.",
+        "continueReady": "Quand cette étape est prête, passez à la suivante.",
+        "finalStepHint": "Lancez un test avec des fichiers exemple, puis déployez quand vous êtes prêt."
       },
       "namePlaceholder": "Nom du workflow…",
       "backToWorkflows": "Workflows",
       "statusLive": "En ligne",
       "statusDraft": "Brouillon",
       "liveTestTitle": "Test en direct",
+      "liveTestHint": "Aperçu instantané de l'extraction et des règles sur des valeurs d'exemple.",
       "newWorkflowHint": "Nouveau workflow — brouillon",
       "editingHint": "Modification du workflow",
       "batchMode": "Mode batch",
@@ -342,12 +419,13 @@
       },
       "deploy": {
         "tabLabel": "Déploiement & API",
+        "sectionHint": "Lancez un test ci-dessus, puis déployez la même extraction et validation en point d'API pour d'autres documents.",
         "readyTitle": "Prêt pour le déploiement",
-        "readyHint": "Votre schéma et vos règles sont configurés. Déployez pour générer votre point de terminaison API. Tout document peut ensuite être soumis avec les mêmes règles.",
+        "readyHint": "Votre schéma et vos règles sont configurés. Déployez pour générer votre point d'accès API. Les appelants envoient un fichier par emplacement document — les champs à extraire sont déjà définis dans le workflow.",
         "liveTitle": "Workflow en ligne",
-        "liveHint": "Votre point de terminaison API est actif. Soumettez n'importe quel document via l'API ou le formulaire ci-dessous.",
+        "liveHint": "Votre point d'accès API est actif. Envoyez un fichier par emplacement ; associez chaque fichier via document_types avec les noms configurés.",
         "apiTitle": "API & intégration",
-        "liveSubmitHint": "Chaque soumission crée un nouveau rapport d'audit accessible dans Rapports d'audit."
+        "liveSubmitHint": "POST renvoie 202 avec un runId. Interrogez GET /api/v1/runs/{runId} pour les résultats. Les rapports apparaissent aussi dans Rapports d'audit."
       },
       "ingestion": {
         "dropTitle": "Déposez vos fichiers ici",
@@ -393,7 +471,7 @@
       },
       "docSource": {
         "title": "Documents et champs à extraire",
-        "hint": "Étape 1 : nommez chaque type de document, définissez ses champs et choisissez son parcours et son modèle d'extraction.",
+        "hint": "Nommez chaque type de document, définissez ses champs et choisissez son modèle d'extraction.",
         "documentTypeLabel": "Nom du document",
         "documentTypePlaceholder": "ex. Facture, Bon de commande, Note de frais",
         "documentTypeHint": "Quel type de fichier sera téléversé pour ce document ?",
@@ -411,7 +489,10 @@
         "intent": "Quoi extraire",
         "examples": "Exemples (optionnel)",
         "examplesPlaceholder": "INV-002418, INV-103772",
-        "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait."
+        "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait.",
+        "emptyShort": "Aucun champ pour le moment",
+        "fieldLabel": "champ",
+        "fieldsLabel": "champs"
       },
       "rules": {
         "title": "Règles de validation",
@@ -501,6 +582,13 @@
         "showKey": "Afficher la clé API",
         "hideKey": "Masquer la clé API",
         "testDocumentLabel": "Document de test (PDF ou image)",
+        "testDocumentsLabel": "Documents de test (un par emplacement)",
+        "testUploadHint": "Téléversez un fichier par emplacement. L'API utilise vos noms de type document dans document_types, dans le même ordre que les fichiers.",
+        "testUploadRequired": "Téléversez au moins un fichier pour lancer l'extraction sur votre schéma.",
+        "documentSlotsLabel": "Emplacements documents",
+        "schemaHint": "Le schéma d'extraction et les règles sont définis dans ce workflow — les appelants envoient les fichiers avec les noms de type document configurés (document_types), pas les champs.",
+        "fieldsCount": "{count, plural, one {# champ} other {# champs}}",
+        "pollHint": "POST renvoie 202 avec runId. Utilisez document_types avec vos noms configurés (ex. [\"Facture\"]). Interrogez GET /api/v1/runs/{runId} pour les résultats.",
         "runTest": "Exécuter un test en direct",
         "runTestHint": "Exécute sur vos documents configurés et affiche le rapport d'extraction complet",
         "processing": "Traitement des documents…",
@@ -648,6 +736,12 @@
     "slaBreach": "Dépassement de SLA sur AUD-2023-9811",
     "slaBreachDetail": "Revue manuelle en attente depuis plus de 4 h",
     "vendorSync": "Synchronisation Vendor Master terminée",
-    "vendorSyncDetail": "1 204 fournisseurs actualisés"
+    "vendorSyncDetail": "1 204 fournisseurs actualisés",
+    "alerts": {
+      "stale": {
+        "title": "Exécutions bloquées",
+        "detail": "Une ou plusieurs exécutions sont en cours depuis plus de 15 minutes — vérifiez les logs worker ou ouvrez Rapports d'audit."
+      }
+    }
   }
 }

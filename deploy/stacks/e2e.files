@@ -1,0 +1,2 @@
+deploy/compose/base.yaml
+deploy/compose/e2e.yaml

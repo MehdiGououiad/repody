@@ -109,3 +109,39 @@ async def test_create_run_progress_includes_queue_fields(admission_session):
     assert run.progress is not None
     assert run.progress.get("queuePosition") == 1
     assert run.progress.get("queueDepth") == 1
+
+
+@pytest.mark.asyncio
+async def test_count_ocr_inflight_uses_worker_pool_column(admission_session):
+    from audit_workbench.db.models import RunDocument
+    from audit_workbench.services.admission import count_ocr_inflight
+
+    session, workflow_id = admission_session
+    session.add(
+        Run(
+            id="AUD-OCR-1",
+            workflow_id=workflow_id,
+            source="test",
+            status=RunStatus.running.value,
+            worker_pool="ocr",
+        )
+    )
+    session.add(
+        Run(
+            id="AUD-FAST-1",
+            workflow_id=workflow_id,
+            source="test",
+            status=RunStatus.running.value,
+            worker_pool="fast",
+        )
+    )
+    session.add(
+        RunDocument(
+            id="rdoc-1",
+            run_id="AUD-FAST-1",
+            storage_key="runs/x/file.pdf",
+            mime_type="application/pdf",
+        )
+    )
+    await session.flush()
+    assert await count_ocr_inflight(session) == 1

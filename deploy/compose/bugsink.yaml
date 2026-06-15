@@ -1,0 +1,55 @@
+# Optional self-hosted Bugsink (Sentry-compatible error tracking).
+# Aligned with https://www.bugsink.com/docs/docker-compose-install/
+# Usage: pnpm compose up --modules-only --with=bugsink --detach
+#        pnpm compose up --stack=dev --with=bugsink --detach
+# UI: http://localhost:${BUGSINK_HTTP_PORT:-8090}
+
+services:
+  bugsink-db:
+    profiles:
+      - bugsink
+    image: ${REPODY_POSTGRES_IMAGE:-postgres:17-alpine}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${BUGSINK_DB_USER:-bugsinkuser}
+      POSTGRES_PASSWORD: ${BUGSINK_DB_PASSWORD:?Set BUGSINK_DB_PASSWORD in .env when using --with=bugsink}
+      POSTGRES_DB: ${BUGSINK_DB_NAME:-bugsink}
+    volumes:
+      - bugsink_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -U ${BUGSINK_DB_USER:-bugsinkuser} -d ${BUGSINK_DB_NAME:-bugsink}"]
+      retries: 5
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+
+  bugsink:
+    profiles:
+      - bugsink
+    image: ${REPODY_BUGSINK_IMAGE:-bugsink/bugsink:2}
+    depends_on:
+      bugsink-db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "${BUGSINK_HTTP_PORT:-8090}:8000"
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:?Set BUGSINK_SECRET_KEY in .env when using --with=bugsink}
+      CREATE_SUPERUSER: ${BUGSINK_SUPERUSER:-admin@example.com:admin}
+      PORT: "8000"
+      DATABASE_URL: postgresql://${BUGSINK_DB_USER:-bugsinkuser}:${BUGSINK_DB_PASSWORD}@bugsink-db:5432/${BUGSINK_DB_NAME:-bugsink}
+      BEHIND_HTTPS_PROXY: ${BUGSINK_BEHIND_HTTPS_PROXY:-false}
+      USE_X_FORWARDED_HOST: ${BUGSINK_USE_X_FORWARDED_HOST:-false}
+      BASE_URL: ${BUGSINK_BASE_URL:-http://localhost:8090}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c 'import requests; requests.get(\"http://localhost:8000/\").raise_for_status()'",
+        ]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+
+volumes:
+  bugsink_db_data:

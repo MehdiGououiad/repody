@@ -1,0 +1,81 @@
+# Production deployment overrides — baked images, no bind mounts, no hot reload.
+
+x-prod-api-env: &prod-api-env
+  AUDIT_SEED_ON_STARTUP: "false"
+  AUDIT_USE_CREATE_ALL: "false"
+  AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
+  AUDIT_AUTH_ENABLED: "true"
+  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_DB_POOL_SIZE: "10"
+  AUDIT_DB_MAX_OVERFLOW: "20"
+  AUDIT_REDIS_MAX_CONNECTIONS: "32"
+  AUDIT_DIRECT_UPLOAD_ENABLED: "true"
+  AUDIT_STORAGE_BACKEND: s3
+  AUDIT_RATE_LIMIT_ENABLED: "true"
+  AUDIT_ADMISSION_CONTROL_ENABLED: "true"
+  AUDIT_ADMISSION_MAX_QUEUED: "80"
+  AUDIT_ADMISSION_MAX_INFLIGHT: "100"
+  AUDIT_ADMISSION_MAX_OCR_INFLIGHT: "100"
+  BUGSINK_DSN: ${BUGSINK_DSN:-}
+  BUGSINK_ENVIRONMENT: ${BUGSINK_ENVIRONMENT:-production}
+
+x-prod-worker-env: &prod-worker-env
+  AUDIT_AUTH_ENABLED: "false"
+  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  BUGSINK_DSN: ${BUGSINK_DSN:-}
+  BUGSINK_ENVIRONMENT: ${BUGSINK_ENVIRONMENT:-production}
+
+services:
+  api:
+    command: uvicorn audit_workbench.main:app --host 0.0.0.0 --port 8000 --workers 2
+    environment:
+      <<: *prod-api-env
+      AUDIT_ADMIN_API_TOKEN: ${AUDIT_ADMIN_API_TOKEN:?Set AUDIT_ADMIN_API_TOKEN in .env}
+      AUDIT_MINIO_PUBLIC_ENDPOINT: ${AUDIT_MINIO_PUBLIC_ENDPOINT:?Set AUDIT_MINIO_PUBLIC_ENDPOINT for presigned uploads}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/healthz/live"]
+      interval: 15s
+      timeout: 10s
+      retries: 8
+      start_period: 60s
+    volumes: !override
+      - hatchet_shared:/shared
+    restart: unless-stopped
+
+  worker:
+    volumes: !override
+      - hatchet_shared:/shared
+    restart: unless-stopped
+    environment:
+      <<: *prod-worker-env
+      AUDIT_WORKER_OCR_MAX_JOBS: "1"
+
+  worker-fast:
+    volumes: !override
+      - hatchet_shared:/shared
+    restart: unless-stopped
+    environment:
+      <<: *prod-worker-env
+      AUDIT_WORKER_FAST_MAX_JOBS: "8"
+
+  web:
+    profiles: !reset []
+    restart: unless-stopped
+    build:
+      args:
+        NEXT_PUBLIC_BUGSINK_DSN: ${NEXT_PUBLIC_BUGSINK_DSN:-${BUGSINK_DSN:-}}
+        BUGSINK_DSN: ${BUGSINK_DSN:-}
+    environment:
+      NODE_ENV: production
+      BACKEND_URL: http://api:8000
+      INTERNAL_API_URL: http://api:8000
+      AUDIT_ADMIN_API_TOKEN: ${AUDIT_ADMIN_API_TOKEN:?Set AUDIT_ADMIN_API_TOKEN in .env}
+
+  postgres:
+    restart: unless-stopped
+
+  redis:
+    restart: unless-stopped
+
+  minio:
+    restart: unless-stopped

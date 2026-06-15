@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 
 import type { RunProgress } from "@/lib/api/test-run";
 import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
-import { formatDurationMs } from "@/lib/stores/audit-run-store";
+import { formatDurationMs } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
 
 const GPU_COLD_START_ESCALATE_MS = 12_000;

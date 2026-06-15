@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Run full platform E2E: live API journey (pytest) + browser tests (Playwright).
- * Prerequisites: API on :8000, web on :3000 (e.g. docker compose + pnpm dev).
+ * Prerequisites: API on :8000, web on :3000 (e.g. pnpm compose up --stack=dev --detach + pnpm dev).
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -26,8 +26,8 @@ async function waitForOk(url, label, attempts = 60) {
   }
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
-      `  Start the stack: docker compose up -d postgres api && pnpm dev\n` +
-      `  Or: docker compose up`
+      `  Start the stack: pnpm compose up --stack=dev --detach && pnpm dev\n` +
+      `  Or: pnpm compose up --stack=prod --build --detach`
   );
   process.exit(1);
 }

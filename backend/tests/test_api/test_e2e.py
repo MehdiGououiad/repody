@@ -79,15 +79,23 @@ async def test_dry_run(client):
 
 @pytest.mark.asyncio
 async def test_test_run_and_audit_detail(client):
-    res = await client.post(
-        "/v1/workflows/wf-invoice-audit/test-run",
-        json={"documents": [], "rules": [], "workflowName": "Invoice Audit Pipeline"},
+    started = await client.post(
+        "/v1/workflows/wf-invoice-audit/runs/json?mode=test",
+        json={
+            "snapshot": {
+                "documents": [],
+                "rules": [],
+                "workflowName": "Invoice Audit Pipeline",
+            }
+        },
     )
-    assert res.status_code == 200
-    body = res.json()
-    assert "id" in body
-    assert body["status"] in ("passed", "failed", "warning")
-    audit_id = body["id"]
+    assert started.status_code == 202
+    run_id = started.json()["runId"]
+
+    from tests.test_e2e.ui_flow import poll_run_until_done
+
+    result = await poll_run_until_done(client, run_id)
+    audit_id = result["id"]
 
     detail = await client.get(f"/v1/audits/{audit_id}")
     assert detail.status_code == 200

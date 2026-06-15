@@ -6,8 +6,8 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.db.models import Run, RunDocument, RunStatus
-from audit_workbench.services.worker_pool import predict_worker_pool
+from audit_workbench.db.models import Run, RunStatus
+from audit_workbench.services.run_pool_classifier import predict_worker_pool
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -53,20 +53,14 @@ async def count_inflight(session: AsyncSession) -> int:
 
 
 async def count_ocr_inflight(session: AsyncSession) -> int:
-    """Runs with uploads that need the OCR/document-model worker pool."""
-    return int(
-        await session.scalar(
-            select(func.count(func.distinct(Run.id)))
-            .select_from(Run)
-            .join(RunDocument, RunDocument.run_id == Run.id)
-            .where(
-                Run.status.in_(_INFLIGHT),
-                RunDocument.storage_key.isnot(None),
-                RunDocument.storage_key != "",
-            )
+    """Inflight runs classified for the OCR/document-model worker pool."""
+    result = await session.execute(
+        select(Run.id).where(
+            Run.status.in_(_INFLIGHT),
+            Run.worker_pool == "ocr",
         )
-        or 0
     )
+    return len(list(result.scalars()))
 
 
 async def queue_position(session: AsyncSession, run_id: str) -> tuple[int | None, int | None]:

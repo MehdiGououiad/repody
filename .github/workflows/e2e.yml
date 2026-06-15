@@ -38,8 +38,7 @@ jobs:
         env:
           DOCKER_BUILDKIT: "1"
           COMPOSE_DOCKER_CLI_BUILD: "1"
-        run: |
-          docker compose -f compose.yaml -f compose.e2e.yaml up -d --build --wait
+        run: pnpm compose up --stack=e2e --build --wait
 
       - name: Playwright smoke
         run: pnpm test:e2e:smoke
@@ -57,4 +56,4 @@ jobs:
 
       - name: Tear down stack
         if: always()
-        run: docker compose -f compose.yaml -f compose.e2e.yaml down -v
+        run: pnpm compose down --stack=e2e --volumes

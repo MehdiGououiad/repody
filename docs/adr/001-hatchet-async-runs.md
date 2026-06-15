@@ -43,6 +43,6 @@ Use **Hatchet** as the workflow engine for audit runs:
 
 ## References
 
-- `compose.yaml` — Hatchet services
+- `deploy/compose/base.yaml` — Hatchet services
 - `backend/src/audit_workbench/hatchet/worker.py`
 - [DEPLOY.md](../../DEPLOY.md) — Hatchet env vars

@@ -1,4 +1,4 @@
-import type { RunAuditDetail } from "@/lib/stores/audit-run-store";
+import type { RunAuditDetail } from "@/lib/types/audit";
 import { humanizeRunError } from "@/lib/api/api-error";
 import { browserJson } from "@/lib/api/http";
 import { watchRunEvents } from "@/lib/api/run-events";

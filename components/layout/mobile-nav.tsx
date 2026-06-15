@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -20,6 +19,8 @@ import {
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { isNavActive } from "@/lib/navigation";
 
 const navItems = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -29,7 +30,7 @@ const navItems = [
 ] as const;
 
 export function MobileNav() {
-  const pathname = usePathname();
+  const pathname = useClientPathname();
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
   const [open, setOpen] = useState(false);
@@ -80,9 +81,7 @@ export function MobileNav() {
 
         <nav className="flex-1 flex flex-col gap-1 px-2" aria-label={tBrand("name")}>
           {navItems.map(({ href, labelKey, icon: Icon }) => {
-            const active =
-              pathname === href ||
-              (href !== "/dashboard" && pathname.startsWith(href));
+            const active = isNavActive(pathname, href);
             return (
               <Link
                 key={href}

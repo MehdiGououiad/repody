@@ -1,4 +1,5 @@
 import { formatApiError } from "@/lib/api/api-error";
+import { resolveAuthCredential, workflowAuthHeaders } from "@/lib/api/auth-policy";
 
 const SERVER_BASE =
   process.env.INTERNAL_API_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
@@ -21,24 +22,30 @@ export async function readApiError(res: Response, label: string): Promise<never>
   throw new Error(`${label}: ${detail}`);
 }
 
-/** Browser — Next.js `/api` rewrite (admin token via middleware). */
+/** Browser — Next.js `/api` rewrite (credential per auth policy). */
 export async function browserFetch(
   path: string,
-  init?: RequestInit & { timeoutMs?: number }
+  init?: RequestInit & { timeoutMs?: number; workflowApiKey?: string }
 ): Promise<Response> {
-  const { timeoutMs, ...rest } = init ?? {};
+  const { timeoutMs, workflowApiKey, ...rest } = init ?? {};
   const controller = timeoutMs ? new AbortController() : null;
   const timer =
     controller && timeoutMs
       ? setTimeout(() => controller.abort(), timeoutMs)
       : null;
   const normalized = path.startsWith("/api") ? path : `/api${apiPath(path)}`;
+  const credential = resolveAuthCredential(normalized);
+  const authHeaders: HeadersInit =
+    credential === "workflow" && workflowApiKey
+      ? workflowAuthHeaders(workflowApiKey)
+      : {};
   try {
     return await fetch(normalized, {
       ...rest,
       signal: controller?.signal ?? rest.signal,
       headers: {
         ...(rest.body instanceof FormData ? {} : { "content-type": "application/json" }),
+        ...authHeaders,
         ...rest.headers,
       },
     });
