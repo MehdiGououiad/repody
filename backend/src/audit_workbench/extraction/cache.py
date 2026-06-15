@@ -12,7 +12,7 @@ from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
 
-CACHE_VERSION = "v4"
+CACHE_VERSION = "v5"
 
 
 async def _redis_client():
@@ -23,12 +23,15 @@ async def _redis_client():
 
 
 def schema_fingerprint(schema: list[SchemaFieldSpec]) -> str:
-    names = sorted(
-        f.name.strip().lower().replace(" ", "_")
-        for f in schema
-        if f.name.strip()
-    )
-    return hashlib.sha256(",".join(names).encode()).hexdigest()[:16]
+    """Fingerprint field names and extraction prompts (descriptions) in schema order."""
+    parts: list[str] = []
+    for field in schema:
+        name = field.name.strip().lower().replace(" ", "_")
+        if not name:
+            continue
+        description = (field.description or "").strip()
+        parts.append(f"{name}\x1f{description}")
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
 
 def cache_key(

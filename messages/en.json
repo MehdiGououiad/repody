@@ -4,7 +4,7 @@
     "tagline": "Enterprise Audit"
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Control center",
     "workflows": "Workflow Builder",
     "audits": "Audit Reports",
     "settings": "Operator Console",
@@ -80,9 +80,14 @@
     "queueServerless": "Runs are processed in order. Serverless GPU jobs may also wait 1–2 minutes on the first request after idle."
   },
   "dashboard": {
-    "title": "Overview",
+    "title": "Control center",
     "description": "Audit activity, compliance health, and workflow status at a glance.",
-    "pageDescription": "Audit activity, compliance health, and workflow status at a glance.",
+    "pageDescription": "Your command center — platform health, workflows, audit runs, and operator tools in one place.",
+    "eyebrow": "Control center",
+    "auditActivity": "Audit activity",
+    "offlineTitle": "Platform not connected",
+    "offlineHint": "Start the API stack to load live metrics. You can still open the workflow builder and configure schemas offline.",
+    "offlineCta": "Create workflow",
     "recentSubmissions": "Recent audit runs",
     "workflowStatus": "Workflows",
     "workflowsTotal": "total",
@@ -127,6 +132,69 @@
         "other": "Other",
         "none": "No failures"
       }
+    },
+    "getStarted": {
+      "title": "Get your first audit running",
+      "description": "Follow the same three steps as the workflow builder — define fields, add rules, then test and deploy.",
+      "stepLabel": "Step {number}",
+      "footerHint": "When deployed, API runs and test results will appear in the sections below."
+    },
+    "platform": {
+      "title": "Platform pulse",
+      "hint": "Queue, workers, extraction runtime, and operator mode.",
+      "openConsole": "Operator console",
+      "queue": "Runs in pipeline",
+      "queueDetail": "{queued} queued · {inflight} running",
+      "queueIdle": "No runs waiting or in progress",
+      "workers": "Workers",
+      "workersReady": "Ready",
+      "workersAttention": "Check queue",
+      "extraction": "Extraction",
+      "operator": "Operator",
+      "operatorOn": "Actions on",
+      "operatorReadOnly": "Read only",
+      "cacheOn": "Cache on · {backend}",
+      "cacheOff": "Extraction cache disabled",
+      "statusOk": "healthy",
+      "statusUnknown": "unknown",
+      "llmOn": "LLM validation on",
+      "llmOff": "Logic only",
+      "runsInPipeline": "{count} in pipeline"
+    },
+    "fleet": {
+      "title": "Workflow fleet",
+      "hint": "Deployed APIs with live stats, plus drafts ready to finish.",
+      "manageAll": "All workflows",
+      "liveApis": "{count, plural, one {# live API} other {# live APIs}}",
+      "drafts": "{count, plural, one {# draft} other {# drafts}}"
+    },
+    "extraction": {
+      "title": "Document model health",
+      "hint": "Repody VLM / inference runtime reachability.",
+      "manageModels": "Model settings",
+      "unknownModel": "Default model",
+      "runtimeUp": "Runtime reachable",
+      "runtimeDown": "Runtime unreachable",
+      "modelLoaded": "Model loaded",
+      "modelNotLoaded": "Model not loaded"
+    },
+    "operator": {
+      "title": "Operator & benchmarks",
+      "hint": "Background jobs for model pull, warmup, and quality benchmarks.",
+      "openBenchmarks": "Benchmarks",
+      "latestBenchmark": "Latest benchmark",
+      "passed": "Passed",
+      "failed": "Failed",
+      "fieldAccuracy": "Field accuracy",
+      "profile": "Profile",
+      "recentJobs": "Recent operator jobs",
+      "noJobs": "No operator jobs yet — run a benchmark from Settings."
+    },
+    "quickNav": {
+      "newWorkflow": "New workflow",
+      "workflows": "Workflow builder",
+      "audits": "Audit reports",
+      "console": "Operator console"
     }
   },
   "audits": {
@@ -285,13 +353,22 @@
         "rules": "Validation rules",
         "rulesHint": "Logic and LLM checks on extracted values",
         "upload": "Test & deploy",
-        "uploadHint": "Upload a sample → extract → validate in one run"
+        "uploadHint": "Upload a sample → extract → validate in one run",
+        "back": "Back",
+        "stepOf": "Step {current} of {total}",
+        "continueToRules": "Continue to validation rules",
+        "continueToTest": "Continue to test & deploy",
+        "continueBlockedSchema": "Name each document and add at least one field before continuing.",
+        "continueRulesOptional": "Add validation rules, or continue — rules are optional for extraction-only workflows.",
+        "continueReady": "When you're done with this step, continue to the next.",
+        "finalStepHint": "Run a test with sample files, then deploy when you're ready."
       },
       "namePlaceholder": "Workflow name…",
       "backToWorkflows": "Workflows",
       "statusLive": "Live",
       "statusDraft": "Draft",
       "liveTestTitle": "Live test",
+      "liveTestHint": "Instant preview of extraction and rules against sample values.",
       "newWorkflowHint": "New workflow — draft",
       "editingHint": "Editing workflow",
       "batchMode": "Batch mode",
@@ -342,12 +419,13 @@
       },
       "deploy": {
         "tabLabel": "Deploy & API",
+        "sectionHint": "Run a sample above, then deploy the same extraction and validation as an API endpoint for other documents.",
         "readyTitle": "Ready to deploy",
-        "readyHint": "Your schema and rules are configured. Deploy to generate your live API endpoint. Any document can then be submitted — same rules apply.",
+        "readyHint": "Your schema and rules are configured. Deploy to generate your live API endpoint. Callers upload one file per document slot — extraction fields are already defined in the workflow.",
         "liveTitle": "Workflow is live",
-        "liveHint": "Your API endpoint is active. Submit any document via the API or the form below.",
+        "liveHint": "Your API endpoint is active. Upload one file per document slot; tag each file with your configured document type names via document_types.",
         "apiTitle": "API & integration",
-        "liveSubmitHint": "Each submission creates a new audit report accessible in Audit Reports."
+        "liveSubmitHint": "POST returns 202 with a runId. Poll GET /api/v1/runs/{runId} for results. Reports also appear in Audit Reports."
       },
       "ingestion": {
         "dropTitle": "Drop sample files here",
@@ -393,7 +471,7 @@
       },
       "docSource": {
         "title": "Documents & fields to extract",
-        "hint": "Step 1: name each document type, define its fields, and choose the extraction path and model per document.",
+        "hint": "Name each document type, define its fields, and choose its extraction model.",
         "documentTypeLabel": "Document name",
         "documentTypePlaceholder": "e.g. Invoice, Purchase Order, Expense Report",
         "documentTypeHint": "What kind of file will be uploaded for this document?",
@@ -411,7 +489,10 @@
         "intent": "What to extract",
         "examples": "Examples (optional)",
         "examplesPlaceholder": "INV-002418, INV-103772",
-        "empty": "No fields yet. Add one to describe what should be extracted from the document."
+        "empty": "No fields yet. Add one to describe what should be extracted from the document.",
+        "emptyShort": "No fields yet",
+        "fieldLabel": "field",
+        "fieldsLabel": "fields"
       },
       "rules": {
         "title": "Validation rules",
@@ -501,6 +582,13 @@
         "showKey": "Show API key",
         "hideKey": "Hide API key",
         "testDocumentLabel": "Test document (PDF or image)",
+        "testDocumentsLabel": "Test documents (one per slot)",
+        "testUploadHint": "Upload a file for each document slot. The API uses your configured document type names in document_types, in the same order as files.",
+        "testUploadRequired": "Upload at least one file to run extraction against your schema.",
+        "documentSlotsLabel": "Document slots",
+        "schemaHint": "Extraction schema and validation rules are defined in this workflow — callers send files tagged with the document type names you configured (document_types), not field definitions.",
+        "fieldsCount": "{count, plural, one {# field} other {# fields}}",
+        "pollHint": "POST returns 202 with runId. Use document_types with your configured names (e.g. [\"Invoice\"]). Poll GET /api/v1/runs/{runId} for results.",
         "runTest": "Run a live test",
         "runTestHint": "Execute against your configured documents and see the full extraction report",
         "processing": "Processing documents…",
@@ -648,6 +736,12 @@
     "slaBreach": "SLA breach on AUD-2023-9811",
     "slaBreachDetail": "Manual review pending > 4h",
     "vendorSync": "Vendor Master DB sync completed",
-    "vendorSyncDetail": "1,204 vendor records refreshed"
+    "vendorSyncDetail": "1,204 vendor records refreshed",
+    "alerts": {
+      "stale": {
+        "title": "Runs stuck in progress",
+        "detail": "One or more audit runs have been running for over 15 minutes — check worker logs or open Audit Reports."
+      }
+    }
   }
 }

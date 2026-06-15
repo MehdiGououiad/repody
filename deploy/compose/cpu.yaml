@@ -1,0 +1,45 @@
+# Repody VLM CPU stack. Inference is served by Docker Model Runner.
+
+x-repody-vlm-environment: &repody-vlm-environment
+  AUDIT_EXTRACTOR: pipeline
+  AUDIT_INFERENCE_MODE: ${AUDIT_INFERENCE_MODE:-docker_model_runner}
+  AUDIT_VLLM_BASE_URL: ${AUDIT_VLLM_BASE_URL:-http://vllm:8000/v1}
+  AUDIT_DOCKER_MODEL_RUNNER_BASE_URL: ${AUDIT_DOCKER_MODEL_RUNNER_BASE_URL:-http://model-runner.docker.internal/engines/llama.cpp/v1}
+  AUDIT_DEFAULT_OCR_MODEL: repody:vlm
+  AUDIT_REPODY_VLM_MODEL: ${AUDIT_REPODY_VLM_MODEL:-repody/repody-vlm:q4_k_m-16k}
+  AUDIT_REPODY_VLM_ENABLED: "true"
+  AUDIT_REPODY_VLM_MAX_TOKENS: "512"
+  AUDIT_REPODY_VLM_MAX_EDGE_PX: "1024"
+  AUDIT_REPODY_VLM_PDF_DPI: "120"
+  AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "600"
+  AUDIT_OCR_MAX_PAGES: "4"
+  AUDIT_OCR_MAX_EDGE_PX: "1024"
+  AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST: "4"
+  AUDIT_REPODY_VLM_WARMUP_ON_START: ${AUDIT_REPODY_VLM_WARMUP_ON_START:-true}
+  AUDIT_HEALTHZ_PROBE_INFERENCE: ${AUDIT_HEALTHZ_PROBE_INFERENCE:-false}
+  AUDIT_GPU_LIVE_PROBE: ${AUDIT_GPU_LIVE_PROBE:-false}
+  AUDIT_MINIO_PUBLIC_ENDPOINT: localhost:9000
+  AUDIT_DIRECT_UPLOAD_ENABLED: "true"
+  AUDIT_LOG_JSON: "true"
+  HATCHET_CLIENT_HOST_PORT: hatchet-lite:7077
+
+services:
+  api:
+    environment:
+      <<: *repody-vlm-environment
+      AUDIT_OTEL_SERVICE_NAME: repody-api
+
+  worker:
+    environment:
+      <<: *repody-vlm-environment
+      AUDIT_WORKER_POOL: ocr
+      AUDIT_WORKER_OCR_MAX_JOBS: "1"
+      AUDIT_OTEL_SERVICE_NAME: repody-worker-ocr
+
+  worker-fast:
+    environment:
+      <<: *repody-vlm-environment
+      AUDIT_WORKER_POOL: fast
+      AUDIT_WORKER_FAST_MAX_JOBS: "2"
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
+      AUDIT_OTEL_SERVICE_NAME: repody-worker-fast

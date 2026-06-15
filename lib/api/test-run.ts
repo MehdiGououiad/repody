@@ -5,6 +5,7 @@ import {
   mergeServerProgress,
   type ClientStepLabels,
 } from "@/lib/api/client-run-progress";
+import { browserFetch } from "@/lib/api/http";
 import { waitForRunUntilDone, type RunProgress } from "@/lib/api/run-poll";
 import {
   fetchWithTimeout,
@@ -17,6 +18,7 @@ import {
 } from "@/lib/api/run-upload";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { workflowAuthHeaders } from "@/lib/api/auth-policy";
 
 export type { RunProgress, RunProgressStep } from "@/lib/api/run-poll";
 export type TestRunResult = RunAuditDetail & { processedAt?: string };
@@ -33,16 +35,12 @@ function buildSnapshot(payload: {
   };
 }
 
-async function startTestRun(
+async function startTestRunSession(
   workflowId: string,
   snapshot: ReturnType<typeof buildSnapshot>,
-  options?: { inline?: boolean; fileBindings?: StoredUploadBinding[] }
-): Promise<{ runId: string } | RunAuditDetail> {
-  const inline = options?.inline ?? false;
-  const qs = new URLSearchParams({ mode: "test" });
-  if (inline) qs.set("inline", "true");
-
-  const body: Record<string, unknown> = { snapshot };
+  options?: { fileBindings?: StoredUploadBinding[] }
+): Promise<{ runId: string }> {
+  const body: Record<string, unknown> = { ...snapshot };
   if (options?.fileBindings?.length) {
     body.fileBindings = options.fileBindings.map((b) => ({
       documentId: b.documentId,
@@ -52,7 +50,7 @@ async function startTestRun(
     }));
   }
 
-  const res = await fetchWithTimeout(`/api/workflows/${workflowId}/runs/json?${qs}`, {
+  const res = await fetchWithTimeout(`/api/workflows/${workflowId}/test-run/session`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
@@ -63,9 +61,6 @@ async function startTestRun(
     raiseStepError("Start audit run", text || `HTTP ${res.status}`, res.status);
   }
   const payload = await res.json();
-  if (inline && payload.result) {
-    return payload.result as RunAuditDetail;
-  }
   return { runId: payload.runId as string };
 }
 
@@ -90,7 +85,7 @@ async function waitForRun(runId: string, reporter?: ProgressReporter) {
   return { ...detail, processedAt: detail.createdAt };
 }
 
-/** Inline test run (schema/stub path, fast). Does not mutate saved workflow. */
+/** Test run without uploads — async via Hatchet workers (poll until done). */
 export async function runTestInline(
   workflowId: string,
   payload: {
@@ -102,11 +97,8 @@ export async function runTestInline(
 ): Promise<TestRunResult> {
   const snapshot = buildSnapshot(payload);
   reportClientStep(reporter, "start-run");
-  const result = await startTestRun(workflowId, snapshot, { inline: true });
-  if ("runId" in result) {
-    return waitForRun(result.runId, reporter);
-  }
-  return { ...result, processedAt: result.createdAt };
+  const { runId } = await startTestRunSession(workflowId, snapshot);
+  return waitForRun(runId, reporter);
 }
 
 /** Upload PDFs/images and run extraction via worker (SSE with poll fallback). */
@@ -131,10 +123,7 @@ export async function runTestWithFiles(
     try {
       const bindings = await uploadViaPresign(docOrder, payload.filesByDocId, reporter);
       reportClientStep(reporter, "start-run");
-      const start = await startTestRun(workflowId, snapshot, { fileBindings: bindings });
-      if (!("runId" in start)) {
-        return { ...start, processedAt: start.createdAt };
-      }
+      const start = await startTestRunSession(workflowId, snapshot, { fileBindings: bindings });
       return waitForRun(start.runId, reporter);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -161,17 +150,23 @@ export async function runTestWithFiles(
   reportClientStep(reporter, "upload-transfer", "Uploading via API…");
   const form = new FormData();
   form.append("payload", JSON.stringify(snapshot));
-  form.append("document_ids", JSON.stringify(docOrder));
+  const docTypes = docOrder
+    .map((docId) => payload.documents.find((d) => d.id === docId)?.documentType.trim())
+    .filter((name): name is string => Boolean(name));
+  form.append("document_types", JSON.stringify(docTypes));
   for (const docId of docOrder) {
     form.append("files", payload.filesByDocId[docId]);
   }
 
   reportClientStep(reporter, "start-run");
-  const startRes = await fetchWithTimeout(`/api/workflows/${workflowId}/runs?mode=test`, {
-    method: "POST",
-    body: form,
-    timeoutMs: 120_000,
-  });
+  const startRes = await fetchWithTimeout(
+    `/api/workflows/${workflowId}/test-run/session/upload`,
+    {
+      method: "POST",
+      body: form,
+      timeoutMs: 120_000,
+    }
+  );
   if (!startRes.ok) {
     const text = await startRes.text();
     raiseStepError("Start audit run", text || `HTTP ${startRes.status}`, startRes.status);
@@ -180,11 +175,14 @@ export async function runTestWithFiles(
   return waitForRun(runId, reporter);
 }
 
-/** Deployed API run with optional file upload (SSE with poll fallback). */
+/** Deployed API run with file uploads bound to workflow document slots. */
 export async function runWorkflowApi(
   workflowId: string,
   apiKey: string,
-  file?: File,
+  payload: {
+    documents: DocumentDef[];
+    filesByDocId: Record<string, File>;
+  },
   onProgress?: (progress: RunProgress) => void
 ) {
   if (!isFullWorkflowApiKey(apiKey)) {
@@ -193,14 +191,24 @@ export async function runWorkflowApi(
     );
   }
 
-  const form = new FormData();
-  if (file) form.append("files", file);
+  const docOrder = payload.documents
+    .filter((d) => d.documentType.trim() && payload.filesByDocId[d.id])
+    .map((d) => d.documentType.trim());
 
-  const start = await fetchWithTimeout(`/api/v1/workflows/${workflowId}/runs`, {
+  const form = new FormData();
+  if (docOrder.length > 0) {
+    form.append("document_types", JSON.stringify(docOrder));
+    for (const docId of docOrder) {
+      form.append("files", payload.filesByDocId[docId]);
+    }
+  }
+
+  const start = await browserFetch(`/api/v1/workflows/${workflowId}/runs`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
+    headers: workflowAuthHeaders(apiKey),
     body: form,
     timeoutMs: 120_000,
+    workflowApiKey: apiKey,
   });
   if (!start.ok) {
     const text = await start.text();

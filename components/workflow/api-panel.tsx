@@ -21,6 +21,9 @@ import type { RunAuditDetail } from "@/lib/types/audit";
 import { reportClientError } from "@/lib/report-error";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { buildWorkflowRunSnippets, workflowDocumentSlots } from "@/lib/api/workflow-run-snippets";
+import { IngestionSection } from "@/components/workflow/ingestion-section";
+import type { DocumentDef } from "@/lib/types";
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -66,17 +69,19 @@ function InfoScreen({
   workflowName,
   apiKey,
   apiKeyHint,
+  documents,
   onRun,
-  testFile,
-  onTestFileChange,
+  filesByDocId,
+  onFilesChange,
 }: {
   workflowId: string;
   workflowName: string;
   apiKey: string;
   apiKeyHint?: string;
+  documents: DocumentDef[];
   onRun: () => void;
-  testFile: File | null;
-  onTestFileChange: (file: File | null) => void;
+  filesByDocId: Record<string, File>;
+  onFilesChange: (files: Record<string, File>) => void;
 }) {
   const t = useTranslations("workflows.builder.api");
   const [showKey, setShowKey] = useState(false);
@@ -92,13 +97,14 @@ function InfoScreen({
     (apiKey.length > 12 ? `${apiKey.slice(0, 12)}********` : apiKey || "—");
   const displayKey = showKey && hasFullKey ? apiKey : maskedKey;
   const snippetKey = hasFullKey ? apiKey : maskedKey;
-  const canRun = hasFullKey && Boolean(testFile);
-
-  const snippets = {
-    curl: `curl -X POST "${endpoint}" \\\n  -H "Authorization: Bearer ${snippetKey}" \\\n  -F "files=@/path/to/document.pdf"`,
-    python: `import requests\n\nwith open("document.pdf", "rb") as document:\n    response = requests.post(\n        "${endpoint}",\n        headers={"Authorization": "Bearer ${snippetKey}"},\n        files={"files": document},\n    )\nprint(response.json())`,
-    js: `const form = new FormData();\nform.append("files", file);\n\nconst res = await fetch("${endpoint}", {\n  method: "POST",\n  headers: { Authorization: "Bearer ${snippetKey}" },\n  body: form,\n});\nconst data = await res.json();`,
-  };
+  const slots = workflowDocumentSlots(documents);
+  const hasFiles = Object.keys(filesByDocId).length > 0;
+  const canRun = hasFullKey && hasFiles;
+  const snippets = buildWorkflowRunSnippets({
+    endpoint,
+    apiKey: snippetKey,
+    documents,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,6 +144,43 @@ function InfoScreen({
         </div>
       </div>
 
+      {slots.length > 0 ? (
+        <div className="panel-elevated rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-border bg-surface-container-low">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+              {t("documentSlotsLabel")}
+            </span>
+          </div>
+          <div className="p-4 space-y-2">
+            <p className="text-xs text-on-surface-variant leading-relaxed">{t("schemaHint")}</p>
+            <ul className="space-y-2">
+              {slots.map((doc, index) => {
+                const fieldCount = doc.schema.filter((f) => f.name.trim()).length;
+                return (
+                  <li
+                    key={doc.id}
+                    className="rounded-lg border border-border bg-surface-container-lowest px-3 py-2 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="font-mono text-[10px] text-on-surface-variant shrink-0">
+                        {index + 1}.
+                      </span>
+                      <span className="font-semibold text-on-surface truncate">
+                        {doc.documentType.trim()}
+                      </span>
+                      <span className="text-on-surface-variant">
+                        {t("fieldsCount", { count: fieldCount })}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-[11px] text-on-surface-variant leading-relaxed">{t("pollHint")}</p>
+          </div>
+        </div>
+      ) : null}
+
       {/* Code snippets */}
       <div className="panel-elevated rounded-xl overflow-hidden">
         <div className="flex items-center border-b border-border" role="tablist" aria-label={t("endpointLabel")}>
@@ -165,23 +208,25 @@ function InfoScreen({
       </div>
 
       {/* Run test CTA */}
-      <div className="panel-elevated rounded-xl p-4 space-y-3">
-        <Label htmlFor="api-test-file" className="text-xs font-semibold text-on-surface-variant">
-          {t("testDocumentLabel")}
-        </Label>
-        <input
-          id="api-test-file"
-          name="api-test-file"
-          type="file"
-          accept=".pdf,.png,.jpg,.jpeg,.webp"
-          className="block w-full text-xs text-on-surface-variant file:mr-3 file:rounded-md file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary"
-          onChange={(e) => onTestFileChange(e.target.files?.[0] ?? null)}
+      <div className="panel-elevated rounded-xl p-4 space-y-3 min-w-0">
+        <div>
+          <Label className="text-xs font-semibold text-on-surface-variant">
+            {slots.length > 1 ? t("testDocumentsLabel") : t("testDocumentLabel")}
+          </Label>
+          <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
+            {t("testUploadHint")}
+          </p>
+        </div>
+        <IngestionSection
+          documents={documents}
+          rules={[]}
+          uploads={{}}
+          filesByDocId={filesByDocId}
+          onFilesChange={onFilesChange}
         />
-        {testFile ? (
-          <p className="text-[11px] text-on-surface-variant font-mono truncate">{testFile.name}</p>
-        ) : (
-          <p className="text-[11px] text-warning">Upload a file to extract real field values.</p>
-        )}
+        {!hasFiles ? (
+          <p className="text-[11px] text-warning">{t("testUploadRequired")}</p>
+        ) : null}
         {!hasFullKey ? (
           <p className="text-[11px] text-warning">{t("keyUnavailable")}</p>
         ) : null}
@@ -322,20 +367,22 @@ export function ApiPanel({
   workflowName,
   apiKey,
   apiKeyHint,
+  documents,
 }: {
   workflowId: string;
   workflowName: string;
   apiKey: string;
   apiKeyHint?: string;
+  documents: DocumentDef[];
 }) {
   const [screen, setScreen] = useState<Screen>("info");
   const [report, setReport] = useState<RunReport | null>(null);
-  const [testFile, setTestFile] = useState<File | null>(null);
+  const [filesByDocId, setFilesByDocId] = useState<Record<string, File>>({});
   const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
 
   const run = async () => {
-    if (!testFile) return;
+    if (Object.keys(filesByDocId).length === 0) return;
     setScreen("loading");
     setRunProgress(null);
     setRunError(null);
@@ -343,7 +390,7 @@ export function ApiPanel({
       const detail = await runWorkflowApi(
         workflowId,
         apiKey,
-        testFile,
+        { documents, filesByDocId },
         (progress) => setRunProgress(progress)
       );
       setReport({ ...detail, processedAt: detail.createdAt });
@@ -374,9 +421,10 @@ export function ApiPanel({
         workflowName={workflowName}
         apiKey={apiKey}
         apiKeyHint={apiKeyHint}
+        documents={documents}
         onRun={run}
-        testFile={testFile}
-        onTestFileChange={setTestFile}
+        filesByDocId={filesByDocId}
+        onFilesChange={setFilesByDocId}
       />
     </>
   );

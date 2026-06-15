@@ -269,11 +269,39 @@
   animation: page-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.panel-reveal {
+  animation: page-enter 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.panel-expand {
+  display: grid;
+  transition: grid-template-rows 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.panel-expand[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.panel-expand[data-open="false"] {
+  grid-template-rows: 0fr;
+}
+
+.panel-dock {
+  transition: max-height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .page-enter-stagger > *,
+  .panel-reveal,
+  .panel-dock,
   .accent-rule {
     animation: none;
+  }
+
+  .panel-expand,
+  .panel-dock {
+    transition: none;
   }
   *,
   *::before,

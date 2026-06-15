@@ -1,41 +1,40 @@
 #!/usr/bin/env bash
-# One-time cloud server bootstrap (Ubuntu 22.04/24.04). Run as root or with sudo.
+# Fast update after git pull — rebuild only when REPODY_BUILD=1.
+#
+#   git pull && bash deploy/cloud/bootstrap.sh
+#   git pull && REPODY_BUILD=1 bash deploy/cloud/bootstrap.sh   # after code changes
+#
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 
-if ! command -v docker >/dev/null 2>&1; then
-  echo "Installing Docker…"
-  apt-get update -qq
-  apt-get install -y ca-certificates curl
-  install -m 0755 -d /etc/apt/keyrings
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  chmod a+r /etc/apt/keyrings/docker.asc
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-    $(. /etc/os-release && echo "${VERSION_CODENAME:-$VERSION_ID}") stable" \
-    > /etc/apt/sources.list.d/docker.list
-  apt-get update -qq
-  apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  systemctl enable --now docker
-fi
+# shellcheck source=deploy/cloud/lib.sh
+source "$ROOT/deploy/cloud/lib.sh"
 
-if [[ ! -f .env ]]; then
-  echo "No .env found. Run: bash deploy/cloud/setup-env.sh"
+if [[ "$(uname -s)" != "Linux" ]]; then
+  echo "Run this on your Ubuntu VPS." >&2
   exit 1
 fi
 
-# Load secrets for compose substitution (hash values stay in the file; do not source .env)
-export DOCKER_BUILDKIT=1
-export COMPOSE_DOCKER_CLI_BUILD=1
+ensure_docker
 
-COMPOSE_FILES="-f compose.yaml -f compose.cpu.yaml -f compose.prod.yaml -f compose.public.yaml -f compose.cloud.yaml"
+if [[ ! -f .env ]]; then
+  echo "No .env found. Run: bash deploy/cloud/deploy.sh" >&2
+  exit 1
+fi
 
-echo "Building and starting Repody (cloud)…"
-docker compose --env-file .env $COMPOSE_FILES --profile web up -d --build
+if cpu_inference_on_vps; then
+  ensure_model_plugin
+  pull_repody_vlm_model
+fi
 
-PUBLIC_DOMAIN="$(grep '^PUBLIC_DOMAIN=' .env | cut -d= -f2- | tr -d '\r')"
+pull_infra_images
+
+echo "Starting Repody…"
+compose_up_cloud
+
+PUBLIC_DOMAIN="$(env_value PUBLIC_DOMAIN)"
 echo ""
-echo "Deployment started. Wait ~2 minutes, then open: https://${PUBLIC_DOMAIN}"
-echo "Logs: docker compose --env-file .env $COMPOSE_FILES logs -f --tail=100 web api worker"
+echo "Done. https://${PUBLIC_DOMAIN}"
+echo "$(compose_logs_hint)"

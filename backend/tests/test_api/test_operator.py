@@ -21,7 +21,7 @@ async def test_operator_status_is_available_in_read_only_mode(client):
 async def test_operator_actions_are_gated_by_default(client):
     response = await client.post(
         "/v1/operator/models/pull",
-        json={"model": "agentcontrol/repody-vlm:q4_k_m-16k"},
+        json={"model": "repody/repody-vlm:q4_k_m-16k"},
     )
 
     assert response.status_code == 403

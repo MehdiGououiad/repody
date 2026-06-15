@@ -45,7 +45,7 @@ def main() -> None:
             ),
         )
     )
-    name = f"audit-worker-{pool}"
+    name = f"repody-worker-{pool}"
     log.info("hatchet_worker_starting", name=name, pool=pool, slots=slots)
 
     asyncio.run(_startup_warmup(pool))

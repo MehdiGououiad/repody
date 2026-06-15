@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -15,6 +14,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { isNavActive } from "@/lib/navigation";
 
 const navItems = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -24,7 +25,7 @@ const navItems = [
 ] as const;
 
 export function AppSidebar() {
-  const pathname = usePathname();
+  const pathname = useClientPathname();
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
 
@@ -66,9 +67,7 @@ export function AppSidebar() {
 
       <nav className="relative flex-1 flex flex-col gap-0.5 px-2" aria-label={tBrand("name")}>
         {navItems.map(({ href, labelKey, icon: Icon }) => {
-          const active =
-            pathname === href ||
-            (href !== "/dashboard" && pathname.startsWith(href));
+          const active = isNavActive(pathname, href);
           return (
             <Link
               key={href}

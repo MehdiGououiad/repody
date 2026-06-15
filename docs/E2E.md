@@ -14,10 +14,10 @@ In-memory API tests (no stack required): `pnpm test:api`.
 ## Prerequisites
 
 1. **Postgres + API** (pick one):
-   - `docker compose up -d postgres api`
-   - Or local: `pnpm dev:api` with `AUDIT_DATABASE_URL` set
+   - `pnpm compose up --stack=dev --detach` (infra + api + workers)
+   - Or local: `pnpm dev:api` with `AUDIT_DATABASE_URL` set (start Postgres with `pnpm compose up --stack=dev --only=infra --detach`)
 2. **Web**: `pnpm dev` (port 3000)  
-   Or full stack: `docker compose up` (ensure web image was built with `BACKEND_URL=http://api:8000`).
+   Or full stack in Docker: `pnpm compose up --stack=dev --only=web --profile=web-docker --build --detach`.
 
 3. **Playwright browser** (once per machine):
 
@@ -53,7 +53,7 @@ pnpm test:platform:api    # live API journey only
 Runs **nightly** and on **workflow_dispatch** only (Actions → E2E smoke → Run workflow). Not triggered on every push — use `pnpm test:e2e:smoke` locally before merge if needed.
 
 ```powershell
-docker compose -f compose.yaml -f compose.e2e.yaml up -d --build --wait
+pnpm compose up --stack=e2e --build --wait
 pnpm test:e2e:smoke
 ```
 
@@ -79,7 +79,7 @@ Until a document is present, upload tests are **skipped** (other specs still run
 ## CI sketch
 
 ```yaml
-- run: docker compose up -d --wait
+- run: pnpm compose up --stack=e2e --build --wait
 - run: pnpm exec playwright install chromium --with-deps
 - run: pnpm test:platform
   env:

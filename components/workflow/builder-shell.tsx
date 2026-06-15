@@ -2,15 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import {
-  FlaskConical,
   AlertCircle,
   User,
   CalendarDays,
 } from "lucide-react";
 import { DocumentsSection } from "./documents-section";
 import { RulesPanel } from "./rules-panel";
-import { DryRunPanel } from "./dry-run-panel";
-import { BuilderStepNav, stepComplete } from "./builder/step-nav";
+import { BuilderStepNav, stepComplete, type BuilderStep } from "./builder/step-nav";
+import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { TestDeployStep } from "./builder/test-run-panel";
 import { BuilderTopbar } from "./builder/builder-topbar";
 import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
@@ -28,7 +27,6 @@ function BuilderShellCore({
   mode: BuilderMode;
   ruleLibrary?: RuleTemplate[];
 }) {
-  const t = useTranslations("workflows.builder");
   const tSteps = useTranslations("workflows.builder.steps");
 
   const {
@@ -49,7 +47,6 @@ function BuilderShellCore({
     handleDeploy,
     handleSaveDraft,
     persistWorkflow,
-    primaryFields,
   } = useBuilderWorkflow(workflow, mode);
 
   const schemaReady = stepComplete(0, documents, rules);
@@ -97,54 +94,49 @@ function BuilderShellCore({
           </div>
         </aside>
 
-        <main className="flex-1 overflow-y-auto p-5 md:p-6 min-w-0 page-enter-stagger">
-          {step === 0 ? (
-            <DocumentsSection documents={documents} onChange={setDocuments} />
-          ) : null}
-          {step === 1 ? (
-            <RulesPanel
-              rules={rules}
-              documents={documents}
-              onChange={setRules}
-              onEnableLlmValidation={() => {}}
-              initialRuleLibrary={ruleLibrary}
-            />
-          ) : null}
-          {step === 2 ? (
-            <TestDeployStep
-              workflowId={activeWorkflowId}
-              name={name || workflow.name}
-              apiKey={apiKey}
-              apiKeyHint={workflow.apiKeyHint}
-              documents={documents}
-              rules={rules}
-              deployed={deployed}
-              onDeploy={handleDeploy}
-              onBeforeRun={() =>
-                persistWorkflow({ navigate: false, toastOnSuccess: false })
-              }
-              testSession={testSession}
-              onTestSessionChange={patchTestSession}
-            />
-          ) : null}
-        </main>
+        <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
+          <div key={step} className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 min-w-0">
+            <div className="mx-auto w-full max-w-4xl page-enter min-w-0">
+              {step === 0 ? (
+                <DocumentsSection documents={documents} onChange={setDocuments} />
+              ) : null}
+              {step === 1 ? (
+                <RulesPanel
+                  rules={rules}
+                  documents={documents}
+                  onChange={setRules}
+                  onEnableLlmValidation={() => {}}
+                  initialRuleLibrary={ruleLibrary}
+                />
+              ) : null}
+              {step === 2 ? (
+                <TestDeployStep
+                  workflowId={activeWorkflowId}
+                  name={name || workflow.name}
+                  apiKey={apiKey}
+                  apiKeyHint={workflow.apiKeyHint}
+                  documents={documents}
+                  rules={rules}
+                  deployed={deployed}
+                  onDeploy={handleDeploy}
+                  onBeforeRun={() =>
+                    persistWorkflow({ navigate: false, toastOnSuccess: false })
+                  }
+                  testSession={testSession}
+                  onTestSessionChange={patchTestSession}
+                />
+              ) : null}
+            </div>
+          </div>
 
-        {step < 2 ? (
-          <aside className="hidden xl:flex w-80 border-l border-border/80 shrink-0 flex-col overflow-hidden builder-panel rounded-none">
-            <div className="px-4 py-3 border-b border-border/70 bg-surface-container-low/80 flex items-center gap-2 shrink-0">
-              <FlaskConical className="h-4 w-4 text-accent-blue" aria-hidden="true" />
-              <span className="font-display text-sm font-semibold">{t("liveTestTitle")}</span>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <DryRunPanel
-                workflowId={activeWorkflowId}
-                fields={primaryFields}
-                rules={rules}
-                sampleName=""
-              />
-            </div>
-          </aside>
-        ) : null}
+          <BuilderStepFooter
+            step={step}
+            documents={documents}
+            rules={rules}
+            onBack={() => setStep((step - 1) as BuilderStep)}
+            onContinue={() => setStep((step + 1) as BuilderStep)}
+          />
+        </main>
       </div>
 
       <BuilderMobileSteps

@@ -28,7 +28,7 @@ export async function goToTestDeployStep(page: Page) {
     await stepBtn.scrollIntoViewIfNeeded();
     await stepBtn.click();
     try {
-      await expect(page.getByRole("tab", { name: "Test run" })).toBeVisible({
+      await expect(page.getByRole("button", { name: "Extract + validate" })).toBeVisible({
         timeout: 5_000,
       });
       return;
@@ -37,12 +37,12 @@ export async function goToTestDeployStep(page: Page) {
     }
   }
 
-  await expect(page.getByRole("tab", { name: "Test run" })).toBeVisible({
+  await expect(page.getByRole("button", { name: "Extract + validate" })).toBeVisible({
     timeout: 20_000,
   });
 }
 
-/** Click the live test CTA on the Test run tab. */
+/** Click the extract + validate CTA on the Test & deploy step. */
 export async function clickExtractValidate(page: Page) {
   const runBtn = page.getByRole("button", { name: "Extract + validate" });
   await expect(runBtn).toBeVisible({ timeout: 20_000 });

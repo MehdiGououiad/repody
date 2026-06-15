@@ -6,8 +6,8 @@ Uses:
   POST /v1/workflows/{id}/runs?mode=test  — multipart payload + document_ids + files
   GET  /v1/runs/{id}/status       — poll (then GET /v1/runs/{id} for result)
 
-ASGI (local tests): `AUDIT_RUN_JOBS_INLINE=true` runs `process_run()` in-process.
-Stack (pnpm docker:deploy): set `E2E_STACK=1` and `E2E_API_URL=http://api:8000`.
+ASGI (local tests): Hatchet dispatch is simulated in pytest (see tests/helpers/hatchet_sim.py).
+Stack (`pnpm compose up --stack=dev --detach`): set `E2E_STACK=1` and `E2E_API_URL=http://api:8000` for real workers.
 """
 
 from __future__ import annotations

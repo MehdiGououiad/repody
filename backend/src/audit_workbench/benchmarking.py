@@ -194,7 +194,7 @@ def html_report(report: dict[str, Any]) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgentControl OCR benchmark</title>
+<title>Repody OCR benchmark</title>
 <style>
 :root {{ color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }}
 body {{ margin: 0; padding: 32px; background: #0b1020; color: #e8edf7; }}

@@ -1,5 +1,3 @@
-import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
-
 export type ReadPathOption = {
   id: string;
   label: string;
@@ -21,12 +19,6 @@ export type ProcessingPathsResponse = {
   defaultPath: string;
   defaultValidationMode: string;
 };
-
-export async function fetchProcessingPaths(): Promise<ProcessingPathsResponse> {
-  const { data, error, response } = await browserApi.GET("/v1/processing-paths");
-  if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as ProcessingPathsResponse;
-}
 
 /** Map legacy workflow values to the current document-model read path. */
 export function normalizeReadPath(mode: string | undefined): string {

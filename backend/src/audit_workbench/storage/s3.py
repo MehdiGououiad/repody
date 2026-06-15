@@ -36,8 +36,8 @@ class S3ObjectStorage(ObjectStorage):
 
     @staticmethod
     def _endpoint(settings: Settings) -> str:
-        scheme = "https" if settings.minio_secure else "http"
-        return f"{scheme}://{settings.minio_endpoint}"
+        # In-cluster MinIO listens on HTTP; TLS for browser uploads is at the edge (Caddy).
+        return f"http://{settings.minio_endpoint}"
 
     @staticmethod
     def _public_endpoint(settings: Settings) -> str:

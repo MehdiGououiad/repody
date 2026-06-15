@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BUILDER_STEP_META,
+  stepBlocked,
   stepComplete,
   type BuilderStep,
 } from "@/components/workflow/builder/step-nav";
@@ -29,9 +30,7 @@ export function BuilderMobileSteps({
         const isActive = step === idx;
         const isDone =
           !isActive && stepComplete(idx as BuilderStep, documents, rules);
-        const isBlocked =
-          (idx === 1 && !stepComplete(0, documents, rules)) ||
-          (idx === 2 && !stepComplete(0, documents, rules));
+        const isBlocked = stepBlocked(idx as BuilderStep, documents, rules);
         return (
           <button
             key={key}

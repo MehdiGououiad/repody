@@ -3,8 +3,6 @@ import type { Workflow } from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { serverApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export { browserFetch, browserJson, serverFetch, serverJson } from "@/lib/api/openapi-client";
-
 export async function fetchWorkflows(): Promise<Workflow[]> {
   const { data, error, response } = await serverApi.GET("/v1/workflows");
   if (error || !response.ok || !data) throwOnApiError(error, response);

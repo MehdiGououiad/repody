@@ -1,0 +1,42 @@
+# OpenTelemetry traces (Tempo) — merge with deploy/compose/observability.yaml
+# Usage: ... -f deploy/compose/observability-traces.yaml --profile obs-traces up -d
+# Only merge this file when traces are desired (sets AUDIT_OTEL_ENABLED on api/workers).
+
+x-otel-environment: &otel-environment
+  AUDIT_OTEL_ENABLED: "true"
+  AUDIT_OTEL_EXPORTER_ENDPOINT: http://tempo:4318/v1/traces
+
+services:
+  tempo:
+    profiles:
+      - obs-traces
+    image: grafana/tempo:2.9.0
+    command: ["-config.file=/etc/tempo.yaml"]
+    ports:
+      - "4318:4318"
+    volumes:
+      - ../../observability/tempo-config.yaml:/etc/tempo.yaml:ro
+      - tempodata:/var/tempo
+    restart: unless-stopped
+
+  grafana:
+    depends_on:
+      - tempo
+
+  api:
+    environment:
+      <<: *otel-environment
+      AUDIT_OTEL_SERVICE_NAME: repody-api
+
+  worker:
+    environment:
+      <<: *otel-environment
+      AUDIT_OTEL_SERVICE_NAME: repody-worker-ocr
+
+  worker-fast:
+    environment:
+      <<: *otel-environment
+      AUDIT_OTEL_SERVICE_NAME: repody-worker-fast
+
+volumes:
+  tempodata:

@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 # Multi-target image — one target per microservice role.
-#   docker build --target api -t audit-api ./backend
-#   docker build --target worker -t audit-worker ./backend
+#   docker build --target api -t repody-api ./backend
+#   docker build --target worker -t repody-worker ./backend
 
-FROM python:3.12-slim AS base
+FROM python:3.13-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libgomp1 libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir uv==0.5.4
+RUN pip install --no-cache-dir uv==0.11.21
 
 WORKDIR /app
 
@@ -36,7 +36,7 @@ RUN chmod +x /app/scripts/docker-entrypoint.sh
 FROM base AS worker
 
 ENV AUDIT_RUN_MIGRATIONS_ON_STARTUP=false \
-    AUDIT_OTEL_SERVICE_NAME=audit-workbench-worker
+    AUDIT_OTEL_SERVICE_NAME=repody-worker
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 CMD ["python", "-m", "audit_workbench.hatchet.worker"]
@@ -44,7 +44,7 @@ CMD ["python", "-m", "audit_workbench.hatchet.worker"]
 # ── Control plane (FastAPI) — last stage = default `docker build` target ──────
 FROM base AS api
 
-ENV AUDIT_OTEL_SERVICE_NAME=audit-workbench-api
+ENV AUDIT_OTEL_SERVICE_NAME=repody-api
 
 EXPOSE 8000
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]

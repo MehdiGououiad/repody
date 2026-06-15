@@ -8,12 +8,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from typing import Any
 
 import httpx
-
-from audit_workbench.settings import get_settings
 
 
 async def _request_with_retry(
@@ -68,20 +65,6 @@ async def poll_run_until_done(
     raise TimeoutError(f"Run {run_id} timed out after {max_ms}ms — check worker and Model Runner logs")
 
 
-async def _process_run_inline(run_id: str) -> None:
-    """Process a queued run in-process (tests with AUDIT_RUN_JOBS_INLINE=true)."""
-    import audit_workbench.db.base as db_base
-    from audit_workbench.services.run_processor import process_run
-
-    async with db_base.async_session_factory() as session:
-        try:
-            await process_run(session, run_id)
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
-
-
 async def run_test_with_files(
     client: httpx.AsyncClient,
     workflow_id: str,
@@ -126,11 +109,6 @@ async def run_test_with_files(
         raise RuntimeError(f"POST runs failed {start.status_code}: {start.text}")
 
     run_id = start.json()["runId"]
-
-    settings = get_settings()
-    # ASGI tests without Hatchet workers: drain queued runs in-process when inline.
-    if not settings.run_jobs_inline and os.environ.get("E2E_STACK") != "1":
-        await _process_run_inline(run_id)
 
     return await poll_run_until_done(client, run_id, max_ms=max_wait_ms)
 

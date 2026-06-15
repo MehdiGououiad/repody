@@ -3,8 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import type { PlatformConfig } from "@/lib/api/platform-config";
-import type { InferenceModelsResponse } from "@/lib/api/inference";
-import type { OcrModelsResponse } from "@/lib/api/ocr";
+import type { ModelsCatalogResponse } from "@/lib/api/models-catalog";
 import type { ProcessingPathsResponse } from "@/lib/api/processing-paths";
 import type { RuleTemplate } from "@/lib/types";
 
@@ -22,13 +21,46 @@ export function useProcessingPathsCatalog() {
   });
 }
 
+export function useUnifiedModelsCatalog(enabled = true) {
+  return useQuery({
+    queryKey: ["catalog", "models-unified"],
+    enabled,
+    queryFn: async (): Promise<ModelsCatalogResponse> => {
+      const { data, error, response } = await browserApi.GET("/v1/models/catalog");
+      if (error || !response.ok || !data) throwOnApiError(error, response);
+      return data as ModelsCatalogResponse;
+    },
+    staleTime: CATALOG_STALE_MS,
+  });
+}
+
+/** @deprecated Prefer useUnifiedModelsCatalog */
 export function useOcrModelsCatalog() {
   return useQuery({
     queryKey: ["catalog", "ocr-models"],
-    queryFn: async (): Promise<OcrModelsResponse> => {
+    queryFn: async () => {
+      const unified = await browserApi.GET("/v1/models/catalog");
+      if (unified.data && unified.response.ok) {
+        const body = unified.data as ModelsCatalogResponse;
+        return {
+          models: body.models
+            .filter((m) => m.kind === "document_model")
+            .map((m) => ({
+              id: m.id,
+              label: m.label,
+              engine: m.engine ?? "",
+              runtime: m.runtime,
+              description: m.description ?? "",
+              available: m.available,
+              availabilityNote: m.availabilityNote,
+              isDefault: m.isDefault,
+            })),
+          defaultModel: body.defaultDocumentModel,
+        };
+      }
       const { data, error, response } = await browserApi.GET("/v1/ocr/models");
       if (error || !response.ok || !data) throwOnApiError(error, response);
-      return data as OcrModelsResponse;
+      return data as import("@/lib/api/ocr").OcrModelsResponse;
     },
     staleTime: CATALOG_STALE_MS,
   });
@@ -65,10 +97,26 @@ export function useModelCatalog(enabled = true) {
   return useQuery({
     queryKey: ["catalog", "inference-models"],
     enabled,
-    queryFn: async (): Promise<InferenceModelsResponse> => {
+    queryFn: async () => {
+      const unified = await browserApi.GET("/v1/models/catalog");
+      if (unified.data && unified.response.ok) {
+        const body = unified.data as ModelsCatalogResponse;
+        return {
+          models: body.models.map((m) => ({
+            id: m.id,
+            label: m.label,
+            kind: m.kind === "validation" ? "validation" : "document_model",
+            runtime: m.runtime,
+            isDefault: m.isDefault,
+          })),
+          defaultDocumentModel: body.defaultDocumentModel,
+          defaultValidationModel: body.defaultValidationModel,
+          inferenceMode: body.inferenceMode,
+        };
+      }
       const { data, error, response } = await browserApi.GET("/v1/inference/models");
       if (error || !response.ok || !data) throwOnApiError(error, response);
-      return data as InferenceModelsResponse;
+      return data as import("@/lib/api/inference").InferenceModelsResponse;
     },
     staleTime: CATALOG_STALE_MS,
   });

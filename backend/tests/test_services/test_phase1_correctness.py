@@ -7,6 +7,7 @@ import pytest
 from audit_workbench.extraction.base import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.cache import (
     cache_key_from_storage,
+    schema_fingerprint,
     should_cache_result,
 )
 from audit_workbench.extraction.parse_fields import parse_fields_json
@@ -83,7 +84,27 @@ def test_storage_cache_key_includes_content_hash():
     )
     assert key_a != key_b
     assert "abc123" in key_a
-    assert "extract:v4s" in key_a
+    assert "extract:v5s" in key_a
+
+
+def test_schema_fingerprint_includes_descriptions():
+    same_names = [
+        SchemaFieldSpec(name="total_amount", description="Total TTC"),
+        SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
+    ]
+    renamed_prompt = [
+        SchemaFieldSpec(name="total_amount", description="Montant total TTC incluant taxes"),
+        SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
+    ]
+    assert schema_fingerprint(same_names) != schema_fingerprint(renamed_prompt)
+
+
+def test_schema_fingerprint_stable_for_identical_schema():
+    schema = [
+        SchemaFieldSpec(name="total_amount", description="Total TTC"),
+        SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
+    ]
+    assert schema_fingerprint(schema) == schema_fingerprint(list(schema))
 
 
 def test_skipped_llm_rules_use_skipped_status():
@@ -122,7 +143,7 @@ async def test_llm_unavailable_is_error_when_model_runner_down(monkeypatch):
     monkeypatch.setenv("AUDIT_INFERENCE_MODE", "docker_model_runner")
     monkeypatch.setenv("AUDIT_DOCKER_MODEL_RUNNER_BASE_URL", base)
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_VALIDATION_MODEL", "agentcontrol/validation:test")
+    monkeypatch.setenv("AUDIT_VALIDATION_MODEL", "repody/validation:test")
     get_settings.cache_clear()
     get_inference_client.cache_clear()
 
@@ -244,7 +265,7 @@ def test_resolve_llm_validation_model_never_falls_back_to_repody_vlm(monkeypatch
     from audit_workbench.inference.validation_model import resolve_llm_validation_model
     from audit_workbench.settings import get_settings
 
-    monkeypatch.setenv("AUDIT_REPODY_VLM_MODEL", "agentcontrol/repody-vlm:q4_k_m-16k")
+    monkeypatch.setenv("AUDIT_REPODY_VLM_MODEL", "repody/repody-vlm:q4_k_m-16k")
     monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)
     get_settings.cache_clear()
 

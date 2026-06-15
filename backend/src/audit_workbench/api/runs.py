@@ -1,45 +1,28 @@
 from __future__ import annotations
 
-import hashlib
 import json
-import uuid
 
 import structlog
-from asgi_correlation_id import correlation_id
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from audit_workbench.api.auth import (
-    extract_bearer,
-    require_admin,
-    require_admin_or_workflow_run,
-    require_test_run_admin,
-)
+from audit_workbench.api.auth import require_admin, require_admin_or_workflow_run, require_test_run_admin
 from audit_workbench.api.deps import get_session
-from audit_workbench.db.models import Run
-from audit_workbench.schemas.run import RunAuditDetail
+from audit_workbench.schemas.common import CamelModel
 from audit_workbench.schemas.workflow import (
     DocumentDefSchema,
     RunCreatedResponse,
     RunPollResponse,
-    RunProgressSchema,
     WorkflowRuleSchema,
 )
-from audit_workbench.schemas.common import CamelModel
 from audit_workbench.services import run_service
-from audit_workbench.services.api_keys import verify_api_key
-from audit_workbench.services.mappers import load_workflow
-from audit_workbench.services.run_service import FileBinding, progress_from_run
-from audit_workbench.services.upload_validation import UploadValidationError, validate_upload_batch, validate_upload_file
-from audit_workbench.services.run_dispatch import dispatch_audit_run, mark_run_dispatch_failed
-from audit_workbench.services.worker_pool import resolve_worker_pool
-from audit_workbench.services.rate_limit import RateLimitExceeded, check_run_rate_limits
-from audit_workbench.services.admission import QueueCapacityExceeded, check_admission, refresh_queued_positions
+from audit_workbench.services.run_enqueue import EnqueueRunRequest, RunSnapshot, client_key_from_request, enqueue_run
 from audit_workbench.services.run_events import subscribe_run_progress
-from audit_workbench.settings import get_settings
-from audit_workbench.storage.factory import get_storage
+from audit_workbench.services.run_service import FileBinding
+from audit_workbench.db.models import Run
+from audit_workbench.services.run_upload_bindings import bindings_from_multipart, parse_json_form
 
 router = APIRouter(tags=["runs"])
 log = structlog.get_logger(__name__)
@@ -132,145 +115,6 @@ async def stream_run_events(
     )
 
 
-async def _enqueue_run(
-    workflow_id: str,
-    source: str,
-    authorization: str | None,
-    session: AsyncSession,
-    *,
-    file_bindings: list[FileBinding] | None = None,
-    snapshot: RunSnapshotBody | None = None,
-    client_key: str | None = None,
-    inline: bool = False,
-) -> RunCreatedResponse | RunPollResponse:
-    try:
-        await check_run_rate_limits(
-            workflow_id=workflow_id,
-            source=source,
-            client_key=client_key,
-        )
-    except RateLimitExceeded as exc:
-        raise HTTPException(429, str(exc)) from exc
-
-    try:
-        predicted_pool = await check_admission(
-            session,
-            workflow_id=workflow_id,
-            file_bindings=file_bindings,
-        )
-    except QueueCapacityExceeded as exc:
-        raise HTTPException(
-            503,
-            str(exc),
-            headers={"Retry-After": str(exc.retry_after_seconds)},
-        ) from exc
-
-    wf = await load_workflow(session, workflow_id)
-    if not wf:
-        raise HTTPException(404, "Workflow not found")
-
-    if source == "api":
-        if not wf.deployed_at:
-            raise HTTPException(409, "Workflow is not deployed.")
-        token = extract_bearer(authorization)
-        if not token or not verify_api_key(token, wf.api_key):
-            log.warning(
-                "run_create_unauthorized",
-                event_domain="audit_run",
-                workflow_id=workflow_id,
-                source=source,
-            )
-            raise HTTPException(401, "Invalid API key.")
-
-    run = await run_service.create_run(
-        session,
-        workflow_id,
-        source=source,
-        file_bindings=file_bindings,
-        snapshot_documents=snapshot.documents if snapshot else None,
-        snapshot_rules=snapshot.rules if snapshot else None,
-        snapshot_workflow_name=snapshot.workflow_name if snapshot else None,
-        force_inline=inline,
-    )
-
-    settings = get_settings()
-    if not settings.run_jobs_inline and not inline:
-        pool = predicted_pool
-        await session.commit()
-        try:
-            await dispatch_audit_run(
-                run.id,
-                pool=pool,
-                workflow_id=workflow_id,
-                request_id=correlation_id.get(),
-            )
-        except Exception as exc:
-            await mark_run_dispatch_failed(run.id, exc)
-            raise HTTPException(503, "Failed to enqueue audit run") from exc
-        await refresh_queued_positions(session)
-        await session.commit()
-        return RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status)
-
-    await session.commit()
-    if inline:
-        await session.refresh(run)
-        detail = await run_service.get_run_detail(session, run.id)
-        if not detail:
-            raise HTTPException(500, "Run failed")
-        return RunPollResponse(
-            status=run.status,
-            progress=progress_from_run(run),
-            result=detail,
-            error=run.error,
-        )
-    return RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status)
-
-
-def _client_key(source: str, authorization: str | None, request: Request | None) -> str | None:
-    if source == "api" and authorization:
-        token = authorization.replace("Bearer ", "").strip()
-        if token:
-            return hashlib.sha256(token.encode()).hexdigest()[:16]
-    if request and request.client:
-        return request.client.host
-    return None
-
-
-async def _bindings_from_uploads(
-    files: list[UploadFile],
-    document_ids: list[str] | None,
-) -> list[FileBinding]:
-    settings = get_settings()
-    validate_upload_batch(file_count=len(files), settings=settings)
-    storage = get_storage()
-    bindings: list[FileBinding] = []
-    for idx, upload in enumerate(files):
-        data = await upload.read()
-        try:
-            safe_name, verified_mime = validate_upload_file(
-                filename=upload.filename,
-                declared_mime=upload.content_type,
-                data=data,
-                settings=settings,
-            )
-        except UploadValidationError as exc:
-            raise HTTPException(400, str(exc)) from exc
-
-        upload_id = uuid.uuid4().hex
-        key = f"runs/{upload_id}/{safe_name}"
-        await storage.put_bytes(key, data, verified_mime)
-        doc_id = document_ids[idx] if document_ids and idx < len(document_ids) else None
-        bindings.append(
-            FileBinding(
-                document_id=doc_id,
-                storage_key=key,
-                mime_type=verified_mime,
-                file_name=safe_name,
-            )
-        )
-    return bindings
-
-
 def _bindings_from_stored(stored: list[StoredFileBinding]) -> list[FileBinding]:
     return [
         FileBinding(
@@ -283,22 +127,23 @@ def _bindings_from_stored(stored: list[StoredFileBinding]) -> list[FileBinding]:
     ]
 
 
-def _parse_json_form(value: str | None, field_name: str) -> list | dict | None:
-    if not value:
+def _snapshot_from_body(body: RunSnapshotBody | None) -> RunSnapshot | None:
+    if not body:
         return None
-    try:
-        return json.loads(value)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(400, f"Invalid JSON in {field_name}.") from exc
+    return RunSnapshot(
+        documents=body.documents,
+        rules=body.rules,
+        workflow_name=body.workflow_name,
+    )
 
 
-def _snapshot_from_legacy_payload(payload: str | None) -> RunSnapshotBody | None:
+def _snapshot_from_legacy_payload(payload: str | None) -> RunSnapshot | None:
     if not payload:
         return None
-    data = _parse_json_form(payload, "payload")
+    data = parse_json_form(payload, "payload")
     if not isinstance(data, dict):
         raise HTTPException(400, "Invalid JSON in payload — expected an object.")
-    return RunSnapshotBody(
+    return RunSnapshot(
         documents=[DocumentDefSchema.model_validate(d) for d in data.get("documents", [])],
         rules=[WorkflowRuleSchema.model_validate(r) for r in data.get("rules", [])],
         workflow_name=data.get("workflowName") or data.get("workflow_name"),
@@ -323,16 +168,18 @@ async def create_run_json(
     """Create a run with files already uploaded to storage (presigned PUT flow)."""
     source = "test" if mode == "test" else "api"
     bindings = _bindings_from_stored(body.file_bindings) if body.file_bindings else None
-    snapshot = body.snapshot or body.payload
-    return await _enqueue_run(
-        workflow_id,
-        source,
-        authorization,
+    snapshot = _snapshot_from_body(body.snapshot or body.payload)
+    return await enqueue_run(
         session,
-        file_bindings=bindings,
-        snapshot=snapshot,
-        client_key=_client_key(source, authorization, request),
-        inline=inline,
+        EnqueueRunRequest(
+            workflow_id=workflow_id,
+            source=source,
+            authorization=authorization,
+            file_bindings=bindings,
+            snapshot=snapshot,
+            client_key=client_key_from_request(source, authorization, request),
+            inline=inline,
+        ),
     )
 
 
@@ -350,6 +197,10 @@ async def create_run(
     session: AsyncSession = Depends(get_session),
     files: list[UploadFile] | None = File(None),
     document_ids: str | None = Form(None),
+    document_types: str | None = Form(
+        None,
+        description="JSON array of configured document type names, same order as files.",
+    ),
     payload: str | None = Form(None),
     __admin: None = Depends(require_test_run_admin),
 ):
@@ -357,19 +208,24 @@ async def create_run(
     bindings: list[FileBinding] | None = None
     snapshot = _snapshot_from_legacy_payload(payload)
     if files:
-        parsed_ids = _parse_json_form(document_ids, "document_ids")
-        if parsed_ids is not None and not isinstance(parsed_ids, list):
-            raise HTTPException(400, "Invalid JSON in document_ids — expected an array.")
-        bindings = await _bindings_from_uploads(files, parsed_ids)
-    return await _enqueue_run(
-        workflow_id,
-        source,
-        authorization,
+        bindings = await bindings_from_multipart(
+            session,
+            workflow_id,
+            files,
+            document_ids=document_ids,
+            document_types=document_types,
+        )
+    return await enqueue_run(
         session,
-        file_bindings=bindings,
-        snapshot=snapshot,
-        client_key=_client_key(source, authorization, request),
-        inline=inline,
+        EnqueueRunRequest(
+            workflow_id=workflow_id,
+            source=source,
+            authorization=authorization,
+            file_bindings=bindings,
+            snapshot=snapshot,
+            client_key=client_key_from_request(source, authorization, request),
+            inline=inline,
+        ),
     )
 
 
@@ -386,26 +242,33 @@ async def create_run_legacy(
     session: AsyncSession = Depends(get_session),
     files: list[UploadFile] | None = File(None),
     document_ids: str | None = Form(None),
+    document_types: str | None = Form(None),
 ):
     bindings = None
     if files:
-        parsed_ids = _parse_json_form(document_ids, "document_ids")
-        if parsed_ids is not None and not isinstance(parsed_ids, list):
-            raise HTTPException(400, "Invalid JSON in document_ids — expected an array.")
-        bindings = await _bindings_from_uploads(files, parsed_ids)
-    result = await _enqueue_run(
-        workflow_id,
-        "api",
-        authorization,
+        bindings = await bindings_from_multipart(
+            session,
+            workflow_id,
+            files,
+            document_ids=document_ids,
+            document_types=document_types,
+        )
+    return await enqueue_run(
         session,
-        file_bindings=bindings,
-        client_key=_client_key("api", authorization, request),
+        EnqueueRunRequest(
+            workflow_id=workflow_id,
+            source="api",
+            authorization=authorization,
+            file_bindings=bindings,
+            client_key=client_key_from_request("api", authorization, request),
+        ),
     )
-    return result
 
 
 @router.post(
     "/workflows/{workflow_id}/test-run",
+    response_model=RunCreatedResponse,
+    status_code=202,
     deprecated=True,
 )
 async def test_run(
@@ -414,17 +277,15 @@ async def test_run(
     session: AsyncSession = Depends(get_session),
     _: None = Depends(require_admin),
 ):
-    """Deprecated — use POST /runs/json?mode=test&inline=true."""
-    response = await _enqueue_run(
-        workflow_id,
-        "test",
-        None,
+    """Deprecated — use POST /runs/json?mode=test and poll GET /runs/{id}."""
+    response = await enqueue_run(
         session,
-        snapshot=body,
-        inline=True,
+        EnqueueRunRequest(
+            workflow_id=workflow_id,
+            source="test",
+            snapshot=_snapshot_from_body(body),
+        ),
     )
-    if isinstance(response, RunPollResponse):
-        if response.result:
-            payload = response.result.model_dump(by_alias=True)
-            return {**payload, "processedAt": response.result.created_at}
-    raise HTTPException(500, "Run failed")
+    if isinstance(response, RunCreatedResponse):
+        return response
+    raise HTTPException(500, "Unexpected synchronous test-run response")

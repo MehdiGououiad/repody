@@ -4,36 +4,23 @@
 
 Accepted — 2026-06-14
 
-## Context
-
-The monorepo runs as a single Docker Compose project with many overlay files (`compose.*.yaml`) and ad-hoc script combinations. Optional services (GlitchTip, Grafana/Loki) were started separately, which confused operators and blocked a clear path to horizontal scale and future Kubernetes extraction.
-
 ## Decision
 
-Treat the runtime as **composable platform modules**, each mapping to one or more Compose services:
+**6 stack presets:** `dev`, `prod`, `prod-micro`, `vps`, `gpu`, `e2e`
 
-| Module | Services | Scale |
-|--------|----------|-------|
-| `infra` | postgres, redis, minio, hatchet-* | vertical |
-| `control` | api | vertical (replicas later) |
-| `workers` | worker, worker-fast | **horizontal** (`--scale`) |
-| `edge` | web | vertical / CDN |
-| `obs` | loki, grafana, promtail | optional addon |
-| `traces` | tempo + OTEL | optional addon |
-| `errors` | glitchtip + deps | optional addon |
+**4 overlays** (flags): `--warmup`, `--lan`, `--public`, `--scale`
 
-**Stack presets** (`dev`, `dev-warm`, `prod`, `prod-scale`, `gpu`) select base compose overlays. **Addon modules** (`--with=obs,errors`) merge additional compose files and profiles.
+**7 modules:** `infra`, `control`, `workers`, `edge`, `obs`, `traces`, `bugsink`
 
-Orchestration lives in `deploy/platform-modules.mjs` and `scripts/platform.mjs`. Legacy `scripts/docker.mjs` commands remain as aliases.
+**Single CLI:** `deploy/scripts/compose.mjs` via `pnpm compose`
+
+**Recipes:** `pnpm dev` · `pnpm prod` · `pnpm stop`
+
+Deploy scripts live under `deploy/scripts/`; VPS under `deploy/cloud/`.
 
 ## Consequences
 
-- One command can start warmup + logs + GlitchTip: `pnpm dev:warmup -- --logs --glitchtip`
-- Scale workers without redeploying api: `pnpm platform:scale -- --stack=prod-scale --worker=3`
-- Each module is a candidate **microservice / Helm chart** boundary for a later migration
-- Compose files stay at repo root for now (no big-bang move); module manifest documents the seam
-
-## Alternatives considered
-
-- **Merge GlitchTip into `compose.yaml`** — rejected; couples lifecycle and RAM cost to every dev boot
-- **Immediate K8s split** — rejected; Compose modules are the stepping stone
+- Fewer stack presets to sync and document
+- `pnpm deploy:check` validates overlay combinations
+- `deploy/compose/prod.yaml` uses YAML anchors for shared prod env
+- `dev + --warmup` layers `warmup.yaml` on `dev.yaml` (does not replace dev overrides)

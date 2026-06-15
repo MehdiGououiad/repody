@@ -20,8 +20,8 @@ The product will add more document models later; routing must not hard-code a si
    - `docker_model_runner` → `AUDIT_DOCKER_MODEL_RUNNER_BASE_URL`
    - `vllm` → `AUDIT_VLLM_BASE_URL`
 3. **Compose overlays:**
-   - CPU: `compose.cpu.yaml` (Model Runner tuning, no vLLM container)
-   - GPU: `compose.gpu.yaml` adds `vllm` service; sets `AUDIT_INFERENCE_MODE=vllm` on api/worker
+   - CPU: `deploy/compose/cpu.yaml` (Model Runner tuning, no vLLM container)
+   - GPU: `deploy/compose/gpu.yaml` adds `vllm` service; sets `AUDIT_INFERENCE_MODE=vllm` on api/worker
 4. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py` (legacy module name).
 5. **LLM rule validation** stays on a separate small text model (Model Runner), never on the document-model runtime — even when `AUDIT_INFERENCE_MODE=vllm`.
 6. **Live probes** live in `services/document_model_catalog.py` (not HTTP routers).
@@ -47,8 +47,8 @@ This is intentional: validation uses a small text model; vLLM hosts the vision d
 
 **Negative**
 
-- GPU deploy always chains `compose.cpu.yaml` + `compose.gpu.yaml` (worker-fast, Hatchet tuning live in CPU base)
-- Two compose commands to document (`docker:deploy` vs `docker:deploy:gpu`)
+- GPU deploy always chains `deploy/compose/cpu.yaml` + `deploy/compose/gpu.yaml` (worker-fast, Hatchet tuning live in CPU base)
+- Two compose stacks: `pnpm compose up --stack=prod --build` vs `--stack=gpu --build`
 - “OCR” naming in API/settings is a legacy alias for document models
 
 ## Alternatives considered
@@ -80,4 +80,4 @@ If the new model needs different vLLM flags, add a dedicated compose service and
 - [DEPLOY.md](../../DEPLOY.md#gpu-stack-repody-vlm-via-vllm)
 - [docs/REPODY-VLM.md](../REPODY-VLM.md)
 - [docs/OCR_CPU.md](../OCR_CPU.md)
-- `compose.gpu.yaml`, `backend/tests/test_inference/test_vllm_runtime.py`
+- `deploy/compose/gpu.yaml`, `backend/tests/test_inference/test_vllm_runtime.py`

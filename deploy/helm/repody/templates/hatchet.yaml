@@ -1,0 +1,146 @@
+{{- if .Values.hatchet.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "repody.fullname" . }}-hatchet-config
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "repody.fullname" . }}-hatchet-postgres
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hatchet-postgres
+spec:
+  serviceName: {{ include "repody.fullname" . }}-hatchet-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: hatchet-postgres
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: hatchet-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17.6-alpine
+          env:
+            - name: POSTGRES_USER
+              value: hatchet
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "repody.secretName" . }}
+                  key: HATCHET_POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: hatchet
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "repody.fullname" . }}-hatchet-postgres
+spec:
+  clusterIP: None
+  selector:
+    {{- include "repody.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: hatchet-postgres
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-hatchet
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: hatchet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: hatchet
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: hatchet
+    spec:
+      containers:
+        - name: hatchet-lite
+          image: {{ .Values.hatchet.image | quote }}
+          ports:
+            - name: http
+              containerPort: 8888
+            - name: grpc
+              containerPort: 7077
+          env:
+            - name: DATABASE_URL
+              value: postgresql://hatchet:$(HATCHET_POSTGRES_PASSWORD)@{{ include "repody.fullname" . }}-hatchet-postgres:5432/hatchet?sslmode=disable
+            - name: HATCHET_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "repody.secretName" . }}
+                  key: HATCHET_POSTGRES_PASSWORD
+            - name: SERVER_AUTH_COOKIE_DOMAIN
+              value: localhost
+            - name: SERVER_AUTH_COOKIE_INSECURE
+              value: "t"
+            - name: SERVER_GRPC_BIND_ADDRESS
+              value: "0.0.0.0"
+            - name: SERVER_GRPC_INSECURE
+              value: "t"
+            - name: SERVER_GRPC_BROADCAST_ADDRESS
+              value: {{ include "repody.fullname" . }}-hatchet:7077
+            - name: SERVER_GRPC_PORT
+              value: "7077"
+            - name: SERVER_URL
+              value: http://{{ include "repody.fullname" . }}-hatchet:8888
+            - name: SERVER_AUTH_SET_EMAIL_VERIFIED
+              value: "t"
+          volumeMounts:
+            - name: hatchet-config
+              mountPath: /config
+      volumes:
+        - name: hatchet-config
+          persistentVolumeClaim:
+            claimName: {{ include "repody.fullname" . }}-hatchet-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "repody.fullname" . }}-hatchet
+spec:
+  selector:
+    {{- include "repody.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: hatchet
+  ports:
+    - name: http
+      port: 8888
+    - name: grpc
+      port: 7077
+{{- end }}

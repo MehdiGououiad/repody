@@ -28,6 +28,9 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
+*.py[cod]
+backend/tests/.storage/
 
 # debug
 npm-debug.log*
@@ -44,3 +47,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# python
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/.agents/

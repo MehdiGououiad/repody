@@ -207,6 +207,5 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     handleDeploy,
     handleSaveDraft,
     persistWorkflow,
-    primaryFields: documents[0]?.schema ?? [],
   };
 }

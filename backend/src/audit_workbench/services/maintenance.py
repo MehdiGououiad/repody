@@ -144,19 +144,23 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
 
 
 async def run_maintenance_cycle() -> None:
-    """One pass: fail stale running and stuck queued jobs."""
+    """One pass: fail stale running and stuck queued jobs; replay dispatch outbox."""
     settings = get_settings()
     if settings.run_jobs_inline:
         return
     reaped = await reap_stale_runs()
-    if settings.admission_control_enabled:
-        from audit_workbench.services.admission import refresh_queued_positions
+    replayed = 0
+    from audit_workbench.services.dispatch_outbox import replay_pending_dispatches
 
-        async with async_session_factory() as session:
+    async with async_session_factory() as session:
+        replayed = await replay_pending_dispatches(session)
+        if settings.admission_control_enabled:
+            from audit_workbench.services.admission import refresh_queued_positions
+
             await refresh_queued_positions(session)
-            await session.commit()
-    if reaped:
-        log.info("maintenance_cycle_done", stale_runs_reaped=reaped)
+        await session.commit()
+    if reaped or replayed:
+        log.info("maintenance_cycle_done", stale_runs_reaped=reaped, dispatches_replayed=replayed)
 
 
 async def maintenance_loop(stop: asyncio.Event) -> None:

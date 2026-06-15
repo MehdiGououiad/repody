@@ -14,6 +14,7 @@ from audit_workbench.api import (
     audits,
     diagnostics,
     inference,
+    models_catalog,
     ocr,
     platform,
     processing_paths,
@@ -21,6 +22,7 @@ from audit_workbench.api import (
     operator,
     rules_library,
     runs,
+    test_run,
     uploads,
     workflows,
 )
@@ -158,6 +160,8 @@ def create_app() -> FastAPI:
     app.include_router(platform.router, prefix="/v1", dependencies=_admin)
     app.include_router(inference.router, prefix="/v1", dependencies=_admin)
     app.include_router(ocr.router, prefix="/v1", dependencies=_admin)
+    app.include_router(models_catalog.router, prefix="/v1", dependencies=_admin)
+    app.include_router(test_run.router, prefix="/v1", dependencies=_admin)
     app.include_router(processing_paths.router, prefix="/v1", dependencies=_admin)
     app.include_router(operator.router, prefix="/v1", dependencies=_admin)
 

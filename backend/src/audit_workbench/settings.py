@@ -113,7 +113,7 @@ class Settings(BaseSettings):
         description="Register Repody VLM in the document model catalog.",
     )
     repody_vlm_model: str = Field(
-        default="agentcontrol/repody-vlm:q4_k_m-16k",
+        default="repody/repody-vlm:q4_k_m-16k",
         description="Repody VLM model id in Docker Model Runner.",
     )
     repody_vlm_max_tokens: int = Field(default=512, ge=64)
@@ -158,7 +158,7 @@ class Settings(BaseSettings):
         default=None,
         description=(
             "Docker Model Runner text model id for LLM rule validation "
-            "(e.g. agentcontrol/validation:q4_k_m-4k). Required when LLM validation is enabled."
+            "(e.g. repody/validation:q4_k_m-4k). Required when LLM validation is enabled."
         ),
     )
     validation_max_tokens: int = Field(default=128, ge=32)
@@ -236,7 +236,7 @@ class Settings(BaseSettings):
     run_events_enabled: bool = Field(default=True)
 
     otel_enabled: bool = Field(default=False)
-    otel_service_name: str = Field(default="audit-workbench-api")
+    otel_service_name: str = Field(default="repody-api")
     otel_exporter_endpoint: str = Field(default="http://localhost:4318/v1/traces")
 
     @model_validator(mode="after")

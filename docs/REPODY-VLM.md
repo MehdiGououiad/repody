@@ -1,6 +1,6 @@
 # Repody VLM on vLLM (on-prem & white-label)
 
-**Repody VLM** is the product name in the UI and docs. You do **not** need your own Hugging Face repo — the bundled stack uses the public upstream vision weights (`numind/NuExtract3`) and packages them locally as `agentcontrol/repody-vlm:q4_k_m-16k` for Docker Model Runner.
+**Repody VLM** is the product name in the UI and docs. You do **not** need your own Hugging Face repo — the bundled stack uses the public upstream vision weights (`numind/NuExtract3`) and packages them locally as `repody/repody-vlm:q4_k_m-16k` for Docker Model Runner.
 
 Repody talks to any **OpenAI-compatible vLLM** endpoint. There is no vendor-specific GPU integration — only `AUDIT_VLLM_BASE_URL` (and an optional API key).
 
@@ -22,11 +22,11 @@ AUDIT_HEALTHZ_PROBE_INFERENCE=false
 ## Option A — bundled GPU stack (this repo)
 
 ```bash
-pnpm docker:verify:gpu
-pnpm docker:deploy:gpu
+pnpm verify:gpu
+pnpm compose up --stack=gpu --build
 ```
 
-`compose.gpu.yaml` serves `numind/NuExtract3` with the recommended flags ([upstream vLLM notes](https://huggingface.co/numind/NuExtract3#vllm-deployment)):
+`deploy/compose/gpu.yaml` serves `numind/NuExtract3` with the recommended flags ([upstream vLLM notes](https://huggingface.co/numind/NuExtract3#vllm-deployment)):
 
 - `--limit-mm-per-prompt '{"image": 6, "video": 0}'`
 - `--chat-template-content-format openai`
@@ -64,12 +64,12 @@ curl -s http://YOUR_GPU_HOST:8000/v1/chat/completions \
 ```env
 AUDIT_INFERENCE_MODE=docker_model_runner
 AUDIT_DOCKER_MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
-AUDIT_REPODY_VLM_MODEL=agentcontrol/repody-vlm:q4_k_m-16k
+AUDIT_REPODY_VLM_MODEL=repody/repody-vlm:q4_k_m-16k
 ```
 
 ```bash
-pnpm docker:models:pull    # pulls upstream GGUF, tags as agentcontrol/repody-vlm:q4_k_m-16k
-pnpm docker:deploy
+pnpm models:pull    # pulls upstream GGUF, tags as repody/repody-vlm:q4_k_m-16k
+pnpm compose up --stack=prod --build
 ```
 
 ## Troubleshooting

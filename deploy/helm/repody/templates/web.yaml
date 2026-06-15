@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-web
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: edge
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: edge
+    spec:
+      containers:
+        - name: web
+          image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"
+          imagePullPolicy: {{ .Values.images.web.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: BACKEND_URL
+              value: http://{{ include "repody.fullname" . }}-api:8000
+            - name: INTERNAL_API_URL
+              value: http://{{ include "repody.fullname" . }}-api:8000
+            - name: AUDIT_ADMIN_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "repody.fullname" . }}-secrets
+                  key: AUDIT_ADMIN_API_TOKEN
+            {{- if .Values.observability.bugsinkDsn }}
+            - name: NEXT_PUBLIC_BUGSINK_DSN
+              value: {{ .Values.observability.bugsinkDsn | quote }}
+            - name: BUGSINK_DSN
+              value: {{ .Values.observability.bugsinkDsn | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "repody.fullname" . }}-web
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "repody.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: edge
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

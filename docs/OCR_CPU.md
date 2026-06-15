@@ -9,7 +9,7 @@ The platform extracts structured fields with **Repody VLM** served by **Docker M
 
 | Variable | Default | Role |
 |----------|---------|------|
-| `AUDIT_REPODY_VLM_MODEL` | `agentcontrol/repody-vlm:q4_k_m-16k` | GGUF model tag in Model Runner |
+| `AUDIT_REPODY_VLM_MODEL` | `repody/repody-vlm:q4_k_m-16k` | GGUF model tag in Model Runner |
 | `AUDIT_DEFAULT_OCR_MODEL` | `repody:vlm` | Workflow catalog id |
 | `AUDIT_DOCKER_MODEL_RUNNER_BASE_URL` | `http://model-runner.docker.internal/engines/llama.cpp/v1` | OpenAI-compatible endpoint |
 | `AUDIT_REPODY_VLM_PDF_DPI` | `120` | PDF render DPI |
@@ -20,15 +20,15 @@ The platform extracts structured fields with **Repody VLM** served by **Docker M
 ## Start the stack
 
 ```powershell
-pnpm platform:start
+pnpm prod
 # or production-like:
-pnpm docker:deploy
+pnpm compose up --stack=prod --build
 ```
 
-Pull / prepare Repody VLM (packages upstream GGUF as `agentcontrol/repody-vlm:q4_k_m-16k`):
+Pull / prepare Repody VLM (packages upstream GGUF as `repody/repody-vlm:q4_k_m-16k`):
 
 ```powershell
-pnpm docker:models:pull
+pnpm models:pull
 ```
 
 ## Verify
@@ -42,9 +42,10 @@ pnpm test:platform:integration
 ## Logs
 
 ```powershell
-pnpm docker:logs:platform
+pnpm compose logs --stack=dev
 # or
-docker compose -f compose.yaml -f compose.cpu.yaml -f compose.dev.yaml logs --tail=300 --timestamps worker api
+pnpm compose logs --stack=dev
+# or: docker compose -f deploy/compose/base.yaml -f deploy/compose/cpu.yaml -f deploy/compose/dev.yaml logs --tail=300 --timestamps worker api
 ```
 
 Look for:
@@ -67,12 +68,12 @@ Disabled by default. LLM rules validate **extracted field values** with a dedica
 model — not Repody VLM.
 
 ```powershell
-pnpm docker:models:pull:validation
+pnpm models:pull:validation
 ```
 
 ```env
 AUDIT_LLM_VALIDATION_ENABLED=true
-AUDIT_VALIDATION_MODEL=agentcontrol/validation:q4_k_m-4k
+AUDIT_VALIDATION_MODEL=repody/validation:q4_k_m-4k
 ```
 
 `AUDIT_STRUCTURED_LLM_ENABLED` is turned on automatically when LLM validation is enabled,
