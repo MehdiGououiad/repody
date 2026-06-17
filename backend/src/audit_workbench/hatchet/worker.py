@@ -16,9 +16,15 @@ log = structlog.get_logger()
 async def _warmup_ocr_models(pool: str) -> None:
     from audit_workbench.extraction.repody_vlm import warmup_repody_vlm
 
+    if pool != "ocr":
+        return
+
     settings = get_settings()
-    if pool == "ocr" and settings.repody_vlm_warmup_on_start:
-        await warmup_repody_vlm()
+    vlm_status = await warmup_repody_vlm() if settings.repody_vlm_warmup_on_start else "disabled"
+    log.info(
+        "ocr_worker_warmup_done",
+        repody_vlm=vlm_status,
+    )
 
 
 async def _startup_warmup(pool: str) -> None:
@@ -29,7 +35,9 @@ async def _startup_warmup(pool: str) -> None:
         # Warmup uses asyncio.run() in a temporary loop; close pooled httpx
         # clients so Hatchet's loop does not inherit stale connections.
         from audit_workbench.inference.http_pool import close_async_http_client
+        from audit_workbench.inference.openai_compat import close_openai_clients
 
+        await close_openai_clients()
         await close_async_http_client()
 
 

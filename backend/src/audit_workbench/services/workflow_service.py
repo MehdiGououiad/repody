@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import uuid
+import asyncio
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -9,15 +9,19 @@ from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Document, Workflow, WorkflowStatus
 from audit_workbench.schemas.workflow import WorkflowSchema
-from audit_workbench.services.mappers import load_workflow, workflow_to_schema
+from audit_workbench.services.mappers import workflow_to_schema
 from audit_workbench.services.workflow_deployment import deploy_workflow
-from audit_workbench.services.workflow_repository import upsert_workflow_aggregate
-from audit_workbench.services.workflow_stats import batch_workflow_stats, workflow_api_stats
+from audit_workbench.services.workflow_repository import (
+    load_workflow,
+    short_id,
+    upsert_workflow_aggregate,
+)
+from audit_workbench.services.workflow_stats import (
+    batch_workflow_stats,
+    workflow_api_stats,
+    workflow_stats,
+)
 from audit_workbench.services.workflow_validator import validate_workflow_rules
-
-
-def _short_id() -> str:
-    return uuid.uuid4().hex[:8]
 
 
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
@@ -32,10 +36,17 @@ async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
     )
     workflows = result.scalars().all()
     stats = await batch_workflow_stats(session, [wf.id for wf in workflows])
+    deployed = [wf for wf in workflows if wf.deployed_at]
+    api_stats_results = await asyncio.gather(
+        *[workflow_api_stats(session, wf.id) for wf in deployed]
+    )
+    api_stats_by_id = {
+        wf.id: api_stats for wf, api_stats in zip(deployed, api_stats_results, strict=True)
+    }
     out: list[WorkflowSchema] = []
     for wf in workflows:
         total, rate, last = stats.get(wf.id, (0, 0.0, None))
-        api_stats = await workflow_api_stats(session, wf.id) if wf.deployed_at else None
+        api_stats = api_stats_by_id.get(wf.id)
         out.append(
             workflow_to_schema(
                 wf,
@@ -52,8 +63,6 @@ async def get_workflow(session: AsyncSession, workflow_id: str) -> WorkflowSchem
     wf = await load_workflow(session, workflow_id)
     if not wf or wf.status == WorkflowStatus.archived.value:
         return None
-    from audit_workbench.services.mappers import workflow_stats
-
     total, rate, last = await workflow_stats(session, workflow_id)
     api_stats = await workflow_api_stats(session, workflow_id) if wf.deployed_at else None
     return workflow_to_schema(
@@ -72,7 +81,7 @@ async def create_workflow(
     description: str,
     owner: str,
 ) -> WorkflowSchema:
-    wf_id = f"wf-{_short_id()}"
+    wf_id = f"wf-{short_id()}"
     wf = Workflow(
         id=wf_id,
         name=name or "Untitled workflow",
@@ -81,7 +90,7 @@ async def create_workflow(
         owner=owner,
     )
     session.add(wf)
-    doc = Document(id=f"doc-{_short_id()}", workflow_id=wf_id, document_type="", position=0)
+    doc = Document(id=f"doc-{short_id()}", workflow_id=wf_id, document_type="", position=0)
     session.add(doc)
     await session.flush()
     wf_loaded = await load_workflow(session, wf_id)
@@ -116,8 +125,6 @@ async def upsert_workflow(session: AsyncSession, payload: WorkflowSchema) -> Wor
 
     wf_loaded = await load_workflow(session, wf.id)
     assert wf_loaded
-    from audit_workbench.services.mappers import workflow_stats
-
     total, rate, last = await workflow_stats(session, wf.id)
     return workflow_to_schema(wf_loaded, total_runs=total, success_rate=rate, last_run=last)
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""API-first OCR, extraction, and validation benchmark suite."""
+"""API-first OCR, extraction, and validation benchmark suite.
+
+Dev-only tools (stress, queue, experiments): backend/scripts/benchmark_dev.py
+"""
 
 from __future__ import annotations
 
@@ -249,7 +252,7 @@ async def _run_once(
     wall_started = time.perf_counter()
     submit_started = time.perf_counter()
     response = await client.post(
-        f"/v1/workflows/{workflow_id}/runs?mode=test",
+        f"/v1/workflows/{workflow_id}/runs",
         files=multipart,
     )
     submit_ms = round((time.perf_counter() - submit_started) * 1000)
@@ -389,8 +392,7 @@ async def run(args: argparse.Namespace) -> int:
             environment = {
                 "health": await _get_json(client, "/v1/healthz"),
                 "platform": await _get_json(client, "/v1/platform/config"),
-                "processingPaths": await _get_json(client, "/v1/processing-paths"),
-                "ocrModels": await _get_json(client, "/v1/ocr/models"),
+                "modelsCatalog": await _get_json(client, "/v1/models/catalog"),
             }
         except Exception as exc:
             print(f"Benchmark cannot reach the Docker API at {args.api}: {exc}", file=sys.stderr)
@@ -398,7 +400,7 @@ async def run(args: argparse.Namespace) -> int:
 
         availability = {
             str(model.get("id")): model
-            for model in environment["ocrModels"].get("models") or []
+            for model in environment["modelsCatalog"].get("models") or []
         }
         cache_enabled = bool(environment["platform"].get("cacheEnabled"))
         cases = _cases(

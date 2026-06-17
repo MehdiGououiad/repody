@@ -27,8 +27,10 @@ def _should_redact_key(key: str) -> bool:
 
 
 def _redact_sensitive_fields(
-    _logger: object, _method: str, event_dict: dict
-) -> dict:
+    _logger: object,
+    _method: str,
+    event_dict: structlog.types.EventDict,
+) -> structlog.types.EventDict:
     for key, value in list(event_dict.items()):
         if key in {"_record", "_from_structlog"}:
             continue
@@ -38,7 +40,11 @@ def _redact_sensitive_fields(
 
 
 def _add_service_context(settings: Settings) -> structlog.types.Processor:
-    def processor(_logger: object, _method: str, event_dict: dict) -> dict:
+    def processor(
+        _logger: object,
+        _method: str,
+        event_dict: structlog.types.EventDict,
+    ) -> structlog.types.EventDict:
         event_dict.setdefault("service.name", settings.otel_service_name)
         event_dict.setdefault("deployment.environment", settings.deployment_environment)
         return event_dict
@@ -47,7 +53,11 @@ def _add_service_context(settings: Settings) -> structlog.types.Processor:
 
 
 def _add_otel_trace_context() -> structlog.types.Processor:
-    def processor(_logger: object, _method: str, event_dict: dict) -> dict:
+    def processor(
+        _logger: object,
+        _method: str,
+        event_dict: structlog.types.EventDict,
+    ) -> structlog.types.EventDict:
         try:
             from opentelemetry import trace
 
@@ -67,7 +77,11 @@ def _add_otel_trace_context() -> structlog.types.Processor:
 def _rename_event_to_body() -> structlog.types.Processor:
     """Map structlog `event` to OTEL-style `body` while keeping `event` for compatibility."""
 
-    def processor(_logger: object, _method: str, event_dict: dict) -> dict:
+    def processor(
+        _logger: object,
+        _method: str,
+        event_dict: structlog.types.EventDict,
+    ) -> structlog.types.EventDict:
         message = event_dict.get("event")
         if isinstance(message, str):
             event_dict.setdefault("body", message)

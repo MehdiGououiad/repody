@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.db.models import Run, RunStatus, RuleResult
+from audit_workbench.db.models import RuleResult, Run, RunStatus
 from audit_workbench.schemas.metrics import (
     HealthAlert,
     KpiMetric,
@@ -64,9 +64,7 @@ async def get_metrics(session: AsyncSession) -> MetricsResponse:
     since = _week_start()
     mid = since + timedelta(days=3)
 
-    total_week_q = await session.execute(
-        select(func.count(Run.id)).where(Run.created_at >= since)
-    )
+    total_week_q = await session.execute(select(func.count(Run.id)).where(Run.created_at >= since))
     total_week = int(total_week_q.scalar() or 0)
 
     done_q = await session.execute(
@@ -185,9 +183,7 @@ async def get_metrics(session: AsyncSession) -> MetricsResponse:
         ),
     ]
 
-    prev_week_counts = await _daily_run_counts(
-        session, since=since - timedelta(days=7)
-    )
+    prev_week_counts = await _daily_run_counts(session, since=since - timedelta(days=7))
     performance = [
         PerformancePoint(
             day=_DAY_LABELS[i % 7],

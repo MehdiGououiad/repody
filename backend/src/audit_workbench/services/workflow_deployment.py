@@ -10,8 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.db.models import WorkflowStatus
 from audit_workbench.schemas.workflow import WorkflowSchema
 from audit_workbench.services.api_keys import api_key_hint, hash_api_key
-from audit_workbench.services.mappers import load_workflow, workflow_stats, workflow_to_schema
-from audit_workbench.services.workflow_stats import workflow_api_stats
+from audit_workbench.services.mappers import workflow_to_schema
+from audit_workbench.services.workflow_repository import load_workflow
+from audit_workbench.services.workflow_stats import workflow_api_stats, workflow_stats
 
 
 async def deploy_workflow(

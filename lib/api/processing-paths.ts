@@ -2,13 +2,13 @@ export type ReadPathOption = {
   id: string;
   label: string;
   description: string;
-  readKind: "document_model";
+  readKind: string;
   showOcrModel?: boolean;
-  ocrEngine?: "document_model" | null;
+  ocrEngine?: string | null;
 };
 
 export type ValidationModeOption = {
-  id: "logic_only";
+  id: string;
   label: string;
   description: string;
 };
@@ -20,10 +20,13 @@ export type ProcessingPathsResponse = {
   defaultValidationMode: string;
 };
 
-/** Map legacy workflow values to the current document-model read path. */
+/** Map legacy workflow values to supported read paths. */
 export function normalizeReadPath(mode: string | undefined): string {
   const raw = (mode ?? "document_model").toLowerCase();
   if (raw === "document_model" || raw === "vlm") return "document_model";
+  if (raw === "paddle_ocr" || raw === "paddle" || raw === "ocr" || raw === "pp-ocrv6") {
+    return "document_model";
+  }
   return "document_model";
 }
 

@@ -30,11 +30,11 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11.7.0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
 
       - name: Install Helm
@@ -48,7 +48,7 @@ jobs:
       - name: Build air-gap bundle
         env:
           REPODY_AIRGAP_VERSION: ${{ steps.ver.outputs.version }}
-          AUDIT_ADMIN_API_TOKEN: airgap-ci-placeholder
+          AUTH_SECRET: airgap-ci-placeholder-secret-32chars-min
           AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
         run: |
           pnpm airgap:build -- --version "${{ steps.ver.outputs.version }}"

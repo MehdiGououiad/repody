@@ -23,6 +23,7 @@ export const COMPOSE = {
   vps: composeFile("vps.yaml"),
   microservices: composeFile("microservices.yaml"),
   bugsink: composeFile("bugsink.yaml"),
+  keycloak: composeFile("keycloak.yaml"),
   observability: composeFile("observability.yaml"),
   observabilityTraces: composeFile("observability-traces.yaml"),
   e2e: composeFile("e2e.yaml"),

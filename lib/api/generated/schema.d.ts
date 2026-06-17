@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/healthz/live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Health Live
+         * @description Liveness for Docker and load balancers — database ping only, no GPU probe.
+         */
+        get: operations["health_live_v1_healthz_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/healthz": {
         parameters: {
             query?: never;
@@ -11,8 +31,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Healthz */
-        get: operations["healthz_v1_healthz_get"];
+        /**
+         * Health Readiness
+         * @description Readiness with queue depth, storage, and optional inference runtime probe.
+         */
+        get: operations["health_readiness_v1_healthz_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -118,7 +141,7 @@ export interface paths {
         };
         /**
          * Get Run Status
-         * @description Lightweight poll — status + progress only (no full audit payload).
+         * @description Lightweight poll — status and progress only (no full audit payload).
          */
         get: operations["get_run_status_v1_runs__run_id__status_get"];
         put?: never;
@@ -195,49 +218,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create Run */
+        /**
+         * Create Run
+         * @description Multipart fallback when presigned upload is unavailable.
+         */
         post: operations["create_run_v1_workflows__workflow_id__runs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workflows/{workflow_id}/run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Run Legacy
-         * @deprecated
-         */
-        post: operations["create_run_legacy_v1_workflows__workflow_id__run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workflows/{workflow_id}/test-run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Test Run
-         * @deprecated
-         * @description Deprecated — use POST /runs/json?mode=test&inline=true.
-         */
-        post: operations["test_run_v1_workflows__workflow_id__test_run_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -380,6 +365,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/platform/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Platform Config
+         * @description Read-only platform configuration snapshot (safe AUDIT_* fields).
+         */
+        get: operations["get_platform_config_v1_platform_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/models/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Models Catalog
+         * @description Document and validation model catalog with live availability.
+         */
+        get: operations["get_models_catalog_v1_models_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/diagnostics/ocr": {
         parameters: {
             query?: never;
@@ -392,74 +417,6 @@ export interface paths {
          * @description Document model runtime status (Docker Model Runner or vLLM).
          */
         get: operations["ocr_diagnostic_v1_diagnostics_ocr_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/platform/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Platform Config */
-        get: operations["get_platform_config_v1_platform_config_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/inference/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Inference Models */
-        get: operations["list_inference_models_v1_inference_models_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/ocr/models": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Ocr Models */
-        get: operations["list_ocr_models_v1_ocr_models_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/processing-paths": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Processing Paths */
-        get: operations["get_processing_paths_v1_processing_paths_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -649,19 +606,17 @@ export interface components {
             /** Audits */
             audits: components["schemas"]["AuditListItem"][];
         };
-        /** Body_create_run_legacy_v1_workflows__workflow_id__run_post */
-        Body_create_run_legacy_v1_workflows__workflow_id__run_post: {
-            /** Files */
-            files?: string[] | null;
-            /** Document Ids */
-            document_ids?: string | null;
-        };
         /** Body_create_run_v1_workflows__workflow_id__runs_post */
         Body_create_run_v1_workflows__workflow_id__runs_post: {
             /** Files */
             files?: string[] | null;
             /** Document Ids */
             document_ids?: string | null;
+            /**
+             * Document Types
+             * @description JSON array of configured document type names, same order as files.
+             */
+            document_types?: string | null;
             /** Payload */
             payload?: string | null;
         };
@@ -719,6 +674,42 @@ export interface components {
             /** Calls */
             calls: number;
         };
+        /** CatalogModelEntry */
+        CatalogModelEntry: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Engine
+             * @default
+             */
+            engine: string;
+            /**
+             * Runtime
+             * @default
+             */
+            runtime: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Available
+             * @default true
+             */
+            available: boolean;
+            /** Availabilitynote */
+            availabilityNote?: string | null;
+            /**
+             * Isdefault
+             * @default false
+             */
+            isDefault: boolean;
+        };
         /** ConfirmUploadItem */
         ConfirmUploadItem: {
             /** Storagekey */
@@ -743,7 +734,6 @@ export interface components {
         /** CreateRunJsonBody */
         CreateRunJsonBody: {
             snapshot?: components["schemas"]["RunSnapshotBody"] | null;
-            payload?: components["schemas"]["RunSnapshotBody"] | null;
             /**
              * Filebindings
              * @default []
@@ -916,35 +906,58 @@ export interface components {
             /** Href */
             href?: string | null;
         };
-        /** InferenceModelSchema */
-        InferenceModelSchema: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Kind */
-            kind: string;
+        /** HealthLiveResponse */
+        HealthLiveResponse: {
             /**
-             * Runtime
-             * @default docker_model_runner
+             * Status
+             * @constant
              */
-            runtime: string;
-            /**
-             * Isdefault
-             * @default false
-             */
-            isDefault: boolean;
+            status: "ok";
         };
-        /** InferenceModelsResponse */
-        InferenceModelsResponse: {
-            /** Models */
-            models: components["schemas"]["InferenceModelSchema"][];
-            /** Defaultdocumentmodel */
-            defaultDocumentModel: string;
-            /** Defaultvalidationmodel */
-            defaultValidationModel?: string | null;
-            /** Inferencemode */
-            inferenceMode: string;
+        /** HealthReadinessResponse */
+        HealthReadinessResponse: {
+            /**
+             * Status
+             * @constant
+             */
+            status: "ok";
+            /** Extractor */
+            extractor: string;
+            /** Inference */
+            inference: string;
+            /** Modelrunner */
+            modelRunner: boolean | null;
+            /** Vllm */
+            vllm?: boolean | null;
+            /** Storagebackend */
+            storageBackend: string;
+            /** Directuploadenabled */
+            directUploadEnabled: boolean;
+            /** Cacheenabled */
+            cacheEnabled: boolean;
+            /** Dbpoolsize */
+            dbPoolSize: number;
+            /** Queuebackend */
+            queueBackend: string;
+            /** Structuredllm */
+            structuredLlm: boolean;
+            /** Ratelimitenabled */
+            rateLimitEnabled: boolean;
+            /** Admissioncontrolenabled */
+            admissionControlEnabled: boolean;
+            /** Queuedruns */
+            queuedRuns: number;
+            /** Runningruns */
+            runningRuns: number;
+            /** Inflightruns */
+            inflightRuns: number;
+            /** Authenabled */
+            authEnabled: boolean;
+            /** Oidcenabled */
+            oidcEnabled: boolean;
+            workerPools: components["schemas"]["WorkerPoolsHealth"];
+            /** Hatchetconfigured */
+            hatchetConfigured: boolean;
         };
         /** KpiMetric */
         KpiMetric: {
@@ -992,6 +1005,31 @@ export interface components {
             /** Model */
             model: string;
         };
+        /** ModelsCatalogResponse */
+        ModelsCatalogResponse: {
+            /** Models */
+            models: components["schemas"]["CatalogModelEntry"][];
+            /** Defaultdocumentmodel */
+            defaultDocumentModel: string;
+            /** Defaultvalidationmodel */
+            defaultValidationModel?: string | null;
+            /** Inferencemode */
+            inferenceMode: string;
+            /** Paths */
+            paths?: components["schemas"]["ReadPathOption"][];
+            /** Validationmodes */
+            validationModes?: components["schemas"]["ValidationModeOption"][];
+            /**
+             * Defaultpath
+             * @default document_model
+             */
+            defaultPath: string;
+            /**
+             * Defaultvalidationmode
+             * @default logic_only
+             */
+            defaultValidationMode: string;
+        };
         /** OcrDiagnosticResponse */
         OcrDiagnosticResponse: {
             /** Ok */
@@ -1008,11 +1046,6 @@ export interface components {
              * @default false
              */
             inferenceReachable: boolean;
-            /**
-             * Modelrunnerreachable
-             * @default false
-             */
-            modelRunnerReachable: boolean;
             /**
              * Modelinregistry
              * @default false
@@ -1055,41 +1088,6 @@ export interface components {
                 [key: string]: number | string | boolean;
             };
         };
-        /** OcrModelOption */
-        OcrModelOption: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Engine */
-            engine: string;
-            /** Runtime */
-            runtime: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-            /**
-             * Available
-             * @default true
-             */
-            available: boolean;
-            /** Availabilitynote */
-            availabilityNote?: string | null;
-            /**
-             * Isdefault
-             * @default false
-             */
-            isDefault: boolean;
-        };
-        /** OcrModelsResponse */
-        OcrModelsResponse: {
-            /** Models */
-            models: components["schemas"]["OcrModelOption"][];
-            /** Defaultmodel */
-            defaultModel: string;
-        };
         /** PerformancePoint */
         PerformancePoint: {
             /** Day */
@@ -1111,8 +1109,6 @@ export interface components {
             storageBackend: string;
             /** Queuebackend */
             queueBackend: string;
-            /** Runjobsinline */
-            runJobsInline: boolean;
             /** Directuploadenabled */
             directUploadEnabled: boolean;
             /** Cacheenabled */
@@ -1159,6 +1155,16 @@ export interface components {
              * @default false
              */
             llmValidationEnabled: boolean;
+            /**
+             * Gpuliveprobe
+             * @default false
+             */
+            gpuLiveProbe: boolean;
+            /**
+             * Healthzprobeinference
+             * @default false
+             */
+            healthzProbeInference: boolean;
         };
         /** PresignFileRequest */
         PresignFileRequest: {
@@ -1211,20 +1217,6 @@ export interface components {
             headers?: {
                 [key: string]: string;
             };
-        };
-        /** ProcessingPathsResponse */
-        ProcessingPathsResponse: {
-            /** Paths */
-            paths: components["schemas"]["ReadPathOption"][];
-            /** Validationmodes */
-            validationModes: components["schemas"]["ValidationModeOption"][];
-            /** Defaultpath */
-            defaultPath: string;
-            /**
-             * Defaultvalidationmode
-             * @default logic_only
-             */
-            defaultValidationMode: string;
         };
         /** ReadPathOption */
         ReadPathOption: {
@@ -1443,6 +1435,11 @@ export interface components {
              */
             cacheHit: boolean;
             /**
+             * Gpucoldstartlikely
+             * @default false
+             */
+            gpuColdStartLikely: boolean;
+            /**
              * Ocrskipped
              * @default false
              */
@@ -1499,10 +1496,15 @@ export interface components {
             ocrModel?: string | null;
             /** Durationms */
             durationMs?: number | null;
+            /**
+             * Gpucoldstarthint
+             * @default false
+             */
+            gpuColdStartHint: boolean;
         };
         /**
          * RunSnapshotBody
-         * @description Ephemeral workflow config for this run only — does not mutate the saved workflow.
+         * @description Ephemeral workflow config for a single run — does not mutate the saved workflow.
          */
         RunSnapshotBody: {
             /**
@@ -1515,8 +1517,8 @@ export interface components {
              * @default []
              */
             rules: components["schemas"]["WorkflowRuleSchema"][];
-            /** Workflow Name */
-            workflow_name?: string | null;
+            /** Workflowname */
+            workflowName?: string | null;
         };
         /** RunSummary */
         RunSummary: {
@@ -1609,6 +1611,13 @@ export interface components {
             share: number;
             /** Color */
             color: string;
+        };
+        /** WorkerPoolsHealth */
+        WorkerPoolsHealth: {
+            /** Fast */
+            fast: string;
+            /** Ocr */
+            ocr: string;
         };
         /** WorkflowApiStatsSchema */
         WorkflowApiStatsSchema: {
@@ -1738,7 +1747,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    healthz_v1_healthz_get: {
+    health_live_v1_healthz_live_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1753,7 +1762,27 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["HealthLiveResponse"];
+                };
+            };
+        };
+    };
+    health_readiness_v1_healthz_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HealthReadinessResponse"];
                 };
             };
         };
@@ -2051,7 +2080,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RunPollResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2114,13 +2143,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
+            /** @description Server-Sent Events stream of run progress updates */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
+                    "text/event-stream": string;
                 };
             };
             /** @description Validation Error */
@@ -2136,11 +2166,7 @@ export interface operations {
     };
     create_run_json_v1_workflows__workflow_id__runs_json_post: {
         parameters: {
-            query?: {
-                mode?: string | null;
-                /** @description Process synchronously (test/dev only). */
-                inline?: boolean;
-            };
+            query?: never;
             header?: {
                 authorization?: string | null;
             };
@@ -2152,84 +2178,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["CreateRunJsonBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunCreatedResponse"] | components["schemas"]["RunPollResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_run_v1_workflows__workflow_id__runs_post: {
-        parameters: {
-            query?: {
-                mode?: string | null;
-                /** @description Process synchronously (test/dev only). */
-                inline?: boolean;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_create_run_v1_workflows__workflow_id__runs_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunCreatedResponse"] | components["schemas"]["RunPollResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_run_legacy_v1_workflows__workflow_id__run_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_create_run_legacy_v1_workflows__workflow_id__run_post"];
             };
         };
         responses: {
@@ -2253,7 +2201,7 @@ export interface operations {
             };
         };
     };
-    test_run_v1_workflows__workflow_id__test_run_post: {
+    create_run_v1_workflows__workflow_id__runs_post: {
         parameters: {
             query?: never;
             header?: {
@@ -2264,19 +2212,19 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["RunSnapshotBody"];
+                "multipart/form-data": components["schemas"]["Body_create_run_v1_workflows__workflow_id__runs_post"];
             };
         };
         responses: {
             /** @description Successful Response */
-            200: {
+            202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["RunCreatedResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2554,40 +2502,6 @@ export interface operations {
             };
         };
     };
-    ocr_diagnostic_v1_diagnostics_ocr_get: {
-        parameters: {
-            query?: {
-                /** @description Run a short Repody VLM probe. */
-                run_infer?: boolean;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OcrDiagnosticResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_platform_config_v1_platform_config_get: {
         parameters: {
             query?: never;
@@ -2619,7 +2533,7 @@ export interface operations {
             };
         };
     };
-    list_inference_models_v1_inference_models_get: {
+    get_models_catalog_v1_models_catalog_get: {
         parameters: {
             query?: never;
             header?: {
@@ -2636,7 +2550,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InferenceModelsResponse"];
+                    "application/json": components["schemas"]["ModelsCatalogResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2650,9 +2564,12 @@ export interface operations {
             };
         };
     };
-    list_ocr_models_v1_ocr_models_get: {
+    ocr_diagnostic_v1_diagnostics_ocr_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Run a short Repody VLM probe. */
+                run_infer?: boolean;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -2667,38 +2584,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OcrModelsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_processing_paths_v1_processing_paths_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProcessingPathsResponse"];
+                    "application/json": components["schemas"]["OcrDiagnosticResponse"];
                 };
             };
             /** @description Validation Error */

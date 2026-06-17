@@ -12,7 +12,9 @@ def effective_pdf_page_limit(max_pages: int, *, hard_cap: int = OCR_MAX_PAGES_HA
     return max(1, min(max_pages, hard_cap))
 
 
-def pages_to_process(doc_page_count: int, max_pages: int, *, hard_cap: int = OCR_MAX_PAGES_HARD_CAP) -> int:
+def pages_to_process(
+    doc_page_count: int, max_pages: int, *, hard_cap: int = OCR_MAX_PAGES_HARD_CAP
+) -> int:
     """Clamp document page count to configured extraction limit."""
     if doc_page_count <= 0:
         return 0

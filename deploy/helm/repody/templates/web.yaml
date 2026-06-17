@@ -31,11 +31,20 @@ spec:
               value: http://{{ include "repody.fullname" . }}-api:8000
             - name: INTERNAL_API_URL
               value: http://{{ include "repody.fullname" . }}-api:8000
-            - name: AUDIT_ADMIN_API_TOKEN
+            - name: AUTH_SECRET
               valueFrom:
                 secretKeyRef:
                   name: {{ include "repody.fullname" . }}-secrets
-                  key: AUDIT_ADMIN_API_TOKEN
+                  key: AUTH_SECRET
+            - name: AUTH_KEYCLOAK_ID
+              value: {{ .Values.config.keycloakClientId | quote }}
+            - name: AUTH_KEYCLOAK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "repody.fullname" . }}-secrets
+                  key: AUTH_KEYCLOAK_CLIENT_SECRET
+            - name: AUTH_KEYCLOAK_ISSUER
+              value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}
             {{- if .Values.observability.bugsinkDsn }}
             - name: NEXT_PUBLIC_BUGSINK_DSN
               value: {{ .Values.observability.bugsinkDsn | quote }}

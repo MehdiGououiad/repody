@@ -4,12 +4,19 @@ Two layers exercise the full stack against a **running** API and web app:
 
 | Layer | Command | What it covers |
 |-------|---------|----------------|
+| **Live API (full)** | `pnpm test:platform:live` | All `@pytest.mark.live` API + extraction scenarios against running stack |
 | API journey | `pnpm test:platform:api` | Health, workflows, dry-run, test-run, audits, deploy, API run + poll |
 | UI (Playwright) | `pnpm test:e2e` | Dashboard, workflows, builder test run, audit report, optional document upload |
 | **Both** | `pnpm test:platform` | Waits for services, then API + UI |
 | **CI smoke** | `pnpm test:e2e:smoke` | Nightly + manual in GitHub Actions (not on every push) |
 
-In-memory API tests (no stack required): `pnpm test:api`.
+In-process API tests (`pnpm test:api`) use **Postgres + Alembic** — same schema path as production. Start infra first:
+
+```powershell
+pnpm compose up --stack=dev --only=infra --detach
+```
+
+Default test DB: `postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench_test` (created automatically if missing).
 
 ## Prerequisites
 
@@ -46,6 +53,8 @@ pnpm test:e2e
 pnpm test:e2e:smoke        # same subset as nightly CI workflow
 pnpm test:e2e:ui          # interactive UI
 pnpm test:platform:api    # live API journey only
+pnpm test:platform:live   # full live API + extraction suite (Hatchet + VLM)
+pnpm test:platform:integration  # scripted integration suite with presign + VLM
 ```
 
 ### CI stack (GitHub Actions)

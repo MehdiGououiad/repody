@@ -2,11 +2,24 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import Field
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from audit_workbench.api.deps import get_session
+from audit_workbench.auth.dependencies import get_current_principal
+from audit_workbench.auth.principal import Principal
 from audit_workbench.schemas.common import CamelModel
-from audit_workbench.services.upload_validation import UploadValidationError, validate_upload_batch, validate_upload_file
+from audit_workbench.services.upload_intents import (
+    UploadIntentError,
+    confirm_upload_intent,
+    record_upload_intent,
+)
+from audit_workbench.services.upload_validation import (
+    UploadValidationError,
+    validate_upload_batch,
+    validate_upload_file,
+)
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.base import PresignedPut
 from audit_workbench.storage.factory import get_storage
@@ -88,7 +101,11 @@ async def upload_capabilities() -> dict:
 
 
 @router.post("/presign", response_model=PresignResponse)
-async def presign_uploads(body: PresignRequest) -> PresignResponse:
+async def presign_uploads(
+    body: PresignRequest,
+    session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
+) -> PresignResponse:
     settings = get_settings()
     validate_upload_batch(file_count=len(body.files), settings=settings)
 
@@ -132,6 +149,15 @@ async def presign_uploads(body: PresignRequest) -> PresignResponse:
             file_req.mime_type,
             expires_seconds=settings.presigned_upload_ttl_seconds,
         )
+        await record_upload_intent(
+            session,
+            storage_key=key,
+            file_name=safe_name,
+            mime_type=file_req.mime_type,
+            size=file_req.size,
+            document_id=file_req.document_id,
+            owner_subject=principal.subject,
+        )
         items.append(
             PresignedUploadItem(
                 id=upload_id,
@@ -150,7 +176,11 @@ async def presign_uploads(body: PresignRequest) -> PresignResponse:
 
 
 @router.post("/confirm", response_model=ConfirmUploadResponse)
-async def confirm_uploads(body: ConfirmUploadRequest) -> ConfirmUploadResponse:
+async def confirm_uploads(
+    body: ConfirmUploadRequest,
+    session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
+) -> ConfirmUploadResponse:
     settings = get_settings()
     storage = get_storage()
     confirmed: list[ConfirmUploadItem] = []
@@ -175,7 +205,7 @@ async def confirm_uploads(body: ConfirmUploadRequest) -> ConfirmUploadResponse:
 
         file_name = key.rsplit("/", 1)[-1]
         try:
-            safe_name, verified_mime = validate_upload_file(
+            _safe_name, verified_mime = validate_upload_file(
                 filename=file_name,
                 declared_mime=None,
                 data=sample,
@@ -184,11 +214,22 @@ async def confirm_uploads(body: ConfirmUploadRequest) -> ConfirmUploadResponse:
         except UploadValidationError as exc:
             raise HTTPException(400, str(exc)) from exc
 
+        try:
+            intent = await confirm_upload_intent(
+                session,
+                storage_key=key,
+                size=size,
+                verified_mime=verified_mime,
+                owner_subject=principal.subject,
+            )
+        except UploadIntentError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
         confirmed.append(
             ConfirmUploadItem(
                 storage_key=key,
-                file_name=safe_name,
-                mime_type=verified_mime,
+                file_name=intent.file_name,
+                mime_type=intent.mime_type,
                 size=size,
             )
         )

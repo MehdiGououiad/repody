@@ -78,7 +78,7 @@ def test_live_facture_document_model_run(client: httpx.Client):
         }
     )
     started = client.post(
-        f"/v1/workflows/{wf_id}/runs?mode=test",
+        f"/v1/workflows/{wf_id}/runs",
         files=[
             ("payload", (None, payload.encode(), "application/json")),
             ("document_ids", (None, json.dumps([doc_id]).encode(), "application/json")),

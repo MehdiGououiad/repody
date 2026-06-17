@@ -26,7 +26,10 @@ const VARIANTS = [
 
 const ENV = {
   ...process.env,
-  AUDIT_ADMIN_API_TOKEN: process.env.AUDIT_ADMIN_API_TOKEN ?? "ci-test-token",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "ci-test-auth-secret-32chars-min",
+  AUTH_KEYCLOAK_CLIENT_SECRET: process.env.AUTH_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
+  AUDIT_OIDC_ISSUER: process.env.AUDIT_OIDC_ISSUER ?? "http://keycloak:8080/realms/repody",
+  AUDIT_OIDC_AUDIENCE: process.env.AUDIT_OIDC_AUDIENCE ?? "repody-api",
   AUDIT_MINIO_PUBLIC_ENDPOINT:
     process.env.AUDIT_MINIO_PUBLIC_ENDPOINT ?? "files.example.com",
   POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "ci-postgres",

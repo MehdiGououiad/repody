@@ -1,16 +1,16 @@
 # syntax=docker/dockerfile:1.7
-FROM node:22-alpine AS deps
+FROM node:24-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-FROM node:22-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 ARG BACKEND_URL=http://api:8000
 ARG NEXT_PUBLIC_BUGSINK_DSN=
 ARG BUGSINK_DSN=
@@ -23,7 +23,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
-FROM node:22-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

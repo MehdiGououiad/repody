@@ -15,7 +15,7 @@ test.describe("UI wiring", () => {
     await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
 
     const configStatus = await page.evaluate(async () => {
-      const response = await fetch("/api/platform/config");
+      const response = await fetch("/api/v1/platform/config");
       return response.status;
     });
     expect(configStatus).toBe(200);

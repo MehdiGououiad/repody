@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 
 from audit_workbench.extraction.base import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
@@ -10,9 +8,10 @@ from audit_workbench.extraction.cache import (
     schema_fingerprint,
     should_cache_result,
 )
-from audit_workbench.extraction.parse_fields import parse_fields_json
+from audit_workbench.extraction.document_modes import resolve_run_validation_mode
+from audit_workbench.extraction.field_json import parse_fields_json
 from audit_workbench.extraction.schema_fields import empty_fields_from_schema
-from audit_workbench.services.audit_pipeline import _skipped_llm_results
+from audit_workbench.rules.runner import skipped_llm_results
 
 
 def test_empty_schema_fields_have_no_fake_values():
@@ -108,7 +107,7 @@ def test_schema_fingerprint_stable_for_identical_schema():
 
 
 def test_skipped_llm_rules_use_skipped_status():
-    results = _skipped_llm_results(
+    results = skipped_llm_results(
         [{"id": "r1", "name": "Fees", "kind": "llm", "severity": "flag", "body": "check"}]
     )
     assert len(results) == 1
@@ -184,19 +183,12 @@ def test_llm_field_references_are_unique_and_affected():
 
 
 def test_llm_rule_forces_logic_and_llm_validation_mode(monkeypatch):
-    from audit_workbench.services.run.helpers import resolve_validation_mode
     from audit_workbench.settings import get_settings
 
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
     get_settings.cache_clear()
 
-    document = SimpleNamespace(
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        schema_fields=[SimpleNamespace(name="total_amount")],
-    )
-
-    assert resolve_validation_mode([document], [{"kind": "llm"}]) == "logic_and_llm"
+    assert resolve_run_validation_mode([{"kind": "llm"}]) == "logic_and_llm"
 
 
 @pytest.mark.asyncio

@@ -1,21 +1,16 @@
 from __future__ import annotations
 
-import uuid
-
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import selectinload
-from sqlalchemy.pool import StaticPool
 
-from audit_workbench.db.base import Base
 from audit_workbench.db.models import (
     Document,
     ExtractedField,
+    RuleResult,
     Run,
     RunDocument,
     RunStatus,
-    RuleResult,
     SchemaField,
     Workflow,
     WorkflowRule,
@@ -25,66 +20,51 @@ from audit_workbench.services.run_processor import process_run
 
 
 @pytest.fixture
-async def run_session(monkeypatch):
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
+async def run_session(postgres_session):
+    wf = Workflow(
+        id="wf-test",
+        name="Test",
+        status=WorkflowStatus.active.value,
     )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    import audit_workbench.db.base as db_base
-
-    monkeypatch.setattr(db_base, "async_session_factory", session_factory)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        wf = Workflow(
-            id="wf-test",
-            name="Test",
-            status=WorkflowStatus.active.value,
-        )
-        doc = Document(
-            id="doc-1",
-            workflow_id=wf.id,
-            document_type="Invoice",
-            position=0,
-            extraction_mode="text_logic",
-        )
-        field = SchemaField(
-            id="sf-1",
-            document_id=doc.id,
-            name="total_amount",
-            description="TTC",
-            position=0,
-        )
-        rule = WorkflowRule(
-            id="rule-1",
-            workflow_id=wf.id,
-            name="Math",
-            kind="logic",
-            scope="intra",
-            body="total_amount == '6000.00'",
-            severity="reject",
-            position=0,
-        )
-        run = Run(
-            id="run-test-1",
-            workflow_id=wf.id,
-            source="test",
-            status=RunStatus.queued.value,
-        )
-        run_doc = RunDocument(
-            id="rdoc-1",
-            run_id=run.id,
-            document_id=doc.id,
-            document_type="Invoice",
-        )
-        session.add_all([wf, doc, field, rule, run, run_doc])
-        await session.commit()
-        yield session, run.id
-
-    await engine.dispose()
+    doc = Document(
+        id="doc-1",
+        workflow_id=wf.id,
+        document_type="Invoice",
+        position=0,
+        extraction_mode="text_logic",
+    )
+    field = SchemaField(
+        id="sf-1",
+        document_id=doc.id,
+        name="total_amount",
+        description="TTC",
+        position=0,
+    )
+    rule = WorkflowRule(
+        id="rule-1",
+        workflow_id=wf.id,
+        name="Math",
+        kind="logic",
+        scope="intra",
+        body="total_amount == '6000.00'",
+        severity="reject",
+        position=0,
+    )
+    run = Run(
+        id="run-test-1",
+        workflow_id=wf.id,
+        source="test",
+        status=RunStatus.queued.value,
+    )
+    run_doc = RunDocument(
+        id="rdoc-1",
+        run_id=run.id,
+        document_id=doc.id,
+        document_type="Invoice",
+    )
+    postgres_session.add_all([wf, doc, field, rule, run, run_doc])
+    await postgres_session.commit()
+    yield postgres_session, run.id
 
 
 @pytest.mark.asyncio
@@ -146,7 +126,11 @@ async def test_process_run_clears_prior_results_on_retry(run_session):
 
     await process_run(session, run_id)
 
-    rr = (await session.execute(select(RuleResult).where(RuleResult.run_id == run_id))).scalars().all()
+    rr = (
+        (await session.execute(select(RuleResult).where(RuleResult.run_id == run_id)))
+        .scalars()
+        .all()
+    )
     assert all(r.id != "rr-old" for r in rr)
 
     result = await session.execute(

@@ -1,59 +1,55 @@
-name: E2E smoke
+name: E2E live stack
 
-# Long-running Docker + Playwright stack — nightly and manual only (not on every push/PR).
+# Optional live-stack pytest against a running dev deployment.
+# Requires E2E_API_URL (and workers) — use workflow_dispatch until a stack is deployed.
 on:
-  schedule:
-    # Nightly 04:00 UTC
-    - cron: "0 4 * * *"
   workflow_dispatch:
-
-concurrency:
-  group: e2e-smoke-${{ github.ref }}
-  cancel-in-progress: true
+    inputs:
+      api_url:
+        description: Base API URL
+        required: false
+        default: http://localhost:8000
 
 jobs:
-  playwright-smoke:
+  live-api:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: astral-sh/setup-uv@v6
         with:
-          version: 10
-
-      - uses: actions/setup-node@v4
+          enable-cache: true
+      - uses: actions/setup-python@v5
         with:
-          node-version: "22"
-          cache: pnpm
-
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright Chromium
-        run: pnpm exec playwright install chromium --with-deps
-
-      - name: Start stack (API + web, stub extraction)
+          python-version: "3.13"
+      - name: Install backend
+        run: uv sync --extra dev
+      - name: Live API pytest
+        run: uv run pytest tests/test_api/test_live_api_e2e.py tests/test_platform -v -m live --tb=short
         env:
-          DOCKER_BUILDKIT: "1"
-          COMPOSE_DOCKER_CLI_BUILD: "1"
-        run: pnpm compose up --stack=e2e --build --wait
+          E2E_API_URL: ${{ github.event.inputs.api_url || 'http://localhost:8000' }}
 
-      - name: Playwright smoke
-        run: pnpm test:e2e:smoke
-        env:
-          E2E_API_URL: http://localhost:8000
-          E2E_WEB_URL: http://localhost:3000
-
-      - name: Upload Playwright report
-        if: failure()
-        uses: actions/upload-artifact@v4
+  platform-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
         with:
-          name: playwright-report
-          path: e2e/report/
-          retention-days: 7
-
-      - name: Tear down stack
-        if: always()
-        run: pnpm compose down --stack=e2e --volumes
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install backend
+        run: uv sync --extra dev
+      - name: Platform integration suite
+        run: uv run python scripts/platform_integration_suite.py --skip-extraction
+        env:
+          E2E_API_URL: ${{ github.event.inputs.api_url || 'http://localhost:8000' }}

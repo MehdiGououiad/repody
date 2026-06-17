@@ -4,14 +4,20 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections.abc import Sequence
+from typing import Any, cast
 
 from fastapi import HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.services.document_slots import resolve_document_slot_keys
-from audit_workbench.services.mappers import load_workflow
 from audit_workbench.services.run_service import FileBinding
-from audit_workbench.services.upload_validation import UploadValidationError, validate_upload_batch, validate_upload_file
+from audit_workbench.services.upload_validation import (
+    UploadValidationError,
+    validate_upload_batch,
+    validate_upload_file,
+)
+from audit_workbench.services.workflow_repository import load_workflow
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import get_storage
 
@@ -89,7 +95,10 @@ async def bindings_from_multipart(
         if not wf:
             raise HTTPException(404, "Workflow not found")
         try:
-            resolved_ids = resolve_document_slot_keys(wf.documents, slot_keys)
+            resolved_ids = resolve_document_slot_keys(
+                cast(Sequence[Any], wf.documents),
+                slot_keys,
+            )
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
         if len(resolved_ids) != len(files):

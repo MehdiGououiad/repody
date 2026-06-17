@@ -24,8 +24,7 @@ def get_hatchet() -> Hatchet:
     token = _resolve_hatchet_token(settings)
     if not token:
         raise RuntimeError(
-            "Hatchet token required when AUDIT_RUN_JOBS_INLINE=false "
-            "(set HATCHET_CLIENT_TOKEN or AUDIT_HATCHET_CLIENT_TOKEN)"
+            "Hatchet token required (set HATCHET_CLIENT_TOKEN or AUDIT_HATCHET_CLIENT_TOKEN)"
         )
     config = ClientConfig(
         token=token,

@@ -12,6 +12,13 @@ from audit_workbench.services.run_progress import fail_run_progress
 
 log = structlog.get_logger()
 
+PUBLIC_RUN_FAILURE_MESSAGE = (
+    "Run failed while processing. Contact an operator with the run id for details."
+)
+PUBLIC_DISPATCH_FAILURE_MESSAGE = (
+    "Run dispatch failed. Retry the run or contact an operator."
+)
+
 
 async def fail_run_terminal(
     run_id: str,

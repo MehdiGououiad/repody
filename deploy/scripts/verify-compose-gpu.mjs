@@ -7,13 +7,20 @@ const GPU_FILES = stackFileArgs("gpu");
 const VALIDATE_ENV = {
   ...process.env,
   VLLM_SERVED_MODEL: process.env.VLLM_SERVED_MODEL ?? "numind/NuExtract3",
-  AUDIT_ADMIN_API_TOKEN: process.env.AUDIT_ADMIN_API_TOKEN ?? "ci-test-token",
+  AUTH_SECRET: process.env.AUTH_SECRET ?? "ci-test-auth-secret-32chars-min",
+  AUTH_KEYCLOAK_CLIENT_SECRET:
+    process.env.AUTH_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
+  AUTH_KEYCLOAK_ISSUER:
+    process.env.AUTH_KEYCLOAK_ISSUER ?? "http://keycloak:8080/realms/repody",
+  AUDIT_OIDC_ISSUER:
+    process.env.AUDIT_OIDC_ISSUER ?? "http://keycloak:8080/realms/repody",
+  AUDIT_OIDC_AUDIENCE: process.env.AUDIT_OIDC_AUDIENCE ?? "repody-api",
   AUDIT_MINIO_PUBLIC_ENDPOINT:
     process.env.AUDIT_MINIO_PUBLIC_ENDPOINT ?? "files.example.com",
 };
 
 function run(args) {
-  return spawnSync("docker", ["compose", ...GPU_FILES, ...args], {
+  return spawnSync("docker", ["compose", ...GPU_FILES, "--profile", "init", ...args], {
     encoding: "utf-8",
     env: VALIDATE_ENV,
   });

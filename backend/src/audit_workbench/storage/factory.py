@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from audit_workbench.settings import Settings, get_settings
+from audit_workbench.settings import get_settings
 from audit_workbench.storage.base import ObjectStorage
 from audit_workbench.storage.local import LocalObjectStorage
 from audit_workbench.storage.s3 import S3ObjectStorage

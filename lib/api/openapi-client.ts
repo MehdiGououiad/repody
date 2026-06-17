@@ -2,17 +2,23 @@ import createClient from "openapi-fetch";
 import type { paths } from "@/lib/api/generated/schema";
 import { formatApiError } from "@/lib/api/api-error";
 import { serverFetch } from "@/lib/api/http";
+import { auth, isOidcConfigured } from "@/auth";
 
 const SERVER_BASE =
   process.env.INTERNAL_API_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
-function adminHeaders(): HeadersInit {
-  const token = process.env.AUDIT_ADMIN_API_TOKEN;
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
+async function serverAuthHeaders(): Promise<HeadersInit> {
+  if (!isOidcConfigured()) {
+    return {};
+  }
+  const session = await auth();
+  if (!session?.accessToken) {
+    return {};
+  }
+  return { Authorization: `Bearer ${session.accessToken}` };
 }
 
-/** Browser client — hits Next.js `/api` rewrite (admin token via middleware). */
+/** Browser client — hits Next.js `/api` rewrite (session token via middleware). */
 export function createBrowserOpenApiClient() {
   return createClient<paths>({ baseUrl: "/api" });
 }
@@ -21,13 +27,19 @@ export function createBrowserOpenApiClient() {
 export function createServerOpenApiClient() {
   return createClient<paths>({
     baseUrl: SERVER_BASE,
-    headers: adminHeaders(),
-    fetch: async (input: Request) => {
+      fetch: async (input: Request) => {
       const url = new URL(input.url);
       const path = url.pathname.replace(/^\/v1/, "") || "/";
+      const sessionHeaders = await serverAuthHeaders();
+      const headers = new Headers(input.headers);
+      for (const [key, value] of Object.entries(sessionHeaders)) {
+        if (typeof value === "string") {
+          headers.set(key, value);
+        }
+      }
       return serverFetch(path, {
         method: input.method,
-        headers: input.headers,
+        headers,
         body: input.body,
         signal: input.signal,
       });

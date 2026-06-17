@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 import structlog
 from sqlalchemy import delete, select
@@ -10,12 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import OverallStatus, RuleResult, Run, RunDocument, RunStatus
-from audit_workbench.extraction.processing_paths import validation_mode_label
-from audit_workbench.services.audit_pipeline import extract_and_validate
+from audit_workbench.extraction.document_modes import ValidationMode, validation_mode_label
+from audit_workbench.rules.runner import validate_extractions
 from audit_workbench.services.mappers import duration_ms_between
 from audit_workbench.services.run.helpers import new_id
 from audit_workbench.services.run.phase_state import (
-    ExtractionPhaseResult,
     RunPhaseState,
 )
 from audit_workbench.services.run_progress import (
@@ -65,14 +65,15 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
             session, run_id, progress_steps, state.step_index, f"LLM rule · {name}…"
         )
 
-    _field_values, rule_evals = await extract_and_validate(
+    _field_values, rule_evals = await validate_extractions(
         extractions=state.extraction_results,
         rules=rules_payload,
         multi_document=state.multi_document,
-        validation_mode=state.validation_mode,
+        validation_mode=cast(ValidationMode, state.validation_mode),
         on_rule_start=on_rule_start,
         llm_model=None,
         precomputed_llm=state.precomputed_llm or None,
+        doc_types_by_id={doc.id: doc.document_type for doc in state.workflow_docs},
     )
 
     if validation_started is not None:
@@ -155,9 +156,11 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
     run.fields_extracted = state.fields_extracted
     run.finished_at = datetime.now(UTC)
     duration_ms = duration_ms_between(run.started_at, run.finished_at)
+    started_at = run.started_at
+    finished_at = run.finished_at
     run.run_metadata = {
-        "startedAt": run.started_at.isoformat() if run.started_at else None,
-        "finishedAt": run.finished_at.isoformat() if run.finished_at else None,
+        "startedAt": started_at.isoformat() if started_at else None,
+        "finishedAt": finished_at.isoformat() if finished_at else None,
         "durationMs": duration_ms,
         "extractionMs": state.extraction_total_ms,
         "validationMs": validation_ms,
@@ -166,8 +169,9 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
         "llmModel": get_settings().validation_model,
     }
     if progress_steps:
-        run.progress = progress_snapshot(progress_steps, len(progress_steps) - 1, "Complete")
-        for step in run.progress["steps"]:
+        progress = progress_snapshot(progress_steps, len(progress_steps) - 1, "Complete")
+        run.progress = progress
+        for step in progress["steps"]:
             step["status"] = "done"
     await session.commit()
     log.info(

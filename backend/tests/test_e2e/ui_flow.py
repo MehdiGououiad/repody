@@ -1,5 +1,5 @@
 """
-Python mirror of the browser UI test-run flow (lib/api/test-run.ts + run-poll.ts).
+Python mirror of the browser UI workflow-run flow (lib/api/workflow-run.ts + run-poll.ts).
 
 Same endpoints, multipart shape, and poll sequence the Test tab uses.
 """
@@ -47,6 +47,14 @@ async def poll_run_until_done(
     interval_ms: float = 400,
 ) -> dict[str, Any]:
     """Poll GET /v1/runs/{id}/status until done, then GET /v1/runs/{id} for full result."""
+    import os
+
+    env_interval = os.getenv("AUDIT_TEST_POLL_INTERVAL_MS", "").strip()
+    if env_interval:
+        try:
+            interval_ms = float(env_interval)
+        except ValueError:
+            pass
     deadline = asyncio.get_event_loop().time() + max_ms / 1000
     wait_s = interval_ms / 1000
     while asyncio.get_event_loop().time() < deadline:
@@ -62,7 +70,9 @@ async def poll_run_until_done(
             raise RuntimeError(body.get("error") or "Run failed")
         await asyncio.sleep(wait_s)
         wait_s = min(2.0, wait_s + 0.2)
-    raise TimeoutError(f"Run {run_id} timed out after {max_ms}ms — check worker and Model Runner logs")
+    raise TimeoutError(
+        f"Run {run_id} timed out after {max_ms}ms — check worker and Model Runner logs"
+    )
 
 
 async def run_test_with_files(
@@ -77,7 +87,7 @@ async def run_test_with_files(
 ) -> dict[str, Any]:
     """
     Same contract as UI runTestWithFiles():
-      POST /v1/workflows/{id}/runs?mode=test
+      POST /v1/workflows/{id}/runs (multipart fallback)
       multipart: payload, document_ids, files[]
       poll until done
     """
@@ -102,7 +112,7 @@ async def run_test_with_files(
         multipart.append(("files", (filename, data, mime)))
 
     start = await client.post(
-        f"/v1/workflows/{workflow_id}/runs?mode=test",
+        f"/v1/workflows/{workflow_id}/runs",
         files=multipart,
     )
     if start.status_code != 202:
@@ -136,4 +146,10 @@ async def save_workflow(
         },
     )
     updated.raise_for_status()
+    for _ in range(8):
+        check = await client.get(f"/v1/workflows/{wf_id}")
+        if check.status_code == 200:
+            return wf_id
+        await asyncio.sleep(0.25)
+    check.raise_for_status()
     return wf_id

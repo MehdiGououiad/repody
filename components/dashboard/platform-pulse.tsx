@@ -61,8 +61,8 @@ export async function PlatformPulse({
     platform?.documentModels.find((m) => m.id === platform.defaultOcrModel)?.label ??
     REPODY_VLM_LABEL;
   const queued = healthz?.queuedRuns ?? 0;
-  const inflight = healthz?.inflightRuns ?? 0;
-  const queueTotal = queued + inflight;
+  const running = healthz?.runningRuns ?? Math.max(0, (healthz?.inflightRuns ?? 0) - queued);
+  const queueTotal = queued + running;
   const hatchetOk = healthz?.hatchetConfigured ?? platform?.hatchetConfigured ?? false;
 
   return (
@@ -86,7 +86,7 @@ export async function PlatformPulse({
           value={String(queueTotal)}
           detail={
             queueTotal > 0
-              ? t("queueDetail", { queued, inflight })
+              ? t("queueDetail", { queued, inflight: running })
               : t("queueIdle")
           }
           tone={queued > 5 ? "warning" : "default"}

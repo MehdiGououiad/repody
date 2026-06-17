@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   AlertCircle,
@@ -13,6 +14,7 @@ import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { TestDeployStep } from "./builder/test-run-panel";
 import { BuilderTopbar } from "./builder/builder-topbar";
 import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
+import { WorkflowNameGate } from "./builder/workflow-name-gate";
 import { useBuilderWorkflow } from "./builder/use-builder-workflow";
 import type { Workflow, RuleTemplate } from "@/lib/types";
 
@@ -28,6 +30,8 @@ function BuilderShellCore({
   ruleLibrary?: RuleTemplate[];
 }) {
   const tSteps = useTranslations("workflows.builder.steps");
+  const isNew = mode === "new";
+  const [nameConfirmed, setNameConfirmed] = useState(() => !isNew || workflow.name.trim().length > 0);
 
   const {
     step,
@@ -50,6 +54,7 @@ function BuilderShellCore({
   } = useBuilderWorkflow(workflow, mode);
 
   const schemaReady = stepComplete(0, documents, rules);
+  const showNameGate = isNew && !nameConfirmed;
 
   return (
     <div className="flex flex-col page-enter" style={{ height: "calc(100vh - 64px)" }}>
@@ -63,6 +68,16 @@ function BuilderShellCore({
         onDeploy={handleDeploy}
       />
 
+      {showNameGate ? (
+        <WorkflowNameGate
+          name={name}
+          onNameChange={setName}
+          onContinue={() => {
+            if (name.trim()) setNameConfirmed(true);
+          }}
+        />
+      ) : (
+        <>
       <div className="flex flex-1 overflow-hidden min-h-0">
         <aside className="hidden md:flex w-52 xl:w-60 border-r border-border/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-surface-container-lowest/80 backdrop-blur-sm">
           <BuilderStepNav
@@ -145,6 +160,8 @@ function BuilderShellCore({
         rules={rules}
         onChange={setStep}
       />
+        </>
+      )}
     </div>
   );
 }

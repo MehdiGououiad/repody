@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Run, Workflow
-from audit_workbench.extraction.processing_paths import parse_read_path
+from audit_workbench.extraction.document_modes import parse_read_path
 
 WorkerPool = str  # "ocr" | "fast"
 
@@ -97,9 +97,7 @@ async def resolve_worker_pool(session: AsyncSession, run_id: str) -> WorkerPool:
     """Resolve pool for a persisted run (dispatch fallback)."""
     run = (
         await session.execute(
-            select(Run)
-            .where(Run.id == run_id)
-            .options(selectinload(Run.documents))
+            select(Run).where(Run.id == run_id).options(selectinload(Run.documents))
         )
     ).scalar_one_or_none()
     if not run:

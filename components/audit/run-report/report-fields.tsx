@@ -173,25 +173,6 @@ export function RunDocFieldsTable({
   );
 }
 
-/** @deprecated Prefer RunDocFieldsList or RunDocFieldsTable. */
-export function RunDocFieldsCard({
-  doc,
-  locale,
-  labels,
-  compact = false,
-}: {
-  doc: RunAuditDocument;
-  locale: string;
-  labels?: RunReportLabels;
-  compact?: boolean;
-}) {
-  return compact ? (
-    <RunDocFieldsList doc={doc} locale={locale} labels={labels} />
-  ) : (
-    <RunDocFieldsTable doc={doc} locale={locale} labels={labels} />
-  );
-}
-
 export function RunFieldsList({
   audit,
   locale,
@@ -205,31 +186,6 @@ export function RunFieldsList({
     <div className="space-y-4">
       {audit.documents.map((doc) => (
         <RunDocFieldsList key={doc.id} doc={doc} locale={locale} labels={labels} />
-      ))}
-    </div>
-  );
-}
-
-/** @deprecated Prefer RunFieldsList for panel layouts. */
-export function RunFieldsTable({
-  audit,
-  locale,
-  labels,
-  compact = false,
-}: {
-  audit: RunAuditDetail;
-  locale: string;
-  labels?: RunReportLabels;
-  compact?: boolean;
-}) {
-  if (compact) {
-    return <RunFieldsList audit={audit} locale={locale} labels={labels} />;
-  }
-
-  return (
-    <div className="space-y-4">
-      {audit.documents.map((doc) => (
-        <RunDocFieldsTable key={doc.id} doc={doc} locale={locale} labels={labels} />
       ))}
     </div>
   );

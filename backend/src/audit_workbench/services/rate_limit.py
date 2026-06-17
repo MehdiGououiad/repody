@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import structlog
-from limits import parse
+from limits import RateLimitItem, parse
 from limits.aio.storage import MemoryStorage, RedisStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -24,9 +24,7 @@ class RunRateLimitExceeded(Exception):
         self.scope = scope
         self.limit = limit
         self.window_seconds = window_seconds
-        super().__init__(
-            f"Rate limit exceeded ({scope}): max {limit} runs per {window_seconds}s."
-        )
+        super().__init__(f"Rate limit exceeded ({scope}): max {limit} runs per {window_seconds}s.")
 
 
 # Backwards-compatible alias for API handlers.
@@ -40,7 +38,7 @@ def clear_rate_limiter_cache() -> None:
     _storage = None
 
 
-def _window_limit(settings: Settings, max_runs: int) -> object:
+def _window_limit(settings: Settings, max_runs: int) -> RateLimitItem:
     window = max(1, settings.rate_limit_window_seconds)
     return parse(f"{max_runs} per {window} second")
 
@@ -64,6 +62,11 @@ async def _get_limiter() -> MovingWindowRateLimiter:
     return _limiter
 
 
+def _allow_on_redis_error(settings: Settings) -> bool:
+    """Return True to allow the request when Redis rate-limit storage fails."""
+    return not settings.rate_limit_fail_closed
+
+
 async def check_run_rate_limits(
     *,
     workflow_id: str,
@@ -76,7 +79,7 @@ async def check_run_rate_limits(
     client_key should be API key hash or client IP for deployed runs.
     """
     settings = get_settings()
-    if not settings.rate_limit_enabled or settings.run_jobs_inline:
+    if not settings.rate_limit_enabled:
         return
 
     limiter = await _get_limiter()
@@ -93,6 +96,12 @@ async def check_run_rate_limits(
             error_type=type(exc).__name__,
             error_message=repr(exc),
         )
+        if not _allow_on_redis_error(settings):
+            raise RunRateLimitExceeded(
+                scope="redis",
+                limit=0,
+                window_seconds=window,
+            ) from exc
         return
 
     if not allowed:
@@ -123,6 +132,12 @@ async def check_run_rate_limits(
             error_type=type(exc).__name__,
             error_message=repr(exc),
         )
+        if not _allow_on_redis_error(settings):
+            raise RunRateLimitExceeded(
+                scope="redis",
+                limit=0,
+                window_seconds=window,
+            ) from exc
         return
 
     if not allowed:
@@ -141,6 +156,7 @@ async def check_run_rate_limits(
 
 async def check_global_http_rate_limit(client_ip: str) -> bool:
     """Return True when the request is allowed under the global HTTP limit."""
+    settings = get_settings()
     limiter = await _get_limiter()
     try:
         return await limiter.hit(_GLOBAL_HTTP_LIMIT, f"audit:rl:http:{client_ip}")
@@ -151,13 +167,15 @@ async def check_global_http_rate_limit(client_ip: str) -> bool:
             error_type=type(exc).__name__,
             error_message=repr(exc),
         )
-        return True
+        return _allow_on_redis_error(settings)
 
 
 class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
     """Global per-IP HTTP rate limit (300/min) using the same `limits` storage."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
+        if not get_settings().rate_limit_enabled:
+            return await call_next(request)
         if request.url.path == "/v1/healthz":
             return await call_next(request)
         client_ip = request.client.host if request.client else "unknown"

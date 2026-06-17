@@ -5,13 +5,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from audit_workbench.db.models import Run
+from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.base import ExtractionResult
-from audit_workbench.extraction.processing_paths import validation_mode_label
-from audit_workbench.services.run.helpers import rules_payload
+from audit_workbench.extraction.document_modes import validation_mode_label
 from audit_workbench.services.run.snapshot import resolve_run_documents, resolve_run_rules
 from audit_workbench.services.run_progress import build_run_progress_plan, mark_step_done
-
 
 PHASE_EXTRACTED = "extracted"
 
@@ -104,9 +102,7 @@ def _base_phase_state(run: Run) -> RunPhaseState:
     workflow = run.workflow
     workflow_docs = resolve_run_documents(run)
     payload = resolve_run_rules(run, workflow)
-    docs_with_files = {
-        rd.document_id for rd in run.documents if rd.document_id and rd.storage_key
-    }
+    docs_with_files = {rd.document_id for rd in run.documents if rd.document_id and rd.storage_key}
     docs_with_schema = sum(
         1 for doc in workflow_docs if any(f.name.strip() for f in doc.schema_fields)
     )

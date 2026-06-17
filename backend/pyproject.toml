@@ -2,10 +2,10 @@
 name = "repody"
 version = "0.1.0"
 description = "Repody — document audit platform backend"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
   # Core API
-  "fastapi>=0.115.12",
+  "fastapi>=0.137.1",
   "uvicorn[standard]>=0.34.0",
   "pydantic>=2.11.0",
   "pydantic-settings>=2.8.0",
@@ -14,28 +14,33 @@ dependencies = [
   "asgi-correlation-id>=4.3.4",
 
   # Database
-  "sqlalchemy[asyncio]>=2.0.40",
+  "sqlalchemy[asyncio]>=2.0.51",
   "asyncpg>=0.30.0",
   "aiosqlite>=0.21.0",
   "alembic>=1.15.0",
 
   # Queue + cache
-  "hatchet-sdk>=1.0.0",
+  "hatchet-sdk>=1.33.9",
   "redis>=5.2.0",
   "limits[async-redis]>=4.4.1",
 
   # Structured LLM
-  "instructor>=1.7.0",
+  "instructor>=1.15.3",
   "openai>=1.68.0",
 
   # HTTP + storage
   "httpx>=0.28.0",
-  "boto3>=1.37.0",
-  "botocore>=1.37.0",
+  "boto3>=1.43.30",
+  "botocore>=1.43.30",
   "filetype>=1.2.0",
 
   # Rules
   "simpleeval>=1.0.3",
+
+  # Auth (Keycloak JWT + Casbin RBAC)
+  "pyjwt[crypto]>=2.10.0",
+  "cryptography>=44.0.0",
+  "casbin>=1.36.0",
 
   # Observability + reliability
   "structlog>=25.1.0",
@@ -49,12 +54,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ocr = [
-  "paddleocr==3.7.0",
-  "paddlex[ocr]==3.7.1",
-  "setuptools>=75.0",
-  "numpy>=2.0",
-]
 ml = [
   "torch>=2.5",
   "transformers>=4.46",
@@ -94,12 +93,36 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "N", "ASYNC"]
+ignore = [
+  # Handled by formatting/readability review; long SQL/HTML/messages are common here.
+  "E501",
+  # FastAPI intentionally uses Depends/File/Form/Header calls in endpoint defaults.
+  "B008",
+  # Public exception names are part of the current service interface.
+  "N818",
+  # Passing timeout through to HTTP clients is intentional in async adapter functions.
+  "ASYNC109",
+  # PEP 695 generics are not required for this codebase style yet.
+  "UP047",
+  # Python 3.11-compatible enum spelling is kept for readability and migrations.
+  "UP042",
+  # Async tests may use pathlib for fixture paths.
+  "ASYNC240",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]
+"tests/test_api/test_api_e2e_suite.py" = ["E402"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+pythonpath = ["."]
 testpaths = ["tests"]
 markers = [
   "live: requires running API at E2E_API_URL (default http://localhost:8000)",
-  "e2e_facture: Facture.pdf path tests (text / paddle / llm / optional vlm)",
+  "e2e_facture: Facture.pdf path tests (text / llm / optional vlm)",
+  "slow: full document extraction run (Facture PDF pipeline)",
   "vlm: LightOn vision path — slow, opt-in with RUN_VLM_E2E=1",
 ]

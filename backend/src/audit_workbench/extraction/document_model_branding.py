@@ -8,8 +8,6 @@ REPODY_VLM_DESCRIPTION = (
     "Repody VLM extracts structured fields from document images using your workflow schema."
 )
 
-DEFAULT_DOCUMENT_MODEL_CATALOG_ID = REPODY_VLM_CATALOG_ID
-
 
 def is_legacy_catalog_id(model_id: str | None) -> bool:
     """True when the id is not the canonical Repody VLM catalog id."""
@@ -23,6 +21,9 @@ def normalize_public_catalog_id(model_id: str | None) -> str:
         return REPODY_VLM_CATALOG_ID
     stripped = model_id.strip()
     if stripped == REPODY_VLM_CATALOG_ID:
+        return REPODY_VLM_CATALOG_ID
+    # Legacy Paddle catalog ids and unknown ids map to Repody VLM.
+    if stripped.startswith("paddle:"):
         return REPODY_VLM_CATALOG_ID
     return REPODY_VLM_CATALOG_ID
 
@@ -41,5 +42,7 @@ def public_runtime_name(runtime: str) -> str:
 def public_document_model_label(model_id: str | None) -> str:
     """User-visible model name (hides legacy catalog ids and served model names)."""
     if not model_id or is_legacy_catalog_id(model_id) or model_id == REPODY_VLM_CATALOG_ID:
+        return REPODY_VLM_LABEL
+    if model_id.startswith("paddle:"):
         return REPODY_VLM_LABEL
     return model_id

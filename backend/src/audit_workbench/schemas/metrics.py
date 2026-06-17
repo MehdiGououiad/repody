@@ -45,4 +45,6 @@ class MetricsResponse(CamelModel):
     kpis: list[KpiMetric]
     performance_series: list[PerformancePoint] = Field(serialization_alias="performanceSeries")
     violation_breakdown: list[ViolationBreakdown] = Field(serialization_alias="violationBreakdown")
-    health_alerts: list[HealthAlert] = Field(default_factory=list, serialization_alias="healthAlerts")
+    health_alerts: list[HealthAlert] = Field(
+        default_factory=list, serialization_alias="healthAlerts"
+    )

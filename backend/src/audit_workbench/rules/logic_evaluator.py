@@ -5,7 +5,9 @@ from typing import Any
 
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
-from audit_workbench.extraction.parse_fields import parse_numeric_value
+from audit_workbench.extraction.field_json import parse_numeric_value
+from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields
+
 _IDENTIFIER = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
 _RESERVED = {
     "and",
@@ -75,7 +77,9 @@ def build_field_namespace(field_values: dict[str, str]) -> dict[str, Any]:
     return namespace
 
 
-def evaluate_logic_expression(body: str, field_values: dict[str, str]) -> tuple[bool | None, str, list[str]]:
+def evaluate_logic_expression(
+    body: str, field_values: dict[str, str]
+) -> tuple[bool | None, str, list[str]]:
     """Evaluate a logic rule. Returns (passed, detail, affected). passed=None means skipped."""
     expression = (body or "").strip()
     if not expression:
@@ -118,3 +122,51 @@ def evaluate_logic_expression(body: str, field_values: dict[str, str]) -> tuple[
         return False, f"Expression evaluated to false: {expression}", affected
     except Exception as exc:
         return False, f"Could not evaluate expression: {exc}", affected
+
+
+def evaluate_logic_rule(rule: dict, field_values: dict[str, str]) -> RuleEvalResult:
+    body = (rule.get("body") or "").strip()
+    rule_id = rule.get("id") or ""
+    name = rule.get("name") or "Rule"
+    severity = rule.get("severity") or "reject"
+    scope = rule.get("scope") or "intra"
+    affected = collect_affected_fields(rule)
+
+    if not body:
+        return RuleEvalResult(
+            id=rule_id,
+            name=name,
+            kind="logic",
+            scope=scope,
+            status="skipped",
+            severity=severity,
+            expression=body,
+            affected_fields=affected,
+            detail="Rule has no expression — configure conditions or a logic body.",
+            expected_value=None,
+            actual_value=None,
+        )
+
+    passed, detail, logic_affected = evaluate_logic_expression(body, field_values)
+    if logic_affected:
+        affected = list(dict.fromkeys(affected + logic_affected))
+    if passed is None:
+        status = "skipped"
+    elif passed:
+        status = "passed"
+    else:
+        status = "failed"
+
+    return RuleEvalResult(
+        id=rule_id,
+        name=name,
+        kind="logic",
+        scope=scope,
+        status=status,
+        severity=severity,
+        expression=body,
+        affected_fields=affected,
+        detail=detail,
+        expected_value=None,
+        actual_value=None,
+    )

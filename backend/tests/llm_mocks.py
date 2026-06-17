@@ -98,12 +98,15 @@ def model_runner_chat_side_effect(request: httpx.Request) -> httpx.Response:
             template = json.loads(template_raw)
             if isinstance(template, dict) and template:
                 mock_payload = {
-                    key: FIELD_FIXTURE_VALUES.get(_normalize_key(key), "mock")
-                    for key in template
+                    key: FIELD_FIXTURE_VALUES.get(_normalize_key(key), "mock") for key in template
                 }
                 return httpx.Response(
                     200,
-                    json={"choices": [{"message": {"role": "assistant", "content": json.dumps(mock_payload)}}]},
+                    json={
+                        "choices": [
+                            {"message": {"role": "assistant", "content": json.dumps(mock_payload)}}
+                        ]
+                    },
                 )
         except json.JSONDecodeError:
             pass

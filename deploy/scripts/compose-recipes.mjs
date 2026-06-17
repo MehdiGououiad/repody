@@ -36,11 +36,18 @@ function composeArgs(...args) {
   return [COMPOSE_CLI, ...args];
 }
 
+/** Node argv arrays are dropped on Windows when shell:true (DEP0190). */
+function spawnUsesShell(command) {
+  if (process.platform !== "win32") return false;
+  const base = command.replace(/\\/g, "/").split("/").pop()?.toLowerCase();
+  return base !== "node" && base !== "node.exe";
+}
+
 function runSync(label, command, args, env = process.env) {
   console.error(`\n▶ ${label}\n`);
   const result = spawnSync(command, args, {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: spawnUsesShell(command),
     env,
   });
   if (result.status !== 0) {
@@ -91,7 +98,10 @@ function runDevHostFrontend(warmup, argv) {
   const forceRebuild = argv.includes("--rebuild");
   const withTraces = argv.includes("--traces");
   const withLogs = argv.includes("--logs") || withTraces;
-  const overlayArgs = warmup ? ["--warmup"] : [];
+  const withAuth = argv.includes("--auth");
+  const withLan = argv.includes("--lan");
+  const overlayArgs = [...(warmup ? ["--warmup"] : []), ...(withLan ? ["--lan"] : [])];
+  const authModuleArgs = withAuth ? ["--with=auth"] : [];
   const buildIdPath = join(process.cwd(), ".next", "BUILD_ID");
   const standaloneServerPath = join(
     process.cwd(),
@@ -118,6 +128,38 @@ function runDevHostFrontend(warmup, argv) {
     AUDIT_DEV_OBS: withTraces ? "traces" : withLogs ? "logs" : "none",
   });
 
+  if (withAuth && !childEnv.AUTH_SECRET) {
+    console.error(
+      "\n✗ --auth requires AUTH_SECRET in .env or .env.local (e.g. openssl rand -base64 32)\n"
+    );
+    process.exit(1);
+  }
+
+  if (withAuth) {
+    if (withLan) {
+      if (!childEnv.PUBLIC_HOST) {
+        console.error(
+          "\n✗ --lan requires PUBLIC_HOST in .env — run: pnpm configure:lan\n"
+        );
+        process.exit(1);
+      }
+      const host = childEnv.PUBLIC_HOST;
+      childEnv.AUTH_URL = `http://${host}:3000`;
+      childEnv.AUTH_KEYCLOAK_ISSUER = `http://${host}:8080/realms/repody`;
+      childEnv.AUDIT_OIDC_ISSUER = `http://${host}:8080/realms/repody`;
+      childEnv.KEYCLOAK_HOSTNAME = host;
+    } else {
+      childEnv.AUTH_URL = "http://localhost:3000";
+      childEnv.AUTH_KEYCLOAK_ISSUER = "http://127.0.0.1:8080/realms/repody";
+      childEnv.AUDIT_OIDC_ISSUER = "http://127.0.0.1:8080/realms/repody";
+      childEnv.KEYCLOAK_HOSTNAME = "127.0.0.1";
+    }
+    childEnv.AUTH_KEYCLOAK_ID ??= "repody-web";
+    childEnv.AUTH_KEYCLOAK_SECRET ??= "repody-web-dev-secret";
+    childEnv.AUDIT_OIDC_JWKS_URL ??=
+      "http://keycloak:8080/realms/repody/protocol/openid-connect/certs";
+  }
+
   const bugsinkModuleArgs =
     childEnv.BUGSINK_DSN || childEnv.NEXT_PUBLIC_BUGSINK_DSN
       ? ["--with=bugsink"]
@@ -131,7 +173,7 @@ function runDevHostFrontend(warmup, argv) {
     console.error("\n▶ Stopping Docker stack…\n");
     spawnSync("node", composeArgs("down", "--stack=dev", ...overlayArgs), {
       stdio: "inherit",
-      shell: process.platform === "win32",
+      shell: false,
       env: childEnv,
     });
     stackStarted = false;
@@ -164,6 +206,7 @@ function runDevHostFrontend(warmup, argv) {
           "up",
           "--stack=dev",
           ...overlayArgs,
+          ...authModuleArgs,
           `--with=${obsWith}`,
           "--only=obs",
           "--detach"
@@ -176,7 +219,7 @@ function runDevHostFrontend(warmup, argv) {
   runSync(
     "Starting infra (postgres, redis, minio, hatchet)",
     "node",
-    [...composeArgs("up", "--stack=dev", ...overlayArgs, ...bugsinkModuleArgs, "--only=infra")],
+    [...composeArgs("up", "--stack=dev", ...overlayArgs, ...authModuleArgs, ...bugsinkModuleArgs, "--only=infra")],
     childEnv
   );
 
@@ -193,10 +236,10 @@ function runDevHostFrontend(warmup, argv) {
 
   runSync(
     warmup
-      ? "Starting backend with Repody VLM warmup enabled"
+      ? "Starting backend with OCR model warmup enabled (Repody VLM)"
       : "Starting backend without warmup (fast boot)",
     "node",
-    [...composeArgs("up", "--stack=dev", ...overlayArgs, ...bugsinkModuleArgs, "--only=services")],
+    [...composeArgs("up", "--stack=dev", ...overlayArgs, ...authModuleArgs, ...bugsinkModuleArgs, "--only=services")],
     childEnv
   );
 
@@ -204,7 +247,7 @@ function runDevHostFrontend(warmup, argv) {
 
   if (warmup) {
     runSync(
-      "Waiting for Repody VLM warmup",
+      "Waiting for OCR worker warmup",
       "node",
       ["scripts/wait-for-warmup.mjs"],
       { ...childEnv, AUDIT_COMPOSE_WARMUP: "1" }
@@ -212,7 +255,14 @@ function runDevHostFrontend(warmup, argv) {
   }
 
   if (forceRebuild || needsBugsinkRebuild || !existsSync(buildIdPath)) {
-    if (needsBugsinkRebuild && !forceRebuild) {
+    if (forceRebuild) {
+      runSync(
+        "Preparing clean Next.js rebuild",
+        "node",
+        ["scripts/clean-next-for-rebuild.mjs"],
+        childEnv
+      );
+    } else if (needsBugsinkRebuild) {
       console.error(
         "\n▶ Rebuilding Next.js — NEXT_PUBLIC_BUGSINK_DSN changed (required for browser error reporting).\n"
       );
@@ -236,13 +286,21 @@ function runDevHostFrontend(warmup, argv) {
       ? "Grafana + Tempo enabled — see endpoint list below"
       : "Grafana/Loki enabled — see endpoint list below"
     : "";
+  const authLine = withAuth
+    ? withLan
+      ? `Keycloak http://${childEnv.PUBLIC_HOST}:8080 — operator@repody.local / repody-dev`
+      : "Keycloak http://127.0.0.1:8080 — operator@repody.local / repody-dev"
+    : "";
   printPlatformBanner({
     mode: "dev",
+    lan: withLan,
+    publicHost: childEnv.PUBLIC_HOST,
     logs: withLogs,
     traces: withTraces,
     footer: [
       "Docker logs: api, worker, worker-fast, postgres, redis, minio, hatchet",
       obsLines,
+      authLine,
       childEnv.NEXT_PUBLIC_BUGSINK_DSN || childEnv.BUGSINK_DSN
         ? "Bugsink DSN configured — see docs/BUGSINK.md"
         : "",
@@ -256,10 +314,10 @@ function runDevHostFrontend(warmup, argv) {
 
   logsProcess = spawn(
     "node",
-    composeArgs("logs", "--stack=dev", ...overlayArgs, ...bugsinkModuleArgs),
+    composeArgs("logs", "--stack=dev", ...overlayArgs, ...authModuleArgs, ...bugsinkModuleArgs),
     {
       stdio: "inherit",
-      shell: process.platform === "win32",
+      shell: false,
       env: childEnv,
       cwd: process.cwd(),
     }
@@ -271,7 +329,12 @@ function runDevHostFrontend(warmup, argv) {
   });
 
   webProcess = spawnPrefixed("web", process.execPath, [standaloneServerPath], {
-    env: { ...childEnv, PORT: childEnv.PORT ?? "3000" },
+    env: {
+      ...childEnv,
+      PORT: childEnv.PORT ?? "3000",
+      HOSTNAME: withLan ? "0.0.0.0" : (childEnv.HOSTNAME ?? "0.0.0.0"),
+      AUTH_URL: childEnv.AUTH_URL ?? childEnv.NEXTAUTH_URL ?? "http://localhost:3000",
+    },
     cwd: join(process.cwd(), ".next", "standalone"),
   });
 
@@ -344,7 +407,7 @@ function runContainerStack(argv) {
 
   if (warmup && models.length) {
     runSync(
-      "Waiting for Repody VLM warmup",
+      "Waiting for OCR worker warmup",
       "node",
       ["scripts/wait-for-warmup.mjs"],
       { ...env, AUDIT_COMPOSE_STACK: "prod", AUDIT_COMPOSE_WARMUP: "1" }
@@ -431,12 +494,15 @@ function runStop(argv) {
   console.error("\n▶ Stopping dev Docker stack…\n");
   for (const warmup of [false, true]) {
     const overlayArgs = warmup ? ["--warmup"] : [];
-    for (const obsMode of ["none", "logs", "traces"]) {
-      spawnSync("node", composeArgs("down", "--stack=dev", ...overlayArgs), {
-        stdio: "inherit",
-        shell: process.platform === "win32",
-        env: { ...childEnv, AUDIT_DEV_OBS: obsMode },
-      });
+    for (const withAuth of [false, true]) {
+      const authArgs = withAuth ? ["--with=auth"] : [];
+      for (const obsMode of ["none", "logs", "traces"]) {
+        spawnSync("node", composeArgs("down", "--stack=dev", ...overlayArgs, ...authArgs), {
+          stdio: "inherit",
+          shell: process.platform === "win32",
+          env: { ...childEnv, AUDIT_DEV_OBS: obsMode },
+        });
+      }
     }
   }
 

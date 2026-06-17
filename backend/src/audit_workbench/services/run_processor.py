@@ -20,7 +20,7 @@ from audit_workbench.services.run.extraction import run_extraction_phase
 from audit_workbench.services.run.phase_state import build_phase_state
 from audit_workbench.services.run.validation import run_validation_phase
 from audit_workbench.services.run_lock import advisory_lock_key
-from audit_workbench.services.run_terminal import fail_run_terminal
+from audit_workbench.services.run_terminal import PUBLIC_RUN_FAILURE_MESSAGE, fail_run_terminal
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
@@ -57,9 +57,7 @@ async def _try_advisory_lock(session: AsyncSession, run_id: str) -> bool:
 
 async def _clear_prior_run_results(session: AsyncSession, run_id: str) -> None:
     await session.execute(delete(RuleResult).where(RuleResult.run_id == run_id))
-    rd_result = await session.execute(
-        select(RunDocument.id).where(RunDocument.run_id == run_id)
-    )
+    rd_result = await session.execute(select(RunDocument.id).where(RunDocument.run_id == run_id))
     rd_ids = list(rd_result.scalars())
     if rd_ids:
         await session.execute(
@@ -122,9 +120,9 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
         .where(Run.id == run_id)
         .options(
             selectinload(Run.documents).selectinload(RunDocument.fields),
-            selectinload(Run.workflow).selectinload(Workflow.documents).selectinload(
-                Document.schema_fields
-            ),
+            selectinload(Run.workflow)
+            .selectinload(Workflow.documents)
+            .selectinload(Document.schema_fields),
             selectinload(Run.workflow).selectinload(Workflow.rules),
         )
     )
@@ -132,7 +130,7 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
 
 
 async def _persist_run_failure(run_id: str, exc: Exception) -> None:
-    await fail_run_terminal(run_id, repr(exc))
+    await fail_run_terminal(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
     log.exception(
         "run_failed",
         event_domain="audit_run",

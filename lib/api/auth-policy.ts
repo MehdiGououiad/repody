@@ -1,12 +1,11 @@
 /**
  * Central auth policy — which credential applies per API route pattern.
  *
- * Admin token: UI routes via Next middleware (`/api/*` except `/api/v1/*`).
+ * Human UI: Keycloak JWT via Auth.js session (middleware + serverFetch).
  * Workflow key: deployed run API (`/api/v1/workflows/.../runs`).
- * Server admin: RSC direct backend calls (`serverFetch`).
  */
 
-export type AuthCredentialKind = "admin" | "workflow" | "none";
+export type AuthCredentialKind = "session" | "workflow" | "none";
 
 export type AuthPolicyRow = {
   pattern: RegExp;
@@ -16,24 +15,30 @@ export type AuthPolicyRow = {
 
 export const AUTH_POLICY: AuthPolicyRow[] = [
   {
-    pattern: /^\/api\/v1\/workflows\/[^/]+\/runs/,
+    pattern: /^\/api\/v1\/healthz/,
+    credential: "none",
+    description: "Public readiness probe",
+  },
+  {
+    pattern: /^\/api\/v1\/workflows\/[^/]+\/runs(?:\/json)?$/,
     credential: "workflow",
-    description: "Deployed workflow run API — client Bearer (workflow key)",
+    description:
+      "Workflow run API — workflow API key when sent; otherwise middleware injects session JWT (builder test)",
   },
   {
     pattern: /^\/api\/v1\//,
-    credential: "workflow",
-    description: "Public workflow API surface — preserve client Bearer",
+    credential: "session",
+    description: "Management API — middleware injects Keycloak access token",
   },
   {
     pattern: /^\/api\//,
-    credential: "admin",
-    description: "UI admin API — middleware injects AUDIT_ADMIN_API_TOKEN",
+    credential: "session",
+    description: "UI admin API — Auth.js injects Keycloak access token",
   },
   {
     pattern: /^\/v1\//,
-    credential: "admin",
-    description: "Server-side direct backend — serverFetch admin token",
+    credential: "session",
+    description: "Server-side direct backend — serverFetch session token",
   },
 ];
 

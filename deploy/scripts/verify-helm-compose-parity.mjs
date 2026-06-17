@@ -45,8 +45,13 @@ function helmScalar(dotted) {
 const CHECKS = [
   {
     label: "API auth enabled",
-    compose: () => composeEnv("api", "AUDIT_AUTH_ENABLED"),
-    helm: () => helmScalar("config.authEnabled"),
+    compose: () => composeEnv("api", "AUDIT_OIDC_ENABLED"),
+    helm: () => helmScalar("config.oidcEnabled"),
+  },
+  {
+    label: "Repody VLM warmup (OCR worker)",
+    compose: () => composeEnv("worker", "AUDIT_REPODY_VLM_WARMUP_ON_START"),
+    helm: () => helmValues.match(/workerOcr:\n[\s\S]*?warmupOnStart:\s*(\w+)/)?.[1] ?? null,
   },
   {
     label: "Direct uploads",

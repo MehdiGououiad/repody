@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from audit_workbench.db.models import Document, Run, Workflow
+from audit_workbench.extraction.document_modes import normalize_document_modes
 from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.extraction.processing_paths import normalize_document_modes
 from audit_workbench.services.run.helpers import rules_payload
 
 
@@ -124,6 +124,7 @@ def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
                 "name": str(rule.get("name") or "Rule"),
                 "kind": str(rule.get("kind") or "logic"),
                 "scope": str(rule.get("scope") or "intra"),
+                "applies_to": rule.get("applies_to") or rule.get("appliesTo") or [],
                 "body": resolve_rule_body(
                     {
                         "body": rule.get("body") or "",

@@ -133,7 +133,7 @@ function main() {
       ...process.env,
       REPODY_IMAGE_TAG: tag,
       REPODY_IMAGE_REGISTRY: "",
-      AUDIT_ADMIN_API_TOKEN: process.env.AUDIT_ADMIN_API_TOKEN ?? "airgap-build-placeholder",
+      AUTH_SECRET: process.env.AUTH_SECRET ?? "airgap-build-placeholder-secret",
       AUDIT_MINIO_PUBLIC_ENDPOINT:
         process.env.AUDIT_MINIO_PUBLIC_ENDPOINT ?? "files.example.com",
       NEXT_PUBLIC_BUGSINK_DSN: process.env.NEXT_PUBLIC_BUGSINK_DSN ?? "",

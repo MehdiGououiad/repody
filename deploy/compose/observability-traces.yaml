@@ -10,7 +10,7 @@ services:
   tempo:
     profiles:
       - obs-traces
-    image: grafana/tempo:2.9.0
+    image: ${REPODY_TEMPO_IMAGE:-grafana/tempo:2.9.2}
     command: ["-config.file=/etc/tempo.yaml"]
     ports:
       - "4318:4318"

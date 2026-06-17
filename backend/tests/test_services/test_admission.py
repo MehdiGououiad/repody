@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
-from audit_workbench.db.base import Base
 from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.services.admission import (
     QueueCapacityExceeded,
@@ -19,26 +16,12 @@ from audit_workbench.settings import clear_settings_cache
 
 
 @pytest.fixture
-async def admission_session(monkeypatch):
-    monkeypatch.setenv("AUDIT_RUN_JOBS_INLINE", "false")
-    clear_settings_cache()
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        wf = Workflow(id="wf-adm", name="Admission", status=WorkflowStatus.active.value)
-        session.add(wf)
-        await session.commit()
-        yield session, wf.id
-
-    await engine.dispose()
-    clear_settings_cache()
+async def admission_session(postgres_session):
+    wf = Workflow(id="wf-adm", name="Admission", status=WorkflowStatus.active.value)
+    postgres_session.add(wf)
+    await postgres_session.flush()
+    await postgres_session.commit()
+    yield postgres_session, wf.id
 
 
 def test_apply_queue_meta_sets_label_and_position():
@@ -109,6 +92,32 @@ async def test_create_run_progress_includes_queue_fields(admission_session):
     assert run.progress is not None
     assert run.progress.get("queuePosition") == 1
     assert run.progress.get("queueDepth") == 1
+
+
+@pytest.mark.asyncio
+async def test_count_running_excludes_queued(admission_session):
+    from audit_workbench.services.admission import count_queued, count_running
+
+    session, workflow_id = admission_session
+    session.add(
+        Run(
+            id="AUD-R-1",
+            workflow_id=workflow_id,
+            source="test",
+            status=RunStatus.running.value,
+        )
+    )
+    session.add(
+        Run(
+            id="AUD-Q-9",
+            workflow_id=workflow_id,
+            source="test",
+            status=RunStatus.queued.value,
+        )
+    )
+    await session.flush()
+    assert await count_running(session) == 1
+    assert await count_queued(session) == 1
 
 
 @pytest.mark.asyncio

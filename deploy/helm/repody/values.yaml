@@ -150,17 +150,22 @@ ingress:
 
 # ── Platform secrets & config ─────────────────────────────────────────────────
 secrets:
-  adminApiToken: ""
+  authSecret: ""
+  keycloakClientSecret: ""
   create: true
 
 config:
-  authEnabled: true
+  oidcEnabled: true
+  oidcIssuer: https://auth.example.com/realms/repody
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
   inferenceMode: vllm
   vllmBaseUrl: http://vllm.inference.svc.cluster.local:8000/v1
   vllmServedModel: numind/NuExtract3
   corsOrigins: '["https://app.example.com"]'
   logJson: true
   directUploadEnabled: true
+  rateLimitFailClosed: true
 
 observability:
   bugsinkDsn: ""

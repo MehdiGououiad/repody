@@ -87,7 +87,7 @@ spec:
               mountPath: /shared
       containers:
         - name: store-secret
-          image: bitnami/kubectl:1.33.4
+          image: bitnami/kubectl:1.34.2
           env:
             - name: TOKEN_SECRET
               value: {{ include "repody.fullname" . }}-hatchet-token

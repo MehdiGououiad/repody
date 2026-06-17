@@ -5,6 +5,11 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    settings: {
+      react: { version: "19" },
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -13,6 +18,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Non-frontend trees (Python, infra, generated artifacts):
+    "backend/**",
+    "deploy/**",
+    "e2e/**",
+    "scripts/**",
+    "observability/**",
+    "lib/api/openapi.json",
+    "lib/api/generated/**",
   ]),
 ]);
 

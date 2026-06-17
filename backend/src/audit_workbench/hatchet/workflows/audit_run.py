@@ -36,15 +36,9 @@ def register_audit_run_workflow(hatchet: Hatchet):
     @workflow.task(
         name="process-audit-run",
         execution_timeout=task_timeout,
-        retries=0,
+        retries=1,
     )
     async def process_audit_run_task(input: AuditRunInput, ctx: Context) -> dict[str, str]:
-        from audit_workbench.db.base import async_session_factory
-        from audit_workbench.db.models import Run
-        from audit_workbench.observability.context import log_context
-        from audit_workbench.observability.tracing import start_span
-        from audit_workbench.services.run_processor import execute_run_with_timeout
-
         run_id = input.run_id
         workflow_id = input.workflow_id
         request_id = input.request_id
@@ -60,6 +54,12 @@ def register_audit_run_workflow(hatchet: Hatchet):
             timeout_minutes=settings.hatchet_task_timeout_minutes,
         )
         try:
+            from audit_workbench.db.base import async_session_factory
+            from audit_workbench.db.models import Run
+            from audit_workbench.observability.context import log_context
+            from audit_workbench.observability.tracing import start_span
+            from audit_workbench.services.run_processor import execute_run_with_timeout
+
             async with start_span(
                 "process_audit_run",
                 {
@@ -87,7 +87,10 @@ def register_audit_run_workflow(hatchet: Hatchet):
                                 bind_log_context(workflow_id=workflow_id)
                         await execute_run_with_timeout(session, run_id)
         except Exception as exc:
-            from audit_workbench.services.run_terminal import fail_run_terminal
+            from audit_workbench.services.run_terminal import (
+                PUBLIC_RUN_FAILURE_MESSAGE,
+                fail_run_terminal,
+            )
 
             if isinstance(exc, TimeoutError):
                 log.warning(
@@ -97,7 +100,7 @@ def register_audit_run_workflow(hatchet: Hatchet):
                 )
             else:
                 log.exception("hatchet_run_failed", run_id=run_id, error=repr(exc))
-            await fail_run_terminal(run_id, repr(exc))
+            await fail_run_terminal(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
             raise
         log.info("hatchet_run_completed", run_id=run_id, pool=input.extract_pool)
         return {"run_id": run_id, "phase": "done"}

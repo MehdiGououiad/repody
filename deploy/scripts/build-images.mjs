@@ -21,8 +21,9 @@ function run(args) {
       ...process.env,
       REPODY_IMAGE_REGISTRY: registry ? `${registry}/` : "",
       REPODY_IMAGE_TAG: tag,
-      AUDIT_ADMIN_API_TOKEN:
-        process.env.AUDIT_ADMIN_API_TOKEN ?? "build-placeholder",
+      AUTH_SECRET: process.env.AUTH_SECRET ?? "build-placeholder-secret-32chars-min",
+      AUTH_KEYCLOAK_CLIENT_SECRET:
+        process.env.AUTH_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
       AUDIT_MINIO_PUBLIC_ENDPOINT:
         process.env.AUDIT_MINIO_PUBLIC_ENDPOINT ?? "files.example.com",
     },

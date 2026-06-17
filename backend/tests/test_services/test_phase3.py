@@ -6,7 +6,7 @@ import pytest
 from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
-from audit_workbench.rules.evaluators.logic import evaluate_logic_rule
+from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
 from audit_workbench.services import rate_limit as rate_limit_module
 from audit_workbench.services.rate_limit import RateLimitExceeded, check_run_rate_limits
 from audit_workbench.settings import Settings, clear_settings_cache
@@ -21,16 +21,7 @@ def test_evaluate_logic_rule_skips_missing_field():
 
 
 @pytest.mark.asyncio
-async def test_rate_limit_disabled_by_default_inline(monkeypatch):
-    monkeypatch.setenv("AUDIT_RUN_JOBS_INLINE", "true")
-    monkeypatch.setenv("AUDIT_RATE_LIMIT_ENABLED", "true")
-    clear_settings_cache()
-    await check_run_rate_limits(workflow_id="wf-1", source="test", client_key="127.0.0.1")
-
-
-@pytest.mark.asyncio
 async def test_rate_limit_exceeded(monkeypatch):
-    monkeypatch.setenv("AUDIT_RUN_JOBS_INLINE", "false")
     monkeypatch.setenv("AUDIT_RATE_LIMIT_ENABLED", "true")
     monkeypatch.setenv("AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW", "1")
     monkeypatch.setenv("AUDIT_RATE_LIMIT_WINDOW_SECONDS", "60")

@@ -1,5 +1,6 @@
-from audit_workbench.schemas.common import CamelModel
 from pydantic import Field
+
+from audit_workbench.schemas.common import CamelModel
 
 
 class RunAuditField(CamelModel):

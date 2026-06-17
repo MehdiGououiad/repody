@@ -6,7 +6,9 @@ metadata:
     {{- include "repody.labels" . | nindent 4 }}
 data:
   AUDIT_DEPLOYMENT_ENVIRONMENT: {{ .Values.global.deploymentEnvironment | quote }}
-  AUDIT_AUTH_ENABLED: {{ .Values.config.authEnabled | quote }}
+  AUDIT_OIDC_ENABLED: {{ .Values.config.oidcEnabled | quote }}
+  AUDIT_OIDC_ISSUER: {{ required "config.oidcIssuer is required when oidcEnabled" .Values.config.oidcIssuer | quote }}
+  AUDIT_OIDC_AUDIENCE: {{ required "config.oidcAudience is required when oidcEnabled" .Values.config.oidcAudience | quote }}
   AUDIT_LOG_JSON: {{ .Values.config.logJson | quote }}
   AUDIT_DIRECT_UPLOAD_ENABLED: {{ .Values.config.directUploadEnabled | quote }}
   AUDIT_STORAGE_BACKEND: s3
@@ -17,6 +19,7 @@ data:
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
   AUDIT_SEED_ON_STARTUP: "false"
   AUDIT_USE_CREATE_ALL: "false"
+  AUDIT_RATE_LIMIT_FAIL_CLOSED: {{ .Values.config.rateLimitFailClosed | quote }}
   HATCHET_CLIENT_TLS_STRATEGY: none
   {{- if .Values.hatchet.enabled }}
   HATCHET_CLIENT_HOST_PORT: {{ include "repody.fullname" . }}-hatchet:7077

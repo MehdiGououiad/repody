@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
-from audit_workbench.db.models import Document, Run, Workflow
+from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
 from audit_workbench.schemas.audit import AuditListItem
 from audit_workbench.schemas.run import (
@@ -24,8 +20,6 @@ from audit_workbench.schemas.workflow import (
     WorkflowApiStatsSchema,
     WorkflowRuleSchema,
     WorkflowSchema,
-    CallSeriesPointSchema,
-    TopFailingRuleSchema,
 )
 
 
@@ -51,27 +45,6 @@ def duration_ms_between(start: datetime | None, end: datetime | None) -> int:
     if not start or not end:
         return 0
     return int((_as_utc(end) - _as_utc(start)).total_seconds() * 1000)
-
-
-async def workflow_stats(session: AsyncSession, workflow_id: str) -> tuple[int, float, str | None]:
-    q = await session.execute(
-        select(
-            func.count(Run.id),
-            func.max(Run.created_at),
-        ).where(Run.workflow_id == workflow_id, Run.status == "done")
-    )
-    total, last_run = q.one()
-    passed_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.workflow_id == workflow_id,
-            Run.status == "done",
-            Run.overall_status == "passed",
-        )
-    )
-    passed = passed_q.scalar() or 0
-    rate = (passed / total) if total else 0.0
-    last_str = last_run.strftime("%b %d, %H:%M") if last_run else None
-    return int(total), rate, last_str
 
 
 def workflow_to_schema(
@@ -129,18 +102,6 @@ def workflow_to_schema(
         default_llm_model=wf.default_llm_model,
         api_stats=api_stats,
     )
-
-
-async def load_workflow(session: AsyncSession, workflow_id: str) -> Workflow | None:
-    result = await session.execute(
-        select(Workflow)
-        .where(Workflow.id == workflow_id)
-        .options(
-            selectinload(Workflow.documents).selectinload(Document.schema_fields),
-            selectinload(Workflow.rules),
-        )
-    )
-    return result.scalar_one_or_none()
 
 
 def run_to_audit_detail(run: Run, workflow_name: str) -> RunAuditDetail:
@@ -224,15 +185,4 @@ def run_to_audit_list_item(run: Run, workflow_name: str) -> AuditListItem:
         timestamp=_fmt_dt_iso(run.created_at),
         rows=run.fields_extracted,
         failed_rules=run.summary_failed,
-    )
-
-
-def default_api_stats() -> WorkflowApiStatsSchema:
-    """Empty stats placeholder — real values come from workflow_stats.workflow_api_stats."""
-    return WorkflowApiStatsSchema(
-        api_calls_today=0,
-        api_calls_total=0,
-        avg_latency_ms=0,
-        call_series=[],
-        top_failing_rules=[],
     )

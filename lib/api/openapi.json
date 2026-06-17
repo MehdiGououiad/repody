@@ -5,16 +5,44 @@
     "version": "0.1.0"
   },
   "paths": {
-    "/v1/healthz": {
+    "/v1/healthz/live": {
       "get": {
-        "summary": "Healthz",
-        "operationId": "healthz_v1_healthz_get",
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Live",
+        "description": "Liveness for Docker and load balancers \u2014 database ping only, no GPU probe.",
+        "operationId": "health_live_v1_healthz_live_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthLiveResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/healthz": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health Readiness",
+        "description": "Readiness with queue depth, storage, and optional inference runtime probe.",
+        "operationId": "health_readiness_v1_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthReadinessResponse"
+                }
               }
             }
           }
@@ -501,7 +529,7 @@
           "runs"
         ],
         "summary": "Get Run Status",
-        "description": "Lightweight poll \u2014 status + progress only (no full audit payload).",
+        "description": "Lightweight poll \u2014 status and progress only (no full audit payload).",
         "operationId": "get_run_status_v1_runs__run_id__status_get",
         "parameters": [
           {
@@ -535,7 +563,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/RunPollResponse"
+                }
               }
             }
           },
@@ -659,10 +689,16 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Server-Sent Events stream of run progress updates",
             "content": {
               "application/json": {
                 "schema": {}
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE `data:` frames containing JSON progress payloads"
+                }
               }
             }
           },
@@ -698,34 +734,6 @@
             }
           },
           {
-            "name": "mode",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Mode"
-            }
-          },
-          {
-            "name": "inline",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Process synchronously (test/dev only).",
-              "default": false,
-              "title": "Inline"
-            },
-            "description": "Process synchronously (test/dev only)."
-          },
-          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -758,15 +766,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/RunCreatedResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/RunPollResponse"
-                    }
-                  ],
-                  "title": "Response Create Run Json V1 Workflows  Workflow Id  Runs Json Post"
+                  "$ref": "#/components/schemas/RunCreatedResponse"
                 }
               }
             }
@@ -790,6 +790,7 @@
           "runs"
         ],
         "summary": "Create Run",
+        "description": "Multipart fallback when presigned upload is unavailable.",
         "operationId": "create_run_v1_workflows__workflow_id__runs_post",
         "parameters": [
           {
@@ -800,34 +801,6 @@
               "type": "string",
               "title": "Workflow Id"
             }
-          },
-          {
-            "name": "mode",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Mode"
-            }
-          },
-          {
-            "name": "inline",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Process synchronously (test/dev only).",
-              "default": false,
-              "title": "Inline"
-            },
-            "description": "Process synchronously (test/dev only)."
           },
           {
             "name": "authorization",
@@ -861,152 +834,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/RunCreatedResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/RunPollResponse"
-                    }
-                  ],
-                  "title": "Response Create Run V1 Workflows  Workflow Id  Runs Post"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/run": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Create Run Legacy",
-        "operationId": "create_run_legacy_v1_workflows__workflow_id__run_post",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_create_run_legacy_v1_workflows__workflow_id__run_post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
                   "$ref": "#/components/schemas/RunCreatedResponse"
                 }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/test-run": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Test Run",
-        "description": "Deprecated \u2014 use POST /runs/json?mode=test&inline=true.",
-        "operationId": "test_run_v1_workflows__workflow_id__test_run_post",
-        "deprecated": true,
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RunSnapshotBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
               }
             }
           },
@@ -1456,74 +1285,13 @@
         }
       }
     },
-    "/v1/diagnostics/ocr": {
-      "get": {
-        "tags": [
-          "diagnostics"
-        ],
-        "summary": "Ocr Diagnostic",
-        "description": "Document model runtime status (Docker Model Runner or vLLM).",
-        "operationId": "ocr_diagnostic_v1_diagnostics_ocr_get",
-        "parameters": [
-          {
-            "name": "run_infer",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "Run a short Repody VLM probe.",
-              "default": false,
-              "title": "Run Infer"
-            },
-            "description": "Run a short Repody VLM probe."
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OcrDiagnosticResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/platform/config": {
       "get": {
         "tags": [
           "platform"
         ],
         "summary": "Get Platform Config",
+        "description": "Read-only platform configuration snapshot (safe AUDIT_* fields).",
         "operationId": "get_platform_config_v1_platform_config_get",
         "parameters": [
           {
@@ -1567,13 +1335,14 @@
         }
       }
     },
-    "/v1/inference/models": {
+    "/v1/models/catalog": {
       "get": {
         "tags": [
-          "inference"
+          "platform"
         ],
-        "summary": "List Inference Models",
-        "operationId": "list_inference_models_v1_inference_models_get",
+        "summary": "Get Models Catalog",
+        "description": "Document and validation model catalog with live availability.",
+        "operationId": "get_models_catalog_v1_models_catalog_get",
         "parameters": [
           {
             "name": "authorization",
@@ -1598,7 +1367,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InferenceModelsResponse"
+                  "$ref": "#/components/schemas/ModelsCatalogResponse"
                 }
               }
             }
@@ -1616,63 +1385,27 @@
         }
       }
     },
-    "/v1/ocr/models": {
+    "/v1/diagnostics/ocr": {
       "get": {
         "tags": [
-          "ocr"
+          "platform"
         ],
-        "summary": "List Ocr Models",
-        "operationId": "list_ocr_models_v1_ocr_models_get",
+        "summary": "Ocr Diagnostic",
+        "description": "Document model runtime status (Docker Model Runner or vLLM).",
+        "operationId": "ocr_diagnostic_v1_diagnostics_ocr_get",
         "parameters": [
           {
-            "name": "authorization",
-            "in": "header",
+            "name": "run_infer",
+            "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OcrModelsResponse"
-                }
-              }
-            }
+              "type": "boolean",
+              "description": "Run a short Repody VLM probe.",
+              "default": false,
+              "title": "Run Infer"
+            },
+            "description": "Run a short Repody VLM probe."
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/processing-paths": {
-      "get": {
-        "tags": [
-          "processing-paths"
-        ],
-        "summary": "Get Processing Paths",
-        "operationId": "get_processing_paths_v1_processing_paths_get",
-        "parameters": [
           {
             "name": "authorization",
             "in": "header",
@@ -1696,7 +1429,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProcessingPathsResponse"
+                  "$ref": "#/components/schemas/OcrDiagnosticResponse"
                 }
               }
             }
@@ -2313,38 +2046,6 @@
         ],
         "title": "AuditListResponse"
       },
-      "Body_create_run_legacy_v1_workflows__workflow_id__run_post": {
-        "properties": {
-          "files": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "contentMediaType": "application/octet-stream"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Files"
-          },
-          "document_ids": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Ids"
-          }
-        },
-        "type": "object",
-        "title": "Body_create_run_legacy_v1_workflows__workflow_id__run_post"
-      },
       "Body_create_run_v1_workflows__workflow_id__runs_post": {
         "properties": {
           "files": {
@@ -2372,6 +2073,18 @@
               }
             ],
             "title": "Document Ids"
+          },
+          "document_types": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Types",
+            "description": "JSON array of configured document type names, same order as files."
           },
           "payload": {
             "anyOf": [
@@ -2504,6 +2217,65 @@
         ],
         "title": "CallSeriesPointSchema"
       },
+      "CatalogModelEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "engine": {
+            "type": "string",
+            "title": "Engine",
+            "default": ""
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": ""
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "available": {
+            "type": "boolean",
+            "title": "Available",
+            "default": true
+          },
+          "availabilityNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Availabilitynote"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "title": "Isdefault",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "kind"
+        ],
+        "title": "CatalogModelEntry"
+      },
       "ConfirmUploadItem": {
         "properties": {
           "storageKey": {
@@ -2567,16 +2339,6 @@
       "CreateRunJsonBody": {
         "properties": {
           "snapshot": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RunSnapshotBody"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "payload": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/RunSnapshotBody"
@@ -2988,75 +2750,140 @@
         ],
         "title": "HealthAlert"
       },
-      "InferenceModelSchema": {
+      "HealthLiveResponse": {
         "properties": {
-          "id": {
+          "status": {
             "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          },
-          "runtime": {
-            "type": "string",
-            "title": "Runtime",
-            "default": "docker_model_runner"
-          },
-          "isDefault": {
-            "type": "boolean",
-            "title": "Isdefault",
-            "default": false
+            "const": "ok",
+            "title": "Status"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "label",
-          "kind"
+          "status"
         ],
-        "title": "InferenceModelSchema"
+        "title": "HealthLiveResponse"
       },
-      "InferenceModelsResponse": {
+      "HealthReadinessResponse": {
         "properties": {
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/InferenceModelSchema"
-            },
-            "type": "array",
-            "title": "Models"
-          },
-          "defaultDocumentModel": {
+          "status": {
             "type": "string",
-            "title": "Defaultdocumentmodel"
+            "const": "ok",
+            "title": "Status"
           },
-          "defaultValidationModel": {
+          "extractor": {
+            "type": "string",
+            "title": "Extractor"
+          },
+          "inference": {
+            "type": "string",
+            "title": "Inference"
+          },
+          "modelRunner": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "boolean"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Defaultvalidationmodel"
+            "title": "Modelrunner"
           },
-          "inferenceMode": {
+          "vllm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vllm"
+          },
+          "storageBackend": {
             "type": "string",
-            "title": "Inferencemode"
+            "title": "Storagebackend"
+          },
+          "directUploadEnabled": {
+            "type": "boolean",
+            "title": "Directuploadenabled"
+          },
+          "cacheEnabled": {
+            "type": "boolean",
+            "title": "Cacheenabled"
+          },
+          "dbPoolSize": {
+            "type": "integer",
+            "title": "Dbpoolsize"
+          },
+          "queueBackend": {
+            "type": "string",
+            "title": "Queuebackend"
+          },
+          "structuredLlm": {
+            "type": "boolean",
+            "title": "Structuredllm"
+          },
+          "rateLimitEnabled": {
+            "type": "boolean",
+            "title": "Ratelimitenabled"
+          },
+          "admissionControlEnabled": {
+            "type": "boolean",
+            "title": "Admissioncontrolenabled"
+          },
+          "queuedRuns": {
+            "type": "integer",
+            "title": "Queuedruns"
+          },
+          "runningRuns": {
+            "type": "integer",
+            "title": "Runningruns"
+          },
+          "inflightRuns": {
+            "type": "integer",
+            "title": "Inflightruns"
+          },
+          "authEnabled": {
+            "type": "boolean",
+            "title": "Authenabled"
+          },
+          "oidcEnabled": {
+            "type": "boolean",
+            "title": "Oidcenabled"
+          },
+          "workerPools": {
+            "$ref": "#/components/schemas/WorkerPoolsHealth"
+          },
+          "hatchetConfigured": {
+            "type": "boolean",
+            "title": "Hatchetconfigured"
           }
         },
         "type": "object",
         "required": [
-          "models",
-          "defaultDocumentModel",
-          "inferenceMode"
+          "status",
+          "extractor",
+          "inference",
+          "modelRunner",
+          "storageBackend",
+          "directUploadEnabled",
+          "cacheEnabled",
+          "dbPoolSize",
+          "queueBackend",
+          "structuredLlm",
+          "rateLimitEnabled",
+          "admissionControlEnabled",
+          "queuedRuns",
+          "runningRuns",
+          "inflightRuns",
+          "authEnabled",
+          "oidcEnabled",
+          "workerPools",
+          "hatchetConfigured"
         ],
-        "title": "InferenceModelsResponse"
+        "title": "HealthReadinessResponse"
       },
       "KpiMetric": {
         "properties": {
@@ -3191,6 +3018,67 @@
         ],
         "title": "ModelActionRequest"
       },
+      "ModelsCatalogResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogModelEntry"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "defaultDocumentModel": {
+            "type": "string",
+            "title": "Defaultdocumentmodel"
+          },
+          "defaultValidationModel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultvalidationmodel"
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/ReadPathOption"
+            },
+            "type": "array",
+            "title": "Paths"
+          },
+          "validationModes": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationModeOption"
+            },
+            "type": "array",
+            "title": "Validationmodes"
+          },
+          "defaultPath": {
+            "type": "string",
+            "title": "Defaultpath",
+            "default": "document_model"
+          },
+          "defaultValidationMode": {
+            "type": "string",
+            "title": "Defaultvalidationmode",
+            "default": "logic_only"
+          }
+        },
+        "type": "object",
+        "required": [
+          "models",
+          "defaultDocumentModel",
+          "inferenceMode"
+        ],
+        "title": "ModelsCatalogResponse"
+      },
       "OcrDiagnosticResponse": {
         "properties": {
           "ok": {
@@ -3209,11 +3097,6 @@
           "inferenceReachable": {
             "type": "boolean",
             "title": "Inferencereachable",
-            "default": false
-          },
-          "modelRunnerReachable": {
-            "type": "boolean",
-            "title": "Modelrunnerreachable",
             "default": false
           },
           "modelInRegistry": {
@@ -3290,81 +3173,6 @@
         ],
         "title": "OcrDiagnosticResponse"
       },
-      "OcrModelOption": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "engine": {
-            "type": "string",
-            "title": "Engine"
-          },
-          "runtime": {
-            "type": "string",
-            "title": "Runtime"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "available": {
-            "type": "boolean",
-            "title": "Available",
-            "default": true
-          },
-          "availabilityNote": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Availabilitynote"
-          },
-          "isDefault": {
-            "type": "boolean",
-            "title": "Isdefault",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "engine",
-          "runtime"
-        ],
-        "title": "OcrModelOption"
-      },
-      "OcrModelsResponse": {
-        "properties": {
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/OcrModelOption"
-            },
-            "type": "array",
-            "title": "Models"
-          },
-          "defaultModel": {
-            "type": "string",
-            "title": "Defaultmodel"
-          }
-        },
-        "type": "object",
-        "required": [
-          "models",
-          "defaultModel"
-        ],
-        "title": "OcrModelsResponse"
-      },
       "PerformancePoint": {
         "properties": {
           "day": {
@@ -3409,10 +3217,6 @@
           "queueBackend": {
             "type": "string",
             "title": "Queuebackend"
-          },
-          "runJobsInline": {
-            "type": "boolean",
-            "title": "Runjobsinline"
           },
           "directUploadEnabled": {
             "type": "boolean",
@@ -3497,6 +3301,16 @@
             "type": "boolean",
             "title": "Llmvalidationenabled",
             "default": false
+          },
+          "gpuLiveProbe": {
+            "type": "boolean",
+            "title": "Gpuliveprobe",
+            "default": false
+          },
+          "healthzProbeInference": {
+            "type": "boolean",
+            "title": "Healthzprobeinference",
+            "default": false
           }
         },
         "type": "object",
@@ -3506,7 +3320,6 @@
           "inferenceMode",
           "storageBackend",
           "queueBackend",
-          "runJobsInline",
           "directUploadEnabled",
           "cacheEnabled",
           "rateLimitEnabled",
@@ -3665,40 +3478,6 @@
           "size"
         ],
         "title": "PresignedUploadItem"
-      },
-      "ProcessingPathsResponse": {
-        "properties": {
-          "paths": {
-            "items": {
-              "$ref": "#/components/schemas/ReadPathOption"
-            },
-            "type": "array",
-            "title": "Paths"
-          },
-          "validationModes": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationModeOption"
-            },
-            "type": "array",
-            "title": "Validationmodes"
-          },
-          "defaultPath": {
-            "type": "string",
-            "title": "Defaultpath"
-          },
-          "defaultValidationMode": {
-            "type": "string",
-            "title": "Defaultvalidationmode",
-            "default": "logic_only"
-          }
-        },
-        "type": "object",
-        "required": [
-          "paths",
-          "validationModes",
-          "defaultPath"
-        ],
-        "title": "ProcessingPathsResponse"
       },
       "ReadPathOption": {
         "properties": {
@@ -4194,6 +3973,11 @@
             "title": "Cachehit",
             "default": false
           },
+          "gpuColdStartLikely": {
+            "type": "boolean",
+            "title": "Gpucoldstartlikely",
+            "default": false
+          },
           "ocrSkipped": {
             "type": "boolean",
             "title": "Ocrskipped",
@@ -4408,6 +4192,11 @@
               }
             ],
             "title": "Durationms"
+          },
+          "gpuColdStartHint": {
+            "type": "boolean",
+            "title": "Gpucoldstarthint",
+            "default": false
           }
         },
         "type": "object",
@@ -4436,7 +4225,7 @@
             "title": "Rules",
             "default": []
           },
-          "workflow_name": {
+          "workflowName": {
             "anyOf": [
               {
                 "type": "string"
@@ -4445,12 +4234,12 @@
                 "type": "null"
               }
             ],
-            "title": "Workflow Name"
+            "title": "Workflowname"
           }
         },
         "type": "object",
         "title": "RunSnapshotBody",
-        "description": "Ephemeral workflow config for this run only \u2014 does not mutate the saved workflow."
+        "description": "Ephemeral workflow config for a single run \u2014 does not mutate the saved workflow."
       },
       "RunSummary": {
         "properties": {
@@ -4694,6 +4483,24 @@
           "color"
         ],
         "title": "ViolationBreakdown"
+      },
+      "WorkerPoolsHealth": {
+        "properties": {
+          "fast": {
+            "type": "string",
+            "title": "Fast"
+          },
+          "ocr": {
+            "type": "string",
+            "title": "Ocr"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fast",
+          "ocr"
+        ],
+        "title": "WorkerPoolsHealth"
       },
       "WorkflowApiStatsSchema": {
         "properties": {
@@ -4959,6 +4766,14 @@
           "name"
         ],
         "title": "WorkflowSchema"
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API token",
+        "description": "Keycloak access token (`Authorization: Bearer <jwt>`) for UI users, or a per-workflow API key for run endpoints."
       }
     }
   }

@@ -4,13 +4,38 @@
     "tagline": "Enterprise Audit"
   },
   "nav": {
-    "dashboard": "Control center",
-    "workflows": "Workflow Builder",
+    "dashboard": "Dashboard",
+    "workflows": "Workflows",
     "audits": "Audit Reports",
-    "settings": "Operator Console",
     "newWorkflow": "New Workflow",
-    "documentation": "Documentation",
-    "logout": "Logout"
+    "logout": "Sign out"
+  },
+  "auth": {
+    "signInTitle": "Sign in to Repody",
+    "signInSubtitle": "Enterprise document audit — use your organization account.",
+    "continueWithKeycloak": "Continue with Keycloak",
+    "keycloakHint": "Roles (admin, operator, viewer) are assigned in Keycloak.",
+    "checkingAuth": "Checking sign-in…",
+    "alreadySignedIn": "You are already signed in.",
+    "continueToApp": "Continue to app",
+    "devModeOnLogin": "Sign-in is disabled in this environment (OIDC not configured).",
+    "devModeBadge": "Dev · no sign-in",
+    "devModeHint": "OIDC is off — API uses dev admin access.",
+    "account": "Account",
+    "accountMenu": "Account menu for {name}",
+    "signOut": "Sign out",
+    "managedInKeycloak": "Profile managed in Keycloak",
+    "roleUnknown": "signed in",
+    "forbiddenTitle": "Access denied",
+    "forbiddenBody": "Your account does not have permission for this action. Contact an administrator or switch account.",
+    "backToDashboard": "Back to dashboard",
+    "switchAccount": "Switch account",
+    "errorConfiguration": "Sign-in failed. Start Keycloak with `pnpm dev -- --auth` and verify AUTH_SECRET in .env.local.",
+    "keycloakNotRunning": "Keycloak is not running. Restart dev with `pnpm dev -- --auth --warmup --logs`.",
+    "errorAccessDenied": "Access was denied. You may not have permission to use this application.",
+    "errorVerification": "Sign-in link expired or was already used.",
+    "errorOAuth": "Sign-in with Keycloak failed. Try again.",
+    "errorDefault": "Sign-in failed. Try again."
   },
   "topbar": {
     "searchPlaceholder": "Search audits, workflows…",
@@ -80,24 +105,31 @@
     "queueServerless": "Runs are processed in order. Serverless GPU jobs may also wait 1–2 minutes on the first request after idle."
   },
   "dashboard": {
-    "title": "Control center",
-    "description": "Audit activity, compliance health, and workflow status at a glance.",
-    "pageDescription": "Your command center — platform health, workflows, audit runs, and operator tools in one place.",
-    "eyebrow": "Control center",
-    "auditActivity": "Audit activity",
-    "offlineTitle": "Platform not connected",
-    "offlineHint": "Start the API stack to load live metrics. You can still open the workflow builder and configure schemas offline.",
+    "title": "Dashboard",
+    "description": "Audit outcomes, compliance trends, and workflows at a glance.",
+    "pageDescription": "Live view of audits, pass rates, and workflows that need attention.",
+    "auditActivity": "This week",
+    "offlineTitle": "Connect to see live data",
+    "offlineHint": "Start the platform to load audits and metrics. You can still create workflows offline.",
     "offlineCta": "Create workflow",
-    "recentSubmissions": "Recent audit runs",
-    "workflowStatus": "Workflows",
-    "workflowsTotal": "total",
-    "workflowActive": "active",
-    "workflowPaused": "paused",
-    "workflowDraft": "drafts",
-    "manageWorkflows": "Manage workflows",
-    "openFailures": "Audits requiring attention",
+    "recentSubmissions": "Recent audits",
+    "openFailures": "Needs attention",
     "viewAll": "View all",
-    "failedRulesBadge": "failed",
+    "failedRulesBadge": "issues",
+    "live": {
+      "updated": "Live · updated {time}"
+    },
+    "queueLive": {
+      "counts": "{running} running · {queued} queued",
+      "idle": "No runs in queue"
+    },
+    "workflows": {
+      "title": "Your workflows",
+      "viewAll": "All workflows",
+      "unnamed": "Untitled workflow",
+      "neverRun": "Not run yet",
+      "runsSummary": "{count} runs · {rate} pass rate"
+    },
     "recent": {
       "title": "Recent Audits"
     },
@@ -137,7 +169,7 @@
       "title": "Get your first audit running",
       "description": "Follow the same three steps as the workflow builder — define fields, add rules, then test and deploy.",
       "stepLabel": "Step {number}",
-      "footerHint": "When deployed, API runs and test results will appear in the sections below."
+      "footerHint": "Completed audits and pass rates will appear on this dashboard."
     },
     "platform": {
       "title": "Platform pulse",
@@ -364,6 +396,13 @@
         "finalStepHint": "Run a test with sample files, then deploy when you're ready."
       },
       "namePlaceholder": "Workflow name…",
+      "nameGate": {
+        "title": "Name your workflow",
+        "hint": "Choose a clear name your team will recognize before configuring documents and rules.",
+        "label": "Workflow name",
+        "placeholder": "e.g. Invoice compliance check",
+        "continue": "Continue"
+      },
       "backToWorkflows": "Workflows",
       "statusLive": "Live",
       "statusDraft": "Draft",
@@ -450,7 +489,7 @@
       "extraction": {
         "readPathLabel": "Read path",
         "readPathPlaceholder": "How to read the document",
-        "readPathHintDefault": "Extract structured fields with the selected document model.",
+        "readPathHintDefault": "Extract structured fields with the selected vision model.",
         "validationModeLabel": "Validation",
         "validationModePlaceholder": "Logic rules",
         "validationModeHintDefault": "Logic rules run on extracted field values.",
@@ -458,7 +497,7 @@
         "pathPlaceholder": "Choose how to read and validate",
         "pathLoading": "Loading paths…",
         "pathHintDefault": "Extract fields, then run validation rules on those values.",
-        "documentModelLabel": "Document model",
+        "documentModelLabel": "Vision model",
         "ocrModelPlaceholder": "Choose model",
         "ocrModelLoading": "Loading models…",
         "configurationUnavailable": "Processing options are unavailable",
@@ -513,7 +552,7 @@
         "hint": "Each rule references fields from step 1. Rules run on extracted values, not directly on the raw document.",
         "runsOnOcr": "Repody VLM extracts schema fields first. Logic checks run locally on the extracted values.",
         "validationEngineTitle": "LLM validation engine",
-        "validationEngineHint": "LLM rules use the platform validation model when AUDIT_LLM_VALIDATION_ENABLED is true. Extraction always uses the selected document model.",
+        "validationEngineHint": "LLM rules use the platform validation model when enabled. Extraction uses the selected vision model.",
         "fixedValidationModel": "Platform validation model",
         "fieldReferenceHint": "Reference extracted fields with @field_name. Only referenced values are sent to the validation model.",
         "noFieldsForPrompt": "Select a document with configured fields first.",

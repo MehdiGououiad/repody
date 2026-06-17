@@ -7,7 +7,7 @@ import pytest
 
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import DocumentBundle
-from audit_workbench.extraction.document_models import DocumentModelExtractor
+from audit_workbench.extraction.field_json import parse_fields_json
 from audit_workbench.extraction.model_registry import (
     REPODY_VLM_CATALOG_ID,
     normalize_model_id,
@@ -19,7 +19,6 @@ from audit_workbench.extraction.repody_vlm import (
     build_vlm_template,
     cap_vlm_pages,
 )
-from audit_workbench.extraction.parse_fields import parse_fields_json
 
 
 def test_model_registry_routes_repody_vlm_to_docker_model_runner():
@@ -73,26 +72,39 @@ def test_cap_vlm_pages_keeps_all_when_under_limit():
 
 
 @pytest.mark.asyncio
-async def test_repody_vlm_bypasses_other_handlers(monkeypatch):
+async def test_pipeline_calls_document_model_registry(monkeypatch):
     direct_result = ExtractionResult(fields=[])
     extract_mock = AsyncMock(return_value=direct_result)
     monkeypatch.setattr(
-        "audit_workbench.extraction.document_models.extract_with_document_model",
+        "audit_workbench.extraction.pipeline.extract_with_document_model",
         extract_mock,
     )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.get_cached",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.set_cached",
+        AsyncMock(),
+    )
+    from audit_workbench.extraction.pipeline import PipelineExtractor
+
     bundle = DocumentBundle(
         raw_bytes=b"image",
         mime_type="image/jpeg",
     )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.load_document_bundle",
+        lambda *a, **k: bundle,
+    )
 
-    result = await DocumentModelExtractor().extract(
+    result = await PipelineExtractor().extract(
         b"image",
         "image/jpeg",
         "Invoice",
         [SchemaFieldSpec(name="total_amount", description="Total TTC")],
         extraction_mode="document_model",
         ocr_model=REPODY_VLM_CATALOG_ID,
-        bundle=bundle,
         validation_mode="logic_only",
     )
 

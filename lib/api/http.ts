@@ -1,13 +1,19 @@
 import { formatApiError } from "@/lib/api/api-error";
 import { resolveAuthCredential, workflowAuthHeaders } from "@/lib/api/auth-policy";
+import { auth, isOidcConfigured } from "@/auth";
 
 const SERVER_BASE =
   process.env.INTERNAL_API_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
-function adminHeaders(): HeadersInit {
-  const token = process.env.AUDIT_ADMIN_API_TOKEN;
-  if (!token) return {};
-  return { Authorization: `Bearer ${token}` };
+async function sessionAuthHeaders(): Promise<HeadersInit> {
+  if (!isOidcConfigured()) {
+    return {};
+  }
+  const session = await auth();
+  if (!session?.accessToken) {
+    return {};
+  }
+  return { Authorization: `Bearer ${session.accessToken}` };
 }
 
 export function apiPath(path: string): string {
@@ -40,7 +46,7 @@ export async function browserFetch(
       ? workflowAuthHeaders(workflowApiKey)
       : {};
   try {
-    return await fetch(normalized, {
+    const res = await fetch(normalized, {
       ...rest,
       signal: controller?.signal ?? rest.signal,
       headers: {
@@ -49,6 +55,26 @@ export async function browserFetch(
         ...rest.headers,
       },
     });
+    if (
+      typeof window !== "undefined" &&
+      res.status === 401 &&
+      credential === "session" &&
+      !window.location.pathname.startsWith("/login")
+    ) {
+      const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?callbackUrl=${returnTo}`;
+    }
+    if (
+      typeof window !== "undefined" &&
+      res.status === 403 &&
+      credential === "session"
+    ) {
+      const body = await res.clone().text();
+      if (body.toLowerCase().includes("forbidden") || body.toLowerCase().includes("permission")) {
+        window.location.href = "/unauthorized";
+      }
+    }
+    return res;
   } catch (err) {
     if (controller && err instanceof DOMException && err.name === "AbortError") {
       throw new Error(`Request timed out after ${Math.round(timeoutMs! / 1000)}s`);
@@ -70,12 +96,13 @@ export async function serverFetch(
     controller && timeoutMs
       ? setTimeout(() => controller.abort(), timeoutMs)
       : null;
+  const sessionHeaders = await sessionAuthHeaders();
   try {
     return await fetch(`${SERVER_BASE}${apiPath(path)}`, {
       cache: "no-store",
       ...rest,
       signal: controller?.signal ?? rest.signal,
-      headers: { ...adminHeaders(), ...rest.headers },
+      headers: { ...sessionHeaders, ...rest.headers },
     });
   } catch (err) {
     if (controller && err instanceof DOMException && err.name === "AbortError") {

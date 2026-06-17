@@ -4,15 +4,14 @@ import time
 from typing import Any, Literal
 
 from audit_workbench.db.models import Run
-from audit_workbench.extraction.processing_paths import (
-    parse_read_path,
-    parse_validation_mode,
-    validation_mode_label,
-)
 from audit_workbench.extraction.document_model_branding import (
     normalize_public_catalog_id,
-    public_document_model_label,
 )
+from audit_workbench.extraction.document_modes import (
+    parse_read_path,
+    resolve_run_validation_mode,
+)
+from audit_workbench.extraction.extraction_display import plan_extraction_detail
 from audit_workbench.settings import get_settings
 
 StepStatus = Literal["pending", "active", "done"]
@@ -103,22 +102,6 @@ def _read_path_for_doc(doc: Any, *, has_file: bool) -> tuple[str, str, str | Non
     return "document_model", path.id, ocr
 
 
-def _extract_detail(doc: Any, *, has_file: bool) -> str:
-    if not has_file:
-        return "Schema placeholders (no file uploaded)"
-    extraction_mode = _value(doc, "extraction_mode", "auto")
-    read_spec = parse_read_path(extraction_mode)
-    val = parse_validation_mode(
-        _value(doc, "validation_mode"),
-        extraction_mode=extraction_mode,
-    )
-    ocr = _value(doc, "ocr_model")
-    parts = [f"Read: {read_spec.label}", f"Validation: {validation_mode_label(val)}"]
-    if ocr and read_spec.show_ocr_model:
-        parts.append(f"Model: {public_document_model_label(ocr)}")
-    return " · ".join(parts)
-
-
 def build_run_progress_plan(
     *,
     workflow_docs: list[Any],
@@ -132,32 +115,27 @@ def build_run_progress_plan(
             detail=_queue_wait_detail(),
         ),
     ]
+    run_validation_mode = resolve_run_validation_mode(rules)
     for doc in workflow_docs:
         schema_fields = _value(doc, "schema_fields", [])
-        has_schema = any(
-            str(_value(f, "name", "")).strip()
-            for f in schema_fields
-        )
+        has_schema = any(str(_value(f, "name", "")).strip() for f in schema_fields)
         if not has_schema:
             continue
         doc_id = _value(doc, "id", "")
         doc_type = _value(doc, "document_type", "Document")
         has_file = doc_id in docs_with_files
         mode, read_path, ocr_model = _read_path_for_doc(doc, has_file=has_file)
-        extraction_mode = _value(doc, "extraction_mode", "auto")
-        val_mode = parse_validation_mode(
-            _value(doc, "validation_mode"),
-            extraction_mode=extraction_mode,
-        )
         steps.append(
             _step(
                 f"extract-{doc_id}",
                 f"Extract · {doc_type}",
                 mode=mode,
                 read_path=read_path,
-                validation_mode=val_mode,
+                validation_mode=run_validation_mode,
                 ocr_model=ocr_model,
-                detail=_extract_detail(doc, has_file=has_file),
+                detail=plan_extraction_detail(
+                    doc, has_file=has_file, run_validation_mode=run_validation_mode
+                ),
             )
         )
     for rule in rules:
@@ -295,10 +273,7 @@ async def init_queued_progress(session: object, run_id: str) -> None:
         _step(
             "queue",
             "Queued for worker",
-            detail=(
-                "Waiting for an OCR worker slot — if another document is processing, "
-                "this can take several minutes on CPU"
-            ),
+            detail=_queue_wait_detail(),
         )
     ]
     await set_run_progress(session, run_id, steps, 0, "Waiting for worker…", force=True)
@@ -338,48 +313,3 @@ async def fail_run_progress(run_id: str, error: str) -> None:
             run.progress = progress
             await session.commit()
     clear_progress_commit_cache(run_id)
-
-
-async def publish_progress_event(
-    session: object,
-    event: "RunProgressEvent",
-    *,
-    steps: list[dict[str, Any]],
-    current_index: int,
-    force: bool = False,
-) -> None:
-    """Map a versioned domain event to UI progress and publish."""
-    from audit_workbench.services.run_progress_events import (
-        RunProgressEvent,
-        progress_dict_from_event,
-    )
-
-    progress = progress_dict_from_event(event, steps=steps, current_index=current_index)
-    from audit_workbench.services.run_events import publish_run_progress
-
-    await publish_run_progress(event.run_id, progress)
-
-    settings = get_settings()
-    interval_s = settings.progress_commit_interval_ms / 1000.0
-    now = time.monotonic()
-    last = _last_progress_commit.get(event.run_id, 0.0)
-    if not force and (now - last) < interval_s:
-        return
-
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from audit_workbench.db.base import async_session_factory
-
-    if isinstance(session, AsyncSession):
-        run = await session.get(Run, event.run_id)
-        if run:
-            run.progress = progress
-        _touch_progress_cache(event.run_id, now)
-        return
-
-    async with async_session_factory() as progress_session:
-        run = await progress_session.get(Run, event.run_id)
-        if not run:
-            return
-        run.progress = progress
-        await progress_session.commit()
-    _touch_progress_cache(event.run_id, now)

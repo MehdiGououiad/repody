@@ -1,0 +1,132 @@
+"""Document read path and validation mode constants."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
+from audit_workbench.extraction.model_registry import DEFAULT_READ_PATH_ID
+from audit_workbench.settings import Settings, get_settings
+
+ValidationMode = Literal["logic_only", "logic_and_llm"]
+LOGIC_VALIDATION: ValidationMode = "logic_only"
+RUN_VALIDATION_LLM: ValidationMode = "logic_and_llm"
+
+ReadKind = Literal["document_model"]
+
+
+@dataclass(frozen=True)
+class ReadPathSpec:
+    id: str
+    label: str
+    description: str
+    read: ReadKind
+    show_document_model: bool = True
+
+    @property
+    def show_ocr_model(self) -> bool:
+        return self.show_document_model
+
+    @property
+    def ocr_engine(self) -> str:
+        return self.read
+
+
+@dataclass(frozen=True)
+class ValidationModeSpec:
+    id: ValidationMode
+    label: str
+    description: str
+
+
+READ_PATHS: tuple[ReadPathSpec, ...] = (
+    ReadPathSpec(
+        id=DEFAULT_READ_PATH_ID,
+        label="Document model",
+        description="Structured field extraction with a registered vision/document model.",
+        read="document_model",
+    ),
+)
+
+_READ_BY_ID = {path.id: path for path in READ_PATHS}
+
+VALIDATION_MODE_OPTIONS: tuple[ValidationModeSpec, ...] = (
+    ValidationModeSpec(
+        id="logic_only",
+        label="Logic rules",
+        description="Validate extracted fields with deterministic logic expressions.",
+    ),
+    ValidationModeSpec(
+        id="logic_and_llm",
+        label="Logic + LLM rules",
+        description="Logic rules plus LLM rule validation when enabled in platform settings.",
+    ),
+)
+
+
+def normalize_read_path_id(mode: str | None) -> str:
+    if not mode:
+        return DEFAULT_READ_PATH_ID
+    raw = mode.strip().lower()
+    if raw in _READ_BY_ID:
+        return raw
+    # Legacy aliases (removed Paddle OCR read path).
+    if raw in ("paddle", "paddle_ocr", "ocr", "pp-ocrv6"):
+        return DEFAULT_READ_PATH_ID
+    return DEFAULT_READ_PATH_ID
+
+
+def parse_read_path(mode: str | None) -> ReadPathSpec:
+    return _READ_BY_ID[normalize_read_path_id(mode)]
+
+
+def read_path_used_label(path_id: str) -> str:
+    return read_path_label(path_id)
+
+
+def normalize_document_modes(
+    extraction_mode: str | None,
+    validation_mode: str | None = None,
+) -> tuple[str, ValidationMode]:
+    _ = validation_mode
+    return normalize_read_path_id(extraction_mode), LOGIC_VALIDATION
+
+
+def read_path_label(path_id: str) -> str:
+    for path in READ_PATHS:
+        if path.id == path_id:
+            return path.label
+    return "Document model"
+
+
+def validation_mode_label(mode: ValidationMode | str) -> str:
+    if mode == RUN_VALIDATION_LLM:
+        return "Logic + LLM rules"
+    return "Logic rules"
+
+
+def list_read_paths() -> list[ReadPathSpec]:
+    return list(READ_PATHS)
+
+
+def list_validation_modes() -> list[ValidationModeSpec]:
+    return list(VALIDATION_MODE_OPTIONS)
+
+
+def run_uses_llm_validation(
+    rules: list[dict] | None,
+    settings: Settings | None = None,
+) -> bool:
+    cfg = settings or get_settings()
+    if not cfg.llm_validation_enabled:
+        return False
+    return any((rule.get("kind") or "logic").lower() == "llm" for rule in rules or [])
+
+
+def resolve_run_validation_mode(
+    rules: list[dict] | None,
+    settings: Settings | None = None,
+) -> ValidationMode:
+    if run_uses_llm_validation(rules, settings):
+        return RUN_VALIDATION_LLM
+    return LOGIC_VALIDATION

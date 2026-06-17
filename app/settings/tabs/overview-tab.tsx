@@ -27,7 +27,7 @@ export function OverviewTab({
     ["Default model", defaultModelLabel],
     ["Read path", platform.defaultReadPath],
     ["LLM validation", platform.llmValidationEnabled ? "enabled" : "disabled"],
-    ["Document models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
+    ["Vision models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
     ["Worker pools", Object.values(platform.workerPools).join(", ")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
     ["Task timeout", `${platform.hatchetTaskTimeoutMinutes} min`],

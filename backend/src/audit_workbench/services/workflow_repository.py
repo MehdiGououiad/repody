@@ -4,18 +4,31 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Document, SchemaField, Workflow, WorkflowRule
+from audit_workbench.extraction.document_modes import normalize_document_modes
 from audit_workbench.extraction.model_registry import normalize_model_id
-from audit_workbench.extraction.processing_paths import normalize_document_modes
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.schemas.workflow import WorkflowSchema
 
 
-def _short_id() -> str:
+def short_id() -> str:
     return uuid.uuid4().hex[:8]
+
+
+async def load_workflow(session: AsyncSession, workflow_id: str) -> Workflow | None:
+    result = await session.execute(
+        select(Workflow)
+        .where(Workflow.id == workflow_id)
+        .options(
+            selectinload(Workflow.documents).selectinload(Document.schema_fields),
+            selectinload(Workflow.rules),
+        )
+    )
+    return result.scalar_one_or_none()
 
 
 async def upsert_workflow_aggregate(
@@ -39,7 +52,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
     existing = {doc.id: doc for doc in wf.documents}
     keep_ids: set[str] = set()
     for di, doc in enumerate(payload.documents):
-        doc_id = doc.id or f"doc-{_short_id()}"
+        doc_id = doc.id or f"doc-{short_id()}"
         keep_ids.add(doc_id)
         read_id, val_id = normalize_document_modes(doc.extraction_mode, doc.validation_mode)
         row = existing.get(doc_id)
@@ -50,9 +63,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             row.extraction_mode = read_id
             row.validation_mode = val_id
             row.ocr_model = ocr_id
-            await session.execute(
-                delete(SchemaField).where(SchemaField.document_id == doc_id)
-            )
+            await session.execute(delete(SchemaField).where(SchemaField.document_id == doc_id))
         else:
             row = Document(
                 id=doc_id,
@@ -66,10 +77,10 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             session.add(row)
             await session.flush()
         for fi, field in enumerate(doc.schema_fields):
-            field_id = field.id or f"f-{_short_id()}"
+            field_id = field.id or f"f-{short_id()}"
             existing_field = await session.get(SchemaField, field_id)
             if existing_field is not None and existing_field.document_id != doc_id:
-                field_id = f"f-{_short_id()}"
+                field_id = f"f-{short_id()}"
             session.add(
                 SchemaField(
                     id=field_id,
@@ -88,10 +99,10 @@ async def _upsert_rules(session: AsyncSession, wf: Workflow, payload: WorkflowSc
     existing = {rule.id: rule for rule in wf.rules}
     keep_ids: set[str] = set()
     for ri, rule in enumerate(payload.rules):
-        rule_id = rule.id or f"r-{_short_id()}"
+        rule_id = rule.id or f"r-{short_id()}"
         existing_rule = await session.get(WorkflowRule, rule_id)
         if existing_rule is not None and existing_rule.workflow_id != wf.id:
-            rule_id = f"r-{_short_id()}"
+            rule_id = f"r-{short_id()}"
         keep_ids.add(rule_id)
         resolved_body = resolve_rule_body(
             {

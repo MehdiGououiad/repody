@@ -1,50 +1,31 @@
+import type { components } from "@/lib/api/generated/schema";
 import { cache } from "react";
-import { browserJson, serverJson } from "@/lib/api/openapi-client";
+import { browserApi, serverApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export interface DocumentModelSummary {
-  id: string;
-  label: string;
-  runtime: string;
-  runtimeModel: string;
-}
+type PlatformConfigResponse = components["schemas"]["PlatformConfigResponse"];
 
-export interface PlatformConfig {
-  appName: string;
-  extractor: string;
-  inferenceMode: string;
-  storageBackend: string;
-  queueBackend: string;
-  runJobsInline: boolean;
-  directUploadEnabled: boolean;
-  cacheEnabled: boolean;
-  rateLimitEnabled: boolean;
-  structuredLlm: boolean;
-  defaultOcrModel: string;
-  defaultReadPath: string;
-  documentModels: DocumentModelSummary[];
-  ocrMaxPages: number;
-  dockerModelRunnerBaseUrl: string;
-  vllmBaseUrl: string;
-  maxUploadBytes: number;
-  maxUploadFiles: number;
-  staleRunTimeoutMinutes: number;
-  queuedStaleTimeoutMinutes: number;
-  hatchetTaskTimeoutMinutes: number;
-  maintenanceIntervalSeconds: number;
+export type PlatformConfig = PlatformConfigResponse & {
   workerPools: Record<string, string>;
-  hatchetConfigured: boolean;
-  llmValidationEnabled: boolean;
-  gpuLiveProbe: boolean;
-  healthzProbeInference: boolean;
+};
+
+function normalizePlatformConfig(data: PlatformConfigResponse): PlatformConfig {
+  return {
+    ...data,
+    workerPools: data.workerPools ?? {},
+  };
 }
 
 export async function fetchPlatformConfig(): Promise<PlatformConfig> {
-  return browserJson<PlatformConfig>("/platform/config");
+  const { data, error, response } = await browserApi.GET("/v1/platform/config");
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return normalizePlatformConfig(data);
 }
 
 /** Server Components — per-request cached platform config. */
 export const fetchPlatformConfigServer = cache(async (): Promise<PlatformConfig> => {
-  return serverJson<PlatformConfig>("/platform/config");
+  const { data, error, response } = await serverApi.GET("/v1/platform/config");
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return normalizePlatformConfig(data);
 });
 
 export function formatBytes(bytes: number): string {

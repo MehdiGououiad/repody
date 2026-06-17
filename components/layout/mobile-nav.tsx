@@ -3,13 +3,10 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { toast } from "sonner";
 import {
   LayoutDashboard,
   GitBranch,
   FileCheck2,
-  SlidersHorizontal,
-  BookOpen,
   LogOut,
   Plus,
   ShieldCheck,
@@ -21,12 +18,12 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
 import { isNavActive } from "@/lib/navigation";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 
 const navItems = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/workflows", labelKey: "workflows", icon: GitBranch },
   { href: "/audits", labelKey: "audits", icon: FileCheck2 },
-  { href: "/settings", labelKey: "settings", icon: SlidersHorizontal },
 ] as const;
 
 export function MobileNav() {
@@ -105,25 +102,13 @@ export function MobileNav() {
         </nav>
 
         <div className="mt-auto px-2 py-4 border-t border-sidebar-border">
-          <Link
-            href="/settings?tab=diagnostics"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors"
-          >
-            <BookOpen className="h-4 w-4" aria-hidden="true" />
-            <span>{t("documentation")}</span>
-          </Link>
-          <button
-            type="button"
-            onClick={() => {
-              setOpen(false);
-              toast.message(t("logout"), { description: "Coming soon." });
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors text-left"
+          <SignOutButton
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors text-left disabled:opacity-50"
+            onSignedOut={() => setOpen(false)}
           >
             <LogOut className="h-4 w-4" aria-hidden="true" />
             <span>{t("logout")}</span>
-          </button>
+          </SignOutButton>
         </div>
       </SheetContent>
     </Sheet>

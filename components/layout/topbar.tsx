@@ -10,6 +10,7 @@ import { MobileNav } from "./mobile-nav";
 import { Button } from "@/components/ui/button";
 import { LanguageSwitcher } from "./language-switcher";
 import { BackendStatus } from "./backend-status";
+import { UserMenu } from "@/components/auth/user-menu";
 
 const CommandPalette = dynamic(
   () =>
@@ -108,13 +109,7 @@ export function TopBar() {
         >
           <History className="h-4 w-4" />
         </Button>
-        <div
-          className="ml-1 hidden size-8 rounded-full bg-gradient-to-br from-accent-blue/30 to-sidebar-accent text-on-surface sm:flex items-center justify-center text-xs font-semibold ring-1 ring-accent-blue/30"
-          aria-label={tBar("accountInitials")}
-          role="img"
-        >
-          MA
-        </div>
+        <UserMenu />
       </div>
 
       {open ? <CommandPalette open={open} onOpenChange={setOpen} /> : null}

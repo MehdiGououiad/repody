@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1.7
 # Dev-only Next.js server with Turbopack (use with deploy/compose/dev.yaml web-docker profile).
-FROM node:22-alpine
+FROM node:24-alpine
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \

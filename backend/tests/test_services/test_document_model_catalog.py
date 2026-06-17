@@ -13,7 +13,6 @@ from audit_workbench.services.document_model_catalog import (
 
 @pytest.mark.asyncio
 async def test_list_catalog_marks_model_available_when_installed(monkeypatch):
-    from audit_workbench.extraction import model_registry
     from audit_workbench.services import document_model_catalog
 
     async def fake_installed(*args, **kwargs):
@@ -49,7 +48,9 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
     get_settings.cache_clear()
 
     async def fail_if_called(*args, **kwargs):
-        raise AssertionError("installed_runtime_models should not call remote vLLM when probe disabled")
+        raise AssertionError(
+            "installed_runtime_models should not call remote vLLM when probe disabled"
+        )
 
     from audit_workbench.services import document_model_catalog
 

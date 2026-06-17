@@ -1,0 +1,77 @@
+{
+  "realm": "repody",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "platform_admin" },
+      { "name": "admin" },
+      { "name": "operator" },
+      { "name": "viewer" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "repody-web",
+      "name": "Repody Web",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "repody-web-dev-secret",
+      "redirectUris": [
+        "http://localhost:3000/api/auth/callback/keycloak",
+        "http://127.0.0.1:3000/api/auth/callback/keycloak",
+        "http://*:3000/api/auth/callback/keycloak"
+      ],
+      "webOrigins": ["http://localhost:3000", "http://127.0.0.1:3000", "+"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@repody.local",
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "email": "admin@repody.local",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "repody-dev", "temporary": false }
+      ],
+      "realmRoles": ["platform_admin"]
+    },
+    {
+      "username": "operator@repody.local",
+      "firstName": "Repody",
+      "lastName": "Operator",
+      "email": "operator@repody.local",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "repody-dev", "temporary": false }
+      ],
+      "realmRoles": ["operator"]
+    },
+    {
+      "username": "viewer@repody.local",
+      "firstName": "Repody",
+      "lastName": "Viewer",
+      "email": "viewer@repody.local",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [],
+      "credentials": [
+        { "type": "password", "value": "repody-dev", "temporary": false }
+      ],
+      "realmRoles": ["viewer"]
+    }
+  ]
+}

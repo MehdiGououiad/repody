@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from audit_workbench.extraction.document_modes import LOGIC_VALIDATION, ValidationMode
 from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
-from audit_workbench.extraction.processing_paths import ValidationKind, parse_validation_mode
 
 
 def _resolve_facture_pdf() -> Path:
@@ -85,7 +85,7 @@ LOGIC_RULE_TVA_UNDER_500_UI_CONDITIONS = {
 class FacturePathCase:
     id: str
     read_path: str
-    validation_mode: ValidationKind
+    validation_mode: ValidationMode
     ocr_model: str = REPODY_VLM_CATALOG_ID
     max_wait_ms: float = 900_000
 
@@ -105,8 +105,8 @@ def facture_bytes() -> bytes:
     return FACTURE_PDF.read_bytes()
 
 
-def validation_mode_for_path(extraction_mode: str) -> ValidationKind:
-    return parse_validation_mode(None, extraction_mode=extraction_mode)
+def validation_mode_for_path(_extraction_mode: str) -> ValidationMode:
+    return LOGIC_VALIDATION
 
 
 def rules_for_case(case: FacturePathCase) -> list[dict]:

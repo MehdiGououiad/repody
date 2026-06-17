@@ -56,20 +56,20 @@ export function airgapAppImages(options = {}) {
  */
 export function airgapUpstreamImages(pinned = loadPinnedImages()) {
   const postgres =
-    pinned.REPODY_POSTGRES_IMAGE ?? pinned.REPODY_HATCHET_POSTGRES_IMAGE ?? "postgres:17.6-alpine";
+    pinned.REPODY_POSTGRES_IMAGE ?? pinned.REPODY_HATCHET_POSTGRES_IMAGE ?? "postgres:17.10-alpine";
   return [
     ...new Set([
       postgres,
       pinned.REPODY_REDIS_IMAGE ?? "redis:8.8.0-alpine",
-      pinned.REPODY_MINIO_IMAGE ?? "minio/minio:RELEASE.2025-09-07T16-13-09Z",
+      pinned.REPODY_MINIO_IMAGE ?? "pgsty/minio:RELEASE.2026-04-17T00-00-00Z",
       pinned.REPODY_HATCHET_LITE_IMAGE ?? "ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest",
       pinned.REPODY_HATCHET_ADMIN_IMAGE ?? "ghcr.io/hatchet-dev/hatchet/hatchet-admin:latest",
       pinned.REPODY_LOKI_IMAGE ?? "grafana/loki:3.6.11",
       pinned.REPODY_PROMTAIL_IMAGE ?? "grafana/promtail:3.6.11",
-      pinned.REPODY_GRAFANA_IMAGE ?? "grafana/grafana:12.2.9",
+      pinned.REPODY_GRAFANA_IMAGE ?? "grafana/grafana:12.4.1",
       pinned.REPODY_BUGSINK_IMAGE ?? "bugsink/bugsink:2",
       pinned.REPODY_BUSYBOX_IMAGE ?? "busybox:1.37.0",
-      pinned.REPODY_KUBECTL_IMAGE ?? "bitnami/kubectl:1.33.4",
+      pinned.REPODY_KUBECTL_IMAGE ?? "bitnami/kubectl:1.34.2",
     ]),
   ];
 }

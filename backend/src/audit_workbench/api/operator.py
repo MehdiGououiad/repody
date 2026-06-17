@@ -7,11 +7,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
-from audit_workbench.inference.http_pool import get_async_http_client
+from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.extraction.document_model_branding import public_document_model_label
 from audit_workbench.services.operator_jobs import (
     OperatorJob,
     append_output,
@@ -22,7 +23,6 @@ from audit_workbench.services.operator_jobs import (
     load_report,
     run_command,
 )
-from audit_workbench.extraction.document_model_branding import public_document_model_label
 from audit_workbench.settings import get_settings
 
 router = APIRouter(prefix="/operator", tags=["operator"])
@@ -63,7 +63,7 @@ def _operator_root() -> Path:
     return root
 
 
-@router.get("/status")
+@router.get("/status", dependencies=[Depends(require_permission("diagnostics", "read"))])
 async def operator_status() -> dict[str, Any]:
     settings = get_settings()
     return {
@@ -80,17 +80,19 @@ async def operator_status() -> dict[str, Any]:
     }
 
 
-@router.get("/jobs")
+@router.get("/jobs", dependencies=[Depends(require_permission("diagnostics", "read"))])
 async def operator_jobs() -> dict[str, Any]:
     return {"jobs": [job.as_dict() for job in list_jobs()]}
 
 
-@router.get("/jobs/{job_id}")
+@router.get("/jobs/{job_id}", dependencies=[Depends(require_permission("diagnostics", "read"))])
 async def operator_job(job_id: str) -> dict[str, Any]:
     return _job_or_404(job_id).as_dict()
 
 
-@router.get("/jobs/{job_id}/report")
+@router.get(
+    "/jobs/{job_id}/report", dependencies=[Depends(require_permission("diagnostics", "read"))]
+)
 async def operator_job_report(job_id: str) -> dict[str, Any]:
     job = _job_or_404(job_id)
     if not job.report_path:
@@ -98,7 +100,10 @@ async def operator_job_report(job_id: str) -> dict[str, Any]:
     return load_report(Path(job.report_path))
 
 
-@router.get("/jobs/{job_id}/artifacts/{artifact}")
+@router.get(
+    "/jobs/{job_id}/artifacts/{artifact}",
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
+)
 async def operator_job_artifact(job_id: str, artifact: str) -> FileResponse:
     job = _job_or_404(job_id)
     if not job.report_path:
@@ -115,7 +120,7 @@ async def operator_job_artifact(job_id: str, artifact: str) -> FileResponse:
     return FileResponse(path, filename=name)
 
 
-@router.get("/benchmarks/latest")
+@router.get("/benchmarks/latest", dependencies=[Depends(require_permission("diagnostics", "read"))])
 async def latest_benchmark() -> dict[str, Any]:
     path = _operator_root() / "latest.json"
     if not path.is_file():
@@ -123,7 +128,11 @@ async def latest_benchmark() -> dict[str, Any]:
     return load_report(path)
 
 
-@router.post("/models/pull", status_code=202)
+@router.post(
+    "/models/pull",
+    status_code=202,
+    dependencies=[Depends(require_permission("operator", "execute"))],
+)
 async def pull_model(payload: ModelActionRequest) -> dict[str, Any]:
     _require_actions()
     _safe_model(payload.model)
@@ -133,7 +142,11 @@ async def pull_model(payload: ModelActionRequest) -> dict[str, Any]:
     )
 
 
-@router.post("/models/warmup", status_code=202)
+@router.post(
+    "/models/warmup",
+    status_code=202,
+    dependencies=[Depends(require_permission("operator", "execute"))],
+)
 async def warmup_model(payload: ModelActionRequest) -> dict[str, Any]:
     _require_actions()
     model = _safe_model(payload.model)
@@ -178,7 +191,11 @@ async def warmup_model(payload: ModelActionRequest) -> dict[str, Any]:
     return {"job": job.as_dict()}
 
 
-@router.post("/benchmarks", status_code=202)
+@router.post(
+    "/benchmarks",
+    status_code=202,
+    dependencies=[Depends(require_permission("operator", "execute"))],
+)
 async def start_benchmark(
     document: UploadFile | None = File(default=None),
     manifest: UploadFile | None = File(default=None),
@@ -206,7 +223,9 @@ async def start_benchmark(
         document_path = built_in / "Facture.pdf"
         manifest_path = built_in / "Facture.benchmark.json"
         if not document_path.is_file() or not manifest_path.is_file():
-            raise HTTPException(status_code=503, detail="Built-in benchmark fixture is unavailable.")
+            raise HTTPException(
+                status_code=503, detail="Built-in benchmark fixture is unavailable."
+            )
     elif document is None or manifest is None:
         raise HTTPException(status_code=422, detail="Upload both a document and its JSON manifest.")
     else:
@@ -225,7 +244,9 @@ async def start_benchmark(
         try:
             json.loads(manifest_bytes)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise HTTPException(status_code=422, detail="Benchmark manifest must be valid JSON.") from exc
+            raise HTTPException(
+                status_code=422, detail="Benchmark manifest must be valid JSON."
+            ) from exc
         document_path.write_bytes(document_bytes)
         manifest_path.write_bytes(manifest_bytes)
 

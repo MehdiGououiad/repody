@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Any
 
 import structlog
 
-from audit_workbench.extraction.base import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec, truncate_ocr_text
+from audit_workbench.extraction.base import (
+    ExtractedFieldResult,
+    ExtractionResult,
+    SchemaFieldSpec,
+    truncate_ocr_text,
+)
 from audit_workbench.services.redis_pool import get_redis
 from audit_workbench.settings import get_settings
 
@@ -85,8 +89,7 @@ def _serialize_result(result: ExtractionResult) -> str:
     llm_rules: dict[str, list] = {}
     if result.llm_rule_results:
         llm_rules = {
-            rid: [status, detail]
-            for rid, (status, detail) in result.llm_rule_results.items()
+            rid: [status, detail] for rid, (status, detail) in result.llm_rule_results.items()
         }
     payload = {
         "rawText": truncate_ocr_text(result.raw_text),

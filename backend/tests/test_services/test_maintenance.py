@@ -4,36 +4,18 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
-from audit_workbench.db.base import Base
 from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.services.maintenance import reap_stale_runs
 from audit_workbench.services.run_dispatch import mark_run_dispatch_failed
 
 
 @pytest.fixture
-async def maintenance_session(monkeypatch):
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    import audit_workbench.db.base as db_base
-
-    monkeypatch.setattr(db_base, "async_session_factory", session_factory)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    async with session_factory() as session:
-        wf = Workflow(id="wf-maint", name="Maint", status=WorkflowStatus.active.value)
-        session.add(wf)
-        await session.commit()
-        yield session
-
-    await engine.dispose()
+async def maintenance_session(postgres_session):
+    wf = Workflow(id="wf-maint", name="Maint", status=WorkflowStatus.active.value)
+    postgres_session.add(wf)
+    await postgres_session.commit()
+    yield postgres_session
 
 
 @pytest.fixture

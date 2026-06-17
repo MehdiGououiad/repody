@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: postgres:17.6-alpine
+          image: postgres:17.10-alpine
           env:
             - name: POSTGRES_USER
               value: hatchet
