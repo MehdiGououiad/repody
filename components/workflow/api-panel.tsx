@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import { runWorkflowApi, type RunProgress } from "@/lib/api/test-run";
+import { runWorkflowApi, type RunProgress } from "@/lib/api/workflow-run";
 import {
   RunDetailedReportSections,
   RunStatusBanner,

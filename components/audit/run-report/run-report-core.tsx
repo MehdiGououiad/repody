@@ -71,15 +71,12 @@ export {
 } from "./report-shared";
 export { RunStatusBanner } from "./report-banner";
 export {
-  RunDocFieldsCard,
   RunDocFieldsList,
   RunDocFieldsTable,
   RunFieldsList,
-  RunFieldsTable,
 } from "./report-fields";
 export {
   RunDetailedRuleCard,
   RunRuleResultsDetailed,
-  RunRuleResultsList,
   RunRuleResultsSummary,
 } from "./report-rules";

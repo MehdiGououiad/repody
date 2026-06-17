@@ -10,15 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import Document, ExtractedField, RunDocument
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
-from audit_workbench.extraction.processing_paths import (
+from audit_workbench.extraction.document_modes import (
     parse_read_path,
-    parse_validation_mode,
     read_path_used_label,
+    resolve_run_validation_mode,
     validation_mode_label,
 )
-from audit_workbench.extraction.registry import get_extractor
-from audit_workbench.rules.payload import llm_rules
 from audit_workbench.extraction.gpu_cold_start import is_serverless_vllm
+from audit_workbench.extraction.pipeline import get_extractor
+from audit_workbench.inference.runtime import effective_parallel_doc_extraction
 from audit_workbench.services.run.helpers import (
     extract_label,
     extraction_step_detail,
@@ -26,7 +26,6 @@ from audit_workbench.services.run.helpers import (
     new_id,
     progress_mode,
     resolve_run_doc_mime,
-    resolve_validation_mode,
 )
 from audit_workbench.services.run.phase_state import RunPhaseState
 from audit_workbench.services.run_progress import mark_step_done, set_run_progress
@@ -35,9 +34,7 @@ from audit_workbench.storage.factory import get_storage
 
 log = structlog.get_logger()
 
-_GPU_COLD_START_DETAIL = (
-    "Serverless GPU may need 1–2 min to start on the first request after idle"
-)
+_GPU_COLD_START_DETAIL = "Serverless GPU may need 1–2 min to start on the first request after idle"
 
 
 def _annotate_cold_start_hint(steps: list, step_id: str) -> None:
@@ -47,6 +44,7 @@ def _annotate_cold_start_hint(steps: list, step_id: str) -> None:
         if step.get("id") == step_id:
             step["gpuColdStartHint"] = True
             break
+
 
 PendingFetch = tuple[Document, list[SchemaFieldSpec], RunDocument, int, bool, str]
 
@@ -62,9 +60,6 @@ class DocExtractionJob:
     step_index: int
     progress_mode: str
     validation_mode: str
-    llm_rules: list[dict]
-    llm_model: str | None
-    allow_combined_llm: bool
 
 
 async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, ExtractionResult]:
@@ -80,9 +75,6 @@ async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, Extr
         storage_key=job.run_doc.storage_key,
         file_size=job.file_size if job.file_size > 0 else None,
         validation_mode=job.validation_mode,
-        llm_rules=job.llm_rules,
-        llm_model=job.llm_model,
-        allow_combined_llm=job.allow_combined_llm,
     )
     return job, result
 
@@ -103,13 +95,8 @@ def _make_extraction_job(
     file_size: int,
     step_index: int,
     prog_mode: str,
-    llm_rules_payload: list[dict],
-    llm_model: str | None,
+    validation_mode: str,
 ) -> DocExtractionJob:
-    doc_validation = parse_validation_mode(
-        getattr(doc, "validation_mode", None),
-        extraction_mode=doc.extraction_mode,
-    )
     return DocExtractionJob(
         doc=doc,
         schema=schema,
@@ -119,10 +106,7 @@ def _make_extraction_job(
         file_size=file_size,
         step_index=step_index,
         progress_mode=prog_mode,
-        validation_mode=doc_validation,
-        llm_rules=llm_rules_payload if doc_validation == "logic_and_llm" else [],
-        llm_model=llm_model,
-        allow_combined_llm=True,
+        validation_mode=validation_mode,
     )
 
 
@@ -132,8 +116,7 @@ async def _build_extraction_jobs(
     *,
     parallel: bool,
     parallel_fetch: bool,
-    llm_rules_payload: list[dict],
-    llm_model: str | None,
+    validation_mode: str,
 ) -> list[DocExtractionJob]:
     if parallel:
         if parallel_fetch:
@@ -141,9 +124,7 @@ async def _build_extraction_jobs(
                 *[_fetch_doc_bytes(storage, item[2].storage_key) for item in pending]
             )
         else:
-            fetched = [
-                await _fetch_doc_bytes(storage, item[2].storage_key) for item in pending
-            ]
+            fetched = [await _fetch_doc_bytes(storage, item[2].storage_key) for item in pending]
         return [
             _make_extraction_job(
                 doc=doc,
@@ -153,8 +134,7 @@ async def _build_extraction_jobs(
                 file_size=file_size,
                 step_index=step_index,
                 prog_mode=prog_mode,
-                llm_rules_payload=llm_rules_payload,
-                llm_model=llm_model,
+                validation_mode=validation_mode,
             )
             for (doc, schema, run_doc, step_index, _has_file, prog_mode), (
                 document_bytes,
@@ -174,8 +154,7 @@ async def _build_extraction_jobs(
                 file_size=file_size,
                 step_index=step_index,
                 prog_mode=prog_mode,
-                llm_rules_payload=llm_rules_payload,
-                llm_model=llm_model,
+                validation_mode=validation_mode,
             )
         )
     return jobs
@@ -186,13 +165,9 @@ async def _persist_extraction_pair(
     state: RunPhaseState,
     job: DocExtractionJob,
     extraction: ExtractionResult,
-    *,
-    precomputed_llm: dict[str, tuple[str, str]],
 ) -> None:
     state.fields_extracted += sum(1 for field in extraction.fields if field.extracted)
     state.extraction_results.append((job.doc.document_type, extraction))
-    if extraction.llm_rule_results:
-        precomputed_llm.update(extraction.llm_rule_results)
     step_id = f"extract-{job.doc.id}"
     if extraction.meta:
         job.run_doc.extraction_meta = meta_to_dict(extraction.meta)
@@ -229,12 +204,10 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
     progress_steps = state.progress_steps
     run_id = state.run_id
 
-    await set_run_progress(
-        session, run_id, progress_steps, 1, "Starting audit run…", force=True
-    )
+    await set_run_progress(session, run_id, progress_steps, 1, "Starting audit run…", force=True)
 
     existing_run_docs = {rd.document_id: rd for rd in run.documents if rd.document_id}
-    llm_rules_payload = llm_rules(rules_payload)
+    run_validation_mode = resolve_run_validation_mode(rules_payload)
 
     pending: list[PendingFetch] = []
 
@@ -268,19 +241,17 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
         pending.append((doc, schema, run_doc, state.step_index, has_file, prog_mode))
 
     if not pending:
-        state.validation_mode = resolve_validation_mode(workflow_docs, rules_payload)
+        state.validation_mode = resolve_run_validation_mode(rules_payload)
         return
 
-    precomputed_llm: dict[str, tuple[str, str]] = {}
-    use_parallel = settings.parallel_doc_extraction and len(pending) > 1
+    use_parallel = effective_parallel_doc_extraction(settings) and len(pending) > 1
 
     jobs = await _build_extraction_jobs(
         storage,
         pending,
         parallel=use_parallel,
         parallel_fetch=settings.parallel_storage_fetch,
-        llm_rules_payload=llm_rules_payload,
-        llm_model=None,
+        validation_mode=run_validation_mode,
     )
 
     if use_parallel:
@@ -299,9 +270,7 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
     else:
         pairs = []
         for idx, job in enumerate(jobs):
-            read_label = read_path_used_label(
-                parse_read_path(job.doc.extraction_mode or "auto").id
-            )
+            read_label = read_path_used_label(parse_read_path(job.doc.extraction_mode or "auto").id)
             val_label = validation_mode_label(job.validation_mode)
             step_id = f"extract-{job.doc.id}"
             detail = f"{read_label} · {val_label}"
@@ -323,11 +292,8 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
             pairs.append(await _run_extraction(job))
 
     for job, extraction in pairs:
-        await _persist_extraction_pair(
-            session, state, job, extraction, precomputed_llm=precomputed_llm
-        )
+        await _persist_extraction_pair(session, state, job, extraction)
         job.document_bytes = None
 
-    state.precomputed_llm = precomputed_llm
-    state.validation_mode = resolve_validation_mode(workflow_docs, rules_payload)
+    state.validation_mode = resolve_run_validation_mode(rules_payload)
     await session.flush()

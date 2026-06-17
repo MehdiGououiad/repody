@@ -1,3 +1,6 @@
+# Enable Repody VLM warmup on the OCR worker pool.
+# Usage: pnpm dev -- --warmup  |  pnpm compose up --stack=prod --warmup
+
 services:
   api:
     environment:

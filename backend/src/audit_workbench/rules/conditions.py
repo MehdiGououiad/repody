@@ -36,7 +36,9 @@ def _literal_to_py(value: str) -> str | None:
         return None
     cleaned = v.replace(" ", "").replace(",", ".")
     try:
-        if cleaned.replace(".", "", 1).replace("-", "", 1).isdigit() or re.match(r"^-?\d+\.?\d*$", cleaned):
+        if cleaned.replace(".", "", 1).replace("-", "", 1).isdigit() or re.match(
+            r"^-?\d+\.?\d*$", cleaned
+        ):
             return str(float(cleaned))
     except ValueError:
         pass
@@ -55,9 +57,10 @@ def _list_literal_to_py(value: str) -> str | None:
     parts = [s.strip() for s in value.split(",") if s.strip()]
     if not parts:
         return None
-    items = [_literal_to_py(p) for p in parts]
-    if any(i is None for i in items):
+    raw_items = [_literal_to_py(p) for p in parts]
+    if any(i is None for i in raw_items):
         return None
+    items = [item for item in raw_items if item is not None]
     return f"[{', '.join(items)}]"
 
 
@@ -76,8 +79,8 @@ def condition_to_string(condition: dict) -> str:
     operator = condition.get("operator") or "=="
     if operator in NO_RIGHT:
         if operator == "EXISTS":
-            return f"({left} is not None and str({left}).strip() not in (\"\", \"—\"))"
-        return f"({left} is None or str({left}).strip() in (\"\", \"—\"))"
+            return f'({left} is not None and str({left}).strip() not in ("", "—"))'
+        return f'({left} is None or str({left}).strip() in ("", "—"))'
 
     right_op = condition.get("right")
     if not right_op:

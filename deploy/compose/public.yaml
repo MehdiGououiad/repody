@@ -22,7 +22,7 @@ services:
       AUDIT_MINIO_SECURE: "true"
 
   caddy:
-    image: caddy:2.10-alpine
+    image: ${REPODY_CADDY_IMAGE:-caddy:2.11.4-alpine}
     restart: unless-stopped
     ports:
       - "80:80"

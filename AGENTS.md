@@ -14,6 +14,6 @@ Do **not** write logs to workspace files. Use Docker or Grafana:
 
 ## Dev workflow
 
-- **Fast dev:** `pnpm dev` (add `-- --warmup` for Repody VLM warmup) — see [DEV.md](./DEV.md).
+- **Fast dev:** `pnpm dev` (add `-- --warmup` to pre-load Repody VLM on the OCR worker) — see [DEV.md](./DEV.md).
 - **Do not** rebuild images on every code change; rebuild only when `pyproject.toml` or Dockerfiles change (`pnpm compose build --stack=dev --only=backend`).
 - **Worker code changes:** `pnpm compose restart workers --stack=dev` or `pnpm compose watch --stack=dev`.

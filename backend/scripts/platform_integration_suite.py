@@ -53,18 +53,21 @@ def _auth_headers(token: str | None) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _resolve_admin_token(cli_token: str | None) -> str | None:
+def _resolve_bearer_token(cli_token: str | None) -> str | None:
     if cli_token:
         return cli_token.strip() or None
+    for key in ("REPODY_ACCESS_TOKEN", "REPODY_OIDC_ACCESS_TOKEN"):
+        env = os.environ.get(key)
+        if env and env.strip():
+            return env.strip()
     env_path = ROOT / ".env"
     if env_path.is_file():
         for line in env_path.read_text(encoding="utf-8-sig").splitlines():
-            if line.startswith("AUDIT_ADMIN_API_TOKEN="):
+            if line.startswith("REPODY_ACCESS_TOKEN="):
                 value = line.split("=", 1)[1].strip()
                 if value:
                     return value
-    env = os.environ.get("AUDIT_ADMIN_API_TOKEN")
-    return env.strip() if env else None
+    return None
 
 
 @dataclass
@@ -151,7 +154,7 @@ async def run_extraction_case(
     await save_workflow(client, wf_id=wf_id, name=WORKFLOW_NAME, documents=documents, rules=rules)
     binding = await presign_upload(client, doc_id, pdf)
     start = await client.post(
-        f"/v1/workflows/{wf_id}/runs/json?mode=test",
+        f"/v1/workflows/{wf_id}/runs/json",
         json={
             "payload": {"documents": documents, "rules": rules, "workflowName": WORKFLOW_NAME},
             "fileBindings": [
@@ -186,14 +189,14 @@ async def main() -> int:
     parser.add_argument("--api", default="http://localhost:8000")
     parser.add_argument(
         "--token",
-        default=os.environ.get("AUDIT_ADMIN_API_TOKEN"),
-        help="Admin API token (default: AUDIT_ADMIN_API_TOKEN env)",
+        default=os.environ.get("REPODY_ACCESS_TOKEN"),
+        help="Keycloak access token (default: REPODY_ACCESS_TOKEN env)",
     )
     parser.add_argument("--skip-extraction", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args()
     base = args.api.rstrip("/")
-    headers = _auth_headers(_resolve_admin_token(args.token))
+    headers = _auth_headers(_resolve_bearer_token(args.token))
 
     if not FACTURE_PDF.is_file():
         print(f"Missing fixture: {FACTURE_PDF}", file=sys.stderr)
@@ -215,7 +218,7 @@ async def main() -> int:
             _check_health(client),
         )
         await _timed("Platform config", report, _check_platform_config(client))
-        await _timed("Processing paths catalog", report, _check_processing_paths(client))
+        await _timed("Models catalog (paths)", report, _check_models_catalog_paths(client))
         await _timed("Document model catalog", report, _check_ocr_models(client))
         await _timed("Upload capabilities", report, _check_upload_capabilities(client))
         await _timed("Diagnostics (registry)", report, _check_diagnostics(client))
@@ -338,8 +341,8 @@ async def _check_platform_config(client: httpx.AsyncClient) -> dict:
     return body
 
 
-async def _check_processing_paths(client: httpx.AsyncClient) -> dict:
-    res = await client.get("/v1/processing-paths")
+async def _check_models_catalog_paths(client: httpx.AsyncClient) -> dict:
+    res = await client.get("/v1/models/catalog")
     res.raise_for_status()
     body = res.json()
     path_ids = {p["id"] for p in body.get("paths") or []}
@@ -349,7 +352,7 @@ async def _check_processing_paths(client: httpx.AsyncClient) -> dict:
 
 
 async def _check_ocr_models(client: httpx.AsyncClient) -> dict:
-    res = await client.get("/v1/ocr/models")
+    res = await client.get("/v1/models/catalog")
     res.raise_for_status()
     body = res.json()
     models = body.get("models") or []

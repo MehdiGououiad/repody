@@ -65,10 +65,23 @@ def default_document_runtime(settings: Settings | None = None) -> str:
 
 def remote_vllm_endpoint(settings: Settings | None = None) -> bool:
     settings = settings or get_settings()
-    return (
-        settings.inference_mode.lower() == "vllm"
-        and is_remote_vllm_url(settings.vllm_base_url)
-    )
+    return settings.inference_mode.lower() == "vllm" and is_remote_vllm_url(settings.vllm_base_url)
+
+
+def effective_parallel_doc_extraction(settings: Settings | None = None) -> bool:
+    """Whether to run multi-document extraction concurrently.
+
+    Auto (``parallel_doc_extraction`` unset): sequential on Docker Model Runner
+    (single CPU llama.cpp worker — parallel doubles vision prefill latency);
+    parallel on vLLM / GPU stacks.
+    """
+    settings = settings or get_settings()
+    explicit = settings.parallel_doc_extraction
+    if explicit is False:
+        return False
+    if explicit is True:
+        return True
+    return settings.inference_mode.lower() != "docker_model_runner"
 
 
 def openai_probe_timeout_seconds(base_url: str, *, default: float = 2.0) -> float:

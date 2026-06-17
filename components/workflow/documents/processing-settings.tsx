@@ -47,10 +47,10 @@ export function ProcessingSettings({
   const pathSpec = paths.find((p) => p.id === pathId);
   const validationId = normalizeValidationMode(doc.validationMode, doc.extractionMode);
   const validationSpec = validationModes.find((v) => v.id === validationId);
-  const documentModels = ocrModels.filter((m) => m.engine === "document_model");
-  const firstAvailable = documentModels.find((m) => m.available !== false);
+  const modelsForPath = ocrModels;
+  const firstAvailable = modelsForPath.find((m) => m.available !== false);
   const selectedOcr = doc.ocrModel ?? firstAvailable?.id ?? defaultOcr;
-  const selectedModel = documentModels.find((m) => m.id === selectedOcr);
+  const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? ocrModels.find((m) => m.id === selectedOcr);
   const readPathId = `read-path-${doc.id}`;
   const validationModeId = `validation-mode-${doc.id}`;
   const extractionModelId = `extraction-model-${doc.id}`;
@@ -166,12 +166,12 @@ export function ProcessingSettings({
             <SelectValue placeholder={t("extraction.ocrModelPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
-            {documentModels.length === 0 ? (
+            {modelsForPath.length === 0 ? (
               <SelectItem value={REPODY_VLM_CATALOG_ID} disabled>
                 {t("extraction.ocrModelLoading")}
               </SelectItem>
             ) : (
-              documentModels.map((m) => (
+              modelsForPath.map((m) => (
                 <SelectItem key={m.id} value={m.id} disabled={m.available === false}>
                   {m.available === false
                     ? `${m.label} — ${t("extraction.unavailable")}`

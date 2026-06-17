@@ -43,7 +43,7 @@ export function ModelsTab({
     return catalog.models.map((model) => ({
       id: model.id,
       label: model.label,
-      kind: model.kind === "validation" ? "Validation LLM" : "Document model",
+      kind: model.kind === "validation" ? "Validation LLM" : "Vision model",
       runtime: model.runtime || REPODY_VLM_LABEL,
       available: model.available !== false,
       note: model.availabilityNote,

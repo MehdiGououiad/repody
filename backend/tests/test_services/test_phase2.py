@@ -3,11 +3,11 @@ from __future__ import annotations
 import pytest
 
 from audit_workbench.extraction.base import ExtractedFieldResult, SchemaFieldSpec
-from audit_workbench.extraction.processing_paths import parse_read_path
-from audit_workbench.rules.validation import validate_logic_rule_body, validate_llm_rule_body
+from audit_workbench.extraction.document_modes import parse_read_path
+from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from audit_workbench.services.upload_validation import UploadValidationError, validate_upload_file
 from audit_workbench.settings import Settings
 from audit_workbench.storage.mime import resolve_mime, sanitize_filename, sniff_mime
-from audit_workbench.services.upload_validation import UploadValidationError, validate_upload_file
 
 
 def test_document_model_path_is_default():
@@ -46,6 +46,28 @@ def test_upload_rejects_disallowed_mime():
             data=b"hello world",
             settings=settings,
         )
+
+
+def test_upload_rejects_declared_pdf_with_non_pdf_content():
+    settings = Settings()
+    with pytest.raises(UploadValidationError):
+        validate_upload_file(
+            filename="fake.pdf",
+            declared_mime="application/pdf",
+            data=b"not a real pdf at all",
+            settings=settings,
+        )
+
+
+def test_upload_accepts_pdf_bytes_with_generic_declared_mime():
+    settings = Settings()
+    _safe_name, verified_mime = validate_upload_file(
+        filename="doc.bin",
+        declared_mime="application/octet-stream",
+        data=b"%PDF-1.4 fake",
+        settings=settings,
+    )
+    assert verified_mime == "application/pdf"
 
 
 def test_validate_logic_rule_body():

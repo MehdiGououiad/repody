@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from audit_workbench.services.worker_pool import resolve_worker_pool
+from audit_workbench.services.run_pool_classifier import resolve_worker_pool
 from audit_workbench.settings import Settings, clear_settings_cache
 
 
@@ -18,11 +18,15 @@ def pool_settings(monkeypatch):
 async def test_resolve_worker_pool_no_files_uses_fast(pool_settings):
     session = AsyncMock()
     run = MagicMock()
+    run.worker_pool = None
+    run.workflow_id = "wf-1"
     run.documents = [MagicMock(storage_key=None)]
 
-    session.execute = AsyncMock(
-        return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=run)),
-    )
+    run_result = MagicMock()
+    run_result.scalar_one_or_none.return_value = run
+    wf_result = MagicMock()
+    wf_result.scalar_one_or_none.return_value = MagicMock(documents=[])
+    session.execute = AsyncMock(side_effect=[run_result, wf_result])
 
     pool = await resolve_worker_pool(session, "run-1")
     assert pool == "fast"
@@ -32,6 +36,7 @@ async def test_resolve_worker_pool_no_files_uses_fast(pool_settings):
 async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
     session = AsyncMock()
     run = MagicMock()
+    run.worker_pool = None
     run.workflow_id = "wf-1"
     run_doc = MagicMock(storage_key="runs/x/file.pdf", document_id="doc-1")
     run.documents = [run_doc]
@@ -40,12 +45,11 @@ async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
     wf_doc = MagicMock(id="doc-1", extraction_mode="auto")
     wf.documents = [wf_doc]
 
-    session.execute = AsyncMock(
-        side_effect=[
-            MagicMock(scalar_one_or_none=MagicMock(return_value=run)),
-            MagicMock(scalar_one_or_none=MagicMock(return_value=wf)),
-        ]
-    )
+    run_result = MagicMock()
+    run_result.scalar_one_or_none.return_value = run
+    wf_result = MagicMock()
+    wf_result.scalar_one_or_none.return_value = wf
+    session.execute = AsyncMock(side_effect=[run_result, wf_result])
 
     pool = await resolve_worker_pool(session, "run-2")
     assert pool == "ocr"
@@ -55,6 +59,7 @@ async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
 async def test_resolve_worker_pool_uploaded_document_model_uses_ocr(pool_settings):
     session = AsyncMock()
     run = MagicMock()
+    run.worker_pool = None
     run.workflow_id = "wf-1"
     run_doc = MagicMock(storage_key="runs/x/scan.pdf", document_id="doc-scan")
     run.documents = [run_doc]
@@ -62,12 +67,11 @@ async def test_resolve_worker_pool_uploaded_document_model_uses_ocr(pool_setting
     wf = MagicMock()
     wf.documents = [MagicMock(id="doc-scan", extraction_mode="document_model")]
 
-    session.execute = AsyncMock(
-        side_effect=[
-            MagicMock(scalar_one_or_none=MagicMock(return_value=run)),
-            MagicMock(scalar_one_or_none=MagicMock(return_value=wf)),
-        ]
-    )
+    run_result = MagicMock()
+    run_result.scalar_one_or_none.return_value = run
+    wf_result = MagicMock()
+    wf_result.scalar_one_or_none.return_value = wf
+    session.execute = AsyncMock(side_effect=[run_result, wf_result])
 
     pool = await resolve_worker_pool(session, "run-4")
     assert pool == "ocr"

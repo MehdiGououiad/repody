@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
-import { useOcrModelsCatalog, useProcessingPathsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { documentModelsFromCatalog, useProcessingPathsCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { cn, shortId } from "@/lib/utils";
 import type { DocumentDef, ValidationModeId } from "@/lib/types";
@@ -22,22 +22,23 @@ export function DocumentsSection({
 }) {
   const t = useTranslations("workflows.builder");
   const pathsQuery = useProcessingPathsCatalog();
-  const ocrQuery = useOcrModelsCatalog();
+  const catalogQuery = useUnifiedModelsCatalog();
 
   const processingOptions = useMemo((): ProcessingOptions => {
-    const loaded = pathsQuery.isFetched && ocrQuery.isFetched;
-    const error = pathsQuery.isError || ocrQuery.isError;
-    if (!pathsQuery.data || !ocrQuery.data) {
+    const loaded = pathsQuery.isFetched && catalogQuery.isFetched;
+    const error = pathsQuery.isError || catalogQuery.isError;
+    if (!pathsQuery.data || !catalogQuery.data) {
       return { ...EMPTY_PROCESSING_OPTIONS, loaded, error };
     }
+    const documentModels = documentModelsFromCatalog(catalogQuery.data);
     return {
       paths: pathsQuery.data.paths,
       validationModes: pathsQuery.data.validationModes,
       defaultPath: pathsQuery.data.defaultPath,
       defaultValidation:
         (pathsQuery.data.defaultValidationMode as ValidationModeId) || "logic_only",
-      ocrModels: ocrQuery.data.models,
-      defaultOcr: ocrQuery.data.defaultModel,
+      ocrModels: documentModels,
+      defaultOcr: catalogQuery.data.defaultDocumentModel,
       loaded: true,
       error: false,
     };
@@ -45,14 +46,14 @@ export function DocumentsSection({
     pathsQuery.data,
     pathsQuery.isFetched,
     pathsQuery.isError,
-    ocrQuery.data,
-    ocrQuery.isFetched,
-    ocrQuery.isError,
+    catalogQuery.data,
+    catalogQuery.isFetched,
+    catalogQuery.isError,
   ]);
 
   const retryProcessingOptions = () => {
     void pathsQuery.refetch();
-    void ocrQuery.refetch();
+    void catalogQuery.refetch();
   };
 
   const updateDoc = (id: string, patch: Partial<DocumentDef>) =>

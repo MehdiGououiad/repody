@@ -8,7 +8,9 @@ Single reference for secrets and `AUDIT_*` configuration across Compose, VPS, an
 
 | Variable | Purpose |
 |----------|---------|
-| `AUDIT_ADMIN_API_TOKEN` | Admin API auth (api + web server-side) |
+| `AUTH_SECRET` | Auth.js session encryption (web) |
+| `AUTH_KEYCLOAK_CLIENT_SECRET` | Keycloak client secret for `repody-web` |
+| `AUDIT_OIDC_ISSUER` | OIDC issuer URL (api + web), e.g. `https://auth.example.com/realms/repody` |
 | `AUDIT_MINIO_PUBLIC_ENDPOINT` | Hostname browsers use for presigned uploads (e.g. `files.example.com`) |
 | `POSTGRES_PASSWORD` | Postgres |
 | `MINIO_ROOT_PASSWORD` | MinIO |
@@ -24,13 +26,20 @@ VPS also needs `PUBLIC_DOMAIN`, `FILES_DOMAIN`, and Caddy `BASIC_AUTH_*` — see
 | `AUDIT_VLLM_BASE_URL` | — | Required when `AUDIT_INFERENCE_MODE=vllm` |
 | `AUDIT_VLLM_SERVED_MODEL` | `numind/NuExtract3` | vLLM model id |
 
+Worker log marker when warmup finishes: `ocr_worker_warmup_done` (field `repody_vlm` = `ok` | `skipped` | `failed` | `disabled`).
+
+| `AUDIT_VALIDATION_MODEL` | — | Text model for LLM rule validation |
+
 ## Platform behavior
 
 | Variable | Prod default | Description |
 |----------|--------------|-------------|
 | `AUDIT_SEED_ON_STARTUP` | `false` | Demo data on API boot |
+| `AUDIT_USE_CREATE_ALL` | `false` | **Never `true` in prod** — use Alembic (`AUDIT_RUN_MIGRATIONS_ON_STARTUP`) |
 | `AUDIT_RUN_MIGRATIONS_ON_STARTUP` | `true` | Alembic on API start |
-| `AUDIT_AUTH_ENABLED` | `true` (api) | API token auth |
+| `AUDIT_OIDC_ENABLED` | `true` (api) | Keycloak JWT on management API |
+| `AUDIT_OIDC_AUDIENCE` | required | Expected JWT audience for the backend API |
+| `AUDIT_RATE_LIMIT_FAIL_CLOSED` | `true` | Reject rate-limited endpoints when Redis is unavailable |
 | `AUDIT_DIRECT_UPLOAD_ENABLED` | `true` | Presigned MinIO uploads |
 | `AUDIT_STORAGE_BACKEND` | `s3` | MinIO in Compose |
 | `AUDIT_LOG_JSON` | `true` (Helm) | Structured logs |
@@ -54,6 +63,10 @@ VPS also needs `PUBLIC_DOMAIN`, `FILES_DOMAIN`, and Caddy `BASIC_AUTH_*` — see
 | `BUGSINK_DSN` | api, workers | Sentry-compatible DSN for backend |
 | `NEXT_PUBLIC_BUGSINK_DSN` | web build | Browser DSN (baked at build time) |
 | `AUDIT_DEV_OBS` | dev recipes | `none` \| `logs` \| `traces` for local Grafana |
+| `AUTH_SECRET` | `--with=auth` | Auth.js session secret (`openssl rand -base64 32`) |
+| `KEYCLOAK_ADMIN_PASSWORD` | `--with=auth` | Keycloak bootstrap admin password |
+| `AUTH_KEYCLOAK_CLIENT_SECRET` | `--with=auth` | Defaults to dev secret from realm import |
+| `AUDIT_OIDC_ISSUER` | `--with=auth` | e.g. `http://keycloak:8080/realms/repody` (api/web in Compose) |
 
 ## CI / image build
 

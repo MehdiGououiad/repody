@@ -31,7 +31,7 @@ Stacks + optional modules. SSOT: [`deploy/platform-modules.mjs`](../deploy/platf
 
 | Flag | Adds |
 |------|------|
-| `--warmup` | Repody VLM warmup (`warmup.yaml`; on `dev`, swaps out `dev.yaml`) |
+| `--warmup` | OCR worker warmup — Repody VLM (`warmup.yaml` overlay on `dev`) |
 | `--lan` | Office LAN (`lan.yaml`) |
 | `--public` | Caddy HTTPS (`public.yaml`) |
 | `--scale` | Worker pool tuning (`scale.yaml`) |

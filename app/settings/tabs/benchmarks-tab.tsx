@@ -22,7 +22,7 @@ import {
   type BenchmarkReport,
   type OperatorJob,
 } from "@/lib/api/operator";
-import { useOcrModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { documentModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shared";
 
 function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string }) {
@@ -114,11 +114,13 @@ export function BenchmarksTab({
   const [warmRuns, setWarmRuns] = useState("1");
   const [minimumAccuracy, setMinimumAccuracy] = useState("1");
   const [cacheCheck, setCacheCheck] = useState(true);
-  const ocrQuery = useOcrModelsCatalog();
-  const models = useMemo(
-    () => (ocrQuery.data?.models ?? []).filter((model) => model.available !== false),
-    [ocrQuery.data]
-  );
+  const catalogQuery = useUnifiedModelsCatalog();
+  const models = useMemo(() => {
+    if (!catalogQuery.data) return [];
+    return documentModelsFromCatalog(catalogQuery.data).filter(
+      (model) => model.available !== false,
+    );
+  }, [catalogQuery.data]);
   const modelsInitialized = useRef(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [document, setDocument] = useState<File | null>(null);
@@ -128,10 +130,10 @@ export function BenchmarksTab({
   const active = jobs.find((job) => job.kind === "benchmark" && ACTIVE_STATUSES.has(job.status));
 
   useEffect(() => {
-    if (!ocrQuery.data || modelsInitialized.current) return;
+    if (!catalogQuery.data || modelsInitialized.current) return;
     modelsInitialized.current = true;
     setSelected(models.map((model) => model.id));
-  }, [ocrQuery.data, models]);
+  }, [catalogQuery.data, models]);
 
   useEffect(() => {
     void fetchLatestBenchmark().then(setReport);
@@ -196,7 +198,7 @@ export function BenchmarksTab({
                   <SelectTrigger id="benchmark-profile"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="quick">Quick baseline</SelectItem>
-                    <SelectItem value="models">Document models</SelectItem>
+                    <SelectItem value="models">Vision models</SelectItem>
                     <SelectItem value="full">Full platform</SelectItem>
                   </SelectContent>
                 </Select>

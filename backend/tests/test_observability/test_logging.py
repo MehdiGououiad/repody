@@ -22,8 +22,9 @@ def test_redact_sensitive_fields_masks_tokens() -> None:
 
 
 def test_configure_logging_json_smoke() -> None:
-    from audit_workbench.observability.logging import configure_logging
     from structlog import get_logger
+
+    from audit_workbench.observability.logging import configure_logging
 
     settings = Settings(log_json=True, otel_service_name="test-service")
     configure_logging(settings)

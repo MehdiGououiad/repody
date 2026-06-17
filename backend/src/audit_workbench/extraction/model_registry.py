@@ -1,8 +1,7 @@
 """Pluggable document model registry.
 
 Register models in ``_registered_models()`` — each catalog id maps to a runtime
-(Docker Model Runner or vLLM) and a served model name. Add new entries here when
-you introduce additional document models.
+(Docker Model Runner or vLLM) and extraction handler.
 """
 
 from __future__ import annotations
@@ -18,8 +17,6 @@ from audit_workbench.extraction.document_model_branding import (
     REPODY_VLM_LABEL,
     is_legacy_catalog_id,
     normalize_public_catalog_id,
-    public_runtime_model_name,
-    public_runtime_name,
 )
 from audit_workbench.extraction.repody_vlm import extract_with_repody_vlm
 from audit_workbench.inference.runtime import default_document_runtime
@@ -52,18 +49,16 @@ def _runtime_model_for(settings: Settings, runtime: DocumentRuntime) -> str:
 
 def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
     models: dict[str, DocumentModelSpec] = {}
-    if not settings.repody_vlm_enabled:
-        return models
-
-    runtime: DocumentRuntime = default_document_runtime(settings)  # type: ignore[assignment]
-    models[REPODY_VLM_CATALOG_ID] = DocumentModelSpec(
-        id=REPODY_VLM_CATALOG_ID,
-        label=REPODY_VLM_LABEL,
-        engine="document_model",
-        runtime=runtime,
-        runtime_model=_runtime_model_for(settings, runtime),
-        description=REPODY_VLM_DESCRIPTION,
-    )
+    if settings.repody_vlm_enabled:
+        runtime: DocumentRuntime = default_document_runtime(settings)  # type: ignore[assignment]
+        models[REPODY_VLM_CATALOG_ID] = DocumentModelSpec(
+            id=REPODY_VLM_CATALOG_ID,
+            label=REPODY_VLM_LABEL,
+            engine="document_model",
+            runtime=runtime,
+            runtime_model=_runtime_model_for(settings, runtime),
+            description=REPODY_VLM_DESCRIPTION,
+        )
     return models
 
 
@@ -71,7 +66,7 @@ def normalize_model_id(model_id: str | None, *, settings: Settings | None = None
     settings = settings or get_settings()
     raw = (model_id or settings.default_ocr_model or REPODY_VLM_CATALOG_ID).strip()
     if not raw:
-        return REPODY_VLM_CATALOG_ID
+        return _default_catalog_id(settings)
     normalized = normalize_public_catalog_id(raw)
     registry = _registered_models(settings)
     if normalized in registry:
@@ -80,7 +75,16 @@ def normalize_model_id(model_id: str | None, *, settings: Settings | None = None
         return REPODY_VLM_CATALOG_ID
     if settings.default_ocr_model in registry:
         return normalize_public_catalog_id(settings.default_ocr_model)
-    return REPODY_VLM_CATALOG_ID
+    return _default_catalog_id(settings)
+
+
+def _default_catalog_id(settings: Settings) -> str:
+    registry = _registered_models(settings)
+    if REPODY_VLM_CATALOG_ID in registry:
+        return REPODY_VLM_CATALOG_ID
+    if registry:
+        return next(iter(registry.keys()))
+    raise RuntimeError("No document models are enabled.")
 
 
 def parse_document_model(model_id: str | None) -> DocumentModelSpec:
@@ -92,7 +96,7 @@ def parse_document_model(model_id: str | None) -> DocumentModelSpec:
         return spec
     if registry:
         return next(iter(registry.values()))
-    raise RuntimeError("No document models are enabled. Set AUDIT_REPODY_VLM_ENABLED=true.")
+    raise RuntimeError("No document models are enabled. Enable Repody VLM.")
 
 
 def list_document_models() -> list[DocumentModelSpec]:

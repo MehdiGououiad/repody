@@ -10,7 +10,7 @@ latency while checking extracted values and rule outcomes.
 pnpm dev
 ```
 
-Use `pnpm dev -- --warmup` when you want Repody VLM warmed on worker start.
+Use `pnpm dev -- --warmup` when you want Repody VLM pre-loaded on the OCR worker.
 
 ## Run
 

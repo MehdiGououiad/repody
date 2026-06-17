@@ -1,2 +1,12 @@
 packages:
   - "."
+
+minimumReleaseAge: 0
+
+allowBuilds:
+  "@parcel/watcher": true
+  "@sentry/cli": true
+  "@swc/core": true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true

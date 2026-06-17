@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import type { RunProgress } from "@/lib/api/test-run";
+import type { RunProgress } from "@/lib/api/workflow-run";
 import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
 import { formatDurationMs } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
@@ -35,7 +35,7 @@ function modeBadge(step: RunProgress["steps"][number]) {
     return (
       <span className="inline-flex items-center gap-1 rounded bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
         <Brain className="h-3 w-3" />
-        Document model
+        Vision model
       </span>
     );
   }
@@ -91,19 +91,15 @@ function useActiveStepElapsed(activeStepId: string | undefined) {
   const [elapsedMs, setElapsedMs] = useState(0);
 
   useEffect(() => {
-    if (!activeStepId) {
-      setElapsedMs(0);
-      return;
-    }
+    if (!activeStepId) return;
     const started = Date.now();
-    setElapsedMs(0);
-    const timer = window.setInterval(() => {
-      setElapsedMs(Date.now() - started);
-    }, 500);
+    const update = () => setElapsedMs(Date.now() - started);
+    update();
+    const timer = window.setInterval(update, 500);
     return () => window.clearInterval(timer);
   }, [activeStepId]);
 
-  return elapsedMs;
+  return activeStepId ? elapsedMs : 0;
 }
 
 export function RunProgressSteps({

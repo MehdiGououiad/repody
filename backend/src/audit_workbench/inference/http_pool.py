@@ -18,11 +18,7 @@ def get_async_http_client(timeout: float = 180.0) -> httpx.AsyncClient:
     except RuntimeError:
         loop_id = None
 
-    stale_loop = (
-        _client_loop_id is not None
-        and loop_id is not None
-        and loop_id != _client_loop_id
-    )
+    stale_loop = _client_loop_id is not None and loop_id is not None and loop_id != _client_loop_id
     if _client is None or _client.is_closed or stale_loop:
         _client = httpx.AsyncClient(
             timeout=httpx.Timeout(_READ_TIMEOUT_S, connect=15.0),

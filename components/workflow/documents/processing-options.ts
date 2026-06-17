@@ -1,4 +1,4 @@
-import type { OcrModelOption } from "@/lib/api/ocr";
+import type { CatalogModelEntry } from "@/lib/api/schema-types";
 import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
 import type {
   ReadPathOption,
@@ -9,7 +9,7 @@ import type { ValidationModeId } from "@/lib/types";
 export type ProcessingOptions = {
   paths: ReadPathOption[];
   validationModes: ValidationModeOption[];
-  ocrModels: OcrModelOption[];
+  ocrModels: CatalogModelEntry[];
   defaultPath: string;
   defaultValidation: ValidationModeId;
   defaultOcr: string;

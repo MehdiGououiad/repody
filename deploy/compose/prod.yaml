@@ -1,10 +1,10 @@
-# Production deployment overrides — baked images, no bind mounts, no hot reload.
-
 x-prod-api-env: &prod-api-env
   AUDIT_SEED_ON_STARTUP: "false"
   AUDIT_USE_CREATE_ALL: "false"
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
-  AUDIT_AUTH_ENABLED: "true"
+  AUDIT_OIDC_ENABLED: "true"
+  AUDIT_OIDC_ISSUER: ${AUDIT_OIDC_ISSUER:?Set AUDIT_OIDC_ISSUER in .env}
+  AUDIT_OIDC_AUDIENCE: ${AUDIT_OIDC_AUDIENCE:?Set AUDIT_OIDC_AUDIENCE in .env}
   AUDIT_DEPLOYMENT_ENVIRONMENT: production
   AUDIT_DB_POOL_SIZE: "10"
   AUDIT_DB_MAX_OVERFLOW: "20"
@@ -12,6 +12,7 @@ x-prod-api-env: &prod-api-env
   AUDIT_DIRECT_UPLOAD_ENABLED: "true"
   AUDIT_STORAGE_BACKEND: s3
   AUDIT_RATE_LIMIT_ENABLED: "true"
+  AUDIT_RATE_LIMIT_FAIL_CLOSED: "true"
   AUDIT_ADMISSION_CONTROL_ENABLED: "true"
   AUDIT_ADMISSION_MAX_QUEUED: "80"
   AUDIT_ADMISSION_MAX_INFLIGHT: "100"
@@ -20,8 +21,9 @@ x-prod-api-env: &prod-api-env
   BUGSINK_ENVIRONMENT: ${BUGSINK_ENVIRONMENT:-production}
 
 x-prod-worker-env: &prod-worker-env
-  AUDIT_AUTH_ENABLED: "false"
+  AUDIT_OIDC_ENABLED: "false"
   AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_REPODY_VLM_WARMUP_ON_START: "true"
   BUGSINK_DSN: ${BUGSINK_DSN:-}
   BUGSINK_ENVIRONMENT: ${BUGSINK_ENVIRONMENT:-production}
 
@@ -30,7 +32,6 @@ services:
     command: uvicorn audit_workbench.main:app --host 0.0.0.0 --port 8000 --workers 2
     environment:
       <<: *prod-api-env
-      AUDIT_ADMIN_API_TOKEN: ${AUDIT_ADMIN_API_TOKEN:?Set AUDIT_ADMIN_API_TOKEN in .env}
       AUDIT_MINIO_PUBLIC_ENDPOINT: ${AUDIT_MINIO_PUBLIC_ENDPOINT:?Set AUDIT_MINIO_PUBLIC_ENDPOINT for presigned uploads}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/v1/healthz/live"]
@@ -57,7 +58,7 @@ services:
     environment:
       <<: *prod-worker-env
       AUDIT_WORKER_FAST_MAX_JOBS: "8"
-
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
   web:
     profiles: !reset []
     restart: unless-stopped
@@ -69,7 +70,10 @@ services:
       NODE_ENV: production
       BACKEND_URL: http://api:8000
       INTERNAL_API_URL: http://api:8000
-      AUDIT_ADMIN_API_TOKEN: ${AUDIT_ADMIN_API_TOKEN:?Set AUDIT_ADMIN_API_TOKEN in .env}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      AUTH_KEYCLOAK_ID: ${AUTH_KEYCLOAK_ID:-repody-web}
+      AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:?Set AUTH_KEYCLOAK_CLIENT_SECRET in .env}
+      AUTH_KEYCLOAK_ISSUER: ${AUTH_KEYCLOAK_ISSUER:?Set AUTH_KEYCLOAK_ISSUER in .env}
 
   postgres:
     restart: unless-stopped

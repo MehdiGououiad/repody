@@ -6,7 +6,7 @@ export type BackendHealth = {
 export async function checkBackendHealth(): Promise<BackendHealth> {
   const start = Date.now();
   try {
-    const res = await fetch("/api/healthz", { cache: "no-store" });
+    const res = await fetch("/api/v1/healthz", { cache: "no-store" });
     if (!res.ok) return { status: "down" };
     const body = await res.json();
     if (body.status === "ok") {

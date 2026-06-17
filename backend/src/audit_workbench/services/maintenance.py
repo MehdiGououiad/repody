@@ -28,14 +28,18 @@ async def _worker_backlog_active(session: AsyncSession) -> bool:
 async def _reap_stale_running_runs(session: AsyncSession, *, minutes: int) -> int:
     cutoff = datetime.now(UTC) - timedelta(minutes=minutes)
     stale_ids = (
-        await session.execute(
-            select(Run.id).where(
-                Run.status == RunStatus.running.value,
-                Run.started_at.is_not(None),
-                Run.started_at < cutoff,
+        (
+            await session.execute(
+                select(Run.id).where(
+                    Run.status == RunStatus.running.value,
+                    Run.started_at.is_not(None),
+                    Run.started_at < cutoff,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     reaped = 0
     for run_id in stale_ids:
         if await fail_run_terminal(
@@ -62,14 +66,18 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
         return 0
     cutoff = datetime.now(UTC) - timedelta(minutes=minutes)
     stale_ids = (
-        await session.execute(
-            select(Run.id).where(
-                Run.status == RunStatus.queued.value,
-                Run.created_at.is_not(None),
-                Run.created_at < cutoff,
+        (
+            await session.execute(
+                select(Run.id).where(
+                    Run.status == RunStatus.queued.value,
+                    Run.created_at.is_not(None),
+                    Run.created_at < cutoff,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     reaped = 0
     for run_id in stale_ids:
         if await fail_run_terminal(
@@ -94,8 +102,6 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
 async def maybe_reap_stale_run(session: AsyncSession, run: Run) -> bool:
     """Fail a single run when it exceeded queued/running stale thresholds."""
     settings = get_settings()
-    if settings.run_jobs_inline:
-        return False
     now = datetime.now(UTC)
     if run.status == RunStatus.running.value and run.started_at:
         cutoff = now - timedelta(minutes=settings.stale_run_timeout_minutes)
@@ -146,8 +152,6 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
 async def run_maintenance_cycle() -> None:
     """One pass: fail stale running and stuck queued jobs; replay dispatch outbox."""
     settings = get_settings()
-    if settings.run_jobs_inline:
-        return
     reaped = await reap_stale_runs()
     replayed = 0
     from audit_workbench.services.dispatch_outbox import replay_pending_dispatches
@@ -166,9 +170,6 @@ async def run_maintenance_cycle() -> None:
 async def maintenance_loop(stop: asyncio.Event) -> None:
     """Periodic maintenance until stop is set."""
     settings = get_settings()
-    if settings.run_jobs_inline:
-        log.info("maintenance_loop_skipped", reason="run_jobs_inline")
-        return
     interval = max(5, settings.maintenance_interval_seconds)
     log.info("maintenance_loop_started", interval_seconds=interval)
     while not stop.is_set():

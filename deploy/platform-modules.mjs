@@ -6,7 +6,7 @@
  */
 import { COMPOSE } from "./compose-paths.mjs";
 
-/** @typedef {"infra" | "control" | "workers" | "edge" | "obs" | "traces" | "bugsink"} ModuleId */
+/** @typedef {"infra" | "control" | "workers" | "edge" | "obs" | "traces" | "bugsink" | "auth"} ModuleId */
 
 /** @typedef {{
  *   warmup?: boolean;
@@ -89,6 +89,14 @@ export const MODULES = {
     files: [COMPOSE.bugsink],
     profiles: ["bugsink"],
   },
+  auth: {
+    id: "auth",
+    label: "Auth (Keycloak)",
+    description: "OIDC identity provider for UI users and JWT validation on API",
+    services: ["keycloak"],
+    files: [COMPOSE.keycloak],
+    profiles: ["auth"],
+  },
 };
 
 /** @type {Record<string, StackPreset>} */
@@ -152,6 +160,7 @@ const MODULE_ORDER = /** @type {ModuleId[]} */ ([
   "obs",
   "traces",
   "bugsink",
+  "auth",
 ]);
 
 export const INFRA_SERVICES = [...MODULES.infra.services];

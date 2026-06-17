@@ -45,8 +45,15 @@ async def count_queued(session: AsyncSession) -> int:
 
 async def count_inflight(session: AsyncSession) -> int:
     return int(
+        await session.scalar(select(func.count()).select_from(Run).where(Run.status.in_(_INFLIGHT)))
+        or 0
+    )
+
+
+async def count_running(session: AsyncSession) -> int:
+    return int(
         await session.scalar(
-            select(func.count()).select_from(Run).where(Run.status.in_(_INFLIGHT))
+            select(func.count()).select_from(Run).where(Run.status == RunStatus.running.value)
         )
         or 0
     )
@@ -54,13 +61,17 @@ async def count_inflight(session: AsyncSession) -> int:
 
 async def count_ocr_inflight(session: AsyncSession) -> int:
     """Inflight runs classified for the OCR/document-model worker pool."""
-    result = await session.execute(
-        select(Run.id).where(
-            Run.status.in_(_INFLIGHT),
-            Run.worker_pool == "ocr",
+    return int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Run)
+            .where(
+                Run.status.in_(_INFLIGHT),
+                Run.worker_pool == "ocr",
+            )
         )
+        or 0
     )
-    return len(list(result.scalars()))
 
 
 async def queue_position(session: AsyncSession, run_id: str) -> tuple[int | None, int | None]:
@@ -123,7 +134,7 @@ async def check_admission(
     Returns predicted worker pool when admitted.
     """
     settings = get_settings()
-    if not settings.admission_control_enabled or settings.run_jobs_inline:
+    if not settings.admission_control_enabled:
         return await predict_worker_pool(session, workflow_id, file_bindings=file_bindings)
 
     pool = await predict_worker_pool(session, workflow_id, file_bindings=file_bindings)

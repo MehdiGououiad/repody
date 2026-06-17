@@ -5,7 +5,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.services.api_keys import api_key_hint, hash_api_key
 from audit_workbench.db.models import (
     Document,
     ExtractedField,
@@ -19,7 +18,7 @@ from audit_workbench.db.models import (
     WorkflowRule,
     WorkflowStatus,
 )
-
+from audit_workbench.services.api_keys import api_key_hint, hash_api_key
 
 RULE_TEMPLATES = [
     RuleTemplate(
@@ -104,7 +103,9 @@ async def seed_database(session: AsyncSession) -> None:
         ("f6", "po_number", "Purchase order number referenced on the invoice."),
     ]
     for i, (fid, name, desc) in enumerate(inv_fields):
-        session.add(SchemaField(id=fid, document_id=doc_inv.id, name=name, description=desc, position=i))
+        session.add(
+            SchemaField(id=fid, document_id=doc_inv.id, name=name, description=desc, position=i)
+        )
 
     po_fields = [
         ("p1", "po_number", "Unique purchase order identifier."),
@@ -112,7 +113,9 @@ async def seed_database(session: AsyncSession) -> None:
         ("p3", "vendor_name", "Vendor name as listed on the purchase order."),
     ]
     for i, (fid, name, desc) in enumerate(po_fields):
-        session.add(SchemaField(id=fid, document_id=doc_po.id, name=name, description=desc, position=i))
+        session.add(
+            SchemaField(id=fid, document_id=doc_po.id, name=name, description=desc, position=i)
+        )
 
     rules = [
         WorkflowRule(
@@ -165,7 +168,9 @@ async def seed_database(session: AsyncSession) -> None:
         finished_at=datetime(2023, 10, 24, 14, 32, 5, tzinfo=UTC),
     )
     session.add(run)
-    rdoc = RunDocument(id="rdoc-seed", run_id=run.id, document_id=doc_inv.id, document_type="Invoice")
+    rdoc = RunDocument(
+        id="rdoc-seed", run_id=run.id, document_id=doc_inv.id, document_type="Invoice"
+    )
     session.add(rdoc)
     await session.flush()
 

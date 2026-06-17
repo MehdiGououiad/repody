@@ -17,7 +17,7 @@ Use **Hatchet** as the workflow engine for audit runs:
 - Workflow: `audit-run` in `backend/src/audit_workbench/hatchet/workflows/`
 - Workers register with pool labels: `ocr` (document-model jobs) and `fast` (logic-only)
 - API dispatches via `services/run_dispatch.py`; workers execute `services/run_processor.py`
-- `AUDIT_RUN_JOBS_INLINE=true` bypasses Hatchet for solo local dev (`pnpm dev:api`)
+- Local dev and CI run Hatchet workers via `pnpm compose` / `pnpm dev`
 
 ## Consequences
 
@@ -30,14 +30,14 @@ Use **Hatchet** as the workflow engine for audit runs:
 **Negative**
 
 - Extra infrastructure: `hatchet-postgres`, `hatchet-lite`, `hatchet-init` token bootstrap
-- Local dev requires either inline mode or running worker containers
+- Local dev requires running worker containers (or full `pnpm dev` stack)
 - `.env.example` and docs must say **Hatchet**, not legacy queue names
 
 ## Alternatives considered
 
 | Option | Why not |
 |--------|---------|
-| Inline-only (no queue) | Blocks API workers; no horizontal scale |
+| Inline-only (no queue) | Blocks API workers; no horizontal scale; removed |
 | ARQ / Redis queue | Less workflow visibility; superseded before production hardening |
 | Celery | Heavier ops footprint for current team size |
 

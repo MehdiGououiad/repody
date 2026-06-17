@@ -10,14 +10,18 @@ from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Run, RunDocument, RunStatus
 from audit_workbench.schemas.run import RunAuditDetail
-from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
-from audit_workbench.services.mappers import load_workflow, run_to_audit_detail
-from audit_workbench.schemas.workflow import RunProgressSchema
+from audit_workbench.schemas.workflow import (
+    DocumentDefSchema,
+    RunProgressSchema,
+    WorkflowRuleSchema,
+)
+from audit_workbench.services.admission import (
+    enrich_progress_for_poll,
+    init_queued_progress_with_position,
+)
+from audit_workbench.services.mappers import run_to_audit_detail
 from audit_workbench.services.run.snapshot import build_run_snapshot
-from audit_workbench.services.run_processor import execute_run_with_timeout
-from audit_workbench.services.admission import enrich_progress_for_poll, init_queued_progress_with_position
-from audit_workbench.services.run_progress import clear_progress_commit_cache
-from audit_workbench.settings import get_settings
+from audit_workbench.services.workflow_repository import load_workflow
 
 
 def _run_id(workflow_id: str, source: str) -> str:
@@ -40,16 +44,8 @@ def _snapshot_from_payload(
     rules: list[WorkflowRuleSchema] | None = None,
     workflow_name: str | None = None,
 ) -> dict | None:
-    doc_rows = (
-        [doc.model_dump(by_alias=True) for doc in documents]
-        if documents
-        else None
-    )
-    rule_rows = (
-        [rule.model_dump(by_alias=True) for rule in rules]
-        if rules
-        else None
-    )
+    doc_rows = [doc.model_dump(by_alias=True) for doc in documents] if documents else None
+    rule_rows = [rule.model_dump(by_alias=True) for rule in rules] if rules else None
     return build_run_snapshot(
         documents=doc_rows,
         rules=rule_rows,
@@ -66,7 +62,6 @@ async def create_run(
     snapshot_documents: list[DocumentDefSchema] | None = None,
     snapshot_rules: list[WorkflowRuleSchema] | None = None,
     snapshot_workflow_name: str | None = None,
-    force_inline: bool = False,
     worker_pool: str | None = None,
 ) -> Run:
     wf = await load_workflow(session, workflow_id)
@@ -104,17 +99,8 @@ async def create_run(
         )
     await session.flush()
 
-    settings = get_settings()
-    # Test runs always queue through Hatchet; never use global inline dev mode.
-    inline = force_inline or (settings.run_jobs_inline and source != "test")
-    if not inline:
-        await init_queued_progress_with_position(session, run.id)
-        await session.flush()
-    else:
-        await execute_run_with_timeout(session, run.id)
-        await session.flush()
-        await session.refresh(run)
-        clear_progress_commit_cache(run.id)
+    await init_queued_progress_with_position(session, run.id)
+    await session.flush()
 
     return run
 
@@ -171,13 +157,12 @@ async def poll_run_status(session: AsyncSession, run_id: str) -> dict:
 async def poll_run(
     session: AsyncSession, run_id: str
 ) -> tuple[str, RunAuditDetail | None, str | None, RunProgressSchema | None]:
-    run = await session.get(Run, run_id)
-    if not run:
-        return "failed", None, "Run not found", None
-    progress = _progress_from_run(run)
-    if run.status == RunStatus.done.value:
+    body = await poll_run_status(session, run_id)
+    progress = body.get("progress")
+    status = body["status"]
+    if status == "done":
         detail = await get_run_detail(session, run_id)
         return "done", detail, None, progress
-    if run.status == RunStatus.failed.value:
-        return "failed", None, run.error or "Run failed", progress
-    return run.status, None, None, progress
+    if status == "failed":
+        return "failed", None, body.get("error") or "Run failed", progress
+    return status, None, None, progress

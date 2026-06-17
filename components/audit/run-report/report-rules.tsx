@@ -205,22 +205,3 @@ export function RunRuleResultsDetailed({
     </>
   );
 }
-
-/** @deprecated Prefer RunRuleResultsSummary or RunRuleResultsDetailed. */
-export function RunRuleResultsList({
-  audit,
-  labels,
-  detailed = false,
-  size = "md",
-}: {
-  audit: RunAuditDetail;
-  labels?: RunReportLabels;
-  detailed?: boolean;
-  size?: "sm" | "md";
-}) {
-  return detailed ? (
-    <RunRuleResultsDetailed audit={audit} labels={labels} size={size} />
-  ) : (
-    <RunRuleResultsSummary audit={audit} />
-  );
-}

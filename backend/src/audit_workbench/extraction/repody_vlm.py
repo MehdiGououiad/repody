@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import json
@@ -10,8 +11,7 @@ import structlog
 
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import DocumentBundle
-from audit_workbench.extraction.parse_fields import parse_fields_json
-from audit_workbench.extraction.preprocess import render_document_pages_jpeg
+from audit_workbench.extraction.field_json import parse_fields_json
 from audit_workbench.inference.openai_compat import post_chat_completion
 from audit_workbench.inference.runtime import openai_base_url_for_runtime
 from audit_workbench.settings import Settings, get_settings
@@ -54,13 +54,18 @@ _MONEY_HINTS = (
 )
 
 
-async def warmup_repody_vlm() -> None:
-    """Load Repody VLM weights with a tiny image request on the active runtime."""
+async def warmup_repody_vlm() -> str:
+    """Load Repody VLM weights with a tiny image request on the active runtime.
+
+    Returns: ``ok`` | ``skipped`` | ``failed`` | ``disabled``
+    """
     from audit_workbench.extraction.model_registry import parse_document_model
 
     settings = get_settings()
-    if not settings.repody_vlm_warmup_on_start or not settings.repody_vlm_enabled:
-        return
+    if not settings.repody_vlm_warmup_on_start:
+        return "disabled"
+    if not settings.repody_vlm_enabled:
+        return "skipped"
     spec = parse_document_model(None)
     base_url = openai_base_url_for_runtime(spec.runtime, settings)
     from PIL import Image
@@ -73,7 +78,9 @@ async def warmup_repody_vlm() -> None:
         "messages": [
             {
                 "role": "user",
-                "content": [{"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded}"}}],
+                "content": [
+                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded}"}}
+                ],
             }
         ],
         "max_tokens": 8,
@@ -98,8 +105,10 @@ async def warmup_repody_vlm() -> None:
             model=spec.runtime_model,
             ms=int((time.perf_counter() - started) * 1000),
         )
+        return "ok"
     except Exception as exc:
         log.warning("repody_vlm_warmup_failed", runtime=spec.runtime, error=repr(exc))
+        return "failed"
 
 
 def _template_type(field: SchemaFieldSpec) -> str:
@@ -156,18 +165,26 @@ def cap_vlm_pages(pages: list[bytes], *, max_pages: int) -> tuple[list[bytes], i
     return pages[:max_pages], len(pages) - max_pages
 
 
-def _render_pages(bundle: DocumentBundle, settings: Settings) -> list[bytes]:
-    render_settings = settings.model_copy(
+def _vlm_render_settings(settings: Settings) -> Settings:
+    return settings.model_copy(
         update={
-            "ocr_max_edge_px": settings.repody_vlm_max_edge_px,
-            "ocr_pdf_dpi": settings.repody_vlm_pdf_dpi,
+            "document_render_max_edge_px": settings.repody_vlm_max_edge_px,
+            "document_render_pdf_dpi": settings.repody_vlm_pdf_dpi,
+            "ocr_jpeg_optimize": False,
         }
     )
-    return render_document_pages_jpeg(
-        bundle.raw_bytes,
-        bundle.mime_type,
-        settings=render_settings,
-    )
+
+
+def _encode_pages_for_vlm(pages: list[bytes]) -> list[dict[str, Any]]:
+    return [
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": f"data:image/jpeg;base64,{base64.b64encode(page).decode('ascii')}"
+            },
+        }
+        for page in pages
+    ]
 
 
 def _fields_payload(raw: str, schema: list[SchemaFieldSpec]) -> str:
@@ -213,7 +230,7 @@ async def extract_with_repody_vlm(
     settings = get_settings()
     spec = spec or parse_document_model(None)
     base_url = openai_base_url_for_runtime(spec.runtime, settings)
-    pages = _render_pages(bundle, settings)
+    pages = bundle.page_jpegs(_vlm_render_settings(settings))
     max_pages = min(settings.ocr_max_pages, settings.repody_vlm_max_pages_per_request)
     pages, dropped = cap_vlm_pages(pages, max_pages=max_pages)
     if dropped:
@@ -224,15 +241,7 @@ async def extract_with_repody_vlm(
             dropped=dropped,
             max_pages=max_pages,
         )
-    content = [
-        {
-            "type": "image_url",
-            "image_url": {
-                "url": f"data:image/jpeg;base64,{base64.b64encode(page).decode('ascii')}"
-            },
-        }
-        for page in pages
-    ]
+    content = await asyncio.to_thread(_encode_pages_for_vlm, pages)
     template = build_vlm_template(schema)
     instructions = build_vlm_instructions(schema, document_type=document_type)
     payload = {

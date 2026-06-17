@@ -43,7 +43,13 @@ function parseArgs(argv) {
       if (eq === -1) {
         flags[arg.slice(2)] = true;
       } else {
-        flags[arg.slice(2, eq)] = arg.slice(eq + 1);
+        const key = arg.slice(2, eq);
+        const value = arg.slice(eq + 1);
+        if (key === "with" && typeof flags.with === "string" && flags.with.length > 0) {
+          flags.with = `${flags.with},${value}`;
+        } else {
+          flags[key] = value;
+        }
       }
     } else {
       positional.push(arg);
@@ -69,8 +75,14 @@ function composeEnv(stack) {
       if (idx < 1) continue;
       const key = line.slice(0, idx).trim();
       const value = line.slice(idx + 1).trim();
-      if (key === "AUDIT_ADMIN_API_TOKEN" && value) {
-        env.AUDIT_ADMIN_API_TOKEN = value;
+      if (key === "AUTH_SECRET" && value) {
+        env.AUTH_SECRET = value;
+      }
+      if (key === "AUTH_KEYCLOAK_CLIENT_SECRET" && value) {
+        env.AUTH_KEYCLOAK_CLIENT_SECRET = value;
+      }
+      if (key === "AUDIT_OIDC_ISSUER" && value) {
+        env.AUDIT_OIDC_ISSUER = value;
       }
     }
   } catch {
@@ -130,13 +142,17 @@ function profileArgs(profiles, extra) {
   return [...set].flatMap((p) => ["--profile", p]);
 }
 
+function authServicesFor(spec) {
+  return spec.modules.includes("auth") ? [...MODULES.auth.services] : [];
+}
+
 function servicesForOnly(only, spec) {
   if (!only) {
     return spec.services.filter((s) => s !== "hatchet-init");
   }
   switch (only) {
     case "infra":
-      return [...INFRA_SERVICES];
+      return [...INFRA_SERVICES, ...authServicesFor(spec)];
     case "services":
     case "backend":
       return [...BACKEND_SERVICES];
@@ -176,7 +192,7 @@ function printHelp() {
 Stacks: dev, prod, prod-micro, vps, gpu, e2e
 
 Stack overlays (combine with --stack):
-  --warmup   Repody VLM warmup (dev: swaps dev.yaml for warmup overlay)
+  --warmup   OCR model warmup — Repody VLM (dev: enables warmup overlay)
   --lan      Office LAN (after pnpm configure:lan)
   --public   HTTPS via Caddy
   --scale    Horizontal worker pool tuning
@@ -394,7 +410,11 @@ if (cmd === "build") {
       console.error(`Unknown --only=${only}. Use: api, worker, web, backend`);
       process.exit(1);
   }
-  runDocker(spec.fileArgs, ["build", ...targets], spec.stack);
+  runDocker(
+    spec.fileArgs,
+    [...profileArgs(spec.profiles, extraProfiles), "build", ...targets],
+    spec.stack
+  );
 }
 
 if (cmd === "restart") {

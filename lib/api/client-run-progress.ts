@@ -111,6 +111,8 @@ export function mergeServerProgress(
   return {
     currentIndex: activeIdx >= 0 ? activeIdx : steps.length - 1,
     label: server.label || client.label,
+    queuePosition: server.queuePosition,
+    queueDepth: server.queueDepth,
     steps: cacheStep
       ? steps.map((s) =>
           s.id === cacheStep.id ? { ...s, cacheHit: true } : s

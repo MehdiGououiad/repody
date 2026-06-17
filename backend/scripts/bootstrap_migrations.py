@@ -10,7 +10,7 @@ from sqlalchemy import text
 
 from audit_workbench.db.base import engine
 
-BASELINE_REVISION = "9b24af3aa3c5"
+BASELINE_REVISION = "f0a1b2c3d4e5"
 
 
 async def _table_exists(conn, name: str) -> bool:

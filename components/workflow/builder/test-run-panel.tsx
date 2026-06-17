@@ -31,7 +31,7 @@ import {
   type ClientStepLabels,
   type RunProgress,
   type TestRunResult,
-} from "@/lib/api/test-run";
+} from "@/lib/api/workflow-run";
 import { buildClientProgress } from "@/lib/api/client-run-progress";
 import { humanizeRunError } from "@/lib/api/api-error";
 import {

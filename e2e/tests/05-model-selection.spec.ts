@@ -17,7 +17,7 @@ test("users can select Repody VLM for document extraction", async ({
     .fill("Total TTC including tax");
 
   await page.getByLabel("Read path").click();
-  await page.getByRole("option", { name: "Document model" }).click();
+  await page.getByRole("option", { name: "Vision model" }).click();
 
   await page.locator('[id^="extraction-model-"]').click();
   await page.getByRole("option", { name: /Repody VLM/ }).click();

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.rules.validation import validate_rule_dict
+from audit_workbench.rules.rule_syntax import validate_rule_dict
 from audit_workbench.schemas.workflow import WorkflowSchema
 
 

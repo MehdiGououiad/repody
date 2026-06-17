@@ -11,8 +11,11 @@ from audit_workbench.hatchet.workflows.audit_run import (
     get_audit_run_workflow,
     worker_pool_labels,
 )
-from audit_workbench.services.run_terminal import fail_run_terminal
-from audit_workbench.services.worker_pool import resolve_worker_pool
+from audit_workbench.services.run_pool_classifier import resolve_worker_pool
+from audit_workbench.services.run_terminal import (
+    PUBLIC_DISPATCH_FAILURE_MESSAGE,
+    fail_run_terminal,
+)
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
@@ -22,8 +25,15 @@ async def mark_run_dispatch_failed(run_id: str, exc: Exception) -> None:
     """Mark a queued run failed when Hatchet dispatch fails after the API commit."""
     await fail_run_terminal(
         run_id,
-        f"Job dispatch failed: {exc}",
+        PUBLIC_DISPATCH_FAILURE_MESSAGE,
         expected_status=RunStatus.queued.value,
+    )
+    log.warning(
+        "hatchet_dispatch_failed_terminal",
+        event_domain="audit_run",
+        run_id=run_id,
+        error_type=type(exc).__name__,
+        error_message=repr(exc),
     )
 
 

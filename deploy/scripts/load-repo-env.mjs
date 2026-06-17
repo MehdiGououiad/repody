@@ -28,5 +28,12 @@ export function loadRepoEnv(target = process.env) {
       env[key] = unquote(line.slice(idx + 1));
     }
   }
+  if (!env.AUTH_KEYCLOAK_SECRET && env.AUTH_KEYCLOAK_CLIENT_SECRET) {
+    env.AUTH_KEYCLOAK_SECRET = env.AUTH_KEYCLOAK_CLIENT_SECRET;
+  }
+  // Auth.js must not infer callback URLs from the server bind address (0.0.0.0).
+  if (!env.AUTH_URL && !env.NEXTAUTH_URL) {
+    env.AUTH_URL = "http://localhost:3000";
+  }
   return env;
 }

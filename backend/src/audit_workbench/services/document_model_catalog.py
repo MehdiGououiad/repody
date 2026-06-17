@@ -6,7 +6,11 @@ import time
 from dataclasses import dataclass
 
 from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
-from audit_workbench.extraction.model_registry import DocumentModelSpec, list_document_models
+from audit_workbench.extraction.model_registry import (
+    DocumentModelSpec,
+    list_document_models,
+    parse_document_model,
+)
 from audit_workbench.inference.openai_compat import (
     list_openai_models,
     model_is_available,
@@ -101,9 +105,7 @@ async def list_catalog_with_availability(
             live_probe=live_probe,
             active_runtime=active_runtime,
         )
-        entries.append(
-            CatalogModelEntry(spec=spec, available=available, availability_note=note)
-        )
+        entries.append(CatalogModelEntry(spec=spec, available=available, availability_note=note))
 
     default = normalize_public_catalog_id(settings.default_ocr_model)
     if not any(entry.spec.id == default and entry.available for entry in entries):
@@ -131,7 +133,6 @@ async def probe_active_runtime(settings: Settings | None = None) -> bool | None:
 async def probe_document_model_state(
     settings: Settings | None = None,
 ) -> RuntimeProbeResult:
-    from audit_workbench.extraction.model_registry import parse_document_model
 
     settings = settings or get_settings()
     spec = parse_document_model(None)
@@ -145,9 +146,7 @@ async def probe_document_model_state(
     base_url = openai_base_url_for_runtime(spec.runtime, settings)
     probe_timeout = openai_probe_timeout_seconds(base_url, default=5.0)
     installed = await list_openai_models(base_url, timeout=probe_timeout)
-    reachable = bool(installed) or await ping_openai_compat(
-        base_url, timeout=probe_timeout
-    )
+    reachable = bool(installed) or await ping_openai_compat(base_url, timeout=probe_timeout)
     loaded = model_is_available(spec.runtime_model, installed)
     return RuntimeProbeResult(
         runtime=spec.runtime,
@@ -171,10 +170,7 @@ def unreachable_detail(runtime: str) -> tuple[str, str]:
 
 def reachable_detail(runtime: str, *, live_probe: bool = True) -> str:
     if not live_probe:
-        return (
-            "Live GPU probe disabled. "
-            "Use ?run_infer=true to run one connectivity test."
-        )
+        return "Live GPU probe disabled. Use ?run_infer=true to run one connectivity test."
     if runtime == "docker_model_runner":
         return "Document model runtime is reachable and Repody VLM is installed."
     return "GPU inference is reachable and Repody VLM is loaded."
@@ -192,7 +188,6 @@ def generation_failure_hint(runtime: str) -> str:
 async def run_generation_probe(
     settings: Settings | None = None,
 ) -> GenerationProbeResult:
-    from audit_workbench.extraction.model_registry import parse_document_model
 
     settings = settings or get_settings()
     spec = parse_document_model(None)

@@ -86,7 +86,7 @@ cp .env.example .env.local
 | Goal | Command |
 |------|---------|
 | **Daily dev** | `pnpm dev` |
-| **VLM warmup** | `pnpm dev -- --warmup` |
+| **OCR warmup** | `pnpm dev -- --warmup` (Repody VLM) |
 | **Hot-reload UI** | `pnpm ui` |
 | **All-in-Docker prod** | `pnpm prod -- --warmup` |
 | **Observability** | `pnpm dev -- --logs --traces` |

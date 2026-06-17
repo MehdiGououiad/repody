@@ -12,8 +12,10 @@ import uuid
 import httpx
 import pytest
 
+from audit_workbench.db.seed import SEED_WORKFLOW_ID
+
 BASE = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
-WF_ID = "wf-invoice-audit"
+WF_ID = SEED_WORKFLOW_ID
 
 pytestmark = pytest.mark.live
 
@@ -54,8 +56,9 @@ def test_workflows_list_detail_and_seed_audit(client: httpx.Client):
 
     audits = client.get("/v1/audits")
     assert audits.status_code == 200
-    assert any(a["id"] == "AUD-2023-8902" for a in audits.json()["audits"])
+    assert isinstance(audits.json()["audits"], list)
 
+    # Seed audit may be outside the latest-100 list after many test runs; fetch directly.
     report = client.get("/v1/audits/AUD-2023-8902")
     assert report.status_code == 200
     audit = report.json()
@@ -87,7 +90,7 @@ def test_dry_run_test_run_and_crud_deploy(client: httpx.Client):
     assert dry.json()["ruleResults"][0]["status"] == "failed"
 
     test_run = client.post(
-        f"/v1/workflows/{WF_ID}/runs/json?mode=test",
+        f"/v1/workflows/{WF_ID}/runs/json",
         json={
             "snapshot": {
                 "documents": [],
@@ -165,18 +168,24 @@ def test_dry_run_test_run_and_crud_deploy(client: httpx.Client):
 
 
 def test_api_run_poll(client: httpx.Client):
-    wf = client.get(f"/v1/workflows/{WF_ID}")
-    assert wf.status_code == 200
-    key = wf.json()["workflow"]["apiKey"]
+    deployed = client.post(f"/v1/workflows/{WF_ID}/deploy", json={})
+    assert deployed.status_code == 200
+    key = deployed.json()["workflow"]["apiKey"]
+    assert key
 
-    unauthorized = client.post(f"/v1/workflows/{WF_ID}/run")
+    unauthorized = client.post(f"/v1/workflows/{WF_ID}/runs")
     assert unauthorized.status_code == 401
 
-    started = client.post(
-        f"/v1/workflows/{WF_ID}/run",
-        headers={"Authorization": f"Bearer {key}"},
-    )
-    assert started.status_code == 202
+    started = None
+    for _ in range(5):
+        started = client.post(
+            f"/v1/workflows/{WF_ID}/runs",
+            headers={"Authorization": f"Bearer {key}"},
+        )
+        if started.status_code == 202:
+            break
+        time.sleep(0.3)
+    assert started is not None and started.status_code == 202
     run_id = started.json()["runId"]
 
     for _ in range(40):

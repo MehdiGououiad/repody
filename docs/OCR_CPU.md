@@ -15,7 +15,7 @@ The platform extracts structured fields with **Repody VLM** served by **Docker M
 | `AUDIT_REPODY_VLM_PDF_DPI` | `120` | PDF render DPI |
 | `AUDIT_REPODY_VLM_MAX_EDGE_PX` | `1024` | Longest page edge before inference |
 | `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` | `4` | Max pages sent in one extraction call |
-| `AUDIT_REPODY_VLM_WARMUP_ON_START` | `true` (OCR worker) | Load weights on worker boot |
+| `AUDIT_REPODY_VLM_WARMUP_ON_START` | `true` (OCR worker) | Load VLM weights on worker boot |
 
 ## Start the stack
 
@@ -35,7 +35,7 @@ pnpm models:pull
 
 ```powershell
 curl http://localhost:8000/v1/healthz
-curl http://localhost:8000/v1/ocr/models
+curl http://localhost:8000/v1/models/catalog
 pnpm test:platform:integration
 ```
 
@@ -50,6 +50,7 @@ pnpm compose logs --stack=dev
 
 Look for:
 
+- `ocr_worker_warmup_done` — OCR worker finished startup warmup (summary)
 - `repody_vlm_warmup_done` — Repody VLM loaded in Model Runner
 - `repody_vlm_done` — extraction latency and field count
 - `document_model_extracted` — registry dispatch
@@ -61,25 +62,6 @@ page to JPEG and sends up to `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` pages in o
 (capped by `AUDIT_OCR_MAX_PAGES`). Extra rendered pages are dropped with a
 `repody_vlm_pages_capped` log warning. Prefer short documents or raise the cap only after
 checking Model Runner context limits.
-
-## Optional LLM rule validation
-
-Disabled by default. LLM rules validate **extracted field values** with a dedicated text
-model — not Repody VLM.
-
-```powershell
-pnpm models:pull:validation
-```
-
-```env
-AUDIT_LLM_VALIDATION_ENABLED=true
-AUDIT_VALIDATION_MODEL=repody/validation:q4_k_m-4k
-```
-
-`AUDIT_STRUCTURED_LLM_ENABLED` is turned on automatically when LLM validation is enabled,
-so rule verdicts use Pydantic-validated JSON from Docker Model Runner.
-
-Extraction still uses Repody VLM only.
 
 ## Adding another document model
 

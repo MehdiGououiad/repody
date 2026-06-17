@@ -25,7 +25,7 @@ Docker Model Runner tags use the `repody/` namespace (e.g. `repody/repody-vlm:q4
 | **Worker pool `ocr`** | Hatchet worker that runs document-model extraction (GPU/CPU bound) |
 | **Worker pool `fast`** | Hatchet worker for logic-only / no-file runs |
 
-Historical note: API paths and settings still use **“OCR”** in places (`/v1/ocr/models`, `AUDIT_DEFAULT_OCR_MODEL`). That means **document model catalog**, not a separate OCR engine stack.
+Historical note: settings still use **“OCR”** in env names (`AUDIT_DEFAULT_OCR_MODEL`). That means **document model catalog**, not a separate OCR engine stack.
 
 ## Request lifecycle
 
@@ -51,7 +51,7 @@ sequenceDiagram
   UI->>API: GET /runs/{id} (poll / SSE)
 ```
 
-**Inline dev mode:** when `AUDIT_RUN_JOBS_INLINE=true`, the API runs `process_run` in-process instead of Hatchet (no worker container required).
+All audit runs are dispatched through Hatchet; worker containers execute `process_run`.
 
 ## Backend layers
 
@@ -68,15 +68,15 @@ backend/src/audit_workbench/
 └── storage/       Local filesystem + S3/MinIO
 ```
 
-**Intentional coupling:** `api/diagnostics.py` and `api/ocr.py` call extraction/inference directly for operator visibility. Everything else on the hot path goes through services.
+**Intentional coupling:** `api/platform.py` exposes diagnostics and catalog endpoints that call extraction/inference directly for operator visibility. Everything else on the hot path goes through services.
 
 ## Three registries (do not merge)
 
 | Module | Selects | Example ids |
 |--------|---------|-------------|
-| `extraction/registry.py` | **Extractor implementation** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
+| `extraction/pipeline.py` (`get_extractor`) | **Extractor implementation** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
 | `extraction/model_registry.py` | **Document model catalog** | `repody:vlm` (legacy `repody:vlm`) |
-| `services/document_model_catalog.py` | **Catalog + live runtime probes** | used by `/ocr/models`, diagnostics, healthz |
+| `services/document_model_catalog.py` | **Catalog + live runtime probes** | used by `/models/catalog`, diagnostics, healthz |
 
 Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` → `extract_with_repody_vlm()` (legacy name) on the runtime chosen by `AUDIT_INFERENCE_MODE`.
 
@@ -99,7 +99,7 @@ Next.js 16 App Router at repo root (not under `frontend/`):
 
 - `app/` — routes (thin pages)
 - `components/` — domain UI (`workflow/`, `audit/`, `dashboard/`)
-- `lib/api/` — typed clients; RSC uses `serverApiGet`, client islands use `/api/*` rewrite to backend `/v1/*`
+- `lib/api/` — typed clients; RSC uses `serverFetch`/`serverJson`, client islands use `/api/*` rewrite to backend `/v1/*`
 
 ## Platform modules (deploy)
 
@@ -142,9 +142,22 @@ These directories are agent/tooling assets, not runtime dependencies:
 
 | Layer | Command | CI |
 |-------|---------|-----|
-| Backend unit/integration | `pnpm test:api` | `.github/workflows/ci.yml` |
+| Backend unit/integration | `pnpm test:api` (`pytest -m "not live"`, Postgres + Alembic) | `.github/workflows/ci.yml` |
+| Live stack (Hatchet + workers) | `E2E_STACK=1 pytest -m live` | compose-smoke / manual |
 | Playwright smoke | `pnpm test:e2e:smoke` | `.github/workflows/e2e.yml` (nightly + manual) |
 | Full platform | `pnpm test:platform` | Manual / nightly (heavier) |
+
+Run completion and Hatchet dispatch are **not** simulated in-process. Use `@pytest.mark.live` with a running docker stack (`E2E_STACK=1`, `E2E_API_URL`).
+
+## Authorization (Casbin)
+
+JWT roles map to permissions in `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)` — not a blanket admin gate. When `AUDIT_OIDC_ENABLED=false` (local dev/tests), the API uses a `platform_admin` dev principal.
+
+| Role | Typical access |
+|------|----------------|
+| `viewer` | Read workflows, runs, audits, models, rules |
+| `operator` | Viewer + write workflows, execute runs, operator tools |
+| `admin` | Operator + metrics, settings, diagnostics |
 
 ## Further reading
 

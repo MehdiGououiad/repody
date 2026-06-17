@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.db.models import Run, RuleResult, RunStatus, Workflow
+from audit_workbench.db.models import RuleResult, Run, RunStatus
 from audit_workbench.schemas.workflow import (
     CallSeriesPointSchema,
     TopFailingRuleSchema,
@@ -49,6 +49,11 @@ async def batch_workflow_stats(
     return out
 
 
+async def workflow_stats(session: AsyncSession, workflow_id: str) -> tuple[int, float, str | None]:
+    batch = await batch_workflow_stats(session, [workflow_id])
+    return batch.get(workflow_id, (0, 0.0, None))
+
+
 async def workflow_api_stats(
     session: AsyncSession,
     workflow_id: str,
@@ -68,8 +73,7 @@ async def workflow_api_stats(
 
     today_start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     today_q = await session.execute(
-        select(func.count())
-        .select_from(
+        select(func.count()).select_from(
             select(Run)
             .where(
                 Run.workflow_id == workflow_id,
@@ -95,7 +99,10 @@ async def workflow_api_stats(
     day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
     series_map = {str(row[0]): int(row[1]) for row in series_q.all()}
     call_series = [
-        CallSeriesPointSchema(day=day_labels[i % 7], calls=series_map.get(str((week_start + timedelta(days=i)).date()), 0))
+        CallSeriesPointSchema(
+            day=day_labels[i % 7],
+            calls=series_map.get(str((week_start + timedelta(days=i)).date()), 0),
+        )
         for i in range(7)
     ]
 

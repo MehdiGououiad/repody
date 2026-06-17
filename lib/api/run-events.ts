@@ -42,7 +42,7 @@ export async function watchRunEvents(
   options?: WatchOptions
 ): Promise<"done" | "failed" | "fallback"> {
   const maxMs = options?.maxMs ?? 13 * 60_000;
-  const url = `/api/runs/${runId}/events`;
+  const url = `/api/v1/runs/${runId}/events`;
   const hasCustomHeaders = Boolean(
     options?.headers && Object.keys(options.headers).length > 0
   );

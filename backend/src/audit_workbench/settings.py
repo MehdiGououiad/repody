@@ -4,12 +4,17 @@ import os
 from functools import lru_cache
 from typing import Self
 
-from pydantic import Field, model_validator
+from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="AUDIT_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_prefix="AUDIT_",
+        env_file=".env",
+        extra="ignore",
+        populate_by_name=True,
+    )
 
     app_name: str = "Repody"
     debug: bool = False
@@ -47,14 +52,27 @@ class Settings(BaseSettings):
 
     cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:3000"])
 
-    auth_enabled: bool = Field(
+    oidc_enabled: bool = Field(
         default=False,
-        description="Require AUDIT_ADMIN_API_TOKEN on management endpoints.",
+        description="Require Keycloak JWT on management endpoints (disable for local pytest).",
     )
-    admin_api_token: str | None = Field(
+    oidc_issuer: str | None = Field(
         default=None,
-        description="Bearer token for UI/admin API access. Required when auth_enabled=true.",
+        description="OIDC issuer URL, e.g. http://keycloak:8080/realms/repody",
     )
+    oidc_audience: str | None = Field(
+        default=None,
+        description="Optional JWT audience (client id). When unset, audience is not verified.",
+    )
+    oidc_jwks_url: str | None = Field(
+        default=None,
+        description="JWKS URL override. Defaults to {issuer}/protocol/openid-connect/certs",
+    )
+    oidc_jwks_json: str | None = Field(
+        default=None,
+        description="Inline JWKS JSON for tests (skips live JWKS fetch).",
+    )
+
     deployment_environment: str = Field(
         default="development",
         description="Deployment label attached to logs and traces (e.g. production).",
@@ -72,8 +90,7 @@ class Settings(BaseSettings):
     minio_public_endpoint: str | None = Field(
         default=None,
         description=(
-            "Browser-reachable MinIO host:port for presigned upload URLs "
-            "(e.g. localhost:9000)."
+            "Browser-reachable MinIO host:port for presigned upload URLs (e.g. localhost:9000)."
         ),
     )
     storage_backend: str = Field(default="local", description="local | s3")
@@ -146,9 +163,21 @@ class Settings(BaseSettings):
 
     ocr_max_pages: int = Field(default=10, description="Max PDF pages per document.")
     ocr_max_pages_hard_cap: int = Field(default=50)
-    ocr_max_edge_px: int = Field(default=896, description="Default longest image edge for rendering.")
-    ocr_pdf_dpi: int = Field(default=120)
+    document_render_max_edge_px: int = Field(
+        default=896,
+        description="Longest image edge when rasterizing documents for bundle cache.",
+        validation_alias=AliasChoices("document_render_max_edge_px", "ocr_max_edge_px"),
+    )
+    document_render_pdf_dpi: int = Field(
+        default=120,
+        description="PDF rasterization DPI for bundle cache.",
+        validation_alias=AliasChoices("document_render_pdf_dpi", "ocr_pdf_dpi"),
+    )
     ocr_jpeg_quality: int = 82
+    ocr_jpeg_optimize: bool = Field(
+        default=True,
+        description="PIL JPEG optimize pass (slower encode, smaller files). Disabled for VLM renders.",
+    )
 
     llm_validation_enabled: bool = Field(
         default=False,
@@ -157,8 +186,8 @@ class Settings(BaseSettings):
     validation_model: str | None = Field(
         default=None,
         description=(
-            "Docker Model Runner text model id for LLM rule validation "
-            "(e.g. repody/validation:q4_k_m-4k). Required when LLM validation is enabled."
+            "Docker Model Runner text model id for LLM rule validation. "
+            "Required when LLM validation is enabled."
         ),
     )
     validation_max_tokens: int = Field(default=128, ge=32)
@@ -167,13 +196,14 @@ class Settings(BaseSettings):
     extraction_cache_enabled: bool = True
     extraction_cache_ttl_seconds: int = 86400
 
-    run_jobs_inline: bool = Field(
-        default=False,
-        description="Execute runs in-process (no Hatchet). Set true for local dev without workers.",
-    )
     stale_run_timeout_minutes: int = Field(default=3)
     queued_stale_timeout_minutes: int = Field(default=30)
     maintenance_interval_seconds: int = Field(default=60)
+    dispatch_max_attempts: int = Field(
+        default=8,
+        ge=1,
+        description="Max Hatchet dispatch attempts per run (outbox replay).",
+    )
 
     operator_actions_enabled: bool = Field(default=False)
     operator_data_path: str = Field(default="/app/benchmark-reports")
@@ -185,6 +215,10 @@ class Settings(BaseSettings):
     log_json: bool = Field(default=True)
 
     rate_limit_enabled: bool = Field(default=True)
+    rate_limit_fail_closed: bool = Field(
+        default=False,
+        description="When true, reject run/http rate limits if Redis is unavailable (prod).",
+    )
     rate_limit_window_seconds: int = Field(default=60)
     rate_limit_runs_per_workflow: int = Field(default=30)
     rate_limit_runs_per_client: int = Field(default=120)
@@ -210,14 +244,21 @@ class Settings(BaseSettings):
         description="Retry-After header when admission rejects a run.",
     )
 
-    parallel_doc_extraction: bool = True
+    parallel_doc_extraction: bool | None = Field(
+        default=None,
+        description=(
+            "Extract multiple documents concurrently. None = auto "
+            "(sequential for docker_model_runner CPU; parallel for vllm). "
+            "Set true to force parallel; false to force sequential."
+        ),
+    )
     parallel_storage_fetch: bool = True
     progress_commit_interval_ms: int = Field(default=400)
 
     seed_on_startup: bool = False
     use_create_all: bool = Field(
-        default=True,
-        description="Create tables on startup (dev only). Use Alembic in production.",
+        default=False,
+        description="Create tables on startup (local tests only). Use Alembic in production.",
     )
 
     max_upload_bytes: int = Field(default=25 * 1024 * 1024)
@@ -243,18 +284,13 @@ class Settings(BaseSettings):
     def _sync_validation_options(self) -> Self:
         if self.llm_validation_enabled and not self.structured_llm_enabled:
             self.structured_llm_enabled = True
-        if self.auth_enabled and not self.admin_api_token:
-            raise ValueError(
-                "AUDIT_ADMIN_API_TOKEN is required when AUDIT_AUTH_ENABLED=true."
-            )
+        if self.oidc_enabled and not self.oidc_issuer:
+            raise ValueError("AUDIT_OIDC_ISSUER is required when AUDIT_OIDC_ENABLED=true.")
         if not self.vllm_api_key:
             self.vllm_api_key = os.getenv("AUDIT_VLLM_API_KEY", "").strip() or None
         from audit_workbench.inference.runtime import is_remote_vllm_url
 
-        if (
-            self.inference_mode.lower() == "vllm"
-            and is_remote_vllm_url(self.vllm_base_url)
-        ):
+        if self.inference_mode.lower() == "vllm" and is_remote_vllm_url(self.vllm_base_url):
             probe_env = os.getenv("AUDIT_GPU_LIVE_PROBE", "").strip().lower()
             health_env = os.getenv("AUDIT_HEALTHZ_PROBE_INFERENCE", "").strip().lower()
             if probe_env not in ("true", "1", "yes"):
@@ -263,6 +299,13 @@ class Settings(BaseSettings):
                 self.healthz_probe_inference = False
         elif os.getenv("AUDIT_GPU_LIVE_PROBE") is None:
             self.gpu_live_probe = True
+        if self.use_create_all and "postgresql" in self.database_url.lower():
+            import warnings
+
+            warnings.warn(
+                "AUDIT_USE_CREATE_ALL=true with PostgreSQL — prefer Alembic migrations in production.",
+                stacklevel=1,
+            )
         return self
 
 

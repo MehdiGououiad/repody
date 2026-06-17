@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
@@ -7,22 +6,10 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
+import { AuthSessionProvider } from "@/components/providers/session-provider";
 import { THEME_COOKIE, defaultTheme } from "@/i18n/config";
 import type { Theme } from "@/i18n/config";
 import "./globals.css";
-
-const sourceSans = Source_Sans_3({
-  subsets: ["latin"],
-  variable: "--font-brand-sans",
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  variable: "--font-jetbrains-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Repody",
@@ -42,14 +29,14 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} className={theme === "dark" ? "dark" : ""} style={{ colorScheme: theme }}>
-      <body
-        className={`${sourceSans.variable} ${jetbrainsMono.variable} antialiased min-h-dvh bg-background text-foreground`}
-      >
+      <body className="antialiased min-h-dvh bg-background text-foreground">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider initialTheme={theme}>
             <QueryProvider>
-              <AppShell>{children}</AppShell>
-              <Toaster richColors closeButton position="bottom-right" />
+              <AuthSessionProvider>
+                <AppShell>{children}</AppShell>
+                <Toaster richColors closeButton position="bottom-right" />
+              </AuthSessionProvider>
             </QueryProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

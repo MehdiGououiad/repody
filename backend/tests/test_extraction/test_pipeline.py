@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.extraction.base import ExtractionResult, ExtractedFieldResult, SchemaFieldSpec
+from audit_workbench.extraction.base import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.pipeline import PipelineExtractor
 
 
@@ -25,8 +25,16 @@ def mock_document_model(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.document_models.DocumentModelExtractor.extract",
+        "audit_workbench.extraction.pipeline.extract_with_document_model",
         AsyncMock(side_effect=fake_extract),
+    )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.get_cached",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.set_cached",
+        AsyncMock(),
     )
 
 

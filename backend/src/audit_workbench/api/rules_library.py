@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
 from audit_workbench.db.models import RuleTemplate
 from audit_workbench.schemas.workflow import RuleTemplateSchema
-from pydantic import BaseModel, Field
 
 
 class RuleLibraryResponse(BaseModel):

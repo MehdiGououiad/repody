@@ -1,6 +1,6 @@
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { humanizeRunError } from "@/lib/api/api-error";
-import { browserJson } from "@/lib/api/http";
+import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import { watchRunEvents } from "@/lib/api/run-events";
 
 export type RunProgressStep = {
@@ -36,7 +36,11 @@ type RunPollResponse = {
 const DEFAULT_RUN_TIMEOUT_MS = 13 * 60_000;
 
 export async function fetchRunDetail(runId: string): Promise<RunAuditDetail> {
-  const body = await browserJson<RunPollResponse>(`/runs/${runId}`);
+  const { data, error, response } = await browserApi.GET("/v1/runs/{run_id}", {
+    params: { path: { run_id: runId } },
+  });
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  const body = data as RunPollResponse;
   if (!body.result) throw new Error("Run finished without result payload");
   return body.result;
 }
@@ -50,7 +54,11 @@ export async function pollRunUntilDone(
   const started = Date.now();
   let intervalMs = 400;
   while (Date.now() - started < maxMs) {
-    const body = await browserJson<RunPollResponse>(`/runs/${runId}/status`);
+    const { data, error, response } = await browserApi.GET("/v1/runs/{run_id}/status", {
+      params: { path: { run_id: runId } },
+    });
+    if (error || !response.ok || !data) throwOnApiError(error, response);
+    const body = data as RunPollResponse;
     if (body.progress) onProgress?.(body.progress);
     if (body.status === "done") return fetchRunDetail(runId);
     if (body.status === "failed") {
@@ -82,7 +90,11 @@ export async function waitForRunUntilDone(
   const outcome = await watchRunEvents(runId, onProgress, { maxMs, headers: options?.headers });
 
   if (outcome === "failed") {
-    const body = await browserJson<RunPollResponse>(`/runs/${runId}/status`);
+    const { data, error, response } = await browserApi.GET("/v1/runs/{run_id}/status", {
+      params: { path: { run_id: runId } },
+    });
+    if (error || !response.ok || !data) throwOnApiError(error, response);
+    const body = data as RunPollResponse;
     throw new Error(
       humanizeRunError(body.error || "Run failed", {
         step: "Audit worker",

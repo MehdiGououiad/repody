@@ -229,7 +229,7 @@ pre {{ overflow: auto; background: #11182a; border-radius: 12px; padding: 16px; 
 <thead><tr><th>Case</th><th>Model</th><th>Phase</th><th>Status</th><th>Wall ms</th>
 <th>Queue ms</th><th>Extract ms</th><th>Validate ms</th><th>Cache</th>
 <th>Field acc.</th><th>Rule acc.</th><th>Error</th></tr></thead>
-<tbody>{''.join(table_rows)}</tbody>
+<tbody>{"".join(table_rows)}</tbody>
 </table></div>
 <details><summary>Environment</summary><pre>{metadata}</pre></details>
 </main></body></html>"""

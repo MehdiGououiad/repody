@@ -23,7 +23,7 @@ hash_password() {
     echo "Docker daemon is not reachable (required to hash basic-auth password)." >&2
     exit 1
   fi
-  docker run --rm caddy:2.10-alpine caddy hash-password --plaintext "$pw"
+  docker run --rm caddy:2.11.4-alpine caddy hash-password --plaintext "$pw"
 }
 
 # Safe for bcrypt hashes ($) and docker-compose .env interpolation.
@@ -60,7 +60,7 @@ fi
 
 cp "$EXAMPLE" "$ENV_FILE"
 
-ADMIN_TOKEN="$(rand)"
+AUTH_SECRET="$(rand)"
 POSTGRES_PW="$(rand)"
 MINIO_PW="$(rand)"
 
@@ -106,7 +106,9 @@ upsert PUBLIC_DOMAIN "$PUBLIC_DOMAIN"
 upsert FILES_DOMAIN "$FILES_DOMAIN"
 upsert BASIC_AUTH_USER "$BASIC_AUTH_USER"
 upsert BASIC_AUTH_HASH "$BASIC_AUTH_HASH"
-upsert AUDIT_ADMIN_API_TOKEN "$ADMIN_TOKEN"
+upsert AUTH_SECRET "$AUTH_SECRET"
+upsert AUTH_KEYCLOAK_CLIENT_SECRET "repody-web-dev-secret"
+upsert AUDIT_OIDC_ISSUER "https://${PUBLIC_DOMAIN}/realms/repody"
 upsert POSTGRES_PASSWORD "$POSTGRES_PW"
 upsert MINIO_ROOT_PASSWORD "$MINIO_PW"
 upsert AUDIT_MINIO_PUBLIC_ENDPOINT "$FILES_DOMAIN"

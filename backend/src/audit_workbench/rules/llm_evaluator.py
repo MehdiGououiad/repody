@@ -19,9 +19,7 @@ _FEE_KEYWORDS = re.compile(
 
 RuleStatus = str  # passed | failed | skipped | error
 log = structlog.get_logger()
-_FIELD_REFERENCE = re.compile(
-    r"(?<![\w@])@([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)"
-)
+_FIELD_REFERENCE = re.compile(r"(?<![\w@])@([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)")
 
 
 def referenced_fields(body: str) -> list[str]:

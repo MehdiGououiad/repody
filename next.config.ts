@@ -11,6 +11,7 @@ const allowedDevOrigins = process.env.NEXT_ALLOWED_DEV_ORIGINS
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   allowedDevOrigins,
   experimental: {
     optimizePackageImports: [
@@ -26,13 +27,10 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
+    // Only proxy /api/v1/* — never /api/auth/* (Auth.js route handlers).
     return [
       {
         source: "/api/v1/:path*",
-        destination: `${backendUrl}/v1/:path*`,
-      },
-      {
-        source: "/api/:path*",
         destination: `${backendUrl}/v1/:path*`,
       },
     ];

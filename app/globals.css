@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@fontsource-variable/source-sans-3/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
 @import "./theme.css";
 
 @custom-variant dark (&:is(.dark *));
@@ -15,6 +17,8 @@
 
 :root {
   color-scheme: light;
+  --font-brand-sans: "Source Sans 3 Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-jetbrains-mono: "JetBrains Mono Variable", ui-monospace, "Fira Code", monospace;
   --surface: var(--brand-surface);
   --surface-dim: #e8ece9;
   --surface-bright: var(--brand-surface);

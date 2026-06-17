@@ -10,7 +10,7 @@ export function resolveDocumentFields(
   const targets = appliesTo.length
     ? documents.filter((doc) => appliesTo.includes(doc.id))
     : documents;
-  const multi = targets.length > 1;
+  const multi = documents.length > 1;
 
   const fields: DocumentFieldOption[] = [];
   for (const doc of targets) {

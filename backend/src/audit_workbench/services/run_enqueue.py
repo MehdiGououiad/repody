@@ -10,19 +10,31 @@ from asgi_correlation_id import correlation_id
 from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.api.auth import extract_bearer
-from audit_workbench.schemas.workflow import DocumentDefSchema, RunCreatedResponse, RunPollResponse, WorkflowRuleSchema
+from audit_workbench.auth.casbin_authorizer import get_authorizer
+from audit_workbench.auth.dependencies import extract_bearer
+from audit_workbench.auth.jwt_validator import JwtValidationError, principal_from_bearer
+from audit_workbench.db.models import Workflow
+from audit_workbench.schemas.workflow import (
+    DocumentDefSchema,
+    RunCreatedResponse,
+    WorkflowRuleSchema,
+)
 from audit_workbench.services import run_service
-from audit_workbench.services.admission import QueueCapacityExceeded, check_admission, refresh_queued_positions
+from audit_workbench.services.admission import (
+    QueueCapacityExceeded,
+    check_admission,
+    refresh_queued_positions,
+)
 from audit_workbench.services.api_keys import verify_api_key
-from audit_workbench.services.dispatch_outbox import dispatch_outbox_row, enqueue_dispatch
-from audit_workbench.services.mappers import load_workflow
+from audit_workbench.services.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
 from audit_workbench.services.rate_limit import RateLimitExceeded, check_run_rate_limits
-from audit_workbench.db.models import RunDispatchOutbox
-from audit_workbench.services.run_service import FileBinding, progress_from_run
+from audit_workbench.services.run_service import FileBinding
+from audit_workbench.services.workflow_repository import load_workflow
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
+
+RunSource = str  # "test" | "api"
 
 
 @dataclass(frozen=True)
@@ -35,15 +47,17 @@ class RunSnapshot:
 @dataclass(frozen=True)
 class EnqueueRunRequest:
     workflow_id: str
-    source: str
     authorization: str | None = None
     file_bindings: list[FileBinding] | None = None
     snapshot: RunSnapshot | None = None
-    client_key: str | None = None
-    inline: bool = False
+    request: Request | None = None
+    """True for bare POST /runs (production API shape without builder snapshot)."""
+    production_api_shape: bool = False
 
 
-def client_key_from_request(source: str, authorization: str | None, request: Request | None) -> str | None:
+def client_key_from_request(
+    source: str, authorization: str | None, request: Request | None
+) -> str | None:
     if source == "api" and authorization:
         token = authorization.replace("Bearer ", "").strip()
         if token:
@@ -53,16 +67,74 @@ def client_key_from_request(source: str, authorization: str | None, request: Req
     return None
 
 
+async def resolve_run_source(
+    session: AsyncSession,
+    workflow_id: str,
+    authorization: str | None,
+    *,
+    has_snapshot: bool = False,
+    production_api_shape: bool = False,
+) -> tuple[RunSource, Workflow]:
+    """Infer test vs production API run from the bearer credential and request shape."""
+    settings = get_settings()
+    token = extract_bearer(authorization)
+
+    wf = await load_workflow(session, workflow_id)
+    if not wf:
+        raise HTTPException(404, "Workflow not found")
+
+    if token and wf.deployed_at and verify_api_key(token, wf.api_key):
+        return "api", wf
+
+    if token and settings.oidc_enabled:
+        try:
+            principal = principal_from_bearer(token, settings)
+        except JwtValidationError as exc:
+            raise HTTPException(401, f"Unauthorized — {exc}") from exc
+
+        if not principal.has_app_role():
+            raise HTTPException(403, "No application role assigned in Keycloak.")
+
+        authorizer = get_authorizer()
+        if not authorizer.authorize(principal, "run", "execute"):
+            raise HTTPException(403, "Forbidden — operator role required for test runs.")
+
+        return "test", wf
+
+    if token and not settings.oidc_enabled:
+        raise HTTPException(401, "Invalid API key.")
+
+    if settings.oidc_enabled:
+        raise HTTPException(401, "Missing bearer token.")
+
+    if production_api_shape or (wf.deployed_at and not has_snapshot):
+        raise HTTPException(401, "Invalid API key.")
+
+    return "test", wf
+
+
 async def enqueue_run(
     session: AsyncSession,
     req: EnqueueRunRequest,
-) -> RunCreatedResponse | RunPollResponse:
+) -> RunCreatedResponse:
     """Create and queue a Run — single interface for all HTTP entry shapes."""
+    source, wf = await resolve_run_source(
+        session,
+        req.workflow_id,
+        req.authorization,
+        has_snapshot=req.snapshot is not None,
+        production_api_shape=req.production_api_shape,
+    )
+    client_key = client_key_from_request(source, req.authorization, req.request)
+
+    if source == "api" and not wf.deployed_at:
+        raise HTTPException(409, "Workflow is not deployed.")
+
     try:
         await check_run_rate_limits(
             workflow_id=req.workflow_id,
-            source=req.source,
-            client_key=req.client_key,
+            source=source,
+            client_key=client_key,
         )
     except RateLimitExceeded as exc:
         raise HTTPException(429, str(exc)) from exc
@@ -80,73 +152,28 @@ async def enqueue_run(
             headers={"Retry-After": str(exc.retry_after_seconds)},
         ) from exc
 
-    wf = await load_workflow(session, req.workflow_id)
-    if not wf:
-        raise HTTPException(404, "Workflow not found")
-
-    if req.source == "api":
-        if not wf.deployed_at:
-            raise HTTPException(409, "Workflow is not deployed.")
-        token = extract_bearer(req.authorization)
-        if not token or not verify_api_key(token, wf.api_key):
-            log.warning(
-                "run_create_unauthorized",
-                event_domain="audit_run",
-                workflow_id=req.workflow_id,
-                source=req.source,
-            )
-            raise HTTPException(401, "Invalid API key.")
-
-    inline = req.inline
-    if req.source == "test":
-        inline = False
-
-    snapshot = req.snapshot
+    snapshot = req.snapshot if source == "test" else None
     run = await run_service.create_run(
         session,
         req.workflow_id,
-        source=req.source,
+        source=source,
         file_bindings=req.file_bindings,
         snapshot_documents=snapshot.documents if snapshot else None,
         snapshot_rules=snapshot.rules if snapshot else None,
         snapshot_workflow_name=snapshot.workflow_name if snapshot else None,
-        force_inline=inline,
         worker_pool=predicted_pool,
     )
 
-    settings = get_settings()
     request_id = correlation_id.get()
 
-    if not settings.run_jobs_inline and not inline:
-        await enqueue_dispatch(
-            session,
-            run_id=run.id,
-            pool=predicted_pool,
-            workflow_id=req.workflow_id,
-            request_id=request_id,
-        )
-        await session.commit()
-
-        row = await session.get(RunDispatchOutbox, run.id)
-        if row is None:
-            raise HTTPException(503, "Failed to enqueue audit run")
-        ok = await dispatch_outbox_row(session, row)
-        if not ok:
-            raise HTTPException(503, "Failed to enqueue audit run")
-        await refresh_queued_positions(session)
-        await session.commit()
-        return RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status)
-
+    await enqueue_dispatch(
+        session,
+        run_id=run.id,
+        pool=predicted_pool,
+        workflow_id=req.workflow_id,
+        request_id=request_id,
+    )
+    await refresh_queued_positions(session)
     await session.commit()
-    if inline:
-        await session.refresh(run)
-        detail = await run_service.get_run_detail(session, run.id)
-        if not detail:
-            raise HTTPException(500, "Run failed")
-        return RunPollResponse(
-            status=run.status,
-            progress=progress_from_run(run),
-            result=detail,
-            error=run.error,
-        )
+    schedule_outbox_dispatch(run.id)
     return RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status)

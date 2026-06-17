@@ -17,6 +17,13 @@ spec:
         {{- include "repody.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: worker-ocr
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
@@ -30,6 +37,11 @@ spec:
         - name: worker
           image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
           imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: {{ include "repody.fullname" . }}-config
@@ -71,6 +83,13 @@ spec:
         {{- include "repody.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: worker-fast
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
@@ -84,6 +103,11 @@ spec:
         - name: worker
           image: "{{ .Values.images.worker.repository }}:{{ .Values.images.worker.tag }}"
           imagePullPolicy: {{ .Values.images.worker.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: {{ include "repody.fullname" . }}-config

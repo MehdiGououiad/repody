@@ -5,9 +5,18 @@ import { useTranslations } from "next-intl";
 import { AppSidebar } from "./app-sidebar";
 import { TopBar } from "./topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+
+const MINIMAL_LAYOUT_PATHS = new Set(["/login", "/unauthorized"]);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
+  const pathname = useClientPathname();
+  const minimal = MINIMAL_LAYOUT_PATHS.has(pathname);
+
+  if (minimal) {
+    return <>{children}</>;
+  }
 
   return (
     <TooltipProvider delayDuration={150}>

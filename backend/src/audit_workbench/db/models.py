@@ -57,8 +57,12 @@ class Workflow(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    documents: Mapped[list[Document]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
-    rules: Mapped[list[WorkflowRule]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
+    documents: Mapped[list[Document]] = relationship(
+        back_populates="workflow", cascade="all, delete-orphan"
+    )
+    rules: Mapped[list[WorkflowRule]] = relationship(
+        back_populates="workflow", cascade="all, delete-orphan"
+    )
     runs: Mapped[list[Run]] = relationship(back_populates="workflow")
 
 
@@ -66,7 +70,9 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    workflow_id: Mapped[str] = mapped_column(ForeignKey("workflows.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id", ondelete="CASCADE"), index=True
+    )
     document_type: Mapped[str] = mapped_column(String(128), default="")
     position: Mapped[int] = mapped_column(Integer, default=0)
     extraction_mode: Mapped[str] = mapped_column(String(32), default="document_model")
@@ -83,7 +89,9 @@ class SchemaField(Base):
     __tablename__ = "schema_fields"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    document_id: Mapped[str] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(128), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     position: Mapped[int] = mapped_column(Integer, default=0)
@@ -95,7 +103,9 @@ class WorkflowRule(Base):
     __tablename__ = "workflow_rules"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    workflow_id: Mapped[str] = mapped_column(ForeignKey("workflows.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(String(255), default="")
     kind: Mapped[str] = mapped_column(String(16), default="logic")
     scope: Mapped[str] = mapped_column(String(16), default="intra")
@@ -129,7 +139,9 @@ class Run(Base):
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    workflow_id: Mapped[str] = mapped_column(ForeignKey("workflows.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(
+        ForeignKey("workflows.id", ondelete="CASCADE"), index=True
+    )
     source: Mapped[str] = mapped_column(String(16), default="test")
     status: Mapped[str] = mapped_column(String(16), default=RunStatus.queued.value)
     overall_status: Mapped[str | None] = mapped_column(String(16), nullable=True)
@@ -147,8 +159,12 @@ class Run(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workflow: Mapped[Workflow] = relationship(back_populates="runs")
-    documents: Mapped[list[RunDocument]] = relationship(back_populates="run", cascade="all, delete-orphan")
-    rule_results: Mapped[list[RuleResult]] = relationship(back_populates="run", cascade="all, delete-orphan")
+    documents: Mapped[list[RunDocument]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
+    rule_results: Mapped[list[RuleResult]] = relationship(
+        back_populates="run", cascade="all, delete-orphan"
+    )
 
 
 class RunDocument(Base):
@@ -164,14 +180,18 @@ class RunDocument(Base):
     extraction_meta: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     run: Mapped[Run] = relationship(back_populates="documents")
-    fields: Mapped[list[ExtractedField]] = relationship(back_populates="run_document", cascade="all, delete-orphan")
+    fields: Mapped[list[ExtractedField]] = relationship(
+        back_populates="run_document", cascade="all, delete-orphan"
+    )
 
 
 class ExtractedField(Base):
     __tablename__ = "extracted_fields"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    run_document_id: Mapped[str] = mapped_column(ForeignKey("run_documents.id", ondelete="CASCADE"), index=True)
+    run_document_id: Mapped[str] = mapped_column(
+        ForeignKey("run_documents.id", ondelete="CASCADE"), index=True
+    )
     key: Mapped[str] = mapped_column(String(128))
     description: Mapped[str] = mapped_column(Text, default="")
     value: Mapped[str] = mapped_column(Text, default="")
@@ -217,6 +237,25 @@ class RunDispatchOutbox(Base):
     workflow_id: Mapped[str] = mapped_column(String(64), default="")
     request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="pending")
+    dispatch_attempts: Mapped[int] = mapped_column(default=0)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class UploadIntent(Base):
+    __tablename__ = "upload_intents"
+    __table_args__ = (
+        Index("ux_upload_intents_storage_key", "storage_key", unique=True),
+        Index("ix_upload_intents_created", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    storage_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(512), nullable=False)
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    owner_subject: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

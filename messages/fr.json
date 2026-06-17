@@ -4,13 +4,38 @@
     "tagline": "Audit d'entreprise"
   },
   "nav": {
-    "dashboard": "Centre de contrôle",
-    "workflows": "Constructeur de workflow",
+    "dashboard": "Tableau de bord",
+    "workflows": "Workflows",
     "audits": "Rapports d'audit",
-    "settings": "Console opérateur",
     "newWorkflow": "Nouveau workflow",
-    "documentation": "Documentation",
     "logout": "Se déconnecter"
+  },
+  "auth": {
+    "signInTitle": "Connexion à Repody",
+    "signInSubtitle": "Audit documentaire — utilisez votre compte organisation.",
+    "continueWithKeycloak": "Continuer avec Keycloak",
+    "keycloakHint": "Les rôles (admin, opérateur, lecteur) sont gérés dans Keycloak.",
+    "checkingAuth": "Vérification de la connexion…",
+    "alreadySignedIn": "Vous êtes déjà connecté.",
+    "continueToApp": "Continuer vers l'application",
+    "devModeOnLogin": "La connexion est désactivée (OIDC non configuré).",
+    "devModeBadge": "Dev · sans connexion",
+    "devModeHint": "OIDC désactivé — accès admin de développement.",
+    "account": "Compte",
+    "accountMenu": "Menu compte pour {name}",
+    "signOut": "Se déconnecter",
+    "managedInKeycloak": "Profil géré dans Keycloak",
+    "roleUnknown": "connecté",
+    "forbiddenTitle": "Accès refusé",
+    "forbiddenBody": "Votre compte n'a pas la permission pour cette action. Contactez un administrateur ou changez de compte.",
+    "backToDashboard": "Retour au tableau de bord",
+    "switchAccount": "Changer de compte",
+    "errorConfiguration": "Connexion impossible. Démarrez Keycloak avec `pnpm dev -- --auth` et vérifiez AUTH_SECRET dans .env.local.",
+    "keycloakNotRunning": "Keycloak n'est pas démarré. Relancez avec `pnpm dev -- --auth --warmup --logs`.",
+    "errorAccessDenied": "Accès refusé. Vous n'avez peut-être pas le droit d'utiliser cette application.",
+    "errorVerification": "Lien de connexion expiré ou déjà utilisé.",
+    "errorOAuth": "Échec de la connexion Keycloak. Réessayez.",
+    "errorDefault": "Échec de la connexion. Réessayez."
   },
   "topbar": {
     "searchPlaceholder": "Rechercher des audits, workflows…",
@@ -80,24 +105,31 @@
     "queueServerless": "Les exécutions sont traitées dans l'ordre. Les jobs GPU serverless peuvent aussi attendre 1 à 2 minutes sur la première requête après inactivité."
   },
   "dashboard": {
-    "title": "Centre de contrôle",
-    "description": "Activité d'audit, santé de la conformité et statut des workflows en un coup d'œil.",
-    "pageDescription": "Votre centre de contrôle — santé plateforme, workflows, exécutions d'audit et outils opérateur au même endroit.",
-    "eyebrow": "Centre de contrôle",
-    "auditActivity": "Activité d'audit",
-    "offlineTitle": "Plateforme non connectée",
-    "offlineHint": "Démarrez la stack API pour charger les métriques. Vous pouvez toujours ouvrir le builder et configurer les schémas.",
+    "title": "Tableau de bord",
+    "description": "Résultats d'audit, tendances de conformité et workflows en un coup d'œil.",
+    "pageDescription": "Vue en direct des audits, taux de réussite et workflows à suivre.",
+    "auditActivity": "Cette semaine",
+    "offlineTitle": "Connectez-vous pour voir les données en direct",
+    "offlineHint": "Démarrez la plateforme pour charger audits et métriques. Vous pouvez toujours créer des workflows hors ligne.",
     "offlineCta": "Créer un workflow",
-    "recentSubmissions": "Exécutions d'audit récentes",
-    "workflowStatus": "Workflows",
-    "workflowsTotal": "au total",
-    "workflowActive": "actifs",
-    "workflowPaused": "en pause",
-    "workflowDraft": "brouillons",
-    "manageWorkflows": "Gérer les workflows",
-    "openFailures": "Audits nécessitant une attention",
+    "recentSubmissions": "Audits récents",
+    "openFailures": "À traiter",
     "viewAll": "Tout voir",
-    "failedRulesBadge": "échec",
+    "failedRulesBadge": "problèmes",
+    "live": {
+      "updated": "En direct · mis à jour à {time}"
+    },
+    "queueLive": {
+      "counts": "{running} en cours · {queued} en file",
+      "idle": "Aucun run en file"
+    },
+    "workflows": {
+      "title": "Vos workflows",
+      "viewAll": "Tous les workflows",
+      "unnamed": "Workflow sans titre",
+      "neverRun": "Pas encore exécuté",
+      "runsSummary": "{count} exécutions · {rate} de réussite"
+    },
     "recent": {
       "title": "Audits récents"
     },
@@ -137,7 +169,7 @@
       "title": "Lancez votre premier audit",
       "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
       "stepLabel": "Étape {number}",
-      "footerHint": "Une fois déployé, les appels API et les résultats de test apparaîtront ci-dessous."
+      "footerHint": "Les audits terminés et les taux de réussite apparaîtront sur ce tableau de bord."
     },
     "platform": {
       "title": "Pouls plateforme",
@@ -364,6 +396,13 @@
         "finalStepHint": "Lancez un test avec des fichiers exemple, puis déployez quand vous êtes prêt."
       },
       "namePlaceholder": "Nom du workflow…",
+      "nameGate": {
+        "title": "Nommez votre workflow",
+        "hint": "Choisissez un nom clair que votre équipe reconnaîtra avant de configurer les documents et les règles.",
+        "label": "Nom du workflow",
+        "placeholder": "ex. Contrôle conformité factures",
+        "continue": "Continuer"
+      },
       "backToWorkflows": "Workflows",
       "statusLive": "En ligne",
       "statusDraft": "Brouillon",
@@ -450,7 +489,7 @@
       "extraction": {
         "readPathLabel": "Lecture",
         "readPathPlaceholder": "Comment lire le document",
-        "readPathHintDefault": "Extraction structurée avec le modèle documentaire sélectionné.",
+        "readPathHintDefault": "Extraction structurée avec le modèle de vision sélectionné.",
         "validationModeLabel": "Validation",
         "validationModePlaceholder": "Règles logiques",
         "validationModeHintDefault": "Les règles logiques s'exécutent sur les valeurs extraites.",
@@ -458,7 +497,7 @@
         "pathPlaceholder": "Lecture et validation",
         "pathLoading": "Chargement…",
         "pathHintDefault": "Extraire les champs, puis valider avec vos règles.",
-        "documentModelLabel": "Modèle documentaire",
+        "documentModelLabel": "Modèle de vision",
         "ocrModelPlaceholder": "Choisir le modèle",
         "ocrModelLoading": "Chargement…",
         "configurationUnavailable": "Options de traitement indisponibles",
@@ -513,7 +552,7 @@
         "hint": "Chaque règle référence les champs de l'étape 1. Les règles s'appliquent aux valeurs extraites, pas directement au document brut.",
         "runsOnOcr": "Repody VLM extrait d'abord les champs du schéma. Les contrôles logiques s'exécutent localement sur les valeurs extraites.",
         "validationEngineTitle": "Moteur de validation LLM",
-        "validationEngineHint": "Les règles LLM utilisent le modèle de validation de la plateforme lorsque AUDIT_LLM_VALIDATION_ENABLED est activé. L'extraction utilise toujours le modèle documentaire sélectionné.",
+        "validationEngineHint": "Les règles LLM utilisent le modèle de validation de la plateforme lorsqu'il est activé. L'extraction utilise le modèle de vision sélectionné.",
         "fixedValidationModel": "Modèle de validation plateforme",
         "fieldReferenceHint": "Référencez les champs extraits avec @nom_du_champ. Seules ces valeurs sont envoyées au modèle de validation.",
         "noFieldsForPrompt": "Sélectionnez d'abord un document contenant des champs.",
