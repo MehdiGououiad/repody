@@ -7,6 +7,7 @@
     "dashboard": "Tableau de bord",
     "workflows": "Workflows",
     "audits": "Rapports d'audit",
+    "users": "Utilisateurs et accès",
     "newWorkflow": "Nouveau workflow",
     "logout": "Se déconnecter"
   },
@@ -334,6 +335,11 @@
       }
     }
   },
+  "users": {
+    "title": "Utilisateurs et accès",
+    "description": "Gérez l'équipe, assignez les rôles et consultez les permissions.",
+    "eyebrow": "Administration"
+  },
   "workflows": {
     "title": "Workflows",
     "description": "Vos pipelines d'extraction et de validation.",
@@ -548,8 +554,8 @@
         "newLlmName": "Règle LLM sans titre",
         "logicExpressionPlaceholder": "ex. Sous_total + Taxe == Total_du",
         "llmPromptPlaceholder": "ex. Vérifier que @montant_total est cohérent avec @sous_total et @montant_taxe.",
-        "emptyActive": "Aucune règle. Cliquez sur « Ajouter une règle » pour en créer une.",
-        "hint": "Chaque règle référence les champs de l'étape 1. Les règles s'appliquent aux valeurs extraites, pas directement au document brut.",
+        "emptyActive": "Aucune règle. Ajoutez une règle logique ou une invite LLM ci-dessous.",
+        "hint": "Choisissez logique ou LLM lors de l'ajout d'une règle. Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites.",
         "runsOnOcr": "Repody VLM extrait d'abord les champs du schéma. Les contrôles logiques s'exécutent localement sur les valeurs extraites.",
         "validationEngineTitle": "Moteur de validation LLM",
         "validationEngineHint": "Les règles LLM utilisent le modèle de validation de la plateforme lorsqu'il est activé. L'extraction utilise le modèle de vision sélectionné.",

@@ -73,6 +73,32 @@ class Settings(BaseSettings):
         description="Inline JWKS JSON for tests (skips live JWKS fetch).",
     )
 
+    keycloak_admin_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_URL", "KEYCLOAK_ADMIN_URL"),
+        description="Keycloak base URL for Admin REST API (e.g. http://keycloak:8080).",
+    )
+    keycloak_admin_user: str = Field(
+        default="admin",
+        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_USER", "KEYCLOAK_ADMIN_USER"),
+    )
+    keycloak_admin_password: str = Field(
+        default="admin",
+        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_PASSWORD", "KEYCLOAK_ADMIN_PASSWORD"),
+    )
+    keycloak_realm: str = Field(
+        default="repody",
+        validation_alias=AliasChoices("AUDIT_KEYCLOAK_REALM", "KEYCLOAK_REALM"),
+    )
+    keycloak_admin_console_url: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "AUDIT_KEYCLOAK_ADMIN_CONSOLE_URL",
+            "KEYCLOAK_ADMIN_CONSOLE_URL",
+        ),
+        description="Browser URL for the Keycloak admin console.",
+    )
+
     deployment_environment: str = Field(
         default="development",
         description="Deployment label attached to logs and traces (e.g. production).",

@@ -28,13 +28,11 @@ export function RulesPanel({
   rules,
   documents,
   onChange,
-  onEnableLlmValidation,
   initialRuleLibrary,
 }: {
   rules: WorkflowRule[];
   documents: DocumentDef[];
   onChange: (rules: WorkflowRule[]) => void;
-  onEnableLlmValidation: () => void;
   initialRuleLibrary?: RuleTemplate[];
 }) {
   const t = useTranslations("workflows.builder.rules");
@@ -43,30 +41,32 @@ export function RulesPanel({
   const ruleLibrary = initialRuleLibrary ?? fetchedLibrary;
 
   const updateRule = (id: string, patch: Partial<WorkflowRule>) => {
-    if (patch.kind === "llm") onEnableLlmValidation();
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   };
 
   const remove = (id: string) => onChange(rules.filter((r) => r.id !== id));
 
-  const addBlank = () =>
+  const addRule = (kind: "logic" | "llm") =>
     onChange([
       ...rules,
       {
         id: `r${shortId()}`,
         name: "",
-        kind: "logic",
+        kind,
         scope: "intra",
         appliesTo: documents[0] ? [documents[0].id] : [],
-        conditions: [
-          {
-            id: "c0",
-            left: { kind: "field", value: "" },
-            operator: "==" as const,
-            right: { kind: "literal", value: "" },
-          },
-        ],
-        conditionJunction: "AND" as ConditionJunction,
+        conditions:
+          kind === "logic"
+            ? [
+                {
+                  id: "c0",
+                  left: { kind: "field", value: "" },
+                  operator: "==" as const,
+                  right: { kind: "literal", value: "" },
+                },
+              ]
+            : undefined,
+        conditionJunction: kind === "logic" ? ("AND" as ConditionJunction) : undefined,
         body: "",
         severity: "flag",
       },
@@ -75,7 +75,6 @@ export function RulesPanel({
   const addFromLibrary = (templateId: string) => {
     const tpl = ruleLibrary.find((x) => x.id === templateId);
     if (!tpl) return;
-    if (tpl.kind === "llm") onEnableLlmValidation();
     const appliesTo =
       tpl.scope === "cross" && documents.length >= 2
         ? [documents[0].id, documents[1].id]
@@ -137,10 +136,21 @@ export function RulesPanel({
               />
             ))
           )}
-          <Button variant="outline" size="sm" onClick={addBlank} className="w-full">
-            <Plus className="h-3.5 w-3.5" />
-            {t("addRule")}
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" size="sm" onClick={() => addRule("logic")} className="w-full">
+              <Code className="h-3.5 w-3.5" />
+              {t("addLogic")}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => addRule("llm")}
+              className="w-full border-accent-blue/30 hover:border-accent-blue/50 hover:bg-accent-blue/5"
+            >
+              <Brain className="h-3.5 w-3.5 text-accent-blue" />
+              {t("addLlm")}
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="library" className="space-y-4 mt-0">

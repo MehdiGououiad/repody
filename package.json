@@ -17,7 +17,7 @@
     "build": "next build",
     "codegen:api": "cd backend && python scripts/export_openapi.py && cd .. && openapi-typescript lib/api/openapi.json -o lib/api/generated/schema.d.ts",
     "start": "node scripts/prepare-standalone.mjs && node .next/standalone/server.js",
-    "lint": "eslint app components lib middleware.ts",
+    "lint": "eslint app components lib proxy.ts",
     "test:auth": "cd backend && python -m pytest tests/test_auth -q",
     "test:api": "cd backend && python -m pytest tests/ -v -m \"not live\"",
     "test:api:e2e": "cd backend && python -m pytest tests/test_api/test_api_e2e_suite.py -v --tb=short -m \"not live\"",

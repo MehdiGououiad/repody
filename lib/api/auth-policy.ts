@@ -1,7 +1,7 @@
 /**
  * Central auth policy — which credential applies per API route pattern.
  *
- * Human UI: Keycloak JWT via Auth.js session (middleware + serverFetch).
+ * Human UI: Keycloak JWT via Auth.js session (Proxy + serverFetch).
  * Workflow key: deployed run API (`/api/v1/workflows/.../runs`).
  */
 
@@ -23,12 +23,12 @@ export const AUTH_POLICY: AuthPolicyRow[] = [
     pattern: /^\/api\/v1\/workflows\/[^/]+\/runs(?:\/json)?$/,
     credential: "workflow",
     description:
-      "Workflow run API — workflow API key when sent; otherwise middleware injects session JWT (builder test)",
+      "Workflow run API — workflow API key when sent; otherwise Proxy injects session JWT (builder test)",
   },
   {
     pattern: /^\/api\/v1\//,
     credential: "session",
-    description: "Management API — middleware injects Keycloak access token",
+    description: "Management API — Proxy injects Keycloak access token",
   },
   {
     pattern: /^\/api\//,

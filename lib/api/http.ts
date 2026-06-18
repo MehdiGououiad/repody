@@ -5,6 +5,22 @@ import { auth, isOidcConfigured } from "@/auth";
 const SERVER_BASE =
   process.env.INTERNAL_API_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 
+let sessionSignOutInFlight = false;
+
+async function redirectToLoginAfterUnauthorized(): Promise<void> {
+  if (typeof window === "undefined" || sessionSignOutInFlight) return;
+  if (window.location.pathname.startsWith("/login")) return;
+
+  sessionSignOutInFlight = true;
+  try {
+    const { signOut } = await import("next-auth/react");
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+    await signOut({ redirectTo: `/login?callbackUrl=${returnTo}` });
+  } finally {
+    sessionSignOutInFlight = false;
+  }
+}
+
 async function sessionAuthHeaders(): Promise<HeadersInit> {
   if (!isOidcConfigured()) {
     return {};
@@ -61,8 +77,7 @@ export async function browserFetch(
       credential === "session" &&
       !window.location.pathname.startsWith("/login")
     ) {
-      const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = `/login?callbackUrl=${returnTo}`;
+      void redirectToLoginAfterUnauthorized();
     }
     if (
       typeof window !== "undefined" &&

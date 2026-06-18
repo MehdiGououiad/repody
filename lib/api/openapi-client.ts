@@ -18,7 +18,7 @@ async function serverAuthHeaders(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${session.accessToken}` };
 }
 
-/** Browser client — hits Next.js `/api` rewrite (session token via middleware). */
+/** Browser client: hits the Next.js `/api` rewrite, where Proxy adds the session token. */
 export function createBrowserOpenApiClient() {
   return createClient<paths>({ baseUrl: "/api" });
 }

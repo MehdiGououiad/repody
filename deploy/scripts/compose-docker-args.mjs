@@ -4,7 +4,10 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { COMPOSE } from "../compose-paths.mjs";
-import { HATCHET_INIT_PROFILE, stackFiles } from "../platform-modules.mjs";
+import {
+  buildPlatformSpec,
+  parseModuleCsv,
+} from "../platform-modules.mjs";
 
 const PROJECT_ROOT = process.cwd();
 
@@ -16,25 +19,41 @@ export function dockerComposeRootArgs() {
 
 /** @param {string} stack @param {import("../platform-modules.mjs").StackOverlays} [overlays] */
 export function dockerComposeInvocation(stack, overlays = {}) {
-  const paths = stackFiles(stack, overlays);
-  const profiles = [HATCHET_INIT_PROFILE];
-  const obsMode = process.env.AUDIT_DEV_OBS ?? "none";
+  const withModules = parseModuleCsv(process.env.AUDIT_COMPOSE_WITH ?? "");
+  let spec = buildPlatformSpec({
+    stack,
+    overlays,
+    withModules,
+  });
 
+  const obsMode = process.env.AUDIT_DEV_OBS ?? "none";
   if (stack === "dev" && obsMode !== "none") {
-    if (!paths.includes(COMPOSE.observability)) {
-      paths.push(COMPOSE.observability);
+    const filePaths = [...spec.filePaths];
+    const profiles = [...spec.profiles];
+    if (!filePaths.includes(COMPOSE.observability)) {
+      filePaths.push(COMPOSE.observability);
     }
-    profiles.push("obs");
+    if (!profiles.includes("obs")) {
+      profiles.push("obs");
+    }
     if (obsMode === "traces") {
-      if (!paths.includes(COMPOSE.observabilityTraces)) {
-        paths.push(COMPOSE.observabilityTraces);
+      if (!filePaths.includes(COMPOSE.observabilityTraces)) {
+        filePaths.push(COMPOSE.observabilityTraces);
       }
-      profiles.push("obs-traces");
+      if (!profiles.includes("obs-traces")) {
+        profiles.push("obs-traces");
+      }
     }
+    spec = {
+      ...spec,
+      filePaths,
+      fileArgs: filePaths.flatMap((p) => ["-f", p]),
+      profiles,
+    };
   }
 
   return {
-    fileArgs: paths.flatMap((p) => ["-f", p]),
-    profileArgs: [...new Set(profiles)].flatMap((p) => ["--profile", p]),
+    fileArgs: spec.fileArgs,
+    profileArgs: [...new Set(spec.profiles)].flatMap((p) => ["--profile", p]),
   };
 }

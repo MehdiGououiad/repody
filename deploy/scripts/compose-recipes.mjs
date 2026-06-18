@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
 import { printPlatformBanner } from "./platform-urls.mjs";
 import { loadRepoEnv } from "./load-repo-env.mjs";
+import { STACKS } from "../platform-modules.mjs";
 
 const COMPOSE_CLI = join(process.cwd(), "deploy/scripts/compose.mjs");
 const VALID_MODELS = new Set(["repody-vlm"]);
@@ -164,6 +165,14 @@ function runDevHostFrontend(warmup, argv) {
     childEnv.BUGSINK_DSN || childEnv.NEXT_PUBLIC_BUGSINK_DSN
       ? ["--with=bugsink"]
       : [];
+
+  const composeWithModules = [
+    ...(withAuth ? ["auth"] : []),
+    ...(bugsinkModuleArgs.length ? ["bugsink"] : []),
+  ];
+  if (composeWithModules.length) {
+    childEnv.AUDIT_COMPOSE_WITH = composeWithModules.join(",");
+  }
 
   const needsBugsinkRebuild =
     Boolean(childEnv.NEXT_PUBLIC_BUGSINK_DSN) && envFileIsNewerThanBuild();
@@ -422,7 +431,7 @@ function runContainerStack(argv) {
       publicDomain: process.env.PUBLIC_DOMAIN,
       filesDomain: process.env.FILES_DOMAIN,
       publicHost: process.env.PUBLIC_HOST,
-      footer: "Streaming logs · Ctrl+C ends log stream · pnpm stop -- --prod to tear down",
+      footer: "Streaming logs · Ctrl+C ends log stream · pnpm stop to tear down",
     });
     runSync(
       "Streaming logs",
@@ -438,15 +447,56 @@ function runContainerStack(argv) {
       publicDomain: process.env.PUBLIC_DOMAIN,
       filesDomain: process.env.FILES_DOMAIN,
       publicHost: process.env.PUBLIC_HOST,
-      footer: "Detached mode — containers keep running · pnpm stop -- --prod to tear down",
+      footer: "Detached mode — containers keep running · pnpm stop to tear down",
     });
   }
 }
 
-function runProdDown() {
-  runSync("Stopping production stack", "node", [
-    ...composeArgs("down", "--stack=prod", "--warmup"),
-  ]);
+/** Host processes started outside Docker (pnpm dev web, pnpm dev:api). */
+const HOST_DEV_PORTS = [3000, 8000];
+
+/** Compose `down` variants — cover overlays/modules used by dev recipes. */
+const DEV_DOWN_ARGS = [
+  [],
+  ["--warmup"],
+  ["--lan"],
+  ["--warmup", "--lan"],
+  ["--with=auth"],
+  ["--warmup", "--with=auth"],
+  ["--lan", "--with=auth"],
+  ["--warmup", "--lan", "--with=auth"],
+  ["--with=bugsink"],
+  ["--warmup", "--with=bugsink"],
+  ["--with=obs"],
+  ["--with=obs,traces"],
+  ["--warmup", "--with=auth", "--with=bugsink"],
+  ["--warmup", "--with=auth", "--with=obs,traces"],
+];
+
+const DEV_MODULE_ONLY_DOWN_ARGS = [
+  ["--modules-only", "--with=obs"],
+  ["--modules-only", "--with=obs,traces"],
+  ["--modules-only", "--with=bugsink"],
+  ["--modules-only", "--with=auth"],
+];
+
+/** Stacks that may be running outside `pnpm dev`. */
+const PLATFORM_STACK_DOWN = [
+  { stack: "prod", args: [[]] },
+  { stack: "prod", args: [["--warmup"], ["--public"], ["--lan"], ["--warmup", "--public"]] },
+  { stack: "prod-micro", args: [[]] },
+  { stack: "e2e", args: [[]] },
+  { stack: "gpu", args: [[], ["--warmup"]] },
+  { stack: "vps", args: [[], ["--with=obs,traces"]] },
+];
+
+function composeDown(args, env, { quiet = true } = {}) {
+  const result = spawnSync("node", composeArgs("down", "--remove-orphans", ...args), {
+    stdio: quiet ? "pipe" : "inherit",
+    shell: false,
+    env,
+  });
+  return result.status === 0;
 }
 
 function killPort(port) {
@@ -480,35 +530,86 @@ function killPort(port) {
   }
 }
 
+function killHostDevProcesses() {
+  console.error("\n▶ Stopping host dev processes (Next.js :3000, API :8000)…");
+  for (const port of HOST_DEV_PORTS) {
+    killPort(port);
+  }
+}
+
+function stopDevComposeStacks(env) {
+  console.error("\n▶ Stopping dev Docker stacks…");
+  for (const extra of DEV_DOWN_ARGS) {
+    for (const obsMode of ["none", "logs", "traces"]) {
+      composeDown(["--stack=dev", ...extra], { ...env, AUDIT_DEV_OBS: obsMode });
+    }
+  }
+  for (const extra of DEV_MODULE_ONLY_DOWN_ARGS) {
+    for (const obsMode of ["none", "logs", "traces"]) {
+      composeDown(["--stack=dev", ...extra], { ...env, AUDIT_DEV_OBS: obsMode });
+    }
+  }
+}
+
+function stopOtherComposeStacks(env, { keepProd = false } = {}) {
+  console.error(
+    keepProd
+      ? "\n▶ Skipping prod / e2e / gpu / vps stacks (--keep-prod)"
+      : "\n▶ Stopping prod, e2e, gpu, and vps stacks…"
+  );
+  if (keepProd) return;
+
+  for (const { stack, args: argSets } of PLATFORM_STACK_DOWN) {
+    if (!STACKS[stack]?.files?.length) continue;
+    for (const extra of argSets) {
+      composeDown([`--stack=${stack}`, ...extra], env);
+    }
+  }
+}
+
+function forceRemoveRepodyContainers() {
+  const list = spawnSync(
+    "docker",
+    ["ps", "-aq", "--filter", "label=com.docker.compose.project=repody"],
+    { encoding: "utf8", shell: false }
+  );
+  const ids = (list.stdout ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!ids.length) return;
+
+  console.error(`\n▶ Removing ${ids.length} remaining Repody container(s)…`);
+  spawnSync("docker", ["rm", "-f", ...ids], { stdio: "inherit", shell: false });
+}
+
 /** @param {string[]} argv */
 function runStop(argv) {
-  const childEnv = {
+  const childEnv = loadRepoEnv({
     ...process.env,
     DOCKER_BUILDKIT: "1",
     COMPOSE_DOCKER_CLI_BUILD: "1",
-  };
+  });
 
-  console.error("\n▶ Stopping frontend on :3000…");
-  killPort(3000);
+  const keepProd = argv.includes("--keep-prod");
+  const wipeVolumes = argv.includes("--volumes");
 
-  console.error("\n▶ Stopping dev Docker stack…\n");
-  for (const warmup of [false, true]) {
-    const overlayArgs = warmup ? ["--warmup"] : [];
-    for (const withAuth of [false, true]) {
-      const authArgs = withAuth ? ["--with=auth"] : [];
-      for (const obsMode of ["none", "logs", "traces"]) {
-        spawnSync("node", composeArgs("down", "--stack=dev", ...overlayArgs, ...authArgs), {
-          stdio: "inherit",
-          shell: process.platform === "win32",
-          env: { ...childEnv, AUDIT_DEV_OBS: obsMode },
-        });
-      }
+  killHostDevProcesses();
+  stopDevComposeStacks(childEnv);
+  stopOtherComposeStacks(childEnv, { keepProd });
+
+  if (wipeVolumes) {
+    console.error("\n▶ Removing Repody Docker volumes…");
+    for (const extra of [[], ["--warmup"], ["--with=auth"]]) {
+      composeDown(
+        ["--stack=dev", ...extra, "--volumes"],
+        { ...childEnv, AUDIT_DEV_OBS: "none" },
+        { quiet: false }
+      );
+    }
+    if (!keepProd) {
+      composeDown(["--stack=prod", "--volumes"], childEnv, { quiet: false });
     }
   }
 
-  if (argv.includes("--prod")) {
-    runProdDown();
-  }
+  forceRemoveRepodyContainers();
 
-  console.error("\n✓ Platform stopped.\n");
+  console.error("\n✓ Platform fully stopped.\n");
 }

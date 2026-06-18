@@ -88,7 +88,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => void signOut({ callbackUrl: "/login" })}
+          onClick={() => void signOut({ redirectTo: "/login" })}
         >
           <LogOut className="mr-2 h-4 w-4" />
           {t("signOut")}
