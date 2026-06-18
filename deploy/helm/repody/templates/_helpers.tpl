@@ -89,10 +89,17 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{- define "repody.imagePullSecrets" -}}
+{{- with .Values.global.imagePullSecrets }}
+imagePullSecrets:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}
+
 {{- define "repody.waitHatchetTokenInit" -}}
 {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
 - name: wait-hatchet-token
-  image: busybox:1.37.0
+  image: {{ .Values.hatchet.waitInitImage | quote }}
   command:
     - sh
     - -c
@@ -112,4 +119,12 @@ app.kubernetes.io/instance: {{ .Release.Name }}
       mountPath: /hatchet
       readOnly: true
 {{- end }}
+{{- end }}
+
+{{- define "repody.keycloakJwksUrl" -}}
+http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/certs
+{{- end }}
+
+{{- define "repody.keycloakAdminUrl" -}}
+http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080
 {{- end }}

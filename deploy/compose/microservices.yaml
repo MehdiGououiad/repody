@@ -39,4 +39,8 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile.web
+      args:
+        # K8s images must bake the Helm service DNS into Next rewrites.
+        # Compose prod keeps using http://api:8000 from deploy/compose/prod.yaml.
+        BACKEND_URL: ${REPODY_WEB_BACKEND_URL:-http://repody-api:8000}
     image: *image-web

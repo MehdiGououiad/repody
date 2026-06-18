@@ -20,7 +20,10 @@ from audit_workbench.settings import get_settings
 def extract_bearer(authorization: str | None) -> str | None:
     if not authorization:
         return None
-    token = authorization.removeprefix("Bearer ").strip()
+    scheme, separator, token = authorization.strip().partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    token = token.strip()
     return token or None
 
 

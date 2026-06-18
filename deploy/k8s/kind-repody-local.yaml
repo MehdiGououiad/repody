@@ -1,0 +1,25 @@
+# kind cluster for local prod-path testing (Gateway API + Argo CD).
+# Maps host ports 80/443 to the control-plane node for Envoy Gateway.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: repody-local
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+# Local registry mirror (same pull model as Harbor on client clusters).
+containerdConfigPatches:
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
+      endpoint = ["http://kind-registry:5000"]

@@ -4,12 +4,36 @@ metadata:
   name: repody
   namespace: argocd
 spec:
-  description: Repody production workloads
+  description: Repody workloads (staging and production)
   sourceRepos:
     - https://github.com/MehdiGououiad/repody.git
+    - "*"  # Allow fork/private GitOps repos — remove in locked-down environments.
   destinations:
     - namespace: repody
       server: https://kubernetes.default.svc
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
   namespaceResourceWhitelist:
-    - group: "*"
+    - group: ""
+      kind: "*"
+    - group: apps
+      kind: "*"
+    - group: batch
+      kind: "*"
+    - group: autoscaling
+      kind: "*"
+    - group: policy
+      kind: "*"
+    - group: networking.k8s.io
+      kind: "*"
+    - group: gateway.networking.k8s.io
+      kind: "*"
+    - group: gateway.envoyproxy.io
+      kind: "*"
+    - group: monitoring.coreos.com
+      kind: "*"
+    - group: external-secrets.io
       kind: "*"

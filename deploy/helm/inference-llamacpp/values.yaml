@@ -1,0 +1,42 @@
+# llama.cpp server for Repody VLM on CPU — same runtime family as Docker Model Runner.
+# Requires a recent server image with libmtmd (multimodal / vision).
+# GPU production should use vLLM (deploy/compose/gpu.yaml), not this chart.
+
+image:
+  repository: ghcr.io/ggml-org/llama.cpp
+  tag: server
+  pullPolicy: IfNotPresent
+
+# Hugging Face GGUF source (synced with deploy/repody-vlm-model.constants.mjs).
+hfRepo: numind/NuExtract3-GGUF
+hfFile: NuExtract3-Q4_K_M.gguf
+# Optional separate mmproj; leave empty when --hf-repo bundles it.
+mmprojFile: ""
+
+contextSize: 16384
+port: 8080
+threads: 0  # 0 = auto
+
+# Model id returned by GET /v1/models — set config.repodyVlmModel in Repody to this value.
+servedModelId: ""
+
+persistence:
+  enabled: true
+  size: 20Gi
+  mountPath: /models
+  storageClass: ""
+
+resources:
+  requests:
+    cpu: "4"
+    memory: 8Gi
+  limits:
+    memory: 16Gi
+
+service:
+  type: ClusterIP
+
+# Optional HF token for gated repos (prefer a K8s secret in production).
+hfToken:
+  existingSecret: ""
+  secretKey: HF_TOKEN

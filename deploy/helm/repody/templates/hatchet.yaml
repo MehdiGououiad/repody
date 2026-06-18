@@ -43,7 +43,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: postgres
-          image: postgres:17.10-alpine
+          image: {{ .Values.hatchet.postgresImage | quote }}
           imagePullPolicy: IfNotPresent
           env:
             - name: POSTGRES_USER

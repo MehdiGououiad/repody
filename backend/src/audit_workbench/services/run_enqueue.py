@@ -59,7 +59,7 @@ def client_key_from_request(
     source: str, authorization: str | None, request: Request | None
 ) -> str | None:
     if source == "api" and authorization:
-        token = authorization.replace("Bearer ", "").strip()
+        token = extract_bearer(authorization)
         if token:
             return hashlib.sha256(token.encode()).hexdigest()[:16]
     if request and request.client:

@@ -77,6 +77,38 @@ async def test_run_json_rejects_unconfirmed_file_binding(client):
     assert "not confirmed" in res.text or "not prepared" in res.text
 
 
+@pytest.mark.asyncio
+async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
+    from audit_workbench.settings import clear_settings_cache
+
+    clear_settings_cache()
+    from audit_workbench.db.base import async_session_factory
+    from audit_workbench.services.upload_intents import record_upload_intent
+    from audit_workbench.storage.factory import get_storage
+
+    storage = get_storage()
+    await storage.ensure_bucket()
+    key = "runs/demo/other-owner.pdf"
+    payload = b"%PDF-1.4\nsample"
+    await storage.put_bytes(key, payload, "application/pdf")
+    async with async_session_factory() as session:
+        await record_upload_intent(
+            session,
+            storage_key=key,
+            file_name="other-owner.pdf",
+            mime_type="application/pdf",
+            size=len(payload),
+            owner_subject="someone-else",
+        )
+        await session.commit()
+
+    res = await client.post("/v1/uploads/confirm", json={"storageKeys": [key]})
+
+    assert res.status_code == 400
+    assert "different authenticated user" in res.text
+
+
 @pytest.mark.live
 @pytest.mark.asyncio
 async def test_duplicate_file_upload_run_completes(live_client):

@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from audit_workbench.auth.casbin_authorizer import get_authorizer
 from audit_workbench.auth.dependencies import get_current_principal, require_permission
-from audit_workbench.auth.keycloak_admin import KeycloakAdminClient, KeycloakAdminError, keycloak_console_url
+from audit_workbench.auth.keycloak_admin import (
+    KeycloakAdminClient,
+    KeycloakAdminError,
+    keycloak_console_url,
+)
 from audit_workbench.auth.principal import APP_REALM_ROLES, Principal
 from audit_workbench.auth.rbac_catalog import (
     ROLE_DESCRIPTIONS,

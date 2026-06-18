@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "inference-llamacpp.fullname" . }}
+  labels:
+    {{- include "inference-llamacpp.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "inference-llamacpp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "inference-llamacpp.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: llama-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --hf-repo
+            - {{ .Values.hfRepo | quote }}
+            - --hf-file
+            - {{ .Values.hfFile | quote }}
+            {{- if .Values.mmprojFile }}
+            - --mmproj
+            - {{ printf "%s/%s" .Values.persistence.mountPath .Values.mmprojFile | quote }}
+            {{- end }}
+            - -c
+            - {{ .Values.contextSize | quote }}
+            {{- if gt (int .Values.threads) 0 }}
+            - -t
+            - {{ .Values.threads | quote }}
+            {{- end }}
+            - --host
+            - "0.0.0.0"
+            - --port
+            - {{ .Values.port | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          env:
+            {{- if .Values.hfToken.existingSecret }}
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.hfToken.existingSecret }}
+                  key: {{ .Values.hfToken.secretKey }}
+            {{- end }}
+          volumeMounts:
+            - name: models
+              mountPath: {{ .Values.persistence.mountPath }}
+          readinessProbe:
+            httpGet:
+              path: /v1/models
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 15
+            timeoutSeconds: 10
+            failureThreshold: 40
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: models
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "inference-llamacpp.fullname" . }}-models
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -24,6 +24,7 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
@@ -90,6 +91,7 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}

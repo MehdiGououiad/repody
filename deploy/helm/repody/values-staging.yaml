@@ -1,0 +1,97 @@
+# Staging overrides — Harbor registry, Gateway API edge, in-cluster Keycloak + CPU vLLM.
+# Copy/adapt for your cluster; keep secrets out of Git (use secrets.existingSecret).
+# Argo CD: deploy/argocd/repody-staging.application.yaml
+
+global:
+  deploymentEnvironment: staging
+  imagePullSecrets:
+    - name: harbor-pull-secret
+
+images:
+  api:
+    repository: harbor.yourdomain.com/repody/repody-api
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: harbor.yourdomain.com/repody/repody-worker
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+  web:
+    repository: harbor.yourdomain.com/repody/repody-web
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+
+api:
+  replicas: 1
+
+workerOcr:
+  replicas: 1
+  warmupOnStart: true
+  autoscaling:
+    enabled: false
+
+workerFast:
+  replicas: 1
+  autoscaling:
+    enabled: false
+
+web:
+  replicas: 1
+
+ingress:
+  enabled: false
+
+gatewayApi:
+  enabled: true
+  createGatewayClass: false
+  gatewayClassName: envoy-gateway
+  host: app.staging.yourdomain.com
+  apiHost: api.staging.yourdomain.com
+  filesHost: files.staging.yourdomain.com
+  authHost: auth.staging.yourdomain.com
+  authServiceName: keycloak
+  authServicePort: 8080
+
+keycloak:
+  enabled: true
+  hostname: auth.staging.yourdomain.com
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  proxyHeaders: xforwarded
+  adminPassword: ""  # Set via External Secrets or --set at bootstrap.
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
+
+config:
+  oidcEnabled: true
+  authUrl: https://app.staging.yourdomain.com
+  oidcIssuer: https://auth.staging.yourdomain.com/realms/repody
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
+  corsOrigins: '["https://app.staging.yourdomain.com"]'
+  inferenceMode: docker_model_runner
+  # In-cluster llama.cpp server (deploy/helm/inference-llamacpp), release name inference-llamacpp.
+  dockerModelRunnerBaseUrl: http://inference-llamacpp.repody.svc.cluster.local:8080/v1
+  # Set to the id from GET /v1/models after inference boots (DMR uses repody/repody-vlm:q4_k_m-16k).
+  repodyVlmModel: ""
+  repodyVlmPdfDpi: 120
+  repodyVlmMaxEdgePx: 1024
+  ocrMaxPages: 4
+  logJson: true
+
+postgresql:
+  auth:
+    password: ""  # From repody-runtime-secrets or Bitnami-generated.
+
+minio:
+  auth:
+    rootPassword: ""
+
+hatchet:
+  postgresPassword: ""
+  bootstrapToken: true
+
+observability:
+  bugsinkDsn: ""

@@ -46,7 +46,7 @@ spec:
       restartPolicy: OnFailure
       initContainers:
         - name: wait-hatchet
-          image: busybox:1.37.0
+          image: {{ .Values.hatchet.waitInitImage | quote }}
           command:
             - sh
             - -c
@@ -87,7 +87,7 @@ spec:
               mountPath: /shared
       containers:
         - name: store-secret
-          image: dtzar/helm-kubectl:3.18.6
+          image: {{ .Values.hatchet.kubectlImage | quote }}
           env:
             - name: TOKEN_SECRET
               value: {{ include "repody.fullname" . }}-hatchet-token

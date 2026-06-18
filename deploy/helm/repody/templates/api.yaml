@@ -24,10 +24,7 @@ spec:
         fsGroup: 10001
         seccompProfile:
           type: RuntimeDefault
-      {{- with .Values.global.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
@@ -58,6 +55,30 @@ spec:
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             - name: AUDIT_OIDC_ISSUER
               value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}
+            {{- $jwks := .Values.config.oidcJwksUrl }}
+            {{- if and (not $jwks) .Values.keycloak.enabled }}
+            {{- $jwks = include "repody.keycloakJwksUrl" . }}
+            {{- end }}
+            {{- if $jwks }}
+            - name: AUDIT_OIDC_JWKS_URL
+              value: {{ $jwks | quote }}
+            {{- end }}
+            {{- if .Values.keycloak.enabled }}
+            - name: KEYCLOAK_ADMIN_URL
+              value: {{ include "repody.keycloakAdminUrl" . | quote }}
+            - name: KEYCLOAK_ADMIN_USER
+              value: {{ .Values.keycloak.adminUsername | quote }}
+            {{- if .Values.keycloak.existingSecret }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.existingSecret }}
+                  key: KEYCLOAK_ADMIN_PASSWORD
+            {{- else }}
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              value: {{ required "keycloak.adminPassword when keycloak.enabled and no existingSecret" .Values.keycloak.adminPassword | quote }}
+            {{- end }}
+            {{- end }}
             {{- if .Values.observability.bugsinkDsn }}
             - name: BUGSINK_DSN
               value: {{ .Values.observability.bugsinkDsn | quote }}

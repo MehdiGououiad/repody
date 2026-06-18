@@ -568,7 +568,12 @@ async def run_stress(args: argparse.Namespace) -> int:
     t0 = time.perf_counter()
     wall_start = t0
 
-    async with httpx.AsyncClient(base_url=args.api.rstrip("/"), timeout=timeout) as client:
+    headers = {"Authorization": f"Bearer {args.bearer_token}"} if args.bearer_token else None
+    async with httpx.AsyncClient(
+        base_url=args.api.rstrip("/"),
+        headers=headers,
+        timeout=timeout,
+    ) as client:
         await _save_workflow(client, workflow_id, doc_id)
         binding = await _upload_presign(
             client,
@@ -636,7 +641,7 @@ async def run_stress(args: argparse.Namespace) -> int:
         "startedAt": report.started_at,
         "api": report.api,
         "config": {
-            k: str(v) if isinstance(v, Path) else v
+            k: "<redacted>" if "token" in k.lower() else str(v) if isinstance(v, Path) else v
             for k, v in report.config.items()
             if not callable(v)
         },
@@ -671,6 +676,11 @@ async def run_stress(args: argparse.Namespace) -> int:
 
 def add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--api", default="http://127.0.0.1:8000")
+    parser.add_argument(
+        "--bearer-token",
+        default=None,
+        help="OIDC access token for auth-enabled stacks.",
+    )
     parser.add_argument("--document", type=Path, default=DEFAULT_PDF)
     parser.add_argument("--burst", type=int, default=8, help="Concurrent valid runs enqueued at once")
     parser.add_argument("--random-rounds", type=int, default=20, help="Random mixed-traffic rounds")
