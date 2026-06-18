@@ -24,6 +24,12 @@ function run(args) {
       AUTH_SECRET: process.env.AUTH_SECRET ?? "build-placeholder-secret-32chars-min",
       AUTH_KEYCLOAK_CLIENT_SECRET:
         process.env.AUTH_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
+      AUTH_KEYCLOAK_ISSUER:
+        process.env.AUTH_KEYCLOAK_ISSUER ??
+        "https://auth.example.com/realms/repody",
+      AUDIT_OIDC_ISSUER:
+        process.env.AUDIT_OIDC_ISSUER ?? "https://auth.example.com/realms/repody",
+      AUDIT_OIDC_AUDIENCE: process.env.AUDIT_OIDC_AUDIENCE ?? "repody-api",
       AUDIT_MINIO_PUBLIC_ENDPOINT:
         process.env.AUDIT_MINIO_PUBLIC_ENDPOINT ?? "files.example.com",
     },

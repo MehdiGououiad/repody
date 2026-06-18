@@ -26,7 +26,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{- define "repody.secretName" -}}
+{{- if .Values.secrets.existingSecret -}}
+{{- .Values.secrets.existingSecret -}}
+{{- else -}}
 {{ include "repody.fullname" . }}-secrets
+{{- end -}}
 {{- end }}
 
 {{- define "repody.minioEndpoint" -}}

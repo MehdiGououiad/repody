@@ -1,0 +1,58 @@
+# Example production values for a Harbor-backed deployment.
+# Copy this to deploy/helm/repody/values-production.yaml or, preferably,
+# keep the environment-specific version in a private GitOps config repo.
+
+global:
+  deploymentEnvironment: production
+  imagePullSecrets:
+    - name: harbor-pull-secret
+
+images:
+  api:
+    repository: harbor.yourdomain.com/repody/repody-api
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: harbor.yourdomain.com/repody/repody-worker
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+  web:
+    repository: harbor.yourdomain.com/repody/repody-web
+    tag: "<git-sha>"
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: nginx
+  host: app.yourdomain.com
+  filesHost: files.yourdomain.com
+  tls:
+    enabled: true
+    secretName: repody-tls
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
+
+config:
+  oidcIssuer: https://auth.yourdomain.com/realms/repody
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
+  corsOrigins: '["https://app.yourdomain.com"]'
+  inferenceMode: vllm
+  vllmBaseUrl: http://vllm.gpu.svc.cluster.local:8000/v1
+  vllmServedModel: numind/NuExtract3
+
+# Prefer managed Postgres, Redis, and S3-compatible storage for production.
+# Leave in-cluster subcharts enabled only for local, staging, or small installs.
+postgresql:
+  auth:
+    password: "" # Set deterministically outside Git if using the subchart.
+
+minio:
+  auth:
+    rootPassword: "" # Set deterministically outside Git if using the subchart.
+
+hatchet:
+  postgresPassword: "" # Supplied by repody-runtime-secrets.
+  bootstrapToken: true

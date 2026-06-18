@@ -34,14 +34,14 @@ spec:
             - name: AUTH_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "repody.fullname" . }}-secrets
+                  name: {{ include "repody.secretName" . }}
                   key: AUTH_SECRET
             - name: AUTH_KEYCLOAK_ID
               value: {{ .Values.config.keycloakClientId | quote }}
             - name: AUTH_KEYCLOAK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "repody.fullname" . }}-secrets
+                  name: {{ include "repody.secretName" . }}
                   key: AUTH_KEYCLOAK_CLIENT_SECRET
             - name: AUTH_KEYCLOAK_ISSUER
               value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}
