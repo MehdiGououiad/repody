@@ -1,0 +1,107 @@
+# Local kind cluster overrides — Gateway API edge, single replica, dev secrets.
+# Used by: pnpm k8s:local up  and  deploy/argocd/repody-local.application.yaml
+
+global:
+  deploymentEnvironment: local
+  imageRegistry: localhost:5001
+  security:
+    allowInsecureImages: true
+
+api:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+workerOcr:
+  replicas: 1
+  warmupOnStart: true
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 4Gi
+
+workerFast:
+  replicas: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+web:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+keycloak:
+  enabled: true
+  hostname: auth.repody.local
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  proxyHeaders: xforwarded
+  adminPassword: admin
+
+ingress:
+  enabled: false
+
+gatewayApi:
+  enabled: true
+  createGatewayClass: true
+  gatewayClassName: eg
+  gatewayClassControllerName: gateway.envoyproxy.io/gatewayclass-controller
+  host: app.repody.local
+  apiHost: api.repody.local
+  filesHost: files.repody.local
+  authHost: auth.repody.local
+  authServiceName: keycloak
+  authServicePort: 8080
+  # kind: EnvoyProxy below pins NodePort 30080 (maps to host :80 via kind-repody-local.yaml).
+  envoyProxyName: repody-kind-nodeport
+  kindNodePort: 30080
+
+secrets:
+  create: true
+  authSecret: local-k8s-auth-secret-32chars-min!
+  keycloakClientSecret: repody-web-dev-secret
+
+postgresql:
+  auth:
+    password: audit-local-k8s
+
+minio:
+  auth:
+    rootPassword: minio-local-k8s
+
+hatchet:
+  postgresPassword: hatchet-local-k8s
+  bootstrapToken: true
+
+config:
+  oidcEnabled: true
+  authUrl: http://app.repody.local
+  oidcIssuer: http://auth.repody.local/realms/repody
+  oidcJwksUrl: http://keycloak.repody.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
+  corsOrigins: '["http://app.repody.local"]'
+  inferenceMode: docker_model_runner
+  dockerModelRunnerBaseUrl: http://model-runner.docker.internal/engines/llama.cpp/v1
+  repodyVlmPdfDpi: 120
+  repodyVlmMaxEdgePx: 1024
+  ocrMaxPages: 4
+  logJson: true

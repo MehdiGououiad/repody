@@ -38,6 +38,30 @@ Health: Healthy
 GET /v1/healthz/live -> 200 {"status":"ok"}
 ```
 
+## Staging flow (CPU inference + Gateway API)
+
+Staging uses in-cluster **llama.cpp server** (`deploy/helm/inference-llamacpp`) and
+`values-staging.yaml` (Harbor images, Gateway API, optional in-cluster Keycloak).
+Repody `config.inferenceMode` stays `docker_model_runner` — same runtime as compose CPU.
+
+```powershell
+$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_TAG="$(git rev-parse --short=12 HEAD)"
+pnpm images:build
+pnpm images:push
+pnpm deploy:staging
+```
+
+Or register Argo CD apps (after pushing chart changes to Git):
+
+```powershell
+pnpm deploy:staging -- --argocd
+kubectl apply -n argocd -f deploy/argocd/repody-inference-staging.application.yaml
+kubectl apply -n argocd -f deploy/argocd/repody-staging.application.yaml
+```
+
+See `deploy/argocd/external-secrets.example.yaml` for runtime secret wiring.
+
 ## Production flow
 
 Use CI to build and push immutable images, then let Argo CD deploy those tags.

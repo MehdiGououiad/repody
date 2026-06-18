@@ -82,6 +82,9 @@ hatchet:
   enabled: true
   image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest
   adminImage: ghcr.io/hatchet-dev/hatchet/hatchet-admin:latest
+  postgresImage: postgres:17.10-alpine
+  waitInitImage: busybox:1.37.0
+  kubectlImage: dtzar/helm-kubectl:3.18.6
   postgresPassword: hatchet
   # Set after first install, or leave empty and enable bootstrapToken job.
   clientToken: ""
@@ -147,6 +150,25 @@ web:
     limits:
       memory: 1Gi
 
+# ── In-cluster Keycloak (staging/local; production usually uses external IdP) ─
+keycloak:
+  enabled: false
+  image: quay.io/keycloak/keycloak:26.6.3
+  realm: repody
+  hostname: auth.example.com
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  proxyHeaders: xforwarded
+  adminUsername: admin
+  adminPassword: ""
+  existingSecret: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
 ingress:
   enabled: true
   className: nginx
@@ -155,6 +177,29 @@ ingress:
   tls:
     enabled: true
     secretName: repody-tls
+
+gatewayApi:
+  enabled: false
+  createGatewayClass: false
+  gatewayClassName: envoy-gateway
+  gatewayClassControllerName: gateway.envoyproxy.io/gatewayclass-controller
+  host: app.example.com
+  apiHost: api.example.com
+  filesHost: files.example.com
+  authHost: auth.example.com
+  authExternalName: ""
+  authExternalAddress: ""
+  authExternalPort: 8080
+  # In-cluster Keycloak (or any Service in the release namespace).
+  authServiceName: ""
+  authServicePort: 8080
+  # Optional EnvoyProxy (gateway.envoyproxy.io) for kind NodePort / custom service shape.
+  envoyProxyName: ""
+  kindNodePort: 0
+  # Envoy Gateway ClusterIP — web pods resolve authHost through the gateway (local kind).
+  authHostAliasIp: ""
+  allowedRoutes:
+    from: Same
 
 # ── Platform secrets & config ─────────────────────────────────────────────────
 secrets:
@@ -165,12 +210,24 @@ secrets:
 
 config:
   oidcEnabled: true
+  authUrl: ""
   oidcIssuer: https://auth.example.com/realms/repody
+  oidcJwksUrl: ""
   oidcAudience: repody-api
   keycloakClientId: repody-web
   inferenceMode: vllm
   vllmBaseUrl: http://vllm.inference.svc.cluster.local:8000/v1
   vllmServedModel: numind/NuExtract3
+  extractor: pipeline
+  dockerModelRunnerBaseUrl: http://model-runner.docker.internal/engines/llama.cpp/v1
+  defaultOcrModel: repody:vlm
+  repodyVlmEnabled: true
+  repodyVlmModel: repody/repody-vlm:q4_k_m-16k
+  repodyVlmMaxTokens: 512
+  repodyVlmMaxEdgePx: 1024
+  repodyVlmPdfDpi: 144
+  repodyVlmMaxPagesPerRequest: 4
+  ocrMaxPages: 4
   corsOrigins: '["https://app.example.com"]'
   logJson: true
   directUploadEnabled: true

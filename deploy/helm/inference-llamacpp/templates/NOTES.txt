@@ -1,0 +1,15 @@
+Repody CPU inference (llama.cpp server) is installing.
+
+OpenAI-compatible base URL (in-cluster):
+  {{ include "inference-llamacpp.openaiBaseUrl" . }}
+
+Repody Helm values:
+  config.inferenceMode: docker_model_runner
+  config.dockerModelRunnerBaseUrl: {{ include "inference-llamacpp.openaiBaseUrl" . }}
+  config.repodyVlmModel: <id from GET /v1/models>
+
+First GGUF download can take several minutes. Pin image.tag to a known-good server build
+(ghcr.io/ggml-org/llama.cpp:server) — multimodal vision requires a recent llama-server.
+
+Watch:
+  kubectl -n {{ .Release.Namespace }} logs -f deploy/{{ include "inference-llamacpp.fullname" . }}

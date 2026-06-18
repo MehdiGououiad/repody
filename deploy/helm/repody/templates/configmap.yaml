@@ -13,8 +13,18 @@ data:
   AUDIT_DIRECT_UPLOAD_ENABLED: {{ .Values.config.directUploadEnabled | quote }}
   AUDIT_STORAGE_BACKEND: s3
   AUDIT_INFERENCE_MODE: {{ .Values.config.inferenceMode | quote }}
+  AUDIT_EXTRACTOR: {{ .Values.config.extractor | quote }}
   AUDIT_VLLM_BASE_URL: {{ .Values.config.vllmBaseUrl | quote }}
   AUDIT_VLLM_SERVED_MODEL: {{ .Values.config.vllmServedModel | quote }}
+  AUDIT_DOCKER_MODEL_RUNNER_BASE_URL: {{ .Values.config.dockerModelRunnerBaseUrl | quote }}
+  AUDIT_DEFAULT_OCR_MODEL: {{ .Values.config.defaultOcrModel | quote }}
+  AUDIT_REPODY_VLM_ENABLED: {{ .Values.config.repodyVlmEnabled | quote }}
+  AUDIT_REPODY_VLM_MODEL: {{ .Values.config.repodyVlmModel | quote }}
+  AUDIT_REPODY_VLM_MAX_TOKENS: {{ .Values.config.repodyVlmMaxTokens | quote }}
+  AUDIT_REPODY_VLM_MAX_EDGE_PX: {{ .Values.config.repodyVlmMaxEdgePx | quote }}
+  AUDIT_REPODY_VLM_PDF_DPI: {{ .Values.config.repodyVlmPdfDpi | quote }}
+  AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST: {{ .Values.config.repodyVlmMaxPagesPerRequest | quote }}
+  AUDIT_OCR_MAX_PAGES: {{ .Values.config.ocrMaxPages | quote }}
   AUDIT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
   AUDIT_SEED_ON_STARTUP: "false"
@@ -29,4 +39,6 @@ data:
   AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.externalObjectStorage.publicEndpoint | quote }}
   {{- else if .Values.ingress.enabled }}
   AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.ingress.filesHost | quote }}
+  {{- else if and .Values.gatewayApi.enabled .Values.gatewayApi.filesHost }}
+  AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.gatewayApi.filesHost | quote }}
   {{- end }}

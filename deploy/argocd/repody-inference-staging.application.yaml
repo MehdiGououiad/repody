@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody-inference-staging
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: repody
+  source:
+    repoURL: https://github.com/MehdiGououiad/repody.git
+    targetRevision: master
+    path: deploy/helm/inference-llamacpp
+    helm:
+      releaseName: inference-llamacpp
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: repody
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  revisionHistoryLimit: 3

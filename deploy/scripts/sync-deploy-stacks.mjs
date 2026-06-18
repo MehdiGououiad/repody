@@ -29,3 +29,21 @@ for (const stack of Object.values(STACKS)) {
 if (checkOnly && drift) {
   process.exit(1);
 }
+
+// Keep Helm Keycloak realm import aligned with the compose/dev source of truth.
+const realmSrc = join(process.cwd(), "deploy", "keycloak", "realm-repody.json");
+const realmDst = join(process.cwd(), "deploy", "helm", "repody", "files", "realm-repody.json");
+if (existsSync(realmSrc)) {
+  const srcBody = readFileSync(realmSrc, "utf8");
+  if (checkOnly) {
+    const dstBody = existsSync(realmDst) ? readFileSync(realmDst, "utf8") : "";
+    if (dstBody !== srcBody) {
+      console.error(`Drift: ${realmDst} (run pnpm deploy:sync-stacks)`);
+      process.exit(1);
+    }
+  } else {
+    mkdirSync(join(process.cwd(), "deploy", "helm", "repody", "files"), { recursive: true });
+    writeFileSync(realmDst, srcBody);
+    console.error(`wrote ${realmDst}`);
+  }
+}

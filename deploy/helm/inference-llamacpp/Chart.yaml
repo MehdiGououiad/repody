@@ -1,0 +1,10 @@
+apiVersion: v2
+name: inference-llamacpp
+description: Repody VLM on CPU via llama.cpp server (OpenAI-compatible, multimodal)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - repody
+  - llama.cpp
+  - inference

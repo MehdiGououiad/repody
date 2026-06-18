@@ -1,0 +1,24 @@
+# Production overrides using Gateway API (Envoy Gateway) instead of Ingress.
+# Merge with values-production.yaml or use as an extra valueFiles entry in Argo CD.
+
+ingress:
+  enabled: false
+
+gatewayApi:
+  enabled: true
+  createGatewayClass: false
+  gatewayClassName: envoy-gateway
+  host: app.yourdomain.com
+  apiHost: api.yourdomain.com
+  filesHost: files.yourdomain.com
+  authHost: auth.yourdomain.com
+  # External managed Keycloak / IdP — set authExternalName or authServiceName.
+  authExternalName: auth.yourdomain.com
+  authExternalPort: 443
+
+config:
+  authUrl: https://app.yourdomain.com
+  oidcIssuer: https://auth.yourdomain.com/realms/repody
+  corsOrigins: '["https://app.yourdomain.com"]'
+
+# keycloak.enabled stays false — use your organization's IdP in production.
