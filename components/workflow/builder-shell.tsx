@@ -120,7 +120,6 @@ function BuilderShellCore({
                   rules={rules}
                   documents={documents}
                   onChange={setRules}
-                  onEnableLlmValidation={() => {}}
                   initialRuleLibrary={ruleLibrary}
                 />
               ) : null}

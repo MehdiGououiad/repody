@@ -13,11 +13,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
-import {
-  normalizeReadPath,
-  normalizeValidationMode,
-} from "@/lib/api/processing-paths";
-import type { DocumentDef, ValidationModeId } from "@/lib/types";
+import { normalizeReadPath } from "@/lib/api/processing-paths";
+import type { DocumentDef } from "@/lib/types";
 import type { ProcessingOptions } from "./processing-options";
 
 export function ProcessingSettings({
@@ -33,29 +30,17 @@ export function ProcessingSettings({
   options: ProcessingOptions;
   onRetry: () => void;
 }) {
-  const {
-    paths,
-    validationModes,
-    ocrModels,
-    defaultPath,
-    defaultOcr,
-    loaded,
-    error,
-  } = options;
+  const { paths, ocrModels, defaultPath, defaultOcr, loaded, error } = options;
 
   const pathId = normalizeReadPath(doc.extractionMode ?? defaultPath);
   const pathSpec = paths.find((p) => p.id === pathId);
-  const validationId = normalizeValidationMode(doc.validationMode, doc.extractionMode);
-  const validationSpec = validationModes.find((v) => v.id === validationId);
+  const showReadPath = paths.length > 1;
   const modelsForPath = ocrModels;
   const firstAvailable = modelsForPath.find((m) => m.available !== false);
   const selectedOcr = doc.ocrModel ?? firstAvailable?.id ?? defaultOcr;
   const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? ocrModels.find((m) => m.id === selectedOcr);
   const readPathId = `read-path-${doc.id}`;
-  const validationModeId = `validation-mode-${doc.id}`;
   const extractionModelId = `extraction-model-${doc.id}`;
-  const validationHint =
-    validationSpec?.description ?? t("extraction.directModelLogicValidationHint");
 
   const runtimeLabel =
     selectedModel?.runtime === "docker_model_runner"
@@ -68,10 +53,6 @@ export function ProcessingSettings({
       extractionMode: v,
       ocrModel: firstModel?.id ?? doc.ocrModel,
     });
-  };
-
-  const onValidationChange = (v: string) => {
-    onChange({ validationMode: v as ValidationModeId });
   };
 
   return (
@@ -97,61 +78,28 @@ export function ProcessingSettings({
         </div>
       ) : null}
 
-      <div className="space-y-1.5">
-        <Label htmlFor={readPathId} className="text-xs font-semibold">
-          {t("extraction.readPathLabel")}
-        </Label>
-        <Select value={pathId} onValueChange={onPathChange} disabled={!loaded || error}>
-          <SelectTrigger id={readPathId} className="h-9">
-            <SelectValue placeholder={t("extraction.readPathPlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {paths.length === 0 ? (
-              <SelectItem value="document_model" disabled>
-                {t("extraction.pathLoading")}
-              </SelectItem>
-            ) : (
-              paths.map((p) => (
+      {showReadPath ? (
+        <div className="space-y-1.5">
+          <Label htmlFor={readPathId} className="text-xs font-semibold">
+            {t("extraction.readPathLabel")}
+          </Label>
+          <Select value={pathId} onValueChange={onPathChange} disabled={!loaded || error}>
+            <SelectTrigger id={readPathId} className="h-9">
+              <SelectValue placeholder={t("extraction.readPathPlaceholder")} />
+            </SelectTrigger>
+            <SelectContent>
+              {paths.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.label}
                 </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-on-surface-variant">
-          {pathSpec?.description ?? t("extraction.readPathHintDefault")}
-        </p>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor={validationModeId} className="text-xs font-semibold">
-          {t("extraction.validationModeLabel")}
-        </Label>
-        <Select
-          value={validationId}
-          onValueChange={onValidationChange}
-          disabled={!loaded || error}
-        >
-          <SelectTrigger id={validationModeId} className="h-9">
-            <SelectValue placeholder={t("extraction.validationModePlaceholder")} />
-          </SelectTrigger>
-          <SelectContent>
-            {validationModes.length === 0 ? (
-              <SelectItem value="logic_only" disabled>
-                {t("extraction.pathLoading")}
-              </SelectItem>
-            ) : (
-              validationModes.map((v) => (
-                <SelectItem key={v.id} value={v.id}>
-                  {v.label}
-                </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
-        <p className="text-[11px] text-on-surface-variant">{validationHint}</p>
-      </div>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-[11px] text-on-surface-variant">
+            {pathSpec?.description ?? t("extraction.readPathHintDefault")}
+          </p>
+        </div>
+      ) : null}
 
       <div className="space-y-1.5">
         <Label htmlFor={extractionModelId} className="text-xs font-semibold">

@@ -3,28 +3,13 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import {
-  LayoutDashboard,
-  GitBranch,
-  FileCheck2,
-  LogOut,
-  Plus,
-  ShieldCheck,
-  Menu,
-  X,
-} from "lucide-react";
+import { LogOut, Plus, ShieldCheck, Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
-import { isNavActive } from "@/lib/navigation";
+import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-
-const navItems = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/workflows", labelKey: "workflows", icon: GitBranch },
-  { href: "/audits", labelKey: "audits", icon: FileCheck2 },
-] as const;
 
 export function MobileNav() {
   const pathname = useClientPathname();
@@ -77,7 +62,7 @@ export function MobileNav() {
         </div>
 
         <nav className="flex-1 flex flex-col gap-1 px-2" aria-label={tBrand("name")}>
-          {navItems.map(({ href, labelKey, icon: Icon }) => {
+          {MAIN_NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
             const active = isNavActive(pathname, href);
             return (
               <Link

@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ShieldCheck } from "lucide-react";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
@@ -20,21 +20,32 @@ const ERROR_KEYS: Record<string, string> = {
   Default: "errorDefault",
 };
 
+function safeCallbackUrl(raw: string | null): string {
+  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+    return raw;
+  }
+  return "/dashboard";
+}
+
 function LoginContent() {
   const t = useTranslations("auth");
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"));
   const errorCode = searchParams.get("error");
   const { oidcEnabled, keycloakConfigured, loading: authLoading } = usePlatformAuth();
   const { status } = useSession();
 
-  if (status === "authenticated") {
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    router.replace(callbackUrl);
+  }, [status, callbackUrl, router]);
+
+  if (status === "loading" || status === "authenticated") {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-4">
-        <p className="text-sm text-muted-foreground">{t("alreadySignedIn")}</p>
-        <Button asChild>
-          <Link href={callbackUrl.startsWith("/") ? callbackUrl : "/dashboard"}>{t("continueToApp")}</Link>
-        </Button>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
+        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
+        <p className="text-sm">{status === "authenticated" ? t("continueToApp") : t("checkingAuth")}</p>
       </div>
     );
   }
@@ -89,7 +100,7 @@ function LoginContent() {
             type="button"
             size="lg"
             className="w-full"
-            onClick={() => signIn("keycloak", { callbackUrl })}
+            onClick={() => signIn("keycloak", { redirectTo: callbackUrl })}
           >
             {t("continueWithKeycloak")}
           </Button>

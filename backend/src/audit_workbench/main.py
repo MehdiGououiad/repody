@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from audit_workbench.api import (
     audits,
     health,
+    iam,
     metrics,
     operator,
     platform,
@@ -130,6 +131,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(platform.router, prefix="/v1")
     app.include_router(operator.router, prefix="/v1")
+    app.include_router(iam.router, prefix="/v1")
 
     install_openapi(app)
     instrument_fastapi(app, settings)

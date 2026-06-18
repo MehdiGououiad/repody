@@ -340,6 +340,7 @@ if (cmd === "up") {
 if (cmd === "down") {
   const downArgs = [...profileArgs(spec.profiles, extraProfiles), "down"];
   if (flags.volumes) downArgs.push("-v");
+  if (flags["remove-orphans"]) downArgs.push("--remove-orphans");
   runDocker(spec.fileArgs, downArgs, spec.stack);
 }
 

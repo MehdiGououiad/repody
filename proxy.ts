@@ -1,14 +1,8 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { auth, isOidcConfigured } from "@/auth";
+import { isPublicApi } from "@/lib/auth/public-paths";
 
-const PUBLIC_PREFIXES = ["/login", "/unauthorized", "/api/auth", "/api/v1/healthz"];
-
-function isPublicPath(path: string): boolean {
-  return PUBLIC_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
-}
-
-/** Deployed workflow run API — workflow API key when client sends Bearer; else session JWT for builder test runs. */
+/** Workflow run API: caller Bearer means workflow API key; otherwise use the UI session JWT for builder test runs. */
 const WORKFLOW_RUN_API = /^\/api\/v1\/workflows\/[^/]+\/runs(?:\/json)?$/;
 
 function isWorkflowRunApi(path: string): boolean {
@@ -20,10 +14,10 @@ function hasCallerBearer(request: { headers: Headers }): boolean {
 }
 
 function forwardWithSessionBearer(
-  request: { auth?: { accessToken?: string | null } | null; headers: Headers }
+  request: { auth?: { accessToken?: string | null; error?: string | null } | null; headers: Headers }
 ): NextResponse {
   const accessToken = request.auth?.accessToken;
-  if (!accessToken) {
+  if (!accessToken || request.auth?.error) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
   const requestHeaders = new Headers(request.headers);
@@ -32,13 +26,17 @@ function forwardWithSessionBearer(
 }
 
 export default auth((request) => {
-  const path = request.nextUrl.pathname;
-
   if (!isOidcConfigured()) {
     return NextResponse.next();
   }
 
-  if (isPublicPath(path)) {
+  const path = request.nextUrl.pathname;
+
+  if (!path.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  if (isPublicApi(path)) {
     return NextResponse.next();
   }
 
@@ -49,17 +47,7 @@ export default auth((request) => {
     return forwardWithSessionBearer(request);
   }
 
-  if (path.startsWith("/api/")) {
-    return forwardWithSessionBearer(request);
-  }
-
-  if (!request.auth) {
-    const loginUrl = new URL("/login", request.nextUrl.origin);
-    loginUrl.searchParams.set("callbackUrl", path);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return forwardWithSessionBearer(request);
 });
 
 export const config = {

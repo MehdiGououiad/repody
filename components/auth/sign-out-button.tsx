@@ -42,7 +42,7 @@ export function SignOutButton({ className, children, onSignedOut }: SignOutButto
       className={className}
       onClick={() => {
         onSignedOut?.();
-        void signOut({ callbackUrl: "/login" });
+        void signOut({ redirectTo: "/login" });
       }}
     >
       {children}

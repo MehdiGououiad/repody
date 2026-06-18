@@ -8,7 +8,7 @@ Daily work on Windows or Linux. For production deploy see [DEPLOY.md](./DEPLOY.m
 pnpm install
 pnpm dev                  # Docker backend + production Next.js on host
 pnpm dev -- --warmup      # same + OCR worker warmup (Repody VLM)
-pnpm stop                 # stop :3000 + Docker
+pnpm stop                 # stop host dev + all Repody Docker stacks
 ```
 
 | URL | Service |
@@ -18,7 +18,9 @@ pnpm stop                 # stop :3000 + Docker
 
 **Hot-reload UI:** `pnpm ui` (Turbopack) while backend is up.
 
-**All-in-Docker production:** `pnpm prod -- --warmup` · stop with `pnpm stop -- --prod`
+**All-in-Docker production:** `pnpm prod -- --warmup` · stop with `pnpm stop`
+
+`pnpm stop` tears down host processes on **:3000** and **:8000**, all dev/prod/e2e compose stacks (auth, obs, bugsink variants), then removes any remaining `repody` containers. Use `pnpm stop -- --keep-prod` to leave prod/vps/gpu running; `pnpm stop -- --volumes` also deletes Docker volumes (data wipe).
 
 ## Recipe flags
 
