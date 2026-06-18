@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: repody
+  namespace: argocd
+spec:
+  description: Repody production workloads
+  sourceRepos:
+    - https://github.com/MehdiGououiad/repody.git
+  destinations:
+    - namespace: repody
+      server: https://kubernetes.default.svc
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
