@@ -77,7 +77,8 @@ def availability_for_spec(
     live_probe: bool = True,
     active_runtime: str | None = None,
 ) -> tuple[bool, str | None]:
-    if not live_probe and active_runtime and spec.runtime == active_runtime:
+    _ = active_runtime
+    if not live_probe and spec.runtime in RUNTIMES:
         return True, SERVERLESS_CATALOG_NOTE
     runtime_models = installed_by_runtime.get(spec.runtime) or set()
     installed = model_is_available(spec.runtime_model or "", runtime_models)

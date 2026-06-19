@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
-import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
 import { documentModelsFromCatalog, useProcessingPathsCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { cn, shortId } from "@/lib/utils";
@@ -68,7 +67,7 @@ export function DocumentsSection({
         schema: [],
         extractionMode: "document_model",
         validationMode: "logic_only",
-        ocrModel: REPODY_VLM_CATALOG_ID,
+        ocrModel: processingOptions.defaultOcr,
       },
     ]);
 

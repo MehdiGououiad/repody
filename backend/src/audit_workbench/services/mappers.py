@@ -65,7 +65,8 @@ def workflow_to_schema(
                 extraction_mode=doc.extraction_mode or "auto",
                 validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
                 ocr_model=normalize_public_catalog_id(doc.ocr_model),
-                extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
+                extraction_instructions=doc.extraction_instructions or "",
+                markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
                 schema_fields=[
                     SchemaFieldSchema(
                         id=f.id,

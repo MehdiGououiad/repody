@@ -12,6 +12,7 @@ from audit_workbench.extraction.base import (
     ExtractionResult,
     SchemaFieldSpec,
     truncate_ocr_text,
+    truncate_text,
 )
 from audit_workbench.extraction.cache import (
     cache_key,
@@ -59,6 +60,7 @@ def _cached_result(
     llm_model: str | None,
     document_type: str,
     content_hash: str | None = None,
+    markdown_extraction: bool = False,
 ) -> ExtractionResult:
     used = cached.read_path_used or read_path_id
     log.info(
@@ -79,7 +81,9 @@ def _cached_result(
         combined_llm=False,
         cache_hit=True,
         fields_extracted=sum(1 for f in cached.fields if f.extracted),
-        ocr_text=truncate_ocr_text(cached.ocr_text or cached.raw_text),
+        markdown_extraction=markdown_extraction,
+        ocr_text=truncate_ocr_text(cached.ocr_text) if markdown_extraction else None,
+        raw_text=truncate_text(cached.raw_text),
     )
     return cached
 
@@ -106,6 +110,7 @@ class PipelineExtractor(DocumentExtractor):
         llm_rules: list[dict] | None = None,
         llm_model: str | None = None,
         extraction_instructions: str = "",
+        markdown_extraction: bool = False,
     ) -> ExtractionResult:
         _ = llm_rules, llm_model
         read_path = parse_read_path(extraction_mode)
@@ -114,7 +119,7 @@ class PipelineExtractor(DocumentExtractor):
             if validation_mode in (LOGIC_VALIDATION, "logic_and_llm")
             else LOGIC_VALIDATION
         )
-        if not document_bytes or not schema:
+        if not document_bytes:
             return ExtractionResult(
                 fields=empty_fields_from_schema(schema),
                 raw_text=None,
@@ -123,9 +128,16 @@ class PipelineExtractor(DocumentExtractor):
         settings = self._settings
         model_id = normalize_model_id(ocr_model or settings.default_ocr_model)
         model_spec = parse_document_model(model_id)
+        if not schema:
+            return ExtractionResult(
+                fields=empty_fields_from_schema(schema),
+                raw_text=None,
+            )
         if model_spec.read_path_id != read_path.id:
             read_path = parse_read_path(model_spec.read_path_id)
-        cache_mode = f"read:{read_path.id}:val:{val_mode}"
+        cache_mode = (
+            f"read:{read_path.id}:val:{val_mode}:md:{'1' if markdown_extraction else '0'}"
+        )
         schema_fp = schema_fingerprint(schema)
 
         content_hash = await asyncio.to_thread(hash_bytes, document_bytes)
@@ -169,6 +181,7 @@ class PipelineExtractor(DocumentExtractor):
                 llm_model=None,
                 document_type=document_type,
                 content_hash=content_hash,
+                markdown_extraction=markdown_extraction,
             )
 
         t0 = time.perf_counter()
@@ -198,6 +211,7 @@ class PipelineExtractor(DocumentExtractor):
                 schema,
                 document_type,
                 extraction_instructions=extraction_instructions,
+                markdown_extraction=markdown_extraction,
             )
             extract_ms = int((time.perf_counter() - te) * 1000)
             log.info(
@@ -223,7 +237,9 @@ class PipelineExtractor(DocumentExtractor):
             cache_hit=False,
             gpu_cold_start_likely=gpu_cold_start_likely(extraction_ms),
             fields_extracted=sum(1 for f in result.fields if f.extracted),
-            ocr_text=truncate_ocr_text(result.ocr_text or result.raw_text),
+            markdown_extraction=markdown_extraction,
+            ocr_text=truncate_ocr_text(result.ocr_text) if markdown_extraction else None,
+            raw_text=truncate_text(result.raw_text),
             ocr_skipped=result.ocr_skipped,
             pages_rendered=result.pages_rendered,
             pages_sent=result.pages_sent,

@@ -65,6 +65,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             row.validation_mode = val_id
             row.ocr_model = ocr_id
             row.extraction_instructions = doc.extraction_instructions or ""
+            row.markdown_extraction = doc.markdown_extraction
             await session.execute(delete(SchemaField).where(SchemaField.document_id == doc_id))
         else:
             row = Document(
@@ -76,6 +77,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 validation_mode=val_id,
                 ocr_model=ocr_id,
                 extraction_instructions=doc.extraction_instructions or "",
+                markdown_extraction=doc.markdown_extraction,
             )
             session.add(row)
             await session.flush()

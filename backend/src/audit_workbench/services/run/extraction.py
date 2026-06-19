@@ -61,6 +61,7 @@ class DocExtractionJob:
     progress_mode: str
     validation_mode: str
     extraction_instructions: str = ""
+    markdown_extraction: bool = False
 
 
 async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, ExtractionResult]:
@@ -77,6 +78,7 @@ async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, Extr
         file_size=job.file_size if job.file_size > 0 else None,
         validation_mode=job.validation_mode,
         extraction_instructions=job.extraction_instructions,
+        markdown_extraction=job.markdown_extraction,
     )
     return job, result
 
@@ -99,6 +101,7 @@ def _make_extraction_job(
     prog_mode: str,
     validation_mode: str,
     extraction_instructions: str = "",
+    markdown_extraction: bool = False,
 ) -> DocExtractionJob:
     return DocExtractionJob(
         doc=doc,
@@ -111,6 +114,7 @@ def _make_extraction_job(
         progress_mode=prog_mode,
         validation_mode=validation_mode,
         extraction_instructions=extraction_instructions,
+        markdown_extraction=markdown_extraction,
     )
 
 
@@ -140,6 +144,7 @@ async def _build_extraction_jobs(
                 prog_mode=prog_mode,
                 validation_mode=validation_mode,
                 extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
+                markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
             )
             for (doc, schema, run_doc, step_index, _has_file, prog_mode), (
                 document_bytes,
@@ -161,6 +166,7 @@ async def _build_extraction_jobs(
                 prog_mode=prog_mode,
                 validation_mode=validation_mode,
                 extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
+                markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
             )
         )
     return jobs

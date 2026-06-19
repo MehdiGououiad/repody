@@ -4,7 +4,8 @@ export const REPODY_VLM_CATALOG_ID = "repody:vlm";
 export const REPODY_VLM_LABEL = "Repody VLM";
 
 function isLegacyCatalogId(modelId: string | null | undefined): boolean {
-  return !modelId || modelId.trim() !== REPODY_VLM_CATALOG_ID;
+  if (!modelId) return false;
+  return modelId.trim() !== REPODY_VLM_CATALOG_ID;
 }
 
 export function publicDocumentModelLabel(modelId: string | null | undefined): string {

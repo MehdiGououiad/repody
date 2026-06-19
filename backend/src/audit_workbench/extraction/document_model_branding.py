@@ -22,14 +22,13 @@ def normalize_public_catalog_id(model_id: str | None) -> str:
     stripped = model_id.strip()
     if stripped == REPODY_VLM_CATALOG_ID:
         return REPODY_VLM_CATALOG_ID
-    # Legacy Paddle catalog ids and unknown ids map to Repody VLM.
-    if stripped.startswith("paddle:"):
-        return REPODY_VLM_CATALOG_ID
+    # Legacy catalog ids and unknown ids map to Repody VLM.
     return REPODY_VLM_CATALOG_ID
 
 
-def public_runtime_model_name(_runtime_model: str) -> str:
+def public_runtime_model_name(runtime_model: str) -> str:
     """Hide underlying served model names from API/UI consumers."""
+    _ = runtime_model
     return REPODY_VLM_LABEL
 
 
@@ -42,7 +41,5 @@ def public_runtime_name(runtime: str) -> str:
 def public_document_model_label(model_id: str | None) -> str:
     """User-visible model name (hides legacy catalog ids and served model names)."""
     if not model_id or is_legacy_catalog_id(model_id) or model_id == REPODY_VLM_CATALOG_ID:
-        return REPODY_VLM_LABEL
-    if model_id.startswith("paddle:"):
         return REPODY_VLM_LABEL
     return model_id

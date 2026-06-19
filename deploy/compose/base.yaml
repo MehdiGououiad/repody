@@ -155,6 +155,8 @@ services:
       context: ../../backend
       dockerfile: Dockerfile
       target: worker
+      args:
+        BACKEND_EXTRAS: otel
     command: python -m audit_workbench.hatchet.worker
     environment:
       AUDIT_WORKER_POOL: ocr

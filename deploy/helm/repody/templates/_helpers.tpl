@@ -89,6 +89,15 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{- define "repody.vllmSecretEnv" -}}
+- name: AUDIT_VLLM_API_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "repody.secretName" . }}
+      key: AUDIT_VLLM_API_KEY
+      optional: true
+{{- end }}
+
 {{- define "repody.imagePullSecrets" -}}
 {{- with .Values.global.imagePullSecrets }}
 imagePullSecrets:

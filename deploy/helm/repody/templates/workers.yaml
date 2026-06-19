@@ -57,6 +57,7 @@ spec:
               value: {{ .Values.workerOcr.warmupOnStart | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-ocr
+            {{- include "repody.vllmSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- if .Values.observability.bugsinkDsn }}
             - name: BUGSINK_DSN
@@ -124,6 +125,7 @@ spec:
               value: {{ .Values.workerFast.warmupOnStart | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-fast
+            {{- include "repody.vllmSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- if .Values.observability.bugsinkDsn }}
             - name: BUGSINK_DSN

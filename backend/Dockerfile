@@ -34,13 +34,14 @@ COPY alembic.ini ./
 COPY alembic/ ./alembic/
 RUN mkdir -p src/audit_workbench && touch src/audit_workbench/__init__.py
 
+ARG BACKEND_EXTRAS=otel
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[otel]"
+    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[${BACKEND_EXTRAS}]"
 
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[otel]"
+    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[${BACKEND_EXTRAS}]"
 
 FROM runtime-base AS app-runtime
 

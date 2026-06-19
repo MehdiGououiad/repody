@@ -40,6 +40,11 @@ class DocumentDefSchema(CamelModel):
         default="",
         serialization_alias="extractionInstructions",
     )
+    markdown_extraction: bool = Field(
+        default=False,
+        serialization_alias="markdownExtraction",
+        description="Run NuExtract document-to-Markdown in parallel with field extraction.",
+    )
 
 
 class WorkflowRuleSchema(CamelModel):

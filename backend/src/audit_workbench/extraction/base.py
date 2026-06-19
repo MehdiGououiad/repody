@@ -37,7 +37,9 @@ class ExtractionMetadata:
     cache_hit: bool = False
     gpu_cold_start_likely: bool = False
     fields_extracted: int = 0
+    markdown_extraction: bool = False
     ocr_text: str | None = None
+    raw_text: str | None = None
     ocr_skipped: bool = False
     pages_rendered: int | None = None
     pages_sent: int | None = None
@@ -47,16 +49,26 @@ class ExtractionMetadata:
 OCR_TEXT_MAX_CHARS = 80_000
 
 
+def truncate_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) -> str | None:
+    if not text:
+        return None
+    stripped = text.strip()
+    if not stripped:
+        return None
+    if len(stripped) <= max_chars:
+        return stripped
+    return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"
+
+
 def truncate_ocr_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) -> str | None:
     if not text:
         return None
     stripped = text.strip()
     if not stripped:
         return None
-    if "<table" in stripped.lower() or "<div" in stripped.lower():
-        from audit_workbench.extraction.ocr_markdown import normalize_ocr_markdown
+    from audit_workbench.extraction.ocr_markdown import normalize_ocr_markdown
 
-        stripped = normalize_ocr_markdown(stripped) or stripped
+    stripped = normalize_ocr_markdown(stripped) or stripped
     if len(stripped) <= max_chars:
         return stripped
     return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"
@@ -94,4 +106,5 @@ class DocumentExtractor(ABC):
         llm_rules: list[dict] | None = None,
         llm_model: str | None = None,
         extraction_instructions: str = "",
+        markdown_extraction: bool = False,
     ) -> ExtractionResult: ...

@@ -147,6 +147,24 @@ export function ProcessingSettings({
           </div>
         ) : null}
       </div>
+
+      <label className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-card/70 px-3 py-2.5 cursor-pointer">
+        <input
+          type="checkbox"
+          className="mt-0.5 size-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
+          checked={doc.markdownExtraction ?? false}
+          onChange={(e) => onChange({ markdownExtraction: e.target.checked })}
+          disabled={!loaded || error}
+        />
+        <span className="min-w-0">
+          <span className="block text-xs font-semibold text-on-surface">
+            {t("extraction.markdownExtractionLabel")}
+          </span>
+          <span className="block text-[11px] leading-relaxed text-on-surface-variant mt-0.5">
+            {t("extraction.markdownExtractionHint")}
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Brain, Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "luci
 
 import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/types/audit";
 import { formatDurationMs } from "@/lib/types/audit";
-import { OcrMarkdownPanel } from "@/components/workflow/ocr-markdown-panel";
+import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { publicDocumentModelLabel } from "@/lib/document-model-branding";
 import { cn, formatExtractedFieldValue } from "@/lib/utils";
 
@@ -112,21 +112,26 @@ export function DocumentExtractionMeta({
 
 export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
   const locale = useLocale();
-  const hasOcr = result.documents.some((d) => d.extraction?.ocrText);
+  const hasOutput = result.documents.some(
+    (d) =>
+      d.extraction &&
+      ((d.extraction.markdownExtraction && d.extraction.ocrText) || d.extraction.rawText)
+  );
 
   return (
     <div className="space-y-4">
       {result.metadata && <RunMetadataPanel metadata={result.metadata} />}
-      {hasOcr && (
+      {hasOutput && (
         <div className="space-y-3">
           {result.documents
-            .filter((d) => d.extraction?.ocrText)
+            .filter(
+              (d) =>
+                d.extraction &&
+                ((d.extraction.markdownExtraction && d.extraction.ocrText) ||
+                  d.extraction.rawText)
+            )
             .map((doc) => (
-              <OcrMarkdownPanel
-                key={doc.id}
-                text={doc.extraction!.ocrText!}
-                readPathUsed={doc.extraction!.readPathUsed}
-              />
+              <DocumentExtractionOutput key={doc.id} extraction={doc.extraction!} />
             ))}
         </div>
       )}

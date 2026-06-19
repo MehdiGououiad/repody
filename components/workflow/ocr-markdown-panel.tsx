@@ -10,55 +10,94 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { normalizeOcrMarkdown } from "@/lib/ocr-markdown/normalize";
+import { normalizeOcrMarkdown, splitOcrMarkdownPages } from "@/lib/ocr-markdown/normalize";
 
 function MarkdownPreview({ text }: { text: string }) {
+  const sections = useMemo(() => splitOcrMarkdownPages(text), [text]);
+
+  if (!sections.length) return null;
+
   return (
-    <article className="space-y-2 text-sm text-on-surface-variant leading-relaxed">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          h1: ({ children }) => (
-            <h2 className="text-lg font-bold text-on-surface mt-5 mb-2">{children}</h2>
-          ),
-          h2: ({ children }) => (
-            <h3 className="text-base font-semibold text-on-surface mt-5 mb-2 pb-1 border-b border-border/60">
-              {children}
-            </h3>
-          ),
-          h3: ({ children }) => (
-            <h4 className="text-sm font-semibold text-on-surface mt-4 mb-1.5 pl-2 border-l-2 border-primary/40">
-              {children}
-            </h4>
-          ),
-          p: ({ children }) => <p className="text-sm text-on-surface-variant">{children}</p>,
-          li: ({ children }) => (
-            <li className="ml-4 list-disc marker:text-primary">{children}</li>
-          ),
-          table: ({ children }) => (
-            <div className="overflow-x-auto rounded-xl border border-border my-4 shadow-sm bg-card">
-              <table className="w-full text-xs border-collapse min-w-[320px]">{children}</table>
-            </div>
-          ),
-          thead: ({ children }) => (
-            <thead className="bg-gradient-to-r from-accent-blue/10 to-surface-container-low">
-              {children}
-            </thead>
-          ),
-          th: ({ children }) => (
-            <th className="px-3 py-2.5 text-left font-semibold text-on-surface whitespace-nowrap border-b border-border">
-              {children}
-            </th>
-          ),
-          td: ({ children }) => (
-            <td className="px-3 py-2 text-on-surface-variant align-top border-b border-border/60">
-              {children}
-            </td>
-          ),
-        }}
-      >
-        {text}
-      </ReactMarkdown>
+    <article className="space-y-5 text-sm text-on-surface-variant leading-relaxed">
+      {sections.map((section, index) => (
+        <section
+          key={section.header || `section-${index}`}
+          className={cn(
+            section.header &&
+              "rounded-xl border border-border/70 bg-surface-container-lowest/60 overflow-hidden"
+          )}
+        >
+          {section.header ? (
+            <header className="px-4 py-2.5 border-b border-border/60 bg-gradient-to-r from-accent-blue/8 to-transparent">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+                {section.header.replace(/^##\s*/, "")}
+              </p>
+            </header>
+          ) : null}
+          <div className={cn(section.header ? "px-4 py-3" : undefined)}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                h1: ({ children }) => (
+                  <h2 className="text-lg font-bold text-on-surface mt-2 mb-2">{children}</h2>
+                ),
+                h2: ({ children }) => (
+                  <h3 className="text-base font-semibold text-on-surface mt-4 mb-2 pb-1 border-b border-border/60">
+                    {children}
+                  </h3>
+                ),
+                h3: ({ children }) => (
+                  <h4 className="text-sm font-semibold text-on-surface mt-3 mb-1.5 pl-2 border-l-2 border-primary/40">
+                    {children}
+                  </h4>
+                ),
+                p: ({ children }) => (
+                  <p className="text-sm text-on-surface leading-6 mb-3 last:mb-0">{children}</p>
+                ),
+                strong: ({ children }) => (
+                  <strong className="font-semibold text-on-surface">{children}</strong>
+                ),
+                em: ({ children }) => {
+                  const label = String(children ?? "");
+                  if (label.startsWith("Image:")) {
+                    return (
+                      <div className="my-3 rounded-lg border border-dashed border-border/80 bg-surface-container-lowest px-3 py-2 text-xs text-on-surface-variant">
+                        {label}
+                      </div>
+                    );
+                  }
+                  return <em className="italic">{children}</em>;
+                },
+                li: ({ children }) => (
+                  <li className="ml-4 list-disc marker:text-primary mb-1">{children}</li>
+                ),
+                table: ({ children }) => (
+                  <div className="overflow-x-auto rounded-xl border border-border my-4 shadow-sm bg-card">
+                    <table className="w-full text-xs border-collapse min-w-[320px]">{children}</table>
+                  </div>
+                ),
+                thead: ({ children }) => (
+                  <thead className="bg-gradient-to-r from-accent-blue/10 to-surface-container-low">
+                    {children}
+                  </thead>
+                ),
+                th: ({ children }) => (
+                  <th className="px-3 py-2.5 text-left font-semibold text-on-surface whitespace-nowrap border-b border-border">
+                    {children}
+                  </th>
+                ),
+                td: ({ children }) => (
+                  <td className="px-3 py-2 text-on-surface-variant align-top border-b border-border/60">
+                    {children}
+                  </td>
+                ),
+              }}
+            >
+              {section.body || section.header}
+            </ReactMarkdown>
+          </div>
+        </section>
+      ))}
     </article>
   );
 }
@@ -77,6 +116,7 @@ export function OcrMarkdownPanel({
   const normalized = useMemo(() => normalizeOcrMarkdown(text), [text]);
   const charCount = normalized.length;
   const lineCount = normalized.split("\n").length;
+  const pageCount = (normalized.match(/^## Page \d+$/gm) ?? []).length;
   const hasTables = /\|.+\|/.test(normalized);
   const isDocumentModel = readPathUsed === "document_model";
 
@@ -92,12 +132,7 @@ export function OcrMarkdownPanel({
   };
 
   return (
-    <div
-      className={cn(
-        "panel-elevated rounded-xl overflow-hidden",
-        className
-      )}
-    >
+    <div className={cn("panel-elevated rounded-xl overflow-hidden", className)}>
       <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border bg-gradient-to-r from-accent-blue/5 to-transparent">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="size-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
@@ -111,11 +146,18 @@ export function OcrMarkdownPanel({
             <p className="text-sm font-semibold text-on-surface">{t("title")}</p>
             <p className="text-[11px] text-on-surface-variant truncate">
               {t("subtitle", { lines: lineCount, chars: charCount.toLocaleString() })}
+              {pageCount > 0 ? ` · ${pageCount} page${pageCount === 1 ? "" : "s"}` : ""}
               {hasTables ? ` · ${t("hasTables")}` : ""}
             </p>
           </div>
         </div>
-        <Button type="button" variant="outline" size="sm" className="shrink-0 h-8" onClick={handleCopy}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 h-8"
+          onClick={handleCopy}
+        >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? t("copied") : t("copy")}
         </Button>
