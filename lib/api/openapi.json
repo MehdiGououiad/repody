@@ -1285,6 +1285,80 @@
         }
       }
     },
+    "/v1/schema/suggest-type": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Suggest Schema Template Type",
+        "description": "Infer a NuExtract template leaf type from field name and intent.",
+        "operationId": "suggest_schema_template_type_v1_schema_suggest_type_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Field name",
+              "default": "",
+              "title": "Name"
+            },
+            "description": "Field name"
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "What to extract",
+              "default": "",
+              "title": "Description"
+            },
+            "description": "What to extract"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestTemplateTypeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/platform/config": {
       "get": {
         "tags": [
@@ -1966,6 +2040,295 @@
           }
         }
       }
+    },
+    "/v1/iam/me": {
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Iam Me",
+        "operationId": "iam_me_v1_iam_me_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamMeResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/iam/catalog": {
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Iam Catalog",
+        "operationId": "iam_catalog_v1_iam_catalog_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/iam/users": {
+      "get": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "List Users",
+        "operationId": "list_users_v1_iam_users_get",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamUsersResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Create User",
+        "operationId": "create_user_v1_iam_users_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIamUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/iam/users/{user_id}": {
+      "patch": {
+        "tags": [
+          "iam"
+        ],
+        "summary": "Update User",
+        "operationId": "update_user_v1_iam_users__user_id__patch",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "User Id"
+            }
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateIamUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IamUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2336,6 +2699,47 @@
         ],
         "title": "ConfirmUploadResponse"
       },
+      "CreateIamUserRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "firstName": {
+            "type": "string",
+            "title": "Firstname",
+            "default": ""
+          },
+          "lastName": {
+            "type": "string",
+            "title": "Lastname",
+            "default": ""
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "title": "Password"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "password"
+        ],
+        "title": "CreateIamUserRequest"
+      },
       "CreateRunJsonBody": {
         "properties": {
           "snapshot": {
@@ -2439,6 +2843,11 @@
             },
             "type": "array",
             "title": "Schema"
+          },
+          "extractionInstructions": {
+            "type": "string",
+            "title": "Extractioninstructions",
+            "default": ""
           }
         },
         "type": "object",
@@ -2562,6 +2971,11 @@
             "type": "string",
             "title": "Description",
             "default": ""
+          },
+          "templateType": {
+            "type": "string",
+            "title": "Templatetype",
+            "default": "verbatim-string"
           },
           "sampleValue": {
             "anyOf": [
@@ -2885,6 +3299,186 @@
         ],
         "title": "HealthReadinessResponse"
       },
+      "IamCatalogResponse": {
+        "properties": {
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleDefinition"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "appRoles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Approles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "roles",
+          "appRoles"
+        ],
+        "title": "IamCatalogResponse"
+      },
+      "IamMeResponse": {
+        "properties": {
+          "subject": {
+            "type": "string",
+            "title": "Subject"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionGrant"
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "canManageUsers": {
+            "type": "boolean",
+            "title": "Canmanageusers"
+          },
+          "oidcEnabled": {
+            "type": "boolean",
+            "title": "Oidcenabled"
+          },
+          "keycloakAdminUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Keycloakadminurl"
+          }
+        },
+        "type": "object",
+        "required": [
+          "subject",
+          "roles",
+          "permissions",
+          "canManageUsers",
+          "oidcEnabled"
+        ],
+        "title": "IamMeResponse"
+      },
+      "IamUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "firstName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstname"
+          },
+          "lastName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastname"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username"
+        ],
+        "title": "IamUser"
+      },
+      "IamUsersResponse": {
+        "properties": {
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/IamUser"
+            },
+            "type": "array",
+            "title": "Users"
+          },
+          "managementAvailable": {
+            "type": "boolean",
+            "title": "Managementavailable"
+          },
+          "managementError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managementerror"
+          }
+        },
+        "type": "object",
+        "required": [
+          "users",
+          "managementAvailable"
+        ],
+        "title": "IamUsersResponse"
+      },
       "KpiMetric": {
         "properties": {
           "id": {
@@ -3195,6 +3789,24 @@
           "prevRuns"
         ],
         "title": "PerformancePoint"
+      },
+      "PermissionGrant": {
+        "properties": {
+          "resource": {
+            "type": "string",
+            "title": "Resource"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resource",
+          "action"
+        ],
+        "title": "PermissionGrant"
       },
       "PlatformConfigResponse": {
         "properties": {
@@ -3522,6 +4134,37 @@
           "showOcrModel"
         ],
         "title": "ReadPathOption"
+      },
+      "RoleDefinition": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionGrant"
+            },
+            "type": "array",
+            "title": "Permissions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "description",
+          "permissions"
+        ],
+        "title": "RoleDefinition"
       },
       "RuleLibraryResponse": {
         "properties": {
@@ -3998,6 +4641,39 @@
               }
             ],
             "title": "Ocrtext"
+          },
+          "pagesRendered": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagesrendered"
+          },
+          "pagesSent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagessent"
+          },
+          "pagesDropped": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagesdropped"
           }
         },
         "type": "object",
@@ -4283,6 +4959,11 @@
             "type": "string",
             "title": "Description",
             "default": ""
+          },
+          "templateType": {
+            "type": "string",
+            "title": "Templatetype",
+            "default": "verbatim-string"
           }
         },
         "type": "object",
@@ -4326,6 +5007,19 @@
         ],
         "title": "StoredFileBinding"
       },
+      "SuggestTemplateTypeResponse": {
+        "properties": {
+          "templateType": {
+            "type": "string",
+            "title": "Templatetype"
+          }
+        },
+        "type": "object",
+        "required": [
+          "templateType"
+        ],
+        "title": "SuggestTemplateTypeResponse"
+      },
       "TopFailingRuleSchema": {
         "properties": {
           "name": {
@@ -4348,6 +5042,71 @@
           "severity"
         ],
         "title": "TopFailingRuleSchema"
+      },
+      "UpdateIamUserRequest": {
+        "properties": {
+          "firstName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstname"
+          },
+          "lastName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastname"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "roles": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roles"
+          },
+          "password": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 8
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "title": "UpdateIamUserRequest"
       },
       "UploadItem": {
         "properties": {

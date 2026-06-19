@@ -108,9 +108,17 @@ async def extract_with_document_model(
     bundle: DocumentBundle,
     schema: list[SchemaFieldSpec],
     document_type: str,
+    *,
+    extraction_instructions: str = "",
 ) -> ExtractionResult:
     if spec.engine != "document_model":
         raise RuntimeError(f"Unsupported document model engine: {spec.engine} ({spec.id})")
     if spec.id == REPODY_VLM_CATALOG_ID or is_legacy_catalog_id(spec.id):
-        return await extract_with_repody_vlm(bundle, schema, document_type, spec=spec)
+        return await extract_with_repody_vlm(
+            bundle,
+            schema,
+            document_type,
+            spec=spec,
+            extraction_instructions=extraction_instructions,
+        )
     raise RuntimeError(f"Unsupported document model handler: {spec.id} ({spec.runtime})")

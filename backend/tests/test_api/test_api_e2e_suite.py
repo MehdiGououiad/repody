@@ -109,7 +109,14 @@ async def test_workflow_lifecycle_deploy_and_auth(client):
                 {
                     "id": doc_id,
                     "documentType": "Invoice",
-                    "schema": [{"id": field_id, "name": "total_amount", "description": "Total"}],
+                    "schema": [
+                        {
+                            "id": field_id,
+                            "name": "total_amount",
+                            "description": "Total",
+                            "templateType": "number",
+                        }
+                    ],
                 }
             ],
             "rules": [
@@ -130,6 +137,9 @@ async def test_workflow_lifecycle_deploy_and_auth(client):
     listed = await client.get("/v1/workflows")
     assert listed.status_code == 200
     assert any(w["id"] == wf_id for w in listed.json()["workflows"])
+    loaded = await client.get(f"/v1/workflows/{wf_id}")
+    assert loaded.status_code == 200
+    assert loaded.json()["workflow"]["documents"][0]["schema"][0]["templateType"] == "number"
 
     deployed = await client.post(f"/v1/workflows/{wf_id}/deploy", json={})
     assert deployed.status_code == 200

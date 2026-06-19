@@ -78,6 +78,7 @@ class Document(Base):
     extraction_mode: Mapped[str] = mapped_column(String(32), default="document_model")
     validation_mode: Mapped[str] = mapped_column(String(32), default="logic_only")
     ocr_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    extraction_instructions: Mapped[str] = mapped_column(Text, default="")
 
     workflow: Mapped[Workflow] = relationship(back_populates="documents")
     schema_fields: Mapped[list[SchemaField]] = relationship(
@@ -94,6 +95,7 @@ class SchemaField(Base):
     )
     name: Mapped[str] = mapped_column(String(128), default="")
     description: Mapped[str] = mapped_column(Text, default="")
+    template_type: Mapped[str] = mapped_column(String(32), default="verbatim-string")
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     document: Mapped[Document] = relationship(back_populates="schema_fields")

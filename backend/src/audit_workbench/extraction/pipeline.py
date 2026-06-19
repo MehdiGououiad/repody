@@ -105,6 +105,7 @@ class PipelineExtractor(DocumentExtractor):
         validation_mode: str = LOGIC_VALIDATION,
         llm_rules: list[dict] | None = None,
         llm_model: str | None = None,
+        extraction_instructions: str = "",
     ) -> ExtractionResult:
         _ = llm_rules, llm_model
         read_path = parse_read_path(extraction_mode)
@@ -196,6 +197,7 @@ class PipelineExtractor(DocumentExtractor):
                 bundle,
                 schema,
                 document_type,
+                extraction_instructions=extraction_instructions,
             )
             extract_ms = int((time.perf_counter() - te) * 1000)
             log.info(
@@ -223,6 +225,9 @@ class PipelineExtractor(DocumentExtractor):
             fields_extracted=sum(1 for f in result.fields if f.extracted),
             ocr_text=truncate_ocr_text(result.ocr_text or result.raw_text),
             ocr_skipped=result.ocr_skipped,
+            pages_rendered=result.pages_rendered,
+            pages_sent=result.pages_sent,
+            pages_dropped=result.pages_dropped,
         )
         log.info(
             "pipeline_extracted",

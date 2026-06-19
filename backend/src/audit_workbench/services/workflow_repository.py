@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from audit_workbench.db.models import Document, SchemaField, Workflow, WorkflowRule
 from audit_workbench.extraction.document_modes import normalize_document_modes
 from audit_workbench.extraction.model_registry import normalize_model_id
+from audit_workbench.extraction.nuextract_types import normalize_template_type
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.schemas.workflow import WorkflowSchema
 
@@ -63,6 +64,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             row.extraction_mode = read_id
             row.validation_mode = val_id
             row.ocr_model = ocr_id
+            row.extraction_instructions = doc.extraction_instructions or ""
             await session.execute(delete(SchemaField).where(SchemaField.document_id == doc_id))
         else:
             row = Document(
@@ -73,6 +75,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 extraction_mode=read_id,
                 validation_mode=val_id,
                 ocr_model=ocr_id,
+                extraction_instructions=doc.extraction_instructions or "",
             )
             session.add(row)
             await session.flush()
@@ -87,6 +90,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                     document_id=doc_id,
                     name=field.name,
                     description=field.description,
+                    template_type=normalize_template_type(field.template_type),
                     position=fi,
                 )
             )

@@ -365,6 +365,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/schema/suggest-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest Schema Template Type
+         * @description Infer a NuExtract template leaf type from field name and intent.
+         */
+        get: operations["suggest_schema_template_type_v1_schema_suggest_type_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/platform/config": {
         parameters: {
             query?: never;
@@ -578,6 +598,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/iam/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Iam Me */
+        get: operations["iam_me_v1_iam_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/iam/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Iam Catalog */
+        get: operations["iam_catalog_v1_iam_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/iam/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Users */
+        get: operations["list_users_v1_iam_users_get"];
+        put?: never;
+        /** Create User */
+        post: operations["create_user_v1_iam_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/iam/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update User */
+        patch: operations["update_user_v1_iam_users__user_id__patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -731,6 +820,30 @@ export interface components {
             /** Uploads */
             uploads: components["schemas"]["ConfirmUploadItem"][];
         };
+        /** CreateIamUserRequest */
+        CreateIamUserRequest: {
+            /** Email */
+            email: string;
+            /**
+             * Firstname
+             * @default
+             */
+            firstName: string;
+            /**
+             * Lastname
+             * @default
+             */
+            lastName: string;
+            /** Password */
+            password: string;
+            /** Roles */
+            roles?: string[];
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+        };
         /** CreateRunJsonBody */
         CreateRunJsonBody: {
             snapshot?: components["schemas"]["RunSnapshotBody"] | null;
@@ -791,6 +904,11 @@ export interface components {
             ocrModel: string | null;
             /** Schema */
             schema?: components["schemas"]["SchemaFieldSchema"][];
+            /**
+             * Extractioninstructions
+             * @default
+             */
+            extractionInstructions: string;
         };
         /** DocumentModelSummary */
         DocumentModelSummary: {
@@ -840,6 +958,11 @@ export interface components {
              * @default
              */
             description: string;
+            /**
+             * Templatetype
+             * @default verbatim-string
+             */
+            templateType: string;
             /** Samplevalue */
             sampleValue?: string | null;
         };
@@ -958,6 +1081,59 @@ export interface components {
             workerPools: components["schemas"]["WorkerPoolsHealth"];
             /** Hatchetconfigured */
             hatchetConfigured: boolean;
+        };
+        /** IamCatalogResponse */
+        IamCatalogResponse: {
+            /** Roles */
+            roles: components["schemas"]["RoleDefinition"][];
+            /** Approles */
+            appRoles: string[];
+        };
+        /** IamMeResponse */
+        IamMeResponse: {
+            /** Subject */
+            subject: string;
+            /** Email */
+            email?: string | null;
+            /** Roles */
+            roles: string[];
+            /** Permissions */
+            permissions: components["schemas"]["PermissionGrant"][];
+            /** Canmanageusers */
+            canManageUsers: boolean;
+            /** Oidcenabled */
+            oidcEnabled: boolean;
+            /** Keycloakadminurl */
+            keycloakAdminUrl?: string | null;
+        };
+        /** IamUser */
+        IamUser: {
+            /** Id */
+            id: string;
+            /** Username */
+            username: string;
+            /** Email */
+            email?: string | null;
+            /** Firstname */
+            firstName?: string | null;
+            /** Lastname */
+            lastName?: string | null;
+            /**
+             * Enabled
+             * @default true
+             */
+            enabled: boolean;
+            /** Roles */
+            roles?: string[];
+        };
+        /** IamUsersResponse */
+        IamUsersResponse: {
+            /** Users */
+            users: components["schemas"]["IamUser"][];
+            /** Managementavailable */
+            managementAvailable: boolean;
+            /** Managementerror */
+            managementError?: string | null;
         };
         /** KpiMetric */
         KpiMetric: {
@@ -1097,6 +1273,13 @@ export interface components {
             /** Prevruns */
             prevRuns: number;
         };
+        /** PermissionGrant */
+        PermissionGrant: {
+            /** Resource */
+            resource: string;
+            /** Action */
+            action: string;
+        };
         /** PlatformConfigResponse */
         PlatformConfigResponse: {
             /** Appname */
@@ -1232,6 +1415,17 @@ export interface components {
             showOcrModel: boolean;
             /** Ocrengine */
             ocrEngine?: string | null;
+        };
+        /** RoleDefinition */
+        RoleDefinition: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /** Description */
+            description: string;
+            /** Permissions */
+            permissions: components["schemas"]["PermissionGrant"][];
         };
         /** RuleLibraryResponse */
         RuleLibraryResponse: {
@@ -1451,6 +1645,12 @@ export interface components {
             fieldsExtracted: number;
             /** Ocrtext */
             ocrText?: string | null;
+            /** Pagesrendered */
+            pagesRendered?: number | null;
+            /** Pagessent */
+            pagesSent?: number | null;
+            /** Pagesdropped */
+            pagesDropped?: number | null;
         };
         /** RunPollResponse */
         RunPollResponse: {
@@ -1542,6 +1742,11 @@ export interface components {
              * @default
              */
             description: string;
+            /**
+             * Templatetype
+             * @default verbatim-string
+             */
+            templateType: string;
         };
         /** StoredFileBinding */
         StoredFileBinding: {
@@ -1554,6 +1759,11 @@ export interface components {
             /** Filename */
             fileName: string;
         };
+        /** SuggestTemplateTypeResponse */
+        SuggestTemplateTypeResponse: {
+            /** Templatetype */
+            templateType: string;
+        };
         /** TopFailingRuleSchema */
         TopFailingRuleSchema: {
             /** Name */
@@ -1562,6 +1772,19 @@ export interface components {
             count: number;
             /** Severity */
             severity: string;
+        };
+        /** UpdateIamUserRequest */
+        UpdateIamUserRequest: {
+            /** Firstname */
+            firstName?: string | null;
+            /** Lastname */
+            lastName?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Roles */
+            roles?: string[] | null;
+            /** Password */
+            password?: string | null;
         };
         /** UploadItem */
         UploadItem: {
@@ -2502,6 +2725,42 @@ export interface operations {
             };
         };
     };
+    suggest_schema_template_type_v1_schema_suggest_type_get: {
+        parameters: {
+            query?: {
+                /** @description Field name */
+                name?: string;
+                /** @description What to extract */
+                description?: string;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SuggestTemplateTypeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_platform_config_v1_platform_config_get: {
         parameters: {
             query?: never;
@@ -2899,6 +3158,173 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    iam_me_v1_iam_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IamMeResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    iam_catalog_v1_iam_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IamCatalogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_v1_iam_users_get: {
+        parameters: {
+            query?: {
+                search?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IamUsersResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_v1_iam_users_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIamUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IamUser"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_v1_iam_users__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateIamUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IamUser"];
                 };
             };
             /** @description Validation Error */

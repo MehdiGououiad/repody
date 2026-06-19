@@ -15,6 +15,8 @@ interface UploadedFile { name: string; size: string; }
 
 export type { UploadedFile };
 
+const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -179,7 +181,7 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
               ref={inputRef}
               type="file"
               name={`upload-${doc.id}`}
-              accept=".pdf,.csv,.json,.xlsx"
+              accept={SUPPORTED_DOCUMENT_ACCEPT}
               className="sr-only"
               onChange={(e) => handleFiles(e.target.files)}
             />

@@ -52,5 +52,9 @@ def completed_extraction_detail(meta) -> str:
         )
     if meta.gpu_cold_start_likely:
         parts.append("Slow extraction may include GPU warm-up (first request after idle)")
+    if meta.pages_dropped and meta.pages_rendered:
+        parts.append(
+            f"Warning: only {meta.pages_sent} of {meta.pages_rendered} page(s) sent to the model"
+        )
     parts.append(f"{meta.fields_extracted} field(s) in {meta.extraction_ms}ms")
     return " · ".join(parts)

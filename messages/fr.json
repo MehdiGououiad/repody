@@ -103,6 +103,7 @@
     "gpuColdStartHint": "GPU serverless — la première requête après inactivité peut prendre 1 à 2 minutes le temps de démarrer un worker.",
     "gpuColdStartActive": "Préparation du GPU serverless… {elapsed}",
     "gpuColdStartDone": "Démarrage à froid GPU inclus",
+    "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
     "queueServerless": "Les exécutions sont traitées dans l'ordre. Les jobs GPU serverless peuvent aussi attendre 1 à 2 minutes sur la première requête après inactivité."
   },
   "dashboard": {
@@ -474,7 +475,7 @@
       },
       "ingestion": {
         "dropTitle": "Déposez vos fichiers ici",
-        "dropHint": "Formats pris en charge : PDF, CSV, JSON, XLSX (50 Mo max par lot)",
+        "dropHint": "Formats pris en charge : PDF, PNG, JPEG, WebP (50 Mo max par lot)",
         "useForDryRun": "Utiliser pour le test",
         "activeSample": "Échantillon de test",
         "severityReject": "Rejeter",
@@ -484,7 +485,7 @@
         "fieldsToExtract": "Champs à extraire",
         "validationRulesLabel": "Règles de validation",
         "uploadPrompt": "Téléverser {name}",
-        "fileHint": "PDF, CSV, JSON, XLSX · glisser-déposer ou cliquer",
+        "fileHint": "PDF, PNG, JPEG, WebP · glisser-déposer ou cliquer",
         "noDocs": "Aucun document configuré.",
         "noDocsHint": "Allez à l'étape 1 pour définir vos types de documents et champs.",
         "unnamedDoc": "Document",
@@ -522,16 +523,109 @@
         "documentTypeHint": "Quel type de fichier sera téléversé pour ce document ?",
         "addDocument": "Ajouter un autre type de document",
         "docLabel": "Doc",
-        "unnamedDoc": "Document"
+        "unnamedDoc": "Document",
+        "extractionInstructionsLabel": "Instructions d'extraction",
+        "extractionInstructionsPlaceholder": "Notes optionnelles pour le modèle, ex. format de date ou repères de section",
+        "extractionInstructionsHint": "Envoyé à Repody avec les descriptions de champs. Pour les règles globales du document."
       },
       "schema": {
         "title": "Quoi extraire",
-        "description": "Décrivez chaque information à extraire du document. Nous choisissons automatiquement la meilleure méthode d'extraction.",
+        "description": "Décrivez chaque information à extraire du document et choisissez le format de sortie attendu.",
         "addField": "Ajouter un champ",
         "namePlaceholder": "ex. numero_facture",
         "descriptionPlaceholder": "De quoi s'agit-il ? Ex. l'identifiant unique de la facture, généralement en haut",
         "name": "Nom",
+        "type": "Format de sortie",
         "intent": "Quoi extraire",
+        "typeGroups": {
+          "common": "Courants",
+          "advanced": "Avancés"
+        },
+        "suggestedType": "Suggestion : {label}",
+        "applySuggestedType": "Utiliser la suggestion",
+        "duplicateName": "Le nom doit être unique",
+        "templateTypes": {
+          "verbatim-string": {
+            "label": "Texte exact",
+            "description": "Reprendre le texte tel qu'il apparaît dans le document"
+          },
+          "string": {
+            "label": "Texte",
+            "description": "Texte libre ; une légère reformulation est acceptée"
+          },
+          "integer": {
+            "label": "Nombre entier",
+            "description": "Un nombre sans décimales, ex. 3"
+          },
+          "number": {
+            "label": "Nombre",
+            "description": "Un entier ou un décimal, ex. 12,50"
+          },
+          "date": {
+            "label": "Date",
+            "description": "Date au format ISO (AAAA-MM-JJ)"
+          },
+          "time": {
+            "label": "Heure",
+            "description": "Heure au format ISO"
+          },
+          "date-time": {
+            "label": "Date et heure",
+            "description": "Date et heure au format ISO"
+          },
+          "boolean": {
+            "label": "Oui / Non",
+            "description": "Vrai ou faux"
+          },
+          "currency": {
+            "label": "Code devise",
+            "description": "Code devise à trois lettres, ex. EUR ou USD"
+          },
+          "email-address": {
+            "label": "Adresse e-mail",
+            "description": "Une adresse e-mail valide"
+          },
+          "phone-number": {
+            "label": "Numéro de téléphone",
+            "description": "Numéro au format international ou local"
+          },
+          "duration": {
+            "label": "Durée",
+            "description": "Une durée au format ISO"
+          },
+          "country": {
+            "label": "Code pays",
+            "description": "Code pays à deux lettres, ex. FR ou US"
+          },
+          "language": {
+            "label": "Code langue",
+            "description": "Code langue à trois lettres"
+          },
+          "language-tag": {
+            "label": "Étiquette de langue",
+            "description": "Étiquette BCP 47, ex. fr-FR"
+          },
+          "script": {
+            "label": "Code d'écriture",
+            "description": "Code du système d'écriture, ex. Latn"
+          },
+          "url": {
+            "label": "Adresse web",
+            "description": "Une URL ou un lien web"
+          },
+          "iban": {
+            "label": "IBAN",
+            "description": "Numéro de compte bancaire international"
+          },
+          "bic": {
+            "label": "BIC / SWIFT",
+            "description": "Code d'identification bancaire"
+          },
+          "unit-code": {
+            "label": "Unité de mesure",
+            "description": "Code d'unité standard, ex. kg ou m"
+          }
+        },
         "examples": "Exemples (optionnel)",
         "examplesPlaceholder": "INV-002418, INV-103772",
         "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait.",

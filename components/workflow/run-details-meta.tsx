@@ -88,6 +88,14 @@ export function DocumentExtractionMeta({
           Cached
         </span>
       )}
+      {extraction.pagesDropped ? (
+        <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-2 py-0.5">
+          {t("pagesTruncated", {
+            sent: extraction.pagesSent ?? 0,
+            total: extraction.pagesRendered ?? 0,
+          })}
+        </span>
+      ) : null}
       {extraction.gpuColdStartLikely && (
         <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 px-2 py-0.5">
           <Snowflake className="h-3 w-3" />

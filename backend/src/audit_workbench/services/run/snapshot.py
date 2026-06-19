@@ -16,6 +16,7 @@ class SnapshotSchemaField:
     name: str
     description: str
     position: int
+    template_type: str = "verbatim-string"
 
 
 @dataclass
@@ -28,6 +29,7 @@ class SnapshotDocument:
     extraction_mode: str
     validation_mode: str
     ocr_model: str | None
+    extraction_instructions: str = ""
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
 
 
@@ -61,6 +63,11 @@ def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
                 id=str(field_row.get("id") or f"sf-{idx}"),
                 name=name,
                 description=str(field_row.get("description") or ""),
+                template_type=str(
+                    field_row.get("templateType")
+                    or field_row.get("template_type")
+                    or "verbatim-string"
+                ),
                 position=idx,
             )
         )
@@ -79,6 +86,9 @@ def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
         extraction_mode=read_id,
         validation_mode=val_id,
         ocr_model=doc.get("ocrModel") or doc.get("ocr_model"),
+        extraction_instructions=str(
+            doc.get("extractionInstructions") or doc.get("extraction_instructions") or ""
+        ),
         schema_fields=_schema_fields_from_snapshot(doc),
     )
 
@@ -91,11 +101,13 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         extraction_mode=doc.extraction_mode or "auto",
         validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
         ocr_model=doc.ocr_model,
+        extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
         schema_fields=[
             SnapshotSchemaField(
                 id=f.id,
                 name=f.name,
                 description=f.description or "",
+                template_type=getattr(f, "template_type", None) or "verbatim-string",
                 position=f.position,
             )
             for f in sorted(doc.schema_fields, key=lambda x: x.position)

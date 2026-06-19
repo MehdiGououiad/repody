@@ -25,6 +25,9 @@ export interface RunDocumentExtractionMeta {
   ocrSkipped: boolean;
   fieldsExtracted: number;
   ocrText?: string | null;
+  pagesRendered?: number | null;
+  pagesSent?: number | null;
+  pagesDropped?: number | null;
 }
 
 export interface RunAuditDocument {

@@ -22,6 +22,8 @@ from audit_workbench.services.workflow_stats import (
     workflow_stats,
 )
 from audit_workbench.services.workflow_validator import validate_workflow_rules
+from audit_workbench.services.workflow_schema_validation import validate_workflow_schema
+from audit_workbench.services.workflow_schema_validation import validate_workflow_schema
 
 
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
@@ -121,6 +123,7 @@ async def upsert_workflow(session: AsyncSession, payload: WorkflowSchema) -> Wor
             raise ValueError(f"Workflow {payload.id} could not be created or loaded")
 
     validate_workflow_rules(payload)
+    validate_workflow_schema(payload)
     await upsert_workflow_aggregate(session, wf, payload)
 
     wf_loaded = await load_workflow(session, wf.id)

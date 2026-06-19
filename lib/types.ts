@@ -51,6 +51,8 @@ export interface SchemaField {
   id: string;
   name: string;
   description: string;
+  /** NuExtract template leaf type, e.g. verbatim-string, number, date-time. */
+  templateType?: string;
   /** Optional value for dry-run rule validation without uploading a file. */
   sampleValue?: string;
 }
@@ -76,6 +78,8 @@ export interface DocumentDef {
   validationMode?: ValidationModeId | string;
   /** Registered document model id (e.g. repody:vlm). */
   ocrModel?: string | null;
+  /** Optional NuExtract instructions for this document type. */
+  extractionInstructions?: string;
 }
 
 // ── Structured condition types (for logic rules) ─────────────────────────────

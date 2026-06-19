@@ -17,7 +17,11 @@ def extract_document_fields(
     from audit_workbench.extraction.schema_fields import fields_from_sample_values
 
     specs = [
-        SchemaFieldSpec(name=(f.get("name") or "").strip(), description=f.get("description") or "")
+        SchemaFieldSpec(
+            name=(f.get("name") or "").strip(),
+            description=f.get("description") or "",
+            template_type=f.get("templateType") or f.get("template_type"),
+        )
         for f in schema
         if (f.get("name") or "").strip()
     ]

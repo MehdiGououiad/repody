@@ -28,6 +28,9 @@ class RunDocumentExtractionMeta(CamelModel):
     ocr_skipped: bool = Field(default=False, serialization_alias="ocrSkipped")
     fields_extracted: int = Field(default=0, serialization_alias="fieldsExtracted")
     ocr_text: str | None = Field(default=None, serialization_alias="ocrText")
+    pages_rendered: int | None = Field(default=None, serialization_alias="pagesRendered")
+    pages_sent: int | None = Field(default=None, serialization_alias="pagesSent")
+    pages_dropped: int | None = Field(default=None, serialization_alias="pagesDropped")
 
 
 class RunAuditDocument(CamelModel):

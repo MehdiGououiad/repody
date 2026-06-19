@@ -56,6 +56,9 @@ def meta_to_dict(meta) -> dict:
         "fieldsExtracted": meta.fields_extracted,
         "ocrText": meta.ocr_text,
         "ocrSkipped": meta.ocr_skipped,
+        "pagesRendered": meta.pages_rendered,
+        "pagesSent": meta.pages_sent,
+        "pagesDropped": meta.pages_dropped,
     }
 
 

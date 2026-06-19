@@ -8,6 +8,7 @@ from dataclasses import dataclass
 class SchemaFieldSpec:
     name: str
     description: str = ""
+    template_type: str | None = None
 
 
 @dataclass
@@ -38,6 +39,9 @@ class ExtractionMetadata:
     fields_extracted: int = 0
     ocr_text: str | None = None
     ocr_skipped: bool = False
+    pages_rendered: int | None = None
+    pages_sent: int | None = None
+    pages_dropped: int | None = None
 
 
 OCR_TEXT_MAX_CHARS = 80_000
@@ -67,6 +71,9 @@ class ExtractionResult:
     read_path_used: str | None = None
     ocr_skipped: bool = False
     meta: ExtractionMetadata | None = None
+    pages_rendered: int | None = None
+    pages_sent: int | None = None
+    pages_dropped: int | None = None
 
 
 class DocumentExtractor(ABC):
@@ -86,4 +93,5 @@ class DocumentExtractor(ABC):
         validation_mode: str = "logic_only",
         llm_rules: list[dict] | None = None,
         llm_model: str | None = None,
+        extraction_instructions: str = "",
     ) -> ExtractionResult: ...

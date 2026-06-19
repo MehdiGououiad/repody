@@ -12,6 +12,7 @@ from audit_workbench.extraction.document_model_branding import (
     normalize_public_catalog_id,
     public_runtime_model_name,
 )
+from audit_workbench.extraction.template_type_inference import suggest_template_type
 from audit_workbench.schemas.common import CamelModel
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
 from audit_workbench.services.document_model_catalog import (
@@ -78,6 +79,23 @@ class OcrDiagnosticResponse(CamelModel):
     detail: str = ""
     hint: str = ""
     settings: dict[str, int | float | str | bool] = Field(default_factory=dict)
+
+
+class SuggestTemplateTypeResponse(CamelModel):
+    template_type: str = Field(serialization_alias="templateType")
+
+
+@router.get(
+    "/schema/suggest-type",
+    response_model=SuggestTemplateTypeResponse,
+    dependencies=[Depends(require_permission("workflow", "read"))],
+)
+async def suggest_schema_template_type(
+    name: str = Query("", description="Field name"),
+    description: str = Query("", description="What to extract"),
+) -> SuggestTemplateTypeResponse:
+    """Infer a NuExtract template leaf type from field name and intent."""
+    return SuggestTemplateTypeResponse(template_type=suggest_template_type(name, description))
 
 
 @router.get(

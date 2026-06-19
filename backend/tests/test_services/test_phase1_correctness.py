@@ -83,7 +83,7 @@ def test_storage_cache_key_includes_content_hash():
     )
     assert key_a != key_b
     assert "abc123" in key_a
-    assert "extract:v5s" in key_a
+    assert "extract:v6s" in key_a
 
 
 def test_schema_fingerprint_includes_descriptions():
@@ -96,6 +96,12 @@ def test_schema_fingerprint_includes_descriptions():
         SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
     ]
     assert schema_fingerprint(same_names) != schema_fingerprint(renamed_prompt)
+
+
+def test_schema_fingerprint_includes_template_type():
+    as_text = [SchemaFieldSpec(name="total_amount", description="Total", template_type="verbatim-string")]
+    as_number = [SchemaFieldSpec(name="total_amount", description="Total", template_type="number")]
+    assert schema_fingerprint(as_text) != schema_fingerprint(as_number)
 
 
 def test_schema_fingerprint_stable_for_identical_schema():

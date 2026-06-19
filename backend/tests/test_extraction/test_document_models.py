@@ -33,7 +33,7 @@ def test_unknown_model_id_falls_back_to_default():
 
 def test_repody_vlm_template_and_flat_json_normalize_money():
     schema = [
-        SchemaFieldSpec(name="total_amount", description="Total TTC"),
+        SchemaFieldSpec(name="total_amount", description="Total TTC", template_type="number"),
         SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
     ]
 
@@ -42,11 +42,12 @@ def test_repody_vlm_template_and_flat_json_normalize_money():
         "invoice_number": "verbatim-string",
     }
 
-    instructions = build_vlm_instructions(schema, document_type="Invoice")
-    assert "Invoice" in instructions
+    instructions = build_vlm_instructions(schema, document_instructions="Use ISO dates.")
+    assert "Field instructions:" in instructions
     assert "total_amount" in instructions
     assert "Total TTC" in instructions
     assert "`invoice_number`" in instructions
+    assert "Use ISO dates." in instructions
 
     wrapped = _fields_payload(
         '{"total_amount": 6000.0, "invoice_number": "FAC-42"}',
@@ -55,6 +56,17 @@ def test_repody_vlm_template_and_flat_json_normalize_money():
     fields = parse_fields_json(wrapped, schema)
     assert fields[0].value == "6000.00"
     assert fields[1].value == "FAC-42"
+
+
+def test_repody_vlm_template_uses_explicit_nuextract_type():
+    schema = [
+        SchemaFieldSpec(name="invoice_date", description="", template_type="date"),
+        SchemaFieldSpec(name="contact", description="", template_type="email-address"),
+    ]
+    assert build_vlm_template(schema) == {
+        "invoice_date": "date",
+        "contact": "email-address",
+    }
 
 
 def test_cap_vlm_pages_truncates_extra_pages():

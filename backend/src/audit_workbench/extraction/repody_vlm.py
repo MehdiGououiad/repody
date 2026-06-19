@@ -12,6 +12,10 @@ import structlog
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import DocumentBundle
 from audit_workbench.extraction.field_json import parse_fields_json
+from audit_workbench.extraction.template_type_inference import (
+    resolve_template_type,
+    vlm_max_tokens_for_field_count,
+)
 from audit_workbench.inference.openai_compat import post_chat_completion
 from audit_workbench.inference.runtime import openai_base_url_for_runtime
 from audit_workbench.settings import Settings, get_settings
@@ -21,24 +25,6 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger()
 
-_NUMBER_HINTS = (
-    "amount",
-    "total",
-    "tax",
-    "tva",
-    "ttc",
-    "ht",
-    "price",
-    "prix",
-    "cost",
-    "fee",
-    "quantity",
-    "qty",
-    "montant",
-    "balance",
-    "percent",
-    "rate",
-)
 _MONEY_HINTS = (
     "amount",
     "total",
@@ -111,35 +97,26 @@ async def warmup_repody_vlm() -> str:
         return "failed"
 
 
-def _template_type(field: SchemaFieldSpec) -> str:
-    hint = f"{field.name} {field.description}".lower()
-    if "date" in hint or "time" in hint:
-        return "date-time"
-    if any(token in hint for token in _NUMBER_HINTS):
-        return "number"
-    if "email" in hint:
-        return "email"
-    if "currency" in hint or "devise" in hint:
-        return "currency"
-    return "verbatim-string"
-
-
 def build_vlm_template(schema: list[SchemaFieldSpec]) -> dict[str, str]:
-    return {field.name: _template_type(field) for field in schema if field.name.strip()}
+    template: dict[str, str] = {}
+    for field in schema:
+        name = field.name.strip()
+        if not name:
+            continue
+        template[name] = resolve_template_type(name, field.description, field.template_type)
+    return template
 
 
 def build_vlm_instructions(
     schema: list[SchemaFieldSpec],
     *,
-    document_type: str = "",
+    document_instructions: str = "",
 ) -> str:
-    """Per-field guidance for Repody VLM structured extraction."""
-    doc = (document_type or "document").strip() or "document"
-    lines = [
-        f"Extract the configured fields from this {doc}.",
-        "Use each field name and expected type precisely.",
-        "Return null when a field is absent.",
-    ]
+    """NuExtract instructions from per-document notes and field descriptions."""
+    lines: list[str] = []
+    doc_block = (document_instructions or "").strip()
+    if doc_block:
+        lines.append(doc_block)
     field_lines: list[str] = []
     for field in schema:
         name = field.name.strip()
@@ -148,10 +125,8 @@ def build_vlm_instructions(
         description = (field.description or "").strip()
         if description:
             field_lines.append(f"- `{name}`: {description}")
-        else:
-            field_lines.append(f"- `{name}`")
     if field_lines:
-        lines.append("Field guidance:")
+        lines.append("Field instructions:")
         lines.extend(field_lines)
     return "\n".join(lines)
 
@@ -224,38 +199,46 @@ async def extract_with_repody_vlm(
     document_type: str,
     *,
     spec: DocumentModelSpec | None = None,
+    extraction_instructions: str = "",
 ) -> ExtractionResult:
     from audit_workbench.extraction.model_registry import parse_document_model
 
     settings = get_settings()
     spec = spec or parse_document_model(None)
     base_url = openai_base_url_for_runtime(spec.runtime, settings)
-    pages = bundle.page_jpegs(_vlm_render_settings(settings))
+    all_pages = bundle.page_jpegs(_vlm_render_settings(settings))
+    pages_rendered = len(all_pages)
     max_pages = min(settings.ocr_max_pages, settings.repody_vlm_max_pages_per_request)
-    pages, dropped = cap_vlm_pages(pages, max_pages=max_pages)
+    pages, dropped = cap_vlm_pages(all_pages, max_pages=max_pages)
     if dropped:
         log.warning(
             "repody_vlm_pages_capped",
-            rendered=len(pages) + dropped,
+            rendered=pages_rendered,
             sent=len(pages),
             dropped=dropped,
             max_pages=max_pages,
         )
     content = await asyncio.to_thread(_encode_pages_for_vlm, pages)
     template = build_vlm_template(schema)
-    instructions = build_vlm_instructions(schema, document_type=document_type)
+    instructions = build_vlm_instructions(
+        schema,
+        document_instructions=extraction_instructions,
+    )
+    field_count = sum(1 for field in schema if field.name.strip())
+    max_tokens = vlm_max_tokens_for_field_count(field_count)
     payload = {
         "model": spec.runtime_model,
         "messages": [{"role": "user", "content": content}],
-        "max_tokens": settings.repody_vlm_max_tokens,
+        "max_tokens": max_tokens,
         "temperature": 0.2,
         "stream": False,
         "chat_template_kwargs": {
             "template": json.dumps(template, ensure_ascii=False),
-            "instructions": instructions,
             "enable_thinking": False,
         },
     }
+    if instructions:
+        payload["chat_template_kwargs"]["instructions"] = instructions
 
     started = time.perf_counter()
     data = await post_chat_completion(
@@ -271,10 +254,20 @@ async def extract_with_repody_vlm(
         runtime=spec.runtime,
         model=spec.runtime_model,
         pages=len(pages),
+        pages_rendered=pages_rendered,
+        pages_dropped=dropped,
+        max_tokens=max_tokens,
         elapsed_ms=int((time.perf_counter() - started) * 1000),
         prompt_ms=int(timings.get("prompt_ms") or 0),
         predicted_ms=int(timings.get("predicted_ms") or 0),
         output_tokens=(data.get("usage") or {}).get("completion_tokens"),
         extracted=sum(1 for field in fields if field.extracted),
     )
-    return ExtractionResult(fields=fields, raw_text=raw, ocr_text=raw)
+    return ExtractionResult(
+        fields=fields,
+        raw_text=raw,
+        ocr_text=raw,
+        pages_rendered=pages_rendered,
+        pages_sent=len(pages),
+        pages_dropped=dropped,
+    )

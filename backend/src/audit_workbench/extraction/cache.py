@@ -16,7 +16,7 @@ from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
 
-CACHE_VERSION = "v5"
+CACHE_VERSION = "v6"
 
 
 async def _redis_client():
@@ -34,7 +34,8 @@ def schema_fingerprint(schema: list[SchemaFieldSpec]) -> str:
         if not name:
             continue
         description = (field.description or "").strip()
-        parts.append(f"{name}\x1f{description}")
+        template_type = (field.template_type or "").strip()
+        parts.append(f"{name}\x1f{description}\x1f{template_type}")
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
 
 
