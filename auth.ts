@@ -8,8 +8,12 @@ import { refreshKeycloakAccessToken } from "@/lib/auth/refresh-keycloak-token";
 const keycloakIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
 const keycloakClientSecret =
   process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
+const apiOidcExplicitlyDisabled = process.env.AUDIT_OIDC_ENABLED === "false";
 const keycloakConfigured = Boolean(
-  keycloakIssuer && process.env.AUTH_KEYCLOAK_ID && process.env.AUTH_SECRET
+  !apiOidcExplicitlyDisabled &&
+    keycloakIssuer &&
+    process.env.AUTH_KEYCLOAK_ID &&
+    process.env.AUTH_SECRET
 );
 const keycloakScopes =
   process.env.AUTH_KEYCLOAK_OFFLINE_ACCESS === "true"

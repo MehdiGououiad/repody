@@ -25,6 +25,8 @@ export interface RunDocumentExtractionMeta {
   ocrSkipped: boolean;
   fieldsExtracted: number;
   ocrText?: string | null;
+  rawText?: string | null;
+  markdownExtraction?: boolean;
   pagesRendered?: number | null;
   pagesSent?: number | null;
   pagesDropped?: number | null;

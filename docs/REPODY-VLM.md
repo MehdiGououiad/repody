@@ -15,6 +15,8 @@ AUDIT_VLLM_API_KEY=
 AUDIT_REPODY_VLM_TIMEOUT_SECONDS=600
 AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST=6
 AUDIT_REPODY_VLM_WARMUP_ON_START=true
+AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=true
+AUDIT_REPODY_VLM_MARKDOWN_MAX_TOKENS=8192
 AUDIT_GPU_LIVE_PROBE=true
 AUDIT_HEALTHZ_PROBE_INFERENCE=false
 ```
@@ -49,6 +51,15 @@ vllm serve numind/NuExtract3 \
 ```
 
 Set `AUDIT_VLLM_SERVED_MODEL` to whatever `/v1/models` returns.
+
+## Structured extraction + document markdown
+
+Each extraction run sends **two** NuExtract requests only when the workflow document has **Document markdown preview** enabled:
+
+1. **Structured fields** — always runs (`chat_template_kwargs.template` from your schema).
+2. **Document markdown** — optional per document (`chat_template_kwargs.mode: "markdown"`). Stored as `ocrText` for the preview.
+
+When markdown is off, run results show the raw structured JSON (`rawText`) only.
 
 Verify:
 

@@ -85,6 +85,28 @@ def resolve_template_type(field_name: str, description: str = "", template_type:
     return suggest_template_type(field_name, description)
 
 
-def vlm_max_tokens_for_field_count(field_count: int, *, ceiling: int = 4096) -> int:
+def vlm_max_tokens_for_field_count(
+    field_count: int,
+    *,
+    ceiling: int = 4096,
+    enable_thinking: bool = False,
+) -> int:
     """Scale completion budget with schema size: min(4096, 128 + 48 × fields)."""
-    return min(ceiling, max(128, 128 + 48 * max(field_count, 0)))
+    base = min(ceiling, max(128, 128 + 48 * max(field_count, 0)))
+    if enable_thinking:
+        # NuExtract reasoning can consume most of the budget before JSON output.
+        return min(ceiling, max(base, 1024))
+    return base
+
+
+def vlm_max_tokens_for_markdown(
+    *,
+    page_count: int = 1,
+    ceiling: int = 8192,
+    enable_thinking: bool = False,
+) -> int:
+    """Scale markdown budget with page count for NuExtract document-to-Markdown."""
+    base = min(ceiling, max(1024, 768 + 640 * max(page_count, 1)))
+    if enable_thinking:
+        return min(ceiling, max(base, 2048))
+    return base

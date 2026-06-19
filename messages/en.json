@@ -513,7 +513,9 @@
         "unavailable": "Unavailable",
         "runtimeDirect": "Direct structured extraction",
         "directModelLogicValidationHint": "Repody VLM extracts schema fields directly. Logic rules run locally on the extracted values.",
-        "directModelLlmValidationHint": "Repody VLM extracts schema fields directly. Optional LLM validation runs only when enabled on the platform."
+        "directModelLlmValidationHint": "Repody VLM extracts schema fields directly. Optional LLM validation runs only when enabled on the platform.",
+        "markdownExtractionLabel": "Document markdown preview",
+        "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only."
       },
       "docSource": {
         "title": "Documents & fields to extract",
@@ -759,6 +761,15 @@
         "hasTables": "tables detected",
         "previewTab": "Preview",
         "sourceTab": "Markdown source",
+        "copy": "Copy",
+        "copied": "Copied",
+        "copyFailed": "Could not copy to clipboard"
+      },
+      "jsonOutput": {
+        "title": "Structured extraction JSON",
+        "subtitle": "{lines} lines · {chars} characters",
+        "previewTab": "Formatted",
+        "sourceTab": "Raw",
         "copy": "Copy",
         "copied": "Copied",
         "copyFailed": "Could not copy to clipboard"

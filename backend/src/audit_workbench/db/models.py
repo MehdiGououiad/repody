@@ -79,6 +79,7 @@ class Document(Base):
     validation_mode: Mapped[str] = mapped_column(String(32), default="logic_only")
     ocr_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     extraction_instructions: Mapped[str] = mapped_column(Text, default="")
+    markdown_extraction: Mapped[bool] = mapped_column(default=False)
 
     workflow: Mapped[Workflow] = relationship(back_populates="documents")
     schema_fields: Mapped[list[SchemaField]] = relationship(

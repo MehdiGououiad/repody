@@ -21,7 +21,7 @@ import {
   type RunReportLabels,
 } from "@/components/audit/run-report/run-report-core";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
-import { OcrMarkdownPanel } from "@/components/workflow/ocr-markdown-panel";
+import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 
 // ── CSV export ────────────────────────────────────────────────────────────────
 
@@ -165,12 +165,7 @@ function DocExtractionCard({
       {doc.extraction && (
         <div className="px-5 py-3 border-b border-border bg-surface-container-lowest space-y-3">
           <DocumentExtractionMeta extraction={doc.extraction} fileName={doc.fileName} />
-          {doc.extraction.ocrText && (
-            <OcrMarkdownPanel
-              text={doc.extraction.ocrText}
-              readPathUsed={doc.extraction.readPathUsed}
-            />
-          )}
+          <DocumentExtractionOutput extraction={doc.extraction} />
         </div>
       )}
 

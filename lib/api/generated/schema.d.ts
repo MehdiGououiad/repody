@@ -909,6 +909,11 @@ export interface components {
              * @default
              */
             extractionInstructions: string;
+            /**
+             * Markdownextraction
+             * @default false
+             */
+            markdownExtraction: boolean;
         };
         /** DocumentModelSummary */
         DocumentModelSummary: {
@@ -1645,6 +1650,13 @@ export interface components {
             fieldsExtracted: number;
             /** Ocrtext */
             ocrText?: string | null;
+            /** Rawtext */
+            rawText?: string | null;
+            /**
+             * Markdownextraction
+             * @default false
+             */
+            markdownExtraction: boolean;
             /** Pagesrendered */
             pagesRendered?: number | null;
             /** Pagessent */

@@ -40,6 +40,7 @@ ingress:
 secrets:
   create: false
   existingSecret: repody-runtime-secrets
+  # Put AUDIT_VLLM_API_KEY in this Secret when the external vLLM endpoint requires auth.
 
 config:
   oidcIssuer: https://auth.yourdomain.com/realms/repody

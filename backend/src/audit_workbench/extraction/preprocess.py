@@ -7,9 +7,11 @@ if TYPE_CHECKING:
     from audit_workbench.settings import Settings
 
 
-def _resize_for_cpu(image, max_edge: int):
+def _resize_for_cpu(image, max_edge: int | None):
     from PIL import Image
 
+    if not max_edge:
+        return image
     w, h = image.size
     if max(w, h) <= max_edge:
         return image
@@ -18,11 +20,18 @@ def _resize_for_cpu(image, max_edge: int):
 
 
 def _to_jpeg_bytes(image, quality: int = 82, *, optimize: bool = True) -> bytes:
-
     if image.mode not in ("RGB", "L"):
         image = image.convert("RGB")
     buf = io.BytesIO()
     image.save(buf, format="JPEG", quality=quality, optimize=optimize)
+    return buf.getvalue()
+
+
+def _to_png_bytes(image) -> bytes:
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+    buf = io.BytesIO()
+    image.save(buf, format="PNG", optimize=False)
     return buf.getvalue()
 
 
@@ -45,6 +54,24 @@ def _pdf_page_images(document_bytes: bytes, *, dpi: int, max_pages: int, hard_ca
     if not images:
         raise ValueError("PDF has no pages")
     return images
+
+
+def render_pdf_pages_png(
+    document_bytes: bytes,
+    *,
+    settings: Settings,
+    dpi: int,
+    max_edge: int | None = None,
+) -> list[bytes]:
+    """Render PDF pages as lossless PNG for OCR engines that benefit from fidelity."""
+    cfg = settings
+    images = _pdf_page_images(
+        document_bytes,
+        dpi=dpi,
+        max_pages=cfg.ocr_max_pages,
+        hard_cap=cfg.ocr_max_pages_hard_cap,
+    )
+    return [_to_png_bytes(_resize_for_cpu(image, max_edge)) for image in images]
 
 
 def render_document_pages_jpeg(

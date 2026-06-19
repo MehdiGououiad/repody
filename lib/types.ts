@@ -80,6 +80,8 @@ export interface DocumentDef {
   ocrModel?: string | null;
   /** Optional NuExtract instructions for this document type. */
   extractionInstructions?: string;
+  /** Run NuExtract document-to-Markdown alongside structured field extraction. */
+  markdownExtraction?: boolean;
 }
 
 // ── Structured condition types (for logic rules) ─────────────────────────────

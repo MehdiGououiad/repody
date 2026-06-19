@@ -14,10 +14,15 @@ from audit_workbench.extraction.model_registry import (
     parse_document_model,
 )
 from audit_workbench.extraction.repody_vlm import (
+    _encode_pages_for_vlm,
     _fields_payload,
+    _markdown_payload,
+    _structured_payload,
+    _vlm_pages,
     build_vlm_instructions,
     build_vlm_template,
     cap_vlm_pages,
+    strip_vlm_thinking,
 )
 
 
@@ -81,6 +86,87 @@ def test_cap_vlm_pages_keeps_all_when_under_limit():
     kept, dropped = cap_vlm_pages(pages, max_pages=4)
     assert kept == pages
     assert dropped == 0
+
+
+def test_repody_vlm_preserves_png_upload_bytes():
+    from audit_workbench.settings import get_settings
+
+    bundle = DocumentBundle(raw_bytes=b"\x89PNG\r\n\x1a\nimage-bytes", mime_type="image/png")
+
+    pages, pages_rendered = _vlm_pages(bundle, get_settings())
+
+    assert pages == [(bundle.raw_bytes, "image/png")]
+    assert pages_rendered == 1
+    assert bundle.page_count == 1
+
+
+def test_repody_vlm_renders_pdf_pages_as_png(monkeypatch):
+    from audit_workbench.settings import get_settings
+
+    def fake_render_pdf_pages_png(document_bytes, *, settings, dpi, max_edge=None):
+        assert document_bytes == b"%PDF-1.7"
+        assert dpi == settings.repody_vlm_pdf_dpi
+        assert max_edge == settings.repody_vlm_max_edge_px
+        return [b"rendered-page"]
+
+    monkeypatch.setattr(
+        "audit_workbench.extraction.preprocess.render_pdf_pages_png",
+        fake_render_pdf_pages_png,
+    )
+    bundle = DocumentBundle(raw_bytes=b"%PDF-1.7", mime_type="application/pdf")
+
+    pages, pages_rendered = _vlm_pages(bundle, get_settings())
+
+    assert pages == [(b"rendered-page", "image/png")]
+    assert pages_rendered == 1
+
+
+def test_repody_vlm_encodes_page_mime_type_in_data_url():
+    content = _encode_pages_for_vlm([(b"page", "image/png")])
+
+    assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
+
+
+def test_repody_vlm_markdown_payload_uses_nuextract_mode():
+    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.settings import get_settings
+
+    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    payload = _markdown_payload(
+        spec=spec,
+        content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+        page_count=2,
+        settings=get_settings(),
+    )
+
+    assert payload["chat_template_kwargs"]["mode"] == "markdown"
+    assert "template" not in payload["chat_template_kwargs"]
+    assert payload["max_tokens"] >= 1024
+
+
+def test_repody_vlm_structured_payload_keeps_template():
+    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.settings import get_settings
+
+    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
+    payload = _structured_payload(
+        spec=spec,
+        content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+        schema=schema,
+        extraction_instructions="Use ISO dates.",
+        settings=get_settings(),
+    )
+
+    assert "template" in payload["chat_template_kwargs"]
+    assert payload["chat_template_kwargs"]["enable_thinking"] is False
+    assert payload["chat_template_kwargs"]["instructions"] == "Use ISO dates.\nField instructions:\n- `invoice_number`: Invoice number"
+
+
+def test_strip_vlm_thinking_removes_reasoning_wrapper():
+    end_tag = "</" + "think" + ">"
+    raw = f"long chain{end_tag}\n\n# Invoice"
+    assert strip_vlm_thinking(raw) == "# Invoice"
 
 
 @pytest.mark.asyncio

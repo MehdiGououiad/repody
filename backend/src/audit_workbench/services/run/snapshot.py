@@ -30,6 +30,7 @@ class SnapshotDocument:
     validation_mode: str
     ocr_model: str | None
     extraction_instructions: str = ""
+    markdown_extraction: bool = False
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
 
 
@@ -89,6 +90,9 @@ def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
         extraction_instructions=str(
             doc.get("extractionInstructions") or doc.get("extraction_instructions") or ""
         ),
+        markdown_extraction=bool(
+            doc.get("markdownExtraction") or doc.get("markdown_extraction") or False
+        ),
         schema_fields=_schema_fields_from_snapshot(doc),
     )
 
@@ -102,6 +106,7 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
         ocr_model=doc.ocr_model,
         extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
+        markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
         schema_fields=[
             SnapshotSchemaField(
                 id=f.id,

@@ -16,7 +16,7 @@ from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
 
-CACHE_VERSION = "v6"
+CACHE_VERSION = "v7"
 
 
 async def _redis_client():

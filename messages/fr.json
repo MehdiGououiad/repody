@@ -513,7 +513,9 @@
         "unavailable": "Indisponible",
         "runtimeDirect": "Extraction structurée directe",
         "directModelLogicValidationHint": "Repody VLM extrait directement les champs du schéma. Les règles logiques s'exécutent localement sur les valeurs extraites.",
-        "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme."
+        "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme.",
+        "markdownExtractionLabel": "Aperçu Markdown du document",
+        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché."
       },
       "docSource": {
         "title": "Documents et champs à extraire",
@@ -759,6 +761,15 @@
         "hasTables": "tableaux détectés",
         "previewTab": "Aperçu",
         "sourceTab": "Source Markdown",
+        "copy": "Copier",
+        "copied": "Copié",
+        "copyFailed": "Impossible de copier"
+      },
+      "jsonOutput": {
+        "title": "JSON d'extraction structurée",
+        "subtitle": "{lines} lignes · {chars} caractères",
+        "previewTab": "Formaté",
+        "sourceTab": "Brut",
         "copy": "Copier",
         "copied": "Copié",
         "copyFailed": "Impossible de copier"

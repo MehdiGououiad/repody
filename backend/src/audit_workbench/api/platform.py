@@ -143,7 +143,6 @@ async def get_platform_config() -> PlatformConfigResponse:
 @router.get(
     "/models/catalog",
     response_model=ModelsCatalogResponse,
-    dependencies=[Depends(require_permission("models", "read"))],
 )
 async def get_models_catalog() -> ModelsCatalogResponse:
     """Document and validation model catalog with live availability."""

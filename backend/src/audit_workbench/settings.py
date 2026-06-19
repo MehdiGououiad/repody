@@ -160,8 +160,18 @@ class Settings(BaseSettings):
         description="Repody VLM model id in Docker Model Runner.",
     )
     repody_vlm_max_tokens: int = Field(default=512, ge=64)
-    repody_vlm_max_edge_px: int = Field(default=1280, ge=512)
-    repody_vlm_pdf_dpi: int = Field(default=144, ge=72)
+    repody_vlm_max_edge_px: int | None = Field(
+        default=None,
+        ge=512,
+        description="Optional Repody VLM page downscale cap. None follows NuExtract docs and preserves rendered size.",
+    )
+    repody_vlm_pdf_dpi: int = Field(default=170, ge=72)
+    repody_vlm_jpeg_quality: int = Field(
+        default=95,
+        ge=50,
+        le=100,
+        description="Fallback JPEG quality for non-PDF/non-image inputs.",
+    )
     repody_vlm_timeout_seconds: float = Field(default=600.0, ge=30)
     repody_vlm_warmup_on_start: bool = True
     healthz_probe_inference: bool = Field(
@@ -184,6 +194,25 @@ class Settings(BaseSettings):
         description=(
             "Max rendered pages sent in one Repody VLM request. "
             "Cap pages to stay within model context."
+        ),
+    )
+    repody_vlm_markdown_on_extract: bool = Field(
+        default=True,
+        description=(
+            "Platform switch: allow NuExtract document-to-Markdown when a workflow "
+            "document enables markdown extraction."
+        ),
+    )
+    repody_vlm_markdown_max_tokens: int = Field(
+        default=8192,
+        ge=256,
+        description="Completion token budget for NuExtract markdown conversion.",
+    )
+    repody_vlm_enable_thinking: bool = Field(
+        default=False,
+        description=(
+            "NuExtract reasoning mode for difficult layouts (enable_thinking). "
+            "Uses higher temperature per upstream docs."
         ),
     )
 
