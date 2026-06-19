@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { browserApi } from "@/lib/api/openapi-client";
+import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import { getRuleIssues } from "@/lib/rules/rule-validation";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
@@ -87,6 +88,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     const payload = buildPayload(id);
     if (!payload.name?.trim()) {
       throw new Error(t("toasts.nameRequired"));
+    }
+    const schemaErrors = validateDocumentSchemas(payload.documents);
+    if (schemaErrors.length) {
+      throw new Error(schemaErrors[0]);
     }
     for (const rule of payload.rules) {
       const selectedDocuments = payload.documents.filter((document) =>

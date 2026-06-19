@@ -103,6 +103,7 @@
     "gpuColdStartHint": "Serverless GPU — the first request after idle can take 1–2 minutes while a worker starts.",
     "gpuColdStartActive": "Warming up serverless GPU… {elapsed}",
     "gpuColdStartDone": "Included GPU cold start",
+    "pagesTruncated": "Only {sent} of {total} pages analyzed",
     "queueServerless": "Runs are processed in order. Serverless GPU jobs may also wait 1–2 minutes on the first request after idle."
   },
   "dashboard": {
@@ -474,7 +475,7 @@
       },
       "ingestion": {
         "dropTitle": "Drop sample files here",
-        "dropHint": "Support for PDF, CSV, JSON, and XLSX (Max 50MB batch)",
+        "dropHint": "Support for PDF, PNG, JPEG, and WebP (Max 50MB batch)",
         "useForDryRun": "Use for dry-run",
         "activeSample": "Dry-run sample",
         "severityReject": "Reject",
@@ -484,7 +485,7 @@
         "fieldsToExtract": "Fields to extract",
         "validationRulesLabel": "Validation rules",
         "uploadPrompt": "Upload {name}",
-        "fileHint": "PDF, CSV, JSON, XLSX · drag & drop or click",
+        "fileHint": "PDF, PNG, JPEG, WebP · drag & drop or click",
         "noDocs": "No documents configured yet.",
         "noDocsHint": "Go to step 1 to define your document types and fields.",
         "unnamedDoc": "Document",
@@ -522,16 +523,109 @@
         "documentTypeHint": "What kind of file will be uploaded for this document?",
         "addDocument": "Add another document type",
         "docLabel": "Doc",
-        "unnamedDoc": "Document"
+        "unnamedDoc": "Document",
+        "extractionInstructionsLabel": "Extraction instructions",
+        "extractionInstructionsPlaceholder": "Optional notes for the model, e.g. date format or section hints",
+        "extractionInstructionsHint": "Sent to Repody with field descriptions. Use for document-wide rules, not per-field detail."
       },
       "schema": {
         "title": "What to extract",
-        "description": "Describe each piece of information you want pulled out of the document. We pick the best extraction method automatically.",
+        "description": "Describe each piece of information you want pulled out of the document and choose how the value should be formatted.",
         "addField": "Add field",
         "namePlaceholder": "e.g. invoice_number",
         "descriptionPlaceholder": "What is this? e.g. the unique invoice identifier, usually near the header",
         "name": "Name",
+        "type": "Output format",
         "intent": "What to extract",
+        "typeGroups": {
+          "common": "Common",
+          "advanced": "Advanced"
+        },
+        "suggestedType": "Suggested: {label}",
+        "applySuggestedType": "Use suggestion",
+        "duplicateName": "Name must be unique",
+        "templateTypes": {
+          "verbatim-string": {
+            "label": "Exact text",
+            "description": "Copy text exactly as it appears in the document"
+          },
+          "string": {
+            "label": "Text",
+            "description": "General text; light paraphrasing is allowed"
+          },
+          "integer": {
+            "label": "Whole number",
+            "description": "A number without decimals, e.g. 3"
+          },
+          "number": {
+            "label": "Number",
+            "description": "An integer or decimal, e.g. 12.50"
+          },
+          "date": {
+            "label": "Date",
+            "description": "Calendar date in ISO format (YYYY-MM-DD)"
+          },
+          "time": {
+            "label": "Time",
+            "description": "Time of day in ISO format"
+          },
+          "date-time": {
+            "label": "Date and time",
+            "description": "Date and time in ISO format"
+          },
+          "boolean": {
+            "label": "Yes / No",
+            "description": "True or false"
+          },
+          "currency": {
+            "label": "Currency code",
+            "description": "Three-letter currency code, e.g. EUR or USD"
+          },
+          "email-address": {
+            "label": "Email address",
+            "description": "A valid email address"
+          },
+          "phone-number": {
+            "label": "Phone number",
+            "description": "Phone number in international or local format"
+          },
+          "duration": {
+            "label": "Duration",
+            "description": "A length of time in ISO format"
+          },
+          "country": {
+            "label": "Country code",
+            "description": "Two-letter country code, e.g. FR or US"
+          },
+          "language": {
+            "label": "Language code",
+            "description": "Three-letter language code"
+          },
+          "language-tag": {
+            "label": "Language tag",
+            "description": "BCP 47 language tag, e.g. fr-FR"
+          },
+          "script": {
+            "label": "Script code",
+            "description": "Writing system code, e.g. Latn"
+          },
+          "url": {
+            "label": "Web address",
+            "description": "A URL or web link"
+          },
+          "iban": {
+            "label": "IBAN",
+            "description": "International bank account number"
+          },
+          "bic": {
+            "label": "BIC / SWIFT",
+            "description": "Bank identifier code"
+          },
+          "unit-code": {
+            "label": "Unit of measure",
+            "description": "Standard unit code, e.g. kg or m"
+          }
+        },
         "examples": "Examples (optional)",
         "examplesPlaceholder": "INV-002418, INV-103772",
         "empty": "No fields yet. Add one to describe what should be extracted from the document.",

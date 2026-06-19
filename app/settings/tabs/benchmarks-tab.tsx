@@ -25,6 +25,8 @@ import {
 import { documentModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shared";
 
+const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+
 function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string }) {
   return (
     <section className="panel-elevated rounded-xl overflow-hidden">
@@ -245,7 +247,7 @@ export function BenchmarksTab({
                 <Label className="rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
                   <Upload className="h-4 w-4 mb-2" />
                   <span className="block text-xs font-medium">{document?.name || "Choose document"}</span>
-                  <input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg" onChange={(event) => setDocument(event.target.files?.[0] || null)} />
+                  <input type="file" className="sr-only" accept={SUPPORTED_DOCUMENT_ACCEPT} onChange={(event) => setDocument(event.target.files?.[0] || null)} />
                 </Label>
                 <Label className="rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
                   <FileJson className="h-4 w-4 mb-2" />

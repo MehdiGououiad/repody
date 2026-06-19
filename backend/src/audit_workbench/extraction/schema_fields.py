@@ -1,24 +1,15 @@
 from __future__ import annotations
 
 from audit_workbench.extraction.base import ExtractedFieldResult, SchemaFieldSpec
+from audit_workbench.extraction.template_type_inference import resolve_template_type
 
 
 def _normalize_key(name: str) -> str:
     return name.strip().lower().replace(" ", "_")
 
 
-def _field_type(name: str, description: str = "") -> str:
-    blob = f"{name} {description}".lower()
-    if any(
-        token in blob
-        for token in ("amount", "price", "cost", "total", "fee", "montant", "balance", "currency")
-    ):
-        return "currency"
-    if "date" in blob or "time" in blob:
-        return "date"
-    if "percent" in blob or "rate" in blob or "%" in blob:
-        return "percent"
-    return "string"
+def _schema_type(field: SchemaFieldSpec) -> str:
+    return resolve_template_type(field.name, field.description, field.template_type)
 
 
 def empty_fields_from_schema(schema: list[SchemaFieldSpec]) -> list[ExtractedFieldResult]:
@@ -32,7 +23,7 @@ def empty_fields_from_schema(schema: list[SchemaFieldSpec]) -> list[ExtractedFie
                 key=field.name,
                 description=field.description,
                 value="—",
-                type=_field_type(field.name, field.description),
+                type=_schema_type(field),
                 confidence=None,
                 extracted=False,
             )
@@ -57,7 +48,7 @@ def fields_from_sample_values(
                 key=field.name,
                 description=field.description,
                 value=value,
-                type=_field_type(field.name, field.description),
+                type=_schema_type(field),
                 confidence=0.9 if value != "—" else None,
                 extracted=value != "—",
             )

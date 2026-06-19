@@ -8,6 +8,10 @@ class SchemaFieldSchema(CamelModel):
     id: str
     name: str
     description: str = ""
+    template_type: str = Field(
+        default="verbatim-string",
+        serialization_alias="templateType",
+    )
 
 
 class DocumentDefSchema(CamelModel):
@@ -31,6 +35,10 @@ class DocumentDefSchema(CamelModel):
         default_factory=list,
         validation_alias="schema",
         serialization_alias="schema",
+    )
+    extraction_instructions: str = Field(
+        default="",
+        serialization_alias="extractionInstructions",
     )
 
 
@@ -116,6 +124,7 @@ class DryRunFieldInput(CamelModel):
     id: str
     name: str
     description: str = ""
+    template_type: str = Field(default="verbatim-string", serialization_alias="templateType")
     sample_value: str | None = Field(default=None, serialization_alias="sampleValue")
 
 

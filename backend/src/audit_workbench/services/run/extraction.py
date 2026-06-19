@@ -60,6 +60,7 @@ class DocExtractionJob:
     step_index: int
     progress_mode: str
     validation_mode: str
+    extraction_instructions: str = ""
 
 
 async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, ExtractionResult]:
@@ -75,6 +76,7 @@ async def _run_extraction(job: DocExtractionJob) -> tuple[DocExtractionJob, Extr
         storage_key=job.run_doc.storage_key,
         file_size=job.file_size if job.file_size > 0 else None,
         validation_mode=job.validation_mode,
+        extraction_instructions=job.extraction_instructions,
     )
     return job, result
 
@@ -96,6 +98,7 @@ def _make_extraction_job(
     step_index: int,
     prog_mode: str,
     validation_mode: str,
+    extraction_instructions: str = "",
 ) -> DocExtractionJob:
     return DocExtractionJob(
         doc=doc,
@@ -107,6 +110,7 @@ def _make_extraction_job(
         step_index=step_index,
         progress_mode=prog_mode,
         validation_mode=validation_mode,
+        extraction_instructions=extraction_instructions,
     )
 
 
@@ -135,6 +139,7 @@ async def _build_extraction_jobs(
                 step_index=step_index,
                 prog_mode=prog_mode,
                 validation_mode=validation_mode,
+                extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
             )
             for (doc, schema, run_doc, step_index, _has_file, prog_mode), (
                 document_bytes,
@@ -155,6 +160,7 @@ async def _build_extraction_jobs(
                 step_index=step_index,
                 prog_mode=prog_mode,
                 validation_mode=validation_mode,
+                extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
             )
         )
     return jobs
@@ -213,7 +219,11 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
 
     for doc in workflow_docs:
         schema = [
-            SchemaFieldSpec(name=f.name, description=f.description)
+            SchemaFieldSpec(
+                name=f.name,
+                description=f.description,
+                template_type=getattr(f, "template_type", None),
+            )
             for f in sorted(doc.schema_fields, key=lambda x: x.position)
             if f.name.strip()
         ]

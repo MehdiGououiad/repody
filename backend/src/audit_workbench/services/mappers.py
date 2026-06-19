@@ -65,8 +65,14 @@ def workflow_to_schema(
                 extraction_mode=doc.extraction_mode or "auto",
                 validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
                 ocr_model=normalize_public_catalog_id(doc.ocr_model),
+                extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
                 schema_fields=[
-                    SchemaFieldSchema(id=f.id, name=f.name, description=f.description)
+                    SchemaFieldSchema(
+                        id=f.id,
+                        name=f.name,
+                        description=f.description,
+                        template_type=getattr(f, "template_type", None) or "verbatim-string",
+                    )
                     for f in sorted(doc.schema_fields, key=lambda x: x.position)
                 ],
             )

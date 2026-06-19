@@ -11,6 +11,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,30 @@ _MINIMAL_PDF = (
     b"0000000052 00000 n \n0000000101 00000 n \n"
     b"trailer<</Size 4/Root 1 0 R>>\nstartxref\n149\n%%EOF\n"
 )
+_MAX_POLL_S = 10.0
+_QUEUED_POLL_S = 4.0
+_RATE_LIMIT_POLL_S = 4.0
+
+
+def _retry_after_s(response: httpx.Response) -> float | None:
+    raw = response.headers.get("retry-after")
+    if not raw:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        pass
+    try:
+        retry_at = parsedate_to_datetime(raw)
+        if retry_at.tzinfo is None:
+            retry_at = retry_at.replace(tzinfo=UTC)
+        return max(0.0, retry_at.timestamp() - datetime.now(UTC).timestamp())
+    except (TypeError, ValueError):
+        return None
+
+
+def _jitter(wait_s: float) -> float:
+    return wait_s * random.uniform(0.85, 1.15)
 
 
 @dataclass
@@ -307,14 +332,17 @@ async def _track_run(
     stop: asyncio.Event,
     poll_s: float,
 ) -> None:
+    wait_s = poll_s
     while not stop.is_set():
         try:
             res = await client.get(f"/v1/runs/{lifecycle.run_id}/status")
             if res.status_code == 429:
-                await asyncio.sleep(1.0)
+                retry_s = _retry_after_s(res) or max(_RATE_LIMIT_POLL_S, wait_s * 2)
+                wait_s = min(_MAX_POLL_S, retry_s)
+                await asyncio.sleep(_jitter(wait_s))
                 continue
             if not res.is_success:
-                await asyncio.sleep(poll_s)
+                await asyncio.sleep(_jitter(wait_s))
                 continue
             body = res.json()
             status = str(body.get("status") or "")
@@ -334,9 +362,10 @@ async def _track_run(
                 if status == "failed":
                     lifecycle.error = str(body.get("error") or "")[:500]
                 return
+            wait_s = min(_MAX_POLL_S, max(_QUEUED_POLL_S if status == "queued" else poll_s, wait_s + 0.25))
         except httpx.HTTPError:
             pass
-        await asyncio.sleep(poll_s)
+        await asyncio.sleep(_jitter(wait_s))
 
 
 async def phase_burst(

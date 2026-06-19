@@ -1,5 +1,4 @@
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import { humanizeRunError } from "@/lib/api/api-error";
 import {
   buildClientProgress,
   mergeServerProgress,
@@ -69,12 +68,6 @@ function runsJsonPath(workflowId: string, credential: WorkflowRunCredential): st
     : `/api/workflows/${workflowId}/runs/json`;
 }
 
-function runsMultipartPath(workflowId: string, credential: WorkflowRunCredential): string {
-  return isApiCredential(credential)
-    ? `/api/v1/workflows/${workflowId}/runs`
-    : `/api/workflows/${workflowId}/runs`;
-}
-
 async function postRunJson(
   workflowId: string,
   credential: WorkflowRunCredential,
@@ -142,73 +135,9 @@ async function waitForRun(
   return { ...detail, processedAt: detail.createdAt };
 }
 
-function presignFallbackAllowed(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err);
-  return (
-    message === "presign_unavailable" ||
-    message.startsWith("Direct upload failed") ||
-    message.includes("HTTP 403") ||
-    humanizeRunError(message).includes("HTTP 403") ||
-    message.startsWith("Prepare upload failed") ||
-    message.startsWith("Confirm upload failed") ||
-    message.includes("timed out")
-  );
-}
-
-async function postRunMultipart(
-  workflowId: string,
-  credential: WorkflowRunCredential,
-  payload: WorkflowRunPayload,
-  docIds: string[]
-): Promise<{ runId: string }> {
-  const form = new FormData();
-  const snapshot = buildSnapshot(payload);
-  if (snapshot) {
-    form.append("payload", JSON.stringify(snapshot));
-  }
-
-  if (isApiCredential(credential)) {
-    const docTypes = docIds
-      .map((docId) => payload.documents.find((d) => d.id === docId)?.documentType.trim())
-      .filter((name): name is string => Boolean(name));
-    if (docTypes.length > 0) {
-      form.append("document_types", JSON.stringify(docTypes));
-    }
-  } else {
-    form.append("document_ids", JSON.stringify(docIds));
-  }
-
-  for (const docId of docIds) {
-    const file = payload.filesByDocId![docId];
-    form.append("files", file);
-  }
-
-  const path = runsMultipartPath(workflowId, credential);
-  const res = isApiCredential(credential)
-    ? await browserFetch(path.slice(4), {
-        method: "POST",
-        headers: workflowAuthHeaders(credential.apiKey),
-        body: form,
-        timeoutMs: 120_000,
-        workflowApiKey: credential.apiKey,
-      })
-    : await fetchWithTimeout(path, {
-        method: "POST",
-        body: form,
-        timeoutMs: 120_000,
-      });
-
-  if (!res.ok) {
-    const text = await res.text();
-    raiseStepError("Start audit run", text || `HTTP ${res.status}`, res.status);
-  }
-  const json = (await res.json()) as { runId: string };
-  return { runId: json.runId };
-}
-
 /**
  * Start a workflow run and wait until complete.
- * Uses presigned upload + POST /runs/json when possible (fastest path).
+ * Uses presigned upload + POST /runs/json for file-backed runs.
  */
 export async function runWorkflowUntilDone(
   workflowId: string,
@@ -232,29 +161,20 @@ export async function runWorkflowUntilDone(
   }
 
   const caps = await getUploadCapabilities();
-  if (caps.directUploadEnabled && caps.uploadMode === "presigned") {
-    try {
-      const bindings = await uploadViaPresign(docIds, payload.filesByDocId!, reporter);
-      reportClientStep(reporter, "start-run");
-      const { runId } = await postRunJson(workflowId, credential, {
-        snapshot,
-        fileBindings: bindings,
-      });
-      return waitForRun(runId, reporter);
-    } catch (err) {
-      if (!presignFallbackAllowed(err)) throw err;
-      reportClientStep(
-        reporter,
-        "upload-transfer",
-        reporter?.clientLabels?.["upload-check"].pendingDetail ??
-          "Direct upload unavailable — sending files through API…"
-      );
-    }
+  if (!caps.directUploadEnabled || caps.uploadMode !== "presigned") {
+    raiseStepError(
+      "Prepare upload",
+      "Direct presigned uploads are not available. Check storage configuration.",
+      503
+    );
   }
 
-  reportClientStep(reporter, "upload-transfer", "Uploading via API…");
+  const bindings = await uploadViaPresign(docIds, payload.filesByDocId!, reporter);
   reportClientStep(reporter, "start-run");
-  const { runId } = await postRunMultipart(workflowId, credential, payload, docIds);
+  const { runId } = await postRunJson(workflowId, credential, {
+    snapshot,
+    fileBindings: bindings,
+  });
   return waitForRun(runId, reporter);
 }
 

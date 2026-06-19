@@ -118,6 +118,24 @@ export function DocumentCard({
             <p className="text-[11px] text-on-surface-variant">{t("docSource.documentTypeHint")}</p>
           </div>
 
+          <div className="space-y-1.5">
+            <Label htmlFor={`doc-instructions-${doc.id}`} className="text-xs font-semibold">
+              {t("docSource.extractionInstructionsLabel")}
+            </Label>
+            <textarea
+              id={`doc-instructions-${doc.id}`}
+              name={`document-instructions-${doc.id}`}
+              value={doc.extractionInstructions ?? ""}
+              onChange={(e) => onChange({ extractionInstructions: e.target.value })}
+              placeholder={t("docSource.extractionInstructionsPlaceholder")}
+              rows={3}
+              className="flex min-h-[72px] w-full rounded-md border border-input bg-card px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+            />
+            <p className="text-[11px] text-on-surface-variant">
+              {t("docSource.extractionInstructionsHint")}
+            </p>
+          </div>
+
           <SchemaTable
             schema={doc.schema}
             onChange={(schema) => onChange({ schema })}

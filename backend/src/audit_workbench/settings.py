@@ -179,7 +179,7 @@ class Settings(BaseSettings):
         ),
     )
     repody_vlm_max_pages_per_request: int = Field(
-        default=4,
+        default=6,
         ge=1,
         description=(
             "Max rendered pages sent in one Repody VLM request. "

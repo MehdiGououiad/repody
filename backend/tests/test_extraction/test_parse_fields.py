@@ -17,6 +17,22 @@ def test_parse_fields_json_normalizes_amounts():
     assert rows[0].value == "6000.00"
 
 
+def test_parse_fields_json_uses_explicit_template_type():
+    raw = '{"fields":[{"name":"reference","value":"6 000,00","confidence":0.9}]}'
+    schema = [SchemaFieldSpec(name="reference", description="", template_type="verbatim-string")]
+    rows = parse_fields_json(raw, schema)
+    assert rows[0].value == "6 000,00"
+    assert rows[0].type == "verbatim-string"
+
+
+def test_parse_fields_json_normalizes_explicit_number_type():
+    raw = '{"fields":[{"name":"total","value":"6 000,00 EUR","confidence":0.9}]}'
+    schema = [SchemaFieldSpec(name="total", description="", template_type="number")]
+    rows = parse_fields_json(raw, schema)
+    assert rows[0].value == "6000.00"
+    assert rows[0].type == "number"
+
+
 def test_normalize_amount_locale():
     assert normalize_amount("6 000,00") == "6000.00"
     assert normalize_amount("5 000,00") == "5000.00"

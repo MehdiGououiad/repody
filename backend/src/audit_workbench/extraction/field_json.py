@@ -28,6 +28,7 @@ _NUMERIC_HINTS = (
     "tva",
 )
 _NUMERIC_RUN = re.compile(r"[+-]?[\d][\d\s.,]*")
+_NUMERIC_TYPES = {"integer", "number"}
 
 
 def _normalize_key(name: str) -> str:
@@ -35,8 +36,19 @@ def _normalize_key(name: str) -> str:
 
 
 def _is_amount_like(spec: SchemaFieldSpec) -> bool:
+    if (spec.template_type or "").strip() in _NUMERIC_TYPES:
+        return True
     blob = f"{spec.name} {spec.description}".lower()
     return any(token in blob for token in _NUMERIC_HINTS)
+
+
+def _result_type(spec: SchemaFieldSpec | None) -> str:
+    if not spec:
+        return "string"
+    template_type = (spec.template_type or "").strip()
+    if template_type:
+        return template_type
+    return "currency" if _is_amount_like(spec) else "string"
 
 
 def _locale_normalize_numeric(token: str) -> str:
@@ -126,7 +138,7 @@ def parse_fields_json(raw: str, schema: list[SchemaFieldSpec]) -> list[Extracted
             key=display,
             description=spec.description if spec else "",
             value=normalized,
-            type="currency" if amount_like else "string",
+            type=_result_type(spec),
             confidence=confidence,
             extracted=value != "—",
         )
@@ -145,7 +157,7 @@ def parse_fields_json(raw: str, schema: list[SchemaFieldSpec]) -> list[Extracted
                     key=spec.name,
                     description=spec.description,
                     value="—",
-                    type="string",
+                    type=_result_type(spec),
                     confidence=None,
                     extracted=False,
                 )
