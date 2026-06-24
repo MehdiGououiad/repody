@@ -1,6 +1,7 @@
 export function createArgoCommands({
   applyJson,
   argoInstallUrl,
+  argoLocalRbacManifest,
   argoNamespace,
   argoRepoUrl,
   capture,
@@ -114,6 +115,8 @@ export function createArgoCommands({
       if (insecure === "true") {
         console.error("ok: Argo CD already configured for Gateway HTTP");
         configureArgoResourceExclusions();
+        configureArgoLocalDevAccess();
+        ensureArgoGatewayGrpcWeb();
         return;
       }
     } catch {
@@ -127,11 +130,68 @@ export function createArgoCommands({
       "argocd-cmd-params-cm",
       "--type=merge",
       "-p",
-      '{"data":{"server.insecure":"true"}}',
+      JSON.stringify({
+        data: {
+          "server.insecure": "true",
+          "server.grpc.web": "true",
+        },
+      }),
     ]);
     configureArgoResourceExclusions();
+    configureArgoLocalDevAccess();
+    ensureArgoGatewayGrpcWeb();
     run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
     waitForArgoServer("Argo CD server ready for Gateway HTTP", 300_000);
+  }
+
+  function ensureArgoGatewayGrpcWeb() {
+    const grpcWeb = captureOptional("kubectl", [
+      "-n",
+      argoNamespace,
+      "get",
+      "configmap",
+      "argocd-cmd-params-cm",
+      "-o",
+      "jsonpath={.data.server\\.grpc\\.web}",
+    ]);
+    if (grpcWeb === "true") {
+      return;
+    }
+    runNoShell("kubectl", [
+      "-n",
+      argoNamespace,
+      "patch",
+      "configmap",
+      "argocd-cmd-params-cm",
+      "--type=merge",
+      "-p",
+      JSON.stringify({
+        data: {
+          "server.grpc.web": "true",
+        },
+      }),
+    ]);
+    run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
+    waitForArgoServer("Argo CD server grpc-web ready", 300_000);
+  }
+
+  function configureArgoLocalDevAccess() {
+    run("kubectl", ["apply", "-f", argoLocalRbacManifest]);
+    runNoShell("kubectl", [
+      "-n",
+      argoNamespace,
+      "patch",
+      "configmap",
+      "argocd-cm",
+      "--type=merge",
+      "-p",
+      JSON.stringify({
+        data: {
+          "exec.enabled": "true",
+        },
+      }),
+    ]);
+    console.error("ok: Argo CD local RBAC allows pod logs and exec for admin");
   }
 
   function configureArgoResourceExclusions() {
