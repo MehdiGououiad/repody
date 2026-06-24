@@ -366,11 +366,18 @@ await step("Argo CD installed", () => {
     }
     summaries.push(`${appName}: health=${health}, sync=${sync}`);
   }
-  const ui = gatewayCurl(LOCAL_HOSTS.argocd, "/");
-  if (!ui.toLowerCase().includes("argo")) {
-    throw new Error("Argo CD UI did not render through Gateway");
+  const server = captureOptional("kubectl", [
+    "-n",
+    ARGO_NS,
+    "get",
+    "deploy/argocd-server",
+    "-o",
+    "jsonpath={.status.readyReplicas}",
+  ]);
+  if (Number(server) < 1) {
+    throw new Error("argocd-server is not ready");
   }
-  return `${summaries.join("; ")}, gateway=ok`;
+  return `${summaries.join("; ")}, server=ready`;
 });
 
 await step("Observability/Bugsink addon presence", () => {

@@ -1,71 +1,45 @@
-# Argo CD deployment
+# Argo CD (optional local GitOps)
 
-GitOps entrypoints for Repody, following [Argo CD installation](https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/), [cluster bootstrapping](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/), and [CI automation](https://argo-cd.readthedocs.io/en/stable/user-guide/ci_automation/).
+Argo CD is **not part of the Repody runtime**. It is an optional operator tool used locally to sync Repody Helm charts from Git. Production clients may use their own Argo CD, Flux, or CI deploy pipeline.
 
-Inference is external to the Repody chart — set `config.vllmBaseUrl` in values.
+Repody workloads are exposed via Envoy Gateway (`app.repody.local`, etc.). **Argo CD is not routed through that Gateway** — use port-forward instead.
 
-## Layout
-
-| Path | Purpose |
-|------|---------|
-| `kustomize/local/` | Declarative Argo CD install for kind (pinned `v3.4.4` + Gateway/RBAC patches) |
-| `bootstrap/gateway-addons.yaml` | Argo CD Gateway route + Envoy policies (synced by root app) |
-| `repody-local-root.application.yaml` | Root Application (apply once after Argo CD install) |
-| `repody-local-apps.yaml` | Four local plane apps (data → queue/auth → app) |
-| `repody-project.yaml` | AppProject whitelist (includes Pod + ReplicaSet for logs/tree) |
-
-## Local GitOps (`repody-local-*`)
-
-`pnpm k8s:local` (non-`--minimal`):
-
-1. Installs Argo CD: `kubectl apply -k deploy/argocd/kustomize/local`
-2. Registers bootstrap: `kubectl apply -f deploy/argocd/repody-local-root.application.yaml`
-3. Helm bootstraps workloads once, then **handoff** deletes Helm release secrets so Argo CD is the sole deployer
-4. Child apps reconcile from Git with automated sync/self-heal
-
-Image tags for the app plane: `deploy/helm/repody/values-local-images.yaml`
+## Install (standalone)
 
 ```powershell
-pnpm gitops:publish -- --all
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+pnpm argocd:port-forward
+# https://127.0.0.1:8080  (admin / kubectl -n argocd get secret argocd-initial-admin-secret ...)
 ```
 
-Verify pod logs through the Gateway:
+`pnpm k8s:local` (non-`--minimal`) runs the same upstream install automatically.
+
+## Repody GitOps (optional)
+
+After Argo CD is running:
 
 ```powershell
-node deploy/scripts/verify-argocd-logs.mjs
+kubectl apply -f deploy/argocd/repody-local-root.application.yaml
 ```
 
-### Security (local)
+That registers `repody-local-root`, which syncs:
 
-- Argo CD RBAC: `policy.default: role:readonly`; only the `admin` account has `role:admin`
-- `role:repody-operator` can sync/view logs for `repody/*` apps (assign via SSO later)
-- Repository credentials are **not** in Git — bootstrap reads `git credential` locally
+- `repody-project.yaml` — AppProject (includes Pod/ReplicaSet for logs)
+- `repody-local-apps.yaml` — data / queue / auth / app planes
 
-## Staging / production
+Image tags: `deploy/helm/repody/values-local-images.yaml` → `pnpm gitops:publish -- --all`
 
-Immutable image promotion via Git (not in-cluster image build):
+Verify logs: `node deploy/scripts/verify-argocd-logs.mjs`
 
-| Environment | Image values file | CI workflow |
-|-------------|-------------------|-------------|
-| Staging | `values-staging-images.yaml` | `.github/workflows/gitops-promote-staging.yml` |
-| Local | `values-local-images.yaml` | `pnpm gitops:publish` |
+## Fast dev without Argo
 
 ```powershell
-pnpm images:build
-pnpm images:push
-node deploy/scripts/gitops-promote-staging.mjs --commit
-git push
-kubectl apply -n argocd -f deploy/argocd/repody-staging.application.yaml
+pnpm dev
 ```
 
-## Runtime secrets
+Helm-only bootstrap — no Argo CD required.
 
-Keep secrets out of Git. Use `secrets.existingSecret=repody-runtime-secrets` and populate via External Secrets / bootstrap.
+## Staging CI promotion
 
-Required keys: `AUTH_SECRET`, `AUTH_KEYCLOAK_CLIENT_SECRET`, `AUDIT_DATABASE_URL`, `AUDIT_REDIS_URL`, `AUDIT_MINIO_ACCESS_KEY`, `AUDIT_MINIO_SECRET_KEY`, `HATCHET_CLIENT_TOKEN`.
-
-## References
-
-- [App-of-apps pattern](https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern-alternative)
-- [RBAC](https://argo-cd.readthedocs.io/en/stable/operator-manual/rbac/)
-- [Helm + Argo CD](https://argo-cd.readthedocs.io/en/stable/user-guide/helm/)
+`values-staging-images.yaml` + `.github/workflows/gitops-promote-staging.yml` — see `repody-staging.application.yaml`.

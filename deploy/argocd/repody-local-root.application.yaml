@@ -18,7 +18,7 @@ spec:
     targetRevision: master
     path: deploy/argocd
     directory:
-      include: "{repody-project.yaml,repody-local-apps.yaml,bootstrap/gateway-addons.yaml}"
+      include: "{repody-project.yaml,repody-local-apps.yaml}"
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

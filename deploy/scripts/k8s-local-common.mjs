@@ -6,7 +6,6 @@ export const LOCAL_HOSTS = Object.freeze({
   api: "api.repody.local",
   files: "files.repody.local",
   auth: "auth.repody.local",
-  argocd: "argocd.repody.local",
   grafana: "grafana.repody.local",
   bugsink: "bugsink.repody.local",
   harbor: "harbor.repody.local",
