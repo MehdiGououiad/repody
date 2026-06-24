@@ -16,6 +16,7 @@ spec:
       valueFiles:
         - values.yaml
         - values-staging.yaml
+        - values-staging-images.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody

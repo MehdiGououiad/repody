@@ -1,0 +1,43 @@
+name: Promote staging images to Git
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to promote. Defaults to the short git SHA.
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image tag
+        id: tag
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "value=${{ inputs.tag }}" >> "${GITHUB_OUTPUT}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "value=${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "value=${GITHUB_SHA::12}" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Bump staging Helm image values
+        env:
+          REPODY_IMAGE_TAG: ${{ steps.tag.outputs.value }}
+        run: node deploy/scripts/gitops-promote-staging.mjs --commit
+
+      - name: Push GitOps promotion
+        run: git push

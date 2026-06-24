@@ -1,0 +1,15 @@
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/web_based_terminal/
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/reconcile/
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+data:
+  exec.enabled: "true"
+  resource.exclusions: |
+    - apiGroups:
+      - batch
+      kinds:
+      - Job
+      clusters:
+      - "*"

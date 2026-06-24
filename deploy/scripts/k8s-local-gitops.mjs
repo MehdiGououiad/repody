@@ -1,7 +1,13 @@
 /**
  * GitOps handoff helpers: Argo CD owns steady state; Helm CLI is bootstrap-only.
+ *
+ * Deleting Helm release secrets (not workloads) is the documented migration path when
+ * moving from `helm install` to Argo CD Helm sources:
+ * https://argo-cd.readthedocs.io/en/stable/user-guide/helm/#helm-release-name
  */
 import { waitFor } from "./k8s-local-process.mjs";
+
+export const LOCAL_ARGO_ROOT_APP = "repody-local-root";
 
 export const LOCAL_ARGO_APP_NAMES = [
   "repody-local-data",
@@ -76,7 +82,9 @@ export function createGitOpsHandoffCommands({
     return total;
   }
 
-  function refreshArgoApplications(appNames = LOCAL_ARGO_APP_NAMES) {
+  function refreshArgoApplications(
+    appNames = [LOCAL_ARGO_ROOT_APP, ...LOCAL_ARGO_APP_NAMES],
+  ) {
     for (const app of appNames) {
       captureOptional("kubectl", [
         "-n",

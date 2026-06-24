@@ -16,11 +16,11 @@ function readAddonManifest(relativePath) {
 }
 
 const obsAddons = readAddonManifest("deploy/k8s/local-addons-obs.yaml");
-const gitopsAddons = readAddonManifest("deploy/k8s/local-addons-gitops.yaml");
+const gitopsAddons = readAddonManifest("deploy/argocd/bootstrap/gateway-addons.yaml");
 
 for (const [label, content] of [
   ["local-addons-obs.yaml", obsAddons],
-  ["local-addons-gitops.yaml", gitopsAddons],
+  ["argocd/bootstrap/gateway-addons.yaml", gitopsAddons],
 ]) {
   const images = [...content.matchAll(/^\s*image:\s*"?([^"\s]+)"?\s*$/gm)].map(
     (match) => match[1],

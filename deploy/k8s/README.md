@@ -69,18 +69,18 @@ Sign in: `operator@repody.local` / `repody-dev`
 - Argo CD app presence and Gateway UI
 - Grafana, Loki, Promtail, Tempo, and Bugsink (when installed with `--with=obs`)
 
-Local Kubernetes addons are split into `local-addons-gitops.yaml` (Argo CD route,
-always applied with the full stack) and `local-addons-obs.yaml` (optional
-observability, `--with=obs` only). They are intentionally separate from the Repody
-app Helm chart. Production should point to external observability and error-tracking
-services instead of bundling them in the app release.
+Local Kubernetes addons: Argo CD Gateway routing lives in
+`../argocd/bootstrap/gateway-addons.yaml` (synced by the `repody-local-root` Application).
+Optional observability is `local-addons-obs.yaml` (`--with=obs` only). Both are separate
+from the Repody app Helm chart. Production should point to external observability and
+error-tracking services instead of bundling them in the app release.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `kind-repody-local.yaml` | kind cluster ports |
-| `local-addons-gitops.yaml` | Local-only Argo CD Gateway route |
+| `../argocd/bootstrap/gateway-addons.yaml` | Argo CD Gateway route (GitOps-managed) |
 | `local-addons-obs.yaml` | Optional Grafana/Loki/Promtail/Tempo/Bugsink (`--with=obs`) |
 | `../helm/repody/values-local.yaml` | App plane overrides (external data/queue/auth URLs) |
-| `../argocd/repody-local-apps.yaml` | Four Argo CD Applications (data, queue, auth, app) |
+| `../argocd/repody-local-root.application.yaml` | App-of-apps root for local GitOps |
