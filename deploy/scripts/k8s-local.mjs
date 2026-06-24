@@ -48,6 +48,7 @@ import {
 } from "./bump-helm-image-tags.mjs";
 import { resolveLocalRegistryConfig } from "./k8s-local-registry-config.mjs";
 import { connectHarborToKind } from "./harbor-local.mjs";
+import { createGitOpsHandoffCommands } from "./k8s-local-gitops.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_CONFIG = resolveLocalRegistryConfig(root);
@@ -180,6 +181,11 @@ const { configureArgoRepositoryCredentials, installArgoCd } = createArgoCommands
 });
 
 const { followPlatformLogs, prepareHelmUpgrade } = createLogCommands({ capture, root, run });
+const {
+  handoffHelmReleasesToArgo,
+  refreshArgoApplications,
+  waitForArgoApplicationsSynced,
+} = createGitOpsHandoffCommands({ captureOptional, run, argoNamespace: ARGO_NS });
 
 function resolveImageTags(minimal) {
   if (process.env.REPODY_IMAGE_TAG) {
@@ -610,6 +616,7 @@ function hatchetClientTokenReady() {
 
 function installLocalHelmStack({
   minimal,
+  argoOwnsApp = false,
   backendTag,
   webTag,
   helmValueFiles,
@@ -687,6 +694,14 @@ function installLocalHelmStack({
     "--timeout",
     "10m",
   ]);
+
+  if (argoOwnsApp) {
+    ensureNamespace(NS_APP);
+    console.error(
+      "ok: app plane owned by Argo CD (repody-local-app) — skipping Helm repody release",
+    );
+    return;
+  }
 
   heading("Installing Repody app (API, web, workers, Gateway)");
   ensureNamespace(NS_APP);
@@ -1148,10 +1163,11 @@ async function cmdUpAsync() {
     heading(
       minimal
         ? "Installing Repody stack via Helm (4 namespaces)"
-        : "Installing Repody via Helm (bootstrap; Argo CD owns Git revisions after push)",
+        : "Bootstrapping platform via Helm (data/queue/auth); Argo CD owns all planes after registration",
     );
     installLocalHelmStack({
       minimal,
+      argoOwnsApp: !minimal,
       backendTag,
       webTag,
       helmValueFiles: [
@@ -1195,6 +1211,18 @@ async function cmdUpAsync() {
       "-f",
       LOCAL_ARGO_APPS,
     ]);
+
+    heading("Handing workload ownership to Argo CD");
+    handoffHelmReleasesToArgo();
+    refreshArgoApplications();
+    try {
+      await waitForArgoApplicationsSynced(fast ? 300_000 : 900_000);
+      syncPlatformSecrets();
+    } catch {
+      console.error(
+        "warn: Argo CD apps not fully Synced yet — run pnpm gitops:publish -- --all or wait for automated sync",
+      );
+    }
   } else {
     console.error("ok: --minimal — skipping Argo CD and local addons");
   }

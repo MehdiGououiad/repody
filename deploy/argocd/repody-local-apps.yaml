@@ -29,6 +29,11 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jqPathExpressions:
+        - .status
   revisionHistoryLimit: 5
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -62,6 +67,11 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jqPathExpressions:
+        - .status
   revisionHistoryLimit: 5
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -95,6 +105,11 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jqPathExpressions:
+        - .status
   revisionHistoryLimit: 5
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -129,4 +144,9 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+  ignoreDifferences:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      jqPathExpressions:
+        - .status
   revisionHistoryLimit: 5
