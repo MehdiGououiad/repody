@@ -82,6 +82,10 @@ const VALUES_LOCAL = path.join(CHART_DIR, "values-local.yaml");
 const VALUES_DATA_LOCAL = path.join(CHART_DATA, "values-local.yaml");
 const VALUES_QUEUE_LOCAL = path.join(CHART_QUEUE, "values-local.yaml");
 const VALUES_AUTH_LOCAL = path.join(CHART_AUTH, "values-local.yaml");
+const VALUES_DATA_REGISTRY = path.join(CHART_DATA, "values-local-registry.yaml");
+const VALUES_QUEUE_REGISTRY = path.join(CHART_QUEUE, "values-local-registry.yaml");
+const VALUES_AUTH_REGISTRY = path.join(CHART_AUTH, "values-local-registry.yaml");
+const VALUES_APP_REGISTRY = path.join(CHART_DIR, "values-local-registry.yaml");
 const VALUES_LOCAL_IMAGES = path.join(CHART_DIR, "values-local-images.yaml");
 const LOCAL_ADDONS_OBS = path.join(root, "deploy/k8s/local-addons-obs.yaml");
 const {
@@ -117,10 +121,6 @@ const {
 });
 const {
   buildAppHelmSets,
-  buildAuthHelmSets,
-  buildDataHelmSets,
-  buildQueueHelmSets,
-  buildRegistryHelmSets,
   collectHelmImages,
   ensureHelmDependencies,
   externalInferenceHelmSets,
@@ -162,7 +162,7 @@ const {
   run,
   waitFor,
 });
-const { configureArgoRepositoryCredentials, installArgoCd, registerLocalGitOpsRootApp } =
+const { configureArgoRepositoryCredentials, installArgoCd, installArgoGatewayRoute, registerLocalGitOpsRootApp } =
   createArgoCommands({
   applyJson,
   argoInstallUrl: ARGO_INSTALL_URL,
@@ -645,7 +645,8 @@ function installLocalHelmStack({
     path.join(CHART_DATA, "values.yaml"),
     "-f",
     VALUES_DATA_LOCAL,
-    ...buildDataHelmSets(),
+    "-f",
+    VALUES_DATA_REGISTRY,
     "--timeout",
     "15m",
   ]);
@@ -664,7 +665,8 @@ function installLocalHelmStack({
     path.join(CHART_QUEUE, "values.yaml"),
     "-f",
     VALUES_QUEUE_LOCAL,
-    ...buildQueueHelmSets(),
+    "-f",
+    VALUES_QUEUE_REGISTRY,
     "--timeout",
     "15m",
   ]);
@@ -690,7 +692,8 @@ function installLocalHelmStack({
     path.join(CHART_AUTH, "values.yaml"),
     "-f",
     VALUES_AUTH_LOCAL,
-    ...buildAuthHelmSets(),
+    "-f",
+    VALUES_AUTH_REGISTRY,
     "--timeout",
     "10m",
   ]);
@@ -714,6 +717,8 @@ function installLocalHelmStack({
     "-n",
     NS_APP,
     ...helmValueFiles.flatMap((file) => ["-f", file]),
+    "-f",
+    VALUES_APP_REGISTRY,
     ...appHelmSets,
     ...authHelmSets,
     "--timeout",
@@ -860,7 +865,7 @@ function printStackReadySummary({ minimal, withObs, tagLabel, argoPassword = "" 
   const argoBlock = minimal
     ? ""
     : `
- Argo CD            https://127.0.0.1:8080  (pnpm argocd:port-forward — admin / ${argoPassword || "see kubectl secret"})`;
+ Argo CD (Gateway)  ${localUrl(LOCAL_HOSTS.argocd)}  (admin / ${argoPassword || "see kubectl secret"})`;
 
   console.error(`
 ══════════════════════════════════════════════════════════════════════
@@ -906,6 +911,8 @@ async function publishThirdPartyImages(tagHelmSets = []) {
 async function cmdWarmRegistry() {
   requireDockerEngine();
   ensureLocalRegistry();
+  heading("Rendering values-local-registry.yaml from pinned-images.env");
+  run("node", ["deploy/scripts/render-local-registry-values.mjs"]);
   heading("Preparing Helm chart dependencies");
   ensureHelmDependencies();
   heading("Warming Harbor (third-party images only)");
@@ -1199,6 +1206,9 @@ async function cmdUpAsync() {
       removeLocalObservability();
       console.error("ok: observability off — use --with=obs to install Grafana/Loki/Bugsink");
     }
+
+    heading("Exposing Argo CD via Gateway API");
+    installArgoGatewayRoute();
 
     heading("Registering Argo CD app-of-apps (GitOps bootstrap from Git)");
     configureArgoRepositoryCredentials();

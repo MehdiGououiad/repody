@@ -19,6 +19,7 @@ spec:
       valueFiles:
         - values.yaml
         - values-local.yaml
+        - values-local-registry.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody-data
@@ -57,6 +58,7 @@ spec:
       valueFiles:
         - values.yaml
         - values-local.yaml
+        - values-local-registry.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody-queue
@@ -95,6 +97,7 @@ spec:
       valueFiles:
         - values.yaml
         - values-local.yaml
+        - values-local-registry.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody-auth
@@ -134,6 +137,7 @@ spec:
         - values.yaml
         - values-local.yaml
         - values-local-images.yaml
+        - values-local-registry.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody-app

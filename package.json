@@ -16,6 +16,7 @@
     "dev:build": "node deploy/scripts/k8s-local.mjs up --minimal --build",
     "dev:sync": "node deploy/scripts/skaffold-dev.mjs",
     "registry:warm": "node deploy/scripts/k8s-local.mjs warm-registry",
+    "registry:render-values": "node deploy/scripts/render-local-registry-values.mjs",
     "harbor:prepare": "node deploy/scripts/harbor-local.mjs prepare",
     "harbor:up": "node deploy/scripts/harbor-local.mjs up",
     "harbor:down": "node deploy/scripts/harbor-local.mjs down",

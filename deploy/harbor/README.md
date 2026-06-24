@@ -37,9 +37,10 @@ Default registry: `harbor.repody.lvh.me:8080/repody` — resolves to localhost w
 
 ## GitOps
 
-`repody-local` tracks `deploy/helm/repody` with `values-local-images.yaml` for
-promoted Harbor tags. **Synced** means the Git revision Argo CD deployed matches
-what is running.
+`repody-local` Argo apps use `values-local-images.yaml` (Repody tags) and
+`values-local-registry.yaml` (third-party Harbor paths from `deploy/pinned-images.env`).
+
+Render registry values: `pnpm registry:render-values` (also runs at start of `pnpm registry:warm`).
 
 ```powershell
 # Full loop (build → Harbor → bump tags in Git → push → Argo sync)
