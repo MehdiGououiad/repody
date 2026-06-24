@@ -65,8 +65,8 @@ const ARGO_NS = "argocd";
 const ARGO_REPO_URL = "https://github.com/MehdiGououiad/repody.git";
 const ENVOY_CHART = "oci://docker.io/envoyproxy/gateway-helm";
 const ENVOY_VERSION = "v1.4.0";
-const ARGO_INSTALL_URL =
-  "https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml";
+const ARGO_KUSTOMIZE = path.join(root, "deploy/argocd/kustomize/local");
+const LOCAL_ARGO_ROOT = path.join(root, "deploy/argocd/repody-local-root.application.yaml");
 
 const KEYCLOAK_IMAGE = requirePinnedImage(PINNED_IMAGES, "REPODY_KEYCLOAK_IMAGE");
 const LOCAL_REGISTRY = REGISTRY_CONFIG.localRegistry;
@@ -83,10 +83,7 @@ const VALUES_DATA_LOCAL = path.join(CHART_DATA, "values-local.yaml");
 const VALUES_QUEUE_LOCAL = path.join(CHART_QUEUE, "values-local.yaml");
 const VALUES_AUTH_LOCAL = path.join(CHART_AUTH, "values-local.yaml");
 const VALUES_LOCAL_IMAGES = path.join(CHART_DIR, "values-local-images.yaml");
-const LOCAL_ADDONS_GITOPS = path.join(root, "deploy/k8s/local-addons-gitops.yaml");
 const LOCAL_ADDONS_OBS = path.join(root, "deploy/k8s/local-addons-obs.yaml");
-const LOCAL_ARGO_APPS = path.join(root, "deploy/argocd/repody-local-apps.yaml");
-const ARGO_LOCAL_RBAC = path.join(root, "deploy/k8s/argocd-local-rbac.yaml");
 const {
   applyJson,
   capture,
@@ -165,10 +162,11 @@ const {
   run,
   waitFor,
 });
-const { configureArgoRepositoryCredentials, installArgoCd } = createArgoCommands({
+const { configureArgoRepositoryCredentials, installArgoCd, registerLocalGitOpsRootApp } =
+  createArgoCommands({
   applyJson,
-  argoInstallUrl: ARGO_INSTALL_URL,
-  argoLocalRbacManifest: ARGO_LOCAL_RBAC,
+  argoKustomizeDir: ARGO_KUSTOMIZE,
+  argoLocalRootApp: LOCAL_ARGO_ROOT,
   argoNamespace: ARGO_NS,
   argoRepoUrl: ARGO_REPO_URL,
   capture,
@@ -765,8 +763,10 @@ function cmdDownSoft() {
   }
   captureOptional("kubectl", [
     "delete",
-    "-f",
-    LOCAL_ADDONS_GITOPS,
+    "application",
+    "repody-local-root",
+    "-n",
+    ARGO_NS,
     "--ignore-not-found",
     "--wait=false",
   ]);
@@ -1192,10 +1192,6 @@ async function cmdUpAsync() {
   }
 
   if (!minimal) {
-    heading("Installing Argo CD Gateway route");
-    run("kubectl", ["apply", "-f", LOCAL_ADDONS_GITOPS]);
-    run("kubectl", ["apply", "-f", ARGO_LOCAL_RBAC]);
-
     if (withObs) {
       heading("Installing local observability addons (Grafana/Loki/Promtail/Tempo/Bugsink)");
       run("kubectl", ["apply", "-f", LOCAL_ADDONS_OBS]);
@@ -1204,16 +1200,9 @@ async function cmdUpAsync() {
       console.error("ok: observability off — use --with=obs to install Grafana/Loki/Bugsink");
     }
 
-    heading("Registering Argo CD Application (GitOps — Synced when Git revision matches cluster)");
-    run("kubectl", ["apply", "-n", ARGO_NS, "-f", path.join(root, "deploy/argocd/repody-project.yaml")]);
+    heading("Registering Argo CD app-of-apps (GitOps bootstrap from Git)");
     configureArgoRepositoryCredentials();
-    run("kubectl", [
-      "apply",
-      "-n",
-      ARGO_NS,
-      "-f",
-      LOCAL_ARGO_APPS,
-    ]);
+    registerLocalGitOpsRootApp();
 
     heading("Handing workload ownership to Argo CD");
     handoffHelmReleasesToArgo();

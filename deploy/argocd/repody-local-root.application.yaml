@@ -1,0 +1,37 @@
+# Root app-of-apps for local GitOps. Apply once after Argo CD is installed:
+#   kubectl apply -n argocd -f deploy/argocd/repody-local-root.application.yaml
+#
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/cluster-bootstrapping/#app-of-apps-pattern-alternative
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody-local-root
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: repody
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/MehdiGououiad/repody.git
+    targetRevision: master
+    path: deploy/argocd
+    directory:
+      include: "{repody-project.yaml,repody-local-apps.yaml,bootstrap/gateway-addons.yaml}"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: argoproj.io
+      kind: Application
+      jqPathExpressions:
+        - .metadata.annotations["argocd.argoproj.io/refresh"]
+        - .operation

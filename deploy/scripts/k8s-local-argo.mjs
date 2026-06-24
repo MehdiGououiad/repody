@@ -1,7 +1,7 @@
 export function createArgoCommands({
   applyJson,
-  argoInstallUrl,
-  argoLocalRbacManifest,
+  argoKustomizeDir,
+  argoLocalRootApp,
   argoNamespace,
   argoRepoUrl,
   capture,
@@ -77,145 +77,27 @@ export function createArgoCommands({
   function installArgoCd() {
     if (argoCdReady()) {
       console.error("ok: Argo CD server already ready");
-      configureLocalArgoGateway();
       return;
     }
-    heading("Installing Argo CD");
+    heading("Installing Argo CD (Kustomize overlay)");
     console.error(
       "  First install can take 5–10 min (image pulls). For faster dev, use: pnpm k8s:local -- --minimal",
     );
     ensureNamespace(argoNamespace);
     run("kubectl", [
       "apply",
-      "-n",
-      argoNamespace,
       "--server-side",
       "--force-conflicts",
-      "-f",
-      argoInstallUrl,
+      "-k",
+      argoKustomizeDir,
     ]);
     waitForArgoServer("Argo CD server", 600_000);
-    configureLocalArgoGateway();
+    console.error("ok: Argo CD installed from deploy/argocd/kustomize/local");
   }
 
-  function configureLocalArgoGateway() {
-    if (!argoCdReady()) {
-      return;
-    }
-    try {
-      const insecure = capture("kubectl", [
-        "-n",
-        argoNamespace,
-        "get",
-        "configmap",
-        "argocd-cmd-params-cm",
-        "-o",
-        "jsonpath={.data.server\\.insecure}",
-      ]);
-      if (insecure === "true") {
-        console.error("ok: Argo CD already configured for Gateway HTTP");
-        configureArgoResourceExclusions();
-        configureArgoLocalDevAccess();
-        ensureArgoGatewayGrpcWeb();
-        return;
-      }
-    } catch {
-      // patch below
-    }
-    runNoShell("kubectl", [
-      "-n",
-      argoNamespace,
-      "patch",
-      "configmap",
-      "argocd-cmd-params-cm",
-      "--type=merge",
-      "-p",
-      JSON.stringify({
-        data: {
-          "server.insecure": "true",
-          "server.grpc.web": "true",
-        },
-      }),
-    ]);
-    configureArgoResourceExclusions();
-    configureArgoLocalDevAccess();
-    ensureArgoGatewayGrpcWeb();
-    run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
-    waitForArgoServer("Argo CD server ready for Gateway HTTP", 300_000);
-  }
-
-  function ensureArgoGatewayGrpcWeb() {
-    const grpcWeb = captureOptional("kubectl", [
-      "-n",
-      argoNamespace,
-      "get",
-      "configmap",
-      "argocd-cmd-params-cm",
-      "-o",
-      "jsonpath={.data.server\\.grpc\\.web}",
-    ]);
-    if (grpcWeb === "true") {
-      return;
-    }
-    runNoShell("kubectl", [
-      "-n",
-      argoNamespace,
-      "patch",
-      "configmap",
-      "argocd-cmd-params-cm",
-      "--type=merge",
-      "-p",
-      JSON.stringify({
-        data: {
-          "server.grpc.web": "true",
-        },
-      }),
-    ]);
-    run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
-    waitForArgoServer("Argo CD server grpc-web ready", 300_000);
-  }
-
-  function configureArgoLocalDevAccess() {
-    run("kubectl", ["apply", "-f", argoLocalRbacManifest]);
-    runNoShell("kubectl", [
-      "-n",
-      argoNamespace,
-      "patch",
-      "configmap",
-      "argocd-cm",
-      "--type=merge",
-      "-p",
-      JSON.stringify({
-        data: {
-          "exec.enabled": "true",
-        },
-      }),
-    ]);
-    console.error("ok: Argo CD local RBAC allows pod logs and exec for admin");
-  }
-
-  function configureArgoResourceExclusions() {
-    const exclusionsYaml = `- apiGroups:
-  - batch
-  kinds:
-  - Job
-  clusters:
-  - "*"
-`;
-    runNoShell("kubectl", [
-      "-n",
-      argoNamespace,
-      "patch",
-      "configmap",
-      "argocd-cm",
-      "--type=merge",
-      "-p",
-      JSON.stringify({
-        data: {
-          "resource.exclusions": exclusionsYaml,
-        },
-      }),
-    ]);
+  function registerLocalGitOpsRootApp() {
+    run("kubectl", ["apply", "-f", argoLocalRootApp]);
+    console.error("ok: repody-local-root Application registered (app-of-apps bootstrap)");
   }
 
   function readGitHubCredential() {
@@ -273,5 +155,9 @@ export function createArgoCommands({
     });
   }
 
-  return { configureArgoRepositoryCredentials, installArgoCd };
+  return {
+    configureArgoRepositoryCredentials,
+    installArgoCd,
+    registerLocalGitOpsRootApp,
+  };
 }

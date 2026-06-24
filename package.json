@@ -49,6 +49,7 @@
     "images:build": "node deploy/scripts/build-images.mjs",
     "images:push": "node deploy/scripts/build-images.mjs --push",
     "gitops:publish": "node deploy/scripts/gitops-publish-local.mjs",
+    "gitops:promote:staging": "node deploy/scripts/gitops-promote-staging.mjs",
     "gitops:sync": "node deploy/scripts/gitops-sync-local.mjs",
     "airgap:build": "node deploy/scripts/airgap-build-release.mjs",
     "airgap:import": "node deploy/scripts/airgap-import.mjs",

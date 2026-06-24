@@ -1,0 +1,15 @@
+# Declarative local Argo CD install (official Kustomize remote base + patches).
+# https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/#kustomize
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: argocd
+
+resources:
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.4.4/manifests/install.yaml
+  - resources/argocd-server-sync-rbac.yaml
+
+patches:
+  - path: patches/argocd-cmd-params-cm.yaml
+  - path: patches/argocd-cm.yaml
+  - path: patches/argocd-rbac-cm.yaml
