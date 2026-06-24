@@ -160,7 +160,38 @@ def test_repody_vlm_structured_payload_keeps_template():
 
     assert "template" in payload["chat_template_kwargs"]
     assert payload["chat_template_kwargs"]["enable_thinking"] is False
+    assert payload["temperature"] == 0.2
+    assert "top_p" not in payload
     assert payload["chat_template_kwargs"]["instructions"] == "Use ISO dates.\nField instructions:\n- `invoice_number`: Invoice number"
+
+
+def test_repody_vlm_thinking_payload_matches_nuextract_docs():
+    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.settings import Settings
+
+    settings = Settings(repody_vlm_enable_thinking=True)
+    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
+    structured = _structured_payload(
+        spec=spec,
+        content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+        schema=schema,
+        extraction_instructions="",
+        settings=settings,
+    )
+    markdown = _markdown_payload(
+        spec=spec,
+        content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+        page_count=1,
+        settings=settings,
+    )
+
+    assert structured["temperature"] == 0.6
+    assert structured["top_p"] == 0.95
+    assert structured["top_k"] == 40
+    assert markdown["temperature"] == 0.7
+    assert markdown["top_p"] == 0.95
+    assert markdown["top_k"] == 40
 
 
 def test_strip_vlm_thinking_removes_reasoning_wrapper():

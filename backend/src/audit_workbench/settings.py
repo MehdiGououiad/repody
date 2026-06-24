@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from functools import lru_cache
 from typing import Self
@@ -41,7 +42,7 @@ class Settings(BaseSettings):
     )
     hatchet_client_tls_strategy: str = Field(
         default="none",
-        description="TLS strategy for Hatchet gRPC (none for hatchet-lite).",
+        description="TLS strategy for Hatchet gRPC (none for in-cluster hatchet-stack).",
     )
     hatchet_task_timeout_minutes: int = Field(
         default=3,
@@ -60,6 +61,36 @@ class Settings(BaseSettings):
         default=None,
         description="OIDC issuer URL, e.g. http://keycloak:8080/realms/repody",
     )
+    oidc_issuer_aliases_env: str = Field(
+        default="",
+        validation_alias=AliasChoices("OIDC_ISSUER_ALIASES"),
+        description="Comma-separated or JSON list of extra accepted JWT issuers.",
+    )
+
+    def accepted_oidc_issuer_aliases(self) -> list[str]:
+        raw = self.oidc_issuer_aliases_env or os.environ.get("AUDIT_OIDC_ISSUER_ALIASES", "")
+        return self._parse_oidc_issuer_aliases(raw)
+
+    @staticmethod
+    def _parse_oidc_issuer_aliases(value: object) -> list[str]:
+        if value is None or value == "":
+            return []
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        if isinstance(value, str):
+            text = value.strip()
+            if not text:
+                return []
+            if text.startswith("["):
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError:
+                    inner = text.strip("[]")
+                    return [part.strip() for part in inner.split(",") if part.strip()]
+                if isinstance(parsed, list):
+                    return [str(item) for item in parsed]
+            return [part.strip() for part in text.split(",") if part.strip()]
+        return []
     oidc_audience: str | None = Field(
         default=None,
         description="Optional JWT audience (client id). When unset, audience is not verified.",
@@ -97,6 +128,31 @@ class Settings(BaseSettings):
             "KEYCLOAK_ADMIN_CONSOLE_URL",
         ),
         description="Browser URL for the Keycloak admin console.",
+    )
+    keycloak_oauth_client_id: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AUDIT_KEYCLOAK_CLIENT_ID", "AUTH_KEYCLOAK_ID"),
+        description="OAuth client id for operator benchmark password-grant tokens.",
+    )
+    keycloak_oauth_client_secret: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices(
+            "AUDIT_KEYCLOAK_CLIENT_SECRET",
+            "AUTH_KEYCLOAK_CLIENT_SECRET",
+        ),
+        description="OAuth client secret for operator benchmark password-grant tokens.",
+    )
+    operator_benchmark_bearer_token: str | None = Field(
+        default=None,
+        description="Pre-issued bearer token for benchmark_suite.py (skips Keycloak grant).",
+    )
+    operator_benchmark_user: str | None = Field(
+        default=None,
+        description="Keycloak user for operator benchmark jobs when OIDC is enabled.",
+    )
+    operator_benchmark_password: str | None = Field(
+        default=None,
+        description="Keycloak password for operator benchmark jobs when OIDC is enabled.",
     )
 
     deployment_environment: str = Field(
@@ -165,7 +221,11 @@ class Settings(BaseSettings):
         ge=512,
         description="Optional Repody VLM page downscale cap. None follows NuExtract docs and preserves rendered size.",
     )
-    repody_vlm_pdf_dpi: int = Field(default=170, ge=72)
+    repody_vlm_pdf_dpi: int = Field(
+        default=170,
+        ge=72,
+        description="PDF raster DPI per NuExtract3 official example (lossless PNG).",
+    )
     repody_vlm_jpeg_quality: int = Field(
         default=95,
         ge=50,
@@ -213,6 +273,69 @@ class Settings(BaseSettings):
         description=(
             "NuExtract reasoning mode for difficult layouts (enable_thinking). "
             "Uses higher temperature per upstream docs."
+        ),
+    )
+
+    surya_ocr_enabled: bool = Field(
+        default=True,
+        description="Register Surya OCR 2 in the benchmark document-model catalog.",
+    )
+    surya_inference_backend: str = Field(
+        default="llamacpp",
+        description=(
+            "Surya inference backend (SURYA_INFERENCE_BACKEND). Repody uses llamacpp only."
+        ),
+    )
+    surya_inference_url: str | None = Field(
+        default=None,
+        description=(
+            "Pre-running llama-server OpenAI API base (SURYA_INFERENCE_URL), e.g. "
+            "http://host:8001/v1. Required for Surya OCR in workers."
+        ),
+    )
+    surya_inference_parallel: int = Field(
+        default=8,
+        ge=1,
+        le=32,
+        description=(
+            "Client-side concurrency (SURYA_INFERENCE_PARALLEL). Match --parallel on llama-server."
+        ),
+    )
+    surya_image_dpi: int = Field(
+        default=96,
+        ge=72,
+        description=(
+            "Surya IMAGE_DPI (datalab benchmark default). Also used when rasterizing PDF "
+            "uploads to PNG before RecognitionPredictor."
+        ),
+    )
+    surya_image_dpi_highres: int = Field(
+        default=192,
+        ge=72,
+        description="Surya IMAGE_DPI_HIGHRES (datalab-to/surya settings.py default).",
+    )
+    surya_max_tokens_full_page: int = Field(
+        default=12288,
+        ge=1024,
+        description="Surya SURYA_MAX_TOKENS_FULL_PAGE (datalab-to/surya settings.py default).",
+    )
+    surya_detector_text_threshold: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Surya DETECTOR_TEXT_THRESHOLD (datalab-to/surya settings.py default).",
+    )
+    surya_layout_block_ocr_enabled: bool = Field(
+        default=False,
+        description=(
+            "Use LayoutPredictor + per-block RecognitionPredictor (datalab-to/surya block mode) "
+            "instead of default full-page OCR."
+        ),
+    )
+    surya_table_recognition_enabled: bool = Field(
+        default=False,
+        description=(
+            "Run TableRecPredictor.predict_full on each page and append table HTML to benchmark text."
         ),
     )
 

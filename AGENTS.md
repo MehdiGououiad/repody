@@ -6,14 +6,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Platform logs
 
-Do **not** write logs to workspace files. Use Docker or Grafana:
+Do **not** write logs to workspace files. Use kubectl or Grafana:
 
-- **Agent debugging:** `pnpm compose logs --stack=dev` (add `-f` via compose logs, or `docker compose -f deploy/compose/base.yaml -f deploy/compose/cpu.yaml -f deploy/compose/dev.yaml logs --tail=300 --timestamps worker api`).
-- **Human live tail:** `pnpm compose logs --stack=dev`
-- **Human search/history:** Grafana http://localhost:3001 (admin / audit) — dashboard **Platform logs**. Start with `pnpm compose up --stack=dev --with=obs --only=obs --detach` or `pnpm compose up --stack=prod --with=obs,traces --build`.
+- **Agent debugging:** `kubectl -n repody logs -l app.kubernetes.io/component=control --tail=300 --timestamps` (add `-f` to follow). Workers: label `app.kubernetes.io/component=worker-ocr` or `worker-fast`.
+- **Human live tail:** `kubectl -n repody logs -f deploy/repody-api`
+- **Human search/history:** Grafana http://grafana.repody.local (admin / audit) — dashboard **Platform logs**. Requires `pnpm k8s:local:hosts` and a running cluster (`pnpm k8s:local`).
 
 ## Dev workflow
 
-- **Fast dev:** `pnpm dev` (add `-- --warmup` to pre-load Repody VLM on the OCR worker) — see [DEV.md](./DEV.md).
-- **Do not** rebuild images on every code change; rebuild only when `pyproject.toml` or Dockerfiles change (`pnpm compose build --stack=dev --only=backend`).
-- **Worker code changes:** `pnpm compose restart workers --stack=dev` or `pnpm compose watch --stack=dev`.
+- **Bootstrap once:** `pnpm dev` — Helm deploy when cluster is new or after `pnpm stop`.
+- **Daily loop:** `pnpm dev:sync` — Skaffold hot sync (Python/TS); no full rebuild/re-helm per save.
+- **Stop app:** `pnpm stop` — uninstalls Helm release; **keeps** kind + Harbor (fast next `pnpm dev`).
+- **Full tear-down:** `pnpm stop:cluster` or `pnpm platform:reset`.
+- **Third-party images:** `pnpm registry:warm` once after clone; `pnpm dev` skips Harbor/Docker pulls when cached.

@@ -109,8 +109,11 @@ def list_read_paths() -> list[ReadPathSpec]:
     return list(READ_PATHS)
 
 
-def list_validation_modes() -> list[ValidationModeSpec]:
-    return list(VALIDATION_MODE_OPTIONS)
+def list_validation_modes(settings: Settings | None = None) -> list[ValidationModeSpec]:
+    cfg = settings or get_settings()
+    if cfg.llm_validation_enabled:
+        return list(VALIDATION_MODE_OPTIONS)
+    return [mode for mode in VALIDATION_MODE_OPTIONS if mode.id != RUN_VALIDATION_LLM]
 
 
 def run_uses_llm_validation(
@@ -130,3 +133,41 @@ def resolve_run_validation_mode(
     if run_uses_llm_validation(rules, settings):
         return RUN_VALIDATION_LLM
     return LOGIC_VALIDATION
+
+
+def _read_doc_value(doc: object, key: str, default: object = None) -> object:
+    value = getattr(doc, key, None)
+    if value is not None:
+        return value
+    if isinstance(doc, dict):
+        return doc.get(key, default)
+    return default
+
+
+def document_has_schema_fields(doc: object) -> bool:
+    schema_fields = _read_doc_value(doc, "schema_fields", None)
+    if schema_fields is None and isinstance(doc, dict):
+        schema_fields = doc.get("schema") or []
+    for field in schema_fields or []:
+        raw = _read_doc_value(field, "name", "")
+        if str(raw or "").strip():
+            return True
+    return False
+
+
+def document_needs_extraction(doc: object, *, has_file: bool) -> bool:
+    """True when a run should invoke the extraction pipeline for this document."""
+    if not has_file:
+        return False
+    if document_has_schema_fields(doc):
+        return True
+    if bool(_read_doc_value(doc, "markdown_extraction", False)):
+        return True
+    if isinstance(doc, dict) and bool(doc.get("markdownExtraction")):
+        return True
+    from audit_workbench.extraction.model_registry import is_ocr_compare_model
+
+    ocr_model = _read_doc_value(doc, "ocr_model", None)
+    if ocr_model is None and isinstance(doc, dict):
+        ocr_model = doc.get("ocrModel")
+    return is_ocr_compare_model(str(ocr_model) if ocr_model else None)

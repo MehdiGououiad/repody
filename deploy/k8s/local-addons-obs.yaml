@@ -1,0 +1,936 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-loki-config
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+data:
+  local-config.yaml: |
+    auth_enabled: false
+
+    server:
+      http_listen_port: 3100
+
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+
+    schema_config:
+      configs:
+        - from: 2020-10-24
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+
+    storage_config:
+      tsdb_shipper:
+        active_index_directory: /loki/tsdb-index
+        cache_location: /loki/tsdb-cache
+      filesystem:
+        directory: /loki/chunks
+
+    limits_config:
+      retention_period: 168h
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+
+    analytics:
+      reporting_enabled: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-promtail-config
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+data:
+  config.yml: |
+    server:
+      http_listen_port: 9080
+      grpc_listen_port: 0
+
+    positions:
+      filename: /run/promtail/positions.yaml
+
+    clients:
+      - url: http://local-loki:3100/loki/api/v1/push
+
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            target_label: component
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_instance]
+            target_label: instance
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: control
+            target_label: service
+            replacement: api
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: worker-ocr
+            target_label: service
+            replacement: worker
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: worker-fast
+            target_label: service
+            replacement: worker-fast
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_component]
+            regex: edge
+            target_label: service
+            replacement: web
+          - source_labels:
+              - __meta_kubernetes_pod_uid
+              - __meta_kubernetes_pod_container_name
+            separator: /
+            target_label: __path__
+            replacement: /var/log/pods/*$1/$2/*.log
+        pipeline_stages:
+          - cri: {}
+          - match:
+              selector: '{namespace="repody", service=~"api|worker|worker-fast"}'
+              stages:
+                - json:
+                    expressions:
+                      level: level
+                      event: event
+                      body: body
+                      run_id: run_id
+                      request_id: request_id
+                      workflow_id: workflow_id
+                      trace_id: trace_id
+                      span_id: span_id
+                      event_domain: event_domain
+                - structured_metadata:
+                    level:
+                    event:
+                    run_id:
+                    request_id:
+                    workflow_id:
+                    trace_id:
+                    span_id:
+                    event_domain:
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-tempo-config
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+data:
+  tempo.yaml: |
+    server:
+      http_listen_port: 3200
+
+    distributor:
+      receivers:
+        otlp:
+          protocols:
+            http:
+              endpoint: 0.0.0.0:4318
+
+    ingester:
+      max_block_duration: 5m
+
+    compactor:
+      compaction:
+        block_retention: 168h
+
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+
+    metrics_generator:
+      registry:
+        external_labels:
+          source: tempo
+      storage:
+        path: /var/tempo/generator/wal
+
+    overrides:
+      defaults:
+        metrics_generator:
+          processors: [service-graphs, span-metrics]
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: local-grafana-provisioning
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+data:
+  loki.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        uid: loki
+        type: loki
+        access: proxy
+        url: http://local-loki:3100
+        isDefault: true
+        editable: false
+        jsonData:
+          maxLines: 1000
+  tempo.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://local-tempo:3200
+        editable: false
+        jsonData:
+          tracesToLogs:
+            datasourceUid: loki
+            filterByTraceID: true
+            filterBySpanID: false
+          nodeGraph:
+            enabled: true
+  dashboards.yaml: |
+    apiVersion: 1
+    providers:
+      - name: repody
+        orgId: 1
+        folder: Repody
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /etc/grafana/provisioning/dashboards/json
+  platform-logs.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "gridPos": { "h": 18, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Descending",
+            "wrapLogMessage": true
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "expr": "{namespace=\"repody\", service=~\"api|worker|worker-fast\"}",
+              "refId": "A"
+            }
+          ],
+          "title": "Repody platform logs",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["repody", "local"],
+      "templating": { "list": [] },
+      "time": { "from": "now-1h", "to": "now" },
+      "timezone": "browser",
+      "title": "Platform logs",
+      "uid": "repody-platform-logs",
+      "version": 1,
+      "weekStart": ""
+    }
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: local-bugsink-secrets
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+type: Opaque
+stringData:
+  BUGSINK_SECRET_KEY: local-k8s-bugsink-secret-key-change-me-50chars-minimum
+  BUGSINK_DB_PASSWORD: bugsink-local-k8s
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: local-promtail
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: repody-local-promtail
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods", "namespaces"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: repody-local-promtail
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: repody-local-promtail
+subjects:
+  - kind: ServiceAccount
+    name: local-promtail
+    namespace: repody
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-loki
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-grafana
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-tempo
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: local-bugsink-db
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-loki
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+    app.kubernetes.io/name: loki
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loki
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loki
+        app.kubernetes.io/component: local-observability
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: loki
+          image: grafana/loki:3.6.11
+          args:
+            - -config.file=/etc/loki/local-config.yaml
+          ports:
+            - name: http
+              containerPort: 3100
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+              readOnly: true
+            - name: data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: local-loki-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: local-loki
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-loki
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  selector:
+    app.kubernetes.io/name: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: local-promtail
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+    app.kubernetes.io/name: promtail
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: promtail
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: promtail
+        app.kubernetes.io/component: local-observability
+    spec:
+      serviceAccountName: local-promtail
+      containers:
+        - name: promtail
+          image: grafana/promtail:3.6.11
+          env:
+            # Promtail keeps only pods scheduled on $HOSTNAME; default hostname is the pod name.
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          args:
+            - -config.file=/etc/promtail/config.yml
+          ports:
+            - name: http
+              containerPort: 9080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/promtail
+              readOnly: true
+            - name: run
+              mountPath: /run/promtail
+            - name: pods
+              mountPath: /var/log/pods
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: local-promtail-config
+        - name: run
+          emptyDir: {}
+        - name: pods
+          hostPath:
+            path: /var/log/pods
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-tempo
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+    app.kubernetes.io/name: tempo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tempo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tempo
+        app.kubernetes.io/component: local-observability
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: tempo
+          image: grafana/tempo:2.9.2
+          args:
+            - -config.file=/etc/tempo.yaml
+          ports:
+            - name: http
+              containerPort: 3200
+            - name: otlp-http
+              containerPort: 4318
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/tempo.yaml
+              subPath: tempo.yaml
+              readOnly: true
+            - name: data
+              mountPath: /var/tempo
+      volumes:
+        - name: config
+          configMap:
+            name: local-tempo-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: local-tempo
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-tempo
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  selector:
+    app.kubernetes.io/name: tempo
+  ports:
+    - name: http
+      port: 3200
+      targetPort: http
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-grafana
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+    app.kubernetes.io/name: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: grafana
+        app.kubernetes.io/component: local-observability
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:12.4.1
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: admin
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: audit
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_SERVER_ROOT_URL
+              value: http://grafana.repody.local
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/grafana
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/datasources/loki.yaml
+              subPath: loki.yaml
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/datasources/tempo.yaml
+              subPath: tempo.yaml
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards/json/platform-logs.json
+              subPath: platform-logs.json
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: local-grafana
+        - name: provisioning
+          configMap:
+            name: local-grafana-provisioning
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-grafana
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  selector:
+    app.kubernetes.io/name: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: local-bugsink-db
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+    app.kubernetes.io/name: bugsink-db
+spec:
+  serviceName: local-bugsink-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bugsink-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bugsink-db
+        app.kubernetes.io/component: local-bugsink
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postgres
+          image: postgres:17.10-alpine
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: bugsinkuser
+            - name: POSTGRES_DB
+              value: bugsink
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: local-bugsink-secrets
+                  key: BUGSINK_DB_PASSWORD
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -h
+                - localhost
+                - -U
+                - bugsinkuser
+                - -d
+                - bugsink
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+              subPath: pgdata
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: local-bugsink-db
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-bugsink-db
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: bugsink-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-bugsink
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+    app.kubernetes.io/name: bugsink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bugsink
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bugsink
+        app.kubernetes.io/component: local-bugsink
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: bugsink
+          image: bugsink/bugsink:2
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: local-bugsink-secrets
+                  key: BUGSINK_SECRET_KEY
+            - name: CREATE_SUPERUSER
+              value: admin@example.com:admin
+            - name: PORT
+              value: "8000"
+            - name: BASE_URL
+              value: http://bugsink.repody.local
+            - name: BEHIND_HTTPS_PROXY
+              value: "false"
+            - name: USE_X_FORWARDED_HOST
+              value: "false"
+            - name: BUGSINK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: local-bugsink-secrets
+                  key: BUGSINK_DB_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://bugsinkuser:$(BUGSINK_DB_PASSWORD)@local-bugsink-db:5432/bugsink
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: bugsink.repody.local
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: bugsink.repody.local
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            timeoutSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: local-bugsink
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+spec:
+  selector:
+    app.kubernetes.io/name: bugsink
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: local-grafana
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-observability
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: repody
+  hostnames:
+    - grafana.repody.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: local-grafana
+          port: 3000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: local-bugsink
+  namespace: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-bugsink
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: repody
+  hostnames:
+    - bugsink.repody.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: local-bugsink
+          port: 8000
+

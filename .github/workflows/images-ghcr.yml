@@ -1,0 +1,84 @@
+name: Publish images to GHCR
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Image tag to publish. Defaults to the short git SHA.
+        required: false
+        type: string
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve image coordinates
+        id: images
+        shell: bash
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          if [ -n "${{ inputs.tag }}" ]; then
+            tag="${{ inputs.tag }}"
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="${GITHUB_SHA::12}"
+          fi
+          echo "registry=ghcr.io/${owner}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push images
+        env:
+          REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
+          REPODY_BACKEND_IMAGE_TAG: ${{ steps.images.outputs.tag }}
+          REPODY_WEB_IMAGE_TAG: ${{ steps.images.outputs.tag }}
+          REPODY_BUILDKIT_CACHE_FROM: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
+          REPODY_BUILDKIT_CACHE_TO: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
+          AUTH_SECRET: ghcr-ci-placeholder-secret-32chars-min
+          AUTH_KEYCLOAK_CLIENT_SECRET: repody-web-ci-secret
+          AUTH_KEYCLOAK_ISSUER: https://auth.example.com/realms/repody
+          AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
+          REPODY_WEB_BACKEND_URL: http://repody-api:8000
+        run: node deploy/scripts/build-images.mjs --push
+
+      - name: Write Helm image values
+        shell: bash
+        run: |
+          mkdir -p dist
+          cat > dist/repody-ghcr-images.yaml <<EOF
+          images:
+            backend:
+              repository: ${{ steps.images.outputs.registry }}/repody-backend
+              tag: "${{ steps.images.outputs.tag }}"
+            api:
+              repository: ${{ steps.images.outputs.registry }}/repody-backend
+              tag: "${{ steps.images.outputs.tag }}"
+            worker:
+              repository: ${{ steps.images.outputs.registry }}/repody-backend
+              tag: "${{ steps.images.outputs.tag }}"
+            web:
+              repository: ${{ steps.images.outputs.registry }}/repody-web
+              tag: "${{ steps.images.outputs.tag }}"
+          EOF
+
+      - name: Upload Helm image values
+        uses: actions/upload-artifact@v4
+        with:
+          name: repody-ghcr-images-${{ steps.images.outputs.tag }}
+          path: dist/repody-ghcr-images.yaml
+          retention-days: 30

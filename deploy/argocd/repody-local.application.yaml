@@ -3,6 +3,8 @@ kind: Application
 metadata:
   name: repody-local
   namespace: argocd
+  annotations:
+    repody.dev/summary: Repody platform Helm release (API, web, workers, data, queue)
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -16,11 +18,14 @@ spec:
       valueFiles:
         - values.yaml
         - values-local.yaml
-        - values-local-harbor.yaml
+        - values-local-images.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true

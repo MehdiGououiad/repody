@@ -1,0 +1,72 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: repody-postgres
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: postgres
+spec:
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+  primaryUpdateStrategy: unsupervised
+  enableSuperuserAccess: false
+
+  bootstrap:
+    initdb:
+      database: audit_workbench
+      owner: audit
+      secret:
+        name: repody-postgres-app
+
+  storage:
+    size: 100Gi
+    storageClass: CHANGE_ME_FAST_REPLICATED_STORAGE
+
+  walStorage:
+    size: 20Gi
+    storageClass: CHANGE_ME_FAST_REPLICATED_STORAGE
+
+  resources:
+    requests:
+      cpu: "1"
+      memory: 2Gi
+    limits:
+      memory: 4Gi
+
+  postgresql:
+    parameters:
+      shared_buffers: 512MB
+      effective_cache_size: 1536MB
+      maintenance_work_mem: 128MB
+      checkpoint_completion_target: "0.9"
+      wal_compression: "on"
+      log_min_duration_statement: "1000"
+      log_checkpoints: "on"
+      log_connections: "on"
+      log_disconnections: "on"
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: preferred
+
+  monitoring:
+    enablePodMonitor: true
+
+  backup:
+    barmanObjectStore:
+      destinationPath: s3://CHANGE_ME_BACKUP_BUCKET/cnpg/repody-postgres
+      endpointURL: https://CHANGE_ME_S3_COMPATIBLE_ENDPOINT
+      s3Credentials:
+        accessKeyId:
+          name: repody-postgres-backup
+          key: ACCESS_KEY_ID
+        secretAccessKey:
+          name: repody-postgres-backup
+          key: SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+      data:
+        compression: gzip
+    retentionPolicy: 30d

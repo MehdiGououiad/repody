@@ -1,0 +1,1 @@
+{"data":{"AUDIT_SURYA_INFERENCE_BACKEND":"llamacpp","AUDIT_SURYA_INFERENCE_URL":"http://host.docker.internal:8001/v1","AUDIT_SURYA_INFERENCE_PARALLEL":"8"}}

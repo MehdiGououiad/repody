@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import shutil
 import statistics
 import sys
@@ -22,10 +23,22 @@ from typing import Any
 import httpx
 
 from audit_workbench.benchmarking import csv_report, html_report, score_fields, score_rules
+from audit_workbench.extraction.model_registry import is_ocr_compare_model
 
 DEFAULT_MODELS = (
     "repody:vlm",
 )
+
+TEXT_PREVIEW_MAX_CHARS = 4_000
+
+
+def _text_preview(text: str) -> str:
+    stripped = text.strip()
+    if not stripped:
+        return ""
+    if len(stripped) <= TEXT_PREVIEW_MAX_CHARS:
+        return stripped
+    return f"{stripped[:TEXT_PREVIEW_MAX_CHARS]}\n\n… ({len(stripped):,} characters total)"
 
 
 @dataclass(frozen=True)
@@ -61,6 +74,8 @@ def _field_payload(
     rows: list[dict[str, Any]],
     probe: str,
     id_prefix: str,
+    *,
+    include_probe: bool = True,
 ) -> list[dict[str, str]]:
     fields = [
         {
@@ -70,20 +85,23 @@ def _field_payload(
         }
         for index, row in enumerate(rows, start=1)
     ]
-    fields.append(
-        {
-            "id": f"{id_prefix}-field-probe",
-            "name": probe,
-            "description": "Benchmark cache-control probe; ignore if absent.",
-        }
-    )
+    if include_probe:
+        fields.append(
+            {
+                "id": f"{id_prefix}-field-probe",
+                "name": probe,
+                "description": "Benchmark cache-control probe; ignore if absent.",
+            }
+        )
     return fields
 
 
 def _model_case_name(model: str) -> str:
     lower = model.casefold()
-    if "repody-vlm" in lower:
+    if "repody-vlm" in lower or model == "repody:vlm":
         return "repody-vlm"
+    if "surya" in lower:
+        return "surya-ocr2"
     token = model.split(":", 1)[-1].split("/")[-1]
     return "".join(char.lower() if char.isalnum() else "-" for char in token).strip("-")[:32]
 
@@ -138,6 +156,12 @@ async def _get_json(client: httpx.AsyncClient, path: str) -> dict[str, Any]:
     if response.is_error:
         raise RuntimeError(f"{response.request.method} {path} failed {response.status_code}: {response.text[:500]}")
     return response.json()
+
+
+def _client_headers(bearer_token: str | None) -> dict[str, str]:
+    if not bearer_token:
+        return {}
+    return {"Authorization": f"Bearer {bearer_token}"}
 
 
 async def _save_workflow(
@@ -205,13 +229,20 @@ async def _run_once(
     probe: str,
     expect_cache: bool | None,
     minimum_accuracy: float,
+    judge_quality: bool,
 ) -> dict[str, Any]:
     document_id = f"doc-{suite_id}-{case.name}"
     case_token = "".join(char for char in case.name if char.isalnum())[:4]
     id_prefix = f"b{suite_id}{case_token}"
     expected_fields = list(manifest.get(case.fields_group) or manifest.get("fields") or [])
     expected_rules = list(manifest.get(case.rules_group) or [])
-    schema = _field_payload(expected_fields, probe, id_prefix)
+    schema = _field_payload(
+        expected_fields,
+        probe,
+        id_prefix,
+        # Phase-specific probe isolates Redis cache keys (required for markdown-only docs).
+        include_probe=True,
+    )
     document: dict[str, Any] = {
         "id": document_id,
         "documentType": manifest.get("documentType") or "Document",
@@ -221,6 +252,8 @@ async def _run_once(
     }
     if case.model:
         document["ocrModel"] = case.model
+    if judge_quality and not (case.model and is_ocr_compare_model(case.model)):
+        document["markdownExtraction"] = True
     rules = _rule_payload(expected_rules, id_prefix)
     await _save_workflow(
         client,
@@ -274,6 +307,11 @@ async def _run_once(
     }
     field_score = score_fields(fields, expected_fields)
     rule_score = score_rules(result.get("ruleResults") or [], expected_rules)
+    raw_text = str(extraction.get("rawText") or document_result.get("rawText") or "")
+    raw_text_chars = len(raw_text.strip())
+    ocr_text = str(extraction.get("ocrText") or "")
+    ocr_text_chars = len(ocr_text.strip())
+    ocr_compare = bool(case.model and is_ocr_compare_model(case.model))
     created_at = _parse_dt(result.get("createdAt"))
     started_at = _parse_dt(metadata.get("startedAt"))
     queue_ms = None
@@ -281,21 +319,41 @@ async def _run_once(
         queue_ms = max(0, round((started_at - created_at).total_seconds() * 1000))
     cache_hit = bool(extraction.get("cacheHit"))
     cache_ok = expect_cache is None or cache_hit is expect_cache
-    passed = (
-        field_score["accuracy"] >= minimum_accuracy
-        and rule_score["accuracy"] == 1.0
-        and cache_ok
-    )
-    error = None
-    if not cache_ok:
-        error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
-    elif field_score["accuracy"] < minimum_accuracy:
-        error = (
-            f"Field accuracy {field_score['accuracy']:.1%} is below "
-            f"{minimum_accuracy:.1%}"
+    if judge_quality:
+        text_chars = raw_text_chars if ocr_compare else ocr_text_chars
+        text_preview = _text_preview(raw_text if ocr_compare else ocr_text)
+        passed = text_chars > 0 and cache_ok
+        error = None
+        if not cache_ok:
+            error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
+        elif text_chars == 0:
+            label = "OCR text" if ocr_compare else "NuExtract markdown"
+            error = f"{label} output was empty"
+    elif ocr_compare:
+        text_preview = _text_preview(raw_text)
+        passed = raw_text_chars > 0 and cache_ok
+        error = None
+        if not cache_ok:
+            error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
+        elif raw_text_chars == 0:
+            error = "OCR compare model produced no text"
+    else:
+        text_preview = _text_preview(ocr_text) if ocr_text_chars else _text_preview(raw_text)
+        passed = (
+            field_score["accuracy"] >= minimum_accuracy
+            and rule_score["accuracy"] == 1.0
+            and cache_ok
         )
-    elif rule_score["accuracy"] < 1.0:
-        error = f"Rule accuracy {rule_score['accuracy']:.1%} is below 100%"
+        error = None
+        if not cache_ok:
+            error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
+        elif field_score["accuracy"] < minimum_accuracy:
+            error = (
+                f"Field accuracy {field_score['accuracy']:.1%} is below "
+                f"{minimum_accuracy:.1%}"
+            )
+        elif rule_score["accuracy"] < 1.0:
+            error = f"Rule accuracy {rule_score['accuracy']:.1%} is below 100%"
 
     return {
         "case": case.name,
@@ -304,6 +362,8 @@ async def _run_once(
         "status": "passed" if passed else "failed",
         "passed": passed,
         "skipped": False,
+        "ocrCompare": ocr_compare,
+        "judgeQuality": judge_quality,
         "runId": run_id,
         "wallMs": wall_ms,
         "submitMs": submit_ms,
@@ -315,6 +375,9 @@ async def _run_once(
         "cacheHit": cache_hit,
         "readPathUsed": extraction.get("readPathUsed"),
         "fieldsExtracted": extraction.get("fieldsExtracted"),
+        "rawTextChars": raw_text_chars,
+        "ocrTextChars": ocr_text_chars,
+        "textPreview": text_preview if (judge_quality or ocr_compare) else None,
         "fieldAccuracy": field_score["accuracy"],
         "ruleAccuracy": rule_score["accuracy"],
         "fieldScore": field_score,
@@ -339,11 +402,17 @@ def _skip_row(case: BenchmarkCase, reason: str) -> dict[str, Any]:
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     measured = [row for row in rows if not row.get("skipped")]
-    field_total = sum(int((row.get("fieldScore") or {}).get("total") or 0) for row in measured)
-    field_correct = sum(int((row.get("fieldScore") or {}).get("correct") or 0) for row in measured)
-    rule_total = sum(int((row.get("ruleScore") or {}).get("total") or 0) for row in measured)
-    rule_correct = sum(int((row.get("ruleScore") or {}).get("correct") or 0) for row in measured)
+    structured = [
+        row
+        for row in measured
+        if not row.get("ocrCompare") and not row.get("judgeQuality")
+    ]
+    field_total = sum(int((row.get("fieldScore") or {}).get("total") or 0) for row in structured)
+    field_correct = sum(int((row.get("fieldScore") or {}).get("correct") or 0) for row in structured)
+    rule_total = sum(int((row.get("ruleScore") or {}).get("total") or 0) for row in structured)
+    rule_correct = sum(int((row.get("ruleScore") or {}).get("correct") or 0) for row in structured)
     wall_times = [int(row["wallMs"]) for row in measured if isinstance(row.get("wallMs"), int)]
+    ocr_rows = [row for row in measured if row.get("ocrCompare")]
     return {
         "passed": sum(1 for row in measured if row.get("passed")),
         "failed": sum(1 for row in measured if not row.get("passed")),
@@ -351,14 +420,40 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "fieldAccuracy": round(field_correct / field_total, 4) if field_total else 1.0,
         "ruleAccuracy": round(rule_correct / rule_total, 4) if rule_total else 1.0,
         "medianWallMs": round(statistics.median(wall_times)) if wall_times else None,
+        "ocrCompareRuns": len(ocr_rows),
+        "medianRawTextChars": round(statistics.median(
+            [int(row.get("rawTextChars") or 0) for row in ocr_rows]
+        )) if ocr_rows else None,
     }
 
 
 def _print_table(rows: list[dict[str, Any]]) -> None:
-    headers = ("case", "phase", "status", "wall", "queue", "extract", "validate", "cache", "fields", "rules")
+    headers = (
+        "case",
+        "phase",
+        "status",
+        "wall",
+        "queue",
+        "extract",
+        "validate",
+        "cache",
+        "fields",
+        "rules",
+        "ocr-chars",
+    )
     print("\n" + " | ".join(f"{header:>10}" for header in headers))
-    print("-" * 133)
+    print("-" * 145)
     for row in rows:
+        field_display = (
+            "-"
+            if row.get("ocrCompare")
+            else f"{float(row.get('fieldAccuracy') or 0):.0%}"
+        )
+        rule_display = (
+            "-"
+            if row.get("ocrCompare")
+            else f"{float(row.get('ruleAccuracy') or 0):.0%}"
+        )
         values = (
             str(row.get("case") or "")[:18],
             str(row.get("phase") or ""),
@@ -368,10 +463,110 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
             str(row.get("extractionMs") if row.get("extractionMs") is not None else "-"),
             str(row.get("validationMs") if row.get("validationMs") is not None else "-"),
             str(row.get("cacheHit") if row.get("cacheHit") is not None else "-"),
-            f"{float(row.get('fieldAccuracy') or 0):.0%}",
-            f"{float(row.get('ruleAccuracy') or 0):.0%}",
+            field_display,
+            rule_display,
+            str(row.get("rawTextChars") if row.get("ocrCompare") else "-"),
         )
         print(" | ".join(f"{value:>10}" for value in values))
+
+
+async def _execute_benchmark_case(
+    client: httpx.AsyncClient,
+    *,
+    args: argparse.Namespace,
+    suite_id: str,
+    case: BenchmarkCase,
+    manifest: dict[str, Any],
+    document_bytes: bytes,
+    filename: str,
+    availability: dict[str, dict[str, Any]],
+    cache_enabled: bool,
+) -> list[dict[str, Any]]:
+    case_rows: list[dict[str, Any]] = []
+    model_info = availability.get(case.model or "") if case.model else None
+    if case.model and model_info and not model_info.get("available", False):
+        reason = str(model_info.get("availabilityNote") or "Model is unavailable")
+        case_rows.append(_skip_row(case, reason))
+        print(f"[SKIP] {case.name}: {reason}", flush=True)
+        return case_rows
+
+    workflow_id = f"wf-benchmark-{suite_id}-{case.name}"
+    print(f"\n[{case.name}] {case.model or case.read_path}", flush=True)
+    try:
+        phase_specs: list[tuple[str, str, bool | None]] = [
+            ("first", f"_benchmark_probe_{suite_id}_{case.name}_first", False)
+        ]
+        if case.repeated:
+            for index in range(args.warm_runs):
+                phase_specs.append(
+                    (
+                        f"warm-{index + 1}",
+                        f"_benchmark_probe_{suite_id}_{case.name}_warm_{index + 1}",
+                        False,
+                    )
+                )
+            if args.cache_check and cache_enabled:
+                last_probe = phase_specs[-1][1]
+                phase_specs.append(("cache", last_probe, True))
+
+        for phase, probe, expect_cache in phase_specs:
+            started = time.perf_counter()
+            try:
+                row = await _run_once(
+                    client,
+                    suite_id=suite_id,
+                    case=case,
+                    phase=phase,
+                    workflow_id=workflow_id,
+                    manifest=manifest,
+                    document_bytes=document_bytes,
+                    filename=filename,
+                    timeout_s=args.timeout_seconds,
+                    probe=probe,
+                    expect_cache=expect_cache,
+                    minimum_accuracy=args.minimum_accuracy,
+                    judge_quality=args.judge_quality,
+                )
+            except Exception as exc:
+                row = {
+                    "case": case.name,
+                    "model": case.model or case.read_path,
+                    "phase": phase,
+                    "status": "failed",
+                    "passed": False,
+                    "skipped": False,
+                    "wallMs": round((time.perf_counter() - started) * 1000),
+                    "fieldAccuracy": 0.0,
+                    "ruleAccuracy": 0.0,
+                    "error": str(exc),
+                }
+            case_rows.append(row)
+            field_display = (
+                str(row.get("rawTextChars") or "-")
+                if row.get("ocrCompare")
+                else f"{float(row.get('fieldAccuracy') or 0):.0%}"
+            )
+            print(
+                f"  {phase:<8} {row['status']:<7} "
+                f"wall={row.get('wallMs', '-')}ms "
+                f"extract={row.get('extractionMs', '-')}ms "
+                f"score={field_display}",
+                flush=True,
+            )
+            if not row.get("passed") and not args.continue_on_failure:
+                break
+    finally:
+        try:
+            await client.delete(f"/v1/workflows/{workflow_id}")
+        except Exception:
+            pass
+    return case_rows
+
+
+def _parallel_model_cases(profile: str, cases: list[BenchmarkCase]) -> list[BenchmarkCase]:
+    if profile not in {"models", "full"}:
+        return []
+    return [case for case in cases if case.model]
 
 
 async def run(args: argparse.Namespace) -> int:
@@ -380,20 +575,24 @@ async def run(args: argparse.Namespace) -> int:
     suite_id = uuid.uuid4().hex[:8]
     generated_at = datetime.now(UTC).isoformat()
     timeout = httpx.Timeout(connect=10.0, read=args.timeout_seconds + 30, write=60.0, pool=10.0)
-    limits = httpx.Limits(max_connections=4, max_keepalive_connections=2)
     rows: list[dict[str, Any]] = []
 
     async with httpx.AsyncClient(
         base_url=args.api.rstrip("/"),
         timeout=timeout,
-        limits=limits,
+        limits=httpx.Limits(max_connections=16, max_keepalive_connections=8),
+        headers=_client_headers(args.bearer_token),
     ) as client:
         try:
+            health = await _get_json(client, "/v1/healthz")
             environment = {
-                "health": await _get_json(client, "/v1/healthz"),
-                "platform": await _get_json(client, "/v1/platform/config"),
+                "health": health,
                 "modelsCatalog": await _get_json(client, "/v1/models/catalog"),
             }
+            try:
+                environment["platform"] = await _get_json(client, "/v1/platform/config")
+            except Exception:
+                environment["platform"] = {"cacheEnabled": bool(health.get("cacheEnabled"))}
         except Exception as exc:
             print(f"Benchmark cannot reach the Docker API at {args.api}: {exc}", file=sys.stderr)
             return 2
@@ -402,84 +601,59 @@ async def run(args: argparse.Namespace) -> int:
             str(model.get("id")): model
             for model in environment["modelsCatalog"].get("models") or []
         }
-        cache_enabled = bool(environment["platform"].get("cacheEnabled"))
+        cache_enabled = bool(
+            environment["platform"].get("cacheEnabled", health.get("cacheEnabled"))
+        )
         cases = _cases(
             args.profile,
             args.model or list(DEFAULT_MODELS),
             args.model_validation,
         )
-        for case in cases:
-            model_info = availability.get(case.model or "") if case.model else None
-            if case.model and model_info and not model_info.get("available", False):
-                reason = str(model_info.get("availabilityNote") or "Model is unavailable")
-                rows.append(_skip_row(case, reason))
-                print(f"[SKIP] {case.name}: {reason}", flush=True)
-                continue
+        parallel_cases = _parallel_model_cases(args.profile, cases)
+        parallel_ids = {case.name for case in parallel_cases}
+        sequential_cases = [case for case in cases if case.name not in parallel_ids]
 
-            workflow_id = f"wf-benchmark-{suite_id}-{case.name}"
-            print(f"\n[{case.name}] {case.model or case.read_path}", flush=True)
-            try:
-                phase_specs: list[tuple[str, str, bool | None]] = [
-                    ("first", f"_benchmark_probe_{suite_id}_{case.name}_first", False)
-                ]
-                if case.repeated:
-                    for index in range(args.warm_runs):
-                        phase_specs.append(
-                            (
-                                f"warm-{index + 1}",
-                                f"_benchmark_probe_{suite_id}_{case.name}_warm_{index + 1}",
-                                False,
-                            )
-                        )
-                    if args.cache_check and cache_enabled:
-                        last_probe = phase_specs[-1][1]
-                        phase_specs.append(("cache", last_probe, True))
+        for case in sequential_cases:
+            rows.extend(
+                await _execute_benchmark_case(
+                    client,
+                    args=args,
+                    suite_id=suite_id,
+                    case=case,
+                    manifest=manifest,
+                    document_bytes=document_bytes,
+                    filename=args.document.name,
+                    availability=availability,
+                    cache_enabled=cache_enabled,
+                )
+            )
 
-                for phase, probe, expect_cache in phase_specs:
-                    started = time.perf_counter()
-                    try:
-                        row = await _run_once(
-                            client,
-                            suite_id=suite_id,
-                            case=case,
-                            phase=phase,
-                            workflow_id=workflow_id,
-                            manifest=manifest,
-                            document_bytes=document_bytes,
-                            filename=args.document.name,
-                            timeout_s=args.timeout_seconds,
-                            probe=probe,
-                            expect_cache=expect_cache,
-                            minimum_accuracy=args.minimum_accuracy,
-                        )
-                    except Exception as exc:
-                        row = {
-                            "case": case.name,
-                            "model": case.model or case.read_path,
-                            "phase": phase,
-                            "status": "failed",
-                            "passed": False,
-                            "skipped": False,
-                            "wallMs": round((time.perf_counter() - started) * 1000),
-                            "fieldAccuracy": 0.0,
-                            "ruleAccuracy": 0.0,
-                            "error": str(exc),
-                        }
-                    rows.append(row)
-                    print(
-                        f"  {phase:<8} {row['status']:<7} "
-                        f"wall={row.get('wallMs', '-')}ms "
-                        f"extract={row.get('extractionMs', '-')}ms "
-                        f"fields={float(row.get('fieldAccuracy') or 0):.0%}",
-                        flush=True,
+        if parallel_cases:
+            print(
+                f"\nRunning {len(parallel_cases)} model case(s) in parallel…",
+                flush=True,
+            )
+            semaphore = asyncio.Semaphore(min(4, len(parallel_cases)))
+
+            async def _bounded(case: BenchmarkCase) -> list[dict[str, Any]]:
+                async with semaphore:
+                    return await _execute_benchmark_case(
+                        client,
+                        args=args,
+                        suite_id=suite_id,
+                        case=case,
+                        manifest=manifest,
+                        document_bytes=document_bytes,
+                        filename=args.document.name,
+                        availability=availability,
+                        cache_enabled=cache_enabled,
                     )
-                    if not row.get("passed") and not args.continue_on_failure:
-                        break
-            finally:
-                try:
-                    await client.delete(f"/v1/workflows/{workflow_id}")
-                except Exception:
-                    pass
+
+            parallel_results = await asyncio.gather(
+                *[_bounded(case) for case in parallel_cases]
+            )
+            for case_rows in parallel_results:
+                rows.extend(case_rows)
 
     summary = _summary(rows)
     report = {
@@ -497,6 +671,7 @@ async def run(args: argparse.Namespace) -> int:
             "warmRuns": args.warm_runs,
             "cacheCheck": args.cache_check,
             "minimumAccuracy": args.minimum_accuracy,
+            "judgeQuality": args.judge_quality,
             "timeoutSeconds": args.timeout_seconds,
             "strictModels": args.strict_models,
         },
@@ -538,6 +713,11 @@ def main() -> int:
     )
     parser.add_argument("--api", default="http://api:8000")
     parser.add_argument(
+        "--bearer-token",
+        default=os.environ.get("AUDIT_BENCHMARK_BEARER_TOKEN"),
+        help="OIDC bearer token for authenticated management API calls.",
+    )
+    parser.add_argument(
         "--document",
         type=Path,
         default=Path("/app/e2e/fixtures/documents/Facture.pdf"),
@@ -559,6 +739,12 @@ def main() -> int:
     parser.add_argument("--warm-runs", type=int, default=1)
     parser.add_argument("--timeout-seconds", type=float, default=900.0)
     parser.add_argument("--minimum-accuracy", type=float, default=1.0)
+    parser.add_argument(
+        "--judge-quality",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="NuExtract markdown + OCR text compare; pass when text output is non-empty.",
+    )
     parser.add_argument("--strict-models", action="store_true")
     parser.add_argument("--continue-on-failure", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--cache-check", action=argparse.BooleanOptionalAction, default=True)

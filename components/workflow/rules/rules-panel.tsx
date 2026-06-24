@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useRulesLibraryCatalog } from "@/lib/hooks/use-catalog-queries";
+import { useRulesLibraryCatalog, usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
 import { cn, shortId } from "@/lib/utils";
 import { SectionHeading } from "@/components/layout/section-heading";
 import type {
@@ -38,6 +38,8 @@ export function RulesPanel({
   const t = useTranslations("workflows.builder.rules");
   const shouldFetchLibrary = initialRuleLibrary === undefined;
   const { data: fetchedLibrary = [] } = useRulesLibraryCatalog(shouldFetchLibrary);
+  const { data: platform } = usePlatformConfig();
+  const llmValidationEnabled = platform?.llmValidationEnabled === true;
   const ruleLibrary = initialRuleLibrary ?? fetchedLibrary;
 
   const updateRule = (id: string, patch: Partial<WorkflowRule>) => {
@@ -131,25 +133,28 @@ export function RulesPanel({
                 key={r.id}
                 rule={r}
                 documents={documents}
+                llmValidationEnabled={llmValidationEnabled}
                 onChange={(patch) => updateRule(r.id, patch)}
                 onRemove={() => remove(r.id)}
               />
             ))
           )}
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className={cn("grid gap-2", llmValidationEnabled ? "sm:grid-cols-2" : "")}>
             <Button variant="outline" size="sm" onClick={() => addRule("logic")} className="w-full">
               <Code className="h-3.5 w-3.5" />
               {t("addLogic")}
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => addRule("llm")}
-              className="w-full border-accent-blue/30 hover:border-accent-blue/50 hover:bg-accent-blue/5"
-            >
-              <Brain className="h-3.5 w-3.5 text-accent-blue" />
-              {t("addLlm")}
-            </Button>
+            {llmValidationEnabled ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addRule("llm")}
+                className="w-full border-accent-blue/30 hover:border-accent-blue/50 hover:bg-accent-blue/5"
+              >
+                <Brain className="h-3.5 w-3.5 text-accent-blue" />
+                {t("addLlm")}
+              </Button>
+            ) : null}
           </div>
         </TabsContent>
 

@@ -4,6 +4,7 @@ import pytest
 
 from audit_workbench.extraction.base import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.cache import (
+    CACHE_VERSION,
     cache_key_from_storage,
     schema_fingerprint,
     should_cache_result,
@@ -42,13 +43,22 @@ def test_parse_fields_json_uses_schema_names():
 
 
 def test_should_not_cache_empty_extractions():
-    empty = ExtractionResult(
+    no_text = ExtractionResult(
         fields=[
             ExtractedFieldResult(
                 key="x", description="", value="—", type="string", confidence=None, extracted=False
             )
         ],
-        raw_text="some text",
+        raw_text=None,
+        ocr_text=None,
+    )
+    text_only = ExtractionResult(
+        fields=[
+            ExtractedFieldResult(
+                key="x", description="", value="—", type="string", confidence=None, extracted=False
+            )
+        ],
+        ocr_text="## Page 1\n\nInvoice total 6000",
     )
     good = ExtractionResult(
         fields=[
@@ -58,7 +68,8 @@ def test_should_not_cache_empty_extractions():
         ],
         raw_text="some text",
     )
-    assert should_cache_result(empty) is False
+    assert should_cache_result(no_text) is False
+    assert should_cache_result(text_only) is True
     assert should_cache_result(good) is True
 
 
@@ -83,7 +94,7 @@ def test_storage_cache_key_includes_content_hash():
     )
     assert key_a != key_b
     assert "abc123" in key_a
-    assert "extract:v6s" in key_a
+    assert f"extract:{CACHE_VERSION}s" in key_a
 
 
 def test_schema_fingerprint_includes_descriptions():

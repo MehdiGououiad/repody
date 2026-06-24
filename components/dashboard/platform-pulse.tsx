@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   Activity,
-  BrainCircuit,
   Layers,
   ListOrdered,
   ArrowUpRight,
@@ -129,12 +128,6 @@ export async function PlatformPulse({
           <Badge variant="outline" className="gap-1.5">
             <Layers className="h-3 w-3" />
             {platform.queueBackend}
-          </Badge>
-        ) : null}
-        {platform ? (
-          <Badge variant="outline" className="gap-1.5">
-            <BrainCircuit className="h-3 w-3" />
-            {platform.llmValidationEnabled ? t("llmOn") : t("llmOff")}
           </Badge>
         ) : null}
         {queueTotal > 0 ? (

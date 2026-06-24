@@ -6,13 +6,19 @@ Run: pnpm test:api:live
 from __future__ import annotations
 
 import json
-import os
 import time
 import uuid
 
 import httpx
 import pytest
 
+from tests.helpers.live_stack import (
+    assert_metrics_access,
+    create_live_client,
+    live_api_base,
+    live_inference_ready,
+    live_oidc_enabled,
+)
 from tests.test_e2e.facture_helpers import (
     EXPECTED_TOTAL,
     FACTURE_UI_PATHS,
@@ -25,14 +31,20 @@ from tests.test_e2e.facture_helpers import (
 
 DOCUMENT_MODEL_CASE = FACTURE_UI_PATHS[0]
 
-BASE = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
+BASE = live_api_base()
 pytestmark = pytest.mark.live
 
 
 @pytest.fixture(scope="module")
 def client():
-    with httpx.Client(base_url=BASE, timeout=120.0) as c:
+    with create_live_client(timeout=120.0) as c:
         yield c
+
+
+@pytest.fixture(scope="module")
+def require_inference(client: httpx.Client):
+    if not live_inference_ready(client):
+        pytest.skip("document-model inference not reachable (healthz modelRunner != true)")
 
 
 def test_live_health_hatchet(client: httpx.Client):
@@ -46,11 +58,11 @@ def test_live_health_hatchet(client: httpx.Client):
 
 def test_live_workflows_and_metrics(client: httpx.Client):
     assert client.get("/v1/workflows").status_code == 200
-    assert client.get("/v1/metrics").status_code == 200
+    assert_metrics_access(client.get("/v1/metrics"), oidc_enabled=live_oidc_enabled(client))
     assert client.get("/v1/rules/library").status_code == 200
 
 
-def test_live_facture_document_model_run(client: httpx.Client):
+def test_live_facture_document_model_run(client: httpx.Client, require_inference):
     suffix = uuid.uuid4().hex[:8]
     wf_id = f"wf-live-api-{suffix}"
     doc_id = f"doc-live-{suffix}"

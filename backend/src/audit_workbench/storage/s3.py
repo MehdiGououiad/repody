@@ -69,7 +69,7 @@ class S3ObjectStorage(ObjectStorage):
                 },
             )
         except ClientError:
-            # MinIO may reject PutBucketCors; global CORS is configured in compose.
+            # MinIO may reject PutBucketCors; global CORS is configured in Helm values.
             pass
 
     async def ensure_bucket(self) -> None:

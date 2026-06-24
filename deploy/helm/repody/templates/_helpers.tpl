@@ -25,6 +25,22 @@ app.kubernetes.io/part-of: repody
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{- define "repody.backendImageRepository" -}}
+{{- coalesce .Values.images.backend.repository .Values.images.api.repository .Values.images.worker.repository "repody-backend" -}}
+{{- end }}
+
+{{- define "repody.backendImageTag" -}}
+{{- coalesce .Values.images.backend.tag .Values.images.api.tag .Values.images.worker.tag .Chart.AppVersion -}}
+{{- end }}
+
+{{- define "repody.backendImagePullPolicy" -}}
+{{- coalesce .Values.images.backend.pullPolicy .Values.images.api.pullPolicy .Values.images.worker.pullPolicy "IfNotPresent" -}}
+{{- end }}
+
+{{- define "repody.backendImage" -}}
+{{- printf "%s:%s" (include "repody.backendImageRepository" .) (include "repody.backendImageTag" .) -}}
+{{- end }}
+
 {{- define "repody.secretName" -}}
 {{- if .Values.secrets.existingSecret -}}
 {{- .Values.secrets.existingSecret -}}
@@ -44,7 +60,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- define "repody.dataPlaneEnv" -}}
 {{- if .Values.externalDatabase.enabled }}
 - name: AUDIT_DATABASE_URL
+  {{- if .Values.externalDatabase.existingSecret }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalDatabase.existingSecret }}
+      key: {{ .Values.externalDatabase.urlKey }}
+  {{- else }}
   value: {{ .Values.externalDatabase.url | quote }}
+  {{- end }}
 {{- else if .Values.postgresql.enabled }}
 - name: POSTGRES_PASSWORD
   valueFrom:
@@ -56,7 +79,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- if .Values.externalRedis.enabled }}
 - name: AUDIT_REDIS_URL
+  {{- if .Values.externalRedis.existingSecret }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalRedis.existingSecret }}
+      key: {{ .Values.externalRedis.urlKey }}
+  {{- else }}
   value: {{ .Values.externalRedis.url | quote }}
+  {{- end }}
 {{- else if .Values.redis.enabled }}
 - name: AUDIT_REDIS_URL
   value: redis://{{ .Release.Name }}-redis-master:6379/0
@@ -67,9 +97,23 @@ app.kubernetes.io/instance: {{ .Release.Name }}
   value: {{ .Values.externalObjectStorage.bucket | default "audit-documents" | quote }}
 {{- if .Values.externalObjectStorage.enabled }}
 - name: AUDIT_MINIO_ACCESS_KEY
+  {{- if .Values.externalObjectStorage.existingSecret }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalObjectStorage.existingSecret }}
+      key: {{ .Values.externalObjectStorage.accessKeyKey }}
+  {{- else }}
   value: {{ .Values.externalObjectStorage.accessKey | quote }}
+  {{- end }}
 - name: AUDIT_MINIO_SECRET_KEY
+  {{- if .Values.externalObjectStorage.existingSecret }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.externalObjectStorage.existingSecret }}
+      key: {{ .Values.externalObjectStorage.secretKeyKey }}
+  {{- else }}
   value: {{ .Values.externalObjectStorage.secretKey | quote }}
+  {{- end }}
 {{- else if .Values.minio.enabled }}
 - name: AUDIT_MINIO_ACCESS_KEY
   value: {{ .Values.minio.auth.rootUser | quote }}
@@ -81,11 +125,57 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- if .Values.hatchet.enabled }}
 - name: HATCHET_CLIENT_TOKEN
+  {{- if .Values.hatchet.clientToken }}
+  value: {{ .Values.hatchet.clientToken | quote }}
+  {{- else }}
   valueFrom:
     secretKeyRef:
-      name: {{ include "repody.fullname" . }}-hatchet-token
-      key: token
+      name: {{ include "repody.hatchetClientTokenSecret" . }}
+      key: {{ include "repody.hatchetClientTokenKey" . }}
       optional: true
+  {{- end }}
+{{- else if .Values.externalHatchet.enabled }}
+- name: HATCHET_CLIENT_TOKEN
+  valueFrom:
+    secretKeyRef:
+      name: {{ required "externalHatchet.existingSecret is required when externalHatchet.enabled" .Values.externalHatchet.existingSecret }}
+      key: {{ .Values.externalHatchet.tokenKey }}
+{{- end }}
+{{- end }}
+
+{{- define "repody.bugsinkEnv" -}}
+{{- if .Values.observability.existingSecret }}
+- name: BUGSINK_DSN
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.observability.existingSecret }}
+      key: {{ .Values.observability.bugsinkDsnKey }}
+      optional: true
+{{- else if .Values.observability.bugsinkDsn }}
+- name: BUGSINK_DSN
+  value: {{ .Values.observability.bugsinkDsn | quote }}
+{{- end }}
+{{- end }}
+
+{{- define "repody.webBugsinkEnv" -}}
+{{- if .Values.observability.existingSecret }}
+- name: BUGSINK_DSN
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.observability.existingSecret }}
+      key: {{ .Values.observability.bugsinkDsnKey }}
+      optional: true
+- name: NEXT_PUBLIC_BUGSINK_DSN
+  valueFrom:
+    secretKeyRef:
+      name: {{ .Values.observability.existingSecret }}
+      key: {{ .Values.observability.bugsinkDsnKey }}
+      optional: true
+{{- else if .Values.observability.bugsinkDsn }}
+- name: NEXT_PUBLIC_BUGSINK_DSN
+  value: {{ .Values.observability.bugsinkDsn | quote }}
+- name: BUGSINK_DSN
+  value: {{ .Values.observability.bugsinkDsn | quote }}
 {{- end }}
 {{- end }}
 
@@ -105,27 +195,65 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{- define "repody.hatchetStackEngineHost" -}}
+{{- (index .Values "hatchet-stack").engine.fullnameOverride | default (printf "%s-hatchet-engine" (include "repody.fullname" .)) -}}
+{{- end -}}
+
+{{- define "repody.hatchetStackApiHost" -}}
+{{- (index .Values "hatchet-stack").api.fullnameOverride | default (printf "%s-hatchet-api" (include "repody.fullname" .)) -}}
+{{- end -}}
+
+{{- define "repody.hatchetClientTokenSecret" -}}
+{{- .Values.hatchet.clientTokenSecret | default "hatchet-client-config" -}}
+{{- end -}}
+
+{{- define "repody.hatchetClientTokenKey" -}}
+{{- .Values.hatchet.clientTokenKey | default "HATCHET_CLIENT_TOKEN" -}}
+{{- end -}}
+
+{{- define "repody.waitPostgresInit" -}}
+{{- if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
+- name: wait-postgres
+  image: {{ .Values.hatchet.waitInitImage | quote }}
+  command:
+    - sh
+    - -c
+    - |
+      host="{{ .Release.Name }}-postgresql"
+      echo "Waiting for PostgreSQL at ${host}:5432..."
+      for i in $(seq 1 90); do
+        if nc -z "${host}" 5432 2>/dev/null; then
+          echo "PostgreSQL is accepting connections"
+          exit 0
+        fi
+        sleep 3
+      done
+      echo "Timed out waiting for PostgreSQL" >&2
+      exit 1
+{{- end }}
+{{- end }}
+
 {{- define "repody.waitHatchetTokenInit" -}}
-{{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
+{{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) }}
 - name: wait-hatchet-token
   image: {{ .Values.hatchet.waitInitImage | quote }}
   command:
     - sh
     - -c
     - |
-      echo "Waiting for Hatchet client token secret..."
+      echo "Waiting for Hatchet client token (hatchet-stack workerTokenJob)..."
       for i in $(seq 1 120); do
-        if [ -s /hatchet/token ]; then
+        if [ -s /hatchet-secret/{{ include "repody.hatchetClientTokenKey" . }} ]; then
           echo "Hatchet token ready"
           exit 0
         fi
         sleep 3
       done
-      echo "Timed out waiting for Hatchet token — set hatchet.clientToken or check hatchet-token-bootstrap job"
+      echo "Timed out waiting for {{ include "repody.hatchetClientTokenSecret" . }} — check hatchet-stack workerTokenJob"
       exit 1
   volumeMounts:
     - name: hatchet-client-token
-      mountPath: /hatchet
+      mountPath: /hatchet-secret
       readOnly: true
 {{- end }}
 {{- end }}

@@ -1,84 +1,73 @@
 #!/usr/bin/env node
 /**
- * Wipe all Repody platform data (Docker volumes + local storage dirs).
+ * Wipe local platform: kind cluster, Harbor runtime, and dev data dirs.
  *
- *   pnpm platform:reset           Stop stack, remove volumes, clear local data
- *   pnpm platform:reset -- --up     Same, then start dev stack
- *   pnpm platform:reset -- --up --with=auth
+ *   pnpm platform:reset              full wipe (default)
+ *   pnpm platform:reset -- --keep-harbor   keep Harbor running + .runtime
+ *   pnpm platform:reset -- --up      wipe then pnpm dev --minimal --reset
  */
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { buildPlatformSpec } from "../platform-modules.mjs";
-import { dockerComposeRootArgs } from "./compose-docker-args.mjs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
-const root = process.cwd();
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const argv = process.argv.slice(2);
 const doUp = argv.includes("--up");
-const withArg = argv.find((a) => a.startsWith("--with="));
-const withModules = withArg?.slice("--with=".length) ?? "obs,traces,bugsink,auth,edge";
+const keepHarbor = argv.includes("--keep-harbor");
 
 function emptyDir(dir) {
   if (!existsSync(dir)) return;
   for (const name of readdirSync(dir)) {
-    rmSync(join(dir, name), { recursive: true, force: true });
+    rmSync(path.join(dir, name), { recursive: true, force: true });
   }
 }
 
-function rmPath(path) {
-  if (existsSync(path)) rmSync(path, { recursive: true, force: true });
+function rmPath(target) {
+  if (existsSync(target)) rmSync(target, { recursive: true, force: true });
 }
 
-const spec = buildPlatformSpec({
-  stack: "dev",
-  withModules: withModules.split(",").map((s) => s.trim()).filter(Boolean),
-});
-
-const profiles = [...new Set([...spec.profiles, "web"])];
-const profileArgs = profiles.flatMap((p) => ["--profile", p]);
-
-console.error("→ Stopping Repody stack and removing Docker volumes…");
-const down = spawnSync(
-  "docker",
-  [
-    "compose",
-    ...dockerComposeRootArgs(),
-    ...spec.fileArgs,
-    ...profileArgs,
-    "down",
-    "-v",
-    "--remove-orphans",
-  ],
-  { stdio: "inherit", cwd: root, env: process.env }
-);
-if (down.status !== 0) {
-  process.exit(down.status ?? 1);
+function runNode(script, args = []) {
+  const result = spawnSync("node", [script, ...args], {
+    stdio: "inherit",
+    cwd: root,
+    shell: false,
+  });
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1);
+  }
 }
 
-const volList = spawnSync("docker", ["volume", "ls", "-q", "--filter", "name=repody"], {
-  encoding: "utf8",
-});
-const orphanVols = (volList.stdout ?? "")
-  .split(/\r?\n/)
-  .map((s) => s.trim())
-  .filter(Boolean);
-if (orphanVols.length) {
-  console.error(`→ Removing ${orphanVols.length} leftover repody volume(s)…`);
-  spawnSync("docker", ["volume", "rm", "-f", ...orphanVols], { stdio: "inherit" });
+console.error("→ Tearing down local Kubernetes cluster…");
+runNode("deploy/scripts/k8s-local.mjs", ["down", "--cluster"]);
+
+if (!keepHarbor) {
+  console.error("→ Stopping Harbor…");
+  runNode("deploy/scripts/harbor-local.mjs", ["down"]);
+  rmPath(path.join(root, "deploy/harbor/.runtime"));
+  rmPath(path.join(root, "deploy/harbor/paths.harbor.local.env"));
 }
 
 console.error("→ Clearing local data directories…");
-emptyDir(join(root, "benchmark-reports"));
-rmPath(join(root, "backend", ".data"));
-emptyDir(join(root, "test-results"));
-emptyDir(join(root, "playwright-report"));
+emptyDir(path.join(root, "benchmark-reports"));
+emptyDir(path.join(root, "backend", "benchmark-reports-local"));
+rmPath(path.join(root, "backend", ".data"));
+emptyDir(path.join(root, "test-results"));
+emptyDir(path.join(root, "playwright-report"));
+emptyDir(path.join(root, "e2e", ".auth"));
 
-console.log("Platform data wiped (Postgres, MinIO, Hatchet, Redis, observability, local storage).");
+console.log(
+  keepHarbor
+    ? "Platform data wiped (cluster removed; Harbor kept)."
+    : "Platform wiped (cluster + Harbor runtime + local storage cleared).",
+);
 
 if (doUp) {
-  const upArgs = ["compose", "up", "--stack=dev", "--detach"];
-  if (withArg) upArgs.push(withArg);
-  console.error(`→ pnpm ${upArgs.join(" ")}`);
-  const up = spawnSync("pnpm", upArgs, { stdio: "inherit", cwd: root, shell: true });
+  console.error("→ pnpm dev -- --reset --minimal");
+  const up = spawnSync(
+    "node",
+    ["deploy/scripts/k8s-local.mjs", "up", "--reset", "--minimal"],
+    { stdio: "inherit", cwd: root, shell: false },
+  );
   process.exit(up.status ?? 0);
 }

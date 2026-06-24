@@ -15,18 +15,18 @@ test.describe("Workflow builder — test run", () => {
     await waitForBuilderReady(page);
   });
 
-  test("dry-run panel shows extraction preview", async ({ page }) => {
-    // Step 0: documents — dry-run sidebar on xl; trigger manual run on smaller viewports
-    await expect(page.getByText(/live test|dry run/i).first()).toBeVisible({ timeout: 20_000 });
+  test("documents step shows extraction controls", async ({ page }) => {
+    await expect(page.getByRole("button", { name: /^What to extract/i })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText("Invoice", { exact: true }).first()).toBeVisible({
+      timeout: 20_000,
+    });
   });
 
   test("full test run produces audit report link", async ({ page }) => {
     await goToTestDeployStep(page);
     await clickExtractValidate(page);
-
-    await expect(page.getByText(/running/i).first()).toBeVisible({
-      timeout: 10_000,
-    }).catch(() => {});
 
     await expect(
       page.getByText(/passed|failed|warning|rule/i).first()

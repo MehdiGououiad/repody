@@ -12,13 +12,18 @@ gatewayApi:
   apiHost: api.yourdomain.com
   filesHost: files.yourdomain.com
   authHost: auth.yourdomain.com
-  # External managed Keycloak / IdP — set authExternalName or authServiceName.
-  authExternalName: auth.yourdomain.com
+  # Managed external IdP: do not route auth through this Gateway. Let
+  # auth.yourdomain.com resolve to the IdP directly and keep authExternalName empty.
+  authExternalName: ""
   authExternalPort: 443
+  tls:
+    enabled: true
+    secretName: repody-gateway-tls
+    redirectHttp: true
 
 config:
   authUrl: https://app.yourdomain.com
   oidcIssuer: https://auth.yourdomain.com/realms/repody
   corsOrigins: '["https://app.yourdomain.com"]'
 
-# keycloak.enabled stays false — use your organization's IdP in production.
+# keycloak.enabled stays false; use your organization's IdP in production.

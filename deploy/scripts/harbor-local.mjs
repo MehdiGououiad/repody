@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Local Harbor (real registry) for prod-path testing — replaces docker registry:2 on :5001.
+ * Local Harbor registry for kind + Helm dev and GitOps testing.
  *
  *   pnpm harbor:prepare    Download Harbor installer + harbor.yml
  *   pnpm harbor:up         Start Harbor (docker compose)
  *   pnpm harbor:bootstrap  prepare + up + login + project
- *   pnpm dev:harbor        Bootstrap Repody stack using Harbor
  *
  * Requires: Docker Desktop, bash (Git Bash or WSL on Windows), curl
  * Docs: https://goharbor.io/docs/latest/install-config/
@@ -185,7 +184,7 @@ Next:
   1. pnpm k8s:local:hosts   (adds harbor.repody.local)
   2. pnpm harbor:up
   3. pnpm harbor:bootstrap  (or harbor:login + harbor:project)
-  4. pnpm dev:harbor
+  4. pnpm dev
 `);
 }
 
@@ -291,6 +290,13 @@ function findHarborProxyContainer() {
 }
 
 function cmdConnectKind() {
+  connectHarborToKind();
+}
+
+/** Attach Harbor nginx proxy to the kind Docker network. */
+export function connectHarborToKind(
+  { registryHost = config.registryHost } = {},
+) {
   const proxy = findHarborProxyContainer();
   if (!proxy) {
     console.error("✗ Harbor proxy container not found. Is Harbor running? (pnpm harbor:up)");
@@ -301,16 +307,16 @@ function cmdConnectKind() {
     shell: process.platform === "win32",
   });
   if (!networks.stdout?.includes("kind")) {
-    console.error("✗ kind network missing — create cluster first: pnpm dev:harbor");
+    console.error("✗ kind network missing — create cluster first: pnpm dev");
     process.exit(1);
   }
   const result = spawnSync(
     "docker",
-    ["network", "connect", "--alias", config.registryHost, "kind", proxy],
+    ["network", "connect", "--alias", registryHost, "kind", proxy],
     { encoding: "utf8", shell: process.platform === "win32" },
   );
   if (result.status === 0) {
-    console.error(`ok: ${proxy} on kind network as ${config.registryHost}`);
+    console.error(`ok: ${proxy} on kind network as ${registryHost}`);
     return;
   }
   const stderr = result.stderr ?? "";
@@ -350,24 +356,30 @@ function cmdBootstrap() {
 ✓ Harbor bootstrap complete.
 
   pnpm k8s:local:hosts
-  pnpm dev:harbor
+  pnpm dev
 
 After kind cluster exists, connect Harbor to kind (safe to repeat):
   pnpm harbor:connect-kind
 `);
 }
 
-const sub = process.argv[2] ?? "bootstrap";
-if (sub === "prepare") cmdPrepare();
-else if (sub === "up") cmdUp();
-else if (sub === "down") cmdDown();
-else if (sub === "login") cmdLogin();
-else if (sub === "project") cmdProject();
-else if (sub === "connect-kind") cmdConnectKind();
-else if (sub === "bootstrap") cmdBootstrap();
-else {
-  console.error(
-    "Usage: pnpm harbor:[prepare|up|down|login|project|connect-kind|bootstrap]",
-  );
-  process.exit(1);
+const isCliEntry =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isCliEntry) {
+  const sub = process.argv[2] ?? "bootstrap";
+  if (sub === "prepare") cmdPrepare();
+  else if (sub === "up") cmdUp();
+  else if (sub === "down") cmdDown();
+  else if (sub === "login") cmdLogin();
+  else if (sub === "project") cmdProject();
+  else if (sub === "connect-kind") cmdConnectKind();
+  else if (sub === "bootstrap") cmdBootstrap();
+  else {
+    console.error(
+      "Usage: pnpm harbor:[prepare|up|down|login|project|connect-kind|bootstrap]",
+    );
+    process.exit(1);
+  }
 }

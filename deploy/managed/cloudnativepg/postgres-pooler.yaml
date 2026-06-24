@@ -1,0 +1,35 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Pooler
+metadata:
+  name: repody-postgres-pooler
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: postgres-pooler
+spec:
+  cluster:
+    name: repody-postgres
+  instances: 2
+  type: rw
+  pgbouncer:
+    poolMode: transaction
+    parameters:
+      max_client_conn: "500"
+      default_pool_size: "25"
+      reserve_pool_size: "10"
+      server_idle_timeout: "300"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: repody
+        app.kubernetes.io/component: postgres-pooler
+    spec:
+      containers:
+        - name: pgbouncer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+

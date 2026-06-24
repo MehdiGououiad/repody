@@ -47,6 +47,27 @@ def test_progress_plan_supports_snapshot_documents():
     assert "Read:" in steps[1]["detail"]
 
 
+def test_progress_plan_includes_markdown_only_documents():
+    document = SnapshotDocument(
+        id="doc-md",
+        document_type="Document",
+        position=0,
+        extraction_mode="document_model",
+        validation_mode="logic_only",
+        ocr_model="repody:vlm",
+        markdown_extraction=True,
+        schema_fields=[],
+    )
+
+    steps = run_progress.build_run_progress_plan(
+        workflow_docs=[document],
+        rules=[],
+        docs_with_files={"doc-md"},
+    )
+
+    assert steps[1]["id"] == "extract-doc-md"
+
+
 @pytest.mark.asyncio
 async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
     published: list[dict] = []

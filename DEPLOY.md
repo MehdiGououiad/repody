@@ -1,95 +1,128 @@
 # Deployment guide
 
-Stack SSOT: [`deploy/platform-modules.mjs`](./deploy/platform-modules.mjs) · CLI: [`deploy/scripts/compose.mjs`](./deploy/scripts/compose.mjs) · Index: [`deploy/README.md`](./deploy/README.md)
+Repody deploys on **Kubernetes** (production cluster or local kind).
 
-```bash
-pnpm compose help
-pnpm compose stacks      # dev, prod, prod-micro, vps, gpu, e2e
-pnpm deploy:check        # CI validation
-```
+Repody does not deploy inference inside the production chart. Point the platform at an
+external document-model endpoint: **vLLM** (reference) or **llama-server** (local GGUF).
 
-## Command reference
-
-| Goal | Command |
-|------|---------|
-| **Ubuntu VPS** | `bash deploy/cloud/deploy.sh` |
-| Local production | `pnpm compose up --stack=prod --build` |
-| GPU / vLLM | `pnpm compose up --stack=gpu --build` |
-| Office LAN | `pnpm configure:lan` then `pnpm compose up --stack=prod --lan --build` |
-| Public HTTPS | `pnpm compose up --stack=prod --public --build` |
-| VPS-equivalent local | `pnpm compose up --stack=vps --build` |
-| Scale workers | `pnpm compose up --stack=prod --scale --scale-worker=2 --build` |
-| Observability | `pnpm compose up --stack=prod --with=obs,traces --build` |
-| Air-gap bundle | `pnpm airgap:build -- --version X.Y.Z` — [docs/AIRGAP.md](./docs/AIRGAP.md) |
-| VPS + observability | `pnpm compose up --stack=vps --with=obs,traces --build` |
-| Warmup overlay | `pnpm compose up --stack=prod --warmup --build --wait` |
-| Kubernetes images | `pnpm images:build` → [docs/CLOUD-K8S.md](./docs/CLOUD-K8S.md) |
-
-### Stacks and overlays
-
-| Stack | Use |
-|-------|-----|
-| `dev` | Local backend development |
-| `prod` | Single-host production |
-| `prod-micro` | Per-role image tags (CI / K8s) |
-| `vps` | Ubuntu VPS file chain |
-| `gpu` | vLLM on same machine |
-| `e2e` | Playwright smoke |
-
-**Overlays** (combine with `--stack`): `--warmup` `--lan` `--public` `--scale`  
-**Modules** (optional): `--with=obs,traces,bugsink`
-
----
-
-## Ubuntu VPS
-
-**First install:** `bash deploy/cloud/deploy.sh`  
-**Updates:** `git pull && bash deploy/cloud/bootstrap.sh` (add `REPODY_BUILD=1` after code changes)  
-**Secrets:** `bash deploy/cloud/setup-env.sh` (interactive; see [deploy/ENV.md](./deploy/ENV.md))
-
----
-
-## Local production
+## Production path
 
 ```powershell
-pnpm compose up --stack=prod --build
+pnpm images:build
+pnpm images:push
+pnpm helm:deps
+
+helm upgrade --install repody deploy/helm/repody `
+  -n repody --create-namespace `
+  -f deploy/helm/repody/values-production.yaml.example `
+  -f deploy/helm/repody/values-production.gateway.yaml.example `
+  -f my-values.yaml
 ```
 
-GPU: `pnpm verify:gpu` then `pnpm compose up --stack=gpu --build`
+See [docs/CLOUD-K8S.md](./docs/CLOUD-K8S.md) for the full Helm workflow.
+For on-prem managed Postgres and data-plane setup, see
+[docs/ONPREM-MANAGED-DATA.md](./docs/ONPREM-MANAGED-DATA.md).
 
-### LAN sharing
+## Required values
+
+```yaml
+images:
+  api:
+    repository: ghcr.io/YOUR_ORG/repody-api
+    tag: "0.1.0"
+  worker:
+    repository: ghcr.io/YOUR_ORG/repody-worker
+    tag: "0.1.0"
+  web:
+    repository: ghcr.io/YOUR_ORG/repody-web
+    tag: "0.1.0"
+
+config:
+  inferenceMode: vllm
+  vllmBaseUrl: https://your-external-vlm-host/v1
+  vllmServedModel: your-served-model-name
+  oidcEnabled: true
+  oidcIssuer: https://auth.yourdomain.com/realms/repody
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
+  corsOrigins: '["https://app.yourdomain.com"]'
+  logJson: true
+
+workerOcr:
+  warmupOnStart: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 768Mi
+    limits:
+      memory: 2Gi
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
+
+migrations:
+  enabled: true
+```
+
+Create the runtime secret outside Git:
 
 ```powershell
-pnpm configure:lan
-pnpm compose up --stack=prod --lan --build --force-recreate=api,web,minio
+kubectl -n repody create secret generic repody-runtime-secrets `
+  --from-literal=AUTH_SECRET="long-random-auth-secret" `
+  --from-literal=AUTH_KEYCLOAK_CLIENT_SECRET="keycloak-client-secret" `
+  --from-literal=AUDIT_DATABASE_URL="postgresql+asyncpg://user:pass@host:5432/audit_workbench" `
+  --from-literal=AUDIT_REDIS_URL="rediss://..." `
+  --from-literal=AUDIT_MINIO_ACCESS_KEY="object-storage-access-key" `
+  --from-literal=AUDIT_MINIO_SECRET_KEY="object-storage-secret-key" `
+  --from-literal=HATCHET_CLIENT_TOKEN="hatchet-client-token" `
+  --from-literal=AUDIT_VLLM_API_KEY="external-vlm-api-key" `
+  --from-literal=BUGSINK_DSN="https://..."
 ```
 
-### Public HTTPS (Caddy)
+`AUDIT_VLLM_API_KEY` is optional when the external endpoint does not require auth.
+In production, create this Secret from Vault, External Secrets Operator, Sealed
+Secrets, SOPS, or your cloud secret manager; do not commit literal secret values.
+
+The OCR worker does not reserve model-hosting memory in Kubernetes. It still needs
+headroom for PDF rasterization and page batching, but inference memory belongs to the
+external VLM runtime.
+
+## Inference contract
+
+The external endpoint must expose:
+
+- `GET /v1/models`
+- `POST /v1/chat/completions`
+
+Repody sends vision chat-completion requests with image data URLs and NuExtract-style
+`chat_template_kwargs`. vLLM with `numind/NuExtract3` is the reference runtime; a
+llama-server deployment can be used when it supports the same OpenAI-compatible
+multimodal request shape.
+
+## Local development
+
+Use the local Kubernetes stack (kind + Helm):
 
 ```powershell
-pnpm compose up --stack=prod --public --build
+pnpm k8s:local:hosts
+pnpm k8s:local
 ```
 
-### Scale workers
-
-```powershell
-pnpm compose up --stack=prod --scale --build --scale-worker=2
-pnpm compose scale --stack=prod --scale --worker=3
-```
-
----
-
-## Compose files
-
-Under [`deploy/compose/`](./deploy/compose/). Env reference: [`deploy/ENV.md`](./deploy/ENV.md). Architecture: [docs/PLATFORM.md](./docs/PLATFORM.md).
-
----
+Set `REPODY_VLLM_BASE_URL` and `REPODY_VLLM_SERVED_MODEL` in your shell to point at an
+external inference endpoint. See [DEV.md](./DEV.md).
 
 ## Go-live checklist
 
-- [ ] Change default postgres/minio/grafana passwords
-- [ ] `AUDIT_SEED_ON_STARTUP=false`
-- [ ] `AUDIT_MINIO_PUBLIC_ENDPOINT` for uploads
-- [ ] `AUDIT_CORS_ORIGINS` for your domain
-- [ ] TLS in front of public ports
-- [ ] `pnpm deploy:check`
+- [ ] Build and push `repody-api`, `repody-worker`, and `repody-web` images
+- [ ] Runtime secret exists and contains auth/client/VLM keys
+- [ ] Runtime secret is sourced from Vault/External Secrets/SOPS, not committed values
+- [ ] Envoy Gateway has a TLS Secret and HTTP-to-HTTPS redirect enabled
+- [ ] Managed Postgres, Redis, and object storage are reachable from pods
+- [ ] External Hatchet host/URL/token are configured and reachable from API/workers
+- [ ] `config.vllmBaseUrl` is reachable from worker pods
+- [ ] OIDC issuer and JWKS URL work from API pods
+- [ ] Storage public endpoint is reachable by browsers
+- [ ] `config.logJson=true`
+- [ ] Cluster log stack collects pod stdout
+- [ ] `pnpm deploy:check` passes in CI with Helm installed

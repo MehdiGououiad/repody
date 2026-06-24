@@ -1,5 +1,5 @@
-# kind cluster for local prod-path testing (Gateway API + Argo CD).
-# Maps host ports 80/443 to the control-plane node for Envoy Gateway.
+# kind cluster for local dev — pulls images from Harbor (pnpm harbor:bootstrap).
+# Harbor proxy must be on the kind Docker network — run: pnpm harbor:connect-kind
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: repody-local
@@ -18,8 +18,9 @@ nodes:
       - containerPort: 443
         hostPort: 443
         protocol: TCP
-# Local registry mirror (same pull model as Harbor on client clusters).
 containerdConfigPatches:
   - |-
-    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5001"]
-      endpoint = ["http://kind-registry:5000"]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."harbor.repody.lvh.me:8080"]
+      endpoint = ["http://harbor.repody.lvh.me:8080"]
+    [plugins."io.containerd.grpc.v1.cri".registry.configs."harbor.repody.lvh.me:8080".tls]
+      insecure_skip_verify = true

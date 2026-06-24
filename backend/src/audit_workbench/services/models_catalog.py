@@ -18,7 +18,7 @@ from audit_workbench.schemas.models_catalog import (
     ValidationModeOption,
 )
 from audit_workbench.services.document_model_catalog import list_catalog_with_availability
-from audit_workbench.settings import get_settings
+from audit_workbench.settings import Settings, get_settings
 
 
 def document_model_summaries() -> list[dict[str, str]]:
@@ -34,7 +34,10 @@ def document_model_summaries() -> list[dict[str, str]]:
     ]
 
 
-def build_processing_paths() -> tuple[list[ReadPathOption], list[ValidationModeOption], str, str]:
+def build_processing_paths(
+    settings: Settings | None = None,
+) -> tuple[list[ReadPathOption], list[ValidationModeOption], str, str]:
+    settings = settings or get_settings()
     paths = [
         ReadPathOption(
             id=p.id,
@@ -48,7 +51,7 @@ def build_processing_paths() -> tuple[list[ReadPathOption], list[ValidationModeO
     ]
     validation_modes = [
         ValidationModeOption(id=v.id, label=v.label, description=v.description)
-        for v in list_validation_modes()
+        for v in list_validation_modes(settings)
     ]
     return paths, validation_modes, "document_model", "logic_only"
 
@@ -56,21 +59,28 @@ def build_processing_paths() -> tuple[list[ReadPathOption], list[ValidationModeO
 async def fetch_models_catalog() -> ModelsCatalogResponse:
     settings = get_settings()
     entries, default_doc = await list_catalog_with_availability()
-    paths, validation_modes, default_path, default_validation_mode = build_processing_paths()
+    paths, validation_modes, default_path, default_validation_mode = build_processing_paths(settings)
     models: list[CatalogModelEntry] = []
 
     for entry in entries:
+        if entry.spec.workflow_selectable:
+            kind = "document_model"
+        elif entry.spec.compare_only:
+            kind = "ocr_compare"
+        else:
+            kind = "document_model"
         models.append(
             CatalogModelEntry(
                 id=entry.spec.id,
                 label=entry.spec.label,
-                kind="document_model",
+                kind=kind,
                 engine=entry.spec.engine,
                 runtime=public_runtime_name(entry.spec.runtime),
                 description=entry.spec.description,
                 available=entry.available,
                 availability_note=entry.availability_note,
                 is_default=entry.spec.id == default_doc,
+                markdown_only=entry.spec.markdown_only,
             )
         )
 

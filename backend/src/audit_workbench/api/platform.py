@@ -21,6 +21,10 @@ from audit_workbench.services.document_model_catalog import (
     run_generation_probe,
     unreachable_detail,
 )
+from audit_workbench.services.model_runtime_config import (
+    ModelRuntimeConfigResponse,
+    build_model_runtime_config,
+)
 from audit_workbench.services.models_catalog import document_model_summaries, fetch_models_catalog
 from audit_workbench.settings import get_settings
 
@@ -138,6 +142,16 @@ async def get_platform_config() -> PlatformConfigResponse:
         gpu_live_probe=settings.gpu_live_probe,
         healthz_probe_inference=settings.healthz_probe_inference,
     )
+
+
+@router.get(
+    "/platform/model-runtime-config",
+    response_model=ModelRuntimeConfigResponse,
+    dependencies=[Depends(require_permission("settings", "read"))],
+)
+async def get_model_runtime_config() -> ModelRuntimeConfigResponse:
+    """Effective per-model runtime knobs (platform env + host inference reference)."""
+    return build_model_runtime_config()
 
 
 @router.get(

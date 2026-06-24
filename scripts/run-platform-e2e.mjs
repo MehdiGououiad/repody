@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /**
  * Run full platform E2E: live API journey (pytest) + browser tests (Playwright).
- * Prerequisites: API on :8000, web on :3000 (e.g. pnpm compose up --stack=dev --detach + pnpm dev).
+ * Prerequisites: local Kubernetes stack (pnpm k8s:local) and hosts file entries.
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const apiURL = process.env.E2E_API_URL ?? "http://localhost:8000";
-const webURL = process.env.E2E_WEB_URL ?? "http://localhost:3000";
+const apiURL = process.env.E2E_API_URL ?? "http://api.repody.local";
+const webURL = process.env.E2E_WEB_URL ?? "http://app.repody.local";
 
-async function waitForOk(url, label, attempts = 60) {
+async function waitForOk(url, label, attempts = 90) {
   for (let i = 0; i < attempts; i++) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
@@ -26,8 +26,8 @@ async function waitForOk(url, label, attempts = 60) {
   }
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
-      `  Start the stack: pnpm compose up --stack=dev --detach && pnpm dev\n` +
-      `  Or: pnpm compose up --stack=prod --build --detach`
+      `  Start the stack: pnpm k8s:local:hosts && pnpm k8s:local\n` +
+      `  Check status: pnpm k8s:local:status`,
   );
   process.exit(1);
 }

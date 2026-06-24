@@ -30,9 +30,9 @@ pnpm test:e2e
 Stack must be running:
 
 ```powershell
-pnpm compose up --stack=dev --detach
-pnpm dev
-# or full Docker web: pnpm compose up --stack=dev --only=web --profile=web-docker --build --detach
+pnpm k8s:local:hosts   # once (admin)
+pnpm k8s:local
+pnpm k8s:local:smoke   # optional
 ```
 
 Then:
@@ -40,3 +40,5 @@ Then:
 ```powershell
 pnpm test:platform
 ```
+
+See [docs/E2E.md](../../docs/E2E.md).

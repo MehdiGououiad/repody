@@ -1,0 +1,60 @@
+{{- /*
+Enterprise production guardrails.
+This template intentionally renders no Kubernetes objects; it fails fast when
+production values drift back toward local/demo infrastructure.
+*/ -}}
+{{- if eq .Values.global.deploymentEnvironment "production" -}}
+  {{- if .Values.postgresql.enabled -}}
+    {{- fail "production must not enable bundled postgresql; use externalDatabase or the managed data-plane manifests" -}}
+  {{- end -}}
+  {{- if .Values.redis.enabled -}}
+    {{- fail "production must not enable bundled redis; use externalRedis" -}}
+  {{- end -}}
+  {{- if .Values.minio.enabled -}}
+    {{- fail "production must not enable bundled minio; use externalObjectStorage" -}}
+  {{- end -}}
+  {{- if .Values.keycloak.enabled -}}
+    {{- fail "production must not enable bundled keycloak; use the enterprise IdP/OIDC provider" -}}
+  {{- end -}}
+  {{- if .Values.hatchet.enabled -}}
+    {{- fail "production must not enable bundled Hatchet; use externalHatchet with the official hatchet-stack or managed Hatchet" -}}
+  {{- end -}}
+  {{- if not .Values.externalDatabase.enabled -}}
+    {{- fail "production requires externalDatabase.enabled=true" -}}
+  {{- end -}}
+  {{- if not .Values.externalRedis.enabled -}}
+    {{- fail "production requires externalRedis.enabled=true" -}}
+  {{- end -}}
+  {{- if not .Values.externalObjectStorage.enabled -}}
+    {{- fail "production requires externalObjectStorage.enabled=true" -}}
+  {{- end -}}
+  {{- if not .Values.externalHatchet.enabled -}}
+    {{- fail "production requires externalHatchet.enabled=true" -}}
+  {{- end -}}
+  {{- if .Values.secrets.create -}}
+    {{- fail "production must not create inline chart secrets; use secrets.existingSecret via External Secrets, Vault, SOPS, or client secret manager" -}}
+  {{- end -}}
+  {{- if not .Values.secrets.existingSecret -}}
+    {{- fail "production requires secrets.existingSecret so auth/runtime credentials come from a pre-created Kubernetes Secret" -}}
+  {{- end -}}
+  {{- if not .Values.externalDatabase.existingSecret -}}
+    {{- fail "production requires externalDatabase.existingSecret; do not put database URLs inline in Helm values" -}}
+  {{- end -}}
+  {{- if not .Values.externalRedis.existingSecret -}}
+    {{- fail "production requires externalRedis.existingSecret; do not put Redis URLs inline in Helm values" -}}
+  {{- end -}}
+  {{- if not .Values.externalObjectStorage.existingSecret -}}
+    {{- fail "production requires externalObjectStorage.existingSecret; do not put object-storage credentials inline in Helm values" -}}
+  {{- end -}}
+  {{- if or .Values.externalObjectStorage.accessKey .Values.externalObjectStorage.secretKey -}}
+    {{- fail "production must not set externalObjectStorage.accessKey/secretKey inline; use externalObjectStorage.existingSecret" -}}
+  {{- end -}}
+  {{- if not .Values.externalHatchet.existingSecret -}}
+    {{- fail "production requires externalHatchet.existingSecret; do not put Hatchet tokens inline in Helm values" -}}
+  {{- end -}}
+  {{- range $name, $image := .Values.images -}}
+    {{- if or (eq (toString $image.tag) "latest") (eq (toString $image.tag) "") -}}
+      {{- fail (printf "production image %s must use an immutable tag or digest, not latest/empty" $name) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

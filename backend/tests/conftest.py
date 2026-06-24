@@ -23,7 +23,6 @@ os.environ["AUDIT_DOCKER_MODEL_RUNNER_BASE_URL"] = "http://model-runner-mock.tes
 os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
 os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
 
-import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -47,13 +46,14 @@ _session_dmr_router: dict[str, object] = {"router": None}
 
 @pytest.fixture
 async def live_client(request):
-    """HTTP client against a running docker stack (Hatchet + workers)."""
+    """HTTP client against a running docker/k8s stack (Hatchet + workers)."""
     if request.node.get_closest_marker("live") is None:
         pytest.skip("live_client fixture requires @pytest.mark.live")
-    if os.environ.get("E2E_STACK") != "1":
-        pytest.skip("Set E2E_STACK=1 with a running docker stack")
-    base = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
-    async with httpx.AsyncClient(base_url=base, timeout=httpx.Timeout(600.0)) as ac:
+    if os.environ.get("E2E_STACK") != "1" and not os.environ.get("E2E_API_URL"):
+        pytest.skip("Set E2E_STACK=1 or E2E_API_URL for live API tests")
+    from tests.helpers.live_stack import create_live_async_client
+
+    async with create_live_async_client() as ac:
         yield ac
 
 

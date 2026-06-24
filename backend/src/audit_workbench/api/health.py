@@ -10,11 +10,11 @@ router = APIRouter(tags=["health"])
 
 @router.get("/healthz/live", response_model=HealthLiveResponse)
 async def health_live() -> HealthLiveResponse:
-    """Liveness for Docker and load balancers — database ping only, no GPU probe."""
+    """Liveness: process is alive, with no dependency or inference probe."""
     return await probe_liveness()
 
 
 @router.get("/healthz", response_model=HealthReadinessResponse)
 async def health_readiness() -> HealthReadinessResponse:
-    """Readiness with queue depth, storage, and optional inference runtime probe."""
+    """Readiness with dependency checks, queue depth, and optional inference probe."""
     return await probe_readiness()

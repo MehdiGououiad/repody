@@ -8,25 +8,21 @@ Two layers exercise the full stack against a **running** API and web app:
 | API journey | `pnpm test:platform:api` | Health, workflows, dry-run, test-run, audits, deploy, API run + poll |
 | UI (Playwright) | `pnpm test:e2e` | Dashboard, workflows, builder test run, audit report, optional document upload |
 | **Both** | `pnpm test:platform` | Waits for services, then API + UI |
-| **CI smoke** | `pnpm test:e2e:smoke` | Nightly + manual in GitHub Actions (not on every push) |
+| **CI smoke** | `pnpm test:e2e:smoke` | PR CI (`k8s-smoke` job) + manual |
 
-In-process API tests (`pnpm test:api`) use **Postgres + Alembic** — same schema path as production. Start infra first:
-
-```powershell
-pnpm compose up --stack=dev --only=infra --detach
-```
-
-Default test DB: `postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench_test` (created automatically if missing).
+In-process API tests (`pnpm test:api`) use **Postgres + Alembic** in CI (GitHub service container). Default test DB: `postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench_test`.
 
 ## Prerequisites
 
-1. **Postgres + API** (pick one):
-   - `pnpm compose up --stack=dev --detach` (infra + api + workers)
-   - Or local: `pnpm dev:api` with `AUDIT_DATABASE_URL` set (start Postgres with `pnpm compose up --stack=dev --only=infra --detach`)
-2. **Web**: `pnpm dev` (port 3000)  
-   Or full stack in Docker: `pnpm compose up --stack=dev --only=web --profile=web-docker --build --detach`.
+1. **Local Kubernetes stack** running:
 
-3. **Playwright browser** (once per machine):
+```powershell
+pnpm k8s:local:hosts    # once (admin)
+pnpm k8s:local
+pnpm k8s:local:smoke    # optional sanity check
+```
+
+2. **Playwright browser** (once per machine):
 
 ```powershell
 pnpm exec playwright install chromium
@@ -35,38 +31,38 @@ pnpm exec playwright install chromium
 ## Run everything
 
 ```powershell
+$env:E2E_API_URL = "http://api.repody.local"
+$env:E2E_WEB_URL = "http://app.repody.local"
+$env:E2E_AUTH_URL = "http://auth.repody.local"
 pnpm test:platform
 ```
 
-Environment overrides:
+When OIDC is enabled, Playwright global setup signs in as `operator@repody.local` and live pytest clients fetch a Keycloak bearer token automatically (override with `E2E_KEYCLOAK_USER` / `E2E_KEYCLOAK_PASSWORD`). Artifacts are saved under `e2e/.auth/`. K8s local does not seed on boot — global setup seeds demo workflow data when `wf-invoice-audit` is missing.
 
-```powershell
-$env:E2E_API_URL = "http://localhost:8000"
-$env:E2E_WEB_URL = "http://localhost:3000"
-pnpm test:platform
-```
+**Operator RBAC (OIDC on):** live API tests expect `403` for operator-only calls to `/v1/metrics` and `/v1/platform/config` (admin-only). Workflow API-key auth checks use an unauthenticated HTTP client so the default JWT is not sent.
+
+**Document extraction (live):** tests that upload `Facture.pdf` and call the VLM are skipped when `GET /v1/healthz` reports `modelRunner != true`. Point k8s local at vLLM or llama-server (see `deploy/llamacpp/` and `docs/REPODY-VLM.md`) to run the full extraction suite.
 
 ## UI only / API only
 
 ```powershell
 pnpm test:e2e
-pnpm test:e2e:smoke        # same subset as nightly CI workflow
-pnpm test:e2e:ui          # interactive UI
-pnpm test:platform:api    # live API journey only
-pnpm test:platform:live   # full live API + extraction suite (Hatchet + VLM)
-pnpm test:platform:integration  # scripted integration suite with presign + VLM
-```
-
-### CI stack (GitHub Actions)
-
-Runs **nightly** and on **workflow_dispatch** only (Actions → E2E smoke → Run workflow). Not triggered on every push — use `pnpm test:e2e:smoke` locally before merge if needed.
-
-```powershell
-pnpm compose up --stack=e2e --build --wait
 pnpm test:e2e:smoke
+pnpm test:e2e:ui
+pnpm test:platform:api
+pnpm test:platform:live
+pnpm test:platform:integration
 ```
 
-## Sample document (your file)
+### CI (GitHub Actions)
+
+The `k8s-smoke` job in `.github/workflows/ci.yml` runs on every push/PR:
+
+1. `pnpm k8s:local` (kind + Helm)
+2. `pnpm test:e2e:smoke`
+3. Live pytest against `http://api.repody.local`
+
+## Sample document
 
 1. Drop `sample-invoice.pdf` (or `.png` / `.jpg`) into `e2e/fixtures/documents/`
 2. Re-run `pnpm test:e2e` — the **document upload** spec runs automatically
@@ -84,14 +80,3 @@ Until a document is present, upload tests are **skipped** (other specs still run
 
 - Playwright HTML: `e2e/report/index.html`
 - Traces/screenshots on failure under `test-results/`
-
-## CI sketch
-
-```yaml
-- run: pnpm compose up --stack=e2e --build --wait
-- run: pnpm exec playwright install chromium --with-deps
-- run: pnpm test:platform
-  env:
-    E2E_API_URL: http://localhost:8000
-    E2E_WEB_URL: http://localhost:3000
-```

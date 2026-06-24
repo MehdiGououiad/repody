@@ -32,6 +32,7 @@ from audit_workbench.extraction.document_modes import (
 from audit_workbench.extraction.gpu_cold_start import gpu_cold_start_likely
 from audit_workbench.extraction.model_registry import (
     extract_with_document_model,
+    is_ocr_compare_model,
     normalize_model_id,
     parse_document_model,
 )
@@ -128,7 +129,8 @@ class PipelineExtractor(DocumentExtractor):
         settings = self._settings
         model_id = normalize_model_id(ocr_model or settings.default_ocr_model)
         model_spec = parse_document_model(model_id)
-        if not schema:
+        has_schema_fields = any(field.name.strip() for field in schema)
+        if not has_schema_fields and not markdown_extraction and not is_ocr_compare_model(model_id):
             return ExtractionResult(
                 fields=empty_fields_from_schema(schema),
                 raw_text=None,

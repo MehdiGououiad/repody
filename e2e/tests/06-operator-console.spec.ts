@@ -1,23 +1,21 @@
 import { expect, test } from "@playwright/test";
-
-const API = process.env.E2E_API_URL ?? "http://localhost:8000";
+import { API, apiAuthHeaders } from "../helpers/api";
 
 test("operator console exposes live models, benchmarks, and diagnostics", async ({
   page,
   request,
 }) => {
-  const statusRes = await request.get(`${API}/v1/operator/status`);
+  const statusRes = await request.get(`${API}/v1/operator/status`, {
+    headers: apiAuthHeaders(),
+  });
   expect(statusRes.ok()).toBeTruthy();
   const actionsEnabled = (await statusRes.json()).actionsEnabled as boolean;
 
-  await page.goto("/settings");
+  await page.goto("/settings?tab=models");
 
   await expect(page.getByRole("heading", { name: "Operator Console" })).toBeVisible();
-  await expect(page.getByText("Effective runtime configuration")).toBeVisible();
-
-  await page.getByRole("tab", { name: "Models" }).click();
   await expect(page.getByRole("heading", { name: "Model inventory" })).toBeVisible();
-  await expect(page.getByText("Repody VLM")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Repody VLM|Install Repody VLM/ })).toBeVisible();
   const warmUp = page.getByRole("button", { name: "Warm up" }).first();
   await expect(warmUp).toBeVisible();
   if (actionsEnabled) {

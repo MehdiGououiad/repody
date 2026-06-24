@@ -4,36 +4,49 @@ metadata:
   name: repody
   namespace: argocd
 spec:
-  description: Repody workloads (staging and production)
+  description: Repody workloads
   sourceRepos:
     - https://github.com/MehdiGououiad/repody.git
-    - "*"  # Allow fork/private GitOps repos — remove in locked-down environments.
   destinations:
     - namespace: repody
-      server: https://kubernetes.default.svc
-    - namespace: argocd
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
   namespaceResourceWhitelist:
     - group: ""
-      kind: "*"
+      kind: ConfigMap
+    - group: ""
+      kind: PersistentVolumeClaim
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
     - group: apps
-      kind: "*"
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
     - group: batch
-      kind: "*"
+      kind: Job
     - group: autoscaling
-      kind: "*"
+      kind: HorizontalPodAutoscaler
     - group: policy
-      kind: "*"
+      kind: PodDisruptionBudget
     - group: networking.k8s.io
-      kind: "*"
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
     - group: gateway.networking.k8s.io
-      kind: "*"
+      kind: Gateway
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
     - group: gateway.envoyproxy.io
-      kind: "*"
-    - group: monitoring.coreos.com
-      kind: "*"
-    - group: external-secrets.io
-      kind: "*"
+      kind: EnvoyProxy
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

@@ -1,0 +1,51 @@
+{{- if .Values.migrations.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "repody.fullname" . }}-migrations
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrations
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
+    helm.sh/hook-delete-policy: {{ .Values.migrations.hookDeletePolicy | quote }}
+spec:
+  backoffLimit: {{ .Values.migrations.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: migrations
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
+      {{- if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
+      initContainers:
+        {{- include "repody.waitPostgresInit" . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migrations
+          image: {{ include "repody.backendImage" . | quote }}
+          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
+          command:
+            - python
+            - /app/scripts/bootstrap_migrations.py
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          env:
+            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+{{- end }}

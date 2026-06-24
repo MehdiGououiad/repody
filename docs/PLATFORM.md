@@ -1,72 +1,59 @@
-# Modular platform architecture
+# Platform architecture
 
-Stacks + optional modules. SSOT: [`deploy/platform-modules.mjs`](../deploy/platform-modules.mjs). CLI: `pnpm compose`.
+Repody has one deployment path: **Kubernetes with Helm**. Local development uses the same chart on a kind cluster (`pnpm k8s:local`).
 
-## Modules
+## Production modules
 
-| Module | CLI | Purpose |
-|--------|-----|---------|
-| `infra` | (core) | Postgres, Redis, MinIO, Hatchet |
-| `control` | (core) | FastAPI |
-| `workers` | (core) | OCR + fast Hatchet pools — **scale here first** |
-| `edge` | (core) | Next.js web |
-| `obs` | `--with=obs` | Grafana + Loki |
-| `traces` | `--with=traces` | Tempo + OTEL (requires obs) |
-| `bugsink` | `--with=bugsink` | Self-hosted Bugsink error tracking |
+| Module | Kubernetes shape | Purpose |
+|--------|------------------|---------|
+| control | `repody-api` Deployment | Workflows, runs, uploads, dispatch |
+| workers | `repody-worker-ocr`, `repody-worker-fast` Deployments | Document extraction and fast validation |
+| edge | `repody-web` Deployment | Next.js UI |
+| data plane | Postgres, Redis, object storage (bundled in local values; external in production) | Durable platform state |
+| queue plane | Hatchet (bundled locally; external in production) | Workflow execution |
+| auth | Keycloak (bundled locally; external IdP in production) | OIDC for UI and API JWT |
+| inference | **External** OpenAI-compatible endpoint | Document-model VLM — not in the Repody chart |
 
-`pnpm compose modules` · `pnpm compose stacks`
+Module catalog: [deploy/platform-modules.mjs](../deploy/platform-modules.mjs).
 
-## Stacks
-
-| Stack | When |
-|-------|------|
-| `dev` | Local development |
-| `prod` | Single-host production |
-| `prod-micro` | Split image tags (K8s / `pnpm images:build`) |
-| `vps` | Ubuntu VPS compose chain |
-| `gpu` | vLLM inference |
-| `e2e` | CI Playwright |
-
-## Overlays (flags on `compose up`)
-
-| Flag | Adds |
-|------|------|
-| `--warmup` | OCR worker warmup — Repody VLM (`warmup.yaml` overlay on `dev`) |
-| `--lan` | Office LAN (`lan.yaml`) |
-| `--public` | Caddy HTTPS (`public.yaml`) |
-| `--scale` | Worker pool tuning (`scale.yaml`) |
-
-## Examples
+## Local stack
 
 ```powershell
-pnpm dev -- --warmup --logs
-pnpm compose up --stack=prod --scale --scale-worker=3 --build
-pnpm compose up --stack=vps --with=obs,traces --build
-pnpm compose scale --stack=prod --scale --worker=3
+pnpm k8s:local:hosts   # once (admin)
+pnpm k8s:local         # or: pnpm dev
 ```
 
-## Optional observability
+Local values (`deploy/helm/repody/values-local.yaml`) enable bundled Postgres, Redis, MinIO, Hatchet, Keycloak, Gateway API hosts (`*.repody.local`), and observability addons.
 
-**Logs/traces:** `pnpm compose up --stack=prod --with=obs,traces --build` or `pnpm dev -- --logs --traces`
+External inference for local runs (vLLM or llama-server on the host):
 
-**Error tracking (Bugsink):** `pnpm compose up --modules-only --with=bugsink --detach` or set DSN in `.env` — [BUGSINK.md](./BUGSINK.md). Rebuild web after changing `NEXT_PUBLIC_BUGSINK_DSN`.
+```powershell
+$env:REPODY_VLLM_BASE_URL="http://host.docker.internal:8000/v1"
+$env:REPODY_VLLM_SERVED_MODEL="nuextract3-q8_0"   # llama-server; or numind/NuExtract3 for vLLM
+pnpm k8s:local
+```
 
-Grafana: http://localhost:3001 (admin / audit)
+See [deploy/llamacpp/README.md](../deploy/llamacpp/README.md), [docs/REPODY-VLM.md](./REPODY-VLM.md), and [DEV.md](../DEV.md).
 
 ## Scale priority
 
-1. `workers` — `--scale-worker=N` with `--scale` overlay
-2. `control` — uvicorn workers in `deploy/compose/prod.yaml`
-3. `infra` — managed Postgres/Redis before multi-node workers
-4. `edge` — CDN / multiple web replicas
+1. Worker pool replicas and HPA (`workerOcr`, `workerFast`)
+2. API replicas and HPA
+3. Managed Postgres / Redis / object storage
+4. Web replicas and ingress tuning
+5. External inference capacity
 
-## Helm boundary
+## Helm values (production)
 
-| Compose module | Helm |
-|----------------|------|
-| control | `repody-api` |
-| workers | worker Deployments + HPA |
-| infra | Bitnami charts + Hatchet |
-| edge | `repody-web` + Ingress |
+| Concern | Values |
+|---------|--------|
+| API scale | `api.replicas`, `api.autoscaling` |
+| Worker scale | `workerOcr.*`, `workerFast.*` |
+| External inference | `config.inferenceMode`, `config.vllmBaseUrl`, `config.vllmServedModel` |
+| Inference auth | `AUDIT_VLLM_API_KEY` in `secrets.existingSecret` |
+| External Hatchet | `externalHatchet.*`, `HATCHET_CLIENT_TOKEN` in secrets |
+| OIDC | `config.oidcIssuer`, `config.oidcJwksUrl`, Keycloak or external IdP |
+| Logs | `config.logJson` + cluster log collector |
+| Traces | `observability.otelEnabled`, `observability.otelEndpoint` |
 
-[docs/CLOUD-K8S.md](./CLOUD-K8S.md) · [ADR 003](./adr/003-modular-platform-modules.md)
+See [CLOUD-K8S.md](./CLOUD-K8S.md).

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 import time
 
 import structlog
@@ -10,40 +9,23 @@ from audit_workbench.inference.factory import get_inference_client
 from audit_workbench.inference.structured import chat_structured, parse_structured_response
 from audit_workbench.inference.structured_models import LlmRuleBatchOutput, LlmRuleVerdict
 from audit_workbench.inference.validation_model import resolve_llm_validation_model
+from audit_workbench.rules.llm_fields import (
+    RuleStatus,
+    evaluate_fee_keyword_rule,
+    referenced_fields,
+    rule_field_values,
+    unknown_reference_detail,
+)
+from audit_workbench.rules.llm_prompts import batch_rules_prompt, single_rule_prompt
 from audit_workbench.settings import get_settings
 
-_FEE_KEYWORDS = re.compile(
-    r"late\s*fee|penalty|pénalité|penalite|retard|frais\s+de\s+retard",
-    re.I,
-)
-
-RuleStatus = str  # passed | failed | skipped | error
 log = structlog.get_logger()
-_FIELD_REFERENCE = re.compile(r"(?<![\w@])@([A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*)")
 
-
-def referenced_fields(body: str) -> list[str]:
-    return list(dict.fromkeys(_FIELD_REFERENCE.findall(body or "")))
-
-
-def _rule_field_values(
-    body: str,
-    field_values: dict[str, str],
-) -> tuple[dict[str, str], list[str]]:
-    references = referenced_fields(body)
-    if not references:
-        return field_values, []
-    selected: dict[str, str] = {}
-    missing: list[str] = []
-    for reference in references:
-        value = field_values.get(reference)
-        if value is None:
-            value = field_values.get(reference.lower())
-        if value is None:
-            missing.append(reference)
-        else:
-            selected[reference] = value
-    return selected, missing
+__all__ = [
+    "evaluate_llm_rule",
+    "evaluate_llm_rules_batch",
+    "referenced_fields",
+]
 
 
 def _llm_disabled() -> bool:
@@ -61,23 +43,14 @@ def _llm_unavailable_status() -> RuleStatus:
 
 def _llm_unavailable_detail() -> str:
     if _llm_disabled():
-        return "LLM validation is disabled. Set AUDIT_LLM_VALIDATION_ENABLED=true and configure AUDIT_VALIDATION_MODEL."
+        return (
+            "LLM validation is disabled. Set AUDIT_LLM_VALIDATION_ENABLED=true "
+            "and configure AUDIT_VALIDATION_MODEL."
+        )
     mode = get_settings().inference_mode.lower()
     if mode == "stub":
         return "LLM evaluator skipped (inference disabled)."
     return "LLM inference unavailable."
-
-
-_LLM_RULE_FEW_SHOT = """
-Examples:
-Rule: "Verify @total_amount is positive."
-Fields: total_amount=6000
-→ {"passed":true,"detail":"total_amount is positive."}
-
-Rule: "Ensure @vendor_name mentions Acme."
-Fields: vendor_name=Globex Corp
-→ {"passed":false,"detail":"vendor_name is Globex Corp, not Acme."}
-""".strip()
 
 
 def _verdict_to_status(verdict: LlmRuleVerdict) -> tuple[RuleStatus, str]:
@@ -95,11 +68,6 @@ def _parse_pass_fail(raw: str) -> tuple[RuleStatus, str]:
         return "error", "LLM response was not valid JSON."
 
 
-def _fields_block(field_values: dict[str, str]) -> str:
-    lines = [f"{k}={v}" for k, v in field_values.items() if v and v != "—"]
-    return "\n".join(lines[:40]) or "(no values)"
-
-
 async def evaluate_llm_rule(
     body: str,
     field_values: dict[str, str],
@@ -107,24 +75,17 @@ async def evaluate_llm_rule(
     rule_name: str = "Rule",
     llm_model: str | None = None,
 ) -> tuple[RuleStatus, str]:
-    """Text-only LLM validation on extracted fields (fast on CPU — no re-OCR)."""
+    """Text-only LLM validation on extracted fields (fast on CPU - no re-OCR)."""
     text = (body or "").strip()
     if not text:
-        return "failed", "Rule body is empty — skipped."
+        return "failed", "Rule body is empty \u2014 skipped."
 
-    selected_fields, missing_fields = _rule_field_values(text, field_values)
+    selected_fields, missing_fields = rule_field_values(text, field_values)
     if missing_fields:
-        missing = ", ".join(f"@{name}" for name in missing_fields)
-        return "error", f"Unknown field reference(s): {missing}."
+        return "error", unknown_reference_detail(missing_fields)
 
-    if _FEE_KEYWORDS.search(text):
-        for value in selected_fields.values():
-            if value and value != "—" and _FEE_KEYWORDS.search(value):
-                return (
-                    "failed",
-                    "Possible late-fee or penalty wording found in extracted field values.",
-                )
-        return "passed", "No late-fee or penalty keywords found in extracted values."
+    if fee_result := evaluate_fee_keyword_rule(text, selected_fields):
+        return fee_result
 
     if _llm_disabled():
         return _llm_unavailable_status(), _llm_unavailable_detail()
@@ -137,13 +98,7 @@ async def evaluate_llm_rule(
     if not await inference_available(client):
         return _llm_unavailable_status(), _llm_unavailable_detail()
 
-    fields_block = _fields_block(selected_fields)
-    prompt = (
-        f"{_LLM_RULE_FEW_SHOT}\n\n"
-        f'Audit rule "{rule_name}": {text}\n'
-        f"Fields:\n{fields_block}\n"
-        'JSON only: {"passed":true|false,"detail":"..."}'
-    )
+    prompt = single_rule_prompt(rule_name=rule_name, body=text, field_values=selected_fields)
     settings = get_settings()
     try:
         if settings.structured_llm_enabled:
@@ -180,34 +135,25 @@ async def evaluate_llm_rules_batch(
     remaining: list[dict] = []
     batch_fields: dict[str, str] = {}
     for rule in rules:
-        rid = rule.get("id") or ""
+        rule_id = rule.get("id") or ""
         body = (rule.get("body") or "").strip()
-        selected_fields, missing_fields = _rule_field_values(body, field_values)
+        selected_fields, missing_fields = rule_field_values(body, field_values)
         if missing_fields:
-            missing = ", ".join(f"@{name}" for name in missing_fields)
-            out[rid] = ("error", f"Unknown field reference(s): {missing}.")
+            out[rule_id] = ("error", unknown_reference_detail(missing_fields))
             continue
-        if _FEE_KEYWORDS.search(body):
-            for value in selected_fields.values():
-                if value and value != "—" and _FEE_KEYWORDS.search(value):
-                    out[rid] = (
-                        "failed",
-                        "Possible late-fee or penalty wording found in extracted field values.",
-                    )
-                    break
-            else:
-                out[rid] = ("passed", "No late-fee or penalty keywords found in extracted values.")
-        else:
-            batch_fields.update(selected_fields)
-            remaining.append(rule)
+        if fee_result := evaluate_fee_keyword_rule(body, selected_fields):
+            out[rule_id] = fee_result
+            continue
+        batch_fields.update(selected_fields)
+        remaining.append(rule)
 
     if not remaining:
         return out
 
     if len(remaining) == 1:
         rule = remaining[0]
-        rid = rule.get("id") or ""
-        out[rid] = await evaluate_llm_rule(
+        rule_id = rule.get("id") or ""
+        out[rule_id] = await evaluate_llm_rule(
             rule.get("body") or "",
             field_values,
             rule_name=rule.get("name") or "Rule",
@@ -236,19 +182,7 @@ async def evaluate_llm_rules_batch(
             out[rule.get("id") or ""] = (status, detail)
         return out
 
-    fields_block = _fields_block(batch_fields)
-    rules_block = "\n".join(
-        f'- id="{r.get("id")}": {r.get("name")} — {(r.get("body") or "").strip()}'
-        for r in remaining
-    )
-    prompt = (
-        f"{_LLM_RULE_FEW_SHOT}\n\n"
-        "Evaluate each audit rule against the field values.\n"
-        f"Fields:\n{fields_block}\n\n"
-        f"Rules:\n{rules_block}\n\n"
-        "JSON only: "
-        '{"results":[{"id":"<rule id>","passed":true|false,"detail":"..."}]}\n'
-    )
+    prompt = batch_rules_prompt(rules=remaining, field_values=batch_fields)
     settings = get_settings()
     started = time.perf_counter()
     try:
@@ -283,9 +217,9 @@ async def evaluate_llm_rules_batch(
         return out
 
     for rule in remaining:
-        rid = rule.get("id") or ""
-        if rid not in out:
-            out[rid] = ("error", "LLM batch response omitted this rule.")
+        rule_id = rule.get("id") or ""
+        if rule_id not in out:
+            out[rule_id] = ("error", "LLM batch response omitted this rule.")
     log.info(
         "llm_rule_batch_done",
         model=model,

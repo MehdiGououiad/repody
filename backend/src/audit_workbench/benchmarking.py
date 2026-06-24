@@ -145,6 +145,10 @@ def csv_report(rows: list[dict[str, Any]]) -> str:
         "extractionMs",
         "validationMs",
         "cacheHit",
+        "ocrCompare",
+        "judgeQuality",
+        "rawTextChars",
+        "ocrTextChars",
         "fieldAccuracy",
         "ruleAccuracy",
         "readPathUsed",
@@ -182,7 +186,7 @@ def html_report(report: dict[str, Any]) -> str:
             f"<td>{cell(row.get('extractionMs'))}</td>"
             f"<td>{cell(row.get('validationMs'))}</td>"
             f"<td>{cell(row.get('cacheHit'))}</td>"
-            f"<td>{cell(row.get('fieldAccuracy'))}</td>"
+            f"<td>{cell(row.get('rawTextChars') if row.get('ocrCompare') else row.get('fieldAccuracy'))}</td>"
             f"<td>{cell(row.get('ruleAccuracy'))}</td>"
             f"<td>{cell(row.get('error'))}</td>"
             "</tr>"
@@ -228,7 +232,7 @@ pre {{ overflow: auto; background: #11182a; border-radius: 12px; padding: 16px; 
 <div class="table-wrap"><table>
 <thead><tr><th>Case</th><th>Model</th><th>Phase</th><th>Status</th><th>Wall ms</th>
 <th>Queue ms</th><th>Extract ms</th><th>Validate ms</th><th>Cache</th>
-<th>Field acc.</th><th>Rule acc.</th><th>Error</th></tr></thead>
+<th>Field / OCR</th><th>Rule acc.</th><th>Error</th></tr></thead>
 <tbody>{"".join(table_rows)}</tbody>
 </table></div>
 <details><summary>Environment</summary><pre>{metadata}</pre></details>

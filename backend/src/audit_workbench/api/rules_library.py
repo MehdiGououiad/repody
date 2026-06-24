@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.api.deps import get_session
 from audit_workbench.db.models import RuleTemplate
 from audit_workbench.schemas.workflow import RuleTemplateSchema
+from audit_workbench.settings import get_settings
 
 
 class RuleLibraryResponse(BaseModel):
@@ -27,6 +28,7 @@ async def rules_library(session: AsyncSession = Depends(get_session)):
         await session.flush()
         result = await session.execute(select(RuleTemplate))
         rows = result.scalars().all()
+    llm_enabled = get_settings().llm_validation_enabled
     rules = [
         RuleTemplateSchema(
             id=t.id,
@@ -38,5 +40,6 @@ async def rules_library(session: AsyncSession = Depends(get_session)):
             severity=t.severity,
         )
         for t in rows
+        if llm_enabled or (t.kind or "logic").lower() != "llm"
     ]
     return RuleLibraryResponse(rules=rules)

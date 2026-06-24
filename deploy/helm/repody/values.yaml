@@ -1,27 +1,32 @@
-# Default: in-cluster data plane + self-hosted Hatchet (per ADR 004).
-# Override for managed RDS/S3: set postgresql.enabled=false and externalDatabase.*
+# Enterprise default: Repody owns stateless app workloads only.
+# Stateful systems, auth, secrets, observability, and inference are external/platform services.
+# Local kind/dev values explicitly opt into bundled dependencies.
 
 global:
   imagePullSecrets: []
   deploymentEnvironment: production
 
 images:
+  backend:
+    repository: repody-backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
   api:
-    repository: repody-api
-    tag: latest
+    repository: repody-backend
+    tag: "0.1.0"
     pullPolicy: IfNotPresent
   worker:
-    repository: repody-worker
-    tag: latest
+    repository: repody-backend
+    tag: "0.1.0"
     pullPolicy: IfNotPresent
   web:
     repository: repody-web
-    tag: latest
+    tag: "0.1.0"
     pullPolicy: IfNotPresent
 
-# ── Bitnami data plane (in-cluster) ───────────────────────────────────────────
+# ── Bundled data plane (local/dev only; disabled for enterprise) ──────────────
 postgresql:
-  enabled: true
+  enabled: false
   auth:
     username: audit
     database: audit_workbench
@@ -33,7 +38,7 @@ postgresql:
       size: 20Gi
 
 redis:
-  enabled: true
+  enabled: false
   architecture: standalone
   auth:
     enabled: false
@@ -42,7 +47,7 @@ redis:
     tag: 8.2.1-debian-12-r0
 
 minio:
-  enabled: true
+  enabled: false
   mode: standalone
   image:
     repository: bitnamilegacy/minio
@@ -61,34 +66,87 @@ minio:
 
 # ── External data plane (disable subcharts above, set URLs) ───────────────────
 externalDatabase:
-  enabled: false
+  enabled: true
   url: ""
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_DATABASE_URL
 
 externalRedis:
-  enabled: false
+  enabled: true
   url: ""
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_REDIS_URL
 
 externalObjectStorage:
-  enabled: false
+  enabled: true
   endpoint: ""
   bucket: audit-documents
   accessKey: ""
   secretKey: ""
+  existingSecret: repody-runtime-secrets
+  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
+  secretKeyKey: AUDIT_MINIO_SECRET_KEY
   secure: true
   publicEndpoint: ""
 
-# ── Hatchet (self-hosted, mirrors Compose hatchet-lite) ───────────────────────
+# ── Hatchet (bundled hatchet-stack for local/dev; externalHatchet for production) ─
 hatchet:
-  enabled: true
-  image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:latest
-  adminImage: ghcr.io/hatchet-dev/hatchet/hatchet-admin:latest
-  postgresImage: postgres:17.10-alpine
+  enabled: false
   waitInitImage: busybox:1.37.0
-  kubectlImage: dtzar/helm-kubectl:3.18.6
-  postgresPassword: hatchet
-  # Set after first install, or leave empty and enable bootstrapToken job.
+  # Optional override when not using hatchet-stack workerTokenJob (GitOps / air-gap).
   clientToken: ""
-  bootstrapToken: true
+  clientTokenSecret: hatchet-client-config
+  clientTokenKey: HATCHET_CLIENT_TOKEN
+
+# Official hatchet-stack subchart — https://docs.hatchet.run/self-hosting/kubernetes-quickstart
+# Bundled Postgres + RabbitMQ (postgres.enabled / rabbitmq.enabled). Production uses externalHatchet.
+# In-cluster ClusterIP only (ingress disabled; no nginx). Repody workers reach engine via sharedConfig URLs.
+# fullnameOverride on api/engine/frontend avoids a service-name clash with repody-api in this umbrella release.
+hatchet-stack:
+  caddy:
+    enabled: false
+  api:
+    fullnameOverride: repody-hatchet-api
+    replicaCount: 1
+    ingress:
+      enabled: false
+    quickstartJob:
+      enabled: true
+    workerTokenJob:
+      enabled: true
+  engine:
+    fullnameOverride: repody-hatchet-engine
+    replicaCount: 1
+    ingress:
+      enabled: false
+  frontend:
+    fullnameOverride: repody-hatchet-frontend
+    ingress:
+      enabled: false
+  postgres:
+    enabled: true
+    primary:
+      extendedConfiguration: |
+        timezone = 'UTC'
+  rabbitmq:
+    enabled: true
+
+externalHatchet:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  tokenKey: HATCHET_CLIENT_TOKEN
+  hostPort: hatchet-grpc.example.com:443
+  serverUrl: https://hatchet.example.com
+  tlsStrategy: tls
+
+migrations:
+  enabled: false
+  hookDeletePolicy: before-hook-creation,hook-succeeded
+  backoffLimit: 3
+
+# Skaffold / local hot-reload (uvicorn --reload when files are synced into the pod)
+dev:
+  apiReload: false
 
 # ── Control plane (api) ───────────────────────────────────────────────────────
 api:
@@ -98,30 +156,47 @@ api:
       cpu: 250m
       memory: 512Mi
     limits:
-      memory: 2Gi
+      memory: 1Gi
   autoscaling:
-    enabled: false
+    enabled: true
     minReplicas: 2
     maxReplicas: 6
     targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
 
 # ── Worker plane (scale here first) ───────────────────────────────────────────
 workerOcr:
   replicas: 2
   pool: ocr
   maxJobs: 1
-  warmupOnStart: true
+  warmupOnStart: false
   resources:
     requests:
-      cpu: 500m
-      memory: 2Gi
+      cpu: 250m
+      memory: 768Mi
     limits:
-      memory: 8Gi
+      memory: 2Gi
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 10
     targetCPUUtilizationPercentage: 75
+  terminationGracePeriodSeconds: 120
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
 
 workerFast:
   replicas: 2
@@ -130,15 +205,24 @@ workerFast:
   warmupOnStart: false
   resources:
     requests:
-      cpu: 250m
-      memory: 512Mi
+      cpu: 100m
+      memory: 256Mi
     limits:
-      memory: 2Gi
+      memory: 1Gi
   autoscaling:
     enabled: true
     minReplicas: 1
     maxReplicas: 8
     targetCPUUtilizationPercentage: 70
+  terminationGracePeriodSeconds: 60
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
 
 # ── Edge (web) ────────────────────────────────────────────────────────────────
 web:
@@ -148,7 +232,20 @@ web:
       cpu: 100m
       memory: 256Mi
     limits:
-      memory: 1Gi
+      memory: 768Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: ScheduleAnyway
 
 # ── In-cluster Keycloak (staging/local; production usually uses external IdP) ─
 keycloak:
@@ -156,6 +253,8 @@ keycloak:
   image: quay.io/keycloak/keycloak:26.6.3
   realm: repody
   hostname: auth.example.com
+  # Busybox image for web pod init that maps gatewayApi.authHost → in-cluster Keycloak.
+  authHostAliasInitImage: ""
   hostnameStrict: false
   hostnameStrictHttps: false
   proxyHeaders: xforwarded
@@ -196,18 +295,23 @@ gatewayApi:
   # Optional EnvoyProxy (gateway.envoyproxy.io) for kind NodePort / custom service shape.
   envoyProxyName: ""
   kindNodePort: 0
-  # Envoy Gateway ClusterIP — web pods resolve authHost through the gateway (local kind).
+  # Optional static ClusterIP for web pods to resolve authHost (external IdP or legacy).
+  # When keycloak.enabled, the web Deployment init container sets this automatically.
   authHostAliasIp: ""
   allowedRoutes:
     from: Same
+  tls:
+    enabled: false
+    secretName: repody-tls
+    redirectHttp: true
 
 # ── Platform secrets & config ─────────────────────────────────────────────────
 secrets:
   authSecret: ""
   keycloakClientSecret: ""
   vllmApiKey: ""
-  create: true
-  existingSecret: ""
+  create: false
+  existingSecret: repody-runtime-secrets
 
 config:
   oidcEnabled: true
@@ -217,24 +321,59 @@ config:
   oidcAudience: repody-api
   keycloakClientId: repody-web
   inferenceMode: vllm
-  vllmBaseUrl: http://vllm.inference.svc.cluster.local:8000/v1
+  # External OpenAI-compatible document-model endpoint. This chart does not run inference.
+  vllmBaseUrl: https://vlm.example.com/v1
   vllmServedModel: numind/NuExtract3
   extractor: pipeline
-  dockerModelRunnerBaseUrl: http://model-runner.docker.internal/engines/llama.cpp/v1
+  dockerModelRunnerBaseUrl: ""
   defaultOcrModel: repody:vlm
   repodyVlmEnabled: true
   repodyVlmModel: repody/repody-vlm:q4_k_m-16k
   repodyVlmMaxTokens: 512
-  repodyVlmMaxEdgePx: 1024
-  repodyVlmPdfDpi: 144
+  repodyVlmMaxEdgePx: ""
+  repodyVlmPdfDpi: 170
   repodyVlmMaxPagesPerRequest: 4
+  suryaOcrEnabled: true
+  suryaInferenceBackend: llamacpp
+  suryaInferenceUrl: ""
+  suryaInferenceParallel: 8
+  suryaImageDpi: 96
+  suryaImageDpiHighres: 192
+  suryaMaxTokensFullPage: 12288
+  suryaDetectorTextThreshold: 0.6
+  suryaLayoutBlockOcrEnabled: false
+  suryaTableRecognitionEnabled: false
+  repodyVlmMarkdownMaxTokens: 8192
+  repodyVlmEnableThinking: false
+  repodyVlmJpegQuality: 95
+  repodyVlmTimeoutSeconds: 600
   ocrMaxPages: 4
   corsOrigins: '["https://app.example.com"]'
   logJson: true
   directUploadEnabled: true
   rateLimitFailClosed: true
+  operatorActionsEnabled: false
+  repodyVlmMarkdownOnExtract: true
+  gpuLiveProbe: false
 
 observability:
   bugsinkDsn: ""
+  existingSecret: ""
+  bugsinkDsnKey: BUGSINK_DSN
+  # OTLP HTTP traces (/v1/traces). Logs stay JSON on stdout; trace_id is correlated in structlog.
   otelEnabled: false
   otelEndpoint: ""
+
+networkPolicy:
+  enabled: true
+  externalEgress:
+    enabled: true
+    cidrs:
+      - 0.0.0.0/0
+    ports:
+      - 80
+      - 443
+      - 5432
+      - 6379
+      - 6380
+      - 9000

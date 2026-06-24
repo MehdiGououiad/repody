@@ -10,7 +10,7 @@ keywords:
   - microservices
 dependencies:
   - name: postgresql
-    version: 18.7.5
+    version: 18.7.6
     repository: https://charts.bitnami.com/bitnami
     condition: postgresql.enabled
   - name: redis
@@ -21,3 +21,8 @@ dependencies:
     version: 17.0.21
     repository: https://charts.bitnami.com/bitnami
     condition: minio.enabled
+  - name: hatchet-stack
+    alias: hatchet-stack
+    version: 0.11.0
+    repository: https://hatchet-dev.github.io/hatchet-charts
+    condition: hatchet.enabled

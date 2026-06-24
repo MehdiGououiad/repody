@@ -1,10 +1,4 @@
-import type {
-  ArithmeticOp,
-  ComparisonOp,
-  ConditionJunction,
-  ConditionOperand,
-  RuleCondition,
-} from "@/lib/types";
+import type { ComparisonOp, ConditionJunction, ConditionOperand, RuleCondition } from "@/lib/types";
 
 const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 

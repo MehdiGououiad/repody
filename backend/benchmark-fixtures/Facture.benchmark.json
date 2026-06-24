@@ -1,0 +1,81 @@
+{
+  "name": "Facture.pdf reference invoice",
+  "documentType": "Invoice",
+  "mimeType": "application/pdf",
+  "fields": [
+    {
+      "name": "total_amount",
+      "description": "Total TTC including tax",
+      "expected": "6000.00",
+      "comparison": "amount",
+      "tolerance": "0.01"
+    },
+    {
+      "name": "tva",
+      "description": "Total TVA tax amount",
+      "expected": "1000.00",
+      "comparison": "amount",
+      "tolerance": "0.01"
+    }
+  ],
+  "baselineFields": [
+    {
+      "name": "total_amount",
+      "description": "Total TTC including tax",
+      "expected": "6000.00",
+      "comparison": "amount",
+      "tolerance": "0.01"
+    }
+  ],
+  "logicRules": [
+    {
+      "id": "benchmark-total-pass",
+      "name": "Total TTC equals 6000",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "total_amount == 6000",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    }
+  ],
+  "logicValidationRules": [
+    {
+      "id": "benchmark-total-pass",
+      "name": "Total TTC equals 6000",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "total_amount == 6000",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    },
+    {
+      "id": "benchmark-total-fail",
+      "name": "Intentional negative control",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "total_amount == 1",
+      "severity": "reject",
+      "expectedStatus": "failed"
+    }
+  ],
+  "llmValidationRules": [
+    {
+      "id": "benchmark-total-pass",
+      "name": "Total TTC equals 6000",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "total_amount == 6000",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    },
+    {
+      "id": "benchmark-llm-total",
+      "name": "LLM confirms invoice total",
+      "kind": "llm",
+      "scope": "intra",
+      "body": "The invoice total_amount must be exactly 6000 euros. Fail if it is different.",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    }
+  ]
+}

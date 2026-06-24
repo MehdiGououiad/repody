@@ -23,7 +23,6 @@ const eslintConfig = defineConfig([
     "deploy/**",
     "e2e/**",
     "scripts/**",
-    "observability/**",
     "lib/api/openapi.json",
     "lib/api/generated/**",
   ]),

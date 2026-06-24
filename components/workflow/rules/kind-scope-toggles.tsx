@@ -8,11 +8,23 @@ import type { RuleKind, RuleScope } from "@/lib/types";
 export function KindToggle({
   kind,
   onChange,
+  llmEnabled = true,
 }: {
   kind: RuleKind;
   onChange: (k: RuleKind) => void;
+  llmEnabled?: boolean;
 }) {
   const t = useTranslations("workflows.builder.rules");
+  if (!llmEnabled) {
+    return (
+      <div className="flex rounded-lg border border-border overflow-hidden w-fit text-[11px] font-medium">
+        <span className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground">
+          <Code className="h-3 w-3" />
+          {t("kindLogic")}
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="flex rounded-lg border border-border overflow-hidden w-fit text-[11px] font-medium">
       <button

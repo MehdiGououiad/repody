@@ -20,4 +20,5 @@ def test_operator_can_execute_runs() -> None:
     authorizer = CasbinAuthorizer()
     principal = Principal(subject="u3", roles=("operator",))
     assert authorizer.authorize(principal, "run", "execute")
+    assert authorizer.authorize(principal, "operator", "execute")
     assert not authorizer.authorize(principal, "settings", "write")

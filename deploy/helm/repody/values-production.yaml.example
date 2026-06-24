@@ -5,6 +5,10 @@
 
 global:
   deploymentEnvironment: production
+  # Required when GHCR packages are private. Public GHCR packages can be pulled
+  # anonymously, but private enterprise installs should use an imagePullSecret.
+  imagePullSecrets:
+    - name: ghcr-pull-secret
 
 images:
   api:
@@ -21,17 +25,45 @@ images:
     pullPolicy: IfNotPresent
 
 postgresql:
+  enabled: false
   auth:
-    password: ""  # Leave empty for Bitnami-generated secret, or set explicitly outside Git.
+    password: ""
+
+externalDatabase:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_DATABASE_URL
+
+redis:
+  enabled: false
+
+externalRedis:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_REDIS_URL
 
 minio:
+  enabled: false
   auth:
-    rootPassword: ""  # Set outside Git for deterministic installs.
+    rootPassword: ""
+
+externalObjectStorage:
+  enabled: true
+  endpoint: s3.yourdomain.com
+  bucket: audit-documents
+  existingSecret: repody-runtime-secrets
+  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
+  secretKeyKey: AUDIT_MINIO_SECRET_KEY
+  secure: true
+  publicEndpoint: files.yourdomain.com
 
 ingress:
   enabled: true
   className: nginx
   host: app.yourdomain.com
+  # Only routed by this chart when bundled minio.enabled=true.
+  # With externalObjectStorage.enabled=true, point DNS/publicEndpoint at the
+  # client object-storage service instead.
   filesHost: files.yourdomain.com
   tls:
     enabled: true
@@ -47,24 +79,56 @@ config:
   oidcAudience: repody-api
   keycloakClientId: repody-web
   corsOrigins: '["https://app.yourdomain.com"]'
-  vllmBaseUrl: http://vllm.gpu.svc.cluster.local:8000/v1
+  # External OpenAI-compatible endpoint: vLLM, llama-server, or managed GPU service.
+  vllmBaseUrl: https://vlm.yourdomain.com/v1
   vllmServedModel: numind/NuExtract3
+  dockerModelRunnerBaseUrl: ""
 
 observability:
-  bugsinkDsn: ""  # Optional Bugsink DSN.
+  existingSecret: repody-runtime-secrets
+  bugsinkDsnKey: BUGSINK_DSN
+  bugsinkDsn: ""  # Optional fallback; prefer observability.existingSecret.
+  otelEnabled: true
+  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
 
 hatchet:
-  postgresPassword: ""  # Not used when secrets.existingSecret is set.
-  bootstrapToken: true
+  enabled: false
+
+externalHatchet:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  tokenKey: HATCHET_CLIENT_TOKEN
+  hostPort: hatchet-grpc.yourdomain.com:443
+  serverUrl: https://hatchet.yourdomain.com
+  tlsStrategy: tls
+
+migrations:
+  enabled: true
 
 workerOcr:
   replicas: 2
+  warmupOnStart: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 768Mi
+    limits:
+      memory: 2Gi
   autoscaling:
     enabled: true
     maxReplicas: 15
 
 workerFast:
   replicas: 2
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
   autoscaling:
     enabled: true
     maxReplicas: 10
+
+networkPolicy:
+  enabled: true

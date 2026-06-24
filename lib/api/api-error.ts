@@ -33,11 +33,46 @@ export type RunErrorContext = {
   status?: number;
 };
 
+/** Thrown when a workflow run fails after a run id exists (poll / SSE path). */
+export class RunWorkflowError extends Error {
+  readonly runId?: string;
+  readonly step?: string;
+
+  constructor(message: string, opts?: { runId?: string; step?: string }) {
+    super(message);
+    this.name = "RunWorkflowError";
+    this.runId = opts?.runId;
+    this.step = opts?.step;
+  }
+}
+
+export function raiseRunError(raw: string, ctx?: RunErrorContext): never {
+  throw new RunWorkflowError(humanizeRunError(raw, ctx), {
+    runId: ctx?.runId,
+    step: ctx?.step,
+  });
+}
+
+export function runErrorFromUnknown(err: unknown): { message: string; runId?: string } {
+  if (err instanceof RunWorkflowError) {
+    return { message: err.message, runId: err.runId };
+  }
+  const raw =
+    err instanceof Error ? err.message : typeof err === "string" ? err : "Something went wrong.";
+  return { message: humanizeRunError(raw) };
+}
+
 /** Turn low-level failures into actionable UI copy. */
 export function humanizeRunError(raw: string, ctx?: RunErrorContext): string {
   const message = formatApiError(raw);
   const lower = message.toLowerCase();
 
+  if (
+    lower.includes("contact an operator with the run id") ||
+    lower.includes("run failed while processing")
+  ) {
+    return "The audit worker could not finish this run. Check that inference is running on the host, then retry or share the run ID below with an operator.";
+  }
   if (lower.includes("timed out") || lower.includes("timeout")) {
     return ctx?.step
       ? `${ctx.step} timed out. The server or worker may be busy — check Docker logs and retry.`
@@ -53,10 +88,10 @@ export function humanizeRunError(raw: string, ctx?: RunErrorContext): string {
     return "The platform is at capacity — too many audits are queued. Wait a minute and try again.";
   }
   if (lower.includes("stayed queued")) {
-    return "The audit job never left the queue. Ensure Hatchet workers are running (`pnpm compose up --stack=dev --only=workers --detach`).";
+    return "The audit job never left the queue. Ensure Hatchet workers are running (`kubectl -n repody get pods -l app.kubernetes.io/component=worker-fast`).";
   }
   if (lower.includes("stale running") || lower.includes("worker timeout")) {
-    return "The worker stopped responding. Restart workers (`pnpm compose restart workers --stack=dev`) and run the test again.";
+    return "The worker stopped responding. Restart workers (`kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-ocr`) and run the test again.";
   }
   if (lower.includes("run timed out")) {
     return "The audit run took too long (>5 min). Check worker and Docker Model Runner logs.";

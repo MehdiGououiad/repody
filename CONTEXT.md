@@ -6,11 +6,11 @@ Single-page map for tech leads and new contributors. Operational how-tos live in
 
 | Name | Where | Meaning |
 |------|--------|---------|
-| **Repody** | Product, repo, npm package, Compose project | Public name everywhere |
+| **Repody** | Product, repo, npm package, Helm release | Public name everywhere |
 | **repody** | Python distribution (`backend/pyproject.toml`) | `pip install -e backend` |
-| **audit_workbench** | `backend/src/audit_workbench/` | Python import path (legacy; stable for migrations) |
+| **audit_workbench** | `backend/src/audit_workbench/` | Python import path |
 
-Docker Model Runner tags use the `repody/` namespace (e.g. `repody/repody-vlm:q4_k_m-16k`).
+Docker Model Runner tags use the `repody/` namespace for optional validation-model images (e.g. `repody/repody-vlm:q4_k_m-16k`).
 
 ## Domain glossary
 
@@ -24,8 +24,7 @@ Docker Model Runner tags use the `repody/` namespace (e.g. `repody/repody-vlm:q4
 | **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
 | **Worker pool `ocr`** | Hatchet worker that runs document-model extraction (GPU/CPU bound) |
 | **Worker pool `fast`** | Hatchet worker for logic-only / no-file runs |
-
-Historical note: settings still use **“OCR”** in env names (`AUDIT_DEFAULT_OCR_MODEL`). That means **document model catalog**, not a separate OCR engine stack.
+| **`AUDIT_DEFAULT_OCR_MODEL`** | Env name for default document model id (`repody:vlm`) |
 
 ## Request lifecycle
 
@@ -36,7 +35,7 @@ sequenceDiagram
   participant Store as MinIO / local storage
   participant Q as Hatchet
   participant W as Worker (ocr|fast)
-  participant Inf as Inference (DMR or vLLM)
+  participant Inf as External VLM
 
   UI->>API: POST presign / confirm upload
   API->>Store: storage key
@@ -60,7 +59,7 @@ backend/src/audit_workbench/
 ├── api/           HTTP routers → mostly delegate to services
 ├── services/      Business logic (runs, workflows, audits, maintenance)
 ├── extraction/    Document pipeline, model catalog, Repody VLM client
-├── inference/     OpenAI-compat clients (Docker Model Runner, vLLM, structured LLM)
+├── inference/     OpenAI-compat clients (external VLM, validation text model)
 ├── rules/         Logic + LLM evaluators
 ├── hatchet/       Worker entrypoint + workflow definitions
 ├── db/            SQLAlchemy models + Alembic
@@ -70,26 +69,41 @@ backend/src/audit_workbench/
 
 **Intentional coupling:** `api/platform.py` exposes diagnostics and catalog endpoints that call extraction/inference directly for operator visibility. Everything else on the hot path goes through services.
 
+## Operator tools
+
+Operator endpoints are diagnostic/admin workflows, not the audit run hot path:
+
+- `api/operator.py` keeps HTTP concerns: routes, permissions, status codes, and response shapes.
+- `services/operator_benchmark_requests.py` validates benchmark forms, model ids, uploads, fixture paths, and operator data paths.
+- `services/operator_benchmarks.py` creates benchmark/warmup jobs and promotes generated reports.
+- `services/operator_jobs.py` owns in-memory job lifecycle and subprocess output capture.
+- `services/operator_job_model.py` defines the persisted job shape; `services/operator_job_redis.py` is the Redis adapter.
+
 ## Three registries (do not merge)
 
 | Module | Selects | Example ids |
 |--------|---------|-------------|
 | `extraction/pipeline.py` (`get_extractor`) | **Extractor implementation** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `extraction/model_registry.py` | **Document model catalog** | `repody:vlm` (legacy `repody:vlm`) |
+| `extraction/model_registry.py` | **Document model catalog** | `repody:vlm` |
 | `services/document_model_catalog.py` | **Catalog + live runtime probes** | used by `/models/catalog`, diagnostics, healthz |
 
-Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` → `extract_with_repody_vlm()` (legacy name) on the runtime chosen by `AUDIT_INFERENCE_MODE`.
+Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` → `extract_with_repody_vlm()` on the runtime from `AUDIT_INFERENCE_MODE`.
 
-## Inference runtimes
+## Inference
 
-| `AUDIT_INFERENCE_MODE` | Deploy | Document extraction |
-|------------------------|--------|---------------------|
-| `docker_model_runner` | `pnpm compose up --stack=prod --build` | Repody VLM GGUF via Docker Model Runner (CPU) |
-| `vllm` | `pnpm compose up --stack=gpu --build` | Repody VLM via vLLM (GPU) |
+| Concern | Configuration |
+|---------|---------------|
+| Document extraction | `AUDIT_INFERENCE_MODE=vllm`, `AUDIT_VLLM_BASE_URL`, `AUDIT_VLLM_SERVED_MODEL` |
+| LLM rule validation | `get_inference_client()` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
 
-LLM **rule validation** uses a separate small text model on Docker Model Runner when `AUDIT_LLM_VALIDATION_ENABLED=true`. It never shares the document-model runtime.
+Document extraction and LLM rule validation use **separate** models and endpoints.
 
-**Intentional asymmetry:** `AUDIT_INFERENCE_MODE=vllm` switches **document extraction** to vLLM only. LLM rule validation always uses `get_inference_client()` → Docker Model Runner (or stub). Do not point validation at vLLM unless you add a dedicated `AUDIT_VALIDATION_RUNTIME` setting and record that in an ADR.
+### LLM rule validation modules
+
+- `rules/runner.py` chooses logic vs LLM rule execution for a Run.
+- `rules/llm_evaluator.py` orchestrates validation-model availability, structured calls, and batch result handling.
+- `rules/llm_fields.py` owns field-reference parsing, selected field values, and deterministic keyword shortcuts.
+- `rules/llm_prompts.py` owns prompt text for single-rule and batch validation.
 
 Add future document models in `extraction/model_registry.py` (`_registered_models()`).
 
@@ -103,32 +117,27 @@ Next.js 16 App Router at repo root (not under `frontend/`):
 
 ## Platform modules (deploy)
 
-Runtime is split into **modules** (`infra`, `control`, `workers`, `edge`, `obs`, `traces`, `bugsink`) composed via stack presets. See [docs/PLATFORM.md](./docs/PLATFORM.md) and [ADR 003](./docs/adr/003-modular-platform-modules.md).
+Runtime is split into deploy **modules** (`control`, `workers`, `edge`, optional local `obs`/`traces`/`bugsink`). Production and local dev both use Kubernetes + Helm. See [docs/PLATFORM.md](./docs/PLATFORM.md), [docs/README.md](./docs/README.md), [ADR 004](./docs/adr/004-cloud-kubernetes-packaging.md), and [ADR 005](./docs/adr/005-kubernetes-only-external-inference.md).
 
 | Term | Meaning |
 |------|---------|
-| **Platform module** | Independently deployable Compose service group (microservice seam) |
-| **Stack preset** | Base chain (`dev`, `prod`, `vps`, `gpu`) + overlays (`--warmup`, `--scale`, …) |
-| **Worker plane** | Horizontally scaled Hatchet workers (`worker`, `worker-fast`) |
+| **Platform module** | Independently deployable Kubernetes workload group (microservice seam) |
+| **Local stack** | kind + Helm local preset (`pnpm k8s:local`) |
+| **Worker plane** | Horizontally scaled Hatchet workers (`worker-ocr`, `worker-fast`) |
 
-## Compose file chain
+## Local Kubernetes
 
-Prefer **`pnpm compose`** with stack presets and `--with` modules:
+**`pnpm k8s:local`** (alias `pnpm dev`) is the only local runtime path:
 
 | Goal | Command |
 |------|---------|
-| Dev + warmup + Loki | `pnpm dev -- --warmup --logs` |
-| Prod scale + addons | `pnpm compose up --stack=prod --scale --with=obs --build` |
-| Scale OCR workers | `pnpm compose scale --stack=prod --scale --worker=3` |
+| Start / update | `pnpm k8s:local` |
+| Hosts file (browser OAuth) | `pnpm k8s:local:hosts` |
+| Smoke test | `pnpm k8s:local:smoke` |
+| Tear down | `pnpm k8s:local:down` |
+| Scale workers | Helm values / HPA (`workerOcr`, `workerFast`) |
 
-| Goal | Files |
-|------|-------|
-| Dev (fast) | `deploy/compose/base.yaml` + `cpu.yaml` + `dev.yaml` |
-| Prod CPU | `deploy/compose/base.yaml` + `cpu.yaml` + `prod.yaml` |
-| Prod GPU | above + `deploy/compose/gpu.yaml` |
-| CI Playwright smoke | `deploy/compose/base.yaml` + `e2e.yaml` |
-
-Module manifest: [deploy/platform-modules.mjs](./deploy/platform-modules.mjs). CLI: [deploy/scripts/compose.mjs](./deploy/scripts/compose.mjs).
+Module manifest: [deploy/platform-modules.mjs](./deploy/platform-modules.mjs). Chart: [deploy/helm/repody](./deploy/helm/repody).
 
 ## Non-product paths
 
@@ -143,11 +152,11 @@ These directories are agent/tooling assets, not runtime dependencies:
 | Layer | Command | CI |
 |-------|---------|-----|
 | Backend unit/integration | `pnpm test:api` (`pytest -m "not live"`, Postgres + Alembic) | `.github/workflows/ci.yml` |
-| Live stack (Hatchet + workers) | `E2E_STACK=1 pytest -m live` | compose-smoke / manual |
+| Live stack (Hatchet + workers) | `E2E_STACK=1 pytest -m live` | k8s-smoke / manual |
 | Playwright smoke | `pnpm test:e2e:smoke` | `.github/workflows/e2e.yml` (nightly + manual) |
 | Full platform | `pnpm test:platform` | Manual / nightly (heavier) |
 
-Run completion and Hatchet dispatch are **not** simulated in-process. Use `@pytest.mark.live` with a running docker stack (`E2E_STACK=1`, `E2E_API_URL`).
+Run completion and Hatchet dispatch are **not** simulated in-process. Use `@pytest.mark.live` with a running Kubernetes stack (`E2E_STACK=1`, `E2E_API_URL`).
 
 ## Authorization (Casbin)
 
@@ -161,7 +170,8 @@ JWT roles map to permissions in `auth/rbac_policy.csv`. Routers use `require_per
 
 ## Further reading
 
+- [docs/README.md](./docs/README.md) — documentation index
 - [docs/adr/001-hatchet-async-runs.md](./docs/adr/001-hatchet-async-runs.md)
 - [docs/adr/002-repody-vlm-dual-inference-runtimes.md](./docs/adr/002-repody-vlm-dual-inference-runtimes.md)
-- [docs/BACKEND_STEPS.md](./docs/BACKEND_STEPS.md) — milestone history
+- [docs/BACKEND.md](./docs/BACKEND.md) — backend layout and conventions
 - [docs/E2E.md](./docs/E2E.md) — full stack test layers

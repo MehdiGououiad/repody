@@ -1,7 +1,11 @@
 """Pluggable document model registry.
 
-Register models in ``_registered_models()`` — each catalog id maps to a runtime
-(Docker Model Runner or vLLM) and extraction handler.
+Each catalog id maps to a runtime and extraction adapter module:
+- ``repody_vlm`` — NuExtract structured extraction + markdown
+- ``surya_ocr`` — Surya OCR 2 benchmark compare
+
+Render policies: ``extraction/document_render.py``
+Inference env: ``extraction/model_inference_env.py`` (Surya)
 """
 
 from __future__ import annotations
@@ -15,6 +19,9 @@ from audit_workbench.extraction.document_model_branding import (
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_DESCRIPTION,
     REPODY_VLM_LABEL,
+    SURYA_OCR2_CATALOG_ID,
+    SURYA_OCR2_DESCRIPTION,
+    SURYA_OCR2_LABEL,
     is_legacy_catalog_id,
     normalize_public_catalog_id,
 )
@@ -22,8 +29,8 @@ from audit_workbench.extraction.repody_vlm import extract_with_repody_vlm
 from audit_workbench.inference.runtime import default_document_runtime
 from audit_workbench.settings import Settings, get_settings
 
-DocumentEngine = Literal["document_model"]
-DocumentRuntime = Literal["docker_model_runner", "vllm"]
+DocumentEngine = Literal["document_model", "ocr_compare"]
+DocumentRuntime = Literal["docker_model_runner", "vllm", "surya"]
 
 DEFAULT_READ_PATH_ID = "document_model"
 
@@ -39,6 +46,9 @@ class DocumentModelSpec:
     runtime_model: str
     read_path_id: str = DEFAULT_READ_PATH_ID
     description: str = ""
+    compare_only: bool = False
+    workflow_selectable: bool = False
+    markdown_only: bool = False
 
 
 def _runtime_model_for(settings: Settings, runtime: DocumentRuntime) -> str:
@@ -58,6 +68,18 @@ def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
             runtime=runtime,
             runtime_model=_runtime_model_for(settings, runtime),
             description=REPODY_VLM_DESCRIPTION,
+        )
+    if settings.surya_ocr_enabled:
+        models[SURYA_OCR2_CATALOG_ID] = DocumentModelSpec(
+            id=SURYA_OCR2_CATALOG_ID,
+            label=SURYA_OCR2_LABEL,
+            engine="ocr_compare",
+            runtime="surya",
+            runtime_model="datalab-to/surya-ocr-2",
+            description=SURYA_OCR2_DESCRIPTION,
+            compare_only=True,
+            workflow_selectable=True,
+            markdown_only=True,
         )
     return models
 
@@ -103,6 +125,20 @@ def list_document_models() -> list[DocumentModelSpec]:
     return list(_registered_models(get_settings()).values())
 
 
+def is_markdown_only_model(model_id: str | None, *, settings: Settings | None = None) -> bool:
+    settings = settings or get_settings()
+    normalized = normalize_model_id(model_id, settings=settings)
+    spec = _registered_models(settings).get(normalized)
+    return bool(spec and spec.markdown_only)
+
+
+def is_ocr_compare_model(model_id: str | None, *, settings: Settings | None = None) -> bool:
+    settings = settings or get_settings()
+    normalized = normalize_model_id(model_id, settings=settings)
+    spec = _registered_models(settings).get(normalized)
+    return bool(spec and spec.compare_only)
+
+
 async def extract_with_document_model(
     spec: DocumentModelSpec,
     bundle: DocumentBundle,
@@ -120,6 +156,15 @@ async def extract_with_document_model(
             spec=spec,
             extraction_instructions=extraction_instructions,
             markdown_extraction=markdown_extraction,
+        )
+    if spec.id == SURYA_OCR2_CATALOG_ID:
+        from audit_workbench.extraction.surya_ocr import extract_with_surya_ocr2
+
+        return await extract_with_surya_ocr2(
+            bundle,
+            schema,
+            document_type,
+            markdown_extraction=markdown_extraction or spec.markdown_only,
         )
     if spec.engine != "document_model":
         raise RuntimeError(f"Unsupported document model engine: {spec.engine} ({spec.id})")

@@ -1,7 +1,19 @@
-const API = process.env.E2E_API_URL ?? "http://localhost:8000";
+import { readApiToken } from "./auth";
+import { API_URL } from "./env";
+
+const API = API_URL;
+
+function authHeaders(): Record<string, string> {
+  const token = readApiToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export function apiAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  return { ...authHeaders(), ...extra };
+}
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API}/v1${path}`);
+  const res = await fetch(`${API}/v1${path}`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`GET ${path} → ${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -9,7 +21,7 @@ export async function apiGet<T>(path: string): Promise<T> {
 export async function apiPost<T>(path: string, body?: unknown, headers?: HeadersInit): Promise<T> {
   const res = await fetch(`${API}/v1${path}`, {
     method: "POST",
-    headers: { "content-type": "application/json", ...headers },
+    headers: { "content-type": "application/json", ...authHeaders(), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {

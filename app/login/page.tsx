@@ -3,10 +3,11 @@
 import { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
 const ERROR_KEYS: Record<string, string> = {
@@ -33,13 +34,18 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"));
   const errorCode = searchParams.get("error");
-  const { oidcEnabled, keycloakConfigured, loading: authLoading } = usePlatformAuth();
-  const { status } = useSession();
+  const { oidcEnabled, loading: authLoading } = usePlatformAuth();
+  const enforceAuth = useAuthEnforcement();
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     if (status !== "authenticated") return;
+    if (session?.error || !session?.accessToken) {
+      void signOut({ redirectTo: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` });
+      return;
+    }
     router.replace(callbackUrl);
-  }, [status, callbackUrl, router]);
+  }, [status, session, callbackUrl, router]);
 
   if (status === "loading" || status === "authenticated") {
     return (
@@ -81,7 +87,7 @@ function LoginContent() {
 
         {authLoading ? (
           <p className="text-center text-sm text-muted-foreground">{t("checkingAuth")}</p>
-        ) : !keycloakConfigured ? (
+        ) : !enforceAuth ? (
           <div className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">{t("devModeOnLogin")}</p>
             <Button asChild className="w-full" size="lg">
@@ -90,9 +96,15 @@ function LoginContent() {
           </div>
         ) : !oidcEnabled ? (
           <div className="space-y-4 text-center">
-            <p className="text-sm text-destructive">{t("keycloakNotRunning")}</p>
-            <Button asChild className="w-full" size="lg" variant="outline">
-              <Link href="/dashboard">{t("continueToApp")}</Link>
+            <p className="text-sm text-muted-foreground">{t("authServiceStarting")}</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={() => window.location.reload()}
+            >
+              {t("retry")}
             </Button>
           </div>
         ) : (

@@ -17,6 +17,17 @@ spec:
         {{- include "repody.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: control
     spec:
+      automountServiceAccountToken: false
+      {{- if .Values.api.topologySpreadConstraints.enabled }}
+      topologySpreadConstraints:
+        - maxSkew: {{ .Values.api.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ .Values.api.topologySpreadConstraints.topologyKey | quote }}
+          whenUnsatisfiable: {{ .Values.api.topologySpreadConstraints.whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "repody.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: control
+      {{- end }}
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -25,19 +36,30 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) .Values.hatchet.bootstrapToken }}
+      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
       volumes:
         - name: hatchet-client-token
           secret:
-            secretName: {{ include "repody.fullname" . }}-hatchet-token
+            secretName: {{ include "repody.hatchetClientTokenSecret" . }}
             optional: true
       {{- end }}
       containers:
         - name: api
-          image: "{{ .Values.images.api.repository }}:{{ .Values.images.api.tag }}"
-          imagePullPolicy: {{ .Values.images.api.pullPolicy }}
+          image: {{ include "repody.backendImage" . | quote }}
+          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
+          {{- /* Image ENTRYPOINT runs migrations when migrations.enabled=false (configmap sets AUDIT_RUN_MIGRATIONS_ON_STARTUP). */}}
+          args:
+            - uvicorn
+            - audit_workbench.main:app
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8000"
+            {{- if .Values.dev.apiReload }}
+            - --reload
+            {{- end }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -79,14 +101,18 @@ spec:
             - name: KEYCLOAK_ADMIN_PASSWORD
               value: {{ required "keycloak.adminPassword when keycloak.enabled and no existingSecret" .Values.keycloak.adminPassword | quote }}
             {{- end }}
+            {{- if .Values.secrets.keycloakClientSecret }}
+            - name: AUDIT_KEYCLOAK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "repody.secretName" . }}
+                  key: AUTH_KEYCLOAK_CLIENT_SECRET
             {{- end }}
-            {{- if .Values.observability.bugsinkDsn }}
-            - name: BUGSINK_DSN
-              value: {{ .Values.observability.bugsinkDsn | quote }}
             {{- end }}
+            {{- include "repody.bugsinkEnv" . | nindent 12 }}
           readinessProbe:
             httpGet:
-              path: /v1/healthz/live
+              path: /v1/healthz
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10

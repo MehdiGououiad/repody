@@ -2629,6 +2629,11 @@
             "type": "boolean",
             "title": "Isdefault",
             "default": false
+          },
+          "markdownOnly": {
+            "type": "boolean",
+            "title": "Markdownonly",
+            "default": false
           }
         },
         "type": "object",

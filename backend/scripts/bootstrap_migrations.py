@@ -43,10 +43,20 @@ async def _bootstrap() -> None:
             f"Existing schema detected without Alembic history — stamping {BASELINE_REVISION}",
             flush=True,
         )
-        subprocess.run(["alembic", "stamp", BASELINE_REVISION], check=True, cwd="/app")
+        await asyncio.to_thread(
+            subprocess.run,
+            ["alembic", "stamp", BASELINE_REVISION],
+            check=True,
+            cwd="/app",
+        )
 
     print("Running alembic upgrade head…", flush=True)
-    subprocess.run(["alembic", "upgrade", "head"], check=True, cwd="/app")
+    await asyncio.to_thread(
+        subprocess.run,
+        ["alembic", "upgrade", "head"],
+        check=True,
+        cwd="/app",
+    )
     await engine.dispose()
 
 

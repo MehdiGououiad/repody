@@ -11,7 +11,8 @@ export type RefreshableJwt = {
 export async function refreshKeycloakAccessToken(
   token: RefreshableJwt
 ): Promise<RefreshableJwt> {
-  const issuer = process.env.AUTH_KEYCLOAK_ISSUER;
+  const issuer =
+    process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? process.env.AUTH_KEYCLOAK_ISSUER;
   const clientId = process.env.AUTH_KEYCLOAK_ID;
   const clientSecret =
     process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
@@ -24,6 +25,7 @@ export async function refreshKeycloakAccessToken(
     const res = await fetch(`${issuer}/protocol/openid-connect/token`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      signal: AbortSignal.timeout(8_000),
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret ?? "",

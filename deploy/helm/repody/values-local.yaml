@@ -3,12 +3,31 @@
 
 global:
   deploymentEnvironment: local
-  imageRegistry: localhost:5001
+  imageRegistry: harbor.repody.lvh.me:8080/repody
   security:
     allowInsecureImages: true
 
+externalDatabase:
+  enabled: false
+
+externalRedis:
+  enabled: false
+
+externalObjectStorage:
+  enabled: false
+
+externalHatchet:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
 api:
   replicas: 1
+  autoscaling:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
   resources:
     requests:
       cpu: 100m
@@ -18,29 +37,37 @@ api:
 
 workerOcr:
   replicas: 1
-  warmupOnStart: true
+  warmupOnStart: false
   autoscaling:
+    enabled: false
+  podDisruptionBudget:
     enabled: false
   resources:
     requests:
       cpu: 250m
       memory: 512Mi
     limits:
-      memory: 4Gi
+      memory: 1536Mi
 
 workerFast:
   replicas: 1
   autoscaling:
+    enabled: false
+  podDisruptionBudget:
     enabled: false
   resources:
     requests:
       cpu: 100m
       memory: 256Mi
     limits:
-      memory: 1Gi
+      memory: 768Mi
 
 web:
   replicas: 1
+  autoscaling:
+    enabled: false
+  podDisruptionBudget:
+    enabled: false
   resources:
     requests:
       cpu: 50m
@@ -74,34 +101,79 @@ gatewayApi:
   envoyProxyName: repody-kind-nodeport
   kindNodePort: 30080
 
-secrets:
-  create: true
-  authSecret: local-k8s-auth-secret-32chars-min!
-  keycloakClientSecret: repody-web-dev-secret
-
 postgresql:
+  enabled: true
   auth:
     password: audit-local-k8s
 
+redis:
+  enabled: true
+
 minio:
+  enabled: true
+  ingress:
+    enabled: false
+    tls: []
+  startupProbe:
+    enabled: true
+    periodSeconds: 5
+    failureThreshold: 24
   auth:
     rootPassword: minio-local-k8s
 
 hatchet:
-  postgresPassword: hatchet-local-k8s
-  bootstrapToken: true
+  enabled: true
+
+# In-cluster networking — https://docs.hatchet.run/self-hosting/networking (no ingress / no Caddy)
+hatchet-stack:
+  sharedConfig:
+    serverUrl: http://repody-hatchet-api:8080
+    serverAuthCookieDomain: localhost
+    grpcBroadcastAddress: repody-hatchet-engine:7070
+
+secrets:
+  create: true
+  existingSecret: ""
+  authSecret: local-k8s-auth-secret-32chars-min!
+  keycloakClientSecret: repody-web-dev-secret
 
 config:
   oidcEnabled: true
   authUrl: http://app.repody.local
   oidcIssuer: http://auth.repody.local/realms/repody
+  oidcIssuerAliases:
+    - http://auth.repody.local:8080/realms/repody
+    - http://keycloak:8080/realms/repody
+  # Server-side token refresh from the web pod (auth.repody.local:80 is not reachable in-cluster).
+  oidcInternalIssuer: http://keycloak:8080/realms/repody
   oidcJwksUrl: http://keycloak.repody.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs
   oidcAudience: repody-api
   keycloakClientId: repody-web
   corsOrigins: '["http://app.repody.local"]'
-  inferenceMode: docker_model_runner
-  dockerModelRunnerBaseUrl: http://model-runner.docker.internal/engines/llama.cpp/v1
-  repodyVlmPdfDpi: 120
-  repodyVlmMaxEdgePx: 1024
+  inferenceMode: vllm
+  # Host llama-server (pnpm llamacpp:serve) or vLLM — reachable from kind via host.docker.internal.
+  vllmBaseUrl: http://host.docker.internal:8000/v1
+  vllmServedModel: nuextract3-q8_0
+  dockerModelRunnerBaseUrl: ""
+  repodyVlmPdfDpi: 170
+  repodyVlmMaxEdgePx: ""
   ocrMaxPages: 4
+  suryaOcrEnabled: true
+  suryaInferenceBackend: llamacpp
+  suryaInferenceUrl: http://host.docker.internal:8001/v1
+  suryaInferenceParallel: 8
+  operatorActionsEnabled: true
+  operatorBenchmarkUser: operator@repody.local
+  operatorBenchmarkPassword: repody-dev
+  keycloakClientId: repody-web
+  repodyVlmMarkdownOnExtract: true
+  gpuLiveProbe: false
   logJson: true
+
+migrations:
+  # API image ENTRYPOINT runs Alembic when this is false (see configmap AUDIT_RUN_MIGRATIONS_ON_STARTUP).
+  enabled: false
+
+observability:
+  otelEnabled: false
+  otelEndpoint: http://local-tempo:4318/v1/traces

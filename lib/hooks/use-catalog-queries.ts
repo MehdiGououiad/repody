@@ -15,7 +15,16 @@ async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
 }
 
 export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
-  return catalog.models.filter((model) => model.kind === "document_model");
+  return catalog.models.filter(
+    (model) => model.kind === "document_model" || model.markdownOnly === true,
+  );
+}
+
+/** Document + OCR-compare models for operator benchmarks. */
+export function benchmarkModelsFromCatalog(catalog: ModelsCatalogResponse) {
+  return catalog.models.filter(
+    (model) => model.kind === "document_model" || model.kind === "ocr_compare",
+  );
 }
 
 export function processingPathsFromCatalog(
@@ -71,6 +80,61 @@ export function usePlatformConfig(enabled = true) {
       const { data, error, response } = await browserApi.GET("/v1/platform/config");
       if (error || !response.ok || !data) throwOnApiError(error, response);
       return data;
+    },
+    staleTime: CATALOG_STALE_MS,
+  });
+}
+
+export type ModelRuntimeConfigResponse = {
+  models: Array<{
+    modelId: string;
+    label: string;
+    runtime: string;
+    runtimeModel: string;
+    enabled: boolean;
+    compareOnly?: boolean;
+    inferenceUrl?: string | null;
+    renderPolicy?: string;
+    fields: Array<{
+      key: string;
+      envVar: string;
+      label: string;
+      description: string;
+      scope: "platform" | "worker_runtime" | "inference_server";
+      restart: string;
+      value?: string | number | boolean | null;
+      configured?: boolean;
+      source?: string;
+    }>;
+  }>;
+  shared: Array<{
+    key: string;
+    envVar: string;
+    label: string;
+    description: string;
+    scope: "platform" | "worker_runtime" | "inference_server";
+    restart: string;
+    value?: string | number | boolean | null;
+  }>;
+  deploymentNotes: Array<{
+    changeKind: string;
+    action: string;
+    detail: string;
+  }>;
+};
+
+export function useModelRuntimeConfig(enabled = true) {
+  return useQuery({
+    queryKey: ["catalog", "model-runtime-config"],
+    enabled,
+    queryFn: async (): Promise<ModelRuntimeConfigResponse> => {
+      const response = await fetch("/api/v1/platform/model-runtime-config", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      return (await response.json()) as ModelRuntimeConfigResponse;
     },
     staleTime: CATALOG_STALE_MS,
   });

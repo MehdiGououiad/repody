@@ -1,5 +1,5 @@
 import type { RunAuditDetail } from "@/lib/types/audit";
-import { humanizeRunError } from "@/lib/api/api-error";
+import { raiseRunError } from "@/lib/api/api-error";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import { watchRunEvents } from "@/lib/api/run-events";
 
@@ -95,22 +95,18 @@ export async function pollRunUntilDone(
     if (body.progress) onProgress?.(body.progress);
     if (body.status === "done") return fetchRunDetail(runId);
     if (body.status === "failed") {
-      throw new Error(
-        humanizeRunError(body.error || "Run failed", {
-          step: "Audit worker",
-          runId,
-        })
-      );
+      raiseRunError(body.error || "Run failed", {
+        step: "Audit worker",
+        runId,
+      });
     }
     intervalMs = nextPollInterval(intervalMs, body);
     await sleep(withJitter(intervalMs));
   }
-  throw new Error(
-    humanizeRunError("Run timed out - check worker and Docker Model Runner logs", {
-      step: "Audit worker",
-      runId,
-    })
-  );
+  raiseRunError("Run timed out - check worker and Docker Model Runner logs", {
+    step: "Audit worker",
+    runId,
+  });
 }
 
 /** SSE-first wait with polling fallback. */
@@ -128,12 +124,10 @@ export async function waitForRunUntilDone(
     });
     if (error || !response.ok || !data) throwOnApiError(error, response);
     const body = data as RunPollResponse;
-    throw new Error(
-      humanizeRunError(body.error || "Run failed", {
-        step: "Audit worker",
-        runId,
-      })
-    );
+    raiseRunError(body.error || "Run failed", {
+      step: "Audit worker",
+      runId,
+    });
   }
 
   if (outcome === "done") {
