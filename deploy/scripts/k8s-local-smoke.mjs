@@ -11,6 +11,7 @@ import {
 } from "./k8s-local-common.mjs";
 
 const NS = "repody-app";
+const NS_QUEUE = "repody-queue";
 const LOCAL_ARGO_APPS = [
   "repody-local-data",
   "repody-local-queue",
@@ -325,7 +326,7 @@ await step("MinIO presign, Gateway PUT, and confirm", () => {
 await step("Hatchet UI and workers", () => {
   const html = must("hatchet", "kubectl", [
     "-n",
-    NS,
+    NS_QUEUE,
     "exec",
     "deploy/repody-hatchet-api",
     "--",
