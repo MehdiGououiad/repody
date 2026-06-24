@@ -34,8 +34,8 @@ externalHatchet:
   existingSecret: hatchet-client-config
   tokenKey: HATCHET_CLIENT_TOKEN
   waitForTokenSecret: true
-  hostPort: repody-queue-hatchet-engine.repody-queue.svc.cluster.local:7070
-  serverUrl: http://repody-queue-hatchet-api.repody-queue.svc.cluster.local:8080
+  hostPort: repody-hatchet-engine.repody-queue.svc.cluster.local:7070
+  serverUrl: http://repody-hatchet-api.repody-queue.svc.cluster.local:8080
   tlsStrategy: none
 
 networkPolicy:
