@@ -4,10 +4,10 @@
 
 images:
   backend:
-    tag: "fdb4f038cec9"
+    tag: "1973a11cbbe0"
   api:
-    tag: "fdb4f038cec9"
+    tag: "1973a11cbbe0"
   worker:
-    tag: "fdb4f038cec9"
+    tag: "1973a11cbbe0"
   web:
-    tag: "fdb4f038cec9"
+    tag: "1973a11cbbe0"
