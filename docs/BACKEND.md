@@ -181,8 +181,8 @@ Consolidated config, catalog, and diagnostics.
 | `factory.py` | `get_inference_client()` → validation client |
 | `validation_client.py` | Text model for LLM rules |
 | `validation_model.py` | Resolve validation model id |
-| `openai_compat.py` | Docker Model Runner HTTP |
-| `runtime.py` | vLLM / DMR runtime helpers |
+| `openai_compat.py` | OpenAI-compatible HTTP client |
+| `runtime.py` | External VLM runtime helpers |
 | `structured.py` | JSON-schema structured chat |
 | `structured_models.py` | Pydantic LLM output models |
 | `availability.py` | Reachability probes |
@@ -249,10 +249,3 @@ Consolidated config, catalog, and diagnostics.
 | `platform/config` vs `models/catalog` | Static config vs live catalog + paths |
 | `document_model_catalog` vs `models_catalog` service | Probes vs API assembly |
 | `workflow_service` vs `workflow_repository` | Orchestration vs persistence |
-
-## Removed / consolidated
-
-- **Paddle OCR stack** — removed (slow, unstable)
-- **Qwen field model + validation prep script** — removed
-- **`api/diagnostics.py` + `api/models_catalog.py`** — merged into `api/platform.py`
-- **`scripts/run_fixture_ocr.py`** — redundant with `benchmark_ui_route.py` / `test-facture.mjs`

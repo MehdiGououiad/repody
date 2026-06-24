@@ -2,40 +2,36 @@
 
 | Path | Role |
 |------|------|
-| [`platform-modules.mjs`](./platform-modules.mjs) | Stacks, modules, overlays (SSOT) |
-| [`compose/`](./compose/) | Docker Compose YAML |
-| [`stacks/*.files`](./stacks/) | Generated lists for VPS bash |
-| [`scripts/`](./scripts/) | `compose.mjs`, validation, image build, air-gap |
-| [`airgap/`](./airgap/) | Regulated-release manifest |
-| [`ENV.md`](./ENV.md) | Secrets and `AUDIT_*` variables |
-| [`cloud/`](./cloud/) | VPS scripts |
-| [`helm/repody/`](./helm/repody/) | Kubernetes chart |
+| [`helm/repody/`](./helm/repody/) | Kubernetes chart (production + local kind values) |
+| [`scripts/`](./scripts/) | image build, Helm validation, `k8s-local` bootstrap |
+| [`k8s/`](./k8s/) | kind cluster config, Gateway addons |
+| [`airgap/`](./airgap/) | regulated-release manifest |
+| [`ENV.md`](./ENV.md) | secrets and `AUDIT_*` variables |
 
-## Commands
+## Production
 
 ```bash
-pnpm dev | prod | stop          # recipes
-pnpm compose …                  # low-level stacks/modules
-pnpm deploy:check               # CI validation
-pnpm deploy:sync-stacks         # refresh stacks/*.files
+pnpm images:build
+pnpm images:push
+pnpm helm:deps
+helm upgrade --install repody deploy/helm/repody -n repody --create-namespace -f my-values.yaml
 ```
 
-## VPS (one entry per task)
+Production inference is external to this repo's Helm chart. Set:
 
-| Task | Script |
-|------|--------|
-| **First install** | `bash deploy/cloud/deploy.sh` |
-| **Update code** | `bash deploy/cloud/bootstrap.sh` |
-| **Generate secrets** | `bash deploy/cloud/setup-env.sh` |
-| **Validate scripts** | `bash deploy/cloud/validate.sh` |
+```yaml
+config:
+  inferenceMode: vllm
+  vllmBaseUrl: https://your-vlm-host/v1
+  vllmServedModel: your-model
+```
 
-Shared helpers: `deploy/cloud/lib.sh` (compose file chain from `deploy/stacks/vps.files`).
+## Local development
 
-## Stacks
+```bash
+pnpm k8s:local:hosts   # once (admin)
+pnpm k8s:local         # or: pnpm dev
+```
 
-`dev` · `prod` · `prod-micro` · `vps` · `gpu` · `e2e`
-
-Overlays: `--warmup` `--lan` `--public` `--scale`  
-Modules: `--with=obs,traces,bugsink`
-
-See [DEPLOY.md](../DEPLOY.md) and [docs/PLATFORM.md](../docs/PLATFORM.md).
+See [../DEPLOY.md](../DEPLOY.md), [../docs/CLOUD-K8S.md](../docs/CLOUD-K8S.md), and
+[../DEV.md](../DEV.md).

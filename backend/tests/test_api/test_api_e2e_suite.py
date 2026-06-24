@@ -33,6 +33,16 @@ async def test_platform_config(client):
 
 
 @pytest.mark.asyncio
+async def test_model_runtime_config(client):
+    res = await client.get("/v1/platform/model-runtime-config")
+    assert res.status_code == 200
+    body = res.json()
+    assert "models" in body
+    assert "deploymentNotes" in body
+    assert any(m["modelId"] == REPODY_VLM_CATALOG_ID for m in body["models"])
+
+
+@pytest.mark.asyncio
 async def test_healthz_reports_configured_queue_backend(client):
     res = await client.get("/v1/healthz")
     assert res.status_code == 200
@@ -62,7 +72,7 @@ async def test_models_catalog_includes_processing_paths(client):
     assert "document_model" in ids
     assert body["defaultPath"] == "document_model"
     assert any(v["id"] == "logic_only" for v in body["validationModes"])
-    assert any(v["id"] == "logic_and_llm" for v in body["validationModes"])
+    assert not any(v["id"] == "logic_and_llm" for v in body["validationModes"])
 
 
 @pytest.mark.asyncio

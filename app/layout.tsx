@@ -7,6 +7,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { AuthEnforcementProvider } from "@/components/auth/auth-enforcement";
+import { isOidcConfigured } from "@/auth";
 import { THEME_COOKIE, defaultTheme } from "@/i18n/config";
 import type { Theme } from "@/i18n/config";
 import "./globals.css";
@@ -26,6 +28,7 @@ export default async function RootLayout({
   ]);
   const rawTheme = cookieStore.get(THEME_COOKIE)?.value;
   const theme: Theme = rawTheme === "dark" || rawTheme === "light" ? rawTheme : defaultTheme;
+  const enforceAuth = isOidcConfigured();
 
   return (
     <html lang={locale} className={theme === "dark" ? "dark" : ""} style={{ colorScheme: theme }}>
@@ -34,8 +37,10 @@ export default async function RootLayout({
           <ThemeProvider initialTheme={theme}>
             <QueryProvider>
               <AuthSessionProvider>
-                <AppShell>{children}</AppShell>
-                <Toaster richColors closeButton position="bottom-right" />
+                <AuthEnforcementProvider enforceAuth={enforceAuth}>
+                  <AppShell>{children}</AppShell>
+                  <Toaster richColors closeButton position="bottom-right" />
+                </AuthEnforcementProvider>
               </AuthSessionProvider>
             </QueryProvider>
           </ThemeProvider>

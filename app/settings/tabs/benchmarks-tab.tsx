@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, FileJson, LoaderCircle, Play, Upload } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Download, LoaderCircle, Play, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,22 @@ import {
   fetchLatestBenchmark,
   startBenchmark,
   type BenchmarkReport,
+  type BenchmarkResult,
   type OperatorJob,
 } from "@/lib/api/operator";
-import { documentModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { benchmarkModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { DocumentTextPreviewPanel } from "@/components/documents/document-markdown-preview";
 import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shared";
 
 const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+
+function scoreLabel(row: BenchmarkResult): string {
+  if (row.judgeQuality || row.ocrCompare) {
+    const chars = row.ocrCompare ? row.rawTextChars : row.ocrTextChars;
+    return chars != null ? `${chars} chars` : "—";
+  }
+  return formatPercent(row.fieldAccuracy);
+}
 
 function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string }) {
   return (
@@ -68,7 +78,7 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
         <table className="w-full text-sm">
           <thead className="bg-surface-container-low text-left">
             <tr>
-              {["Model", "Phase", "Status", "Wall", "Queue", "Extract", "Validate", "Fields"].map((heading) => (
+              {["Model", "Phase", "Status", "Wall", "Queue", "Extract", "Validate", "Score"].map((heading) => (
                 <th key={heading} className="px-4 py-3 text-[11px] uppercase tracking-wider text-on-surface-variant">
                   {heading}
                 </th>
@@ -77,7 +87,8 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
           </thead>
           <tbody className="divide-y divide-border">
             {report.results.map((row, index) => (
-              <tr key={`${row.case}-${row.phase}-${index}`}>
+              <Fragment key={`${row.case}-${row.phase}-${index}`}>
+                <tr>
                 <td className="px-4 py-3">
                   <p className="font-medium">{row.case}</p>
                   <code className="text-[11px] text-on-surface-variant">{row.model}</code>
@@ -92,8 +103,26 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
                 <td className="px-4 py-3 tabular-nums">{formatDuration(row.queueMs)}</td>
                 <td className="px-4 py-3 tabular-nums">{formatDuration(row.extractionMs)}</td>
                 <td className="px-4 py-3 tabular-nums">{formatDuration(row.validationMs)}</td>
-                <td className="px-4 py-3 tabular-nums">{formatPercent(row.fieldAccuracy)}</td>
+                <td className="px-4 py-3 tabular-nums">{scoreLabel(row)}</td>
               </tr>
+              {row.error ? (
+                <tr key={`${row.case}-${row.phase}-${index}-error`} className="bg-destructive/5">
+                  <td colSpan={8} className="px-4 py-3 text-xs text-destructive">
+                    {row.error}
+                  </td>
+                </tr>
+              ) : null}
+              {row.textPreview ? (
+                <tr key={`${row.case}-${row.phase}-${index}-preview`} className="bg-surface-container-low/40">
+                  <td colSpan={8} className="px-4 py-3">
+                    <DocumentTextPreviewPanel
+                      text={row.textPreview}
+                      label={`Rendered preview (${row.ocrCompare ? "OCR" : "NuExtract markdown"})`}
+                    />
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -112,21 +141,22 @@ export function BenchmarksTab({
   onJobCreated: (job: OperatorJob) => void;
 }) {
   const [profile, setProfile] = useState<"quick" | "models" | "full">("models");
-  const [validationMode, setValidationMode] = useState<"logic_only">("logic_only");
+  const validationMode = "logic_only";
   const [warmRuns, setWarmRuns] = useState("1");
-  const [minimumAccuracy, setMinimumAccuracy] = useState("1");
+  const [minimumAccuracy, setMinimumAccuracy] = useState("0");
   const [cacheCheck, setCacheCheck] = useState(true);
+  const [judgeQuality, setJudgeQuality] = useState(true);
   const catalogQuery = useUnifiedModelsCatalog();
   const models = useMemo(() => {
     if (!catalogQuery.data) return [];
-    return documentModelsFromCatalog(catalogQuery.data).filter(
+    return benchmarkModelsFromCatalog(catalogQuery.data).filter(
       (model) => model.available !== false,
     );
   }, [catalogQuery.data]);
   const modelsInitialized = useRef(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [customDataset, setCustomDataset] = useState(false);
   const [document, setDocument] = useState<File | null>(null);
-  const [manifest, setManifest] = useState<File | null>(null);
   const [report, setReport] = useState<BenchmarkReport | null>(null);
   const [reportJobId, setReportJobId] = useState<string>();
   const active = jobs.find((job) => job.kind === "benchmark" && ACTIVE_STATUSES.has(job.status));
@@ -159,8 +189,8 @@ export function BenchmarksTab({
   };
 
   const run = async () => {
-    if ((document && !manifest) || (!document && manifest)) {
-      toast.error("Upload both the document and its benchmark manifest.");
+    if (customDataset && !document) {
+      toast.error("Choose a document to benchmark.");
       return;
     }
     try {
@@ -171,8 +201,8 @@ export function BenchmarksTab({
         warmRuns: Number(warmRuns),
         minimumAccuracy: Number(minimumAccuracy),
         cacheCheck,
-        document,
-        manifest,
+        judgeQuality,
+        document: customDataset ? document : null,
       });
       onJobCreated(job);
       setReportJobId(undefined);
@@ -190,7 +220,7 @@ export function BenchmarksTab({
             <div>
               <h2 className="font-display text-lg font-semibold">Run benchmark suite</h2>
               <p className="text-sm text-on-surface-variant mt-1">
-                Exercises the same multipart API, queue, worker, extraction, and validation path as the UI.
+                Compare NuExtract markdown (Repody VLM) and Surya OCR in parallel — you judge text quality from the previews.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -215,9 +245,32 @@ export function BenchmarksTab({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="benchmark-accuracy">Minimum field accuracy</Label>
-                <Input id="benchmark-accuracy" type="number" min="0" max="1" step="0.05" value={minimumAccuracy} onChange={(event) => setMinimumAccuracy(event.target.value)} />
+                <Input
+                  id="benchmark-accuracy"
+                  type="number"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={minimumAccuracy}
+                  disabled={judgeQuality}
+                  onChange={(event) => setMinimumAccuracy(event.target.value)}
+                />
               </div>
             </div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={judgeQuality}
+                onChange={(event) => setJudgeQuality(event.target.checked)}
+                className="size-4 mt-0.5 accent-primary"
+              />
+              <span className="text-sm">
+                <span className="font-medium block">Judge text quality manually</span>
+                <span className="text-on-surface-variant text-xs">
+                  Enables NuExtract <code className="text-[10px]">mode: markdown</code> on Repody VLM and passes when markdown/OCR text is non-empty.
+                </span>
+              </span>
+            </label>
             <label className="flex items-center gap-3 cursor-pointer">
               <input type="checkbox" checked={cacheCheck} onChange={(event) => setCacheCheck(event.target.checked)} className="size-4 accent-primary" />
               <span className="text-sm">Verify extraction cache on the final repeated run</span>
@@ -233,6 +286,11 @@ export function BenchmarksTab({
                     <input type="checkbox" checked={selected.includes(model.id)} onChange={() => toggleModel(model.id)} className="size-4 mt-0.5 accent-primary" />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{model.label}</span>
+                      {model.kind === "ocr_compare" ? (
+                        <span className="block text-[11px] text-on-surface-variant mt-0.5">
+                          OCR compare — text output only (no structured fields)
+                        </span>
+                      ) : null}
                     </span>
                   </label>
                 ))}
@@ -241,20 +299,39 @@ export function BenchmarksTab({
             <div>
               <p className="text-sm font-semibold">Dataset</p>
               <p className="text-xs text-on-surface-variant mt-1">
-                Leave empty for the built-in invoice fixture, or upload a document and matching JSON manifest.
+                Default: built-in invoice PDF — no upload needed. For your own file, upload the document only;
+                fields are optional when judging markdown/OCR text quality.
               </p>
-              <div className="grid sm:grid-cols-2 gap-3 mt-3">
-                <Label className="rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
+              <label className="mt-3 flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={customDataset}
+                  onChange={(event) => {
+                    setCustomDataset(event.target.checked);
+                    if (!event.target.checked) {
+                      setDocument(null);
+                    }
+                  }}
+                  className="size-4 accent-primary"
+                />
+                <span className="text-sm">Use a custom document</span>
+              </label>
+              {customDataset ? (
+                <Label className="mt-3 block rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
                   <Upload className="h-4 w-4 mb-2" />
-                  <span className="block text-xs font-medium">{document?.name || "Choose document"}</span>
-                  <input type="file" className="sr-only" accept={SUPPORTED_DOCUMENT_ACCEPT} onChange={(event) => setDocument(event.target.files?.[0] || null)} />
+                  <span className="block text-xs font-medium">{document?.name || "Choose PDF or image"}</span>
+                  <input
+                    type="file"
+                    className="sr-only"
+                    accept={SUPPORTED_DOCUMENT_ACCEPT}
+                    onChange={(event) => setDocument(event.target.files?.[0] || null)}
+                  />
                 </Label>
-                <Label className="rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
-                  <FileJson className="h-4 w-4 mb-2" />
-                  <span className="block text-xs font-medium">{manifest?.name || "Choose manifest"}</span>
-                  <input type="file" className="sr-only" accept=".json,application/json" onChange={(event) => setManifest(event.target.files?.[0] || null)} />
-                </Label>
-              </div>
+              ) : (
+                <p className="mt-2 text-[11px] text-on-surface-variant rounded-lg border border-border/60 bg-surface-container-low/50 px-3 py-2">
+                  Using built-in fixture: invoice PDF with reference field checks.
+                </p>
+              )}
             </div>
           </div>
         </div>

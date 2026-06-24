@@ -1,44 +1,61 @@
-# Repody VLM on vLLM (on-prem & white-label)
+# External document-model inference
 
-**Repody VLM** is the product name in the UI and docs. You do **not** need your own Hugging Face repo — the bundled stack uses the public upstream vision weights (`numind/NuExtract3`) and packages them locally as `repody/repody-vlm:q4_k_m-16k` for Docker Model Runner.
+Repody does not run inference in the production Kubernetes chart. The platform calls an
+external OpenAI-compatible VLM endpoint for document extraction.
 
-Repody talks to any **OpenAI-compatible vLLM** endpoint. There is no vendor-specific GPU integration — only `AUDIT_VLLM_BASE_URL` (and an optional API key).
+**Supported runtimes:** [vLLM](https://docs.vllm.ai/) (reference) and **llama-server**
+from [llama.cpp](https://github.com/ggml-org/llama.cpp) for local GGUF.
+
+- Repody: Kubernetes Helm chart
+- Inference: external **vLLM** or **llama-server**
+- Auth: optional bearer token through `AUDIT_VLLM_API_KEY`
 
 ## Platform settings
 
 ```env
 AUDIT_INFERENCE_MODE=vllm
-AUDIT_VLLM_BASE_URL=http://vllm:8000/v1
-AUDIT_VLLM_SERVED_MODEL=numind/NuExtract3    # id from vLLM /v1/models (default bundled GPU stack)
+AUDIT_VLLM_BASE_URL=https://your-vlm-host/v1
+AUDIT_VLLM_SERVED_MODEL=numind/NuExtract3
 AUDIT_VLLM_API_KEY=
 
 AUDIT_REPODY_VLM_TIMEOUT_SECONDS=600
 AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST=6
-AUDIT_REPODY_VLM_WARMUP_ON_START=true
-AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=true
-AUDIT_REPODY_VLM_MARKDOWN_MAX_TOKENS=8192
-AUDIT_GPU_LIVE_PROBE=true
+AUDIT_REPODY_VLM_WARMUP_ON_START=false
+AUDIT_REPODY_VLM_ENABLE_THINKING=false
+AUDIT_GPU_LIVE_PROBE=false
 AUDIT_HEALTHZ_PROBE_INFERENCE=false
 ```
 
-## Option A — bundled GPU stack (this repo)
+The `vllm` setting means "external OpenAI-compatible document-model runtime" in the
+current application code.
+
+### NuExtract generation defaults (Repody payloads)
+
+| Mode | `enable_thinking` | `temperature` | `top_p` / `top_k` |
+|------|-------------------|---------------|-------------------|
+| Production extraction | `false` | `0.2` | — |
+| Thinking extraction | `true` | `0.6` | `0.95` / `40` |
+| Thinking markdown | `true` | `0.7` | `0.95` / `40` |
+
+## Endpoint contract
+
+The endpoint should expose:
 
 ```bash
-pnpm verify:gpu
-pnpm compose up --stack=gpu --build
+curl -s https://your-vlm-host/v1/models
+curl -s https://your-vlm-host/v1/chat/completions \
+  -H 'Authorization: Bearer YOUR_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"numind/NuExtract3","messages":[{"role":"user","content":"hi"}],"max_tokens":8}'
 ```
 
-`deploy/compose/gpu.yaml` serves `numind/NuExtract3` with the recommended flags ([upstream vLLM notes](https://huggingface.co/numind/NuExtract3#vllm-deployment)):
+Structured extraction sends image data URLs and `chat_template_kwargs.template`.
+Document markdown preview, when enabled on a workflow document, sends a second request
+with `chat_template_kwargs.mode: "markdown"`.
 
-- `--limit-mm-per-prompt '{"image": 6, "video": 0}'`
-- `--chat-template-content-format openai`
-- `--generation-config vllm`
-- `--max-model-len 16384`
-- MTP speculative decoding (`qwen3_next_mtp`, 2 tokens)
+## vLLM reference command
 
-Override with `VLLM_SERVED_MODEL` in `.env` if your vLLM exposes a different id.
-
-## Option B — customer-managed vLLM
+Low-memory profile (matches Repody’s 16k context and 6-image cap):
 
 ```bash
 vllm serve numind/NuExtract3 \
@@ -50,46 +67,60 @@ vllm serve numind/NuExtract3 \
   --max-model-len 16384
 ```
 
-Set `AUDIT_VLLM_SERVED_MODEL` to whatever `/v1/models` returns.
+Set `AUDIT_VLLM_SERVED_MODEL` to the id returned by `/v1/models`.
 
-## Structured extraction + document markdown
+For full context on large GPUs, NuExtract documents `--max-model-len 131072` and optional
+MTP speculative decoding — see [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF).
 
-Each extraction run sends **two** NuExtract requests only when the workflow document has **Document markdown preview** enabled:
+## llama-server (local GGUF)
 
-1. **Structured fields** — always runs (`chat_template_kwargs.template` from your schema).
-2. **Document markdown** — optional per document (`chat_template_kwargs.mode: "markdown"`). Stored as `ocrText` for the preview.
+For `NuExtract3-Q8_0.gguf` on a developer machine:
 
-When markdown is off, run results show the raw structured JSON (`rawText`) only.
-
-Verify:
-
-```bash
-curl -s http://YOUR_GPU_HOST:8000/v1/models
-curl -s http://YOUR_GPU_HOST:8000/v1/chat/completions \
-  -H 'Content-Type: application/json' \
-  -d '{"model":"numind/NuExtract3","messages":[{"role":"user","content":"hi"}],"max_tokens":8}'
+```powershell
+winget install llama.cpp
+copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
+pnpm llamacpp:serve
+pnpm llamacpp:verify
 ```
 
-## Option C — CPU dev (no GPU)
+Full guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md)
 
-```env
-AUDIT_INFERENCE_MODE=docker_model_runner
-AUDIT_DOCKER_MODEL_RUNNER_BASE_URL=http://model-runner.docker.internal/engines/llama.cpp/v1
-AUDIT_REPODY_VLM_MODEL=repody/repody-vlm:q4_k_m-16k
+```powershell
+$env:REPODY_VLLM_BASE_URL="http://host.docker.internal:8000/v1"
+$env:REPODY_VLLM_SERVED_MODEL="nuextract3-q8_0"
+pnpm k8s:local
 ```
 
-```bash
-pnpm models:pull    # pulls upstream GGUF, tags as repody/repody-vlm:q4_k_m-16k
-pnpm compose up --stack=prod --build
+## Kubernetes values
+
+```yaml
+config:
+  inferenceMode: vllm
+  vllmBaseUrl: https://your-vlm-host/v1
+  vllmServedModel: numind/NuExtract3
+
+workerOcr:
+  warmupOnStart: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 768Mi
+    limits:
+      memory: 2Gi
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
 ```
+
+Put `AUDIT_VLLM_API_KEY` in `repody-runtime-secrets` when the endpoint requires auth.
 
 ## Troubleshooting
 
 | Symptom | Check |
-|---------|--------|
-| `Repody VLM is unavailable` | `curl $AUDIT_VLLM_BASE_URL/models`, vLLM logs, firewall |
-| Extraction timeout | Raise `AUDIT_REPODY_VLM_TIMEOUT_SECONDS`; GPU finished loading |
-| OOM on GPU | Lower `max-model-len` or use a larger GPU |
-| Wrong JSON | vLLM needs `openai` chat template + vision limits above |
-
-See [`deploy/repody-vlm.env.example`](../deploy/repody-vlm.env.example).
+|---------|-------|
+| `Repody VLM is unavailable` | Worker pod can reach `$AUDIT_VLLM_BASE_URL/models` |
+| 401/403 | `AUDIT_VLLM_API_KEY` exists in the runtime Secret |
+| Extraction timeout | Increase `AUDIT_REPODY_VLM_TIMEOUT_SECONDS`; check remote cold start |
+| Wrong JSON | Runtime must support NuExtract `chat_template_kwargs` |
+| llama-server ignores template | Use `--jinja`; verify with `pnpm llamacpp:verify` |

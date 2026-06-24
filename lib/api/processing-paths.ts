@@ -30,10 +30,7 @@ export function normalizeReadPath(mode: string | undefined): string {
   return "document_model";
 }
 
-export function normalizeValidationMode(
-  validationMode: string | undefined,
-  _extractionMode?: string | undefined
-): "logic_only" {
+export function normalizeValidationMode(validationMode: string | undefined): "logic_only" {
   const raw = (validationMode ?? "").toLowerCase();
   if (raw === "logic_only") return "logic_only";
   return "logic_only";

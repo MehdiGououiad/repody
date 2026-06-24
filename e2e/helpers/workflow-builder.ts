@@ -1,17 +1,33 @@
 import { expect, type Page } from "@playwright/test";
 
+/** Confirm the new-workflow name gate when present. */
+export async function confirmNewWorkflowGate(page: Page, name: string) {
+  const gateInput = page.locator("#workflow-name");
+  if (!(await gateInput.isVisible().catch(() => false))) return;
+  await gateInput.fill(name);
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(gateInput).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: /^What to extract/i })).toBeVisible({
+    timeout: 20_000,
+  });
+}
+
 /** Wait until the dynamically loaded workflow builder is interactive. */
-export async function waitForBuilderReady(page: Page) {
+export async function waitForBuilderReady(
+  page: Page,
+  options?: { newWorkflowName?: string }
+) {
   await expect(page.getByText("Loading builder…")).toHaveCount(0);
+  await confirmNewWorkflowGate(
+    page,
+    options?.newWorkflowName ?? `E2E Workflow ${Date.now()}`
+  );
   await expect(page.getByPlaceholder("Workflow name…")).toBeVisible({
     timeout: 20_000,
   });
-  await expect(page.getByText("Steps", { exact: true })).toBeVisible({
+  await expect(page.getByRole("button", { name: /^What to extract/i })).toBeVisible({
     timeout: 20_000,
   });
-  await expect(
-    page.getByRole("button", { name: /^What to extract/i })
-  ).toBeVisible({ timeout: 20_000 });
 }
 
 /** Open the Test & deploy step in the workflow builder sidebar. */
@@ -58,8 +74,9 @@ export async function saveWorkflowName(page: Page, workflowId: string, name: str
 
   const saveResponse = page.waitForResponse(
     (resp) =>
-      resp.url().includes(`/api/workflows/${workflowId}`) &&
-      resp.request().method() === "PUT"
+      resp.url().includes(`/api/v1/workflows/${workflowId}`) &&
+      resp.request().method() === "PUT",
+    { timeout: 30_000 }
   );
   await page.getByRole("button", { name: "Save draft" }).click();
   const response = await saveResponse;

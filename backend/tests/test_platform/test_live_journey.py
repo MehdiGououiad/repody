@@ -5,7 +5,6 @@ Run via: pnpm test:platform  (or pytest -m live with E2E_API_URL set)
 
 from __future__ import annotations
 
-import os
 import time
 import uuid
 
@@ -13,8 +12,15 @@ import httpx
 import pytest
 
 from audit_workbench.db.seed import SEED_WORKFLOW_ID
+from tests.helpers.live_stack import (
+    assert_metrics_access,
+    create_anonymous_live_client,
+    create_live_client,
+    live_api_base,
+    live_oidc_enabled,
+)
 
-BASE = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
+BASE = live_api_base()
 WF_ID = SEED_WORKFLOW_ID
 
 pytestmark = pytest.mark.live
@@ -22,7 +28,7 @@ pytestmark = pytest.mark.live
 
 @pytest.fixture(scope="module")
 def client():
-    with httpx.Client(base_url=BASE, timeout=30.0) as c:
+    with create_live_client() as c:
         yield c
 
 
@@ -33,11 +39,9 @@ def test_healthz(client: httpx.Client):
 
 
 def test_metrics_and_rules_library(client: httpx.Client):
+    oidc = live_oidc_enabled(client)
     metrics = client.get("/v1/metrics")
-    assert metrics.status_code == 200
-    body = metrics.json()
-    assert "kpis" in body
-    assert any(k["id"] == "auditsWeek" for k in body["kpis"])
+    assert_metrics_access(metrics, oidc_enabled=oidc)
 
     rules = client.get("/v1/rules/library")
     assert rules.status_code == 200
@@ -173,18 +177,19 @@ def test_api_run_poll(client: httpx.Client):
     key = deployed.json()["workflow"]["apiKey"]
     assert key
 
-    unauthorized = client.post(f"/v1/workflows/{WF_ID}/runs")
-    assert unauthorized.status_code == 401
+    with create_anonymous_live_client() as anon:
+        unauthorized = anon.post(f"/v1/workflows/{WF_ID}/runs")
+        assert unauthorized.status_code == 401
 
-    started = None
-    for _ in range(5):
-        started = client.post(
-            f"/v1/workflows/{WF_ID}/runs",
-            headers={"Authorization": f"Bearer {key}"},
-        )
-        if started.status_code == 202:
-            break
-        time.sleep(0.3)
+        started = None
+        for _ in range(5):
+            started = anon.post(
+                f"/v1/workflows/{WF_ID}/runs",
+                headers={"Authorization": f"Bearer {key}"},
+            )
+            if started.status_code == 202:
+                break
+            time.sleep(0.3)
     assert started is not None and started.status_code == 202
     run_id = started.json()["runId"]
 

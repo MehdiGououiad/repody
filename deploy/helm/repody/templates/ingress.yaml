@@ -15,7 +15,7 @@ spec:
   tls:
     - hosts:
         - {{ .Values.ingress.host }}
-        {{- if .Values.ingress.filesHost }}
+        {{- if and .Values.ingress.filesHost .Values.minio.enabled }}
         - {{ .Values.ingress.filesHost }}
         {{- end }}
       secretName: {{ .Values.ingress.tls.secretName }}
@@ -31,7 +31,7 @@ spec:
                 name: {{ include "repody.fullname" . }}-web
                 port:
                   number: 3000
-    {{- if .Values.ingress.filesHost }}
+    {{- if and .Values.ingress.filesHost .Values.minio.enabled }}
     - host: {{ .Values.ingress.filesHost }}
       http:
         paths:

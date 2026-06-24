@@ -1,8 +1,0 @@
-HTTP/1.1 302 Found
-vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch
-location: http://localhost:3000/login?error=MissingCSRF
-Date: Mon, 15 Jun 2026 11:08:08 GMT
-Connection: keep-alive
-Keep-Alive: timeout=5
-Transfer-Encoding: chunked
-

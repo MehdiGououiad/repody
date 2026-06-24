@@ -5,6 +5,7 @@ import { Box, HardDriveDownload, LoaderCircle, RefreshCw, Zap } from "lucide-rea
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
 import { startModelAction, type OperatorJob } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
@@ -43,7 +44,11 @@ export function ModelsTab({
     return catalog.models.map((model) => ({
       id: model.id,
       label: model.label,
-      kind: model.kind === "validation" ? "Validation LLM" : "Vision model",
+      kind: model.kind === "validation"
+        ? "Validation LLM"
+        : model.markdownOnly
+          ? "OCR model"
+          : "Vision model",
       runtime: model.runtime || REPODY_VLM_LABEL,
       available: model.available !== false,
       note: model.availabilityNote,
@@ -68,7 +73,7 @@ export function ModelsTab({
           <div>
             <h2 className="font-display text-lg font-semibold">Model inventory</h2>
             <p className="text-sm text-on-surface-variant mt-1">
-              {REPODY_VLM_LABEL} availability from Docker Model Runner.
+              Catalog availability plus effective runtime knobs (env vars, preprocessing, host inference).
             </p>
           </div>
           <Button variant="outline" onClick={refresh} disabled={loading}>
@@ -130,6 +135,8 @@ export function ModelsTab({
           </div>
         </div>
       </section>
+
+      <ModelRuntimeConfigPanel />
     </div>
   );
 }

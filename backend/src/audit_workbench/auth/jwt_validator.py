@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from functools import lru_cache
 from typing import Any, cast
 
@@ -31,6 +32,19 @@ def _issuer(settings: Settings) -> str:
     return settings.oidc_issuer.rstrip("/")
 
 
+def _accepted_issuers(settings: Settings) -> set[str]:
+    issuers = {_issuer(settings)}
+    raw = settings.oidc_issuer_aliases_env or os.environ.get("AUDIT_OIDC_ISSUER_ALIASES", "")
+    issuers.update(alias.rstrip("/") for alias in settings._parse_oidc_issuer_aliases(raw))
+    return issuers
+
+
+def _validate_issuer(payload: dict[str, Any], settings: Settings) -> None:
+    token_issuer = str(payload.get("iss") or "").rstrip("/")
+    if token_issuer not in _accepted_issuers(settings):
+        raise JwtValidationError("Invalid issuer")
+
+
 def _jwks_url(settings: Settings) -> str:
     if settings.oidc_jwks_url:
         return settings.oidc_jwks_url
@@ -50,7 +64,12 @@ def _roles_from_payload(payload: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _decode_options(settings: Settings) -> dict[str, bool]:
-    return {"verify_aud": bool(settings.oidc_audience)}
+    return {"verify_aud": bool(settings.oidc_audience), "verify_iss": False}
+
+
+def _finalize_payload(payload: dict[str, Any], settings: Settings) -> dict[str, Any]:
+    _validate_issuer(payload, settings)
+    return payload
 
 
 def _decode_with_jwks(token: str, settings: Settings) -> dict[str, Any]:
@@ -65,24 +84,28 @@ def _decode_with_jwks(token: str, settings: Settings) -> dict[str, Any]:
         from jwt.algorithms import RSAAlgorithm
 
         public_key = cast(Any, RSAAlgorithm.from_jwk(json.dumps(jwk_data)))
-        return jwt.decode(
-            token,
-            public_key,
-            algorithms=["RS256"],
-            issuer=_issuer(settings),
-            options=cast(Any, _decode_options(settings)),
-            audience=settings.oidc_audience,
+        return _finalize_payload(
+            jwt.decode(
+                token,
+                public_key,
+                algorithms=["RS256"],
+                options=cast(Any, _decode_options(settings)),
+                audience=settings.oidc_audience,
+            ),
+            settings,
         )
 
     client = _jwks_client(_jwks_url(settings))
     signing_key = client.get_signing_key_from_jwt(token)
-    return jwt.decode(
-        token,
-        signing_key.key,
-        algorithms=["RS256"],
-        issuer=_issuer(settings),
-        options=cast(Any, _decode_options(settings)),
-        audience=settings.oidc_audience,
+    return _finalize_payload(
+        jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            options=cast(Any, _decode_options(settings)),
+            audience=settings.oidc_audience,
+        ),
+        settings,
     )
 
 

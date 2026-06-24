@@ -1,9 +1,43 @@
+# Dependencies and build output
 node_modules
 .next
 .git
-backend/.venv
+.docker-cache
 **/__pycache__
 *.pyc
 .pytest_cache
+backend/.venv
 .env
 .env.local
+.env.*
+
+# Backend — not needed for web image
+backend/
+e2e/
+deploy/
+docs/
+scripts/
+.github/
+.agents/
+.cursor/
+*.md
+!README.md
+
+# Benchmark / reports / local artifacts
+backend/benchmark-fixtures
+benchmark-reports
+*.log
+carte-*.txt
+carte-*.json
+
+# Playwright / test fixtures at repo root
+playwright-report
+test-results
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Airgap / helm archives
+deploy/helm/repody/charts/*.tgz

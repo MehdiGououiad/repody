@@ -16,14 +16,13 @@ from audit_workbench.services.workflow_repository import (
     short_id,
     upsert_workflow_aggregate,
 )
+from audit_workbench.services.workflow_schema_validation import validate_workflow_schema
 from audit_workbench.services.workflow_stats import (
     batch_workflow_stats,
     workflow_api_stats,
     workflow_stats,
 )
 from audit_workbench.services.workflow_validator import validate_workflow_rules
-from audit_workbench.services.workflow_schema_validation import validate_workflow_schema
-from audit_workbench.services.workflow_schema_validation import validate_workflow_schema
 
 
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:

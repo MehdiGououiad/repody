@@ -8,8 +8,18 @@ data:
   AUDIT_DEPLOYMENT_ENVIRONMENT: {{ .Values.global.deploymentEnvironment | quote }}
   AUDIT_OIDC_ENABLED: {{ .Values.config.oidcEnabled | quote }}
   AUDIT_OIDC_ISSUER: {{ required "config.oidcIssuer is required when oidcEnabled" .Values.config.oidcIssuer | quote }}
+  {{- if .Values.config.oidcIssuerAliases }}
+  AUDIT_OIDC_ISSUER_ALIASES: {{ join "," .Values.config.oidcIssuerAliases | quote }}
+  {{- end }}
   AUDIT_OIDC_AUDIENCE: {{ required "config.oidcAudience is required when oidcEnabled" .Values.config.oidcAudience | quote }}
   AUDIT_LOG_JSON: {{ .Values.config.logJson | quote }}
+  {{- if and .Values.observability.otelEnabled (not .Values.observability.otelEndpoint) }}
+  {{- fail "observability.otelEndpoint is required when observability.otelEnabled=true" }}
+  {{- end }}
+  AUDIT_OTEL_ENABLED: {{ .Values.observability.otelEnabled | quote }}
+  {{- if .Values.observability.otelEnabled }}
+  AUDIT_OTEL_EXPORTER_ENDPOINT: {{ .Values.observability.otelEndpoint | quote }}
+  {{- end }}
   AUDIT_DIRECT_UPLOAD_ENABLED: {{ .Values.config.directUploadEnabled | quote }}
   AUDIT_STORAGE_BACKEND: s3
   AUDIT_INFERENCE_MODE: {{ .Values.config.inferenceMode | quote }}
@@ -21,19 +31,64 @@ data:
   AUDIT_REPODY_VLM_ENABLED: {{ .Values.config.repodyVlmEnabled | quote }}
   AUDIT_REPODY_VLM_MODEL: {{ .Values.config.repodyVlmModel | quote }}
   AUDIT_REPODY_VLM_MAX_TOKENS: {{ .Values.config.repodyVlmMaxTokens | quote }}
+  {{- if .Values.config.repodyVlmMaxEdgePx }}
   AUDIT_REPODY_VLM_MAX_EDGE_PX: {{ .Values.config.repodyVlmMaxEdgePx | quote }}
+  {{- end }}
   AUDIT_REPODY_VLM_PDF_DPI: {{ .Values.config.repodyVlmPdfDpi | quote }}
   AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST: {{ .Values.config.repodyVlmMaxPagesPerRequest | quote }}
+  AUDIT_REPODY_VLM_MARKDOWN_MAX_TOKENS: {{ .Values.config.repodyVlmMarkdownMaxTokens | quote }}
+  AUDIT_REPODY_VLM_ENABLE_THINKING: {{ .Values.config.repodyVlmEnableThinking | quote }}
+  AUDIT_REPODY_VLM_JPEG_QUALITY: {{ .Values.config.repodyVlmJpegQuality | quote }}
+  AUDIT_REPODY_VLM_TIMEOUT_SECONDS: {{ .Values.config.repodyVlmTimeoutSeconds | quote }}
+  AUDIT_SURYA_OCR_ENABLED: {{ .Values.config.suryaOcrEnabled | quote }}
+  AUDIT_SURYA_INFERENCE_PARALLEL: {{ .Values.config.suryaInferenceParallel | quote }}
+  AUDIT_SURYA_IMAGE_DPI: {{ .Values.config.suryaImageDpi | quote }}
+  AUDIT_SURYA_IMAGE_DPI_HIGHRES: {{ .Values.config.suryaImageDpiHighres | quote }}
+  AUDIT_SURYA_MAX_TOKENS_FULL_PAGE: {{ .Values.config.suryaMaxTokensFullPage | quote }}
+  AUDIT_SURYA_DETECTOR_TEXT_THRESHOLD: {{ .Values.config.suryaDetectorTextThreshold | quote }}
+  AUDIT_SURYA_LAYOUT_BLOCK_OCR_ENABLED: {{ .Values.config.suryaLayoutBlockOcrEnabled | quote }}
+  AUDIT_SURYA_TABLE_RECOGNITION_ENABLED: {{ .Values.config.suryaTableRecognitionEnabled | quote }}
+  {{- if .Values.config.suryaInferenceBackend }}
+  AUDIT_SURYA_INFERENCE_BACKEND: {{ .Values.config.suryaInferenceBackend | quote }}
+  SURYA_INFERENCE_BACKEND: {{ .Values.config.suryaInferenceBackend | quote }}
+  {{- end }}
+  {{- if .Values.config.suryaInferenceUrl }}
+  AUDIT_SURYA_INFERENCE_URL: {{ .Values.config.suryaInferenceUrl | quote }}
+  SURYA_INFERENCE_URL: {{ .Values.config.suryaInferenceUrl | quote }}
+  {{- end }}
+  {{- if .Values.config.suryaInferenceParallel }}
+  SURYA_INFERENCE_PARALLEL: {{ .Values.config.suryaInferenceParallel | quote }}
+  {{- end }}
+  IMAGE_DPI: {{ .Values.config.suryaImageDpi | quote }}
+  IMAGE_DPI_HIGHRES: {{ .Values.config.suryaImageDpiHighres | quote }}
+  SURYA_MAX_TOKENS_FULL_PAGE: {{ .Values.config.suryaMaxTokensFullPage | quote }}
+  DETECTOR_TEXT_THRESHOLD: {{ .Values.config.suryaDetectorTextThreshold | quote }}
   AUDIT_OCR_MAX_PAGES: {{ .Values.config.ocrMaxPages | quote }}
   AUDIT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
-  AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
+  AUDIT_RUN_MIGRATIONS_ON_STARTUP: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
   AUDIT_SEED_ON_STARTUP: "false"
   AUDIT_USE_CREATE_ALL: "false"
   AUDIT_RATE_LIMIT_FAIL_CLOSED: {{ .Values.config.rateLimitFailClosed | quote }}
-  HATCHET_CLIENT_TLS_STRATEGY: none
+  AUDIT_OPERATOR_ACTIONS_ENABLED: {{ .Values.config.operatorActionsEnabled | quote }}
+  {{- if .Values.config.operatorBenchmarkUser }}
+  AUDIT_OPERATOR_BENCHMARK_USER: {{ .Values.config.operatorBenchmarkUser | quote }}
+  {{- end }}
+  {{- if .Values.config.operatorBenchmarkPassword }}
+  AUDIT_OPERATOR_BENCHMARK_PASSWORD: {{ .Values.config.operatorBenchmarkPassword | quote }}
+  {{- end }}
+  {{- if .Values.config.keycloakClientId }}
+  AUDIT_KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
+  {{- end }}
+  AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT: {{ .Values.config.repodyVlmMarkdownOnExtract | quote }}
+  AUDIT_GPU_LIVE_PROBE: {{ .Values.config.gpuLiveProbe | quote }}
   {{- if .Values.hatchet.enabled }}
-  HATCHET_CLIENT_HOST_PORT: {{ include "repody.fullname" . }}-hatchet:7077
-  HATCHET_CLIENT_SERVER_URL: http://{{ include "repody.fullname" . }}-hatchet:8888
+  HATCHET_CLIENT_TLS_STRATEGY: none
+  HATCHET_CLIENT_HOST_PORT: {{ include "repody.hatchetStackEngineHost" . }}:7070
+  HATCHET_CLIENT_SERVER_URL: http://{{ include "repody.hatchetStackApiHost" . }}:8080
+  {{- else if .Values.externalHatchet.enabled }}
+  HATCHET_CLIENT_TLS_STRATEGY: {{ .Values.externalHatchet.tlsStrategy | quote }}
+  HATCHET_CLIENT_HOST_PORT: {{ required "externalHatchet.hostPort is required when externalHatchet.enabled" .Values.externalHatchet.hostPort | quote }}
+  HATCHET_CLIENT_SERVER_URL: {{ required "externalHatchet.serverUrl is required when externalHatchet.enabled" .Values.externalHatchet.serverUrl | quote }}
   {{- end }}
   {{- if .Values.externalObjectStorage.publicEndpoint }}
   AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.externalObjectStorage.publicEndpoint | quote }}

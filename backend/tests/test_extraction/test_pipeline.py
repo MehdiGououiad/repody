@@ -56,3 +56,39 @@ async def test_document_model_path_returns_fields(mock_document_model):
     )
     assert result.raw_text is not None
     assert any(f.key == "total_amount" and f.value == "6000.00" for f in result.fields)
+
+
+@pytest.mark.asyncio
+async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
+    async def fake_extract(*_args, **kwargs):
+        assert kwargs.get("markdown_extraction") is True
+        return ExtractionResult(
+            fields=[],
+            raw_text=None,
+            ocr_text="## Page 1\n\nHello",
+        )
+
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.extract_with_document_model",
+        AsyncMock(side_effect=fake_extract),
+    )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.get_cached",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "audit_workbench.extraction.pipeline.set_cached",
+        AsyncMock(),
+    )
+
+    extractor = PipelineExtractor()
+    result = await extractor.extract(
+        b"%PDF-1.4\n%%EOF",
+        "application/pdf",
+        "Document",
+        [],
+        extraction_mode="document_model",
+        ocr_model="repody:vlm",
+        markdown_extraction=True,
+    )
+    assert result.ocr_text == "## Page 1\n\nHello"

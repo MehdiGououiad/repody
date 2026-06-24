@@ -1,6 +1,6 @@
 import type { RuleCondition, WorkflowRule } from "@/lib/types";
 import { formatApiError as parseApiError } from "@/lib/api/api-error";
-import { conditionsToExpression, conditionToString } from "@/lib/rules/expression";
+import { conditionsToExpression } from "@/lib/rules/expression";
 
 const NO_RIGHT = new Set(["EXISTS", "IS_EMPTY"]);
 const FIELD_REFERENCE =

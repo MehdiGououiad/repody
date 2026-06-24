@@ -17,6 +17,7 @@ class CatalogModelEntry(CamelModel):
     available: bool = True
     availability_note: str | None = Field(default=None, serialization_alias="availabilityNote")
     is_default: bool = Field(default=False, serialization_alias="isDefault")
+    markdown_only: bool = Field(default=False, serialization_alias="markdownOnly")
 
 
 class ReadPathOption(CamelModel):

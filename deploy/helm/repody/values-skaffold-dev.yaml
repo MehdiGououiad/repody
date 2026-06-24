@@ -1,0 +1,3 @@
+# Skaffold hot-reload overlay (pnpm dev:sync). Not for production.
+dev:
+  apiReload: true

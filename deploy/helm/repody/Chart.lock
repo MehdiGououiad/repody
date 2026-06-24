@@ -1,12 +1,15 @@
 dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
-  version: 18.7.5
+  version: 18.7.6
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 27.0.10
 - name: minio
   repository: https://charts.bitnami.com/bitnami
   version: 17.0.21
-digest: sha256:9af9b73e5f85c29948490b96199601ce81ee07c4490805730ff93865ab9f6e41
-generated: "2026-06-18T16:10:03.4790495+01:00"
+- name: hatchet-stack
+  repository: https://hatchet-dev.github.io/hatchet-charts
+  version: 0.11.0
+digest: sha256:d05d2fae3644a14fc48df54262d1dd95c8cb0474e1b1ecf8a8136f7a7345bfa5
+generated: "2026-06-24T15:54:05.282377+01:00"

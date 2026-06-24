@@ -79,10 +79,10 @@ jobs:
         env:
           BACKEND_URL: http://127.0.0.1:8000
 
-  compose-smoke:
+  k8s-smoke:
     runs-on: ubuntu-latest
     needs: [backend, frontend]
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -96,16 +96,19 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Install Playwright Chromium
         run: pnpm exec playwright install chromium --with-deps
-      - name: Start stack (API + web, stub extraction)
+      - name: Hosts entries for Gateway
+        run: |
+          echo "127.0.0.1 app.repody.local api.repody.local auth.repody.local files.repody.local grafana.repody.local bugsink.repody.local argocd.repody.local" | sudo tee -a /etc/hosts
+      - name: Start local Kubernetes stack
         env:
           DOCKER_BUILDKIT: "1"
-          COMPOSE_DOCKER_CLI_BUILD: "1"
-        run: pnpm compose up --stack=e2e --build --wait
+        run: pnpm k8s:local
       - name: Playwright smoke
         run: pnpm test:e2e:smoke
         env:
-          E2E_API_URL: http://localhost:8000
-          E2E_WEB_URL: http://localhost:3000
+          E2E_API_URL: http://api.repody.local
+          E2E_WEB_URL: http://app.repody.local
+          E2E_AUTH_URL: http://auth.repody.local
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
@@ -117,7 +120,7 @@ jobs:
         run: uv sync --extra dev && uv run pytest tests/test_api/test_api_e2e_suite.py tests/test_e2e/test_facture_ui_e2e.py tests/test_api/test_document_types_run.py tests/test_api/test_uploads_duplicate.py tests/test_auth/test_run_create_access.py -v -m live --tb=short
         env:
           E2E_STACK: "1"
-          E2E_API_URL: http://localhost:8000
+          E2E_API_URL: http://api.repody.local
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
@@ -127,4 +130,4 @@ jobs:
           retention-days: 7
       - name: Tear down stack
         if: always()
-        run: pnpm compose down --stack=e2e --volumes
+        run: pnpm k8s:local:down

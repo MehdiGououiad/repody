@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID, parse_document_model
+from audit_workbench.extraction.document_model_branding import (
+    REPODY_VLM_CATALOG_ID,
+    SURYA_OCR2_CATALOG_ID,
+)
+from audit_workbench.extraction.model_registry import parse_document_model
 from audit_workbench.services.document_model_catalog import (
     availability_for_spec,
     list_catalog_with_availability,
@@ -77,3 +81,21 @@ def test_availability_note_for_missing_vllm_model(monkeypatch):
     available, note = availability_for_spec(spec, installed_by_runtime={"vllm": set()})
     assert available is False
     assert note is not None
+    get_settings.cache_clear()
+
+
+def test_surya_unavailable_without_inference_url(monkeypatch):
+    monkeypatch.setenv("AUDIT_SURYA_OCR_ENABLED", "true")
+    monkeypatch.delenv("AUDIT_SURYA_INFERENCE_URL", raising=False)
+    from audit_workbench.services import document_model_catalog
+
+    monkeypatch.setattr(document_model_catalog, "surya_package_installed", lambda: True)
+    from audit_workbench.settings import get_settings
+
+    get_settings.cache_clear()
+    spec = parse_document_model(SURYA_OCR2_CATALOG_ID)
+    available, note = availability_for_spec(spec, installed_by_runtime={"surya": set()})
+    assert available is False
+    assert note is not None
+    assert "AUDIT_SURYA_INFERENCE_URL" in note
+    get_settings.cache_clear()

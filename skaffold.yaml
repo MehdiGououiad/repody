@@ -1,0 +1,70 @@
+# Skaffold dev loop — file sync into running pods (no image rebuild per save).
+# Prerequisite: cluster up (`pnpm k8s:local:hosts` once, then `pnpm dev`).
+# Usage: pnpm dev:sync
+apiVersion: skaffold/v4beta13
+kind: Config
+metadata:
+  name: repody
+build:
+  artifacts:
+    - image: repody-backend
+      context: backend
+      docker:
+        dockerfile: Dockerfile
+        target: backend
+        buildArgs:
+          BACKEND_EXTRAS: otel,ocr
+      sync:
+        manual:
+          - src: src/**/*.py
+            dest: /app/src
+          - src: scripts/**/*.py
+            dest: /app/scripts
+    - image: repody-web
+      context: .
+      docker:
+        dockerfile: Dockerfile.web
+        buildArgs:
+          BACKEND_URL: http://repody-api:8000
+  tagPolicy:
+    inputDigest: {}
+  local:
+    push: true
+    useBuildkit: true
+manifests:
+  helm:
+    releases:
+      - name: repody
+        chartPath: deploy/helm/repody
+        namespace: repody
+        createNamespace: true
+        valuesFiles:
+          - deploy/helm/repody/values.yaml
+          - deploy/helm/repody/values-local.yaml
+          - deploy/helm/repody/values-skaffold-dev.yaml
+        setValues:
+          global.imageRegistry: harbor.repody.lvh.me:8080/repody
+          images.backend.repository: repody-backend
+          images.api.repository: repody-backend
+          images.worker.repository: repody-backend
+          images.web.repository: repody-web
+deploy:
+  helm:
+    releases:
+      - name: repody
+        chartPath: deploy/helm/repody
+        namespace: repody
+verify:
+  - name: restart-workers-after-backend-sync
+    executionMode:
+      local:
+        command:
+          - kubectl
+          - rollout
+          - restart
+          - deployment
+          - -n
+          - repody
+          - repody-worker-ocr
+          - repody-worker-fast
+        os: [darwin, linux, windows]

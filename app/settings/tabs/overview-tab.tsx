@@ -26,7 +26,6 @@ export function OverviewTab({
     ["Storage", platform.storageBackend],
     ["Default model", defaultModelLabel],
     ["Read path", platform.defaultReadPath],
-    ["LLM validation", platform.llmValidationEnabled ? "enabled" : "disabled"],
     ["Vision models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
     ["Worker pools", Object.values(platform.workerPools).join(", ")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],

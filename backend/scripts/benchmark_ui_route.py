@@ -106,7 +106,9 @@ def _doc_defs(doc_a: str, doc_b: str, *, probe: str | None = None) -> list[dict[
 
 
 def _scenarios(doc_a: str, doc_b: str) -> list[Scenario]:
-    rid = lambda suffix: f"rule-{suffix}-{uuid.uuid4().hex[:6]}"
+    def rid(suffix: str) -> str:
+        return f"rule-{suffix}-{uuid.uuid4().hex[:6]}"
+
     return [
         Scenario(
             "logic-intra",

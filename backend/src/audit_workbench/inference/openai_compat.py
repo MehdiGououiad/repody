@@ -8,7 +8,16 @@ from openai import AsyncOpenAI
 from audit_workbench.inference.runtime import openai_api_key_for_base_url
 
 _STANDARD_CHAT_KEYS = frozenset(
-    {"model", "messages", "max_tokens", "temperature", "stream", "response_format"}
+    {
+        "model",
+        "messages",
+        "max_tokens",
+        "temperature",
+        "top_p",
+        "top_k",
+        "stream",
+        "response_format",
+    }
 )
 
 # Reuse clients per event loop — avoids TLS + connection setup on every VLM request.

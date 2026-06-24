@@ -26,10 +26,21 @@ def test_legacy_read_path_aliases_normalize_to_document_model():
     assert parse_read_path("paddle_ocr").id == "document_model"
 
 
-def test_validation_mode_catalog():
+def test_validation_mode_catalog_default_logic_only():
+    modes = list_validation_modes()
+    ids = {mode.id for mode in modes}
+    assert ids == {LOGIC_VALIDATION}
+
+
+def test_validation_mode_catalog_includes_llm_when_enabled(monkeypatch):
+    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
+    from audit_workbench.settings import get_settings
+
+    get_settings.cache_clear()
     modes = list_validation_modes()
     ids = {mode.id for mode in modes}
     assert ids == {LOGIC_VALIDATION, RUN_VALIDATION_LLM}
+    get_settings.cache_clear()
 
 
 def test_unknown_read_path_normalizes_to_document_model():

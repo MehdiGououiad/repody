@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-const API = process.env.E2E_API_URL ?? "http://localhost:8000";
+import { API, apiAuthHeaders } from "../helpers/api";
 
 test.describe("UI wiring", () => {
   test("proxy API, dashboard endpoint, and header actions work", async ({ page }) => {
@@ -12,10 +11,10 @@ test.describe("UI wiring", () => {
     });
 
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
 
     const configStatus = await page.evaluate(async () => {
-      const response = await fetch("/api/v1/platform/config");
+      const response = await fetch("/api/v1/healthz");
       return response.status;
     });
     expect(configStatus).toBe(200);
@@ -27,6 +26,7 @@ test.describe("UI wiring", () => {
 
   test("deployed API examples match the multipart contract", async ({ page, request }) => {
     const created = await request.post(`${API}/v1/workflows`, {
+      headers: apiAuthHeaders({ "content-type": "application/json" }),
       data: {
         name: `UI Wiring ${Date.now()}`,
         description: "Temporary deployed workflow for browser contract checks",
@@ -57,11 +57,14 @@ test.describe("UI wiring", () => {
         },
       ];
       const configured = await request.put(`${API}/v1/workflows/${workflowId}`, {
+        headers: apiAuthHeaders({ "content-type": "application/json" }),
         data: body.workflow,
       });
       expect(configured.ok()).toBeTruthy();
 
-      const deployed = await request.post(`${API}/v1/workflows/${workflowId}/deploy`);
+      const deployed = await request.post(`${API}/v1/workflows/${workflowId}/deploy`, {
+        headers: apiAuthHeaders(),
+      });
       expect(deployed.ok()).toBeTruthy();
 
       await page.goto(`/workflows/${workflowId}/edit`);
@@ -79,20 +82,23 @@ test.describe("UI wiring", () => {
       await expect(page.getByText(/-F "files=@\/path\/to\/invoice\.pdf"/)).toBeVisible();
 
       await page.getByRole("tab", { name: "python" }).click();
-      await expect(page.getByText(/document_types/)).toBeVisible();
-      await expect(page.getByText(/invoice\.pdf/)).toBeVisible();
+      await expect(page.locator("code").filter({ hasText: /document_types/ }).first()).toBeVisible();
+      await expect(page.locator("code").filter({ hasText: /invoice\.pdf/ }).first()).toBeVisible();
 
       await page.getByRole("tab", { name: "js" }).click();
       await expect(page.getByText(/form\.append\("document_types"/)).toBeVisible();
       await expect(page.getByText(/form\.append\("files"/)).toBeVisible();
     } finally {
-      await request.delete(`${API}/v1/workflows/${workflowId}`);
+      await request.delete(`${API}/v1/workflows/${workflowId}`, {
+        headers: apiAuthHeaders(),
+      });
     }
   });
 
   test("audit list CSV export downloads a report", async ({ page }) => {
     await page.goto("/audits");
-    await expect(page.getByText("AUD-2023-8902")).toBeVisible();
+    const auditLink = page.getByRole("link", { name: "AUD-2023-8902" }).first();
+    await expect(auditLink).toBeVisible({ timeout: 20_000 });
 
     const downloadPromise = page.waitForEvent("download");
     await page.getByRole("link", { name: /Export CSV/i }).click();

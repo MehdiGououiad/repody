@@ -1,4 +1,4 @@
-import { humanizeRunError } from "@/lib/api/api-error";
+import { raiseRunError } from "@/lib/api/api-error";
 import { browserFetch } from "@/lib/api/http";
 import type { ClientProgressStepId, ClientStepLabels } from "@/lib/api/client-run-progress";
 import {
@@ -70,7 +70,7 @@ export async function fetchWithTimeout(
 }
 
 export function raiseStepError(step: string, raw: string, status?: number): never {
-  throw new Error(humanizeRunError(raw, { step, status }));
+  raiseRunError(raw, { step, status });
 }
 
 export function reportClientStep(

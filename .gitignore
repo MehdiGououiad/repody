@@ -29,6 +29,7 @@
 
 # misc
 .DS_Store
+.docker-cache/
 *.pem
 __pycache__/
 *.py[cod]
@@ -66,7 +67,11 @@ next-env.d.ts
 .ruff_cache/
 backend/.agents/
 deploy/llamacpp/paths.local.env
+deploy/llamacpp/surya-paths.local.env
+deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
 deploy/harbor/.runtime/
 deploy/harbor/paths.harbor.local.env
 /harbor/
+/harbor.yml
+/harbor-online-installer-*.tgz

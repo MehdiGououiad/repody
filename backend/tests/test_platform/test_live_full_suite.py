@@ -6,7 +6,6 @@ Requires a running stack (Hatchet + workers + inference). Run via:
 
 from __future__ import annotations
 
-import os
 import time
 import uuid
 
@@ -15,6 +14,16 @@ import pytest
 
 from audit_workbench.db.seed import SEED_WORKFLOW_ID
 from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
+from tests.helpers.live_stack import (
+    assert_metrics_access,
+    assert_settings_config_access,
+    create_anonymous_live_client,
+    create_live_async_client,
+    create_live_client,
+    live_api_base,
+    live_inference_ready,
+    live_oidc_enabled,
+)
 from tests.test_e2e.facture_helpers import (
     EXPECTED_TOTAL,
     EXPECTED_TVA,
@@ -36,7 +45,7 @@ from tests.test_e2e.facture_helpers import (
 )
 from tests.test_e2e.ui_flow import run_test_with_files, save_workflow
 
-BASE = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
+BASE = live_api_base()
 pytestmark = pytest.mark.live
 
 requires_facture = pytest.mark.skipif(
@@ -47,22 +56,31 @@ requires_facture = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def client():
-    with httpx.Client(base_url=BASE, timeout=120.0) as c:
+    with create_live_client(timeout=120.0) as c:
         yield c
+
+
+@pytest.fixture(scope="module")
+def oidc_enabled(client: httpx.Client) -> bool:
+    return live_oidc_enabled(client)
+
+
+@pytest.fixture(scope="module")
+def require_inference(client: httpx.Client):
+    if not live_inference_ready(client):
+        pytest.skip("document-model inference not reachable (healthz modelRunner != true)")
 
 
 @pytest.fixture
 async def async_client():
-    async with httpx.AsyncClient(
-        base_url=BASE, timeout=httpx.Timeout(1200.0, connect=30.0)
-    ) as client:
+    async with create_live_async_client(timeout=httpx.Timeout(1200.0, connect=30.0)) as client:
         yield client
 
 
 # --- Platform surface ---
 
 
-def test_live_health_and_config(client: httpx.Client):
+def test_live_health_and_config(client: httpx.Client, oidc_enabled: bool):
     live = client.get("/v1/healthz/live")
     assert live.status_code == 200
     assert live.json()["status"] == "ok"
@@ -75,13 +93,14 @@ def test_live_health_and_config(client: httpx.Client):
     assert body.get("hatchetConfigured") is True
 
     config = client.get("/v1/platform/config")
-    assert config.status_code == 200
-    cfg = config.json()
-    assert cfg.get("maxUploadBytes", 0) > 0
-    assert cfg.get("documentModels")
+    assert_settings_config_access(config, oidc_enabled=oidc_enabled)
+    if not oidc_enabled:
+        cfg = config.json()
+        assert cfg.get("maxUploadBytes", 0) > 0
+        assert cfg.get("documentModels")
 
 
-def test_live_models_catalog_and_rules(client: httpx.Client):
+def test_live_models_catalog_and_rules(client: httpx.Client, oidc_enabled: bool):
     catalog = client.get("/v1/models/catalog")
     assert catalog.status_code == 200
     cat = catalog.json()
@@ -90,7 +109,6 @@ def test_live_models_catalog_and_rules(client: httpx.Client):
     assert cat["defaultPath"] == "document_model"
     val_ids = {v["id"] for v in cat["validationModes"]}
     assert "logic_only" in val_ids
-    assert "logic_and_llm" in val_ids
     models = {m["id"]: m for m in cat["models"]}
     assert REPODY_VLM_CATALOG_ID in models
 
@@ -99,8 +117,7 @@ def test_live_models_catalog_and_rules(client: httpx.Client):
     assert len(rules.json()["rules"]) >= 1
 
     metrics = client.get("/v1/metrics")
-    assert metrics.status_code == 200
-    assert "kpis" in metrics.json()
+    assert_metrics_access(metrics, oidc_enabled=oidc_enabled)
 
 
 def test_live_uploads_and_diagnostics(client: httpx.Client):
@@ -195,18 +212,19 @@ def test_live_workflow_crud_deploy_and_dry_run(client: httpx.Client):
     api_key = deployed.json()["workflow"]["apiKey"]
     assert api_key
 
-    unauthorized = client.post(f"/v1/workflows/{wf_id}/runs")
-    assert unauthorized.status_code == 401
+    with create_anonymous_live_client() as anon:
+        unauthorized = anon.post(f"/v1/workflows/{wf_id}/runs")
+        assert unauthorized.status_code == 401
 
-    started = None
-    for _ in range(5):
-        started = client.post(
-            f"/v1/workflows/{wf_id}/runs",
-            headers={"Authorization": f"Bearer {api_key}"},
-        )
-        if started.status_code == 202:
-            break
-        time.sleep(0.3)
+        started = None
+        for _ in range(5):
+            started = anon.post(
+                f"/v1/workflows/{wf_id}/runs",
+                headers={"Authorization": f"Bearer {api_key}"},
+            )
+            if started.status_code == 202:
+                break
+            time.sleep(0.3)
     assert started is not None and started.status_code == 202
     run_id = started.json()["runId"]
     _poll_sync(client, run_id, timeout_s=120)
@@ -268,7 +286,7 @@ def test_live_run_events_sse(client: httpx.Client):
 
 
 @requires_facture
-def test_live_presign_confirm_json_run(client: httpx.Client):
+def test_live_presign_confirm_json_run(client: httpx.Client, require_inference):
     pdf = facture_bytes()
     case = FACTURE_UI_PATHS[0]
     doc_id = new_doc_id()
@@ -345,7 +363,9 @@ def test_live_presign_confirm_json_run(client: httpx.Client):
 
 @requires_facture
 @pytest.mark.asyncio
-async def test_live_multipart_extraction_logic_pass(async_client: httpx.AsyncClient):
+async def test_live_multipart_extraction_logic_pass(
+    async_client: httpx.AsyncClient, require_inference
+):
     case = FACTURE_UI_PATHS[0]
     doc_id = new_doc_id()
     documents = [document_def(case, doc_id=doc_id)]
@@ -374,7 +394,9 @@ async def test_live_multipart_extraction_logic_pass(async_client: httpx.AsyncCli
 
 @requires_facture
 @pytest.mark.asyncio
-async def test_live_multipart_extraction_logic_fail(async_client: httpx.AsyncClient):
+async def test_live_multipart_extraction_logic_fail(
+    async_client: httpx.AsyncClient, require_inference
+):
     case = FACTURE_UI_PATHS[0]
     doc_id = new_doc_id()
     documents = [document_def(case, doc_id=doc_id)]
@@ -403,7 +425,9 @@ async def test_live_multipart_extraction_logic_fail(async_client: httpx.AsyncCli
 
 @requires_facture
 @pytest.mark.asyncio
-async def test_live_multipart_tva_validation_fail(async_client: httpx.AsyncClient):
+async def test_live_multipart_tva_validation_fail(
+    async_client: httpx.AsyncClient, require_inference
+):
     case = FACTURE_UI_PATHS[0]
     doc_id = new_doc_id()
     documents = [document_def_tva(case, doc_id=doc_id)]
@@ -434,7 +458,9 @@ async def test_live_multipart_tva_validation_fail(async_client: httpx.AsyncClien
 
 @requires_facture
 @pytest.mark.asyncio
-async def test_live_multipart_ui_conditions_validation(async_client: httpx.AsyncClient):
+async def test_live_multipart_ui_conditions_validation(
+    async_client: httpx.AsyncClient, require_inference
+):
     case = FACTURE_UI_PATHS[0]
     doc_id = new_doc_id()
     documents = [document_def_tva(case, doc_id=doc_id)]

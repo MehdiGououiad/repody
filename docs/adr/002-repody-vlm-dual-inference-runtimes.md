@@ -1,4 +1,4 @@
-# ADR 002: Repody VLM with dual inference runtimes
+# ADR 002: Repody VLM with external inference
 
 **Status:** Accepted  
 **Date:** 2026-06-13  
@@ -6,58 +6,41 @@
 
 ## Context
 
-Structured field extraction uses **Repody VLM** (image → JSON schema). Deploy targets differ:
+Structured field extraction uses **Repody VLM** (image → JSON schema). Inference runs outside the Repody Helm release:
 
-- **Developer laptops / CPU servers:** Docker Desktop Model Runner + llama.cpp GGUF
-- **GPU servers:** vLLM with the upstream vision weights and MTP speculative decoding
+- **Local:** llama-server or vLLM on the host (`REPODY_VLLM_*` env vars)
+- **Production:** vLLM or llama-server
 
 The product will add more document models later; routing must not hard-code a single endpoint.
 
 ## Decision
 
 1. **Single catalog** in `extraction/model_registry.py` — each entry has `runtime` + `runtime_model`.
-2. **Two OpenAI-compatible runtimes**, selected by `AUDIT_INFERENCE_MODE`:
-   - `docker_model_runner` → `AUDIT_DOCKER_MODEL_RUNNER_BASE_URL`
-   - `vllm` → `AUDIT_VLLM_BASE_URL`
-3. **Compose overlays:**
-   - CPU: `deploy/compose/cpu.yaml` (Model Runner tuning, no vLLM container)
-   - GPU: `deploy/compose/gpu.yaml` adds `vllm` service; sets `AUDIT_INFERENCE_MODE=vllm` on api/worker
-4. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py` (legacy module name).
-5. **LLM rule validation** stays on a separate small text model (Model Runner), never on the document-model runtime — even when `AUDIT_INFERENCE_MODE=vllm`.
-6. **Live probes** live in `services/document_model_catalog.py` (not HTTP routers).
+2. **Document extraction:** `AUDIT_INFERENCE_MODE=vllm` → `AUDIT_VLLM_BASE_URL` (external OpenAI-compatible endpoint).
+3. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py`.
+4. **LLM rule validation** uses a separate small text model, never the document-model runtime.
+5. **Live probes** live in `services/document_model_catalog.py`.
 
-Default catalog id: `repody:vlm` (legacy alias `repody:vlm`).
+Default catalog id: `repody:vlm`.
 
 ### Validation vs extraction runtime
 
 | Concern | Runtime selector |
 |---------|------------------|
-| Document extraction | `AUDIT_INFERENCE_MODE` → DMR or vLLM |
-| LLM rule validation | `get_inference_client()` → DMR or stub always |
-
-This is intentional: validation uses a small text model; vLLM hosts the vision document model only.
+| Document extraction | `AUDIT_INFERENCE_MODE` → external vLLM-compatible endpoint |
+| LLM rule validation | `get_inference_client()` → separate text model or stub |
 
 ## Consequences
 
 **Positive**
 
-- GPU path matches upstream vLLM deployment notes for Repody VLM weights
-- Adding a model is one registry entry + optional new compose service if it needs a different serve profile
+- Matches upstream vLLM deployment notes for Repody VLM weights
+- Adding a model is one registry entry plus endpoint configuration
 - Health/diagnostics expose runtime-specific availability
 
 **Negative**
 
-- GPU deploy always chains `deploy/compose/cpu.yaml` + `deploy/compose/gpu.yaml` (worker-fast, Hatchet tuning live in CPU base)
-- Two compose stacks: `pnpm compose up --stack=prod --build` vs `--stack=gpu --build`
-- “OCR” naming in API/settings is a legacy alias for document models
-
-## Alternatives considered
-
-| Option | Why not |
-|--------|---------|
-| Model Runner for GPU too | Slower than vLLM on hardware we target |
-| Single vLLM everywhere | Heavy for laptop dev; Model Runner integrates with Docker Desktop |
-| Per-model microservices from day one | Premature; registry pattern suffices until multiple concurrent models are required |
+- Operators run and monitor inference outside the Repody release
 
 ## Adding another document model
 
@@ -67,17 +50,16 @@ models["vendor:MyModel"] = DocumentModelSpec(
     id="vendor:MyModel",
     label="My Model",
     engine="document_model",
-    runtime="vllm",  # or docker_model_runner
+    runtime="vllm",
     runtime_model="org/MyModel",
     description="…",
 )
 ```
 
-If the new model needs different vLLM flags, add a dedicated compose service and point `AUDIT_VLLM_BASE_URL` (or introduce per-model base URLs in the registry).
+If the new model needs a different serve profile, point `AUDIT_VLLM_BASE_URL` at a dedicated endpoint (or add per-model base URLs in the registry).
 
 ## References
 
-- [DEPLOY.md](../../DEPLOY.md#gpu-stack-repody-vlm-via-vllm)
 - [docs/REPODY-VLM.md](../REPODY-VLM.md)
-- [docs/OCR_CPU.md](../OCR_CPU.md)
-- `deploy/compose/gpu.yaml`, `backend/tests/test_inference/test_vllm_runtime.py`
+- [DEPLOY.md](../../DEPLOY.md)
+- `backend/tests/test_inference/test_vllm_runtime.py`

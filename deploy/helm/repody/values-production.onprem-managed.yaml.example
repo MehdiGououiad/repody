@@ -1,0 +1,55 @@
+# On-prem managed-data override.
+# Use with values-production.yaml.example and values-production.gateway.yaml.example.
+
+postgresql:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_DATABASE_URL
+
+redis:
+  enabled: false
+
+externalRedis:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_REDIS_URL
+
+minio:
+  enabled: false
+
+externalObjectStorage:
+  enabled: true
+  endpoint: minio.yourdomain.com
+  bucket: audit-documents
+  existingSecret: repody-runtime-secrets
+  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
+  secretKeyKey: AUDIT_MINIO_SECRET_KEY
+  secure: true
+  publicEndpoint: files.yourdomain.com
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
+
+observability:
+  existingSecret: repody-runtime-secrets
+  bugsinkDsnKey: BUGSINK_DSN
+  otelEnabled: true
+  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
+
+hatchet:
+  enabled: false
+
+externalHatchet:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  tokenKey: HATCHET_CLIENT_TOKEN
+  hostPort: hatchet-grpc.yourdomain.com:443
+  serverUrl: https://hatchet.yourdomain.com
+  tlsStrategy: tls
+
+migrations:
+  enabled: true

@@ -25,6 +25,9 @@ ingress:
   enabled: true
   className: nginx
   host: app.yourdomain.com
+  # Only routed by this chart when bundled minio.enabled=true.
+  # With externalObjectStorage.enabled=true, point DNS/publicEndpoint at the
+  # client object-storage service instead.
   filesHost: files.yourdomain.com
   tls:
     enabled: true
@@ -40,19 +43,45 @@ config:
   keycloakClientId: repody-web
   corsOrigins: '["https://app.yourdomain.com"]'
   inferenceMode: vllm
-  vllmBaseUrl: http://vllm.gpu.svc.cluster.local:8000/v1
+  vllmBaseUrl: https://vlm.yourdomain.com/v1
   vllmServedModel: numind/NuExtract3
 
-# Prefer managed Postgres, Redis, and S3-compatible storage for production.
-# Leave in-cluster subcharts enabled only for local, staging, or small installs.
 postgresql:
-  auth:
-    password: "" # Set deterministically outside Git if using the subchart.
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_DATABASE_URL
+
+redis:
+  enabled: false
+
+externalRedis:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_REDIS_URL
 
 minio:
-  auth:
-    rootPassword: "" # Set deterministically outside Git if using the subchart.
+  enabled: false
+
+externalObjectStorage:
+  enabled: true
+  endpoint: s3.yourdomain.com
+  bucket: audit-documents
+  existingSecret: repody-runtime-secrets
+  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
+  secretKeyKey: AUDIT_MINIO_SECRET_KEY
+  secure: true
+  publicEndpoint: files.yourdomain.com
 
 hatchet:
-  postgresPassword: "" # Supplied by repody-runtime-secrets.
-  bootstrapToken: true
+  enabled: false
+
+externalHatchet:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  tokenKey: HATCHET_CLIENT_TOKEN
+  hostPort: hatchet-grpc.yourdomain.com:443
+  serverUrl: https://hatchet.yourdomain.com
+  tlsStrategy: tls

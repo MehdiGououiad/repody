@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a Hatchet API token for Repody workers (run once after hatchet-lite starts)."""
+"""Create a Hatchet API token for Repody workers (run once after hatchet-stack starts)."""
 
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def main() -> int:
             return 0
 
     last_exc: Exception | None = None
-    for attempt in range(30):
+    for _attempt in range(30):
         try:
             token = _create_via_admin(args.config, args.name)
             if args.out:

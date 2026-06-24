@@ -11,7 +11,7 @@ test.describe("Platform smoke", () => {
 
   test("dashboard loads with KPIs and recent audits", async ({ page }) => {
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: /Control center/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.locator("main")).toBeVisible();
     // Seeded workflow banner or KPI cards
     await expect(page.getByText(/audit|pass rate|workflow/i).first()).toBeVisible();
@@ -30,9 +30,10 @@ test.describe("Platform smoke", () => {
 
   test("audits list and seeded audit report", async ({ page }) => {
     await page.goto("/audits");
-    await expect(page.getByText("AUD-2023-8902")).toBeVisible();
+    const auditLink = page.getByRole("link", { name: "AUD-2023-8902" }).first();
+    await expect(auditLink).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole("link", { name: /AUD-2023-8902/i }).click();
+    await auditLink.click();
     await expect(page).toHaveURL(/\/audits\/AUD-2023-8902/);
     await expect(page.getByText(/math integrity|subtotal|rule/i).first()).toBeVisible();
   });

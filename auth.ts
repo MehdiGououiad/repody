@@ -5,13 +5,15 @@ import { realmRolesFromAccessToken } from "@/lib/auth/jwt-claims";
 import { isPublicPage } from "@/lib/auth/public-paths";
 import { refreshKeycloakAccessToken } from "@/lib/auth/refresh-keycloak-token";
 
-const keycloakIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
+const keycloakPublicIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
+const keycloakServerIssuer =
+  process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? keycloakPublicIssuer;
 const keycloakClientSecret =
   process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
 const apiOidcExplicitlyDisabled = process.env.AUDIT_OIDC_ENABLED === "false";
 const keycloakConfigured = Boolean(
   !apiOidcExplicitlyDisabled &&
-    keycloakIssuer &&
+    keycloakPublicIssuer &&
     process.env.AUTH_KEYCLOAK_ID &&
     process.env.AUTH_SECRET
 );
@@ -32,10 +34,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         Keycloak({
           clientId: process.env.AUTH_KEYCLOAK_ID!,
           clientSecret: keycloakClientSecret ?? "",
-          issuer: keycloakIssuer!,
+          // JWT `iss` matches the public gateway hostname — not the in-cluster service name.
+          issuer: keycloakPublicIssuer!,
+          wellKnown: `${keycloakServerIssuer}/.well-known/openid-configuration`,
           authorization: {
+            url: `${keycloakPublicIssuer}/protocol/openid-connect/auth`,
             params: { scope: keycloakScopes },
           },
+          token: `${keycloakServerIssuer}/protocol/openid-connect/token`,
+          userinfo: `${keycloakServerIssuer}/protocol/openid-connect/userinfo`,
         }),
       ]
     : [],
@@ -52,7 +59,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (isPublicPage(path)) {
-        if (path === "/login" && session?.user && !session.error) {
+        if (
+          path === "/login" &&
+          session?.user &&
+          session?.accessToken &&
+          !session.error
+        ) {
           const callback = request.nextUrl.searchParams.get("callbackUrl");
           const dest =
             callback && callback.startsWith("/") && !callback.startsWith("//")
@@ -63,7 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      return Boolean(session?.user && !session.error);
+      return Boolean(session?.user && session?.accessToken && !session.error);
     },
     async jwt({ token, account }) {
       if (account?.access_token) {
@@ -90,16 +102,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { ...token, ...refreshed };
       }
 
-      return token;
+      if (token.error) {
+        return token;
+      }
+
+      return { ...token, error: "SessionExpired" };
     },
     async session({ session, token }) {
       if (token.error) {
         session.error = token.error as string;
+        session.accessToken = undefined;
         return session;
       }
-      if (token.accessToken) {
-        session.accessToken = token.accessToken as string;
+      if (!token.accessToken) {
+        session.error = "SessionExpired";
+        session.accessToken = undefined;
+        return session;
       }
+      session.accessToken = token.accessToken as string;
       if (token.roles) {
         session.roles = token.roles as string[];
       }

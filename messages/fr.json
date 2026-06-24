@@ -8,6 +8,7 @@
     "workflows": "Workflows",
     "audits": "Rapports d'audit",
     "users": "Utilisateurs et accès",
+    "settings": "Console opérateur",
     "newWorkflow": "Nouveau workflow",
     "logout": "Se déconnecter"
   },
@@ -31,8 +32,11 @@
     "forbiddenBody": "Votre compte n'a pas la permission pour cette action. Contactez un administrateur ou changez de compte.",
     "backToDashboard": "Retour au tableau de bord",
     "switchAccount": "Changer de compte",
-    "errorConfiguration": "Connexion impossible. Démarrez Keycloak avec `pnpm dev -- --auth` et vérifiez AUTH_SECRET dans .env.local.",
-    "keycloakNotRunning": "Keycloak n'est pas démarré. Relancez avec `pnpm dev -- --auth --warmup --logs`.",
+    "errorConfiguration": "Connexion impossible. Vérifiez la configuration OIDC, les secrets de la plateforme et l'accessibilité de Keycloak depuis l'edge.",
+    "keycloakNotRunning": "Keycloak est inaccessible. Vérifiez le service d'authentification et la configuration OIDC du déploiement.",
+    "authServiceStarting": "Le service de connexion démarre. Patientez un instant, puis réessayez.",
+    "redirectingToSignIn": "Redirection vers la connexion…",
+    "retry": "Réessayer",
     "errorAccessDenied": "Accès refusé. Vous n'avez peut-être pas le droit d'utiliser cette application.",
     "errorVerification": "Lien de connexion expiré ou déjà utilisé.",
     "errorOAuth": "Échec de la connexion Keycloak. Réessayez.",
@@ -443,6 +447,7 @@
         "viewReport": "Ouvrir le rapport",
         "openFullReport": "Voir le rapport d'audit complet",
         "errorTitle": "Échec du test",
+        "errorRunIdHint": "ID du run — partagez-le avec un opérateur ou ouvrez le rapport d'audit pour plus de détails.",
         "progress": {
           "starting": "Démarrage du test…",
           "saveWorkflow": "Enregistrer le workflow",
@@ -515,7 +520,9 @@
         "directModelLogicValidationHint": "Repody VLM extrait directement les champs du schéma. Les règles logiques s'exécutent localement sur les valeurs extraites.",
         "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme.",
         "markdownExtractionLabel": "Aperçu Markdown du document",
-        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché."
+        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché.",
+        "suryaMarkdownLabel": "Extraction texte Surya",
+        "suryaMarkdownHint": "Exécute Surya OCR 2 et enregistre le texte des pages dans le rapport d'audit. Les champs du schéma ne sont pas remplis automatiquement — utilisez Repody VLM pour du JSON direct, ou ajoutez une étape LLM de structuration plus tard."
       },
       "docSource": {
         "title": "Documents et champs à extraire",

@@ -34,11 +34,13 @@ export function RuleCard({
   documents,
   onChange,
   onRemove,
+  llmValidationEnabled = false,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
+  llmValidationEnabled?: boolean;
 }) {
   const t = useTranslations("workflows.builder.rules");
   const tCommon = useTranslations("common");
@@ -91,13 +93,6 @@ export function RuleCard({
     });
   };
 
-  const handleJunctionChange = (j: ConditionJunction) => {
-    onChange({
-      conditionJunction: j,
-      body: conditionsToExpression(conditions, j),
-    });
-  };
-
   const ruleIssues = getRuleIssues(
     rule,
     isLlm ? fields.map((field) => field.token) : undefined
@@ -147,7 +142,11 @@ export function RuleCard({
           <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
             {t("checkType")}
           </p>
-          <KindToggle kind={rule.kind} onChange={(k) => onChange({ kind: k })} />
+          <KindToggle
+            kind={rule.kind}
+            llmEnabled={llmValidationEnabled}
+            onChange={(k) => onChange({ kind: k })}
+          />
         </div>
       </div>
 
@@ -200,10 +199,8 @@ export function RuleCard({
         ) : (
           <ConditionBuilder
             conditions={conditions}
-            junction={junction}
             fields={fields}
             onConditionsChange={handleConditionsChange}
-            onJunctionChange={handleJunctionChange}
           />
         )}
         {ruleIssues.length > 0 && (

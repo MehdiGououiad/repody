@@ -8,10 +8,11 @@ import json
 import sys
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 _BACKEND = Path(__file__).resolve().parents[1]
 for _path in (_BACKEND / "src", _BACKEND):
@@ -19,10 +20,10 @@ for _path in (_BACKEND / "src", _BACKEND):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-import httpx
+import httpx  # noqa: E402
 
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
-from scripts.benchmark_ui_route import (
+from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID  # noqa: E402
+from scripts.benchmark_ui_route import (  # noqa: E402
     DEFAULT_PDF,
     _fetch_oidc_token,
     _upload_presign,

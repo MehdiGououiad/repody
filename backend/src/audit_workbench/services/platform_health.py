@@ -18,8 +18,6 @@ from audit_workbench.settings import get_settings
 
 
 async def probe_liveness() -> HealthLiveResponse:
-    async with db_base.async_session_factory() as session:
-        await session.execute(text("SELECT 1"))
     return HealthLiveResponse(status="ok")
 
 

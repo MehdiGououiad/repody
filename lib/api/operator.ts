@@ -40,6 +40,11 @@ export type BenchmarkResult = {
   validationMs?: number | null;
   fieldAccuracy?: number | null;
   ruleAccuracy?: number | null;
+  ocrCompare?: boolean;
+  judgeQuality?: boolean;
+  rawTextChars?: number | null;
+  ocrTextChars?: number | null;
+  textPreview?: string | null;
   cacheHit?: boolean | null;
   error?: string | null;
 };
@@ -55,6 +60,8 @@ export type BenchmarkReport = {
     fieldAccuracy: number;
     ruleAccuracy: number;
     medianWallMs?: number | null;
+    ocrCompareRuns?: number;
+    medianRawTextChars?: number | null;
   };
   results: BenchmarkResult[];
 };
@@ -109,6 +116,7 @@ export async function startBenchmark(options: {
   warmRuns: number;
   minimumAccuracy: number;
   cacheCheck: boolean;
+  judgeQuality?: boolean;
   document?: File | null;
   manifest?: File | null;
 }): Promise<OperatorJob> {
@@ -119,6 +127,7 @@ export async function startBenchmark(options: {
   form.set("warm_runs", String(options.warmRuns));
   form.set("minimum_accuracy", String(options.minimumAccuracy));
   form.set("cache_check", String(options.cacheCheck));
+  form.set("judge_quality", String(options.judgeQuality ?? true));
   if (options.document) form.set("document", options.document);
   if (options.manifest) form.set("manifest", options.manifest);
   const response = await browserFetch("/operator/benchmarks", { method: "POST", body: form });

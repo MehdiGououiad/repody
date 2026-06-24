@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
- * Deploy Repody staging stack to an existing Kubernetes cluster (Harbor + CPU vLLM).
+ * Deploy Repody staging stack to an existing Kubernetes cluster.
  *
  * Prerequisites:
  *   - kubectl context pointing at the target cluster
- *   - Harbor pull secret `harbor-pull-secret` in namespace repody (or set REPODY_SKIP_PULL_SECRET=1)
- *   - Runtime secret `repody-runtime-secrets` when secrets.create=false (see deploy/argocd/README.md)
+ *   - image pull secret in namespace repody, unless images are public
+ *   - runtime secret when secrets.create=false
+ *   - external OpenAI-compatible VLM endpoint
  *
- *   pnpm deploy:staging              Install inference-cpu + repody (values-staging.yaml)
- *   pnpm deploy:staging -- --argocd    Register Argo CD Applications instead of direct helm
+ *   pnpm deploy:staging
+ *   pnpm deploy:staging -- --argocd
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -16,7 +17,6 @@ import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const NS = process.env.REPODY_NAMESPACE || "repody";
-const INFERENCE_RELEASE = process.env.REPODY_INFERENCE_RELEASE || "inference-llamacpp";
 const REPODY_RELEASE = process.env.REPODY_HELM_RELEASE || "repody";
 const IMAGE_TAG =
   process.env.REPODY_IMAGE_TAG ||
@@ -29,13 +29,11 @@ const IMAGE_TAG =
   })();
 
 const CHART_REPODY = path.join(root, "deploy/helm/repody");
-const CHART_INFERENCE = path.join(root, "deploy/helm/inference-llamacpp");
 const VALUES_STAGING = path.join(CHART_REPODY, "values-staging.yaml");
 const ARGO_DIR = path.join(root, "deploy/argocd");
 
 const useArgo = process.argv.includes("--argocd");
 
-/** @param {string} cmd @param {string[]} args */
 function run(cmd, args) {
   const result = spawnSync(cmd, args, {
     stdio: "inherit",
@@ -43,22 +41,26 @@ function run(cmd, args) {
     shell: process.platform === "win32",
     env: process.env,
   });
-  if (result.status !== 0) {
-    process.exit(result.status ?? 1);
-  }
+  if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 function heading(text) {
-  console.error(`\n▶ ${text}\n`);
+  console.error(`\n> ${text}\n`);
 }
 
 function helmImageSets() {
   const registry = process.env.REPODY_IMAGE_REGISTRY;
-  const sets = [`images.api.tag=${IMAGE_TAG}`, `images.worker.tag=${IMAGE_TAG}`, `images.web.tag=${IMAGE_TAG}`];
+  const sets = [
+    `images.backend.tag=${IMAGE_TAG}`,
+    `images.api.tag=${IMAGE_TAG}`,
+    `images.worker.tag=${IMAGE_TAG}`,
+    `images.web.tag=${IMAGE_TAG}`,
+  ];
   if (registry) {
     sets.push(
-      `images.api.repository=${registry}/repody-api`,
-      `images.worker.repository=${registry}/repody-worker`,
+      `images.backend.repository=${registry}/repody-backend`,
+      `images.api.repository=${registry}/repody-backend`,
+      `images.worker.repository=${registry}/repody-backend`,
       `images.web.repository=${registry}/repody-web`,
     );
   }
@@ -73,20 +75,6 @@ function ensureNamespace() {
 function deployHelm() {
   heading("Helm dependencies");
   run("node", ["scripts/helm-deps.mjs"]);
-
-  heading(`Installing CPU inference — llama.cpp server (${INFERENCE_RELEASE})`);
-  run("helm", [
-    "upgrade",
-    "--install",
-    INFERENCE_RELEASE,
-    CHART_INFERENCE,
-    "-n",
-    NS,
-    "--create-namespace",
-    "--timeout",
-    "30m",
-    "--wait",
-  ]);
 
   heading(`Installing Repody (${REPODY_RELEASE}, tag ${IMAGE_TAG})`);
   run("helm", [
@@ -110,11 +98,9 @@ function deployHelm() {
 function deployArgo() {
   heading("Registering Argo CD Applications");
   run("kubectl", ["apply", "-n", "argocd", "-f", path.join(ARGO_DIR, "repody-project.yaml")]);
-  run("kubectl", ["apply", "-n", "argocd", "-f", path.join(ARGO_DIR, "repody-inference-staging.application.yaml")]);
   run("kubectl", ["apply", "-n", "argocd", "-f", path.join(ARGO_DIR, "repody-staging.application.yaml")]);
   console.error(`
-Argo CD apps registered. Sync when values-staging.yaml and images are ready:
-  argocd app sync repody-inference-staging
+Argo CD app registered. Sync when values-staging.yaml and images are ready:
   argocd app sync repody-staging
 `);
 }
@@ -127,10 +113,11 @@ if (useArgo) {
 } else {
   deployHelm();
   console.error(`
-Staging Helm releases installed in namespace ${NS}.
-Inference: ${INFERENCE_RELEASE}  |  Repody: ${REPODY_RELEASE}  |  tag: ${IMAGE_TAG}
+Staging Helm release installed in namespace ${NS}.
+Repody: ${REPODY_RELEASE} | tag: ${IMAGE_TAG}
 
-Next: configure DNS for gatewayApi hosts in values-staging.yaml, TLS via cert-manager, and
-      ensure repody-runtime-secrets exists when secrets.create=false.
+Next: configure DNS/TLS and ensure the external VLM endpoint in values-staging.yaml
+is reachable from worker pods. Add AUDIT_VLLM_API_KEY to repody-runtime-secrets
+when the endpoint requires auth.
 `);
 }

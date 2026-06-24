@@ -1,75 +1,60 @@
-# Platform logs (Loki + Grafana + Tempo)
+# Observability
 
-> **Start:** `pnpm compose up --stack=prod --with=obs,traces --build` or `pnpm dev -- --logs`. See [PLATFORM.md](./PLATFORM.md).
+## Local (kind cluster)
 
-Self-hosted log aggregation and distributed tracing for Docker services (api, worker, worker-fast, web, vllm).
-
-For **browser and client-side errors** (events that never hit the API), use **Bugsink** — see [BUGSINK.md](./BUGSINK.md).
-
-| Signal | Tool |
-|--------|------|
-| Full platform log stream (workers, api, `run_id`) | **Loki** (this doc) |
-| API/worker exceptions + warning/error lines | **Bugsink** (optional) + **Loki** logs |
-| Browser / React errors | **Bugsink** (optional) |
-| Distributed traces (optional) | **Tempo** (`deploy:obs`) |
-
-## Start stack with logging + tracing
-
-```powershell
-pnpm compose up --stack=dev --with=obs --only=obs --detach
-```
-
-Or production with logs and OTLP traces:
-
-```powershell
-pnpm compose up --stack=prod --with=obs,traces --build
-```
-
-`deploy/compose/observability.yaml` — **Loki + Promtail + Grafana** (`--profile obs`).  
-`deploy/compose/observability-traces.yaml` — **Tempo + OTEL** on api/workers (`--profile obs-traces`).
-
-### Dev stack flags
-
-```powershell
-pnpm dev                         # no Grafana/Tempo
-pnpm dev -- --logs               # Grafana/Loki only
-pnpm dev -- --traces             # Grafana/Loki + Tempo/OTEL
-pnpm dev -- --warmup --logs      # warmup + observability
-```
-
-Observability only (if the app is already running):
-
-```powershell
-pnpm compose up --stack=dev --with=obs --only=obs --detach
-```
-
-## Structured JSON logs
-
-API and workers call the same `configure_logging()` path. In production (`AUDIT_LOG_JSON=true`), logs are JSON with fields such as:
-
-| Field | Example | Role |
-|-------|---------|------|
-| `event` / `body` | `repody_vlm_done` | Repody VLM extraction finished (legacy log key) |
-| `level` | `info` | Log level |
-| `run_id` | `run_abc` | Audit run (worker) |
-| `workflow_id` | `wf_123` | Workflow |
-| `request_id` | UUID | HTTP correlation id (API → Hatchet → worker) |
-| `trace_id` | hex | OpenTelemetry trace (when OTEL enabled) |
-| `service.name` | `repody-worker-ocr` | Process |
-
-Promtail parses JSON lines into Loki **structured metadata** (not high-cardinality labels). Sensitive keys (`token`, `password`, etc.) are redacted in the application before emit.
-
-## Grafana UI
+The local Kubernetes stack includes Grafana, Loki, Promtail, Tempo, and OpenTelemetry wiring via `deploy/k8s/local-addons.yaml` (applied by `pnpm k8s:local`).
 
 | | |
-|--|--|
-| URL | http://localhost:3001 |
+|-|-|
+| Grafana | http://grafana.repody.local |
 | User | `admin` |
 | Password | `audit` |
 
-1. Open **Explore** (compass icon).
-2. Datasource **Loki** (default).
-3. Example queries:
+Requires `pnpm k8s:local:hosts`.
+
+### Pod logs (kubectl)
+
+```powershell
+kubectl -n repody logs -l app.kubernetes.io/component=control --tail=200 -f
+kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200 -f
+```
+
+Helm values for local OTEL:
+
+```yaml
+observability:
+  otelEnabled: true
+  otelEndpoint: http://local-tempo:4318/v1/traces
+```
+
+## Production
+
+Kubernetes production emits structured JSON to pod stdout. Ship logs to your cluster stack: Loki, CloudWatch, Google Cloud Logging, Azure Monitor, Datadog, or another collector.
+
+```yaml
+config:
+  logJson: true
+
+observability:
+  otelEnabled: true
+  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
+```
+
+## Useful log fields
+
+| Field | Example | Role |
+|-------|---------|------|
+| `event` / `body` | `repody_vlm_done` | Document-model extraction finished |
+| `level` | `info` | Log level |
+| `run_id` | `run_abc` | Audit run |
+| `workflow_id` | `wf_123` | Workflow |
+| `request_id` | UUID | HTTP correlation id |
+| `trace_id` | hex | OpenTelemetry trace |
+| `service.name` | `repody-worker-ocr` | Process |
+
+Sensitive keys are redacted before emit.
+
+## Local Loki queries
 
 ```logql
 {service="worker"}
@@ -80,61 +65,9 @@ Promtail parses JSON lines into Loki **structured metadata** (not high-cardinali
 ```
 
 ```logql
-{service="api"} | json | event_domain="admission"
-```
-
-```logql
 {service=~"api|worker.*"} | json | level="error"
 ```
 
-Pre-built dashboard: **Dashboards → Repody → Platform logs** (errors, document model, admission, HTTP 5xx panels).
+## Error tracking
 
-**Traces:** Grafana → Explore → datasource **Tempo**. Link from a trace to Loki logs via `trace_id`.
-
-## Labels
-
-| Label | Example | Meaning |
-|-------|---------|---------|
-| `service` | `worker`, `api`, `vllm` | Compose service name |
-| `container` | `repody-worker-1` | Container name |
-| `stream` | `stdout` / `stderr` | Log stream |
-
-Only containers from the Compose project **`repody`** are collected. If you use another project name, edit `observability/promtail-config.yaml` regex.
-
-## Cursor / CLI
-
-Grafana is the main UI. For the agent or terminal:
-
-```powershell
-# Live tail (no Grafana)
-pnpm compose logs --stack=dev
-
-# Loki ready check
-curl.exe http://localhost:3100/ready
-```
-
-To query Loki from a script (optional):
-
-```powershell
-curl.exe -G "http://localhost:3100/loki/api/v1/query_range" --data-urlencode 'query={service="worker"}' --data-urlencode "limit=50"
-```
-
-## Retention
-
-Loki keeps logs for **7 days** (`retention_period: 168h` in `observability/loki-config.yaml`).
-
-## Windows notes
-
-Promtail needs access to the Docker socket and container log files. **Docker Desktop** supports this; if Promtail shows no logs, ensure containers are running under the same Docker host and project name is `repody`.
-
-## Stop observability only
-
-```powershell
-pnpm compose down --stack=dev --with=obs --modules-only
-```
-
-Data persists in volumes `lokidata` and `grafanadata` until removed with `docker volume rm`.
-
-## Error tracking (Bugsink)
-
-Exception reporting for the web UI, API, and workers uses **Bugsink** (Sentry-SDK compatible). Setup: [BUGSINK.md](./BUGSINK.md).
+Browser, API, and worker exceptions use Bugsink/Sentry-compatible DSNs. See [BUGSINK.md](./BUGSINK.md).

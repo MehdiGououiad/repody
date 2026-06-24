@@ -1,6 +1,9 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { requireDockerEngine } from "./k8s-local-process.mjs";
+import { ensureLocalDockerNoProxy } from "./k8s-local-registry-config.mjs";
+
+const PUSH_CONCURRENCY = 2;
 
 function normalizeImageRef(image) {
   return image
@@ -17,30 +20,24 @@ export function createLocalRegistryCommands({
   heading,
   kindPlatform,
   localRegistry,
-  registryMode = "simple",
-  registryName,
-  root,
+  connectHarborToKind,
   run,
 }) {
+  let harborLoggedIn = false;
+
   function localRegistryRef(image) {
     return `${localRegistry}/${normalizeImageRef(image)}`;
   }
 
   function registryApiBase() {
-    if (registryMode === "harbor") {
-      return `http://${harborHost}:${harborHttpPort}`;
-    }
-    return `http://${localRegistry}`;
+    return `http://${harborHost}:${harborHttpPort}`;
   }
 
   function manifestRepository(image) {
     const normalized = normalizeImageRef(image);
     const colon = normalized.lastIndexOf(":");
     const name = colon > 0 ? normalized.slice(0, colon) : normalized;
-    if (registryMode === "harbor" && harborProject) {
-      return `${harborProject}/${name}`;
-    }
-    return name;
+    return `${harborProject}/${name}`;
   }
 
   function manifestTag(image) {
@@ -52,15 +49,48 @@ export function createLocalRegistryCommands({
   function localRegistryHasImage(image) {
     const repository = manifestRepository(image);
     const tag = manifestTag(image);
+    const repoName = repository.includes("/")
+      ? repository.slice(repository.indexOf("/") + 1)
+      : repository;
+
+    if (dockerHasLocalImage(localRegistryRef(image))) {
+      return true;
+    }
+
+    if (harborAdminPassword) {
+      try {
+        const encodedRepo = encodeURIComponent(repoName);
+        const encodedTag = encodeURIComponent(tag);
+        const body = captureNoShell(process.platform === "win32" ? "curl.exe" : "curl", [
+          "-fsS",
+          "--max-time",
+          "5",
+          "-u",
+          `admin:${harborAdminPassword}`,
+          `${registryApiBase()}/api/v2.0/projects/${harborProject}/repositories/${encodedRepo}/artifacts?q=tags%3D${encodedTag}`,
+        ]);
+        const artifacts = JSON.parse(body);
+        if (Array.isArray(artifacts) && artifacts.length > 0) {
+          return true;
+        }
+      } catch {
+        // fall through to registry v2 probe
+      }
+    }
+
+    const curlArgs = [
+      "-fsI",
+      "--max-time",
+      "3",
+      "-H",
+      "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json",
+    ];
+    if (harborAdminPassword) {
+      curlArgs.push("-u", `admin:${harborAdminPassword}`);
+    }
+    curlArgs.push(`${registryApiBase()}/v2/${repository}/manifests/${tag}`);
     try {
-      captureNoShell(process.platform === "win32" ? "curl.exe" : "curl", [
-        "-fsI",
-        "--max-time",
-        "3",
-        "-H",
-        "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json",
-        `${registryApiBase()}/v2/${repository}/manifests/${tag}`,
-      ]);
+      captureNoShell(process.platform === "win32" ? "curl.exe" : "curl", curlArgs);
       return true;
     } catch {
       return false;
@@ -68,6 +98,7 @@ export function createLocalRegistryCommands({
   }
 
   function dockerLoginHarbor() {
+    if (harborLoggedIn) return;
     const registry = `${harborHost}:${harborHttpPort}`;
     const login = spawnSync(
       "docker",
@@ -82,12 +113,14 @@ export function createLocalRegistryCommands({
       console.error(login.stderr || login.stdout || "docker login failed");
       process.exit(login.status ?? 1);
     }
+    harborLoggedIn = true;
     console.error(`ok: docker logged in to ${registry}`);
   }
 
-  function ensureHarborRegistry() {
+  function ensureLocalRegistry() {
     requireDockerEngine();
-    heading(`Using Harbor registry (${localRegistry})`);
+    ensureLocalDockerNoProxy(harborHost);
+    heading(`Harbor registry (${localRegistry})`);
     try {
       captureNoShell(process.platform === "win32" ? "curl.exe" : "curl", [
         "-fsS",
@@ -105,71 +138,8 @@ export function createLocalRegistryCommands({
     dockerLoginHarbor();
   }
 
-  function ensureSimpleRegistry() {
-    requireDockerEngine();
-    heading(`Starting local registry (${localRegistry})`);
-    const inspect = spawnSync(
-      "docker",
-      ["inspect", "-f", "{{.State.Running}}", registryName],
-      { encoding: "utf8", shell: process.platform === "win32" },
-    );
-    if (inspect.status === 0) {
-      if (inspect.stdout?.trim() === "true") {
-        console.error(`ok: ${registryName} already running`);
-        return;
-      }
-      console.error(`… starting stopped ${registryName} (preserving cached images)`);
-      run("docker", ["start", registryName]);
-      return;
-    }
-    run("docker", [
-      "run",
-      "-d",
-      "--restart=always",
-      "-p",
-      `127.0.0.1:5001:5000`,
-      "--name",
-      registryName,
-      "registry:2",
-    ]);
-  }
-
-  function ensureLocalRegistry() {
-    if (registryMode === "harbor") {
-      ensureHarborRegistry();
-      return;
-    }
-    ensureSimpleRegistry();
-  }
-
   function connectRegistryToKind() {
-    if (registryMode === "harbor") {
-      const script = path.join(root, "deploy/scripts/harbor-local.mjs");
-      const result = spawnSync("node", [script, "connect-kind"], {
-        cwd: root,
-        stdio: "inherit",
-        shell: false,
-      });
-      if (result.status !== 0) {
-        process.exit(result.status ?? 1);
-      }
-      return;
-    }
-    const result = spawnSync(
-      "docker",
-      ["network", "connect", "kind", registryName],
-      { encoding: "utf8", shell: process.platform === "win32" },
-    );
-    if (result.status === 0) {
-      console.error(`ok: ${registryName} attached to kind network`);
-      return;
-    }
-    const stderr = result.stderr ?? "";
-    if (stderr.includes("already exists")) {
-      console.error(`ok: ${registryName} already on kind network`);
-      return;
-    }
-    if (stderr) console.error(stderr.trim());
+    connectHarborToKind();
   }
 
   function dockerHasLocalImage(image) {
@@ -186,9 +156,7 @@ export function createLocalRegistryCommands({
       console.error(`ok: ${localRegistryRef(upstream)} already in registry`);
       return localRegistryRef(upstream);
     }
-    if (registryMode === "harbor") {
-      dockerLoginHarbor();
-    }
+    dockerLoginHarbor();
     let source = upstream;
     if (localBuild) {
       const candidates = [upstream, `${localRegistry}/${upstream}`];
@@ -215,41 +183,55 @@ export function createLocalRegistryCommands({
     return dest;
   }
 
+  async function pushManyToLocalRegistry(images, { localBuild = false } = {}) {
+    const unique = [...new Set(images)];
+    let skipped = 0;
+    let pushed = 0;
+    const queue = [...unique];
+    const workers = Array.from(
+      { length: Math.min(PUSH_CONCURRENCY, queue.length || 1) },
+      async () => {
+        while (queue.length > 0) {
+          const image = queue.shift();
+          if (!image) break;
+          if (localRegistryHasImage(image)) {
+            skipped += 1;
+            console.error(`ok: ${localRegistryRef(image)} already in registry`);
+            continue;
+          }
+          pushToLocalRegistry(image, { localBuild });
+          pushed += 1;
+        }
+      },
+    );
+    await Promise.all(workers);
+    if (skipped > 0) {
+      console.error(`ok: ${skipped}/${unique.length} images skipped (already in Harbor)`);
+    }
+    if (pushed > 0) {
+      console.error(`ok: pushed ${pushed} images to Harbor`);
+    }
+  }
+
   function repodyImagesInRegistry({ backendTag, webTag }) {
     const backendOk = localRegistryHasImage(`repody-backend:${backendTag}`);
     const webOk = localRegistryHasImage(`repody-web:${webTag}`);
     return { backendOk, webOk, allOk: backendOk && webOk };
   }
 
-  function stopLocalRegistry() {
-    if (registryMode === "harbor") {
-      console.error("ok: Harbor registry left running (pnpm harbor:down to stop)");
-      return;
-    }
-    heading(`Stopping local registry (${localRegistry})`);
-    const inspect = spawnSync(
-      "docker",
-      ["inspect", "-f", "{{.State.Running}}", registryName],
-      { encoding: "utf8", shell: process.platform === "win32" },
-    );
-    if (inspect.status !== 0) {
-      console.error(`ok: ${registryName} not present`);
-      return;
-    }
-    if (inspect.stdout?.trim() === "true") {
-      run("docker", ["stop", registryName]);
-      console.error(`✓ ${registryName} stopped`);
-      return;
-    }
-    console.error(`ok: ${registryName} already stopped`);
+  function thirdPartyImagesWarm(images) {
+    const unique = [...new Set(images)];
+    if (unique.length === 0) return true;
+    return unique.every((image) => localRegistryHasImage(image));
   }
 
   return {
     connectRegistryToKind,
     ensureLocalRegistry,
     localRegistryRef,
+    pushManyToLocalRegistry,
     pushToLocalRegistry,
     repodyImagesInRegistry,
-    stopLocalRegistry,
+    thirdPartyImagesWarm,
   };
 }

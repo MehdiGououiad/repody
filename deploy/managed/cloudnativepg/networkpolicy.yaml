@@ -1,0 +1,101 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: repody-postgres-default-deny
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: repody-data-internal
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: repody-postgres-allow-repody
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: repody-postgres
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: repody
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: repody-postgres-pooler-allow-repody
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: postgres-pooler
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: repody
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: repody-postgres-dns-and-backup-egress
+  namespace: repody-data
+  labels:
+    app.kubernetes.io/part-of: repody
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: repody-postgres
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443

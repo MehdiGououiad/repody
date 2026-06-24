@@ -1,9 +1,12 @@
 # Argo CD deployment
 
-This directory contains the GitOps entrypoint for Repody.
+This directory contains GitOps entrypoints for Repody.
 
-Argo CD renders the Helm chart with `helm template` and owns the Kubernetes
-lifecycle. Keep runtime secrets out of Git: set `secrets.create=false` and
+Argo CD owns the Repody Helm release only. Inference is external to this chart:
+run **vLLM** or **llama-server** separately and set
+`config.vllmBaseUrl` in the Repody values file.
+
+Keep runtime secrets out of Git. Set `secrets.create=false` and
 `secrets.existingSecret=repody-runtime-secrets`, then create that secret with
 External Secrets, Sealed Secrets, SOPS, or a one-time cluster bootstrap.
 
@@ -11,38 +14,30 @@ Required keys in `repody-runtime-secrets`:
 
 - `AUTH_SECRET`
 - `AUTH_KEYCLOAK_CLIENT_SECRET`
-- `HATCHET_POSTGRES_PASSWORD`
+- `AUDIT_DATABASE_URL`
+- `AUDIT_REDIS_URL`
+- `AUDIT_MINIO_ACCESS_KEY`
+- `AUDIT_MINIO_SECRET_KEY`
+- `HATCHET_CLIENT_TOKEN`
 
-## Local validation
+Optional keys:
 
-The local validation path uses `kind` plus an in-cluster Argo CD installation.
-It should prove the deployment mechanics before any cloud cluster is touched:
+- `AUDIT_VLLM_API_KEY`
+- `BUGSINK_DSN`
+
+## Local GitOps (`repody-local`)
+
+Image tags live in `deploy/helm/repody/values-local-images.yaml` (committed).
+Harbor stores the images; Git records which tag should run; Argo CD reconciles.
 
 ```powershell
-kind create cluster --name repody-argocd
-kubectl create namespace argocd
-kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kind load docker-image repody-api:latest --name repody-argocd
-kind load docker-image repody-worker:latest --name repody-argocd
-kind load docker-image repody-web:latest --name repody-argocd
+pnpm gitops:publish -- --all
 ```
 
-For a full local GitOps test, Argo CD must read the chart from Git. Use a branch
-that contains the chart changes, or a temporary bare Git repository for local
-experiments. The successful local smoke target is:
+Argo CD `repody-local` uses automated sync/self-heal. **Synced** + revision =
+cluster matches that Git commit.
 
-```text
-Application: repody-local
-Sync: Synced
-Health: Healthy
-GET /v1/healthz/live -> 200 {"status":"ok"}
-```
-
-## Staging flow (CPU inference + Gateway API)
-
-Staging uses in-cluster **llama.cpp server** (`deploy/helm/inference-llamacpp`) and
-`values-staging.yaml` (Harbor images, Gateway API, optional in-cluster Keycloak).
-Repody `config.inferenceMode` stays `docker_model_runner` — same runtime as compose CPU.
+## Staging Flow
 
 ```powershell
 $env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
@@ -52,17 +47,14 @@ pnpm images:push
 pnpm deploy:staging
 ```
 
-Or register Argo CD apps (after pushing chart changes to Git):
+Or register Argo CD apps after pushing chart changes to Git:
 
 ```powershell
 pnpm deploy:staging -- --argocd
-kubectl apply -n argocd -f deploy/argocd/repody-inference-staging.application.yaml
 kubectl apply -n argocd -f deploy/argocd/repody-staging.application.yaml
 ```
 
-See `deploy/argocd/external-secrets.example.yaml` for runtime secret wiring.
-
-## Production flow
+## Production Flow
 
 Use CI to build and push immutable images, then let Argo CD deploy those tags.
 Do not build images inside Argo CD.
@@ -74,7 +66,7 @@ pnpm images:build
 pnpm images:push
 ```
 
-Then commit the same tag into `deploy/helm/repody/values-production.yaml`:
+Commit the same tag into the production values file:
 
 ```yaml
 images:
@@ -87,55 +79,16 @@ images:
   web:
     repository: harbor.yourdomain.com/repody/repody-web
     tag: "<git-sha>"
+
+config:
+  inferenceMode: vllm
+  vllmBaseUrl: https://your-vlm-host/v1
+  vllmServedModel: numind/NuExtract3
 ```
 
-If Harbor is private, create an image pull secret in the target namespace and
-reference it from Helm:
-
-```powershell
-kubectl create secret docker-registry harbor-pull-secret -n repody `
-  --docker-server=harbor.yourdomain.com `
-  --docker-username="$env:HARBOR_ROBOT_USER" `
-  --docker-password="$env:HARBOR_ROBOT_TOKEN"
-```
-
-```yaml
-global:
-  imagePullSecrets:
-    - name: harbor-pull-secret
-```
-
-Recommended rollout:
+Then:
 
 ```powershell
 kubectl apply -n argocd -f deploy/argocd/repody-project.yaml
 kubectl apply -n argocd -f deploy/argocd/repody-production.application.yaml
 ```
-
-Before enabling automated sync in a real environment, push immutable image tags
-to a registry and commit a `deploy/helm/repody/values-production.yaml` with
-environment-specific hosts, image repositories, and image tags.
-
-## Secret management
-
-For production, prefer External Secrets Operator backed by your cloud secret
-manager or Vault. A plain Kubernetes Secret is acceptable only for a local lab
-or a first disposable staging test.
-
-Recommended production secret ownership:
-
-- `repody-runtime-secrets`: External Secrets Operator
-- Harbor robot credentials: External Secrets Operator or manually bootstrapped
-  image pull secret
-- TLS certificate: cert-manager
-- Database/object storage passwords: managed service secrets, not generated by
-  repeated Helm renders
-
-## Harbor checklist
-
-- Use a Harbor project such as `repody`.
-- Create robot accounts with pull-only credentials for clusters and push
-  credentials only for CI.
-- Enable vulnerability scanning and tag immutability for release tags.
-- Prefer commit SHA tags for deployments and optional semantic tags for humans.
-- Keep `latest` for local development only.

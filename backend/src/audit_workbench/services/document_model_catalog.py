@@ -5,11 +5,18 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
+from audit_workbench.extraction.document_model_branding import (
+    REPODY_VLM_CATALOG_ID,
+    normalize_public_catalog_id,
+)
 from audit_workbench.extraction.model_registry import (
     DocumentModelSpec,
     list_document_models,
     parse_document_model,
+)
+from audit_workbench.extraction.surya_ocr import (
+    surya_inference_configured,
+    surya_package_installed,
 )
 from audit_workbench.inference.openai_compat import (
     list_openai_models,
@@ -24,10 +31,14 @@ from audit_workbench.inference.runtime import (
 )
 from audit_workbench.settings import Settings, get_settings
 
-RUNTIMES = ("docker_model_runner", "vllm")
+RUNTIMES = ("docker_model_runner", "vllm", "surya")
 
 SERVERLESS_CATALOG_NOTE = (
     "Serverless GPU — billed only on extraction runs (idle GPU probes disabled)."
+)
+SURYA_CATALOG_NOTE = (
+    "Surya OCR 2 via llama-server (datalab-to/surya-ocr-2-gguf). "
+    "Set AUDIT_SURYA_INFERENCE_URL and match SURYA_INFERENCE_PARALLEL to --parallel."
 )
 
 
@@ -63,10 +74,17 @@ async def installed_runtime_models(
         return installed
     runtime = default_document_runtime(settings)
     base_url = openai_base_url_for_runtime(runtime, settings)
-    installed[runtime] = await list_openai_models(
-        base_url,
-        timeout=openai_probe_timeout_seconds(base_url),
-    )
+    if base_url.strip():
+        installed[runtime] = await list_openai_models(
+            base_url,
+            timeout=openai_probe_timeout_seconds(base_url),
+        )
+    if surya_inference_configured(settings):
+        surya_url = (settings.surya_inference_url or "").strip().rstrip("/")
+        installed["surya"] = await list_openai_models(
+            surya_url,
+            timeout=openai_probe_timeout_seconds(surya_url),
+        )
     return installed
 
 
@@ -86,7 +104,32 @@ def availability_for_spec(
         note = None if installed else "Enable the document model runtime and install Repody VLM."
         return installed, note
     if spec.runtime == "vllm":
-        note = None if installed else "Start the GPU inference service and wait for Repody VLM."
+        if not live_probe:
+            return True, SERVERLESS_CATALOG_NOTE
+        note = None if installed else (
+            "Start vLLM or llama-server and set AUDIT_VLLM_BASE_URL / AUDIT_VLLM_SERVED_MODEL."
+        )
+        return installed, note
+    if spec.runtime == "surya":
+        settings = get_settings()
+        if not surya_package_installed():
+            return False, "Install optional dependency surya-ocr (BACKEND_EXTRAS=otel,ocr on the worker image)."
+        if not surya_inference_configured(settings):
+            return False, (
+                "Set AUDIT_SURYA_INFERENCE_URL to a pre-running llama-server "
+                "(SURYA_INFERENCE_BACKEND=llamacpp). See deploy/llamacpp/README.md#surya-ocr-2."
+            )
+        if not live_probe:
+            return True, SURYA_CATALOG_NOTE
+        runtime_models = installed_by_runtime.get("surya") or set()
+        installed = bool(runtime_models) or model_is_available(
+            spec.runtime_model or "",
+            runtime_models,
+        )
+        note = None if installed else (
+            f"llama-server not reachable at {settings.surya_inference_url}. "
+            "Run pnpm llamacpp:surya:serve on the host."
+        )
         return installed, note
     return False, "Unsupported document model runtime."
 
@@ -165,7 +208,7 @@ def unreachable_detail(runtime: str) -> tuple[str, str]:
         )
     return (
         "Repody VLM is unavailable on the GPU inference service.",
-        "Start the GPU stack and wait for Repody VLM to load.",
+        "Check the external document-model runtime and wait for the served model to load.",
     )
 
 
@@ -181,8 +224,7 @@ def generation_failure_hint(runtime: str) -> str:
     if runtime == "docker_model_runner":
         return "Check Docker Model Runner logs with: docker model logs"
     return (
-        "Check vLLM logs with: docker compose -f deploy/compose/base.yaml "
-        "-f deploy/compose/gpu.yaml logs vllm"
+        "Check vLLM or llama-server logs on the inference host."
     )
 
 

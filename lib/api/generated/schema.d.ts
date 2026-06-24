@@ -798,6 +798,11 @@ export interface components {
              * @default false
              */
             isDefault: boolean;
+            /**
+             * Markdownonly
+             * @default false
+             */
+            markdownOnly: boolean;
         };
         /** ConfirmUploadItem */
         ConfirmUploadItem: {

@@ -78,12 +78,13 @@ def hash_bytes(data: bytes) -> str:
 
 
 def should_cache_result(result: ExtractionResult) -> bool:
-    """Do not cache stub fallbacks or zero-field extractions."""
+    """Do not cache stub fallbacks; cache field or text-only extractions."""
     if result.raw_text and str(result.raw_text).startswith("stub_fallback:"):
         return False
-    if sum(1 for f in result.fields if f.extracted) == 0:
-        return False
-    return True
+    if sum(1 for f in result.fields if f.extracted) > 0:
+        return True
+    text = (result.ocr_text or result.raw_text or "").strip()
+    return len(text) > 0
 
 
 def _serialize_result(result: ExtractionResult) -> str:

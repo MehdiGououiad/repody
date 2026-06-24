@@ -8,6 +8,7 @@
     "workflows": "Workflows",
     "audits": "Audit Reports",
     "users": "Users & access",
+    "settings": "Operator Console",
     "newWorkflow": "New Workflow",
     "logout": "Sign out"
   },
@@ -31,8 +32,11 @@
     "forbiddenBody": "Your account does not have permission for this action. Contact an administrator or switch account.",
     "backToDashboard": "Back to dashboard",
     "switchAccount": "Switch account",
-    "errorConfiguration": "Sign-in failed. Start Keycloak with `pnpm dev -- --auth` and verify AUTH_SECRET in .env.local.",
-    "keycloakNotRunning": "Keycloak is not running. Restart dev with `pnpm dev -- --auth --warmup --logs`.",
+    "errorConfiguration": "Sign-in is not configured correctly. Verify OIDC issuer URLs, platform secrets, and that Keycloak is reachable from the edge.",
+    "keycloakNotRunning": "Keycloak is not reachable. Check the auth service and OIDC settings for this deployment.",
+    "authServiceStarting": "Sign-in service is starting. Wait a moment, then try again.",
+    "redirectingToSignIn": "Redirecting to sign-in…",
+    "retry": "Retry",
     "errorAccessDenied": "Access was denied. You may not have permission to use this application.",
     "errorVerification": "Sign-in link expired or was already used.",
     "errorOAuth": "Sign-in with Keycloak failed. Try again.",
@@ -443,6 +447,7 @@
         "viewReport": "Open report",
         "openFullReport": "View full audit report",
         "errorTitle": "Test run failed",
+        "errorRunIdHint": "Run ID — share with an operator or open the audit report for details.",
         "progress": {
           "starting": "Starting test run…",
           "saveWorkflow": "Save workflow",
@@ -515,7 +520,9 @@
         "directModelLogicValidationHint": "Repody VLM extracts schema fields directly. Logic rules run locally on the extracted values.",
         "directModelLlmValidationHint": "Repody VLM extracts schema fields directly. Optional LLM validation runs only when enabled on the platform.",
         "markdownExtractionLabel": "Document markdown preview",
-        "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only."
+        "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only.",
+        "suryaMarkdownLabel": "Surya text extraction",
+        "suryaMarkdownHint": "Runs Surya OCR 2 and stores the page text in the audit report. Schema fields are not filled automatically — use Repody VLM for direct JSON, or add an LLM structuring step later."
       },
       "docSource": {
         "title": "Documents & fields to extract",

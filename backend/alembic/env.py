@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from audit_workbench.db.base import Base
+from alembic import context
 from audit_workbench.db import models  # noqa: F401
+from audit_workbench.db.base import Base
 from audit_workbench.settings import get_settings
 
 config = context.config
