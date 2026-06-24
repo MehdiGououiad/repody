@@ -13,6 +13,7 @@
 # testing
 /coverage
 /e2e/report/
+/e2e/.auth/
 /playwright-report/
 /test-results/
 /blob-report/
@@ -38,6 +39,15 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
+/logs/
+
+# local HTTP/auth scratch artifacts
+/body.txt
+/cookies.txt
+/csrf.json
+/e2e-cookies.txt
+/headers.txt
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -55,3 +65,8 @@ next-env.d.ts
 .mypy_cache/
 .ruff_cache/
 backend/.agents/
+deploy/llamacpp/paths.local.env
+deploy/llamacpp/logs/
+deploy/harbor/.runtime/
+deploy/harbor/paths.harbor.local.env
+/harbor/

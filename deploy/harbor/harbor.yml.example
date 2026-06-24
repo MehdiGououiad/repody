@@ -1,0 +1,28 @@
+# Harbor installer config for local Repody testing.
+# Copy to deploy/harbor/.runtime/harbor/harbor.yml after pnpm harbor:prepare
+#
+# Docs: https://goharbor.io/docs/latest/install-config/
+
+hostname: harbor.repody.local
+
+# HTTP on 8080 — host ports 80/443 are used by Envoy Gateway in kind.
+http:
+  port: 8080
+
+# Omit https block for HTTP-only local dev (see harbor.yml.tmpl for TLS).
+
+harbor_admin_password: Harbor12345
+
+# Relative to the installer directory (created by harbor:prepare).
+data_volume: ./data
+
+# External URL shown in Harbor UI (matches hostname + http port).
+external_url: http://harbor.repody.local:8080
+
+# Local dev: skip Trivy resource use (enable for scan testing).
+trivy:
+  ignore_unfixed: false
+  skip_update: false
+  offline_scan: false
+  security_check: vuln
+  insecure: false
