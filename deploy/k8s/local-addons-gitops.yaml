@@ -1,3 +1,21 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: repody-gateway-argocd-paths
+  namespace: repody-app
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-gitops
+spec:
+  # Argo CD log/exec/stream APIs embed encoded slashes (e.g. %2F) in URLs.
+  # Envoy Gateway defaults to decoding them, which breaks pod logs in the UI.
+  path:
+    escapedSlashesAction: KeepUnchanged
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: repody
+---
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -42,3 +60,22 @@ spec:
           name: argocd-server
           namespace: argocd
           port: 80
+          weight: 1
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: local-argocd-streams
+  namespace: repody-app
+  labels:
+    app.kubernetes.io/part-of: repody
+    app.kubernetes.io/component: local-gitops
+spec:
+  # Pod logs and live app streams use long-lived HTTP/SSE connections.
+  timeout:
+    http:
+      requestTimeout: 3600s
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: local-argocd

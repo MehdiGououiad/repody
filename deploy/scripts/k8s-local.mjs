@@ -86,6 +86,7 @@ const VALUES_LOCAL_IMAGES = path.join(CHART_DIR, "values-local-images.yaml");
 const LOCAL_ADDONS_GITOPS = path.join(root, "deploy/k8s/local-addons-gitops.yaml");
 const LOCAL_ADDONS_OBS = path.join(root, "deploy/k8s/local-addons-obs.yaml");
 const LOCAL_ARGO_APPS = path.join(root, "deploy/argocd/repody-local-apps.yaml");
+const ARGO_LOCAL_RBAC = path.join(root, "deploy/k8s/argocd-local-rbac.yaml");
 const {
   applyJson,
   capture,
@@ -167,6 +168,7 @@ const {
 const { configureArgoRepositoryCredentials, installArgoCd } = createArgoCommands({
   applyJson,
   argoInstallUrl: ARGO_INSTALL_URL,
+  argoLocalRbacManifest: ARGO_LOCAL_RBAC,
   argoNamespace: ARGO_NS,
   argoRepoUrl: ARGO_REPO_URL,
   capture,
@@ -1192,6 +1194,7 @@ async function cmdUpAsync() {
   if (!minimal) {
     heading("Installing Argo CD Gateway route");
     run("kubectl", ["apply", "-f", LOCAL_ADDONS_GITOPS]);
+    run("kubectl", ["apply", "-f", ARGO_LOCAL_RBAC]);
 
     if (withObs) {
       heading("Installing local observability addons (Grafana/Loki/Promtail/Tempo/Bugsink)");
