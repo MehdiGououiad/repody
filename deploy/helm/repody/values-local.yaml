@@ -9,16 +9,19 @@ global:
 
 externalDatabase:
   enabled: true
+  existingSecret: ""
   url: postgresql+asyncpg://audit:audit-local-k8s@repody-data-postgresql.repody-data.svc.cluster.local:5432/audit_workbench
   host: repody-data-postgresql.repody-data.svc.cluster.local
   port: 5432
 
 externalRedis:
   enabled: true
+  existingSecret: ""
   url: redis://repody-data-redis-master.repody-data.svc.cluster.local:6379/0
 
 externalObjectStorage:
   enabled: true
+  existingSecret: ""
   endpoint: repody-data-minio.repody-data.svc.cluster.local:9000
   bucket: audit-documents
   accessKey: minioadmin
