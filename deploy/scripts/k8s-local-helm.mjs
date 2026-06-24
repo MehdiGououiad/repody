@@ -69,10 +69,12 @@ export function createLocalHelmCommands({
       path.join(chartPath, "values.yaml"),
       "-f",
       path.join(chartPath, "values-local.yaml"),
-      "--set",
-      "global.imageRegistry=",
-      ...extraHelmSets,
     ];
+    const registryValues = path.join(chartPath, "values-local-registry.yaml");
+    if (existsSync(registryValues)) {
+      args.push("-f", registryValues);
+    }
+    args.push("--set", "global.imageRegistry=", ...extraHelmSets);
     const rendered = capture("helm", args);
     const images = new Set();
     for (const line of rendered.split("\n")) {
@@ -123,7 +125,8 @@ export function createLocalHelmCommands({
     const hatchetPostgres = registryImageSets(
       requirePinnedImage(pinnedImages, "REPODY_BITNAMI_POSTGRES_IMAGE"),
     );
-    const hatchetPostgresInit = registryImageSets(
+    const hatchetPostgresInit = harborImageSets(
+      localRegistry,
       requirePinnedImage(pinnedImages, "REPODY_POSTGRES_IMAGE"),
     );
     const hatchetRabbitmq = registryImageSets(
@@ -201,8 +204,6 @@ export function createLocalHelmCommands({
             "--set",
             "images.web.pullPolicy=IfNotPresent",
           ]),
-      "--set",
-      `hatchet.waitInitImage=${localRegistryRef(requirePinnedImage(pinnedImages, "REPODY_BUSYBOX_IMAGE"))}`,
     ];
   }
 
