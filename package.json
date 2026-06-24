@@ -51,6 +51,7 @@
     "gitops:publish": "node deploy/scripts/gitops-publish-local.mjs",
     "gitops:promote:staging": "node deploy/scripts/gitops-promote-staging.mjs",
     "gitops:sync": "node deploy/scripts/gitops-sync-local.mjs",
+    "argocd:port-forward": "node deploy/scripts/argocd-port-forward.mjs",
     "airgap:build": "node deploy/scripts/airgap-build-release.mjs",
     "airgap:import": "node deploy/scripts/airgap-import.mjs",
     "helm:deps": "node scripts/helm-deps.mjs",

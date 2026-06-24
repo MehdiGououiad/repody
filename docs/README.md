@@ -52,6 +52,6 @@ Repody runs on **Kubernetes** (local kind cluster or production cluster).
 | Keycloak | http://auth.repody.local |
 | Grafana | http://grafana.repody.local |
 | Bugsink | http://bugsink.repody.local |
-| Argo CD | http://argocd.repody.local |
+| Argo CD (optional GitOps) | `pnpm argocd:port-forward` → https://127.0.0.1:8080 |
 
 Sign in: `operator@repody.local` / `repody-dev`

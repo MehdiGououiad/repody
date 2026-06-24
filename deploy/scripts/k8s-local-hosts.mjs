@@ -49,7 +49,7 @@ export function createHostsCommands({ root, run }) {
       const ps = [
         `$line = '${LOCAL_HOSTS_LINE}'`,
         `$path = '${hostsPath.replace(/\\/g, "\\\\")}'`,
-        `$pattern = 'app\\.repody\\.local|api\\.repody\\.local|files\\.repody\\.local|auth\\.repody\\.local|argocd\\.repody\\.local|grafana\\.repody\\.local|bugsink\\.repody\\.local|harbor\\.repody\\.local'`,
+        `$pattern = 'app\\.repody\\.local|api\\.repody\\.local|files\\.repody\\.local|auth\\.repody\\.local|grafana\\.repody\\.local|bugsink\\.repody\\.local|harbor\\.repody\\.local'`,
         `$content = @(Get-Content -LiteralPath $path -ErrorAction SilentlyContinue | Where-Object { $_ -notmatch $pattern })`,
         `($content + $line) | Set-Content -LiteralPath $path -Encoding ASCII -Force`,
         `ipconfig /flushdns | Out-Null`,

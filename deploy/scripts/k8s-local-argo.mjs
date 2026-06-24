@@ -1,6 +1,6 @@
 export function createArgoCommands({
   applyJson,
-  argoKustomizeDir,
+  argoInstallUrl,
   argoLocalRootApp,
   argoNamespace,
   argoRepoUrl,
@@ -10,7 +10,6 @@ export function createArgoCommands({
   ensureNamespace,
   heading,
   run,
-  runNoShell,
   waitFor,
   waitForWithProgress,
 }) {
@@ -46,22 +45,6 @@ export function createArgoCommands({
     ]);
     if (pods && !pods.startsWith("error")) {
       console.error(`  argocd-server: ${pods.split(/\r?\n/)[0]}`);
-      return;
-    }
-    const all = captureOptional("kubectl", [
-      "-n",
-      argoNamespace,
-      "get",
-      "pods",
-      "--no-headers",
-    ]);
-    if (all && !all.startsWith("error")) {
-      const notReady = all
-        .split(/\r?\n/)
-        .filter((line) => line && !/\s1\/1\s|\s2\/2\s|\s3\/3\s/.test(line));
-      if (notReady.length) {
-        console.error(`  argocd not ready: ${notReady.slice(0, 3).join(" | ")}`);
-      }
     }
   }
 
@@ -74,30 +57,70 @@ export function createArgoCommands({
     waitFor(() => argoServerReadyReplicas(), label, timeoutMs);
   }
 
+  function resetGatewayEraArgoPatches() {
+    const raw = captureOptional("kubectl", [
+      "-n",
+      argoNamespace,
+      "get",
+      "configmap",
+      "argocd-cmd-params-cm",
+      "-o",
+      "json",
+    ]);
+    if (!raw) return;
+    try {
+      const cm = JSON.parse(raw);
+      const data = { ...(cm.data ?? {}) };
+      let changed = false;
+      for (const key of ["server.insecure", "server.grpc.web"]) {
+        if (key in data) {
+          delete data[key];
+          changed = true;
+        }
+      }
+      if (!changed) return;
+      applyJson({
+        apiVersion: "v1",
+        kind: "ConfigMap",
+        metadata: { name: "argocd-cmd-params-cm", namespace: argoNamespace },
+        data,
+      });
+      run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
+      waitForArgoServer("Argo CD server after standalone reset", 300_000);
+      console.error("ok: removed Gateway-era Argo server flags (insecure / grpc.web)");
+    } catch {
+      // non-fatal
+    }
+  }
+
   function installArgoCd() {
     if (argoCdReady()) {
       console.error("ok: Argo CD server already ready");
+      resetGatewayEraArgoPatches();
       return;
     }
-    heading("Installing Argo CD (Kustomize overlay)");
+    heading("Installing Argo CD (upstream manifest, standalone)");
     console.error(
-      "  First install can take 5–10 min (image pulls). For faster dev, use: pnpm k8s:local -- --minimal",
+      "  Optional for local GitOps. Fast path without Argo: pnpm dev  (--minimal)",
     );
     ensureNamespace(argoNamespace);
     run("kubectl", [
       "apply",
+      "-n",
+      argoNamespace,
       "--server-side",
       "--force-conflicts",
-      "-k",
-      argoKustomizeDir,
+      "-f",
+      argoInstallUrl,
     ]);
     waitForArgoServer("Argo CD server", 600_000);
-    console.error("ok: Argo CD installed from deploy/argocd/kustomize/local");
+    resetGatewayEraArgoPatches();
+    console.error("ok: Argo CD installed — run: pnpm argocd:port-forward");
   }
 
   function registerLocalGitOpsRootApp() {
     run("kubectl", ["apply", "-f", argoLocalRootApp]);
-    console.error("ok: repody-local-root Application registered (app-of-apps bootstrap)");
+    console.error("ok: repody-local-root Application registered (Repody GitOps only)");
   }
 
   function readGitHubCredential() {
@@ -131,7 +154,7 @@ export function createArgoCommands({
     const credential = readGitHubCredential();
     if (!credential) {
       console.error(
-        "No local GitHub credential found for Argo CD; private repo comparison may require adding a repository secret.",
+        "No local GitHub credential found for Argo CD; private repo sync may need a repository secret.",
       );
       return;
     }

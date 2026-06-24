@@ -40,7 +40,7 @@ First cold start can take **15–25 minutes** (Harbor warm, image build, Helm su
 Add to `C:\Windows\System32\drivers\etc\hosts`:
 
 ```text
-127.0.0.1 app.repody.local api.repody.local files.repody.local auth.repody.local argocd.repody.local grafana.repody.local bugsink.repody.local
+127.0.0.1 app.repody.local api.repody.local files.repody.local auth.repody.local grafana.repody.local bugsink.repody.local
 ```
 
 ## URLs
@@ -50,7 +50,7 @@ Add to `C:\Windows\System32\drivers\etc\hosts`:
 | Web | http://app.repody.local |
 | API | http://api.repody.local/v1/healthz/live |
 | Keycloak | http://auth.repody.local |
-| Argo CD | http://argocd.repody.local (`admin` / password printed by `pnpm k8s:local`) |
+| Argo CD (optional) | `pnpm argocd:port-forward` → https://127.0.0.1:8080 |
 | Grafana | http://grafana.repody.local (`admin` / `audit`) |
 | Bugsink | http://bugsink.repody.local (`admin@example.com` / `admin`) |
 
@@ -66,21 +66,18 @@ Sign in: `operator@repody.local` / `repody-dev`
 - Postgres and Redis from the API pod
 - MinIO presigned upload through `files.repody.local`
 - Hatchet UI and worker connections
-- Argo CD app presence and Gateway UI
+- Argo CD app presence (optional GitOps)
 - Grafana, Loki, Promtail, Tempo, and Bugsink (when installed with `--with=obs`)
 
-Local Kubernetes addons: Argo CD Gateway routing lives in
-`../argocd/bootstrap/gateway-addons.yaml` (synced by the `repody-local-root` Application).
-Optional observability is `local-addons-obs.yaml` (`--with=obs` only). Both are separate
-from the Repody app Helm chart. Production should point to external observability and
-error-tracking services instead of bundling them in the app release.
+Argo CD is optional, installed from the upstream manifest, and accessed via
+`pnpm argocd:port-forward` (not through the Repody Gateway). Observability addons
+are in `local-addons-obs.yaml` (`--with=obs` only).
 
 ## Files
 
 | File | Purpose |
 |------|---------|
 | `kind-repody-local.yaml` | kind cluster ports |
-| `../argocd/bootstrap/gateway-addons.yaml` | Argo CD Gateway route (GitOps-managed) |
 | `local-addons-obs.yaml` | Optional Grafana/Loki/Promtail/Tempo/Bugsink (`--with=obs`) |
 | `../helm/repody/values-local.yaml` | App plane overrides (external data/queue/auth URLs) |
-| `../argocd/repody-local-root.application.yaml` | App-of-apps root for local GitOps |
+| `../argocd/repody-local-root.application.yaml` | Optional GitOps root for local Argo CD |

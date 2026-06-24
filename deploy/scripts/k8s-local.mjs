@@ -24,6 +24,7 @@ import {
   requirePinnedImage,
 } from "./k8s-local-common.mjs";
 import { createArgoCommands } from "./k8s-local-argo.mjs";
+import { ARGO_INSTALL_URL } from "./argocd-local.mjs";
 import { createGatewayCommands } from "./k8s-local-gateway.mjs";
 import { createLocalHelmCommands } from "./k8s-local-helm.mjs";
 import { createHostsCommands } from "./k8s-local-hosts.mjs";
@@ -65,7 +66,6 @@ const ARGO_NS = "argocd";
 const ARGO_REPO_URL = "https://github.com/MehdiGououiad/repody.git";
 const ENVOY_CHART = "oci://docker.io/envoyproxy/gateway-helm";
 const ENVOY_VERSION = "v1.4.0";
-const ARGO_KUSTOMIZE = path.join(root, "deploy/argocd/kustomize/local");
 const LOCAL_ARGO_ROOT = path.join(root, "deploy/argocd/repody-local-root.application.yaml");
 
 const KEYCLOAK_IMAGE = requirePinnedImage(PINNED_IMAGES, "REPODY_KEYCLOAK_IMAGE");
@@ -165,7 +165,7 @@ const {
 const { configureArgoRepositoryCredentials, installArgoCd, registerLocalGitOpsRootApp } =
   createArgoCommands({
   applyJson,
-  argoKustomizeDir: ARGO_KUSTOMIZE,
+  argoInstallUrl: ARGO_INSTALL_URL,
   argoLocalRootApp: LOCAL_ARGO_ROOT,
   argoNamespace: ARGO_NS,
   argoRepoUrl: ARGO_REPO_URL,
@@ -860,7 +860,7 @@ function printStackReadySummary({ minimal, withObs, tagLabel, argoPassword = "" 
   const argoBlock = minimal
     ? ""
     : `
- Argo CD (GW)      ${localUrl(LOCAL_HOSTS.argocd)}  (admin / ${argoPassword || "see kubectl secret"})`;
+ Argo CD            https://127.0.0.1:8080  (pnpm argocd:port-forward — admin / ${argoPassword || "see kubectl secret"})`;
 
   console.error(`
 ══════════════════════════════════════════════════════════════════════

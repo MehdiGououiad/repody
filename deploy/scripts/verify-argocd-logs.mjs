@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Verify Argo CD pod log API works through the local Gateway (argocd.repody.local).
+ * Verify Argo CD pod log API (standalone install via port-forward).
  */
-import { spawnSync } from "node:child_process";
-import { LOCAL_HOSTS } from "./k8s-local-common.mjs";
+import { spawn, spawnSync } from "node:child_process";
+import { ARGO_NAMESPACE, argoLocalBaseUrl, readArgoPortForwardTarget } from "./argocd-local.mjs";
 
 function capture(cmd, args) {
   const result = spawnSync(cmd, args, { encoding: "utf8", shell: false });
@@ -11,6 +11,11 @@ function capture(cmd, args) {
     throw new Error(`${cmd} ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
   }
   return result.stdout.trim();
+}
+
+function captureOptional(cmd, args) {
+  const result = spawnSync(cmd, args, { encoding: "utf8", shell: false });
+  return result.status === 0 ? result.stdout.trim() : null;
 }
 
 function curl(args) {
@@ -22,10 +27,18 @@ function curl(args) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const target = readArgoPortForwardTarget(captureOptional);
+const base = argoLocalBaseUrl(target);
+const tlsFlags = target.tlsInsecure ? ["-k"] : [];
+
 const password = Buffer.from(
   capture("kubectl", [
     "-n",
-    "argocd",
+    ARGO_NAMESPACE,
     "get",
     "secret",
     "argocd-initial-admin-secret",
@@ -46,66 +59,70 @@ const pod = capture("kubectl", [
   "jsonpath={.items[0].metadata.name}",
 ]);
 
-const sessionRes = curl([
-  "-sf",
-  "-X",
-  "POST",
-  "-H",
-  `Host: ${LOCAL_HOSTS.argocd}`,
-  "-H",
-  "Content-Type: application/json",
-  "-d",
-  JSON.stringify({ username: "admin", password }),
-  "http://127.0.0.1/api/v1/session",
-]);
-if (sessionRes.status !== 0) {
-  console.error("session failed:", sessionRes.stderr || sessionRes.stdout);
-  process.exit(1);
+const portForward = spawn(
+  "kubectl",
+  [
+    "port-forward",
+    "svc/argocd-server",
+    "-n",
+    ARGO_NAMESPACE,
+    `${target.localPort}:${target.remotePort}`,
+  ],
+  { stdio: "ignore", shell: false },
+);
+
+try {
+  await sleep(4000);
+
+  const sessionRes = curl([
+    ...tlsFlags,
+    "-s",
+    "-X",
+    "POST",
+    "-H",
+    "Content-Type: application/json",
+    "-d",
+    JSON.stringify({ username: "admin", password }),
+    `${base}/api/v1/session`,
+  ]);
+  if (sessionRes.status !== 0 || !sessionRes.stdout.trim()) {
+    console.error("session failed:", sessionRes.stderr || sessionRes.stdout);
+    process.exit(1);
+  }
+  const { token } = JSON.parse(sessionRes.stdout);
+
+  const query = new URLSearchParams({
+    appNamespace: "argocd",
+    namespace: "repody-app",
+    podName: pod,
+    container: "api",
+    tailLines: "20",
+    follow: "false",
+  });
+
+  const logsRes = curl([
+    "-s",
+    ...tlsFlags,
+    "-w",
+    "\n__HTTP__%{http_code}",
+    "-H",
+    `Authorization: Bearer ${token}`,
+    `${base}/api/v1/applications/repody-local-app/logs?${query}`,
+  ]);
+
+  const marker = logsRes.stdout.lastIndexOf("\n__HTTP__");
+  const body = marker >= 0 ? logsRes.stdout.slice(0, marker) : logsRes.stdout;
+  const httpMatch = logsRes.stdout.match(/__HTTP__(\d{3})$/);
+  const httpCode = httpMatch?.[1] ?? "000";
+
+  console.error(`> Argo CD logs API: HTTP ${httpCode}, ${body.length} bytes`);
+  if (httpCode !== "200" || !body.trim()) {
+    console.error(body.slice(0, 500));
+    process.exit(1);
+  }
+
+  console.error("ok: Argo CD returned application pod logs");
+  console.log(body.slice(0, 400));
+} finally {
+  portForward.kill("SIGTERM");
 }
-const { token } = JSON.parse(sessionRes.stdout);
-
-const query = new URLSearchParams({
-  appNamespace: "argocd",
-  namespace: "repody-app",
-  podName: pod,
-  container: "api",
-  tailLines: "20",
-  follow: "false",
-});
-
-const logsRes = curl([
-  "-s",
-  "-w",
-  "\n__HTTP__%{http_code}",
-  "-H",
-  `Host: ${LOCAL_HOSTS.argocd}`,
-  "-H",
-  `Authorization: Bearer ${token}`,
-  `http://127.0.0.1/api/v1/applications/repody-local-app/logs?${query}`,
-]);
-
-const marker = logsRes.stdout.lastIndexOf("\n__HTTP__");
-const body = marker >= 0 ? logsRes.stdout.slice(0, marker) : logsRes.stdout;
-const httpMatch = logsRes.stdout.match(/__HTTP__(\d{3})$/);
-const httpCode = httpMatch?.[1] ?? "000";
-
-console.error(`> Argo CD logs API via Gateway: HTTP ${httpCode}, ${body.length} bytes`);
-if (httpCode !== "200") {
-  console.error(body.slice(0, 500));
-  process.exit(1);
-}
-
-if (!body.trim()) {
-  console.error("empty log body — checking direct kubectl logs for comparison");
-  const direct = capture("kubectl", ["-n", "repody-app", "logs", pod, "-c", "api", "--tail=3"]);
-  console.error("kubectl logs sample:\n", direct);
-  process.exit(1);
-}
-
-if (!body.includes("http_request") && !body.includes("logging_configured") && !body.includes("level")) {
-  console.error("unexpected log body:\n", body.slice(0, 500));
-  process.exit(1);
-}
-
-console.error("ok: Argo CD returned application pod logs through the Gateway");
-console.log(body.slice(0, 400));

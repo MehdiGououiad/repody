@@ -48,12 +48,7 @@ steps.push([
   ["kustomize", "deploy/managed/cloudnativepg"],
 ]);
 steps.push([
-  "kustomize-argocd-local",
-  "kubectl",
-  ["kustomize", "deploy/argocd/kustomize/local"],
-]);
-steps.push([
-  "argocd-bootstrap-manifests-dry-run",
+  "argocd-manifests-dry-run",
   "kubectl",
   [
     "apply",
@@ -62,8 +57,6 @@ steps.push([
     "deploy/argocd/repody-project.yaml",
     "-f",
     "deploy/argocd/repody-local-apps.yaml",
-    "-f",
-    "deploy/argocd/bootstrap/gateway-addons.yaml",
   ],
 ]);
 steps.push([
