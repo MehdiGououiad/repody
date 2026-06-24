@@ -16,6 +16,7 @@ spec:
       valueFiles:
         - values.yaml
         - values-local.yaml
+        - values-local-harbor.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: repody

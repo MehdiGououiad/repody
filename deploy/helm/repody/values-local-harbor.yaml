@@ -1,0 +1,19 @@
+# Harbor-backed local GitOps overlay (Argo CD repody-local + pnpm dev:harbor).
+global:
+  imageRegistry: harbor.repody.lvh.me:8080/repody
+  security:
+    allowInsecureImages: true
+
+images:
+  backend:
+    repository: harbor.repody.lvh.me:8080/repody/repody-backend
+    tag: "456e08865b8b"
+  api:
+    repository: harbor.repody.lvh.me:8080/repody/repody-backend
+    tag: "456e08865b8b"
+  worker:
+    repository: harbor.repody.lvh.me:8080/repody/repody-backend
+    tag: "456e08865b8b"
+  web:
+    repository: harbor.repody.lvh.me:8080/repody/repody-web
+    tag: "456e08865b8b"
