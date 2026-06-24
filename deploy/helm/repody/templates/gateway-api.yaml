@@ -150,6 +150,7 @@ spec:
           kind: Service
           name: {{ include "repody.fullname" . }}-web
           port: 3000
+          weight: 1
 ---
 {{- if .Values.gatewayApi.apiHost }}
 apiVersion: gateway.networking.k8s.io/v1
@@ -178,6 +179,7 @@ spec:
           kind: Service
           name: {{ include "repody.fullname" . }}-api
           port: 8000
+          weight: 1
 ---
 {{- end }}
 {{- if and .Values.gatewayApi.filesHost (or .Values.minio.enabled .Values.gatewayApi.filesServiceName) }}
@@ -209,9 +211,11 @@ spec:
           name: {{ .Values.gatewayApi.filesServiceName | quote }}
           namespace: {{ required "gatewayApi.filesServiceNamespace is required when filesServiceName is set" .Values.gatewayApi.filesServiceNamespace | quote }}
           port: {{ .Values.gatewayApi.filesServicePort | default 9000 }}
+          weight: 1
           {{- else }}
           name: {{ .Release.Name }}-minio
           port: 9000
+          weight: 1
           {{- end }}
 ---
 {{- end }}
@@ -246,9 +250,11 @@ spec:
           namespace: {{ .Values.gatewayApi.authServiceNamespace | quote }}
           {{- end }}
           port: {{ .Values.gatewayApi.authServicePort }}
+          weight: 1
           {{- else }}
           name: {{ include "repody.fullname" . }}-auth-external
           port: {{ .Values.gatewayApi.authExternalPort }}
+          weight: 1
           {{- end }}
 {{- end }}
 {{- end }}
