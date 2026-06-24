@@ -37,13 +37,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) }}
+      {{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
       volumes:
         - name: hatchet-client-token
           secret:
-            secretName: {{ include "repody.hatchetClientTokenSecret" . }}
+            secretName: {{ include "repody.hatchetTokenSecretName" . }}
             optional: true
       {{- end }}
       containers:
@@ -127,13 +127,13 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) }}
+      {{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
       initContainers:
         {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
       volumes:
         - name: hatchet-client-token
           secret:
-            secretName: {{ include "repody.hatchetClientTokenSecret" . }}
+            secretName: {{ include "repody.hatchetTokenSecretName" . }}
             optional: true
       {{- end }}
       containers:

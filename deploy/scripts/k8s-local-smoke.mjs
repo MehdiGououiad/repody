@@ -10,7 +10,13 @@ import {
   localUrl,
 } from "./k8s-local-common.mjs";
 
-const NS = "repody";
+const NS = "repody-app";
+const LOCAL_ARGO_APPS = [
+  "repody-local-data",
+  "repody-local-queue",
+  "repody-local-auth",
+  "repody-local-app",
+];
 const ARGO_NS = "argocd";
 const WITH_OBS =
   process.argv.includes("--with=obs") ||
@@ -338,24 +344,32 @@ await step("Hatchet UI and workers", () => {
 });
 
 await step("Argo CD installed", () => {
-  const app = must("argocd app", "kubectl", [
-    "-n",
-    ARGO_NS,
-    "get",
-    "applications.argoproj.io/repody-local",
-    "-o",
-    "json",
-  ]);
-  const parsed = parseJson(app);
-  const health = parsed.status?.health?.status ?? "Unknown";
-  const sync = parsed.status?.sync?.status ?? "Unknown";
-  const comparison = parsed.status?.conditions?.find((condition) => condition.type === "ComparisonError");
-  if (comparison) {
-    warnings.push(`Argo CD app comparison is blocked: ${comparison.message}`);
+  const summaries = [];
+  for (const appName of LOCAL_ARGO_APPS) {
+    const app = must(`argocd app ${appName}`, "kubectl", [
+      "-n",
+      ARGO_NS,
+      "get",
+      `applications.argoproj.io/${appName}`,
+      "-o",
+      "json",
+    ]);
+    const parsed = parseJson(app);
+    const health = parsed.status?.health?.status ?? "Unknown";
+    const sync = parsed.status?.sync?.status ?? "Unknown";
+    const comparison = parsed.status?.conditions?.find(
+      (condition) => condition.type === "ComparisonError",
+    );
+    if (comparison) {
+      warnings.push(`Argo CD ${appName} comparison blocked: ${comparison.message}`);
+    }
+    summaries.push(`${appName}: health=${health}, sync=${sync}`);
   }
   const ui = gatewayCurl(LOCAL_HOSTS.argocd, "/");
-  if (!ui.toLowerCase().includes("argo")) throw new Error("Argo CD UI did not render through Gateway");
-  return `health=${health}, sync=${sync}, gateway=ok`;
+  if (!ui.toLowerCase().includes("argo")) {
+    throw new Error("Argo CD UI did not render through Gateway");
+  }
+  return `${summaries.join("; ")}, gateway=ok`;
 });
 
 await step("Observability/Bugsink addon presence", () => {

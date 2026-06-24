@@ -1,0 +1,17 @@
+{{- if .Values.minio.enabled }}
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-repody-app-gateway-to-minio
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: {{ required "gatewayConsumerNamespace is required when minio.enabled" .Values.gatewayConsumerNamespace | quote }}
+  to:
+    - group: ""
+      kind: Service
+      name: {{ .Release.Name }}-minio
+{{- end }}

@@ -25,8 +25,24 @@ app.kubernetes.io/part-of: repody
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{- define "repody.imageRepository" -}}
+{{- $repo := .repo -}}
+{{- $registry := .root.Values.global.imageRegistry | default "" -}}
+{{- if and $registry (not (contains "/" $repo)) -}}
+{{- printf "%s/%s" $registry $repo -}}
+{{- else -}}
+{{- $repo -}}
+{{- end -}}
+{{- end }}
+
 {{- define "repody.backendImageRepository" -}}
-{{- coalesce .Values.images.backend.repository .Values.images.api.repository .Values.images.worker.repository "repody-backend" -}}
+{{- $repo := coalesce .Values.images.backend.repository .Values.images.api.repository .Values.images.worker.repository "repody-backend" -}}
+{{- include "repody.imageRepository" (dict "root" . "repo" $repo) -}}
+{{- end }}
+
+{{- define "repody.webImageRepository" -}}
+{{- $repo := .Values.images.web.repository | default "repody-web" -}}
+{{- include "repody.imageRepository" (dict "root" . "repo" $repo) -}}
 {{- end }}
 
 {{- define "repody.backendImageTag" -}}
@@ -212,7 +228,26 @@ imagePullSecrets:
 {{- end -}}
 
 {{- define "repody.waitPostgresInit" -}}
-{{- if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
+{{- if and .Values.externalDatabase.enabled .Values.externalDatabase.host }}
+- name: wait-postgres
+  image: {{ .Values.hatchet.waitInitImage | quote }}
+  command:
+    - sh
+    - -c
+    - |
+      host="{{ .Values.externalDatabase.host }}"
+      port="{{ .Values.externalDatabase.port | default 5432 }}"
+      echo "Waiting for PostgreSQL at ${host}:${port}..."
+      for i in $(seq 1 90); do
+        if nc -z "${host}" "${port}" 2>/dev/null; then
+          echo "PostgreSQL is accepting connections"
+          exit 0
+        fi
+        sleep 3
+      done
+      echo "Timed out waiting for PostgreSQL" >&2
+      exit 1
+{{- else if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
 - name: wait-postgres
   image: {{ .Values.hatchet.waitInitImage | quote }}
   command:
@@ -233,15 +268,23 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{- define "repody.hatchetTokenSecretName" -}}
+{{- if .Values.hatchet.enabled -}}
+{{- include "repody.hatchetClientTokenSecret" . -}}
+{{- else if .Values.externalHatchet.enabled -}}
+{{- .Values.externalHatchet.existingSecret -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "repody.waitHatchetTokenInit" -}}
-{{- if and .Values.hatchet.enabled (not .Values.hatchet.clientToken) }}
+{{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
 - name: wait-hatchet-token
   image: {{ .Values.hatchet.waitInitImage | quote }}
   command:
     - sh
     - -c
     - |
-      echo "Waiting for Hatchet client token (hatchet-stack workerTokenJob)..."
+      echo "Waiting for Hatchet client token..."
       for i in $(seq 1 120); do
         if [ -s /hatchet-secret/{{ include "repody.hatchetClientTokenKey" . }} ]; then
           echo "Hatchet token ready"
@@ -249,7 +292,7 @@ imagePullSecrets:
         fi
         sleep 3
       done
-      echo "Timed out waiting for {{ include "repody.hatchetClientTokenSecret" . }} — check hatchet-stack workerTokenJob"
+      echo "Timed out waiting for {{ include "repody.hatchetTokenSecretName" . }}"
       exit 1
   volumeMounts:
     - name: hatchet-client-token
@@ -259,9 +302,19 @@ imagePullSecrets:
 {{- end }}
 
 {{- define "repody.keycloakJwksUrl" -}}
+{{- if .Values.gatewayApi.authServiceNamespace -}}
+http://{{ .Values.gatewayApi.authServiceName | default "keycloak" }}.{{ .Values.gatewayApi.authServiceNamespace }}.svc.cluster.local:{{ .Values.gatewayApi.authServicePort | default 8080 }}/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/certs
+{{- else -}}
 http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080/realms/{{ .Values.keycloak.realm }}/protocol/openid-connect/certs
+{{- end -}}
 {{- end }}
 
 {{- define "repody.keycloakAdminUrl" -}}
+{{- if .Values.config.keycloakAdminUrl -}}
+{{- .Values.config.keycloakAdminUrl -}}
+{{- else if .Values.gatewayApi.authServiceNamespace -}}
+http://{{ .Values.gatewayApi.authServiceName | default "keycloak" }}.{{ .Values.gatewayApi.authServiceNamespace }}.svc.cluster.local:{{ .Values.gatewayApi.authServicePort | default 8080 }}
+{{- else -}}
 http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080
+{{- end -}}
 {{- end }}

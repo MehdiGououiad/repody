@@ -25,14 +25,23 @@ function harborImageSets(localRegistry, image) {
   };
 }
 
-/** @param {string} localRegistry @param {string} image — bitnami charts prepend global.imageRegistry */
+/** @param {string} image — bitnami charts prepend global.imageRegistry */
 function registryImageSets(image) {
   return splitImageRef(image);
 }
 
+function globalRegistrySets(localRegistry) {
+  return [
+    "--set",
+    `global.imageRegistry=${localRegistry}`,
+    "--set",
+    "global.security.allowInsecureImages=true",
+  ];
+}
+
 export function createLocalHelmCommands({
   capture,
-  chartDir,
+  chartDirs,
   hasFlag,
   keycloakImage,
   localRegistry,
@@ -43,16 +52,23 @@ export function createLocalHelmCommands({
   valuesBase,
   valuesLocal,
 }) {
-  /** @param {string[]} extraHelmSets */
-  function collectHelmImages(extraHelmSets = []) {
+  const {
+    app: chartDir,
+    data: chartData,
+    queue: chartQueue,
+    auth: chartAuth,
+  } = chartDirs;
+
+  /** @param {string} chartPath @param {string[]} extraHelmSets */
+  function collectHelmImagesFromChart(chartPath, extraHelmSets = []) {
     const args = [
       "template",
       "repody",
-      chartDir,
+      chartPath,
       "-f",
-      valuesBase,
+      path.join(chartPath, "values.yaml"),
       "-f",
-      valuesLocal,
+      path.join(chartPath, "values-local.yaml"),
       "--set",
       "global.imageRegistry=",
       ...extraHelmSets,
@@ -72,8 +88,18 @@ export function createLocalHelmCommands({
     return [...images];
   }
 
-  /** @param {{ backendTag: string, webTag: string, omitImageTags?: boolean }} tags */
-  function buildRegistryHelmSets({ backendTag, webTag, omitImageTags = false }) {
+  function collectHelmImages(extraHelmSets = []) {
+    return [
+      ...new Set([
+        ...collectHelmImagesFromChart(chartData, extraHelmSets),
+        ...collectHelmImagesFromChart(chartQueue, extraHelmSets),
+        ...collectHelmImagesFromChart(chartAuth, extraHelmSets),
+        ...collectHelmImagesFromChart(chartDir, extraHelmSets),
+      ]),
+    ];
+  }
+
+  function buildHatchetHelmSets() {
     const hatchetApi = harborImageSets(
       localRegistry,
       requirePinnedImage(pinnedImages, "REPODY_HATCHET_API_IMAGE"),
@@ -105,38 +131,6 @@ export function createLocalHelmCommands({
     );
 
     return [
-      "--set",
-      `global.imageRegistry=${localRegistry}`,
-      "--set",
-      "global.security.allowInsecureImages=true",
-      ...(omitImageTags
-        ? []
-        : [
-            "--set",
-            `images.backend.repository=${localRegistry}/repody-backend`,
-            "--set",
-            `images.backend.tag=${backendTag}`,
-            "--set",
-            `images.backend.pullPolicy=IfNotPresent`,
-            "--set",
-            `images.api.repository=${localRegistry}/repody-backend`,
-            "--set",
-            `images.worker.repository=${localRegistry}/repody-backend`,
-            "--set",
-            `images.web.repository=${localRegistry}/repody-web`,
-            "--set",
-            `images.api.tag=${backendTag}`,
-            "--set",
-            `images.worker.tag=${backendTag}`,
-            "--set",
-            `images.web.tag=${webTag}`,
-            "--set",
-            "images.api.pullPolicy=IfNotPresent",
-            "--set",
-            "images.worker.pullPolicy=IfNotPresent",
-            "--set",
-            "images.web.pullPolicy=IfNotPresent",
-          ]),
       "--set",
       `hatchet.waitInitImage=${localRegistryRef(requirePinnedImage(pinnedImages, "REPODY_BUSYBOX_IMAGE"))}`,
       "--set",
@@ -173,21 +167,97 @@ export function createLocalHelmCommands({
       `hatchet-stack.api.postgresImage.repository=${hatchetPostgresInit.repository}`,
       "--set",
       `hatchet-stack.api.postgresImage.tag=${hatchetPostgresInit.tag}`,
+    ];
+  }
+
+  /** @param {{ backendTag: string, webTag: string, omitImageTags?: boolean }} tags */
+  function buildAppHelmSets({ backendTag, webTag, omitImageTags = false }) {
+    return [
+      ...(omitImageTags
+        ? []
+        : [
+            "--set",
+            `images.backend.repository=${localRegistry}/repody-backend`,
+            "--set",
+            `images.backend.tag=${backendTag}`,
+            "--set",
+            `images.backend.pullPolicy=IfNotPresent`,
+            "--set",
+            `images.api.repository=${localRegistry}/repody-backend`,
+            "--set",
+            `images.worker.repository=${localRegistry}/repody-backend`,
+            "--set",
+            `images.web.repository=${localRegistry}/repody-web`,
+            "--set",
+            `images.api.tag=${backendTag}`,
+            "--set",
+            `images.worker.tag=${backendTag}`,
+            "--set",
+            `images.web.tag=${webTag}`,
+            "--set",
+            "images.api.pullPolicy=IfNotPresent",
+            "--set",
+            "images.worker.pullPolicy=IfNotPresent",
+            "--set",
+            "images.web.pullPolicy=IfNotPresent",
+          ]),
+      "--set",
+      `hatchet.waitInitImage=${localRegistryRef(requirePinnedImage(pinnedImages, "REPODY_BUSYBOX_IMAGE"))}`,
+    ];
+  }
+
+  /** @param {{ backendTag: string, webTag: string, omitImageTags?: boolean }} tags */
+  function buildRegistryHelmSets(tags) {
+    return [
+      ...globalRegistrySets(localRegistry),
+      ...buildHatchetHelmSets(),
+      ...buildAppHelmSets(tags),
+      "--set",
+      `keycloak.image=${localRegistryRef(keycloakImage)}`,
+    ];
+  }
+
+  function buildDataHelmSets() {
+    return globalRegistrySets(localRegistry);
+  }
+
+  function buildQueueHelmSets() {
+    return [...globalRegistrySets(localRegistry), ...buildHatchetHelmSets()];
+  }
+
+  function buildAuthHelmSets() {
+    return [
+      ...globalRegistrySets(localRegistry),
       "--set",
       `keycloak.image=${localRegistryRef(keycloakImage)}`,
     ];
   }
 
   function ensureHelmDependencies() {
-    const chartLock = path.join(chartDir, "Chart.lock");
-    const expectedCharts = [
-      "postgresql-18.7.6.tgz",
-      "redis-27.0.10.tgz",
-      "minio-17.0.21.tgz",
-      "hatchet-stack-0.11.0.tgz",
-    ].map((name) => path.join(chartDir, "charts", name));
+    const charts = [
+      {
+        dir: chartData,
+        lock: path.join(chartData, "Chart.lock"),
+        expected: [
+          "postgresql-18.7.6.tgz",
+          "redis-27.0.10.tgz",
+          "minio-17.0.21.tgz",
+        ],
+      },
+      {
+        dir: chartQueue,
+        lock: path.join(chartQueue, "Chart.lock"),
+        expected: ["hatchet-stack-0.11.0.tgz"],
+      },
+    ];
     const refresh = hasFlag("--deps") || truthyEnv("REPODY_K8S_LOCAL_REFRESH_DEPS");
-    if (!refresh && existsSync(chartLock) && expectedCharts.every((chart) => existsSync(chart))) {
+    const missing = charts.some(
+      ({ lock, expected, dir }) =>
+        refresh ||
+        !existsSync(lock) ||
+        expected.some((name) => !existsSync(path.join(dir, "charts", name))),
+    );
+    if (!missing) {
       console.error("ok: Helm chart dependencies already present");
       return;
     }
@@ -209,6 +279,10 @@ export function createLocalHelmCommands({
   }
 
   return {
+    buildAppHelmSets,
+    buildAuthHelmSets,
+    buildDataHelmSets,
+    buildQueueHelmSets,
     buildRegistryHelmSets,
     collectHelmImages,
     ensureHelmDependencies,

@@ -1,10 +1,15 @@
 # Local Kubernetes
 
-Runs Repody on kind with Envoy Gateway, Argo CD, and in-cluster Keycloak.
+Runs Repody on kind with Envoy Gateway, Argo CD, and four namespaces:
 
-Inference is external. The local Kubernetes stack does not pull or run a VLM model.
-Set `config.vllmBaseUrl` in `deploy/helm/repody/values-local.yaml` or override it
-when installing.
+| Namespace | Argo CD app | Contents |
+|-----------|-------------|----------|
+| `repody-data` | `repody-local-data` | PostgreSQL, Redis, MinIO |
+| `repody-queue` | `repody-local-queue` | Hatchet stack |
+| `repody-auth` | `repody-local-auth` | Keycloak |
+| `repody-app` | `repody-local-app` | API, web, workers, Gateway routes |
+
+Inference is external. Set `config.vllmBaseUrl` in `deploy/helm/repody/values-local.yaml`.
 
 ## Prerequisites
 
@@ -77,5 +82,5 @@ services instead of bundling them in the app release.
 | `kind-repody-local.yaml` | kind cluster ports |
 | `local-addons-gitops.yaml` | Local-only Argo CD Gateway route |
 | `local-addons-obs.yaml` | Optional Grafana/Loki/Promtail/Tempo/Bugsink (`--with=obs`) |
-| `../helm/repody/values-local.yaml` | Single-replica + Gateway API hosts + external inference URL |
-| `../argocd/repody-local.application.yaml` | Argo CD Application |
+| `../helm/repody/values-local.yaml` | App plane overrides (external data/queue/auth URLs) |
+| `../argocd/repody-local-apps.yaml` | Four Argo CD Applications (data, queue, auth, app) |

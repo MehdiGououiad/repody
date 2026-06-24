@@ -8,6 +8,14 @@ spec:
   sourceRepos:
     - https://github.com/MehdiGououiad/repody.git
   destinations:
+    - namespace: repody-app
+      server: https://kubernetes.default.svc
+    - namespace: repody-data
+      server: https://kubernetes.default.svc
+    - namespace: repody-queue
+      server: https://kubernetes.default.svc
+    - namespace: repody-auth
+      server: https://kubernetes.default.svc
     - namespace: repody
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
@@ -26,6 +34,8 @@ spec:
       kind: Service
     - group: ""
       kind: ServiceAccount
+    - group: ""
+      kind: Endpoints
     - group: apps
       kind: Deployment
     - group: apps
@@ -44,6 +54,8 @@ spec:
       kind: Gateway
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
+    - group: gateway.networking.k8s.io
+      kind: ReferenceGrant
     - group: gateway.envoyproxy.io
       kind: EnvoyProxy
     - group: rbac.authorization.k8s.io

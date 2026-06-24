@@ -1,0 +1,23 @@
+global:
+  imagePullSecrets: []
+  deploymentEnvironment: production
+
+gatewayConsumerNamespace: repody-app
+
+keycloak:
+  enabled: false
+  image: quay.io/keycloak/keycloak:26.6.3
+  realm: repody
+  hostname: auth.example.com
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  proxyHeaders: xforwarded
+  adminUsername: admin
+  adminPassword: ""
+  existingSecret: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      memory: 1Gi

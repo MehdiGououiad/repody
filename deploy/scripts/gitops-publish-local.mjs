@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * GitOps publish loop for local Harbor + Argo CD repody-local:
+ * GitOps publish loop for local Harbor + Argo CD (repody-local-* apps):
  *   build → push (Harbor) → bump values-local-images.yaml → commit/push Git → Argo sync
  *
  *   pnpm gitops:publish

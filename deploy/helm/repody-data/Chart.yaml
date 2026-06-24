@@ -1,0 +1,24 @@
+apiVersion: v2
+name: repody-data
+description: Repody data plane — PostgreSQL, Redis, MinIO (local/dev)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - repody
+  - postgresql
+  - redis
+  - minio
+dependencies:
+  - name: postgresql
+    version: 18.7.6
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 27.0.10
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: minio
+    version: 17.0.21
+    repository: https://charts.bitnami.com/bitnami
+    condition: minio.enabled

@@ -53,7 +53,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..")
 const REGISTRY_CONFIG = resolveLocalRegistryConfig(root);
 const PINNED_IMAGES = readPinnedImages(root);
 const CLUSTER = "repody-local";
-const NS = "repody";
+const NS_APP = "repody-app";
+const NS_DATA = "repody-data";
+const NS_QUEUE = "repody-queue";
+const NS_AUTH = "repody-auth";
+const LOCAL_NAMESPACES = [NS_DATA, NS_QUEUE, NS_AUTH, NS_APP];
+const NS = NS_APP;
 const ENVOY_NS = "envoy-gateway-system";
 const ARGO_NS = "argocd";
 const ARGO_REPO_URL = "https://github.com/MehdiGououiad/repody.git";
@@ -68,11 +73,18 @@ const KIND_CONFIG = REGISTRY_CONFIG.kindConfigFile;
 const KIND_PLATFORM =
   process.arch === "arm64" ? "linux/arm64" : "linux/amd64";
 const CHART_DIR = path.join(root, "deploy/helm/repody");
-const VALUES_LOCAL = path.join(CHART_DIR, "values-local.yaml");
+const CHART_DATA = path.join(root, "deploy/helm/repody-data");
+const CHART_QUEUE = path.join(root, "deploy/helm/repody-queue");
+const CHART_AUTH = path.join(root, "deploy/helm/repody-auth");
 const VALUES_BASE = path.join(CHART_DIR, "values.yaml");
+const VALUES_LOCAL = path.join(CHART_DIR, "values-local.yaml");
+const VALUES_DATA_LOCAL = path.join(CHART_DATA, "values-local.yaml");
+const VALUES_QUEUE_LOCAL = path.join(CHART_QUEUE, "values-local.yaml");
+const VALUES_AUTH_LOCAL = path.join(CHART_AUTH, "values-local.yaml");
 const VALUES_LOCAL_IMAGES = path.join(CHART_DIR, "values-local-images.yaml");
 const LOCAL_ADDONS_GITOPS = path.join(root, "deploy/k8s/local-addons-gitops.yaml");
 const LOCAL_ADDONS_OBS = path.join(root, "deploy/k8s/local-addons-obs.yaml");
+const LOCAL_ARGO_APPS = path.join(root, "deploy/argocd/repody-local-apps.yaml");
 const {
   applyJson,
   capture,
@@ -105,13 +117,22 @@ const {
   run,
 });
 const {
+  buildAppHelmSets,
+  buildAuthHelmSets,
+  buildDataHelmSets,
+  buildQueueHelmSets,
   buildRegistryHelmSets,
   collectHelmImages,
   ensureHelmDependencies,
   externalInferenceHelmSets,
 } = createLocalHelmCommands({
   capture,
-  chartDir: CHART_DIR,
+  chartDirs: {
+    app: CHART_DIR,
+    data: CHART_DATA,
+    queue: CHART_QUEUE,
+    auth: CHART_AUTH,
+  },
   hasFlag,
   keycloakImage: KEYCLOAK_IMAGE,
   localRegistry: LOCAL_REGISTRY,
@@ -130,6 +151,7 @@ const {
   installEnvoyGatewayController,
 } = createGatewayCommands({
   authHost: LOCAL_HOSTS.auth,
+  authNamespace: NS_AUTH,
   capture,
   captureOptional,
   chartDir: CHART_DIR,
@@ -284,7 +306,6 @@ const REPODY_CRITICAL_POD_PREFIXES = [
   "repody-api-",
   "repody-web-",
   "repody-worker-",
-  "keycloak-",
 ];
 
 function wantsObservability(minimal) {
@@ -302,7 +323,7 @@ function cleanupStaleLocalResources() {
   ]);
   captureOptional("kubectl", [
     "-n",
-    NS,
+    NS_APP,
     "delete",
     "jobs",
     "--field-selector",
@@ -325,9 +346,12 @@ function removeLocalObservability() {
 function repodyPodGroup(name, phase) {
   if (phase === "Succeeded" || phase === "Failed") return "Completed jobs";
   if (name.startsWith("local-")) return "Observability";
-  if (/^repody-(api|web|worker|keycloak)-/.test(name)) return "Platform";
-  if (/^repody-(postgresql|postgres|minio|redis)/.test(name)) return "Data";
-  if (/^repody-(hatchet|rabbitmq)/.test(name)) return "Queue";
+  if (/^repody-(api|web|worker)-/.test(name)) return "Platform";
+  if (/^(repody-auth-)?keycloak-/.test(name)) return "Auth";
+  if (/^repody-(data-)?postgresql|^repody-(data-)?redis|^repody-(data-)?minio/.test(name)) {
+    return "Data";
+  }
+  if (/^repody-(queue-)?(hatchet|rabbitmq)/.test(name)) return "Queue";
   if (/^repody-[a-z0-9]+-/.test(name)) return "Completed jobs";
   return "Other";
 }
@@ -356,7 +380,7 @@ function printGroupedPodStatus(namespace) {
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group).push({ name, ready, phase });
   }
-  const order = ["Platform", "Data", "Queue", "Observability", "Completed jobs", "Other"];
+  const order = ["Platform", "Data", "Queue", "Auth", "Observability", "Completed jobs", "Other"];
   for (const title of order) {
     const pods = groups.get(title);
     if (!pods?.length) continue;
@@ -369,11 +393,18 @@ function printGroupedPodStatus(namespace) {
   }
 }
 
-function repodyPodsReady() {
+function printAllGroupedPodStatus() {
+  for (const namespace of LOCAL_NAMESPACES) {
+    heading(`Pods in ${namespace}`);
+    printGroupedPodStatus(namespace);
+  }
+}
+
+function namespacePodsReady(namespace) {
   try {
     const states = capture("kubectl", [
       "-n",
-      NS,
+      namespace,
       "get",
       "pods",
       "--no-headers",
@@ -381,7 +412,7 @@ function repodyPodsReady() {
       "custom-columns=NAME:.metadata.name,READY:.status.containerStatuses[*].ready,PHASE:.status.phase",
     ]);
     const lines = states.split("\n").map((line) => line.trim()).filter(Boolean);
-    if (lines.length === 0) return false;
+    if (lines.length === 0) return namespace !== NS_APP;
     return lines.every((line) => {
       const parts = line.split(/\s+/);
       const name = parts[0] ?? "";
@@ -397,11 +428,15 @@ function repodyPodsReady() {
   }
 }
 
+function repodyPodsReady() {
+  return LOCAL_NAMESPACES.every((namespace) => namespacePodsReady(namespace));
+}
+
 function hatchetControlPlaneReady() {
   try {
     const ready = captureOptionalNoShell("kubectl", [
       "-n",
-      NS,
+      NS_QUEUE,
       "get",
       "deploy",
       "repody-hatchet-engine",
@@ -419,7 +454,7 @@ function repodyPodFailureReason() {
     const hatchetReady = hatchetControlPlaneReady();
     const raw = captureOptionalNoShell("kubectl", [
       "-n",
-      NS,
+      NS_APP,
       "get",
       "pods",
       "-o",
@@ -477,21 +512,24 @@ function repodyPodFailureReason() {
 
 function repodyPodsProgress() {
   console.error("\n--- Repody pod status ---");
-  console.error(
-    captureOptional("kubectl", [
-      "-n",
-      NS,
-      "get",
-      "pods",
-      "-o",
-      "wide",
-    ]),
-  );
+  for (const namespace of LOCAL_NAMESPACES) {
+    console.error(`\n[${namespace}]`);
+    console.error(
+      captureOptional("kubectl", [
+        "-n",
+        namespace,
+        "get",
+        "pods",
+        "-o",
+        "wide",
+      ]),
+    );
+  }
 
-  console.error("\n--- Waiting / terminated container reasons ---");
+  console.error("\n--- Waiting / terminated container reasons (app) ---");
   const reasons = captureOptionalNoShell("kubectl", [
     "-n",
-    NS,
+    NS_APP,
     "get",
     "pods",
     "-o",
@@ -499,11 +537,11 @@ function repodyPodsProgress() {
   ]);
   console.error(reasons || "(no container status yet)");
 
-  console.error("\n--- Recent Repody events ---");
+  console.error("\n--- Recent Repody events (app) ---");
   console.error(
     captureOptional("kubectl", [
       "-n",
-      NS,
+      NS_APP,
       "get",
       "events",
       "--sort-by=.lastTimestamp",
@@ -513,25 +551,36 @@ function repodyPodsProgress() {
       .join("\n"),
   );
 
-  const pods = captureOptional("kubectl", [
-    "-n",
-    NS,
-    "get",
-    "pods",
-    "-o",
-    "jsonpath={range .items[*]}{.metadata.name}{'\\n'}{end}",
-  ])
-    .split("\n")
-    .map((pod) => pod.trim())
-    .filter(Boolean)
-    .filter((pod) => pod.startsWith("repody-api") || pod.startsWith("repody-web") || pod.startsWith("repody-worker") || pod.startsWith("repody-hatchet") || pod.startsWith("repody-keycloak"));
+  const pods = LOCAL_NAMESPACES.flatMap((namespace) =>
+    captureOptional("kubectl", [
+      "-n",
+      namespace,
+      "get",
+      "pods",
+      "-o",
+      "jsonpath={range .items[*]}{.metadata.name}{'\\n'}{end}",
+    ])
+      .split("\n")
+      .map((pod) => pod.trim())
+      .filter(Boolean)
+      .filter(
+        (pod) =>
+          pod.startsWith("repody-api") ||
+          pod.startsWith("repody-web") ||
+          pod.startsWith("repody-worker") ||
+          pod.startsWith("repody-hatchet") ||
+          pod.startsWith("repody-auth-keycloak") ||
+          pod.startsWith("keycloak-"),
+      )
+      .map((pod) => ({ namespace, pod })),
+  );
 
-  for (const pod of pods.slice(0, 8)) {
-    console.error(`\n--- Recent logs: ${pod} ---`);
+  for (const { namespace, pod } of pods.slice(0, 8)) {
+    console.error(`\n--- Recent logs: ${namespace}/${pod} ---`);
     console.error(
       captureOptional("kubectl", [
         "-n",
-        NS,
+        namespace,
         "logs",
         pod,
         "--all-containers=true",
@@ -541,6 +590,120 @@ function repodyPodsProgress() {
     );
   }
   console.error("");
+}
+
+function syncPlatformSecrets() {
+  run("node", ["deploy/scripts/sync-platform-secrets.mjs"]);
+}
+
+function hatchetClientTokenReady() {
+  const token = captureOptionalNoShell("kubectl", [
+    "-n",
+    NS_QUEUE,
+    "get",
+    "secret/hatchet-client-config",
+    "-o",
+    "jsonpath={.data.HATCHET_CLIENT_TOKEN}",
+  ]);
+  return Boolean(token);
+}
+
+function installLocalHelmStack({
+  minimal,
+  backendTag,
+  webTag,
+  helmValueFiles,
+  authHelmSets,
+}) {
+  const appHelmSets = [
+    ...buildAppHelmSets({
+      backendTag,
+      webTag,
+      omitImageTags: !minimal,
+    }),
+    ...externalInferenceHelmSets(),
+  ];
+
+  heading("Installing platform data plane (PostgreSQL, Redis, MinIO)");
+  ensureNamespace(NS_DATA);
+  prepareHelmUpgrade(NS_DATA, "repody-data");
+  run("helm", [
+    "upgrade",
+    "--install",
+    "repody-data",
+    CHART_DATA,
+    "-n",
+    NS_DATA,
+    "-f",
+    path.join(CHART_DATA, "values.yaml"),
+    "-f",
+    VALUES_DATA_LOCAL,
+    ...buildDataHelmSets(),
+    "--timeout",
+    "15m",
+  ]);
+
+  heading("Installing platform queue (Hatchet)");
+  ensureNamespace(NS_QUEUE);
+  prepareHelmUpgrade(NS_QUEUE, "repody-queue");
+  run("helm", [
+    "upgrade",
+    "--install",
+    "repody-queue",
+    CHART_QUEUE,
+    "-n",
+    NS_QUEUE,
+    "-f",
+    path.join(CHART_QUEUE, "values.yaml"),
+    "-f",
+    VALUES_QUEUE_LOCAL,
+    ...buildQueueHelmSets(),
+    "--timeout",
+    "15m",
+  ]);
+
+  waitForWithProgress(
+    () => hatchetClientTokenReady(),
+    "Hatchet worker token in repody-queue",
+    300_000,
+    5_000,
+  );
+  syncPlatformSecrets();
+
+  heading("Installing platform auth (Keycloak)");
+  ensureNamespace(NS_AUTH);
+  run("helm", [
+    "upgrade",
+    "--install",
+    "repody-auth",
+    CHART_AUTH,
+    "-n",
+    NS_AUTH,
+    "-f",
+    path.join(CHART_AUTH, "values.yaml"),
+    "-f",
+    VALUES_AUTH_LOCAL,
+    ...buildAuthHelmSets(),
+    "--timeout",
+    "10m",
+  ]);
+
+  heading("Installing Repody app (API, web, workers, Gateway)");
+  ensureNamespace(NS_APP);
+  prepareHelmUpgrade(NS_APP, "repody");
+  run("helm", [
+    "upgrade",
+    "--install",
+    "repody",
+    CHART_DIR,
+    "-n",
+    NS_APP,
+    ...helmValueFiles.flatMap((file) => ["-f", file]),
+    ...appHelmSets,
+    ...authHelmSets,
+    "--timeout",
+    minimal ? "10m" : "15m",
+  ]);
 }
 
 function cmdDown() {
@@ -568,15 +731,20 @@ function cmdDownSoft() {
     console.error("\n✓ Soft stop complete.\n");
     return;
   }
-  const uninstall = spawnSync(
-    "helm",
-    ["uninstall", "repody", "-n", NS, "--ignore-not-found", "--wait=false"],
-    { stdio: "inherit", shell: process.platform === "win32" },
-  );
-  if (uninstall.status === 0) {
-    console.error("✓ Helm release repody removed");
-  } else {
-    console.error("ok: repody release was not installed");
+  for (const { release, namespace } of [
+    { release: "repody", namespace: NS_APP },
+    { release: "repody-auth", namespace: NS_AUTH },
+    { release: "repody-queue", namespace: NS_QUEUE },
+    { release: "repody-data", namespace: NS_DATA },
+  ]) {
+    const uninstall = spawnSync(
+      "helm",
+      ["uninstall", release, "-n", namespace, "--ignore-not-found", "--wait=false"],
+      { stdio: "inherit", shell: process.platform === "win32" },
+    );
+    if (uninstall.status === 0) {
+      console.error(`✓ Helm release ${release} removed`);
+    }
   }
   captureOptional("kubectl", [
     "delete",
@@ -592,15 +760,16 @@ function cmdDownSoft() {
     "--ignore-not-found",
     "--wait=false",
   ]);
-  // hatchet-stack quickstart/workerToken jobs create these outside Helm ownership; drop on stop so reinstall is clean.
-  for (const secret of ["hatchet-config", "hatchet-client-config", "hatchet-shared-config"]) {
-    const del = spawnSync(
-      "kubectl",
-      ["delete", "secret", secret, "-n", NS, "--ignore-not-found"],
-      { stdio: "ignore", shell: process.platform === "win32" },
-    );
-    if (del.status === 0) {
-      console.error(`✓ removed stale secret ${secret}`);
+  for (const namespace of [NS_QUEUE, NS_APP]) {
+    for (const secret of ["hatchet-config", "hatchet-client-config", "hatchet-shared-config"]) {
+      const del = spawnSync(
+        "kubectl",
+        ["delete", "secret", secret, "-n", namespace, "--ignore-not-found"],
+        { stdio: "ignore", shell: process.platform === "win32" },
+      );
+      if (del.status === 0) {
+        console.error(`✓ removed stale secret ${namespace}/${secret}`);
+      }
     }
   }
   console.error(`
@@ -624,7 +793,7 @@ function cmdDownCluster() {
 }
 
 function helmReleaseInstalled() {
-  const result = spawnSync("helm", ["status", "repody", "-n", NS], {
+  const result = spawnSync("helm", ["status", "repody", "-n", NS_APP], {
     stdio: "ignore",
     cwd: root,
     shell: process.platform === "win32",
@@ -647,7 +816,7 @@ function deployedImageTagsMatch({ backend, web, minimal }) {
       "values",
       "repody",
       "-n",
-      NS,
+      NS_APP,
       "-o",
       "json",
     ]);
@@ -738,9 +907,8 @@ async function cmdWarmRegistry() {
 function cmdStatus() {
   run("kubectl", ["config", "use-context", `kind-${CLUSTER}`]);
   run("kubectl", ["get", "nodes"]);
-  heading(`Pods in ${NS}`);
-  printGroupedPodStatus(NS);
-  run("kubectl", ["-n", NS, "get", "gateway,httproute"]);
+  printAllGroupedPodStatus();
+  run("kubectl", ["-n", NS_APP, "get", "gateway,httproute"]);
   const argoPods = captureOptional("kubectl", [
     "-n",
     ARGO_NS,
@@ -809,6 +977,10 @@ function cmdUp() {
 async function cmdUpAsync() {
   requireDockerEngine();
 
+  const minimal =
+    hasFlag("--minimal") || truthyEnv("REPODY_K8S_LOCAL_MINIMAL");
+  const withObs = wantsObservability(minimal);
+
   ensureLocalRegistry();
   heading("Preparing Helm chart dependencies");
   ensureHelmDependencies();
@@ -820,9 +992,6 @@ async function cmdUpAsync() {
     hasFlag("--build") || truthyEnv("REPODY_K8S_LOCAL_BUILD");
   const forceDeploy =
     hasFlag("--deploy") || truthyEnv("REPODY_K8S_LOCAL_FORCE_DEPLOY");
-  const minimal =
-    hasFlag("--minimal") || truthyEnv("REPODY_K8S_LOCAL_MINIMAL");
-  const withObs = wantsObservability(minimal);
   const tagHelmSets = [
     ...(minimal
       ? [
@@ -863,7 +1032,8 @@ async function cmdUpAsync() {
       followPlatformLogs({
         minimal,
         verbose: hasFlag("--logs-all"),
-        repodyNamespace: NS,
+        repodyNamespace: NS_APP,
+        repodyNamespaces: LOCAL_NAMESPACES,
         envoyNamespace: ENVOY_NS,
         argoNamespace: ARGO_NS,
       });
@@ -955,11 +1125,6 @@ async function cmdUpAsync() {
     console.error(`ok: values-local-images.yaml → ${backendTag}`);
   }
 
-  const registryHelmSets = buildRegistryHelmSets({
-    backendTag,
-    webTag,
-    omitImageTags: !minimal,
-  });
   const authHelmSets = authHostAliasHelmSets();
   const skipHelmUpgrade =
     fast &&
@@ -967,8 +1132,10 @@ async function cmdUpAsync() {
     helmReleaseInstalled() &&
     deployedImageTagsMatch({ backend: backendTag, web: webTag, minimal });
 
-  heading("Preparing namespace and Gateway edge");
-  ensureNamespace(NS);
+  heading("Preparing namespaces and Gateway edge");
+  for (const namespace of LOCAL_NAMESPACES) {
+    ensureNamespace(namespace);
+  }
   run("kubectl", [
     "apply",
     "-f",
@@ -980,27 +1147,20 @@ async function cmdUpAsync() {
   } else {
     heading(
       minimal
-        ? "Installing Repody Helm chart (Gateway API edge + in-cluster Keycloak)"
+        ? "Installing Repody stack via Helm (4 namespaces)"
         : "Installing Repody via Helm (bootstrap; Argo CD owns Git revisions after push)",
     );
-    prepareHelmUpgrade(NS, "repody");
-    const helmValueFiles = [VALUES_BASE, VALUES_LOCAL];
-    if (!minimal) {
-      helmValueFiles.push(VALUES_LOCAL_IMAGES);
-    }
-    run("helm", [
-      "upgrade",
-      "--install",
-      "repody",
-      CHART_DIR,
-      "-n",
-      NS,
-      ...helmValueFiles.flatMap((file) => ["-f", file]),
-      ...registryHelmSets,
-      ...authHelmSets,
-      "--timeout",
-      minimal ? "10m" : "15m",
-    ]);
+    installLocalHelmStack({
+      minimal,
+      backendTag,
+      webTag,
+      helmValueFiles: [
+        VALUES_BASE,
+        VALUES_LOCAL,
+        ...(minimal ? [] : [VALUES_LOCAL_IMAGES]),
+      ],
+      authHelmSets,
+    });
 
     if (!authHelmSets.length) {
       console.error(
@@ -1033,7 +1193,7 @@ async function cmdUpAsync() {
       "-n",
       ARGO_NS,
       "-f",
-      path.join(root, "deploy/argocd/repody-local.application.yaml"),
+      LOCAL_ARGO_APPS,
     ]);
   } else {
     console.error("ok: --minimal — skipping Argo CD and local addons");
@@ -1179,7 +1339,8 @@ async function cmdUpAsync() {
     followPlatformLogs({
       minimal,
       verbose: hasFlag("--logs-all"),
-      repodyNamespace: NS,
+      repodyNamespace: NS_APP,
+      repodyNamespaces: LOCAL_NAMESPACES,
       envoyNamespace: ENVOY_NS,
       argoNamespace: ARGO_NS,
     });
@@ -1194,7 +1355,8 @@ function cmdLogs() {
   followPlatformLogs({
     minimal,
     verbose: hasFlag("--logs-all"),
-    repodyNamespace: NS,
+    repodyNamespace: NS_APP,
+    repodyNamespaces: LOCAL_NAMESPACES,
     envoyNamespace: ENVOY_NS,
     argoNamespace: ARGO_NS,
   });

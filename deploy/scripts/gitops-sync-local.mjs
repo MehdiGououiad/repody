@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Sync repody-local from Git (in-cluster Argo CD, no CLI login).
+ * Sync local Repody Argo CD apps from Git (in-cluster Argo CD, no CLI login).
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -8,7 +8,12 @@ import path from "node:path";
 import { gitHeadRevision } from "./git-sha.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const APP = "repody-local";
+const APPS = [
+  "repody-local-data",
+  "repody-local-queue",
+  "repody-local-auth",
+  "repody-local-app",
+];
 const ARGO_NS = "argocd";
 
 function run(cmd, args) {
@@ -37,39 +42,64 @@ function capture(cmd, args) {
 
 const revision = process.env.REPODY_GITOPS_REVISION ?? gitHeadRevision(root);
 
-console.error(`> Argo CD sync ${APP} @ ${revision.slice(0, 12)}\n`);
+console.error(`> Argo CD sync local stack @ ${revision.slice(0, 12)}\n`);
 
-run("kubectl", [
-  "-n",
-  ARGO_NS,
-  "exec",
-  "deploy/argocd-server",
-  "--",
-  "argocd",
-  "app",
-  "sync",
-  APP,
-  "--revision",
-  revision,
-  "--core",
-  "--timeout",
-  "600",
-]);
+for (const app of APPS) {
+  console.error(`> sync ${app}`);
+  run("kubectl", [
+    "-n",
+    ARGO_NS,
+    "exec",
+    "deploy/argocd-server",
+    "--",
+    "argocd",
+    "app",
+    "sync",
+    app,
+    "--revision",
+    revision,
+    "--core",
+    "--timeout",
+    "600",
+  ]);
+}
 
-const phase = capture("kubectl", [
-  "-n",
-  ARGO_NS,
-  "get",
-  `applications.argoproj.io/${APP}`,
-  "-o",
-  "jsonpath={.status.sync.status},{.status.health.status},{.status.sync.revision}",
-]);
-const [sync, health, syncedRev] = phase.split(",");
-console.error(`\nok: sync=${sync} health=${health} revision=${syncedRev?.slice(0, 12) ?? "?"}`);
+if (!process.env.REPODY_SKIP_PLATFORM_SECRET_SYNC) {
+  run("node", ["deploy/scripts/sync-platform-secrets.mjs"]);
+  run("kubectl", [
+    "-n",
+    process.env.REPODY_APP_NAMESPACE ?? "repody-app",
+    "rollout",
+    "restart",
+    "deploy",
+    "-l",
+    "app.kubernetes.io/instance=repody",
+    "--ignore-not-found",
+  ]);
+}
 
-if (sync !== "Synced") {
+const phases = APPS.map((app) => {
+  const phase = capture("kubectl", [
+    "-n",
+    ARGO_NS,
+    "get",
+    `applications.argoproj.io/${app}`,
+    "-o",
+    "jsonpath={.status.sync.status},{.status.health.status}",
+  ]);
+  const [sync, health] = phase.split(",");
+  return { app, sync, health };
+});
+
+console.error("\nArgo CD status:");
+for (const { app, sync, health } of phases) {
+  console.error(`  ${app}: sync=${sync} health=${health}`);
+}
+
+const notSynced = phases.filter((p) => p.sync !== "Synced");
+if (notSynced.length) {
   console.error(
-    "Argo CD is not Synced — ensure values-local-images.yaml is pushed to the Application repo/branch.",
+    "\nSome apps are not Synced — ensure values are pushed to the Application repo/branch.",
   );
   process.exit(1);
 }

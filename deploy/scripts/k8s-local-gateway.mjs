@@ -1,5 +1,6 @@
 export function createGatewayCommands({
   authHost,
+  authNamespace,
   capture,
   captureOptional,
   chartDir,
@@ -102,7 +103,7 @@ export function createGatewayCommands({
       "get",
       "svc",
       "-l",
-      "gateway.envoyproxy.io/owning-gateway-name=repody,gateway.envoyproxy.io/owning-gateway-namespace=repody",
+      "gateway.envoyproxy.io/owning-gateway-name=repody,gateway.envoyproxy.io/owning-gateway-namespace=repody-app",
       "-o",
       "jsonpath={.items[0].metadata.name}",
     ]);
@@ -112,7 +113,7 @@ export function createGatewayCommands({
     try {
       return capture("kubectl", [
         "-n",
-        namespace,
+        authNamespace,
         "get",
         "svc/keycloak",
         "-o",

@@ -6,7 +6,7 @@ function platformPodLabel(pod) {
   if (pod.startsWith("repody-web-")) return "web";
   if (pod.startsWith("repody-worker-ocr-")) return "worker-ocr";
   if (pod.startsWith("repody-worker-fast-")) return "worker-fast";
-  if (pod.startsWith("repody-keycloak-")) return "keycloak";
+  if (pod.startsWith("repody-auth-keycloak-") || pod.startsWith("keycloak-")) return "keycloak";
   if (pod.startsWith("repody-hatchet-engine-")) return "hatchet-engine";
   if (pod.startsWith("repody-hatchet-api-")) return "hatchet-api";
   if (pod.startsWith("argocd-server-")) return "argocd";
@@ -24,7 +24,8 @@ function isAppPlatformPod(pod) {
     pod.startsWith("repody-api-") ||
     pod.startsWith("repody-web-") ||
     pod.startsWith("repody-worker-") ||
-    pod.startsWith("repody-keycloak-") ||
+    pod.startsWith("repody-auth-keycloak-") ||
+    pod.startsWith("keycloak-") ||
     (pod.startsWith("repody-hatchet-engine-") ||
       pod.startsWith("repody-hatchet-api-"))
   );
@@ -139,6 +140,7 @@ export function createLogCommands({ capture, root, run }) {
    * @param {{
    *   minimal?: boolean,
    *   verbose?: boolean,
+   *   repodyNamespaces?: string[],
    *   repodyNamespace: string,
    *   envoyNamespace: string,
    *   argoNamespace: string,
@@ -148,22 +150,25 @@ export function createLogCommands({ capture, root, run }) {
     minimal = false,
     verbose = false,
     repodyNamespace,
+    repodyNamespaces = repodyNamespace ? [repodyNamespace] : [],
     envoyNamespace,
     argoNamespace,
   }) {
     /** @type {{ ns: string, pod: string, label: string }[]} */
     const streams = [];
 
-    const repodyPods = listRunningPods(repodyNamespace);
-    for (const pod of repodyPods) {
-      if (!verbose && !isAppPlatformPod(pod)) {
-        continue;
+    for (const namespace of repodyNamespaces) {
+      const repodyPods = listRunningPods(namespace);
+      for (const pod of repodyPods) {
+        if (!verbose && !isAppPlatformPod(pod)) {
+          continue;
+        }
+        streams.push({
+          ns: namespace,
+          pod,
+          label: platformPodLabel(pod),
+        });
       }
-      streams.push({
-        ns: repodyNamespace,
-        pod,
-        label: platformPodLabel(pod),
-      });
     }
 
     if (verbose) {
