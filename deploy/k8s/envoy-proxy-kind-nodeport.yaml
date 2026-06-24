@@ -4,7 +4,7 @@ apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: EnvoyProxy
 metadata:
   name: repody-kind-nodeport
-  namespace: repody
+  namespace: repody-app
 spec:
   provider:
     type: Kubernetes

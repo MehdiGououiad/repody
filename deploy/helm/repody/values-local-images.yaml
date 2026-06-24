@@ -1,13 +1,13 @@
-# Promoted Repody image tags for local GitOps (Harbor + Argo CD repody-local).
+# Promoted Repody image tags for local GitOps (Harbor + Argo CD repody-local-app).
 # Updated by: pnpm gitops:publish  (or pnpm k8s:local with --push)
 # Argo CD Synced = this file at the Git revision matches what is running.
 
 images:
   backend:
-    tag: "1732c6b5432e"
+    tag: "fdb4f038cec9"
   api:
-    tag: "1732c6b5432e"
+    tag: "fdb4f038cec9"
   worker:
-    tag: "1732c6b5432e"
+    tag: "fdb4f038cec9"
   web:
-    tag: "1732c6b5432e"
+    tag: "fdb4f038cec9"

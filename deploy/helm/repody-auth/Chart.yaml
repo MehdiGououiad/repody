@@ -1,0 +1,10 @@
+apiVersion: v2
+name: repody-auth
+description: Repody auth plane — Keycloak (local/dev)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - repody
+  - keycloak
+  - auth

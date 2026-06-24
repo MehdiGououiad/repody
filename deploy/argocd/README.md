@@ -25,16 +25,23 @@ Optional keys:
 - `AUDIT_VLLM_API_KEY`
 - `BUGSINK_DSN`
 
-## Local GitOps (`repody-local`)
+## Local GitOps (`repody-local-*`)
 
-Image tags live in `deploy/helm/repody/values-local-images.yaml` (committed).
+Four Argo CD Applications (data → queue/auth → app) replace the monolithic `repody-local` app:
+
+- `repody-local-data` — PostgreSQL, Redis, MinIO (`repody-data`)
+- `repody-local-queue` — Hatchet (`repody-queue`)
+- `repody-local-auth` — Keycloak (`repody-auth`)
+- `repody-local-app` — API, web, workers, Gateway (`repody-app`)
+
+Image tags for the app plane live in `deploy/helm/repody/values-local-images.yaml` (committed).
 Harbor stores the images; Git records which tag should run; Argo CD reconciles.
 
 ```powershell
 pnpm gitops:publish -- --all
 ```
 
-Argo CD `repody-local` uses automated sync/self-heal. **Synced** + revision =
+Argo CD apps use automated sync/self-heal. **Synced** + revision =
 cluster matches that Git commit.
 
 ## Staging Flow

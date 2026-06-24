@@ -38,8 +38,9 @@ spec:
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- $authHost := .Values.gatewayApi.authHost }}
       {{- $authSvc := .Values.gatewayApi.authServiceName | default "keycloak" }}
+      {{- $authNs := .Values.gatewayApi.authServiceNamespace | default .Release.Namespace }}
       {{- $authHostAliasIp := .Values.gatewayApi.authHostAliasIp }}
-      {{- $authHostInit := and .Values.gatewayApi.enabled $authHost .Values.keycloak.enabled (not $authHostAliasIp) }}
+      {{- $authHostInit := and .Values.gatewayApi.enabled $authHost .Values.gatewayApi.authServiceName (not $authHostAliasIp) }}
       {{- if and .Values.gatewayApi.enabled $authHost $authHostAliasIp }}
       hostAliases:
         - ip: {{ $authHostAliasIp | quote }}
@@ -49,7 +50,7 @@ spec:
       {{- if $authHostInit }}
       initContainers:
         - name: auth-host-alias
-          image: {{ .Values.keycloak.authHostAliasInitImage | default .Values.hatchet.waitInitImage | quote }}
+          image: {{ .Values.gatewayApi.authHostAliasInitImage | default .Values.hatchet.waitInitImage | quote }}
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -57,7 +58,7 @@ spec:
             - sh
             - -ec
             - |
-              AUTH_FQDN="{{ $authSvc }}.{{ .Release.Namespace }}.svc.cluster.local"
+              AUTH_FQDN="{{ $authSvc }}.{{ $authNs }}.svc.cluster.local"
               for i in $(seq 1 90); do
                 KC_IP=$(nslookup "$AUTH_FQDN" 2>/dev/null | awk '/^Address [0-9]+: / { print $3; exit }')
                 if [ -z "$KC_IP" ]; then
@@ -81,7 +82,7 @@ spec:
       {{- end }}
       containers:
         - name: web
-          image: "{{ .Values.images.web.repository }}:{{ .Values.images.web.tag }}"
+          image: "{{ include "repody.webImageRepository" . }}:{{ .Values.images.web.tag }}"
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           securityContext:
             allowPrivilegeEscalation: false

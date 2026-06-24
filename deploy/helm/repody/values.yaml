@@ -68,6 +68,8 @@ minio:
 externalDatabase:
   enabled: true
   url: ""
+  host: ""
+  port: 5432
   existingSecret: repody-runtime-secrets
   urlKey: AUDIT_DATABASE_URL
 
@@ -135,6 +137,7 @@ externalHatchet:
   enabled: true
   existingSecret: repody-runtime-secrets
   tokenKey: HATCHET_CLIENT_TOKEN
+  waitForTokenSecret: false
   hostPort: hatchet-grpc.example.com:443
   serverUrl: https://hatchet.example.com
   tlsStrategy: tls
@@ -289,9 +292,14 @@ gatewayApi:
   authExternalName: ""
   authExternalAddress: ""
   authExternalPort: 8080
-  # In-cluster Keycloak (or any Service in the release namespace).
+  # In-cluster Keycloak or external IdP Service (may be in another namespace).
   authServiceName: ""
+  authServiceNamespace: ""
   authServicePort: 8080
+  filesServiceName: ""
+  filesServiceNamespace: ""
+  filesServicePort: 9000
+  authHostAliasInitImage: ""
   # Optional EnvoyProxy (gateway.envoyproxy.io) for kind NodePort / custom service shape.
   envoyProxyName: ""
   kindNodePort: 0
@@ -318,6 +326,9 @@ config:
   authUrl: ""
   oidcIssuer: https://auth.example.com/realms/repody
   oidcJwksUrl: ""
+  keycloakAdminUrl: ""
+  keycloakAdminUsername: admin
+  keycloakAdminPassword: ""
   oidcAudience: repody-api
   keycloakClientId: repody-web
   inferenceMode: vllm

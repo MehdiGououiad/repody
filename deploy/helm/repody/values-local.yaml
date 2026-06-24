@@ -1,5 +1,5 @@
 # Local kind cluster overrides — Gateway API edge, single replica, dev secrets.
-# Used by: pnpm k8s:local up  and  deploy/argocd/repody-local.application.yaml
+# Platform data/queue/auth run in separate namespaces (repody-data, repody-queue, repody-auth).
 
 global:
   deploymentEnvironment: local
@@ -8,16 +8,32 @@ global:
     allowInsecureImages: true
 
 externalDatabase:
-  enabled: false
+  enabled: true
+  url: postgresql+asyncpg://audit:audit-local-k8s@repody-data-postgresql.repody-data.svc.cluster.local:5432/audit_workbench
+  host: repody-data-postgresql.repody-data.svc.cluster.local
+  port: 5432
 
 externalRedis:
-  enabled: false
+  enabled: true
+  url: redis://repody-data-redis-master.repody-data.svc.cluster.local:6379/0
 
 externalObjectStorage:
-  enabled: false
+  enabled: true
+  endpoint: repody-data-minio.repody-data.svc.cluster.local:9000
+  bucket: audit-documents
+  accessKey: minioadmin
+  secretKey: minio-local-k8s
+  secure: false
+  publicEndpoint: files.repody.local
 
 externalHatchet:
-  enabled: false
+  enabled: true
+  existingSecret: hatchet-client-config
+  tokenKey: HATCHET_CLIENT_TOKEN
+  waitForTokenSecret: true
+  hostPort: repody-queue-hatchet-engine.repody-queue.svc.cluster.local:7070
+  serverUrl: http://repody-queue-hatchet-api.repody-queue.svc.cluster.local:8080
+  tlsStrategy: none
 
 networkPolicy:
   enabled: false
@@ -76,12 +92,7 @@ web:
       memory: 512Mi
 
 keycloak:
-  enabled: true
-  hostname: auth.repody.local
-  hostnameStrict: false
-  hostnameStrictHttps: false
-  proxyHeaders: xforwarded
-  adminPassword: admin
+  enabled: false
 
 ingress:
   enabled: false
@@ -96,40 +107,19 @@ gatewayApi:
   filesHost: files.repody.local
   authHost: auth.repody.local
   authServiceName: keycloak
+  authServiceNamespace: repody-auth
   authServicePort: 8080
+  filesServiceName: repody-data-minio
+  filesServiceNamespace: repody-data
+  filesServicePort: 9000
+  authHostAliasInitImage: ""
   # kind: EnvoyProxy below pins NodePort 30080 (maps to host :80 via kind-repody-local.yaml).
   envoyProxyName: repody-kind-nodeport
   kindNodePort: 30080
 
-postgresql:
-  enabled: true
-  auth:
-    password: audit-local-k8s
-
-redis:
-  enabled: true
-
-minio:
-  enabled: true
-  ingress:
-    enabled: false
-    tls: []
-  startupProbe:
-    enabled: true
-    periodSeconds: 5
-    failureThreshold: 24
-  auth:
-    rootPassword: minio-local-k8s
-
 hatchet:
-  enabled: true
-
-# In-cluster networking — https://docs.hatchet.run/self-hosting/networking (no ingress / no Caddy)
-hatchet-stack:
-  sharedConfig:
-    serverUrl: http://repody-hatchet-api:8080
-    serverAuthCookieDomain: localhost
-    grpcBroadcastAddress: repody-hatchet-engine:7070
+  enabled: false
+  waitInitImage: busybox:1.37.0
 
 secrets:
   create: true
@@ -143,15 +133,16 @@ config:
   oidcIssuer: http://auth.repody.local/realms/repody
   oidcIssuerAliases:
     - http://auth.repody.local:8080/realms/repody
-    - http://keycloak:8080/realms/repody
-  # Server-side token refresh from the web pod (auth.repody.local:80 is not reachable in-cluster).
-  oidcInternalIssuer: http://keycloak:8080/realms/repody
-  oidcJwksUrl: http://keycloak.repody.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs
+    - http://keycloak.repody-auth.svc.cluster.local:8080/realms/repody
+  oidcInternalIssuer: http://keycloak.repody-auth.svc.cluster.local:8080/realms/repody
+  oidcJwksUrl: http://keycloak.repody-auth.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs
+  keycloakAdminUrl: http://keycloak.repody-auth.svc.cluster.local:8080
+  keycloakAdminUsername: admin
+  keycloakAdminPassword: admin
   oidcAudience: repody-api
   keycloakClientId: repody-web
   corsOrigins: '["http://app.repody.local"]'
   inferenceMode: vllm
-  # Host llama-server (pnpm llamacpp:serve) or vLLM — reachable from kind via host.docker.internal.
   vllmBaseUrl: http://host.docker.internal:8000/v1
   vllmServedModel: nuextract3-q8_0
   dockerModelRunnerBaseUrl: ""
@@ -165,15 +156,22 @@ config:
   operatorActionsEnabled: true
   operatorBenchmarkUser: operator@repody.local
   operatorBenchmarkPassword: repody-dev
-  keycloakClientId: repody-web
   repodyVlmMarkdownOnExtract: true
   gpuLiveProbe: false
   logJson: true
 
 migrations:
-  # API image ENTRYPOINT runs Alembic when this is false (see configmap AUDIT_RUN_MIGRATIONS_ON_STARTUP).
   enabled: false
 
 observability:
   otelEnabled: false
   otelEndpoint: http://local-tempo:4318/v1/traces
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+minio:
+  enabled: false

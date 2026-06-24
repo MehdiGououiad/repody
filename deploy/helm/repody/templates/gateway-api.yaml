@@ -110,7 +110,7 @@ spec:
     {{- if .Values.gatewayApi.apiHost }}
     - {{ .Values.gatewayApi.apiHost | quote }}
     {{- end }}
-    {{- if and .Values.gatewayApi.filesHost .Values.minio.enabled }}
+    {{- if and .Values.gatewayApi.filesHost (or .Values.minio.enabled .Values.gatewayApi.filesServiceName) }}
     - {{ .Values.gatewayApi.filesHost | quote }}
     {{- end }}
     {{- if .Values.gatewayApi.authHost }}
@@ -180,7 +180,7 @@ spec:
           port: 8000
 ---
 {{- end }}
-{{- if and .Values.gatewayApi.filesHost .Values.minio.enabled }}
+{{- if and .Values.gatewayApi.filesHost (or .Values.minio.enabled .Values.gatewayApi.filesServiceName) }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -205,8 +205,14 @@ spec:
       backendRefs:
         - group: ""
           kind: Service
+          {{- if .Values.gatewayApi.filesServiceName }}
+          name: {{ .Values.gatewayApi.filesServiceName | quote }}
+          namespace: {{ required "gatewayApi.filesServiceNamespace is required when filesServiceName is set" .Values.gatewayApi.filesServiceNamespace | quote }}
+          port: {{ .Values.gatewayApi.filesServicePort | default 9000 }}
+          {{- else }}
           name: {{ .Release.Name }}-minio
           port: 9000
+          {{- end }}
 ---
 {{- end }}
 {{- if and .Values.gatewayApi.authHost (or .Values.gatewayApi.authServiceName .Values.gatewayApi.authExternalName .Values.gatewayApi.authExternalAddress) }}
@@ -236,6 +242,9 @@ spec:
           kind: Service
           {{- if .Values.gatewayApi.authServiceName }}
           name: {{ .Values.gatewayApi.authServiceName | quote }}
+          {{- if .Values.gatewayApi.authServiceNamespace }}
+          namespace: {{ .Values.gatewayApi.authServiceNamespace | quote }}
+          {{- end }}
           port: {{ .Values.gatewayApi.authServicePort }}
           {{- else }}
           name: {{ include "repody.fullname" . }}-auth-external
