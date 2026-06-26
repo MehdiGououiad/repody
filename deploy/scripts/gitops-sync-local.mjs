@@ -7,7 +7,7 @@ import path from "node:path";
 import { gitHeadRevision } from "./git-sha.mjs";
 import { createProcessAdapter } from "./k8s-local-process.mjs";
 import {
-  createGitOpsHandoffCommands,
+  createGitOpsCommands,
   LOCAL_ARGO_APP_NAMES,
 } from "./k8s-local-gitops.mjs";
 
@@ -16,17 +16,13 @@ const ARGO_NS = "argocd";
 
 const { captureOptional, run } = createProcessAdapter(root);
 const {
-  handoffHelmReleasesToArgo,
   refreshArgoApplications,
   waitForArgoApplicationsSynced,
-} = createGitOpsHandoffCommands({ captureOptional, run, argoNamespace: ARGO_NS });
+} = createGitOpsCommands({ captureOptional, argoNamespace: ARGO_NS });
 
 const revision = process.env.REPODY_GITOPS_REVISION ?? gitHeadRevision(root);
 
 console.error(`> Argo CD sync local stack @ ${revision.slice(0, 12)}\n`);
-
-console.error("> release Helm ownership metadata (Argo CD is sole deployer)");
-handoffHelmReleasesToArgo();
 
 for (const app of LOCAL_ARGO_APP_NAMES) {
   console.error(`> refresh ${app}`);

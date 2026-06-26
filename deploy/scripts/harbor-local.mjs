@@ -127,7 +127,7 @@ function dockerLoginRegistry() {
     {
       input: config.harborAdminPassword,
       encoding: "utf8",
-      shell: process.platform === "win32",
+      shell: false,
       stdio: ["pipe", "inherit", "inherit"],
     },
   );
@@ -269,7 +269,7 @@ function findHarborProxyContainer() {
       "--filter",
       "label=com.docker.compose.service=proxy",
     ],
-    { encoding: "utf8", shell: process.platform === "win32" },
+    { encoding: "utf8", shell: false },
   );
   const labeled = (byLabel.stdout ?? "")
     .split("\n")
@@ -279,7 +279,7 @@ function findHarborProxyContainer() {
 
   const all = spawnSync("docker", ["ps", "--format", "{{.Names}}"], {
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: false,
   });
   return (
     (all.stdout ?? "")
@@ -304,7 +304,7 @@ export function connectHarborToKind(
   }
   const networks = spawnSync("docker", ["network", "ls", "--format", "{{.Name}}"], {
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (!networks.stdout?.includes("kind")) {
     console.error("✗ kind network missing — create cluster first: pnpm dev");
@@ -313,7 +313,7 @@ export function connectHarborToKind(
   const result = spawnSync(
     "docker",
     ["network", "connect", "--alias", registryHost, "kind", proxy],
-    { encoding: "utf8", shell: process.platform === "win32" },
+    { encoding: "utf8", shell: false },
   );
   if (result.status === 0) {
     console.error(`ok: ${proxy} on kind network as ${registryHost}`);

@@ -25,8 +25,15 @@ export function createLocalRegistryCommands({
 }) {
   let harborLoggedIn = false;
 
+  function registryImageName(image) {
+    const normalized = normalizeImageRef(image);
+    return normalized.startsWith(`${localRegistry}/`)
+      ? normalized.slice(localRegistry.length + 1)
+      : normalized;
+  }
+
   function localRegistryRef(image) {
-    return `${localRegistry}/${normalizeImageRef(image)}`;
+    return `${localRegistry}/${registryImageName(image)}`;
   }
 
   function registryApiBase() {
@@ -34,14 +41,14 @@ export function createLocalRegistryCommands({
   }
 
   function manifestRepository(image) {
-    const normalized = normalizeImageRef(image);
+    const normalized = registryImageName(image);
     const colon = normalized.lastIndexOf(":");
     const name = colon > 0 ? normalized.slice(0, colon) : normalized;
     return `${harborProject}/${name}`;
   }
 
   function manifestTag(image) {
-    const normalized = normalizeImageRef(image);
+    const normalized = registryImageName(image);
     const colon = normalized.lastIndexOf(":");
     return colon > 0 ? normalized.slice(colon + 1) : "latest";
   }
@@ -106,7 +113,7 @@ export function createLocalRegistryCommands({
       {
         input: harborAdminPassword,
         encoding: "utf8",
-        shell: process.platform === "win32",
+        shell: false,
       },
     );
     if (login.status !== 0) {
@@ -145,13 +152,13 @@ export function createLocalRegistryCommands({
   function dockerHasLocalImage(image) {
     const inspect = spawnSync("docker", ["image", "inspect", image], {
       stdio: "ignore",
-      shell: process.platform === "win32",
+      shell: false,
     });
     return inspect.status === 0;
   }
 
   function pushToLocalRegistry(image, { localBuild = false } = {}) {
-    const upstream = normalizeImageRef(image);
+    const upstream = registryImageName(image);
     if (localRegistryHasImage(upstream)) {
       console.error(`ok: ${localRegistryRef(upstream)} already in registry`);
       return localRegistryRef(upstream);

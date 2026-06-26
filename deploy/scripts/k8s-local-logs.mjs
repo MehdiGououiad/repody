@@ -224,47 +224,5 @@ export function createLogCommands({ capture, root, run }) {
     process.on("SIGTERM", shutdown);
   }
 
-  /** @param {string} namespace @param {string} release */
-  function prepareHelmUpgrade(namespace, release) {
-    const hatchetSecret = captureOptional("kubectl", [
-      "-n",
-      namespace,
-      "get",
-      "secret",
-      "hatchet-client-config",
-    ]);
-    if (!hatchetSecret) {
-      console.error("ok: hatchet-client-config not present; hatchet-stack workerTokenJob will create it");
-    } else {
-      console.error("ok: Hatchet client token secret present");
-    }
-
-    for (const suffix of ["worker-ocr", "worker-fast"]) {
-      const name = `${release}-${suffix}`;
-      const managers = captureOptional("kubectl", [
-        "-n",
-        namespace,
-        "get",
-        "deployment",
-        name,
-        "-o",
-        "jsonpath={.metadata.managedFields[*].manager}",
-      ]);
-      if (!managers) continue;
-      if (!managers.split(/\s+/).includes("kubectl-set")) continue;
-      console.error(
-        `… removing ${name} (kubectl set image conflicts with Helm apply)`,
-      );
-      captureOptional("kubectl", [
-        "-n",
-        namespace,
-        "delete",
-        "deployment",
-        name,
-        "--wait=false",
-      ]);
-    }
-  }
-
-  return { followPlatformLogs, listRunningPods, prepareHelmUpgrade };
+  return { followPlatformLogs, listRunningPods };
 }

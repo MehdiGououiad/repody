@@ -66,7 +66,7 @@ export function createProcessAdapter(cwd) {
       stdio: "inherit",
       cwd,
       env: { ...process.env, ...extraEnv },
-      shell: process.platform === "win32",
+      shell: false,
     });
     traceCommand(cmd, args, Date.now() - started);
     if (result.status !== 0) {
@@ -80,7 +80,7 @@ export function createProcessAdapter(cwd) {
     const result = spawnSync(cmd, args, {
       encoding: "utf8",
       cwd,
-      shell: process.platform === "win32",
+      shell: false,
     });
     if (result.status !== 0) {
       throw new Error(result.stderr || result.stdout || `${cmd} failed`);
@@ -120,7 +120,7 @@ export function createProcessAdapter(cwd) {
       input,
       encoding: "utf8",
       cwd,
-      shell: process.platform === "win32",
+      shell: false,
     });
     if (result.status !== 0) {
       throw new Error(result.stderr || result.stdout || `${cmd} failed`);
@@ -135,7 +135,7 @@ export function createProcessAdapter(cwd) {
       encoding: "utf8",
       cwd,
       stdio: ["pipe", "inherit", "inherit"],
-      shell: process.platform === "win32",
+      shell: false,
     });
     if (result.status !== 0) {
       process.exit(result.status ?? 1);
@@ -187,7 +187,7 @@ export function truthyEnv(name) {
 export function requireDockerEngine() {
   const result = spawnSync("docker", ["ps", "-q"], {
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (result.status === 0) {
     return;

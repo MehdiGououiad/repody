@@ -1,0 +1,15 @@
+diff --git a/hatchet-stack/charts/hatchet-api/templates/deployment.yaml b/hatchet-stack/charts/hatchet-api/templates/deployment.yaml
+index c69fe76..7b1c1dc 100644
+--- a/hatchet-stack/charts/hatchet-api/templates/deployment.yaml
++++ b/hatchet-stack/charts/hatchet-api/templates/deployment.yaml
+@@ -38,6 +38,10 @@ spec:
+       {{- if .Values.priorityClassName }}
+       priorityClassName: "{{ .Values.priorityClassName }}"
+       {{- end }}
++{{- if .Values.initContainers }}
++      initContainers:
++{{ toYaml .Values.initContainers | indent 8 }}
++{{- end }}
+       containers:
+       - name: {{ .Chart.Name }}
+         image: "{{ .Values.image.repository }}:{{ required "Please set a value for .Values.image.tag" (coalesce .Values.sharedConfig.image.tag .Values.image.tag) }}"

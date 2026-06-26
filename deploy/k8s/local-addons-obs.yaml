@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: local-loki-config
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -54,7 +54,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: local-promtail-config
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -110,7 +110,7 @@ data:
         pipeline_stages:
           - cri: {}
           - match:
-              selector: '{namespace="repody", service=~"api|worker|worker-fast"}'
+              selector: '{namespace="repody-app", service=~"api|worker|worker-fast"}'
               stages:
                 - json:
                     expressions:
@@ -137,7 +137,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: local-tempo-config
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -150,6 +150,8 @@ data:
       receivers:
         otlp:
           protocols:
+            grpc:
+              endpoint: 0.0.0.0:4317
             http:
               endpoint: 0.0.0.0:4318
 
@@ -184,7 +186,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: local-grafana-provisioning
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -277,7 +279,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: local-bugsink-secrets
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -290,7 +292,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: local-promtail
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -321,13 +323,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: local-promtail
-    namespace: repody
+    namespace: repody-app
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: local-loki
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -341,7 +343,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: local-grafana
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -355,7 +357,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: local-tempo
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -369,7 +371,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: local-bugsink-db
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -383,7 +385,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-loki
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -446,7 +448,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: local-loki
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -462,7 +464,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: local-promtail
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -527,7 +529,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-tempo
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -554,6 +556,8 @@ spec:
           ports:
             - name: http
               containerPort: 3200
+            - name: otlp-grpc
+              containerPort: 4317
             - name: otlp-http
               containerPort: 4318
           readinessProbe:
@@ -593,7 +597,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: local-tempo
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -604,6 +608,9 @@ spec:
     - name: http
       port: 3200
       targetPort: http
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
     - name: otlp-http
       port: 4318
       targetPort: otlp-http
@@ -612,7 +619,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-grafana
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -695,7 +702,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: local-grafana
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -711,7 +718,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: local-bugsink-db
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -776,7 +783,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: local-bugsink-db
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -793,7 +800,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: local-bugsink
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -870,7 +877,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: local-bugsink
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -886,7 +893,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: local-grafana
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-observability
@@ -912,7 +919,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: local-bugsink
-  namespace: repody
+  namespace: repody-app
   labels:
     app.kubernetes.io/part-of: repody
     app.kubernetes.io/component: local-bugsink
@@ -933,4 +940,3 @@ spec:
           kind: Service
           name: local-bugsink
           port: 8000
-
