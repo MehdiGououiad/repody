@@ -8,6 +8,17 @@ hatchet-stack:
     image:
       tag: v0.84.0
   api:
+    initContainers:
+      - name: wait-rabbitmq
+        image: "harbor.repody.lvh.me:8080/repody/busybox:1.37.0"
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-ec"]
+        args:
+          - |
+            until nc -z repody-queue-rabbitmq 5672; do
+              echo "waiting for RabbitMQ";
+              sleep 2;
+            done
     image:
       repository: "harbor.repody.lvh.me:8080/repody/ghcr.io/hatchet-dev/hatchet/hatchet-api"
       tag: v0.84.0
@@ -23,6 +34,17 @@ hatchet-stack:
       repository: "harbor.repody.lvh.me:8080/repody/postgres"
       tag: 17.10-alpine
   engine:
+    initContainers:
+      - name: wait-rabbitmq
+        image: "harbor.repody.lvh.me:8080/repody/busybox:1.37.0"
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh", "-ec"]
+        args:
+          - |
+            until nc -z repody-queue-rabbitmq 5672; do
+              echo "waiting for RabbitMQ";
+              sleep 2;
+            done
     image:
       repository: "harbor.repody.lvh.me:8080/repody/ghcr.io/hatchet-dev/hatchet/hatchet-engine"
       tag: v0.84.0

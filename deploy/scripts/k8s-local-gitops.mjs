@@ -1,9 +1,5 @@
 /**
- * GitOps handoff helpers: Argo CD owns steady state; Helm CLI is bootstrap-only.
- *
- * Deleting Helm release secrets (not workloads) is the documented migration path when
- * moving from `helm install` to Argo CD Helm sources:
- * https://argo-cd.readthedocs.io/en/stable/user-guide/helm/#helm-release-name
+ * GitOps helpers for local Argo CD apps.
  */
 import { waitFor } from "./k8s-local-process.mjs";
 
@@ -16,72 +12,16 @@ export const LOCAL_ARGO_APP_NAMES = [
   "repody-local-app",
 ];
 
-/** @type {{ namespace: string; release: string }[]} */
-export const GITOPS_HELM_HANDOFF = [
-  { namespace: "repody-data", release: "repody-data" },
-  { namespace: "repody-queue", release: "repody-queue" },
-  { namespace: "repody-auth", release: "repody-auth" },
-  { namespace: "repody-app", release: "repody" },
-];
-
 /**
  * @param {{
  *   captureOptional: (cmd: string, args: string[]) => string | null;
- *   run: (cmd: string, args: string[]) => void;
  *   argoNamespace?: string;
  * }} deps
  */
-export function createGitOpsHandoffCommands({
+export function createGitOpsCommands({
   captureOptional,
-  run,
   argoNamespace = "argocd",
 }) {
-  /** @param {string} namespace @param {string} releaseName */
-  function releaseHelmOwnership(namespace, releaseName) {
-    const names = captureOptional("kubectl", [
-      "-n",
-      namespace,
-      "get",
-      "secrets",
-      "-l",
-      `owner=helm,name=${releaseName}`,
-      "-o",
-      "jsonpath={.items[*].metadata.name}",
-    ]);
-    if (!names) return 0;
-    let removed = 0;
-    for (const name of names.split(/\s+/).filter(Boolean)) {
-      run("kubectl", [
-        "-n",
-        namespace,
-        "delete",
-        "secret",
-        name,
-        "--ignore-not-found",
-        "--wait=false",
-      ]);
-      removed += 1;
-    }
-    return removed;
-  }
-
-  function handoffHelmReleasesToArgo() {
-    let total = 0;
-    for (const { namespace, release } of GITOPS_HELM_HANDOFF) {
-      const count = releaseHelmOwnership(namespace, release);
-      if (count > 0) {
-        console.error(
-          `ok: released Helm release metadata ${namespace}/${release} (${count} revision secret(s))`,
-        );
-        total += count;
-      }
-    }
-    if (total === 0) {
-      console.error("ok: no Helm release secrets — Argo CD already owns workloads");
-    }
-    return total;
-  }
-
   function refreshArgoApplications(
     appNames = [LOCAL_ARGO_ROOT_APP, ...LOCAL_ARGO_APP_NAMES],
   ) {
@@ -90,7 +30,7 @@ export function createGitOpsHandoffCommands({
         "-n",
         argoNamespace,
         "annotate",
-        `application/${app}`,
+        "application/" + app,
         "argocd.argoproj.io/refresh=hard",
         "--overwrite",
       ]);
@@ -108,7 +48,7 @@ export function createGitOpsHandoffCommands({
           "-n",
           argoNamespace,
           "get",
-          `application/${appName}`,
+          "application/" + appName,
           "-o",
           "jsonpath={.status.sync.status},{.status.health.status}",
         ]);
@@ -119,7 +59,7 @@ export function createGitOpsHandoffCommands({
           (health === "Healthy" || health === "Progressing")
         );
       },
-      `Argo CD ${appName} Synced`,
+      "Argo CD " + appName + " Synced",
       timeoutMs,
     );
   }
@@ -138,9 +78,7 @@ export function createGitOpsHandoffCommands({
   }
 
   return {
-    handoffHelmReleasesToArgo,
     refreshArgoApplications,
-    releaseHelmOwnership,
     waitForArgoApplicationsSynced,
     waitForArgoAppSynced,
   };

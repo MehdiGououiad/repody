@@ -57,46 +57,9 @@ export function createArgoCommands({
     waitFor(() => argoServerReadyReplicas(), label, timeoutMs);
   }
 
-  function resetGatewayEraArgoPatches() {
-    const raw = captureOptional("kubectl", [
-      "-n",
-      argoNamespace,
-      "get",
-      "configmap",
-      "argocd-cmd-params-cm",
-      "-o",
-      "json",
-    ]);
-    if (!raw) return;
-    try {
-      const cm = JSON.parse(raw);
-      const data = { ...(cm.data ?? {}) };
-      let changed = false;
-      for (const key of ["server.insecure", "server.grpc.web"]) {
-        if (key in data) {
-          delete data[key];
-          changed = true;
-        }
-      }
-      if (!changed) return;
-      applyJson({
-        apiVersion: "v1",
-        kind: "ConfigMap",
-        metadata: { name: "argocd-cmd-params-cm", namespace: argoNamespace },
-        data,
-      });
-      run("kubectl", ["-n", argoNamespace, "rollout", "restart", "deploy/argocd-server"]);
-      waitForArgoServer("Argo CD server after standalone reset", 300_000);
-      console.error("ok: removed Gateway-era Argo server flags (insecure / grpc.web)");
-    } catch {
-      // non-fatal
-    }
-  }
-
   function installArgoCd() {
     if (argoCdReady()) {
       console.error("ok: Argo CD server already ready");
-      resetGatewayEraArgoPatches();
       return;
     }
     heading("Installing Argo CD (upstream manifest, standalone)");
@@ -108,8 +71,6 @@ export function createArgoCommands({
       "apply",
       "-n",
       argoNamespace,
-      "--server-side",
-      "--force-conflicts",
       "-f",
       argoInstallUrl,
     ]);

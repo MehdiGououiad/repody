@@ -49,7 +49,7 @@ import {
 } from "./bump-helm-image-tags.mjs";
 import { resolveLocalRegistryConfig } from "./k8s-local-registry-config.mjs";
 import { connectHarborToKind } from "./harbor-local.mjs";
-import { createGitOpsHandoffCommands } from "./k8s-local-gitops.mjs";
+import { createGitOpsCommands } from "./k8s-local-gitops.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const REGISTRY_CONFIG = resolveLocalRegistryConfig(root);
@@ -162,7 +162,7 @@ const {
   run,
   waitFor,
 });
-const { configureArgoRepositoryCredentials, installArgoCd, installArgoGatewayRoute, registerLocalGitOpsRootApp } =
+const { configureArgoRepositoryCredentials, installArgoCd, registerLocalGitOpsRootApp } =
   createArgoCommands({
   applyJson,
   argoInstallUrl: ARGO_INSTALL_URL,
@@ -180,13 +180,12 @@ const { configureArgoRepositoryCredentials, installArgoCd, installArgoGatewayRou
   waitForWithProgress,
 });
 
-const { followPlatformLogs, prepareHelmUpgrade } = createLogCommands({ capture, root, run });
+const { followPlatformLogs } = createLogCommands({ capture, root, run });
 const {
-  handoffHelmReleasesToArgo,
   refreshArgoApplications,
+  waitForArgoAppSynced,
   waitForArgoApplicationsSynced,
-} = createGitOpsHandoffCommands({ captureOptional, run, argoNamespace: ARGO_NS });
-
+} = createGitOpsCommands({ captureOptional, argoNamespace: ARGO_NS });
 function resolveImageTags(minimal) {
   if (process.env.REPODY_IMAGE_TAG) {
     const tag = process.env.REPODY_IMAGE_TAG;
@@ -214,7 +213,7 @@ function kindClusterReachable() {
     {
       stdio: "ignore",
       cwd: root,
-      shell: process.platform === "win32",
+      shell: false,
     },
   );
   if (useContext.status !== 0) {
@@ -223,7 +222,7 @@ function kindClusterReachable() {
   const clusterInfo = spawnSync("kubectl", ["cluster-info"], {
     stdio: "ignore",
     cwd: root,
-    shell: process.platform === "win32",
+    shell: false,
   });
   return clusterInfo.status === 0;
 }
@@ -299,7 +298,7 @@ function ensureNamespace(name) {
   const exists = spawnSync("kubectl", ["get", "namespace", name], {
     stdio: "ignore",
     cwd: root,
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (exists.status === 0) {
     console.error(`✓ namespace/${name}`);
@@ -616,7 +615,6 @@ function hatchetClientTokenReady() {
 
 function installLocalHelmStack({
   minimal,
-  argoOwnsApp = false,
   backendTag,
   webTag,
   helmValueFiles,
@@ -633,7 +631,6 @@ function installLocalHelmStack({
 
   heading("Installing platform data plane (PostgreSQL, Redis, MinIO)");
   ensureNamespace(NS_DATA);
-  prepareHelmUpgrade(NS_DATA, "repody-data");
   run("helm", [
     "upgrade",
     "--install",
@@ -653,7 +650,6 @@ function installLocalHelmStack({
 
   heading("Installing platform queue (Hatchet)");
   ensureNamespace(NS_QUEUE);
-  prepareHelmUpgrade(NS_QUEUE, "repody-queue");
   run("helm", [
     "upgrade",
     "--install",
@@ -698,17 +694,8 @@ function installLocalHelmStack({
     "10m",
   ]);
 
-  if (argoOwnsApp) {
-    ensureNamespace(NS_APP);
-    console.error(
-      "ok: app plane owned by Argo CD (repody-local-app) — skipping Helm repody release",
-    );
-    return;
-  }
-
   heading("Installing Repody app (API, web, workers, Gateway)");
   ensureNamespace(NS_APP);
-  prepareHelmUpgrade(NS_APP, "repody");
   run("helm", [
     "upgrade",
     "--install",
@@ -744,7 +731,7 @@ function cmdDownSoft() {
   const useContext = spawnSync(
     "kubectl",
     ["config", "use-context", `kind-${CLUSTER}`],
-    { stdio: "ignore", shell: process.platform === "win32" },
+    { stdio: "ignore", shell: false },
   );
   if (useContext.status !== 0) {
     console.error(`ok: kind cluster ${CLUSTER} unreachable`);
@@ -760,7 +747,7 @@ function cmdDownSoft() {
     const uninstall = spawnSync(
       "helm",
       ["uninstall", release, "-n", namespace, "--ignore-not-found", "--wait=false"],
-      { stdio: "inherit", shell: process.platform === "win32" },
+      { stdio: "inherit", shell: false },
     );
     if (uninstall.status === 0) {
       console.error(`✓ Helm release ${release} removed`);
@@ -787,7 +774,7 @@ function cmdDownSoft() {
       const del = spawnSync(
         "kubectl",
         ["delete", "secret", secret, "-n", namespace, "--ignore-not-found"],
-        { stdio: "ignore", shell: process.platform === "win32" },
+        { stdio: "ignore", shell: false },
       );
       if (del.status === 0) {
         console.error(`✓ removed stale secret ${namespace}/${secret}`);
@@ -804,7 +791,7 @@ Full wipe:    pnpm stop --cluster  |  pnpm platform:reset
 function cmdDownCluster() {
   const del = spawnSync("kind", ["delete", "cluster", "--name", CLUSTER], {
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
   });
   if (del.status === 0) {
     console.error(`✓ kind cluster ${CLUSTER} removed`);
@@ -818,7 +805,7 @@ function helmReleaseInstalled() {
   const result = spawnSync("helm", ["status", "repody", "-n", NS_APP], {
     stdio: "ignore",
     cwd: root,
-    shell: process.platform === "win32",
+    shell: false,
   });
   return result.status === 0;
 }
@@ -855,7 +842,33 @@ function deployedImageTagsMatch({ backend, web, minimal }) {
   }
 }
 
-function printStackReadySummary({ minimal, withObs, tagLabel, argoPassword = "" }) {
+function liveRepodyImageTags() {
+  const raw = captureOptionalNoShell("kubectl", [
+    "-n",
+    NS_APP,
+    "get",
+    "deploy",
+    "repody-api",
+    "repody-web",
+    "-o",
+    "jsonpath={range .items[*]}{range .spec.template.spec.containers[*]}{.image}{'\\n'}{end}{end}",
+  ]);
+  const tags = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim().split(":").pop())
+    .filter(Boolean);
+  const unique = [...new Set(tags)];
+  if (unique.length === 0) return "";
+  return unique.length === 1 ? unique[0] : unique.join(", ");
+}
+
+function printStackReadySummary({
+  minimal,
+  withObs,
+  tagLabel,
+  deployedTagLabel = tagLabel,
+  argoPassword = "",
+}) {
   const obsBlock =
     minimal || !withObs
       ? ""
@@ -865,7 +878,7 @@ function printStackReadySummary({ minimal, withObs, tagLabel, argoPassword = "" 
   const argoBlock = minimal
     ? ""
     : `
- Argo CD (Gateway)  ${localUrl(LOCAL_HOSTS.argocd)}  (admin / ${argoPassword || "see kubectl secret"})`;
+ Argo CD            pnpm argocd:port-forward  (admin / ${argoPassword || "see kubectl secret"})`;
 
   console.error(`
 ══════════════════════════════════════════════════════════════════════
@@ -877,7 +890,7 @@ function printStackReadySummary({ minimal, withObs, tagLabel, argoPassword = "" 
  Keycloak (GW)     ${localUrl(LOCAL_HOSTS.auth)}${obsBlock}${argoBlock}
 ──────────────────────────────────────────────────────────────────────
  Registry:      ${LOCAL_REGISTRY} (Harbor)
- Image tags:    ${tagLabel}
+ Image tags:    ${deployedTagLabel}${deployedTagLabel !== tagLabel ? ` (local build: ${tagLabel})` : ""}
  Sign in: ${LOCAL_CREDENTIALS.keycloakUser} / ${LOCAL_CREDENTIALS.keycloakPassword}
  Open the app at ${localUrl(LOCAL_HOSTS.web)} — do not use localhost or 127.0.0.1 for sign-in.
 ${minimal ? " Fast path: --minimal (Helm deploy, content-hash tags)\n" : " GitOps: tags in values-local-images.yaml → pnpm gitops:publish -- --all → Argo Synced\n"}${!minimal && !withObs ? " Observability: off (add --with=obs for Grafana/Loki/Bugsink)\n" : ""} Daily loop:  pnpm dev:sync  (Skaffold — Python/TS hot sync, no rebuild)
@@ -971,7 +984,7 @@ function startRepodyImageBuild({ buildOnly, backendTag, webTag }) {
       {
         cwd: root,
         stdio: "inherit",
-        shell: process.platform === "win32",
+        shell: false,
         env: {
           ...process.env,
           AUDIT_MINIO_PUBLIC_ENDPOINT: LOCAL_HOSTS.files,
@@ -1050,7 +1063,12 @@ async function cmdUpAsync() {
     );
     ensureHostsHint();
     traceSummary();
-    printStackReadySummary({ minimal, withObs, tagLabel });
+    printStackReadySummary({
+      minimal,
+      withObs,
+      tagLabel,
+      deployedTagLabel: liveRepodyImageTags() || tagLabel,
+    });
     if (hasFlag("--logs") || truthyEnv("REPODY_K8S_LOCAL_LOGS")) {
       heading("Following platform logs (Ctrl+C to stop)");
       followPlatformLogs({
@@ -1149,13 +1167,6 @@ async function cmdUpAsync() {
     console.error(`ok: values-local-images.yaml → ${backendTag}`);
   }
 
-  const authHelmSets = authHostAliasHelmSets();
-  const skipHelmUpgrade =
-    fast &&
-    !forceDeploy &&
-    helmReleaseInstalled() &&
-    deployedImageTagsMatch({ backend: backendTag, web: webTag, minimal });
-
   heading("Preparing namespaces and Gateway edge");
   for (const namespace of LOCAL_NAMESPACES) {
     ensureNamespace(namespace);
@@ -1166,87 +1177,83 @@ async function cmdUpAsync() {
     path.join(root, "deploy/k8s/envoy-proxy-kind-nodeport.yaml"),
   ]);
 
-  if (skipHelmUpgrade) {
-    console.error("ok: deployed image tags match — skipping Helm upgrade");
-  } else {
-    heading(
-      minimal
-        ? "Installing Repody stack via Helm (4 namespaces)"
-        : "Bootstrapping platform via Helm (data/queue/auth); Argo CD owns all planes after registration",
-    );
-    installLocalHelmStack({
-      minimal,
-      argoOwnsApp: !minimal,
-      backendTag,
-      webTag,
-      helmValueFiles: [
-        VALUES_BASE,
-        VALUES_LOCAL,
-        ...(minimal ? [] : [VALUES_LOCAL_IMAGES]),
-      ],
-      authHelmSets,
-    });
+  if (minimal) {
+    const authHelmSets = authHostAliasHelmSets();
+    const skipHelmUpgrade =
+      fast &&
+      !forceDeploy &&
+      helmReleaseInstalled() &&
+      deployedImageTagsMatch({ backend: backendTag, web: webTag, minimal });
 
-    if (!authHelmSets.length) {
-      console.error(
-        "ok: web auth-host-alias init container maps Keycloak for server-side OIDC (no second Helm upgrade)",
-      );
+    if (skipHelmUpgrade) {
+      console.error("ok: deployed image tags match - skipping Helm upgrade");
     } else {
-      console.error(
-        `ok: gatewayApi.authHostAliasIp set in initial Helm upgrade (${authHelmSets[1]})`,
-      );
-    }
-  }
+      heading("Installing Repody stack via Helm (4 namespaces)");
+      installLocalHelmStack({
+        minimal,
+        backendTag,
+        webTag,
+        helmValueFiles: [VALUES_BASE, VALUES_LOCAL],
+        authHelmSets,
+      });
 
-  if (!minimal) {
+      if (!authHelmSets.length) {
+        console.error(
+          "ok: web auth-host-alias init container maps Keycloak for server-side OIDC (no second Helm upgrade)",
+        );
+      } else {
+        console.error(
+          `ok: gatewayApi.authHostAliasIp set in initial Helm upgrade (${authHelmSets[1]})`,
+        );
+      }
+    }
+    console.error("ok: --minimal - Helm owns the local stack");
+  } else {
+    const publishGitOps = hasFlag("--push") || truthyEnv("REPODY_GITOPS_PUSH");
+
+    heading("Deploying Repody stack via Argo CD (GitOps owner)");
+
     if (withObs) {
       heading("Installing local observability addons (Grafana/Loki/Promtail/Tempo/Bugsink)");
       run("kubectl", ["apply", "-f", LOCAL_ADDONS_OBS]);
     } else {
       removeLocalObservability();
-      console.error("ok: observability off — use --with=obs to install Grafana/Loki/Bugsink");
+      console.error("ok: observability off - use --with=obs to install Grafana/Loki/Bugsink");
     }
 
-    heading("Exposing Argo CD via Gateway API");
-    installArgoGatewayRoute();
+    console.error("ok: Argo CD local access via pnpm argocd:port-forward");
 
     heading("Registering Argo CD app-of-apps (GitOps bootstrap from Git)");
     configureArgoRepositoryCredentials();
     registerLocalGitOpsRootApp();
 
-    heading("Handing workload ownership to Argo CD");
-    handoffHelmReleasesToArgo();
-    refreshArgoApplications();
-    try {
-      await waitForArgoApplicationsSynced(fast ? 300_000 : 900_000);
-      syncPlatformSecrets();
-    } catch {
+    if (publishGitOps) {
+      heading("Publishing GitOps revision and syncing Argo CD");
+      run("node", [
+        "deploy/scripts/gitops-publish-local.mjs",
+        "--commit",
+        "--push",
+        "--sync",
+      ]);
+      refreshArgoApplications();
+    } else {
       console.error(
-        "warn: Argo CD apps not fully Synced yet — run pnpm gitops:publish -- --all or wait for automated sync",
+        "ok: no GitOps publish requested; observing the current Git revision without a hard refresh",
       );
     }
-  } else {
-    console.error("ok: --minimal — skipping Argo CD and local addons");
+
+    try {
+      await waitForArgoAppSynced("repody-local-queue", fast ? 300_000 : 900_000);
+      syncPlatformSecrets();
+      await waitForArgoApplicationsSynced(fast ? 300_000 : 900_000);
+    } catch {
+      console.error(
+        "warn: Argo CD apps not fully Synced yet - publish the GitOps revision or inspect Argo CD status",
+      );
+    }
   }
 
   cleanupStaleLocalResources();
-
-  if (
-    !minimal &&
-    (hasFlag("--push") || truthyEnv("REPODY_GITOPS_PUSH"))
-  ) {
-    heading("GitOps: commit, push, and Argo CD sync");
-    run("node", [
-      "deploy/scripts/gitops-publish-local.mjs",
-      "--commit",
-      "--push",
-      "--sync",
-    ]);
-  } else if (!minimal) {
-    console.error(
-      "ok: bump values-local-images.yaml locally — run pnpm gitops:publish -- --all for Argo Synced",
-    );
-  }
 
   const alreadyHealthy =
     fast && repodyPodsReady() && gatewayProgrammed();
@@ -1362,7 +1369,13 @@ async function cmdUpAsync() {
 
   ensureHostsHint();
   traceSummary();
-  printStackReadySummary({ minimal, withObs, tagLabel, argoPassword });
+  printStackReadySummary({
+    minimal,
+    withObs,
+    tagLabel,
+    deployedTagLabel: liveRepodyImageTags() || tagLabel,
+    argoPassword,
+  });
 
   if (hasFlag("--logs") || truthyEnv("REPODY_K8S_LOCAL_LOGS")) {
     heading("Following platform logs (Ctrl+C to stop)");

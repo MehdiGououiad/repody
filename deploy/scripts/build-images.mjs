@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
 import { cpSync, mkdirSync, rmSync } from "node:fs";
+import os from "node:os";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -20,6 +21,11 @@ const webTag =
 const push = process.argv.includes("--push");
 const onlyArg = process.argv.find((arg) => arg.startsWith("--only="));
 const only = onlyArg ? onlyArg.slice("--only=".length) : "all";
+const localCacheRoot =
+  process.env.REPODY_BUILDKIT_LOCAL_CACHE_DIR ??
+  (process.platform === "win32" && root.toLowerCase().includes(`${path.sep}onedrive${path.sep}`)
+    ? path.join(os.homedir(), ".cache", "repody", "docker-buildkit")
+    : path.join(root, ".docker-cache"));
 
 const image = (name, tag) =>
   registry ? `${registry}/${name}:${tag}` : `${name}:${tag}`;
@@ -71,14 +77,14 @@ function appendBuildKitCacheFlags(args, cacheName) {
       if (trimmed) args.push("--cache-from", trimmed);
     }
   } else {
-    const localCache = path.join(root, ".docker-cache", cacheName);
+    const localCache = path.join(localCacheRoot, cacheName);
     mkdirSync(localCache, { recursive: true });
     args.push("--cache-from", `type=local,src=${localCache}`);
   }
   if (cacheTo) {
     args.push("--cache-to", cacheTo.trim());
   } else {
-    const localCache = path.join(root, ".docker-cache", cacheName);
+    const localCache = path.join(localCacheRoot, cacheName);
     mkdirSync(localCache, { recursive: true });
     args.push("--cache-to", `type=local,dest=${localCache},mode=max`);
   }

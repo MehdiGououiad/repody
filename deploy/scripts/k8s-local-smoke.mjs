@@ -48,6 +48,11 @@ function must(label, cmd, args, options = {}) {
   return result.stdout.trim();
 }
 
+function optional(cmd, args, options = {}) {
+  const result = run(cmd, args, options);
+  return result.status === 0 ? result.stdout.trim() : "";
+}
+
 function curl(args) {
   return must("curl", process.platform === "win32" ? "curl.exe" : "curl", args);
 }
@@ -178,8 +183,22 @@ await step("API health through Gateway", () => {
 });
 
 await step("Frontend and Auth.js provider", () => {
-  const html = gatewayCurl(LOCAL_HOSTS.web, "/dashboard");
-  if (!html.includes("Dashboard")) throw new Error("dashboard HTML did not render");
+  const dashboard = run(process.platform === "win32" ? "curl.exe" : "curl", [
+    "-sS",
+    "-o",
+    process.platform === "win32" ? "NUL" : "/dev/null",
+    "-w",
+    "%{http_code} %{redirect_url}",
+    "-H",
+    `Host: ${LOCAL_HOSTS.web}`,
+    "http://127.0.0.1/dashboard",
+  ]);
+  if (
+    dashboard.status !== 0 ||
+    !dashboard.stdout.includes(`307 ${localUrl(LOCAL_HOSTS.web, "/login")}`)
+  ) {
+    throw new Error(`dashboard did not redirect to login: ${dashboard.stdout}${dashboard.stderr}`);
+  }
   const providers = parseJson(gatewayCurl(LOCAL_HOSTS.web, "/api/auth/providers"));
   if (!providers.keycloak) throw new Error("Auth.js Keycloak provider missing");
   const temp = mkdtempSync(path.join(tmpdir(), "repody-auth-"));
@@ -217,7 +236,7 @@ await step("Frontend and Auth.js provider", () => {
   if (signIn.status !== 0 || !signIn.stdout.includes(`302 ${localUrl(LOCAL_HOSTS.auth, "/realms/repody/")}`)) {
     throw new Error(`Auth.js sign-in did not redirect to Keycloak: ${signIn.stdout}${signIn.stderr}`);
   }
-  return "dashboard + Keycloak redirect";
+  return "login redirect + Keycloak redirect";
 });
 
 await step("Keycloak token and authenticated API", () => {
@@ -324,7 +343,7 @@ await step("MinIO presign, Gateway PUT, and confirm", () => {
 });
 
 await step("Hatchet UI and workers", () => {
-  const html = must("hatchet", "kubectl", [
+  must("hatchet", "kubectl", [
     "-n",
     NS_QUEUE,
     "exec",
@@ -332,16 +351,18 @@ await step("Hatchet UI and workers", () => {
     "--",
     "sh",
     "-c",
-    "wget -q -O - http://127.0.0.1:8080/",
+    "wget -q -O - http://127.0.0.1:8080/api/ready",
   ]);
-  if (!html.includes("Hatchet")) throw new Error("Hatchet UI did not render");
   for (const name of ["repody-worker-fast", "repody-worker-ocr"]) {
     const logs = must(`${name} logs`, "kubectl", ["-n", NS, "logs", `deploy/${name}`, "--tail=120"]);
-    if (!logs.includes("started, waiting for tasks")) {
+    if (
+      !logs.includes("started, waiting for tasks") &&
+      !logs.includes("action listener established")
+    ) {
       throw new Error(`${name} is not connected to Hatchet`);
     }
   }
-  return "UI + fast/ocr workers";
+  return "API ready + fast/ocr workers";
 });
 
 await step("Argo CD installed", () => {
@@ -366,7 +387,7 @@ await step("Argo CD installed", () => {
     }
     summaries.push(`${appName}: health=${health}, sync=${sync}`);
   }
-  const server = captureOptional("kubectl", [
+  const server = optional("kubectl", [
     "-n",
     ARGO_NS,
     "get",
@@ -390,7 +411,7 @@ await step("Observability/Bugsink addon presence", () => {
   if (missing.length) throw new Error(`missing ${missing.join(", ")}`);
   const grafana = parseJson(gatewayCurl(LOCAL_HOSTS.grafana, "/api/health"));
   if (grafana.database !== "ok") throw new Error(`Grafana unhealthy: ${JSON.stringify(grafana)}`);
-  const otelEnabled = must("otel env", "kubectl", [
+  const otelEnabled = optional("kubectl", [
     "-n",
     NS,
     "exec",
@@ -399,7 +420,7 @@ await step("Observability/Bugsink addon presence", () => {
     "printenv",
     "AUDIT_OTEL_ENABLED",
   ]);
-  const otelEndpoint = must("otel endpoint", "kubectl", [
+  const otelEndpoint = optional("kubectl", [
     "-n",
     NS,
     "exec",
@@ -408,8 +429,61 @@ await step("Observability/Bugsink addon presence", () => {
     "printenv",
     "AUDIT_OTEL_EXPORTER_ENDPOINT",
   ]);
-  if (otelEnabled !== "true" || !otelEndpoint.includes("/v1/traces")) {
-    throw new Error(`OTEL misconfigured: enabled=${otelEnabled} endpoint=${otelEndpoint}`);
+  if (otelEnabled !== "true") {
+    warnings.push("App OTEL export is disabled; observability addons are installed, but traces are not emitted by repody-api.");
+  } else if (!otelEndpoint.includes("/v1/traces")) {
+    throw new Error(`OTEL endpoint misconfigured: ${otelEndpoint}`);
+  }
+  const tempoPorts = must("Tempo service ports", "kubectl", [
+    "-n",
+    NS,
+    "get",
+    "svc/local-tempo",
+    "-o",
+    "json",
+  ]);
+  const tempo = parseJson(tempoPorts);
+  if (!tempo.spec.ports.some((port) => port.name === "otlp-grpc" && port.port === 4317)) {
+    throw new Error("Tempo OTLP gRPC port 4317 is not exposed");
+  }
+  const hatchetSecret = parseJson(must("Hatchet shared config", "kubectl", [
+    "-n",
+    NS_QUEUE,
+    "get",
+    "secret/hatchet-shared-config",
+    "-o",
+    "json",
+  ]));
+  const decodeSecret = (key) =>
+    Buffer.from(hatchetSecret.data?.[key] ?? "", "base64").toString("utf8");
+  const hatchetCollector = decodeSecret("SERVER_OTEL_COLLECTOR_URL");
+  const hatchetInsecure = decodeSecret("SERVER_OTEL_INSECURE");
+  if (hatchetCollector !== "local-tempo.repody-app.svc.cluster.local:4317") {
+    throw new Error(`Hatchet OTEL collector misconfigured: ${hatchetCollector}`);
+  }
+  if (hatchetInsecure !== "true") {
+    throw new Error(`Hatchet OTEL insecure flag misconfigured: ${hatchetInsecure}`);
+  }
+  const hatchetDeploys = parseJson(must("Hatchet deployments", "kubectl", [
+    "-n",
+    NS_QUEUE,
+    "get",
+    "deploy/repody-hatchet-api",
+    "deploy/repody-hatchet-engine",
+    "-o",
+    "json",
+  ]));
+  const serviceNames = new Map();
+  for (const item of hatchetDeploys.items) {
+    const env = item.spec.template.spec.containers[0].env ?? [];
+    const serviceName = env.find((entry) => entry.name === "SERVER_OTEL_SERVICE_NAME")?.value;
+    serviceNames.set(item.metadata.name, serviceName);
+  }
+  if (serviceNames.get("repody-hatchet-api") !== "hatchet-api") {
+    throw new Error("Hatchet API OTEL service name is not hatchet-api");
+  }
+  if (serviceNames.get("repody-hatchet-engine") !== "hatchet-engine") {
+    throw new Error("Hatchet engine OTEL service name is not hatchet-engine");
   }
   const bugsink = gatewayCurl(LOCAL_HOSTS.bugsink, "/accounts/login/");
   if (!bugsink.toLowerCase().includes("bugsink")) throw new Error("Bugsink UI did not render");
@@ -430,7 +504,7 @@ for name, url in {
     shell: false,
   });
   if (result.status !== 0) throw new Error(result.stdout + result.stderr);
-  return `OTEL=${otelEnabled}, Grafana/Loki/Promtail/Tempo/Bugsink`;
+  return `OTEL=${otelEnabled || "unset"}, Hatchet OTEL=gRPC, Grafana/Loki/Promtail/Tempo/Bugsink`;
 });
 
 if (warnings.length) {

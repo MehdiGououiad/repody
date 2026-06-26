@@ -31,7 +31,7 @@ function run(cmd, args, { cwd = root, env = process.env } = {}) {
   const result = spawnSync(cmd, args, {
     cwd,
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
     env,
   });
   if (result.status !== 0) {
@@ -43,7 +43,7 @@ function capture(cmd, args, { cwd = root } = {}) {
   const result = spawnSync(cmd, args, {
     cwd,
     encoding: "utf8",
-    shell: process.platform === "win32",
+    shell: false,
     env: process.env,
   });
   if (result.status !== 0) {
