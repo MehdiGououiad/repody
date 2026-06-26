@@ -34,16 +34,28 @@ await waitForArgoApplicationsSynced(600_000);
 
 if (!process.env.REPODY_SKIP_PLATFORM_SECRET_SYNC) {
   run("node", ["deploy/scripts/sync-platform-secrets.mjs"]);
-  run("kubectl", [
+  const namespace = process.env.REPODY_APP_NAMESPACE ?? "repody-app";
+  const deployments = captureOptional("kubectl", [
     "-n",
-    process.env.REPODY_APP_NAMESPACE ?? "repody-app",
-    "rollout",
-    "restart",
+    namespace,
+    "get",
     "deploy",
     "-l",
     "app.kubernetes.io/instance=repody",
-    "--ignore-not-found",
+    "-o",
+    "name",
   ]);
+  if (deployments) {
+    run("kubectl", [
+      "-n",
+      namespace,
+      "rollout",
+      "restart",
+      "deploy",
+      "-l",
+      "app.kubernetes.io/instance=repody",
+    ]);
+  }
 }
 
 const phases = LOCAL_ARGO_APP_NAMES.map((app) => {
