@@ -17,7 +17,7 @@ from audit_workbench.services.upload_validation import (
     validate_upload_batch,
     validate_upload_file,
 )
-from audit_workbench.services.workflow_repository import load_workflow
+from audit_workbench.services.workflow import load_workflow
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import get_storage
 

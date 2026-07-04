@@ -82,7 +82,18 @@ def normalize_amount(value: str) -> str:
 
 def parse_numeric_value(value: str) -> float | None:
     """Parse a numeric field value, ignoring trailing currency labels."""
-    normalized = normalize_amount(value)
+    s = value.strip()
+    if not s or s == "—":
+        return None
+    match = _NUMERIC_RUN.search(s.replace("\u00a0", " "))
+    if not match:
+        return None
+    start, end = match.span()
+    prefix = s[:start].strip()
+    # Reject alphanumeric IDs like PO-2024-991 where digits sit inside a reference token.
+    if prefix and re.search(r"[A-Za-z]", prefix):
+        return None
+    normalized = normalize_amount(s)
     if not normalized or normalized == "—":
         return None
     try:

@@ -24,14 +24,13 @@ from audit_workbench.api.openapi_config import install_openapi
 from audit_workbench.auth.dependencies import require_permission
 from audit_workbench.db.base import Base, async_session_factory, engine
 from audit_workbench.db.seed import seed_database
-from audit_workbench.inference.http_pool import close_async_http_client
 from audit_workbench.inference.openai_compat import close_openai_clients
 from audit_workbench.observability.bootstrap import init_observability
 from audit_workbench.observability.middleware import RequestLoggingMiddleware
 from audit_workbench.observability.tracing import instrument_fastapi
 from audit_workbench.services.rate_limit import GlobalRateLimitMiddleware
 from audit_workbench.services.redis_pool import close_redis_pool
-from audit_workbench.services.run_dispatch import close_hatchet_client
+from audit_workbench.services.run_dispatch import close_taskiq_brokers
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import init_storage
 
@@ -53,9 +52,11 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
         log.info("database_schema_create_all", event_domain="platform")
     await init_storage()
-    from audit_workbench.services.operator_jobs import hydrate_operator_jobs_from_redis
+    from audit_workbench.services.operator import hydrate_operator_jobs_from_redis
+    from audit_workbench.taskiq.broker import startup_taskiq_brokers
 
     await hydrate_operator_jobs_from_redis()
+    await startup_taskiq_brokers()
     if settings.oidc_enabled:
         from audit_workbench.auth.jwt_validator import warm_jwks_cache
 
@@ -84,10 +85,9 @@ async def lifespan(app: FastAPI):
     from audit_workbench.services.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
-    await close_hatchet_client()
+    await close_taskiq_brokers()
     await close_redis_pool()
     await close_openai_clients()
-    await close_async_http_client()
     if not settings.use_create_all:
         await engine.dispose()
 

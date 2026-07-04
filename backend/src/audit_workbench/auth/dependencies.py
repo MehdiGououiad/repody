@@ -72,10 +72,6 @@ def require_permission(resource: str, action: str) -> Callable:
     return _dependency
 
 
-# Back-compat alias — prefer require_permission per route.
-require_admin = require_management_access
-
-
 async def require_admin_or_workflow_run(
     run_id: str,
     authorization: Annotated[str | None, Header()] = None,

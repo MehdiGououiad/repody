@@ -13,7 +13,7 @@ def extract_document_fields(
     *,
     sample_values: dict[str, str] | None = None,
 ) -> list:
-    """Sync helper for dry-run and legacy callers — never injects hardcoded demo data."""
+    """Sync helper for dry-run callers — never injects hardcoded demo data."""
     from audit_workbench.extraction.schema_fields import fields_from_sample_values
 
     specs = [
@@ -31,7 +31,7 @@ def extract_document_fields(
 
 
 class StubDocumentExtractor(DocumentExtractor):
-    """Legacy name — returns schema placeholders only (no fake document values)."""
+    """Returns schema placeholders only (no fake document values)."""
 
     async def extract(
         self,

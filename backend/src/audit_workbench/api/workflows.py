@@ -18,7 +18,7 @@ from audit_workbench.schemas.workflow import (
     WorkflowResponse,
     WorkflowSchema,
 )
-from audit_workbench.services import workflow_service
+from audit_workbench.services.workflow import workflow_service
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 

@@ -1,34 +1,39 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
 
 from audit_workbench.auth.dependencies import require_permission
-from audit_workbench.services.operator_benchmark_requests import (
+from audit_workbench.schemas.operator import (
+    BenchmarkReportSchema,
+    OperatorJobAcceptedResponse,
+    OperatorJobSchema,
+    OperatorJobsResponse,
+    OperatorStatusResponse,
+    OperatorLimitsSchema,
+    OperatorWarmupConfig,
+)
+from audit_workbench.schemas.operator_requests import ModelActionRequest
+from audit_workbench.services.operator import (
     OperatorRequestError,
+    create_benchmark_job,
+    create_warmup_job,
+    get_job,
+    list_jobs,
+    load_report,
+    operator_job_schema,
+    safe_model_identifier,
+)
+from audit_workbench.services.operator.requests import (
     build_benchmark_request,
     operator_root,
     require_operator_actions,
-    safe_model_identifier,
 )
-from audit_workbench.services.operator_benchmarks import create_benchmark_job, create_warmup_job
-from audit_workbench.services.operator_jobs import (
-    OperatorJob,
-    get_job,
-    list_jobs,
-)
-from audit_workbench.services.operator_reports import load_report
 from audit_workbench.settings import get_settings
 
 router = APIRouter(prefix="/operator", tags=["operator"])
-
-
-class ModelActionRequest(BaseModel):
-    model: str = Field(min_length=1, max_length=180)
 
 
 def _require_actions() -> None:
@@ -45,7 +50,7 @@ def _safe_model(model: str) -> str:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
-def _job_or_404(job_id: str) -> OperatorJob:
+def _job_or_404(job_id: str):
     job = get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Operator job not found.")
@@ -60,41 +65,55 @@ def _raise_operator_error(exc: OperatorRequestError) -> None:
     raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
-@router.get("/status", dependencies=[Depends(require_permission("diagnostics", "read"))])
-async def operator_status() -> dict[str, Any]:
+@router.get(
+    "/status",
+    response_model=OperatorStatusResponse,
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
+)
+async def operator_status() -> OperatorStatusResponse:
     settings = get_settings()
-    return {
-        "actionsEnabled": settings.operator_actions_enabled,
-        "reportDirectory": settings.operator_data_path,
-        "warmup": {
-            "documentModelOnStart": settings.repody_vlm_warmup_on_start,
-        },
-        "limits": {
-            "maxUploadBytes": settings.max_upload_bytes,
-            "ocrMaxPages": settings.ocr_max_pages,
-            "taskTimeoutMinutes": settings.hatchet_task_timeout_minutes,
-        },
-    }
-
-
-@router.get("/jobs", dependencies=[Depends(require_permission("diagnostics", "read"))])
-async def operator_jobs() -> dict[str, Any]:
-    return {"jobs": [job.as_dict() for job in list_jobs()]}
-
-
-@router.get("/jobs/{job_id}", dependencies=[Depends(require_permission("diagnostics", "read"))])
-async def operator_job(job_id: str) -> dict[str, Any]:
-    return _job_or_404(job_id).as_dict()
+    return OperatorStatusResponse(
+        actions_enabled=settings.operator_actions_enabled,
+        report_directory=settings.operator_data_path,
+        warmup=OperatorWarmupConfig(
+            document_model_on_start=settings.repody_vlm_warmup_on_start,
+        ),
+        limits=OperatorLimitsSchema(
+            max_upload_bytes=settings.max_upload_bytes,
+            ocr_max_pages=settings.ocr_max_pages,
+            task_timeout_minutes=settings.worker_task_timeout_minutes,
+        ),
+    )
 
 
 @router.get(
-    "/jobs/{job_id}/report", dependencies=[Depends(require_permission("diagnostics", "read"))]
+    "/jobs",
+    response_model=OperatorJobsResponse,
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
 )
-async def operator_job_report(job_id: str) -> dict[str, Any]:
+async def operator_jobs() -> OperatorJobsResponse:
+    return OperatorJobsResponse(jobs=[operator_job_schema(job) for job in list_jobs()])
+
+
+@router.get(
+    "/jobs/{job_id}",
+    response_model=OperatorJobSchema,
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
+)
+async def operator_job(job_id: str) -> OperatorJobSchema:
+    return operator_job_schema(_job_or_404(job_id))
+
+
+@router.get(
+    "/jobs/{job_id}/report",
+    response_model=BenchmarkReportSchema,
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
+)
+async def operator_job_report(job_id: str) -> BenchmarkReportSchema:
     job = _job_or_404(job_id)
     if not job.report_path:
         raise HTTPException(status_code=404, detail="This job has no report yet.")
-    return load_report(Path(job.report_path))
+    return BenchmarkReportSchema.model_validate(load_report(Path(job.report_path)))
 
 
 @router.get(
@@ -117,46 +136,39 @@ async def operator_job_artifact(job_id: str, artifact: str) -> FileResponse:
     return FileResponse(path, filename=name)
 
 
-@router.get("/benchmarks/latest", dependencies=[Depends(require_permission("diagnostics", "read"))])
-async def latest_benchmark() -> dict[str, Any]:
+@router.get(
+    "/benchmarks/latest",
+    response_model=BenchmarkReportSchema,
+    dependencies=[Depends(require_permission("diagnostics", "read"))],
+)
+async def latest_benchmark() -> BenchmarkReportSchema:
     path = _operator_root() / "latest.json"
     if not path.is_file():
         raise HTTPException(status_code=404, detail="No benchmark report is available.")
-    return load_report(path)
-
-
-@router.post(
-    "/models/pull",
-    status_code=202,
-    dependencies=[Depends(require_permission("operator", "execute"))],
-)
-async def pull_model(payload: ModelActionRequest) -> dict[str, Any]:
-    _require_actions()
-    _safe_model(payload.model)
-    raise HTTPException(
-        status_code=409,
-        detail="Install Repody VLM with: pnpm models:pull",
-    )
+    return BenchmarkReportSchema.model_validate(load_report(path))
 
 
 @router.post(
     "/models/warmup",
     status_code=202,
+    response_model=OperatorJobAcceptedResponse,
     dependencies=[Depends(require_permission("operator", "execute"))],
 )
-async def warmup_model(payload: ModelActionRequest) -> dict[str, Any]:
+async def warmup_model(payload: ModelActionRequest) -> OperatorJobAcceptedResponse:
     _require_actions()
+    _safe_model(payload.model)
     root = _operator_root()
     try:
         job = create_warmup_job(root=root, model=payload.model)
     except OperatorRequestError as exc:
         _raise_operator_error(exc)
-    return {"job": job.as_dict()}
+    return OperatorJobAcceptedResponse(job=operator_job_schema(job))
 
 
 @router.post(
     "/benchmarks",
     status_code=202,
+    response_model=OperatorJobAcceptedResponse,
     dependencies=[Depends(require_permission("operator", "execute"))],
 )
 async def start_benchmark(
@@ -169,7 +181,7 @@ async def start_benchmark(
     minimum_accuracy: float = Form(default=1.0, ge=0.0, le=1.0),
     cache_check: bool = Form(default=True),
     judge_quality: bool = Form(default=True),
-) -> dict[str, Any]:
+) -> OperatorJobAcceptedResponse:
     _require_actions()
     root = _operator_root()
     try:
@@ -189,4 +201,4 @@ async def start_benchmark(
         job = create_benchmark_job(root, benchmark_request)
     except OperatorRequestError as exc:
         _raise_operator_error(exc)
-    return {"job": job.as_dict()}
+    return OperatorJobAcceptedResponse(job=operator_job_schema(job))

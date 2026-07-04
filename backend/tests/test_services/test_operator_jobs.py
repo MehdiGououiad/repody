@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from audit_workbench.services.operator_job_model import OperatorJob
+from audit_workbench.services.operator import OperatorJob, operator_job_schema
 
 
 def test_operator_job_store_round_trip_preserves_public_state() -> None:
@@ -22,5 +22,6 @@ def test_operator_job_store_round_trip_preserves_public_state() -> None:
     restored = OperatorJob.from_store(job.to_store())
 
     assert restored == job
-    assert restored.as_dict()["hasReport"] is True
-    assert restored.as_dict()["startedAt"] == "2026-01-01T00:01:00+00:00"
+    schema = operator_job_schema(restored)
+    assert schema.has_report is True
+    assert schema.started_at == datetime(2026, 1, 1, 0, 1, tzinfo=UTC)

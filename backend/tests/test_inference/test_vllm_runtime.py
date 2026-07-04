@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from audit_workbench.extraction.model_registry import (
-    REPODY_VLM_CATALOG_ID,
-    _registered_models,
-    parse_document_model,
-)
+from audit_workbench.catalog.registry import _registered_models
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.catalog.registry import parse_document_model
 from audit_workbench.settings import Settings, clear_settings_cache, get_settings
 
 
@@ -33,3 +31,29 @@ def test_openai_base_url_for_vllm():
     from audit_workbench.inference.runtime import openai_base_url_for_runtime
 
     assert openai_base_url_for_runtime("vllm", settings) == "http://vllm:8000/v1"
+
+
+def test_top_k_is_sent_as_openai_extra_body():
+    from audit_workbench.inference.openai_compat import split_chat_payload
+
+    standard, extra = split_chat_payload(
+        {
+            "model": "nuextract",
+            "messages": [],
+            "temperature": 0.6,
+            "top_p": 0.95,
+            "top_k": 40,
+            "chat_template_kwargs": {"enable_thinking": True},
+        }
+    )
+
+    assert standard == {
+        "model": "nuextract",
+        "messages": [],
+        "temperature": 0.6,
+        "top_p": 0.95,
+    }
+    assert extra == {
+        "top_k": 40,
+        "chat_template_kwargs": {"enable_thinking": True},
+    }

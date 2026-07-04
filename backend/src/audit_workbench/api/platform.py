@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import os
-
 from fastapi import APIRouter, Depends, Query
-from pydantic import Field
 
 from audit_workbench.auth.dependencies import require_permission
 from audit_workbench.extraction.document_model_branding import (
@@ -13,80 +10,29 @@ from audit_workbench.extraction.document_model_branding import (
     public_runtime_model_name,
 )
 from audit_workbench.extraction.template_type_inference import suggest_template_type
-from audit_workbench.schemas.common import CamelModel
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
-from audit_workbench.services.document_model_catalog import (
+from audit_workbench.schemas.platform import (
+    DocumentModelSummary,
+    OcrDiagnosticResponse,
+    OcrDiagnosticSettingsSchema,
+    PlatformConfigResponse,
+    SuggestTemplateTypeResponse,
+)
+from audit_workbench.catalog.api import (
+    document_model_summaries,
+    fetch_models_catalog,
+)
+from audit_workbench.catalog.probes import (
     probe_document_model_state,
     reachable_detail,
     run_generation_probe,
     unreachable_detail,
 )
-from audit_workbench.services.model_runtime_config import (
-    ModelRuntimeConfigResponse,
-    build_model_runtime_config,
-)
-from audit_workbench.services.models_catalog import document_model_summaries, fetch_models_catalog
+from audit_workbench.catalog.runtime_fields import build_model_runtime_config
+from audit_workbench.schemas.model_runtime import ModelRuntimeConfigResponse
 from audit_workbench.settings import get_settings
 
 router = APIRouter(tags=["platform"])
-
-
-class DocumentModelSummary(CamelModel):
-    id: str
-    label: str
-    runtime: str
-    runtime_model: str = Field(serialization_alias="runtimeModel")
-
-
-class PlatformConfigResponse(CamelModel):
-    app_name: str
-    extractor: str
-    inference_mode: str
-    storage_backend: str
-    queue_backend: str
-    direct_upload_enabled: bool
-    cache_enabled: bool
-    rate_limit_enabled: bool
-    structured_llm: bool
-    default_ocr_model: str = Field(serialization_alias="defaultOcrModel")
-    default_read_path: str = Field(serialization_alias="defaultReadPath")
-    document_models: list[DocumentModelSummary] = Field(serialization_alias="documentModels")
-    ocr_max_pages: int = Field(serialization_alias="ocrMaxPages")
-    docker_model_runner_base_url: str = Field(serialization_alias="dockerModelRunnerBaseUrl")
-    vllm_base_url: str = Field(serialization_alias="vllmBaseUrl")
-    max_upload_bytes: int = Field(serialization_alias="maxUploadBytes")
-    max_upload_files: int = Field(serialization_alias="maxUploadFiles")
-    stale_run_timeout_minutes: int = Field(serialization_alias="staleRunTimeoutMinutes")
-    queued_stale_timeout_minutes: int = Field(serialization_alias="queuedStaleTimeoutMinutes")
-    hatchet_task_timeout_minutes: int = Field(serialization_alias="hatchetTaskTimeoutMinutes")
-    maintenance_interval_seconds: int = Field(serialization_alias="maintenanceIntervalSeconds")
-    worker_pools: dict[str, str] = Field(default_factory=dict, serialization_alias="workerPools")
-    hatchet_configured: bool = Field(default=False, serialization_alias="hatchetConfigured")
-    llm_validation_enabled: bool = Field(default=False, serialization_alias="llmValidationEnabled")
-    gpu_live_probe: bool = Field(default=False, serialization_alias="gpuLiveProbe")
-    healthz_probe_inference: bool = Field(
-        default=False, serialization_alias="healthzProbeInference"
-    )
-
-
-class OcrDiagnosticResponse(CamelModel):
-    ok: bool
-    model: str
-    runtime: str = ""
-    inference_reachable: bool = False
-    model_in_registry: bool = False
-    model_loaded: bool = False
-    extractor: str = ""
-    inference_mode: str = ""
-    infer_ms: int | None = None
-    sample_extracted: bool = False
-    detail: str = ""
-    hint: str = ""
-    settings: dict[str, int | float | str | bool] = Field(default_factory=dict)
-
-
-class SuggestTemplateTypeResponse(CamelModel):
-    template_type: str = Field(serialization_alias="templateType")
 
 
 @router.get(
@@ -116,7 +62,7 @@ async def get_platform_config() -> PlatformConfigResponse:
         extractor=settings.extractor,
         inference_mode=settings.inference_mode,
         storage_backend=settings.storage_backend,
-        queue_backend="hatchet",
+        queue_backend="taskiq",
         direct_upload_enabled=settings.direct_upload_enabled and settings.storage_backend == "s3",
         cache_enabled=settings.extraction_cache_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
@@ -131,13 +77,13 @@ async def get_platform_config() -> PlatformConfigResponse:
         max_upload_files=settings.max_upload_files,
         stale_run_timeout_minutes=settings.stale_run_timeout_minutes,
         queued_stale_timeout_minutes=settings.queued_stale_timeout_minutes,
-        hatchet_task_timeout_minutes=settings.hatchet_task_timeout_minutes,
+        worker_task_timeout_minutes=settings.worker_task_timeout_minutes,
         maintenance_interval_seconds=settings.maintenance_interval_seconds,
         worker_pools={
             "fast": settings.worker_pool_fast,
             "ocr": settings.worker_pool_ocr,
         },
-        hatchet_configured=bool(settings.hatchet_client_token or os.getenv("HATCHET_CLIENT_TOKEN")),
+        taskiq_configured=bool(settings.redis_url),
         llm_validation_enabled=settings.llm_validation_enabled,
         gpu_live_probe=settings.gpu_live_probe,
         healthz_probe_inference=settings.healthz_probe_inference,
@@ -174,14 +120,14 @@ async def ocr_diagnostic(
     """Document model runtime status (Docker Model Runner or vLLM)."""
     settings = get_settings()
     state = await probe_document_model_state(settings)
-    snapshot: dict[str, int | float | str | bool] = {
-        "extractor": settings.extractor,
-        "inferenceMode": settings.inference_mode,
-        "runtime": state.runtime,
-        "documentModelMaxEdgePx": settings.repody_vlm_max_edge_px,
-        "documentModelPdfDpi": settings.repody_vlm_pdf_dpi,
-        "llmValidationEnabled": settings.llm_validation_enabled,
-    }
+    snapshot = OcrDiagnosticSettingsSchema(
+        extractor=settings.extractor,
+        inference_mode=settings.inference_mode,
+        runtime=state.runtime,
+        document_model_pdf_dpi=settings.repody_vlm_pdf_dpi,
+        document_model_max_edge_px=settings.repody_vlm_max_edge_px,
+        llm_validation_enabled=settings.llm_validation_enabled,
+    )
     common = {
         "model": public_runtime_model_name(state.model),
         "runtime": state.runtime,

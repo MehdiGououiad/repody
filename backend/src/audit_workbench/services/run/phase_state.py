@@ -3,81 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
 
 from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.base import ExtractionResult
-from audit_workbench.extraction.document_modes import validation_mode_label
 from audit_workbench.services.run.snapshot import resolve_run_documents, resolve_run_rules
 from audit_workbench.services.run_progress import build_run_progress_plan, mark_step_done
-
-PHASE_EXTRACTED = "extracted"
-
-
-def decode_precomputed_llm(raw: Any) -> dict[str, tuple[str, str]]:
-    if not isinstance(raw, dict):
-        return {}
-    out: dict[str, tuple[str, str]] = {}
-    for rule_id, pair in raw.items():
-        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
-            out[str(rule_id)] = (str(pair[0]), str(pair[1]))
-    return out
-
-
-@dataclass
-class ExtractionPhaseResult:
-    """Typed metadata persisted between Hatchet extract and validate tasks."""
-
-    precomputed_llm: dict[str, tuple[str, str]] = field(default_factory=dict)
-    extraction_ms: int = 0
-    fields_extracted: int = 0
-    step_index: int = 0
-    validation_mode: str = "logic_only"
-    multi_document: bool = False
-
-    @classmethod
-    def from_state(cls, state: RunPhaseState) -> ExtractionPhaseResult:
-        return cls(
-            precomputed_llm=dict(state.precomputed_llm),
-            extraction_ms=state.extraction_total_ms,
-            fields_extracted=state.fields_extracted,
-            step_index=state.step_index,
-            validation_mode=state.validation_mode,
-            multi_document=state.multi_document,
-        )
-
-    def to_metadata(self) -> dict:
-        return {
-            "phase": PHASE_EXTRACTED,
-            "precomputedLlm": {k: list(v) for k, v in self.precomputed_llm.items()},
-            "extractionMs": self.extraction_ms,
-            "fieldsExtracted": self.fields_extracted,
-            "multiDocument": self.multi_document,
-            "validationMode": self.validation_mode,
-            "validationLabel": validation_mode_label(self.validation_mode),
-            "stepIndex": self.step_index,
-        }
-
-    @classmethod
-    def from_metadata(cls, meta: dict) -> ExtractionPhaseResult | None:
-        if meta.get("phase") != PHASE_EXTRACTED:
-            return None
-        return cls(
-            precomputed_llm=decode_precomputed_llm(meta.get("precomputedLlm")),
-            extraction_ms=int(meta.get("extractionMs") or 0),
-            fields_extracted=int(meta.get("fieldsExtracted") or 0),
-            step_index=int(meta.get("stepIndex") or 0),
-            validation_mode=str(meta.get("validationMode") or "logic_only"),
-            multi_document=bool(meta.get("multiDocument")),
-        )
-
-    def apply_to(self, state: RunPhaseState) -> None:
-        state.precomputed_llm = dict(self.precomputed_llm)
-        state.extraction_total_ms = self.extraction_ms
-        state.fields_extracted = self.fields_extracted
-        state.step_index = self.step_index
-        state.validation_mode = self.validation_mode
-        state.multi_document = self.multi_document
 
 
 @dataclass
@@ -126,5 +56,5 @@ def _base_phase_state(run: Run) -> RunPhaseState:
 def build_phase_state(run: Run) -> RunPhaseState:
     """Fresh state after claim — marks the queue step as picked up."""
     state = _base_phase_state(run)
-    mark_step_done(state.progress_steps, "queue", detail="Hatchet worker picked up job")
+    mark_step_done(state.progress_steps, "queue", detail="Taskiq worker picked up job")
     return state

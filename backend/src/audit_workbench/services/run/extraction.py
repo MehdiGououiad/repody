@@ -6,8 +6,8 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.db.models import RunDocument
-from audit_workbench.extraction.base import SchemaFieldSpec
+from audit_workbench.db.models import ExtractedField, RunDocument
+from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_modes import (
     document_needs_extraction,
     parse_read_path,
@@ -18,18 +18,58 @@ from audit_workbench.extraction.document_modes import (
 from audit_workbench.extraction.gpu_cold_start import is_serverless_vllm
 from audit_workbench.inference.runtime import effective_parallel_doc_extraction
 from audit_workbench.services.run.extraction_jobs import (
+    DocExtractionJob,
     PendingFetch,
     build_extraction_jobs,
     run_extraction_job,
 )
-from audit_workbench.services.run.extraction_persistence import persist_extraction_pair
-from audit_workbench.services.run.helpers import extract_label, new_id, progress_mode
+from audit_workbench.services.run.helpers import (
+    extraction_step_detail,
+    extract_label,
+    meta_to_dict,
+    new_id,
+    progress_mode,
+)
 from audit_workbench.services.run.phase_state import RunPhaseState
-from audit_workbench.services.run_progress import set_run_progress
+from audit_workbench.services.run_progress import mark_step_done, set_run_progress
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import get_storage
 
 _GPU_COLD_START_DETAIL = "Serverless GPU may need 1-2 min to start on the first request after idle"
+
+
+async def persist_extraction_pair(
+    session: AsyncSession,
+    state: RunPhaseState,
+    job: DocExtractionJob,
+    extraction: ExtractionResult,
+) -> None:
+    state.fields_extracted += sum(1 for field in extraction.fields if field.extracted)
+    state.extraction_results.append((job.doc.document_type, extraction))
+    step_id = f"extract-{job.doc.id}"
+    if extraction.meta:
+        job.run_doc.extraction_meta = meta_to_dict(extraction.meta)
+        state.extraction_total_ms += extraction.meta.extraction_ms
+        mark_step_done(
+            state.progress_steps,
+            step_id,
+            duration_ms=extraction.meta.extraction_ms,
+            detail=extraction_step_detail(extraction.meta),
+        )
+    for field in extraction.fields:
+        session.add(
+            ExtractedField(
+                id=new_id("fld"),
+                run_document_id=job.run_doc.id,
+                key=field.key,
+                description=field.description,
+                value=field.value,
+                type=field.type,
+                confidence=field.confidence,
+                extracted=field.extracted,
+                flagged=False,
+            )
+        )
 
 
 def _annotate_cold_start_hint(steps: list, step_id: str) -> None:

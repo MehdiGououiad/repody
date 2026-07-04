@@ -26,7 +26,7 @@ async def test_execute_run_with_timeout_fails_run(monkeypatch):
         lambda: type(
             "S",
             (),
-            {"hatchet_task_timeout_minutes": 0},
+            {"worker_task_timeout_minutes": 0},
         )(),
     )
     fail = AsyncMock(return_value=True)

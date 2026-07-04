@@ -18,8 +18,6 @@ def _field_ref(token: str) -> str | None:
         return None
     if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", t):
         return t
-    if re.match(r"^[A-Za-z_][A-Za-z0-9_.]*$", t) and " " not in t:
-        return t.replace(".", "__")
     if "." in t:
         parts = [_normalize_field_token(part) for part in t.split(".")]
         if all(re.match(r"^[a-z_][a-z0-9_]*$", part) for part in parts):

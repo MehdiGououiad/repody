@@ -23,7 +23,7 @@ from typing import Any
 import httpx
 
 from audit_workbench.benchmarking import csv_report, html_report, score_fields, score_rules
-from audit_workbench.extraction.model_registry import is_ocr_compare_model
+from audit_workbench.catalog.registry import normalize_model_id
 
 DEFAULT_MODELS = (
     "repody:vlm",
@@ -100,8 +100,6 @@ def _model_case_name(model: str) -> str:
     lower = model.casefold()
     if "repody-vlm" in lower or model == "repody:vlm":
         return "repody-vlm"
-    if "surya" in lower:
-        return "surya-ocr2"
     token = model.split(":", 1)[-1].split("/")[-1]
     return "".join(char.lower() if char.isalnum() else "-" for char in token).strip("-")[:32]
 
@@ -252,7 +250,7 @@ async def _run_once(
     }
     if case.model:
         document["ocrModel"] = case.model
-    if judge_quality and not (case.model and is_ocr_compare_model(case.model)):
+    if judge_quality:
         document["markdownExtraction"] = True
     rules = _rule_payload(expected_rules, id_prefix)
     await _save_workflow(
@@ -311,7 +309,6 @@ async def _run_once(
     raw_text_chars = len(raw_text.strip())
     ocr_text = str(extraction.get("ocrText") or "")
     ocr_text_chars = len(ocr_text.strip())
-    ocr_compare = bool(case.model and is_ocr_compare_model(case.model))
     created_at = _parse_dt(result.get("createdAt"))
     started_at = _parse_dt(metadata.get("startedAt"))
     queue_ms = None
@@ -320,15 +317,14 @@ async def _run_once(
     cache_hit = bool(extraction.get("cacheHit"))
     cache_ok = expect_cache is None or cache_hit is expect_cache
     if judge_quality:
-        text_chars = raw_text_chars if ocr_compare else ocr_text_chars
-        text_preview = _text_preview(raw_text if ocr_compare else ocr_text)
+        text_chars = ocr_text_chars
+        text_preview = _text_preview(ocr_text)
         passed = text_chars > 0 and cache_ok
         error = None
         if not cache_ok:
             error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
         elif text_chars == 0:
-            label = "OCR text" if ocr_compare else "NuExtract markdown"
-            error = f"{label} output was empty"
+            error = "NuExtract markdown output was empty"
     elif ocr_compare:
         text_preview = _text_preview(raw_text)
         passed = raw_text_chars > 0 and cache_ok
@@ -709,7 +705,7 @@ async def run(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Benchmark OCR models through the same multipart API flow used by the UI."
+        description="Benchmark document models through the same multipart API flow used by the UI."
     )
     parser.add_argument("--api", default="http://api:8000")
     parser.add_argument(
@@ -743,7 +739,7 @@ def main() -> int:
         "--judge-quality",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="NuExtract markdown + OCR text compare; pass when text output is non-empty.",
+        help="NuExtract markdown/text quality check; pass when text output is non-empty.",
     )
     parser.add_argument("--strict-models", action="store_true")
     parser.add_argument("--continue-on-failure", action=argparse.BooleanOptionalAction, default=True)

@@ -7,10 +7,12 @@ import pytest
 from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.services.admission import (
     QueueCapacityExceeded,
-    apply_queue_meta,
     check_admission,
-    queue_position,
+    count_ocr_inflight,
+    count_queued,
+    count_running,
 )
+from audit_workbench.services.queue import apply_queue_meta, queue_position
 from audit_workbench.services.run_service import create_run
 from audit_workbench.settings import clear_settings_cache
 
@@ -96,8 +98,6 @@ async def test_create_run_progress_includes_queue_fields(admission_session):
 
 @pytest.mark.asyncio
 async def test_count_running_excludes_queued(admission_session):
-    from audit_workbench.services.admission import count_queued, count_running
-
     session, workflow_id = admission_session
     session.add(
         Run(
@@ -123,7 +123,6 @@ async def test_count_running_excludes_queued(admission_session):
 @pytest.mark.asyncio
 async def test_count_ocr_inflight_uses_worker_pool_column(admission_session):
     from audit_workbench.db.models import RunDocument
-    from audit_workbench.services.admission import count_ocr_inflight
 
     session, workflow_id = admission_session
     session.add(

@@ -1,5 +1,5 @@
 from audit_workbench.extraction.base import SchemaFieldSpec
-from audit_workbench.extraction.field_json import normalize_amount, parse_fields_json
+from audit_workbench.extraction.field_json import normalize_amount, parse_fields_json, parse_numeric_value
 
 
 def test_parse_fields_json():
@@ -48,3 +48,10 @@ def test_parse_fields_preserves_identifier_containing_number():
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice reference number")]
     rows = parse_fields_json(raw, schema)
     assert rows[0].value == "FAC-42"
+
+
+def test_parse_numeric_value_rejects_embedded_reference_numbers():
+    assert parse_numeric_value("PO-2024-991") is None
+    assert parse_numeric_value("FAC-42") is None
+    assert parse_numeric_value("6000.00") == 6000.0
+    assert parse_numeric_value("6 000,00 Dh TTC") == 6000.0

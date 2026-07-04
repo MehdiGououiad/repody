@@ -17,6 +17,8 @@ def _reset_settings_cache(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUDIT_OIDC_ENABLED", "true")
     monkeypatch.setenv("AUDIT_OIDC_ISSUER", TEST_ISSUER)
     monkeypatch.setenv("AUDIT_OIDC_JWKS_JSON", jwks_json_for_tests())
+    monkeypatch.setenv("AUDIT_OIDC_JWKS_URL", "")
+    monkeypatch.setenv("AUDIT_OIDC_AUDIENCE", "")
     yield
     clear_settings_cache()
 

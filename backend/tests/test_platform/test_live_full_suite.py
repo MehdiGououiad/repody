@@ -1,6 +1,6 @@
 """Production-like live API suite — all public endpoints and extraction/validation paths.
 
-Requires a running stack (Hatchet + workers + inference). Run via:
+Requires a running stack (Taskiq workers + inference). Run via:
   pnpm test:platform:live
 """
 
@@ -13,8 +13,8 @@ import httpx
 import pytest
 
 from audit_workbench.db.seed import SEED_WORKFLOW_ID
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
-from tests.helpers.live_stack import (
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.integration.live_stack import (
     assert_metrics_access,
     assert_settings_config_access,
     create_anonymous_live_client,
@@ -24,7 +24,7 @@ from tests.helpers.live_stack import (
     live_inference_ready,
     live_oidc_enabled,
 )
-from tests.test_e2e.facture_helpers import (
+from audit_workbench.integration.facture import (
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -43,7 +43,7 @@ from tests.test_e2e.facture_helpers import (
     total_from_result,
     tva_from_result,
 )
-from tests.test_e2e.ui_flow import run_test_with_files, save_workflow
+from audit_workbench.integration.workflow_flow import run_test_with_files, save_workflow
 
 BASE = live_api_base()
 pytestmark = pytest.mark.live
@@ -89,8 +89,8 @@ def test_live_health_and_config(client: httpx.Client, oidc_enabled: bool):
     assert health.status_code == 200
     body = health.json()
     assert body["status"] == "ok"
-    assert body["queueBackend"] == "hatchet"
-    assert body.get("hatchetConfigured") is True
+    assert body["queueBackend"] == "taskiq"
+    assert body.get("taskiqConfigured") is True
 
     config = client.get("/v1/platform/config")
     assert_settings_config_access(config, oidc_enabled=oidc_enabled)

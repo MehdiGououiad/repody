@@ -4,7 +4,6 @@ from audit_workbench.extraction.document_modes import (
     document_has_schema_fields,
     document_needs_extraction,
 )
-from audit_workbench.extraction.document_model_branding import SURYA_OCR2_CATALOG_ID
 from audit_workbench.services.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
@@ -30,19 +29,6 @@ def test_document_needs_extraction_with_markdown_only() -> None:
         validation_mode="logic_only",
         ocr_model="repody:vlm",
         markdown_extraction=True,
-        schema_fields=[],
-    )
-    assert document_needs_extraction(doc, has_file=True) is True
-
-
-def test_document_needs_extraction_for_ocr_compare_without_fields() -> None:
-    doc = SnapshotDocument(
-        id="doc-1",
-        document_type="Document",
-        position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        ocr_model=SURYA_OCR2_CATALOG_ID,
         schema_fields=[],
     )
     assert document_needs_extraction(doc, has_file=True) is True

@@ -151,7 +151,7 @@ async def test_mark_run_dispatch_failed(maintenance_session, mock_progress):
     session.add(run)
     await session.commit()
 
-    await mark_run_dispatch_failed("run-dispatch-fail", RuntimeError("hatchet down"))
+    await mark_run_dispatch_failed("run-dispatch-fail", RuntimeError("taskiq down"))
 
     await session.refresh(run)
     assert run.status == RunStatus.failed.value

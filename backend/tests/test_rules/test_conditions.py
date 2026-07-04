@@ -56,6 +56,21 @@ def test_resolve_rule_body_spaced_field_names():
     assert resolve_rule_body(rule) == "tva_total < 500.0"
 
 
+def test_resolve_rule_body_normalizes_dotted_cross_doc_tokens():
+    rule = {
+        "body": "",
+        "conditions": [
+            {
+                "id": "c1",
+                "left": {"kind": "field", "value": "Invoice.po_number"},
+                "operator": "==",
+                "right": {"kind": "field", "value": "Purchase Order.po_number"},
+            }
+        ],
+    }
+    assert resolve_rule_body(rule) == "invoice__po_number == purchase_order__po_number"
+
+
 def test_resolve_rule_body_multiple_conditions_uses_python_and():
     rule = {
         "body": "(tva < 500 ) AND ( total_amount > 1000 )",

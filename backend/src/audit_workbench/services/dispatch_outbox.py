@@ -1,4 +1,4 @@
-"""Durable Hatchet dispatch outbox — replay after API commit."""
+"""Durable Taskiq dispatch outbox — replay after API commit."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ _dispatch_tasks: set[asyncio.Task[None]] = set()
 
 
 def _is_transient_dispatch_error(exc: Exception) -> bool:
-    """True when Hatchet dispatch may succeed on a later attempt."""
+    """True when Taskiq dispatch may succeed on a later attempt."""
     msg = str(exc).lower()
     transient_markers = (
         "connection",
@@ -62,7 +62,7 @@ async def enqueue_dispatch(
 
 
 async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> bool:
-    """Attempt Hatchet dispatch for one outbox row. Returns True on success."""
+    """Attempt Taskiq dispatch for one outbox row. Returns True on success."""
     from audit_workbench.services.run_dispatch import dispatch_audit_run
 
     settings = get_settings()
@@ -114,7 +114,7 @@ async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> 
 async def dispatch_outbox_run(run_id: str) -> bool:
     """Dispatch one outbox row in a dedicated session (background / maintenance)."""
     from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.admission import refresh_queued_positions
+    from audit_workbench.services.queue import refresh_queued_positions
 
     async with async_session_factory() as session:
         row = await session.get(RunDispatchOutbox, run_id)
@@ -127,7 +127,7 @@ async def dispatch_outbox_run(run_id: str) -> bool:
 
 
 def schedule_outbox_dispatch(run_id: str) -> None:
-    """Fire-and-forget Hatchet dispatch after the API transaction commits."""
+    """Fire-and-forget Taskiq dispatch after the API transaction commits."""
 
     async def _run() -> None:
         try:
@@ -174,7 +174,3 @@ async def replay_dispatch_outbox(session: AsyncSession, *, limit: int = 50) -> i
         if await dispatch_outbox_row(session, row):
             dispatched += 1
     return dispatched
-
-
-# Backwards-compatible alias for maintenance imports.
-replay_pending_dispatches = replay_dispatch_outbox

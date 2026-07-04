@@ -20,8 +20,3 @@ async def inference_available(client: InferenceClient) -> bool:
     _cached_at = now
     _cached_ok = ok
     return ok
-
-
-def invalidate_inference_availability() -> None:
-    global _cached_at
-    _cached_at = 0.0

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 from sqlalchemy import text
 
 from audit_workbench.db import base as db_base
@@ -13,7 +11,7 @@ from audit_workbench.schemas.health import (
     WorkerPoolsHealth,
 )
 from audit_workbench.services.admission import count_inflight, count_queued, count_running
-from audit_workbench.services.document_model_catalog import probe_active_runtime
+from audit_workbench.catalog.probes import probe_active_runtime
 from audit_workbench.settings import get_settings
 
 
@@ -49,7 +47,7 @@ async def probe_readiness() -> HealthReadinessResponse:
         direct_upload_enabled=settings.direct_upload_enabled and settings.storage_backend == "s3",
         cache_enabled=settings.extraction_cache_enabled,
         db_pool_size=settings.db_pool_size,
-        queue_backend="hatchet",
+        queue_backend="taskiq",
         structured_llm=settings.structured_llm_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
         admission_control_enabled=settings.admission_control_enabled,
@@ -62,5 +60,5 @@ async def probe_readiness() -> HealthReadinessResponse:
             fast=settings.worker_pool_fast,
             ocr=settings.worker_pool_ocr,
         ),
-        hatchet_configured=bool(settings.hatchet_client_token or os.getenv("HATCHET_CLIENT_TOKEN")),
+        taskiq_configured=bool(settings.redis_url),
     )

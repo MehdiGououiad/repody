@@ -27,10 +27,6 @@ class RunRateLimitExceeded(Exception):
         super().__init__(f"Rate limit exceeded ({scope}): max {limit} runs per {window_seconds}s.")
 
 
-# Backwards-compatible alias for API handlers.
-RateLimitExceeded = RunRateLimitExceeded
-
-
 def clear_rate_limiter_cache() -> None:
     """Reset cached limiter (tests)."""
     global _limiter, _storage

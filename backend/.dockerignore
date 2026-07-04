@@ -1,12 +1,30 @@
-__pycache__/
+# Keep backend image context focused on runtime inputs.
+.venv
+__pycache__
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
-.pytest_cache/
-.ruff_cache/
-.venv/
+.pytest_cache
+.ruff_cache
+.mypy_cache
+dist/
+coverage/
+htmlcov/
+*.egg-info/
+*.sqlite
+*.db
+alembic_dev.db
+node_modules/
+
+# Tests and local-only artifacts are not copied into the runtime image.
+tests/
+.agents/
+benchmark-reports/
+tests/.storage/
+
+# Secrets, scratch files, and logs.
 .env
 .env.*
-!.env.example
-node_modules/
 *.log
+*.tmp

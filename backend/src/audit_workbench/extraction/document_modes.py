@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from audit_workbench.extraction.model_registry import DEFAULT_READ_PATH_ID
+DEFAULT_READ_PATH_ID = "document_model"
 from audit_workbench.settings import Settings, get_settings
 
 ValidationMode = Literal["logic_only", "logic_and_llm"]
@@ -70,10 +70,29 @@ def normalize_read_path_id(mode: str | None) -> str:
     raw = mode.strip().lower()
     if raw in _READ_BY_ID:
         return raw
-    # Legacy aliases (removed Paddle OCR read path).
-    if raw in ("paddle", "paddle_ocr", "ocr", "pp-ocrv6"):
-        return DEFAULT_READ_PATH_ID
     return DEFAULT_READ_PATH_ID
+
+
+def normalize_validation_mode(
+    mode: str | None,
+    settings: Settings | None = None,
+) -> ValidationMode:
+    cfg = settings or get_settings()
+    raw = (mode or LOGIC_VALIDATION).strip().lower()
+    if raw == RUN_VALIDATION_LLM and cfg.llm_validation_enabled:
+        return RUN_VALIDATION_LLM
+    return LOGIC_VALIDATION
+
+
+def normalize_document_modes(
+    extraction_mode: str | None,
+    validation_mode: str | None = None,
+    *,
+    settings: Settings | None = None,
+) -> tuple[str, ValidationMode]:
+    read_id = normalize_read_path_id(extraction_mode)
+    val_id = normalize_validation_mode(validation_mode, settings)
+    return read_id, val_id
 
 
 def parse_read_path(mode: str | None) -> ReadPathSpec:
@@ -82,14 +101,6 @@ def parse_read_path(mode: str | None) -> ReadPathSpec:
 
 def read_path_used_label(path_id: str) -> str:
     return read_path_label(path_id)
-
-
-def normalize_document_modes(
-    extraction_mode: str | None,
-    validation_mode: str | None = None,
-) -> tuple[str, ValidationMode]:
-    _ = validation_mode
-    return normalize_read_path_id(extraction_mode), LOGIC_VALIDATION
 
 
 def read_path_label(path_id: str) -> str:
@@ -165,9 +176,4 @@ def document_needs_extraction(doc: object, *, has_file: bool) -> bool:
         return True
     if isinstance(doc, dict) and bool(doc.get("markdownExtraction")):
         return True
-    from audit_workbench.extraction.model_registry import is_ocr_compare_model
-
-    ocr_model = _read_doc_value(doc, "ocr_model", None)
-    if ocr_model is None and isinstance(doc, dict):
-        ocr_model = doc.get("ocrModel")
-    return is_ocr_compare_model(str(ocr_model) if ocr_model else None)
+    return False

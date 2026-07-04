@@ -22,7 +22,7 @@ for _path in (_BACKEND / "src", _BACKEND):
 
 import httpx  # noqa: E402
 
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID  # noqa: E402
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 from scripts.benchmark_ui_route import (  # noqa: E402
     DEFAULT_PDF,
     _fetch_oidc_token,

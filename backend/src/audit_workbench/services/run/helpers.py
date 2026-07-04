@@ -68,24 +68,49 @@ def extraction_step_detail(meta) -> str:
     return completed_extraction_detail(meta)
 
 
+def rule_dict_from_row(
+    *,
+    rule_id: str,
+    name: str,
+    kind: str,
+    scope: str,
+    applies_to: list | None,
+    body: str,
+    severity: str,
+    conditions,
+    condition_junction,
+) -> dict:
+    return {
+        "id": rule_id,
+        "name": name,
+        "kind": kind,
+        "scope": scope,
+        "applies_to": applies_to or [],
+        "body": resolve_rule_body(
+            {
+                "body": body,
+                "conditions": conditions,
+                "condition_junction": condition_junction,
+            }
+        ),
+        "severity": severity,
+        "conditions": conditions,
+        "condition_junction": condition_junction,
+    }
+
+
 def rules_payload(workflow: Workflow) -> list[dict]:
     return [
-        {
-            "id": r.id,
-            "name": r.name,
-            "kind": r.kind,
-            "scope": r.scope,
-            "applies_to": r.applies_to or [],
-            "body": resolve_rule_body(
-                {
-                    "body": r.body,
-                    "conditions": r.conditions,
-                    "condition_junction": r.condition_junction,
-                }
-            ),
-            "severity": r.severity,
-            "conditions": r.conditions,
-            "condition_junction": r.condition_junction,
-        }
+        rule_dict_from_row(
+            rule_id=r.id,
+            name=r.name,
+            kind=r.kind,
+            scope=r.scope,
+            applies_to=r.applies_to,
+            body=r.body,
+            severity=r.severity,
+            conditions=r.conditions,
+            condition_junction=r.condition_junction,
+        )
         for r in sorted(workflow.rules, key=lambda x: x.position)
     ]

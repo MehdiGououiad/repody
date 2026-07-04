@@ -1,7 +1,7 @@
 import pytest
 
 from audit_workbench.schemas.workflow import DocumentDefSchema, SchemaFieldSchema, WorkflowSchema
-from audit_workbench.services.workflow_schema_validation import (
+from audit_workbench.services.workflow import (
     duplicate_field_names,
     validate_workflow_schema,
 )

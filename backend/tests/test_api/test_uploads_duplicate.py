@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tests.test_e2e.facture_helpers import facture_bytes
+from audit_workbench.integration.facture import facture_bytes
 
 
 @pytest.mark.asyncio
@@ -153,7 +153,7 @@ async def test_duplicate_file_upload_run_completes(live_client):
         assert res.status_code == 202, res.text
         return res.json()["runId"]
 
-    from tests.test_e2e.ui_flow import poll_run_until_done
+    from audit_workbench.integration.workflow_flow import poll_run_until_done
 
     run_id_1 = await start_run()
     run_id_2 = await start_run()

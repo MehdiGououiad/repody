@@ -214,10 +214,6 @@ class RuleTemplateSchema(CamelModel):
     severity: str
 
 
-class RuleLibraryResponse(CamelModel):
-    templates: list[RuleTemplateSchema]
-
-
 # Re-export run schemas for OpenAPI
 __all__ = [
     "RunAuditDetail",

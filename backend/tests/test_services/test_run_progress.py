@@ -98,7 +98,10 @@ async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
 
     monkeypatch.setattr("audit_workbench.services.run_events.publish_run_progress", _publish)
     monkeypatch.setattr("audit_workbench.db.base.async_session_factory", _session_factory)
-    monkeypatch.setattr(run_progress, "get_settings", lambda: _ThrottleSettings())
+    monkeypatch.setattr(
+        "audit_workbench.services.run.progress_persist.get_settings",
+        lambda: _ThrottleSettings(),
+    )
 
     steps = [run_progress._step("queue", "Queued")]
     await run_progress.set_run_progress(None, "run-1", steps, 0, "Primed", force=True)
@@ -142,7 +145,10 @@ async def test_progress_db_written_when_forced(monkeypatch):
 
     monkeypatch.setattr("audit_workbench.services.run_events.publish_run_progress", _publish)
     monkeypatch.setattr("audit_workbench.db.base.async_session_factory", _session_factory)
-    monkeypatch.setattr(run_progress, "get_settings", lambda: _ThrottleSettings())
+    monkeypatch.setattr(
+        "audit_workbench.services.run.progress_persist.get_settings",
+        lambda: _ThrottleSettings(),
+    )
 
     steps = [run_progress._step("queue", "Queued")]
     await run_progress.set_run_progress(None, "run-2", steps, 0, "Done", force=True)

@@ -20,7 +20,8 @@ dependencies = [
   "alembic>=1.15.0",
 
   # Queue + cache
-  "hatchet-sdk>=1.33.9",
+  "taskiq>=0.12.0",
+  "taskiq-redis>=1.2.0",
   "redis>=5.2.0",
   "limits[async-redis]>=4.4.1",
 
@@ -59,9 +60,6 @@ ml = [
   "transformers>=4.46",
   "accelerate>=1.1",
 ]
-ocr = [
-  "surya-ocr>=0.20.0",
-]
 dev = [
   "ruff>=0.11.0",
   "pyright>=1.1.389",
@@ -82,14 +80,6 @@ otel = [
 
 [tool.uv]
 package = true
-override-dependencies = [
-  # surya-ocr pins pillow<11; Repody requires pillow>=11 for document rendering.
-  "pillow>=11.1.0",
-  # surya-ocr 0.20 pins httpx<0.28; Repody uses httpx>=0.28 (compatible at runtime).
-  "httpx>=0.28.0",
-  # surya-ocr 0.20 pins openai<2; instructor requires openai>=2 (Surya uses httpx paths only).
-  "openai>=2.0.0",
-]
 
 [build-system]
 requires = ["hatchling"]

@@ -1,9 +1,9 @@
-from types import SimpleNamespace
+from __future__ import annotations
 
 import pytest
 import structlog.testing
 
-from audit_workbench.hatchet import worker
+from audit_workbench.taskiq import worker
 
 
 @pytest.mark.asyncio
@@ -16,8 +16,8 @@ async def test_ocr_worker_warms_repody_vlm(monkeypatch):
 
     monkeypatch.setattr(
         worker,
-        "get_settings",
-        lambda: SimpleNamespace(repody_vlm_warmup_on_start=True),
+        "settings",
+        type("S", (), {"repody_vlm_warmup_on_start": True})(),
     )
 
     import audit_workbench.extraction.repody_vlm as repody_vlm_mod
@@ -35,9 +35,8 @@ async def test_ocr_worker_warms_repody_vlm(monkeypatch):
 @pytest.mark.asyncio
 async def test_fast_pool_skips_ocr_warmup(monkeypatch):
     monkeypatch.setattr(
-        worker,
-        "get_settings",
-        lambda: SimpleNamespace(repody_vlm_warmup_on_start=True),
+        "audit_workbench.taskiq.worker.get_settings",
+        lambda: type("S", (), {"repody_vlm_warmup_on_start": True})(),
     )
 
     with structlog.testing.capture_logs() as captured:
