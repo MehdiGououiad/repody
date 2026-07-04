@@ -18,7 +18,9 @@ from audit_workbench.db.seed import seed_database
 from audit_workbench.settings import clear_settings_cache
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench_test"
+DEFAULT_TEST_DATABASE_URL = (
+    "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/audit_workbench_test"
+)
 
 
 def resolve_test_database_url() -> str:

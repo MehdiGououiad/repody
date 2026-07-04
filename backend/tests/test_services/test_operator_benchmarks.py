@@ -4,13 +4,12 @@ import json
 
 import pytest
 
-from audit_workbench.services.operator_benchmark_requests import (
-    OperatorRequestError,
+from audit_workbench.services.operator import OperatorRequestError, benchmark_command
+from audit_workbench.services.operator.requests import (
     parse_benchmark_options,
     resolve_benchmark_inputs,
     safe_model_identifier,
 )
-from audit_workbench.services.operator_benchmarks import benchmark_command
 
 
 class FakeUpload:

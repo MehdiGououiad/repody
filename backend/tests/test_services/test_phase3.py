@@ -8,7 +8,7 @@ from limits.aio.strategies import MovingWindowRateLimiter
 
 from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
 from audit_workbench.services import rate_limit as rate_limit_module
-from audit_workbench.services.rate_limit import RateLimitExceeded, check_run_rate_limits
+from audit_workbench.services.rate_limit import RunRateLimitExceeded, check_run_rate_limits
 from audit_workbench.settings import Settings, clear_settings_cache
 
 
@@ -32,7 +32,7 @@ async def test_rate_limit_exceeded(monkeypatch):
     rate_limit_module._limiter = MovingWindowRateLimiter(rate_limit_module._storage)
 
     await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
-    with pytest.raises(RateLimitExceeded):
+    with pytest.raises(RunRateLimitExceeded):
         await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
 
     _ = Settings()

@@ -28,10 +28,16 @@ def _normalize_key(name: str) -> str:
     return name.strip().lower().replace(" ", "_")
 
 
+def _strip_string_literals(expression: str) -> str:
+    """Remove quoted literals so comparison values are not treated as field names."""
+    without_double = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', ' "" ', expression)
+    return re.sub(r"'[^'\\]*(?:\\.[^'\\]*)*'", " '' ", without_double)
+
+
 def _identifiers_in_expression(expression: str) -> list[str]:
     seen: set[str] = set()
     out: list[str] = []
-    for token in _IDENTIFIER.findall(expression):
+    for token in _IDENTIFIER.findall(_strip_string_literals(expression)):
         if token in _RESERVED:
             continue
         if token not in seen:

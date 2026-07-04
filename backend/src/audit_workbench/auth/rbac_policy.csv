@@ -24,6 +24,7 @@ p, operator, run, execute
 p, operator, audit, read
 p, operator, upload, write
 p, operator, models, read
+p, operator, settings, read
 p, operator, operator, execute
 p, operator, diagnostics, read
 p, operator, rules, read

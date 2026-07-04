@@ -10,18 +10,19 @@ from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Run, RunDocument, RunStatus
 from audit_workbench.schemas.run import RunAuditDetail
+from audit_workbench.schemas.run_poll import RunPollBody, RunPollStatus
 from audit_workbench.schemas.workflow import (
     DocumentDefSchema,
     RunProgressSchema,
     WorkflowRuleSchema,
 )
-from audit_workbench.services.admission import (
+from audit_workbench.services.queue import (
     enrich_progress_for_poll,
     init_queued_progress_with_position,
 )
 from audit_workbench.services.mappers import run_to_audit_detail
 from audit_workbench.services.run.snapshot import build_run_snapshot
-from audit_workbench.services.workflow_repository import load_workflow
+from audit_workbench.services.workflow import load_workflow
 
 
 def _run_id(workflow_id: str, source: str) -> str:
@@ -134,15 +135,10 @@ def progress_from_run(run: Run) -> RunProgressSchema | None:
     return _progress_from_run(run)
 
 
-async def poll_run_status(session: AsyncSession, run_id: str) -> dict:
+async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:
     run = await session.get(Run, run_id)
     if not run:
-        return {"status": "failed", "error": "Run not found", "progress": None}
-    from audit_workbench.services.maintenance import maybe_reap_stale_run
-
-    if run.status in (RunStatus.queued.value, RunStatus.running.value):
-        if await maybe_reap_stale_run(session, run):
-            await session.refresh(run)
+        return RunPollStatus(status="failed", error="Run not found", progress=None)
     progress_dict = await enrich_progress_for_poll(session, run)
     progress = (
         RunProgressSchema.model_validate(progress_dict)
@@ -150,19 +146,19 @@ async def poll_run_status(session: AsyncSession, run_id: str) -> dict:
         else _progress_from_run(run)
     )
     if run.status == RunStatus.failed.value:
-        return {"status": "failed", "error": run.error or "Run failed", "progress": progress}
-    return {"status": run.status, "error": None, "progress": progress}
+        return RunPollStatus(status="failed", error=run.error or "Run failed", progress=progress)
+    return RunPollStatus(status=run.status, error=None, progress=progress)
 
 
 async def poll_run(
     session: AsyncSession, run_id: str
-) -> tuple[str, RunAuditDetail | None, str | None, RunProgressSchema | None]:
+) -> RunPollBody:
     body = await poll_run_status(session, run_id)
-    progress = body.get("progress")
-    status = body["status"]
+    progress = body.progress
+    status = body.status
     if status == "done":
         detail = await get_run_detail(session, run_id)
-        return "done", detail, None, progress
+        return RunPollBody(status="done", result=detail, error=None, progress=progress)
     if status == "failed":
-        return "failed", None, body.get("error") or "Run failed", progress
-    return status, None, None, progress
+        return RunPollBody(status="failed", result=None, error=body.error or "Run failed", progress=progress)
+    return RunPollBody(status=status, result=None, error=None, progress=progress)

@@ -1,4 +1,4 @@
-"""Queue depth admission control and queue position for waiting runs."""
+"""Queue depth admission control."""
 
 from __future__ import annotations
 
@@ -74,55 +74,6 @@ async def count_ocr_inflight(session: AsyncSession) -> int:
     )
 
 
-async def queue_position(session: AsyncSession, run_id: str) -> tuple[int | None, int | None]:
-    """1-based position among queued runs and total queued depth."""
-    run = await session.get(Run, run_id)
-    if not run or run.status != RunStatus.queued.value:
-        return None, None
-
-    result = await session.execute(
-        select(Run.id)
-        .where(Run.status == RunStatus.queued.value)
-        .order_by(Run.created_at.asc(), Run.id.asc())
-    )
-    ids = list(result.scalars())
-    depth = len(ids)
-    if depth == 0 or run_id not in ids:
-        return None, None
-    return ids.index(run_id) + 1, depth
-
-
-def _queue_label(position: int, depth: int) -> str:
-    if depth <= 1:
-        return "Waiting for worker…"
-    return f"Queued — position {position} of {depth}"
-
-
-def _queue_detail(position: int, depth: int) -> str:
-    ahead = max(0, position - 1)
-    if ahead == 0:
-        return "Next in line for a worker slot."
-    if ahead == 1:
-        return "1 run ahead of you in the queue."
-    return f"{ahead} runs ahead of you in the queue."
-
-
-def apply_queue_meta(progress: dict, *, position: int, depth: int) -> dict:
-    """Merge queue position fields into a progress payload."""
-    updated = dict(progress)
-    updated["queuePosition"] = position
-    updated["queueDepth"] = depth
-    updated["label"] = _queue_label(position, depth)
-    steps = list(updated.get("steps") or [])
-    if steps and steps[0].get("id") == "queue":
-        step0 = dict(steps[0])
-        step0["detail"] = _queue_detail(position, depth)
-        step0["status"] = "active" if position == 1 else "pending"
-        steps[0] = step0
-    updated["steps"] = steps
-    return updated
-
-
 async def check_admission(
     session: AsyncSession,
     *,
@@ -185,61 +136,3 @@ async def check_admission(
         )
 
     return pool
-
-
-async def init_queued_progress_with_position(session: AsyncSession, run_id: str) -> None:
-    from audit_workbench.services.run_progress import init_queued_progress
-
-    await init_queued_progress(session, run_id)
-    run = await session.get(Run, run_id)
-    if not run or not run.progress:
-        return
-    position, depth = await queue_position(session, run_id)
-    if position is None or depth is None:
-        return
-    run.progress = apply_queue_meta(run.progress, position=position, depth=depth)
-
-
-async def refresh_queued_positions(session: AsyncSession) -> int:
-    """Update queue position metadata for all queued runs (DB + SSE)."""
-    from audit_workbench.services.run_events import publish_run_progress
-
-    result = await session.execute(
-        select(Run)
-        .where(Run.status == RunStatus.queued.value)
-        .order_by(Run.created_at.asc(), Run.id.asc())
-    )
-    runs = list(result.scalars())
-    depth = len(runs)
-    if depth == 0:
-        return 0
-
-    updated = 0
-    for index, run in enumerate(runs, start=1):
-        if not run.progress:
-            continue
-        progress = apply_queue_meta(run.progress, position=index, depth=depth)
-        if progress == run.progress:
-            continue
-        run.progress = progress
-        updated += 1
-        await publish_run_progress(run.id, progress)
-    if updated:
-        await session.flush()
-    return updated
-
-
-async def enrich_progress_for_poll(session: AsyncSession, run: Run) -> dict | None:
-    """Refresh queue position on poll while the run is still queued."""
-    if not run.progress:
-        return None
-    if run.status != RunStatus.queued.value:
-        return run.progress
-    position, depth = await queue_position(session, run.id)
-    if position is None or depth is None:
-        return run.progress
-    progress = apply_queue_meta(run.progress, position=position, depth=depth)
-    if progress != run.progress:
-        run.progress = progress
-        await session.flush()
-    return progress

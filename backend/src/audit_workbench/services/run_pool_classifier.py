@@ -1,4 +1,4 @@
-"""Classify audit runs into Hatchet worker pools (ocr | fast)."""
+"""Classify audit runs into Taskiq worker pools (ocr | fast)."""
 
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ async def predict_worker_pool(
     *,
     file_bindings: list | None = None,
 ) -> WorkerPool:
-    """Predict Hatchet pool before a run row exists (admission / enqueue)."""
+    """Predict Taskiq pool before a run row exists (admission / enqueue)."""
     if not file_bindings:
         return "fast"
 

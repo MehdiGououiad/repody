@@ -6,8 +6,10 @@ from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_acc
 
 
 @pytest.fixture(autouse=True)
-def _reset_settings_cache():
+def _reset_settings_cache(monkeypatch: pytest.MonkeyPatch):
     clear_settings_cache()
+    monkeypatch.setenv("AUDIT_OIDC_AUDIENCE", "")
+    monkeypatch.setenv("AUDIT_OIDC_JWKS_URL", "")
     yield
     clear_settings_cache()
 

@@ -30,12 +30,12 @@ from audit_workbench.extraction.document_modes import (
     validation_mode_label,
 )
 from audit_workbench.extraction.gpu_cold_start import gpu_cold_start_likely
-from audit_workbench.extraction.model_registry import (
+from audit_workbench.catalog.registry import (
     extract_with_document_model,
-    is_ocr_compare_model,
     normalize_model_id,
     parse_document_model,
 )
+import audit_workbench.extraction.repody_vlm  # noqa: F401 — register catalog adapters
 from audit_workbench.extraction.schema_fields import empty_fields_from_schema
 from audit_workbench.extraction.stub import StubDocumentExtractor
 from audit_workbench.observability.tracing import start_span
@@ -130,7 +130,7 @@ class PipelineExtractor(DocumentExtractor):
         model_id = normalize_model_id(ocr_model or settings.default_ocr_model)
         model_spec = parse_document_model(model_id)
         has_schema_fields = any(field.name.strip() for field in schema)
-        if not has_schema_fields and not markdown_extraction and not is_ocr_compare_model(model_id):
+        if not has_schema_fields and not markdown_extraction:
             return ExtractionResult(
                 fields=empty_fields_from_schema(schema),
                 raw_text=None,

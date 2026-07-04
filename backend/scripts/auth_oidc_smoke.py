@@ -11,15 +11,16 @@ import argparse
 import json
 import sys
 import urllib.error
-import urllib.parse
 import urllib.request
+from pathlib import Path
 
+_BACKEND = Path(__file__).resolve().parents[1]
+for _path in (_BACKEND / "src", _BACKEND):
+    _text = str(_path)
+    if _text not in sys.path:
+        sys.path.insert(0, _text)
 
-def _post_form(url: str, data: dict[str, str]) -> dict:
-    body = urllib.parse.urlencode(data).encode("utf-8")
-    req = urllib.request.Request(url, data=body, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as res:
-        return json.loads(res.read().decode("utf-8"))
+from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync  # noqa: E402
 
 
 def _get(url: str, token: str) -> tuple[int, str]:
@@ -49,6 +50,24 @@ def _post_json(url: str, token: str, payload: dict) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8")
 
 
+def _fetch_token(
+    *,
+    token_url: str,
+    client_id: str,
+    client_secret: str,
+    username: str,
+    password: str,
+) -> str:
+    return fetch_password_grant_token_sync(
+        token_url=token_url,
+        client_id=client_id,
+        client_secret=client_secret,
+        username=username,
+        password=password,
+        timeout=30.0,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="OIDC + Casbin smoke test")
     parser.add_argument("--keycloak", default="http://127.0.0.1:8080")
@@ -61,19 +80,16 @@ def main() -> int:
     args = parser.parse_args()
 
     token_url = f"{args.keycloak}/realms/{args.realm}/protocol/openid-connect/token"
-    tokens = _post_form(
-        token_url,
-        {
-            "grant_type": "password",
-            "client_id": args.client_id,
-            "client_secret": args.client_secret,
-            "username": args.username,
-            "password": args.password,
-        },
-    )
-    access = tokens.get("access_token")
-    if not access:
-        print("Token response missing access_token", file=sys.stderr)
+    try:
+        access = _fetch_token(
+            token_url=token_url,
+            client_id=args.client_id,
+            client_secret=args.client_secret,
+            username=args.username,
+            password=args.password,
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     status, body = _get(f"{args.base_url}/v1/workflows", access)
@@ -82,17 +98,18 @@ def main() -> int:
         print(body, file=sys.stderr)
         return 1
 
-    viewer_tokens = _post_form(
-        token_url,
-        {
-            "grant_type": "password",
-            "client_id": args.client_id,
-            "client_secret": args.client_secret,
-            "username": "viewer@repody.local",
-            "password": args.password,
-        },
-    )
-    viewer_access = viewer_tokens["access_token"]
+    try:
+        viewer_access = _fetch_token(
+            token_url=token_url,
+            client_id=args.client_id,
+            client_secret=args.client_secret,
+            username="viewer@repody.local",
+            password=args.password,
+        )
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
     blocked_status, _ = _post_json(
         f"{args.base_url}/v1/workflows",
         viewer_access,

@@ -17,6 +17,20 @@ from audit_workbench.settings import get_settings
 log = structlog.get_logger()
 
 
+def _stale_running_message(minutes: int) -> str:
+    return (
+        f"Run exceeded {minutes} minute worker timeout "
+        "(stale running state — retry the test run)"
+    )
+
+
+def _stale_queued_message(minutes: int) -> str:
+    return (
+        f"Run stayed queued for over {minutes} minutes "
+        "(dispatch may have failed — retry the run)"
+    )
+
+
 async def _worker_backlog_active(session: AsyncSession) -> bool:
     """True when at least one run is actively executing on a worker."""
     result = await session.execute(
@@ -44,10 +58,7 @@ async def _reap_stale_running_runs(session: AsyncSession, *, minutes: int) -> in
     for run_id in stale_ids:
         if await fail_run_terminal(
             run_id,
-            (
-                f"Run exceeded {minutes} minute worker timeout "
-                "(stale running state — retry the test run)"
-            ),
+            _stale_running_message(minutes),
             expected_status=RunStatus.running.value,
         ):
             reaped += 1
@@ -82,10 +93,7 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
     for run_id in stale_ids:
         if await fail_run_terminal(
             run_id,
-            (
-                f"Run stayed queued for over {minutes} minutes "
-                "(dispatch may have failed — retry the run)"
-            ),
+            _stale_queued_message(minutes),
             expected_status=RunStatus.queued.value,
         ):
             reaped += 1
@@ -108,10 +116,7 @@ async def maybe_reap_stale_run(session: AsyncSession, run: Run) -> bool:
         if run.started_at < cutoff:
             return await fail_run_terminal(
                 run.id,
-                (
-                    f"Run exceeded {settings.stale_run_timeout_minutes} minute worker timeout "
-                    "(stale running state — retry the test run)"
-                ),
+                _stale_running_message(settings.stale_run_timeout_minutes),
                 session=session,
                 expected_status=RunStatus.running.value,
             )
@@ -122,10 +127,7 @@ async def maybe_reap_stale_run(session: AsyncSession, run: Run) -> bool:
         if run.created_at < cutoff:
             return await fail_run_terminal(
                 run.id,
-                (
-                    f"Run stayed queued for over {settings.queued_stale_timeout_minutes} minutes "
-                    "(dispatch may have failed — retry the run)"
-                ),
+                _stale_queued_message(settings.queued_stale_timeout_minutes),
                 session=session,
                 expected_status=RunStatus.queued.value,
             )
@@ -154,12 +156,12 @@ async def run_maintenance_cycle() -> None:
     settings = get_settings()
     reaped = await reap_stale_runs()
     replayed = 0
-    from audit_workbench.services.dispatch_outbox import replay_pending_dispatches
+    from audit_workbench.services.dispatch_outbox import replay_dispatch_outbox
 
     async with async_session_factory() as session:
-        replayed = await replay_pending_dispatches(session)
+        replayed = await replay_dispatch_outbox(session)
         if settings.admission_control_enabled:
-            from audit_workbench.services.admission import refresh_queued_positions
+            from audit_workbench.services.queue import refresh_queued_positions
 
             await refresh_queued_positions(session)
         await session.commit()

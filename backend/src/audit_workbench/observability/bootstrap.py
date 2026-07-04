@@ -1,4 +1,4 @@
-"""Shared observability startup for API and Hatchet workers."""
+"""Shared observability startup for API and Taskiq workers."""
 
 from __future__ import annotations
 

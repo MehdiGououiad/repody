@@ -18,12 +18,27 @@ def test_document_model_read_path():
     assert parse_read_path(None).id == "document_model"
 
 
-def test_legacy_read_path_aliases_normalize_to_document_model():
-    paths = list_read_paths()
-    ids = {path.id for path in paths}
-    assert ids == {"document_model"}
-    assert parse_read_path("paddle").id == "document_model"
-    assert parse_read_path("paddle_ocr").id == "document_model"
+def test_unknown_read_path_normalizes_to_document_model():
+    read, val = normalize_document_modes("unknown_legacy_mode", "anything")
+    assert read == "document_model"
+    assert val == LOGIC_VALIDATION
+
+
+def test_normalize_document_modes_honors_validation_mode(monkeypatch):
+    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
+    from audit_workbench.settings import get_settings
+
+    get_settings.cache_clear()
+    read, val = normalize_document_modes("document_model", "logic_and_llm")
+    assert read == "document_model"
+    assert val == RUN_VALIDATION_LLM
+    get_settings.cache_clear()
+
+
+def test_normalize_document_modes_downgrades_llm_when_disabled():
+    read, val = normalize_document_modes("document_model", "logic_and_llm")
+    assert read == "document_model"
+    assert val == LOGIC_VALIDATION
 
 
 def test_validation_mode_catalog_default_logic_only():
@@ -41,12 +56,6 @@ def test_validation_mode_catalog_includes_llm_when_enabled(monkeypatch):
     ids = {mode.id for mode in modes}
     assert ids == {LOGIC_VALIDATION, RUN_VALIDATION_LLM}
     get_settings.cache_clear()
-
-
-def test_unknown_read_path_normalizes_to_document_model():
-    read, val = normalize_document_modes("unknown_legacy_mode", "anything")
-    assert read == "document_model"
-    assert val == LOGIC_VALIDATION
 
 
 def test_logic_only_skips_llm_rules():

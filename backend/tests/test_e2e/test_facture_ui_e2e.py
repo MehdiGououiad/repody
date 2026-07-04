@@ -6,7 +6,7 @@ Uses:
   POST /v1/workflows/{id}/runs   — multipart payload + document_ids + files
   GET  /v1/runs/{id}/status       — poll (then GET /v1/runs/{id} for result)
 
-Requires a running docker stack with Hatchet + workers:
+Requires a running docker stack with Taskiq workers:
   E2E_STACK=1 E2E_API_URL=http://localhost:8000 pnpm test:api:live
 """
 
@@ -15,7 +15,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from tests.test_e2e.facture_helpers import (
+from audit_workbench.integration.facture import (
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -35,7 +35,7 @@ from tests.test_e2e.facture_helpers import (
     total_from_result,
     tva_from_result,
 )
-from tests.test_e2e.ui_flow import run_test_with_files, save_workflow
+from audit_workbench.integration.workflow_flow import run_test_with_files, save_workflow
 
 pytestmark = [pytest.mark.e2e_facture, pytest.mark.live, pytest.mark.asyncio]
 

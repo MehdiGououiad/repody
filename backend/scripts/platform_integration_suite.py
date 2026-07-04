@@ -27,7 +27,7 @@ sys.path.insert(0, str(ROOT / "backend" / "src"))
 sys.path.insert(0, str(ROOT / "backend"))
 
 from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID  # noqa: E402
-from tests.test_e2e.facture_helpers import (  # noqa: E402
+from audit_workbench.integration.facture import (  # noqa: E402
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -41,7 +41,7 @@ from tests.test_e2e.facture_helpers import (  # noqa: E402
     total_from_result,
     tva_from_result,
 )
-from tests.test_e2e.ui_flow import poll_run_until_done, save_workflow  # noqa: E402
+from audit_workbench.integration.workflow_flow import poll_run_until_done, save_workflow  # noqa: E402
 
 DEFAULT_DOCUMENT_MODEL = REPODY_VLM_CATALOG_ID
 MAX_WAIT_MS = 900_000
@@ -54,8 +54,20 @@ def _auth_headers(token: str | None) -> dict[str, str]:
 
 
 def _resolve_bearer_token(cli_token: str | None) -> str | None:
-    if cli_token:
-        return cli_token.strip() or None
+    if cli_token and cli_token.strip():
+        return cli_token.strip()
+
+    api_base = os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/")
+    try:
+        health = httpx.get(f"{api_base}/v1/healthz", timeout=10.0)
+        health.raise_for_status()
+        if health.json().get("oidcEnabled"):
+            from audit_workbench.integration.live_stack import fetch_keycloak_token
+
+            return fetch_keycloak_token()
+    except Exception:
+        pass
+
     for key in ("REPODY_ACCESS_TOKEN", "REPODY_OIDC_ACCESS_TOKEN"):
         env = os.environ.get(key)
         if env and env.strip():
@@ -186,11 +198,14 @@ async def run_extraction_case(
 
 async def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api", default="http://localhost:8000")
+    parser.add_argument(
+        "--api",
+        default=os.environ.get("E2E_API_URL", "http://localhost:8000").rstrip("/"),
+    )
     parser.add_argument(
         "--token",
-        default=os.environ.get("REPODY_ACCESS_TOKEN"),
-        help="Keycloak access token (default: REPODY_ACCESS_TOKEN env)",
+        default=None,
+        help="Keycloak access token (overrides auto-fetch when OIDC is enabled)",
     )
     parser.add_argument("--skip-extraction", action="store_true")
     parser.add_argument("--output", type=Path, default=None)
@@ -224,7 +239,7 @@ async def main() -> int:
         await _timed("Diagnostics (registry)", report, _check_diagnostics(client))
 
         if not args.skip_extraction and health:
-            from tests.test_e2e.facture_helpers import FACTURE_UI_PATHS
+            from audit_workbench.integration.facture import FACTURE_UI_PATHS
 
             case = FACTURE_UI_PATHS[0]
             doc_id = f"doc-{uuid.uuid4().hex[:8]}"

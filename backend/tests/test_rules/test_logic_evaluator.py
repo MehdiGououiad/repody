@@ -41,6 +41,26 @@ def test_currency_suffix_coerces_for_comparison():
     assert "false" in detail.lower()
 
 
+def test_reference_ids_are_not_coerced_to_numbers():
+    """PO-2024-991 and PO-2024-992 must compare as strings, not as -2024."""
+    fields = {
+        "invoice__po_number": "PO-2024-991",
+        "purchase_order__po_number": "PO-2024-992",
+    }
+    passed, _, _ = evaluate_logic_expression(
+        "invoice__po_number == purchase_order__po_number",
+        fields,
+    )
+    assert passed is False
+
+
+def test_string_literal_values_are_not_treated_as_fields():
+    fields = {"invoice__currency": "EUR"}
+    passed, detail, _ = evaluate_logic_expression('invoice__currency == "EUR"', fields)
+    assert passed is True
+    assert "not found" not in detail.lower()
+
+
 def test_ocr_locale_amount_coerces():
     fields = {"total_amount": "6 000,00 Dh TTC"}
     passed, _, _ = evaluate_logic_expression("total_amount > 1000", fields)

@@ -1,18 +1,14 @@
 """Per-model document input policies (upstream docs only, no platform tuning).
 
 NuExtract3: native image bytes; PDF → lossless PNG @ 170 DPI (official example).
-Surya OCR 2: PIL from native bytes; PDF → lossless PNG @ IMAGE_DPI (96 in benchmarks).
 """
 
 from __future__ import annotations
 
-import io
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from PIL import Image
-
     from audit_workbench.extraction.document_bundle import DocumentBundle
     from audit_workbench.settings import Settings
 
@@ -41,19 +37,8 @@ REPODY_VLM_RENDER = ModelRenderPolicy(
     max_edge_px=None,
 )
 
-# https://huggingface.co/datalab-to/surya-ocr-2 — Image.open(path); 96 DPI benchmark input
-SURYA_OCR_RENDER = ModelRenderPolicy(
-    model_id="surya:ocr2",
-    doc_ref="datalab-to/surya-ocr-2 (native image; PDF raster @ IMAGE_DPI)",
-    image_input="pil_rgb",
-    pdf_dpi=96,
-    pdf_format="png",
-    max_edge_px=None,
-)
-
 RENDER_POLICIES: dict[str, ModelRenderPolicy] = {
     REPODY_VLM_RENDER.model_id: REPODY_VLM_RENDER,
-    SURYA_OCR_RENDER.model_id: SURYA_OCR_RENDER,
 }
 
 
@@ -71,10 +56,6 @@ def _is_image_upload(mime_type: str, raw_bytes: bytes) -> bool:
 
 def repody_vlm_pdf_dpi(settings: Settings) -> int:
     return settings.repody_vlm_pdf_dpi
-
-
-def surya_pdf_dpi(settings: Settings) -> int:
-    return settings.surya_image_dpi
 
 
 def native_image_mime_type(mime_type: str, image_bytes: bytes) -> str:
@@ -112,40 +93,3 @@ def repody_vlm_pages(bundle: DocumentBundle, settings: Settings) -> tuple[list[t
     pages = render_document_pages_jpeg(bundle.raw_bytes, bundle.mime_type, settings=settings)
     bundle.page_count = len(pages)
     return [(page, "image/jpeg") for page in pages], len(pages)
-
-
-def surya_pil_pages(bundle: DocumentBundle, settings: Settings) -> list[Image.Image]:
-    """PIL pages for Surya: native uploads; PDF → lossless PNG @ surya_image_dpi."""
-    from PIL import Image
-
-    if _is_image_upload(bundle.mime_type, bundle.raw_bytes):
-        image = Image.open(io.BytesIO(bundle.raw_bytes))
-        image.load()
-        if image.mode not in ("RGB", "L"):
-            image = image.convert("RGB")
-        bundle.page_count = 1
-        return [image]
-
-    if _is_pdf(bundle.mime_type, bundle.raw_bytes):
-        from audit_workbench.extraction.preprocess import render_pdf_pages_png
-
-        png_pages = render_pdf_pages_png(
-            bundle.raw_bytes,
-            settings=settings,
-            dpi=surya_pdf_dpi(settings),
-            max_edge=SURYA_OCR_RENDER.max_edge_px,
-        )
-        bundle.page_count = len(png_pages)
-        images: list[Image.Image] = []
-        for page in png_pages:
-            image = Image.open(io.BytesIO(page))
-            image.load()
-            images.append(image)
-        return images
-
-    image = Image.open(io.BytesIO(bundle.raw_bytes))
-    image.load()
-    if image.mode not in ("RGB", "L"):
-        image = image.convert("RGB")
-    bundle.page_count = 1
-    return [image]

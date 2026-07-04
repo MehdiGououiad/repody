@@ -18,9 +18,9 @@ async def test_operator_status_is_available_in_read_only_mode(client):
 
 
 @pytest.mark.asyncio
-async def test_operator_actions_are_gated_by_default(client):
+async def test_operator_warmup_is_gated_by_default(client):
     response = await client.post(
-        "/v1/operator/models/pull",
+        "/v1/operator/models/warmup",
         json={"model": "repody/repody-vlm:q4_k_m-16k"},
     )
 

@@ -43,7 +43,7 @@ def test_html_report_is_self_contained():
                     "ruleAccuracy": 1.0,
                 }
             ],
-            "environment": {"platform": {"queueBackend": "hatchet"}},
+            "environment": {"platform": {"queueBackend": "taskiq"}},
         }
     )
     assert "<!doctype html>" in rendered

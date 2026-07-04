@@ -29,7 +29,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from audit_workbench.main import create_app
-from audit_workbench.settings import get_settings
+from audit_workbench.settings import clear_settings_cache, get_settings
 from tests.helpers.db import (
     bind_test_database,
     configure_test_database_url,
@@ -44,14 +44,21 @@ from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
 _session_dmr_router: dict[str, object] = {"router": None}
 
 
+@pytest.fixture(autouse=True)
+def fresh_settings():
+    clear_settings_cache()
+    yield
+    clear_settings_cache()
+
+
 @pytest.fixture
 async def live_client(request):
-    """HTTP client against a running docker/k8s stack (Hatchet + workers)."""
+    """HTTP client against a running docker/k8s stack (Taskiq workers)."""
     if request.node.get_closest_marker("live") is None:
         pytest.skip("live_client fixture requires @pytest.mark.live")
     if os.environ.get("E2E_STACK") != "1" and not os.environ.get("E2E_API_URL"):
         pytest.skip("Set E2E_STACK=1 or E2E_API_URL for live API tests")
-    from tests.helpers.live_stack import create_live_async_client
+    from audit_workbench.integration.live_stack import create_live_async_client
 
     async with create_live_async_client() as ac:
         yield ac
@@ -77,6 +84,8 @@ async def test_session_factory():
 @pytest_asyncio.fixture(scope="session")
 async def app(test_session_factory):
     """Real ASGI app against migrated Postgres (UI-identical routes)."""
+    os.environ["AUDIT_OIDC_ENABLED"] = "false"
+    os.environ["AUDIT_OIDC_AUDIENCE"] = ""
     get_settings.cache_clear()
     router = enable_dmr_mock(monkeypatch=None)
     _session_dmr_router["router"] = router
@@ -85,11 +94,13 @@ async def app(test_session_factory):
 
     yield application
 
-    from audit_workbench.hatchet.client import clear_hatchet_client
-    from audit_workbench.services.run_dispatch import close_hatchet_client
+    from audit_workbench.services.run_dispatch import close_taskiq_brokers
+    from audit_workbench.taskiq.broker import clear_broker_cache
+    from audit_workbench.taskiq.tasks import clear_task_registry
 
-    await close_hatchet_client()
-    clear_hatchet_client()
+    await close_taskiq_brokers()
+    clear_broker_cache()
+    clear_task_registry()
     disable_dmr_mock(router)
     _session_dmr_router["router"] = None
     get_settings.cache_clear()
@@ -106,7 +117,7 @@ async def postgres_session(monkeypatch, test_session_factory):
 
 @pytest.fixture(autouse=True)
 async def drain_background_tasks():
-    """Let fire-and-forget Hatchet dispatch tasks finish before the next test."""
+    """Let fire-and-forget Taskiq dispatch tasks finish before the next test."""
     yield
     from audit_workbench.services.dispatch_outbox import drain_dispatch_tasks
 
@@ -118,11 +129,9 @@ async def reset_inference_clients():
     """Drop cached httpx clients between tests (session loop keeps the same event loop)."""
     yield
     from audit_workbench.inference.factory import get_inference_client
-    from audit_workbench.inference.http_pool import close_async_http_client
     from audit_workbench.inference.openai_compat import close_openai_clients
 
     await close_openai_clients()
-    await close_async_http_client()
     get_inference_client.cache_clear()
 
 

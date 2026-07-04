@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
+from audit_workbench.inference.runtime import is_remote_vllm_url
 from audit_workbench.settings import Settings, get_settings
 
-# First request after an idle GPU service is often much slower than steady-state.
+# First request after an idle remote GPU service is often much slower than steady-state.
 GPU_COLD_START_THRESHOLD_MS = 15_000
 
 
 def is_serverless_vllm(settings: Settings | None = None) -> bool:
+    """True for remote OpenAI-compatible vLLM (serverless GPU), not local llama-server."""
     settings = settings or get_settings()
-    return settings.inference_mode.lower() == "vllm"
+    if settings.inference_mode.lower() != "vllm":
+        return False
+    return is_remote_vllm_url(settings.vllm_base_url)
 
 
 def gpu_cold_start_likely(

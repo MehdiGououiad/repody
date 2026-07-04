@@ -27,7 +27,8 @@ from typing import Any
 
 import httpx
 
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
+from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF = REPO_ROOT / "e2e" / "fixtures" / "documents" / "Facture.pdf"
@@ -49,26 +50,17 @@ def _fetch_oidc_token(
     username: str,
     password: str,
 ) -> str | None:
-    import urllib.error
-    import urllib.parse
-    import urllib.request
-
     token_url = f"{keycloak.rstrip('/')}/realms/{realm}/protocol/openid-connect/token"
-    body = urllib.parse.urlencode(
-        {
-            "grant_type": "password",
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "username": username,
-            "password": password,
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request(token_url, data=body, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=30) as res:
-            payload = json.loads(res.read().decode("utf-8"))
-            return payload.get("access_token")
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError):
+        return fetch_password_grant_token_sync(
+            token_url=token_url,
+            client_id=client_id,
+            client_secret=client_secret,
+            username=username,
+            password=password,
+            timeout=30.0,
+        )
+    except RuntimeError:
         return None
 
 

@@ -3,13 +3,22 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from pydantic import Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
 from audit_workbench.auth.dependencies import get_current_principal
 from audit_workbench.auth.principal import Principal
-from audit_workbench.schemas.common import CamelModel
+from audit_workbench.schemas.uploads import (
+    ConfirmUploadItem,
+    ConfirmUploadRequest,
+    ConfirmUploadResponse,
+    PresignRequest,
+    PresignResponse,
+    PresignedUploadItem,
+    UploadCapabilitiesResponse,
+    UploadItem,
+    UploadResponse,
+)
 from audit_workbench.services.upload_intents import (
     UploadIntentError,
     confirm_upload_intent,
@@ -28,76 +37,22 @@ from audit_workbench.storage.mime import is_allowed_mime, sanitize_filename
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 
 
-class UploadItem(CamelModel):
-    id: str
-    storage_key: str
-    file_name: str
-    mime_type: str
-    size: int
-
-
-class UploadResponse(CamelModel):
-    uploads: list[UploadItem]
-
-
-class PresignFileRequest(CamelModel):
-    file_name: str
-    mime_type: str
-    size: int = Field(ge=1)
-    document_id: str | None = None
-
-
-class PresignRequest(CamelModel):
-    files: list[PresignFileRequest]
-
-
-class PresignedUploadItem(CamelModel):
-    id: str
-    storage_key: str
-    file_name: str
-    mime_type: str
-    size: int
-    document_id: str | None = None
-    upload_url: str | None = None
-    method: str = "PUT"
-    headers: dict[str, str] = Field(default_factory=dict)
-
-
-class PresignResponse(CamelModel):
-    upload_mode: str = Field(description="presigned | api")
-    uploads: list[PresignedUploadItem]
-
-
-class ConfirmUploadRequest(CamelModel):
-    storage_keys: list[str]
-
-
-class ConfirmUploadItem(CamelModel):
-    storage_key: str
-    file_name: str
-    mime_type: str
-    size: int
-
-
-class ConfirmUploadResponse(CamelModel):
-    uploads: list[ConfirmUploadItem]
-
-
 def _presign_supported() -> bool:
     settings = get_settings()
     return settings.storage_backend == "s3" and settings.direct_upload_enabled
 
 
-@router.get("/capabilities")
-async def upload_capabilities() -> dict:
+@router.get("/capabilities", response_model=UploadCapabilitiesResponse)
+async def upload_capabilities() -> UploadCapabilitiesResponse:
     settings = get_settings()
-    return {
-        "storageBackend": settings.storage_backend,
-        "directUploadEnabled": settings.direct_upload_enabled and _presign_supported(),
-        "uploadMode": "presigned" if _presign_supported() else "api",
-        "maxUploadBytes": settings.max_upload_bytes,
-        "maxUploadFiles": settings.max_upload_files,
-    }
+    presigned = _presign_supported()
+    return UploadCapabilitiesResponse(
+        storage_backend=settings.storage_backend,
+        direct_upload_enabled=settings.direct_upload_enabled and presigned,
+        upload_mode="presigned" if presigned else "api",
+        max_upload_bytes=settings.max_upload_bytes,
+        max_upload_files=settings.max_upload_files,
+    )
 
 
 @router.post("/presign", response_model=PresignResponse)

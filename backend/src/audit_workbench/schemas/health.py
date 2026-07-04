@@ -38,4 +38,4 @@ class HealthReadinessResponse(CamelModel):
     auth_enabled: bool = Field(serialization_alias="authEnabled")
     oidc_enabled: bool = Field(serialization_alias="oidcEnabled")
     worker_pools: WorkerPoolsHealth = Field(serialization_alias="workerPools")
-    hatchet_configured: bool = Field(serialization_alias="hatchetConfigured")
+    taskiq_configured: bool = Field(serialization_alias="taskiqConfigured")

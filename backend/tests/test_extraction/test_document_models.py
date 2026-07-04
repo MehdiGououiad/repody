@@ -8,8 +8,8 @@ import pytest
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import DocumentBundle
 from audit_workbench.extraction.field_json import parse_fields_json
-from audit_workbench.extraction.model_registry import (
-    REPODY_VLM_CATALOG_ID,
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.catalog.registry import (
     normalize_model_id,
     parse_document_model,
 )
@@ -128,7 +128,7 @@ def test_repody_vlm_encodes_page_mime_type_in_data_url():
 
 
 def test_repody_vlm_markdown_payload_uses_nuextract_mode():
-    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.catalog.registry import parse_document_model
     from audit_workbench.settings import get_settings
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -145,7 +145,7 @@ def test_repody_vlm_markdown_payload_uses_nuextract_mode():
 
 
 def test_repody_vlm_structured_payload_keeps_template():
-    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.catalog.registry import parse_document_model
     from audit_workbench.settings import get_settings
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -166,7 +166,7 @@ def test_repody_vlm_structured_payload_keeps_template():
 
 
 def test_repody_vlm_thinking_payload_matches_nuextract_docs():
-    from audit_workbench.extraction.model_registry import parse_document_model
+    from audit_workbench.catalog.registry import parse_document_model
     from audit_workbench.settings import Settings
 
     settings = Settings(repody_vlm_enable_thinking=True)

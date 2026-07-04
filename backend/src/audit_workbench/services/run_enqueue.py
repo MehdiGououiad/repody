@@ -7,7 +7,6 @@ from dataclasses import dataclass
 
 import structlog
 from asgi_correlation_id import correlation_id
-from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.auth.casbin_authorizer import get_authorizer
@@ -20,16 +19,20 @@ from audit_workbench.schemas.workflow import (
     WorkflowRuleSchema,
 )
 from audit_workbench.services import run_service
-from audit_workbench.services.admission import (
-    QueueCapacityExceeded,
-    check_admission,
-    refresh_queued_positions,
-)
+from audit_workbench.services.admission import QueueCapacityExceeded, check_admission
 from audit_workbench.services.api_keys import verify_api_key
 from audit_workbench.services.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
-from audit_workbench.services.rate_limit import RateLimitExceeded, check_run_rate_limits
+from audit_workbench.services.queue import refresh_queued_positions
+from audit_workbench.services.rate_limit import RunRateLimitExceeded, check_run_rate_limits
+from audit_workbench.services.run_enqueue_errors import (
+    ForbiddenRunError,
+    RunEnqueueError,
+    UnauthorizedRunError,
+    WorkflowNotDeployedError,
+    WorkflowNotFoundError,
+)
 from audit_workbench.services.run_service import FileBinding
-from audit_workbench.services.workflow_repository import load_workflow
+from audit_workbench.services.workflow import load_workflow
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -50,21 +53,19 @@ class EnqueueRunRequest:
     authorization: str | None = None
     file_bindings: list[FileBinding] | None = None
     snapshot: RunSnapshot | None = None
-    request: Request | None = None
+    client_host: str | None = None
     """True for bare POST /runs (production API shape without builder snapshot)."""
     production_api_shape: bool = False
 
 
 def client_key_from_request(
-    source: str, authorization: str | None, request: Request | None
+    source: str, authorization: str | None, client_host: str | None
 ) -> str | None:
     if source == "api" and authorization:
         token = extract_bearer(authorization)
         if token:
             return hashlib.sha256(token.encode()).hexdigest()[:16]
-    if request and request.client:
-        return request.client.host
-    return None
+    return client_host
 
 
 async def resolve_run_source(
@@ -81,7 +82,7 @@ async def resolve_run_source(
 
     wf = await load_workflow(session, workflow_id)
     if not wf:
-        raise HTTPException(404, "Workflow not found")
+        raise WorkflowNotFoundError
 
     if token and wf.deployed_at and verify_api_key(token, wf.api_key):
         return "api", wf
@@ -90,25 +91,25 @@ async def resolve_run_source(
         try:
             principal = principal_from_bearer(token, settings)
         except JwtValidationError as exc:
-            raise HTTPException(401, f"Unauthorized — {exc}") from exc
+            raise UnauthorizedRunError(f"Unauthorized — {exc}") from exc
 
         if not principal.has_app_role():
-            raise HTTPException(403, "No application role assigned in Keycloak.")
+            raise ForbiddenRunError("No application role assigned in Keycloak.")
 
         authorizer = get_authorizer()
         if not authorizer.authorize(principal, "run", "execute"):
-            raise HTTPException(403, "Forbidden — operator role required for test runs.")
+            raise ForbiddenRunError("Forbidden — operator role required for test runs.")
 
         return "test", wf
 
     if token and not settings.oidc_enabled:
-        raise HTTPException(401, "Invalid API key.")
+        raise UnauthorizedRunError("Invalid API key.")
 
     if settings.oidc_enabled:
-        raise HTTPException(401, "Missing bearer token.")
+        raise UnauthorizedRunError("Missing bearer token.")
 
     if production_api_shape or (wf.deployed_at and not has_snapshot):
-        raise HTTPException(401, "Invalid API key.")
+        raise UnauthorizedRunError("Invalid API key.")
 
     return "test", wf
 
@@ -125,10 +126,10 @@ async def enqueue_run(
         has_snapshot=req.snapshot is not None,
         production_api_shape=req.production_api_shape,
     )
-    client_key = client_key_from_request(source, req.authorization, req.request)
+    client_key = client_key_from_request(source, req.authorization, req.client_host)
 
     if source == "api" and not wf.deployed_at:
-        raise HTTPException(409, "Workflow is not deployed.")
+        raise WorkflowNotDeployedError
 
     try:
         await check_run_rate_limits(
@@ -136,8 +137,8 @@ async def enqueue_run(
             source=source,
             client_key=client_key,
         )
-    except RateLimitExceeded as exc:
-        raise HTTPException(429, str(exc)) from exc
+    except RunRateLimitExceeded:
+        raise
 
     try:
         predicted_pool = await check_admission(
@@ -145,12 +146,8 @@ async def enqueue_run(
             workflow_id=req.workflow_id,
             file_bindings=req.file_bindings,
         )
-    except QueueCapacityExceeded as exc:
-        raise HTTPException(
-            503,
-            str(exc),
-            headers={"Retry-After": str(exc.retry_after_seconds)},
-        ) from exc
+    except QueueCapacityExceeded:
+        raise
 
     snapshot = req.snapshot if source == "test" else None
     run = await run_service.create_run(

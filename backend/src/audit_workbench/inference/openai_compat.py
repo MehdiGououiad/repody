@@ -14,7 +14,6 @@ _STANDARD_CHAT_KEYS = frozenset(
         "max_tokens",
         "temperature",
         "top_p",
-        "top_k",
         "stream",
         "response_format",
     }
@@ -90,10 +89,16 @@ async def post_chat_completion(
     api_key: str | None = None,
 ) -> dict[str, Any]:
     client = _client(base_url, timeout=timeout, api_key=api_key)
-    standard = {k: payload[k] for k in _STANDARD_CHAT_KEYS if k in payload}
-    extra = {k: v for k, v in payload.items() if k not in _STANDARD_CHAT_KEYS}
+    standard, extra = split_chat_payload(payload)
     response = await client.chat.completions.create(**standard, extra_body=extra or None)
     return response.model_dump()
+
+
+def split_chat_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Split OpenAI SDK params from runtime-specific extension params."""
+    standard = {k: payload[k] for k in _STANDARD_CHAT_KEYS if k in payload}
+    extra = {k: v for k, v in payload.items() if k not in _STANDARD_CHAT_KEYS}
+    return standard, extra
 
 
 def model_is_available(expected: str, installed: set[str]) -> bool:

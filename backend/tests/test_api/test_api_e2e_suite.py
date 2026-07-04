@@ -1,4 +1,4 @@
-"""In-process API tests (no Hatchet). Run-completion flows use @pytest.mark.live + live_client."""
+"""In-process API tests (no Taskiq workers). Run-completion flows use @pytest.mark.live + live_client."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ import uuid
 
 import pytest
 
-from audit_workbench.extraction.model_registry import REPODY_VLM_CATALOG_ID
-from tests.test_e2e.facture_helpers import (
+from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_PDF,
     FACTURE_UI_PATHS,
@@ -48,7 +48,7 @@ async def test_healthz_reports_configured_queue_backend(client):
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
-    assert body["queueBackend"] == "hatchet"
+    assert body["queueBackend"] == "taskiq"
     assert "workerPools" in body
     assert body["workerPools"]["fast"] == "fast"
     assert body["workerPools"]["ocr"] == "ocr"
@@ -88,7 +88,7 @@ async def test_ocr_model_catalog_reports_runtime_availability(client, monkeypatc
         }
 
     monkeypatch.setattr(
-        "audit_workbench.services.document_model_catalog.installed_runtime_models",
+        "audit_workbench.catalog.probes.installed_runtime_models",
         fake_installed_runtime_models,
     )
 
@@ -162,8 +162,8 @@ async def test_workflow_lifecycle_deploy_and_auth(client):
 
 
 @pytest.mark.asyncio
-async def test_enqueue_without_hatchet_returns_queued(client):
-    """Enqueue commits the run + outbox before background Hatchet dispatch."""
+async def test_enqueue_without_worker_returns_queued(client):
+    """Enqueue commits the run + outbox before background Taskiq dispatch."""
     res = await client.post(
         "/v1/workflows/wf-invoice-audit/runs/json",
         json={
@@ -269,7 +269,7 @@ async def test_api_run_requires_seed_key(client):
     assert res.status_code == 401
 
 
-# --- Live stack (Hatchet + workers) ---
+# --- Live stack (Taskiq workers) ---
 
 
 @pytest.mark.live
@@ -411,7 +411,7 @@ async def test_multipart_test_run_with_facture(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from tests.test_e2e.ui_flow import poll_run_until_done
+    from audit_workbench.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id, max_ms=120_000)
     assert total_from_result(result) == EXPECTED_TOTAL
@@ -433,7 +433,7 @@ async def test_test_run_produces_audit_detail(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from tests.test_e2e.ui_flow import poll_run_until_done
+    from audit_workbench.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     audit_id = result["id"]
@@ -453,7 +453,7 @@ async def test_api_run_with_seed_key_completes(live_client):
     assert ok.status_code == 202
     run_id = ok.json()["runId"]
 
-    from tests.test_e2e.ui_flow import poll_run_until_done
+    from audit_workbench.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     assert result is not None

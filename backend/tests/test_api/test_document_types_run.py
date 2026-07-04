@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tests.test_e2e.facture_helpers import facture_bytes
+from audit_workbench.integration.facture import facture_bytes
 
 
 @pytest.mark.live
@@ -37,7 +37,7 @@ async def test_multipart_run_accepts_document_types(live_client):
     assert res.status_code == 202, res.text
     run_id = res.json()["runId"]
 
-    from tests.test_e2e.ui_flow import poll_run_until_done
+    from audit_workbench.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     assert result is not None

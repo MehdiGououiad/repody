@@ -6,8 +6,7 @@ from dataclasses import dataclass, field
 
 from audit_workbench.db.models import Document, Run, Workflow
 from audit_workbench.extraction.document_modes import normalize_document_modes
-from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.services.run.helpers import rules_payload
+from audit_workbench.services.run.helpers import rule_dict_from_row, rules_payload
 
 
 @dataclass
@@ -136,25 +135,18 @@ def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
     raw_rules = snapshot.get("rules")
     if raw_rules:
         return [
-            {
-                "id": str(rule.get("id") or f"rule-{idx}"),
-                "name": str(rule.get("name") or "Rule"),
-                "kind": str(rule.get("kind") or "logic"),
-                "scope": str(rule.get("scope") or "intra"),
-                "applies_to": rule.get("applies_to") or rule.get("appliesTo") or [],
-                "body": resolve_rule_body(
-                    {
-                        "body": rule.get("body") or "",
-                        "conditions": rule.get("conditions"),
-                        "condition_junction": rule.get("condition_junction")
-                        or rule.get("conditionJunction"),
-                    }
-                ),
-                "severity": str(rule.get("severity") or "reject"),
-                "conditions": rule.get("conditions"),
-                "condition_junction": rule.get("condition_junction")
+            rule_dict_from_row(
+                rule_id=str(rule.get("id") or f"rule-{idx}"),
+                name=str(rule.get("name") or "Rule"),
+                kind=str(rule.get("kind") or "logic"),
+                scope=str(rule.get("scope") or "intra"),
+                applies_to=rule.get("applies_to") or rule.get("appliesTo") or [],
+                body=str(rule.get("body") or ""),
+                severity=str(rule.get("severity") or "reject"),
+                conditions=rule.get("conditions"),
+                condition_junction=rule.get("condition_junction")
                 or rule.get("conditionJunction"),
-            }
+            )
             for idx, rule in enumerate(raw_rules)
         ]
     return rules_payload(workflow)

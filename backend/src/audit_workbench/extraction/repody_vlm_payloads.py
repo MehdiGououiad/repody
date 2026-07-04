@@ -12,7 +12,7 @@ from audit_workbench.extraction.template_type_inference import (
 from audit_workbench.settings import Settings
 
 if TYPE_CHECKING:
-    from audit_workbench.extraction.model_registry import DocumentModelSpec
+    from audit_workbench.catalog.registry import DocumentModelSpec
 
 _MONEY_HINTS = (
     "amount",
@@ -144,6 +144,7 @@ def _structured_payload(
         "messages": [{"role": "user", "content": content}],
         "max_tokens": vlm_max_tokens_for_field_count(
             field_count,
+            ceiling=settings.repody_vlm_max_tokens,
             enable_thinking=enable_thinking,
         ),
         "stream": False,

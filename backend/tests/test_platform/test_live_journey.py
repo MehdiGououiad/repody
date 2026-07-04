@@ -12,7 +12,7 @@ import httpx
 import pytest
 
 from audit_workbench.db.seed import SEED_WORKFLOW_ID
-from tests.helpers.live_stack import (
+from audit_workbench.integration.live_stack import (
     assert_metrics_access,
     create_anonymous_live_client,
     create_live_client,

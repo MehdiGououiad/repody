@@ -15,6 +15,8 @@ def _oidc_enabled(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUDIT_OIDC_ENABLED", "true")
     monkeypatch.setenv("AUDIT_OIDC_ISSUER", TEST_ISSUER)
     monkeypatch.setenv("AUDIT_OIDC_JWKS_JSON", jwks_json_for_tests())
+    monkeypatch.setenv("AUDIT_OIDC_JWKS_URL", "")
+    monkeypatch.setenv("AUDIT_OIDC_AUDIENCE", "")
     yield
     clear_settings_cache()
 
@@ -73,11 +75,12 @@ async def test_test_run_accepts_operator_jwt(live_client):
     health = await live_client.get("/v1/healthz")
     if not health.json().get("oidcEnabled"):
         pytest.skip("OIDC not enabled on target stack")
-    operator = mint_access_token(roles=["operator"])
+    from audit_workbench.integration.live_stack import fetch_keycloak_token
+
     ok = await live_client.post(
         "/v1/workflows/wf-invoice-audit/runs/json",
         json={"snapshot": {"documents": [], "rules": []}},
-        headers={"Authorization": f"Bearer {operator}"},
+        headers={"Authorization": f"Bearer {fetch_keycloak_token()}"},
     )
     assert ok.status_code == 202
     assert ok.json()["runId"]

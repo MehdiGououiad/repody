@@ -1,4 +1,4 @@
-"""Live-stack API E2E suite — requires running Docker stack (Hatchet + workers + Model Runner).
+"""Live-stack API E2E suite — requires running Docker stack (Taskiq workers + Model Runner).
 
 Run: pnpm test:api:live
 """
@@ -12,14 +12,14 @@ import uuid
 import httpx
 import pytest
 
-from tests.helpers.live_stack import (
+from audit_workbench.integration.live_stack import (
     assert_metrics_access,
     create_live_client,
     live_api_base,
     live_inference_ready,
     live_oidc_enabled,
 )
-from tests.test_e2e.facture_helpers import (
+from audit_workbench.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_UI_PATHS,
     WORKFLOW_NAME,
@@ -47,13 +47,13 @@ def require_inference(client: httpx.Client):
         pytest.skip("document-model inference not reachable (healthz modelRunner != true)")
 
 
-def test_live_health_hatchet(client: httpx.Client):
+def test_live_health_taskiq(client: httpx.Client):
     res = client.get("/v1/healthz")
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
-    assert body["queueBackend"] == "hatchet"
-    assert body.get("hatchetConfigured") is True
+    assert body["queueBackend"] == "taskiq"
+    assert body.get("taskiqConfigured") is True
 
 
 def test_live_workflows_and_metrics(client: httpx.Client):

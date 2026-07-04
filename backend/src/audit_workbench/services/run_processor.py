@@ -27,14 +27,14 @@ log = structlog.get_logger()
 
 
 async def execute_run_with_timeout(session: AsyncSession, run_id: str) -> None:
-    """Run extract+validate with a hard ceiling from AUDIT_HATCHET_TASK_TIMEOUT_MINUTES."""
+    """Run extract+validate with a hard ceiling from AUDIT_WORKER_TASK_TIMEOUT_MINUTES."""
     settings = get_settings()
-    timeout_seconds = settings.hatchet_task_timeout_minutes * 60
+    timeout_seconds = settings.worker_task_timeout_minutes * 60
     try:
         await asyncio.wait_for(process_run(session, run_id), timeout=timeout_seconds)
     except TimeoutError:
         await session.rollback()
-        minutes = settings.hatchet_task_timeout_minutes
+        minutes = settings.worker_task_timeout_minutes
         await fail_run_terminal(
             run_id,
             f"Run exceeded {minutes} minute task timeout",
@@ -109,7 +109,7 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
     await session.commit()
 
     from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.admission import refresh_queued_positions
+    from audit_workbench.services.queue import refresh_queued_positions
 
     async with async_session_factory() as refresh_session:
         await refresh_queued_positions(refresh_session)

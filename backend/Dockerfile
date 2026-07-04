@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # One backend image for api + workers (role chosen by Kubernetes command).
-#   docker build --target backend -t repody-backend ./backend
+#   pnpm images:build -- --only=backend
 # Legacy aliases (same layers): --target api | --target worker
 
 FROM python:3.13.14-slim AS runtime-base
@@ -10,10 +10,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     VIRTUAL_ENV=/opt/venv \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
     PATH="/opt/venv/bin:$PATH"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      curl libpq5 libgomp1 libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 \
+      libpq5 libgomp1 libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system --gid 10001 repody \
     && useradd --system --uid 10001 --gid repody --home-dir /app --shell /usr/sbin/nologin repody \
@@ -22,40 +25,54 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 FROM runtime-base AS build
 
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /bin/
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install --no-cache-dir uv==0.11.21 \
-    && python -m venv "$VIRTUAL_ENV"
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY pyproject.toml ./
-COPY alembic.ini ./
-COPY alembic/ ./alembic/
-RUN mkdir -p src/audit_workbench && touch src/audit_workbench/__init__.py
-
-ARG BACKEND_EXTRAS=otel,ocr
+ARG BACKEND_EXTRAS=otel
+ARG INCLUDE_BENCHMARK_FIXTURES=false
+COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[${BACKEND_EXTRAS}]"
+    set -eux; \
+    extras=""; \
+    for extra in $(echo "$BACKEND_EXTRAS" | tr "," " "); do extras="$extras --extra $extra"; done; \
+    uv sync --locked --no-dev --no-install-project $extras
 
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --python "$VIRTUAL_ENV/bin/python" --no-cache -e ".[${BACKEND_EXTRAS}]"
+    set -eux; \
+    extras=""; \
+    for extra in $(echo "$BACKEND_EXTRAS" | tr "," " "); do extras="$extras --extra $extra"; done; \
+    uv sync --locked --no-dev --no-editable $extras
+
+# Empty default; `pnpm images:build` may override via --build-context benchmark-fixtures=...
+FROM scratch AS benchmark-fixtures
 
 FROM runtime-base AS app-runtime
+
+ARG INCLUDE_BENCHMARK_FIXTURES=false
 
 WORKDIR /app
 
 COPY --from=build --chown=repody:repody /opt/venv /opt/venv
 COPY --chown=repody:repody alembic.ini ./
 COPY --chown=repody:repody alembic/ ./alembic/
-COPY --chown=repody:repody src/ ./src/
 COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-COPY --chown=repody:repody scripts/ ./scripts/
-COPY --chown=repody:repody benchmark-fixtures/ ./e2e/fixtures/documents/
+COPY --chown=repody:repody scripts/bootstrap_migrations.py ./scripts/bootstrap_migrations.py
+COPY --chown=repody:repody scripts/benchmark_suite.py ./scripts/benchmark_suite.py
+COPY --from=benchmark-fixtures --chown=repody:repody / /tmp/benchmark-fixtures/
 
-RUN chmod +x /app/scripts/docker-entrypoint.sh
+RUN set -eux; \
+    mkdir -p /app/e2e/fixtures/documents; \
+    if [ "$INCLUDE_BENCHMARK_FIXTURES" = "true" ]; then \
+      cp -a /tmp/benchmark-fixtures/. /app/e2e/fixtures/documents/; \
+    fi; \
+    rm -rf /tmp/benchmark-fixtures; \
+    chmod +x /app/scripts/docker-entrypoint.sh
 
 USER repody
 
@@ -68,7 +85,7 @@ ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 FROM backend AS worker
 
 ENV AUDIT_OTEL_SERVICE_NAME=repody-worker
-CMD ["python", "-m", "audit_workbench.hatchet.worker"]
+CMD ["python", "-m", "audit_workbench.taskiq.worker"]
 
 FROM backend AS api
 

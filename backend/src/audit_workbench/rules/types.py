@@ -26,7 +26,7 @@ def collect_affected_fields(rule: dict) -> list[str]:
             if op and op.get("kind") == "field" and op.get("value"):
                 affected.append(op["value"])
     if (rule.get("kind") or "logic").lower() == "llm":
-        from audit_workbench.rules.llm_evaluator import referenced_fields
+        from audit_workbench.rules.llm_fields import referenced_fields
 
         affected.extend(referenced_fields(rule.get("body") or ""))
     return list(dict.fromkeys(affected))
