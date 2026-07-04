@@ -1,73 +1,34 @@
 # Observability
 
-## Local (kind cluster)
+## Local Compose dev
 
-The local Kubernetes stack includes Grafana, Loki, Promtail, Tempo, and OpenTelemetry wiring via `deploy/k8s/local-addons.yaml` (applied by `pnpm k8s:local`).
+Structured logs go to the terminal running `pnpm dev:api` / workers. No in-repo log stack.
 
-| | |
-|-|-|
-| Grafana | http://grafana.repody.local |
-| User | `admin` |
-| Password | `audit` |
+## Kubernetes
 
-Requires `pnpm k8s:local:hosts`.
+Use **upstream Helm charts** for Loki, Prometheus/Grafana, and OpenTelemetry Collector.
 
-### Pod logs (kubectl)
+Guide: [docs/deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md)
 
-```powershell
-kubectl -n repody logs -l app.kubernetes.io/component=control --tail=200 -f
-kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200 -f
-```
-
-Helm values for local OTEL:
+Enable traces on Repody:
 
 ```yaml
 observability:
   otelEnabled: true
-  otelEndpoint: http://local-tempo:4318/v1/traces
+  otelEndpoint: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
 ```
 
 ## Production
 
-Kubernetes production emits structured JSON to pod stdout. Ship logs to your cluster stack: Loki, CloudWatch, Google Cloud Logging, Azure Monitor, Datadog, or another collector.
-
-```yaml
-config:
-  logJson: true
-
-observability:
-  otelEnabled: true
-  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
-```
+Clients ship pod logs and OTLP to their platform. Repody sets `config.logJson: true` in production values.
 
 ## Useful log fields
 
-| Field | Example | Role |
-|-------|---------|------|
-| `event` / `body` | `repody_vlm_done` | Document-model extraction finished |
-| `level` | `info` | Log level |
-| `run_id` | `run_abc` | Audit run |
-| `workflow_id` | `wf_123` | Workflow |
-| `request_id` | UUID | HTTP correlation id |
-| `trace_id` | hex | OpenTelemetry trace |
-| `service.name` | `repody-worker-ocr` | Process |
+| Field | Role |
+|-------|------|
+| `event` / `body` | e.g. `repody_vlm_done` |
+| `run_id`, `workflow_id` | Audit correlation |
+| `trace_id` | OpenTelemetry |
+| `service.name` | `repody-api`, `repody-worker-ocr`, … |
 
-Sensitive keys are redacted before emit.
-
-## Local Loki queries
-
-```logql
-{service="worker"}
-```
-
-```logql
-{service="worker"} | json | event="repody_vlm_done"
-```
-
-```logql
-{service=~"api|worker.*"} | json | level="error"
-```
-
-## Error tracking
-
-Browser, API, and worker exceptions use Bugsink/Sentry-compatible DSNs. See [BUGSINK.md](./BUGSINK.md).
+See [BUGSINK.md](./BUGSINK.md) for error tracking (client-managed DSN).

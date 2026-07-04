@@ -11,11 +11,11 @@ that Secret before Argo CD syncs the app.
 
 - `AUTH_SECRET`
 - `AUTH_KEYCLOAK_CLIENT_SECRET`
+- `KEYCLOAK_ADMIN_PASSWORD` (when using in-cluster Keycloak via `repody-auth`; omit for external OIDC-only)
 - `AUDIT_DATABASE_URL`
 - `AUDIT_REDIS_URL`
 - `AUDIT_MINIO_ACCESS_KEY`
 - `AUDIT_MINIO_SECRET_KEY`
-- `HATCHET_CLIENT_TOKEN`
 - `BUGSINK_DSN`
 
 Add `AUDIT_VLLM_API_KEY` when the external VLM endpoint requires bearer-token

@@ -1,7 +1,7 @@
 name: E2E live stack
 
 # Optional live-stack pytest against a running dev deployment.
-# Requires E2E_API_URL (and workers) — use workflow_dispatch until a stack is deployed.
+# Requires E2E_API_URL (and workers) - use workflow_dispatch until a stack is deployed.
 on:
   workflow_dispatch:
     inputs:

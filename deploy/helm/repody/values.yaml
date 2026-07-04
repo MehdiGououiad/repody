@@ -1,10 +1,28 @@
 # Enterprise default: Repody owns stateless app workloads only.
 # Stateful systems, auth, secrets, observability, and inference are external/platform services.
-# Local kind/dev values explicitly opt into bundled dependencies.
+# Bundled data plane: use deploy/client/values-bundled.example.yaml (OpenShift or generic K8s).
 
 global:
   imagePullSecrets: []
   deploymentEnvironment: production
+  openshift:
+    enabled: false
+    routes:
+      enabled: false
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+      webHost: ""
+      apiHost: ""
+      filesHost: ""
+      filesServiceName: repody-data-minio
+      filesServicePort: 9000
+
+# Portable hardening (Kubernetes Pod Security "restricted").
+# Same profile on every platform. Local dev sets restricted: false.
+platform:
+  compatibility:
+    restricted: true
 
 images:
   backend:
@@ -91,56 +109,8 @@ externalObjectStorage:
   secure: true
   publicEndpoint: ""
 
-# ── Hatchet (bundled hatchet-stack for local/dev; externalHatchet for production) ─
-hatchet:
-  enabled: false
-  waitInitImage: busybox:1.37.0
-  # Optional override when not using hatchet-stack workerTokenJob (GitOps / air-gap).
-  clientToken: ""
-  clientTokenSecret: hatchet-client-config
-  clientTokenKey: HATCHET_CLIENT_TOKEN
-
-# Official hatchet-stack subchart — https://docs.hatchet.run/self-hosting/kubernetes-quickstart
-# Bundled Postgres + RabbitMQ (postgres.enabled / rabbitmq.enabled). Production uses externalHatchet.
-# In-cluster ClusterIP only (ingress disabled; no nginx). Repody workers reach engine via sharedConfig URLs.
-# fullnameOverride on api/engine/frontend avoids a service-name clash with repody-api in this umbrella release.
-hatchet-stack:
-  caddy:
-    enabled: false
-  api:
-    fullnameOverride: repody-hatchet-api
-    replicaCount: 1
-    ingress:
-      enabled: false
-    quickstartJob:
-      enabled: true
-    workerTokenJob:
-      enabled: true
-  engine:
-    fullnameOverride: repody-hatchet-engine
-    replicaCount: 1
-    ingress:
-      enabled: false
-  frontend:
-    fullnameOverride: repody-hatchet-frontend
-    ingress:
-      enabled: false
-  postgres:
-    enabled: true
-    primary:
-      extendedConfiguration: |
-        timezone = 'UTC'
-  rabbitmq:
-    enabled: true
-
-externalHatchet:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  tokenKey: HATCHET_CLIENT_TOKEN
-  waitForTokenSecret: false
-  hostPort: hatchet-grpc.example.com:443
-  serverUrl: https://hatchet.example.com
-  tlsStrategy: tls
+init:
+  waitImage: busybox:1.37.0
 
 migrations:
   enabled: false
@@ -273,9 +243,15 @@ keycloak:
 
 ingress:
   enabled: true
-  className: nginx
+  className: ""
   host: app.example.com
+  apiHost: api.example.com
   filesHost: files.example.com
+  filesServiceName: ""
+  filesServicePort: 9000
+  annotations: {}
+  controllerAnnotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
   tls:
     enabled: true
     secretName: repody-tls
@@ -300,7 +276,10 @@ gatewayApi:
   filesServiceNamespace: ""
   filesServicePort: 9000
   authHostAliasInitImage: ""
-  # Optional EnvoyProxy (gateway.envoyproxy.io) for kind NodePort / custom service shape.
+  # Dev-only: root init rewrites /etc/hosts for authHost (breaks restricted profile). Use
+  # authHostAliasIp or an external IdP URL in production instead.
+  authHostAliasInitEnabled: false
+  # Optional EnvoyProxy (gateway.envoyproxy.io) for custom Gateway service shape.
   envoyProxyName: ""
   kindNodePort: 0
   # Optional static ClusterIP for web pods to resolve authHost (external IdP or legacy).
@@ -344,16 +323,6 @@ config:
   repodyVlmMaxEdgePx: ""
   repodyVlmPdfDpi: 170
   repodyVlmMaxPagesPerRequest: 4
-  suryaOcrEnabled: true
-  suryaInferenceBackend: llamacpp
-  suryaInferenceUrl: ""
-  suryaInferenceParallel: 8
-  suryaImageDpi: 96
-  suryaImageDpiHighres: 192
-  suryaMaxTokensFullPage: 12288
-  suryaDetectorTextThreshold: 0.6
-  suryaLayoutBlockOcrEnabled: false
-  suryaTableRecognitionEnabled: false
   repodyVlmMarkdownMaxTokens: 8192
   repodyVlmEnableThinking: false
   repodyVlmJpegQuality: 95
@@ -363,6 +332,11 @@ config:
   logJson: true
   directUploadEnabled: true
   rateLimitFailClosed: true
+  admissionControlEnabled: true
+  admissionMaxQueued: 50
+  admissionMaxInflight: 64
+  admissionMaxOcrInflight: 8
+  admissionRetryAfterSeconds: 60
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: true
   gpuLiveProbe: false
@@ -377,6 +351,10 @@ observability:
 
 networkPolicy:
   enabled: true
+  # OVN (OpenShift): port-only DNS egress is insufficient — allow these namespaces (all ports).
+  dnsNamespaces:
+    - openshift-dns
+    - kube-system
   externalEgress:
     enabled: true
     cidrs:
@@ -387,4 +365,6 @@ networkPolicy:
       - 5432
       - 6379
       - 6380
+      - 7070
+      - 8081
       - 9000

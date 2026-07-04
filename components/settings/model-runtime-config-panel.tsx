@@ -25,7 +25,6 @@ type RuntimeProfile = {
   runtime: string;
   runtimeModel: string;
   enabled: boolean;
-  compareOnly?: boolean;
   inferenceUrl?: string | null;
   renderPolicy?: string;
   fields: ConfigField[];
@@ -126,7 +125,6 @@ export function ModelRuntimeConfigPanel() {
                   <Badge variant={profile.enabled ? "success" : "danger"}>
                     {profile.enabled ? "Enabled" : "Disabled"}
                   </Badge>
-                  {profile.compareOnly ? <Badge variant="outline">Benchmark only</Badge> : null}
                   <Badge variant="outline">{profile.runtime}</Badge>
                   <span className="text-xs font-mono text-on-surface-variant">{profile.modelId}</span>
                 </div>

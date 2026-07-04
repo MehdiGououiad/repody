@@ -11,7 +11,7 @@
           "health"
         ],
         "summary": "Health Live",
-        "description": "Liveness for Docker and load balancers \u2014 database ping only, no GPU probe.",
+        "description": "Liveness: process is alive, with no dependency or inference probe.",
         "operationId": "health_live_v1_healthz_live_get",
         "responses": {
           "200": {
@@ -33,7 +33,7 @@
           "health"
         ],
         "summary": "Health Readiness",
-        "description": "Readiness with queue depth, storage, and optional inference runtime probe.",
+        "description": "Readiness with dependency checks, queue depth, and optional inference probe.",
         "operationId": "health_readiness_v1_healthz_get",
         "responses": {
           "200": {
@@ -1088,9 +1088,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Upload Capabilities V1 Uploads Capabilities Get"
+                  "$ref": "#/components/schemas/UploadCapabilitiesResponse"
                 }
               }
             }
@@ -1409,14 +1407,14 @@
         }
       }
     },
-    "/v1/models/catalog": {
+    "/v1/platform/model-runtime-config": {
       "get": {
         "tags": [
           "platform"
         ],
-        "summary": "Get Models Catalog",
-        "description": "Document and validation model catalog with live availability.",
-        "operationId": "get_models_catalog_v1_models_catalog_get",
+        "summary": "Get Model Runtime Config",
+        "description": "Effective per-model runtime knobs (platform env + host inference reference).",
+        "operationId": "get_model_runtime_config_v1_platform_model_runtime_config_get",
         "parameters": [
           {
             "name": "authorization",
@@ -1441,7 +1439,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelsCatalogResponse"
+                  "$ref": "#/components/schemas/ModelRuntimeConfigResponse"
                 }
               }
             }
@@ -1452,6 +1450,28 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models/catalog": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Get Models Catalog",
+        "description": "Document and validation model catalog with live availability.",
+        "operationId": "get_models_catalog_v1_models_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelsCatalogResponse"
                 }
               }
             }
@@ -1552,9 +1572,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Operator Status V1 Operator Status Get"
+                  "$ref": "#/components/schemas/OperatorStatusResponse"
                 }
               }
             }
@@ -1603,9 +1621,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Operator Jobs V1 Operator Jobs Get"
+                  "$ref": "#/components/schemas/OperatorJobsResponse"
                 }
               }
             }
@@ -1663,9 +1679,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Operator Job V1 Operator Jobs  Job Id  Get"
+                  "$ref": "#/components/schemas/OperatorJobSchema"
                 }
               }
             }
@@ -1723,9 +1737,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Operator Job Report V1 Operator Jobs  Job Id  Report Get"
+                  "$ref": "#/components/schemas/BenchmarkReportSchema"
                 }
               }
             }
@@ -1839,70 +1851,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Latest Benchmark V1 Operator Benchmarks Latest Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/operator/models/pull": {
-      "post": {
-        "tags": [
-          "operator"
-        ],
-        "summary": "Pull Model",
-        "operationId": "pull_model_v1_operator_models_pull_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ModelActionRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Pull Model V1 Operator Models Pull Post"
+                  "$ref": "#/components/schemas/BenchmarkReportSchema"
                 }
               }
             }
@@ -1961,9 +1910,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Warmup Model V1 Operator Models Warmup Post"
+                  "$ref": "#/components/schemas/OperatorJobAcceptedResponse"
                 }
               }
             }
@@ -2021,9 +1968,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true,
-                  "title": "Response Start Benchmark V1 Operator Benchmarks Post"
+                  "$ref": "#/components/schemas/OperatorJobAcceptedResponse"
                 }
               }
             }
@@ -2409,6 +2354,291 @@
         ],
         "title": "AuditListResponse"
       },
+      "BenchmarkReportSchema": {
+        "properties": {
+          "generatedAt": {
+            "type": "string",
+            "title": "Generatedat",
+            "default": ""
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile",
+            "default": ""
+          },
+          "suiteId": {
+            "type": "string",
+            "title": "Suiteid",
+            "default": ""
+          },
+          "summary": {
+            "$ref": "#/components/schemas/BenchmarkSummarySchema"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/BenchmarkResultSchema"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "environment": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Environment"
+          }
+        },
+        "type": "object",
+        "title": "BenchmarkReportSchema"
+      },
+      "BenchmarkResultSchema": {
+        "properties": {
+          "case": {
+            "type": "string",
+            "title": "Case",
+            "default": ""
+          },
+          "model": {
+            "type": "string",
+            "title": "Model",
+            "default": ""
+          },
+          "phase": {
+            "type": "string",
+            "title": "Phase",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": ""
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed",
+            "default": false
+          },
+          "skipped": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped"
+          },
+          "wallMs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wallms"
+          },
+          "queueMs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queuems"
+          },
+          "extractionMs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extractionms"
+          },
+          "validationMs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validationms"
+          },
+          "fieldAccuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fieldaccuracy"
+          },
+          "ruleAccuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruleaccuracy"
+          },
+          "ocrCompare": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrcompare"
+          },
+          "judgeQuality": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judgequality"
+          },
+          "rawTextChars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtextchars"
+          },
+          "ocrTextChars": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrtextchars"
+          },
+          "textPreview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Textpreview"
+          },
+          "cacheHit": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cachehit"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "title": "BenchmarkResultSchema"
+      },
+      "BenchmarkSummarySchema": {
+        "properties": {
+          "passed": {
+            "type": "integer",
+            "title": "Passed",
+            "default": 0
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed",
+            "default": 0
+          },
+          "skipped": {
+            "type": "integer",
+            "title": "Skipped",
+            "default": 0
+          },
+          "fieldAccuracy": {
+            "type": "number",
+            "title": "Fieldaccuracy",
+            "default": 0.0
+          },
+          "ruleAccuracy": {
+            "type": "number",
+            "title": "Ruleaccuracy",
+            "default": 0.0
+          },
+          "medianWallMs": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medianwallms"
+          },
+          "ocrCompareRuns": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ocrcompareruns"
+          },
+          "medianRawTextChars": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medianrawtextchars"
+          }
+        },
+        "type": "object",
+        "title": "BenchmarkSummarySchema"
+      },
       "Body_create_run_v1_workflows__workflow_id__runs_post": {
         "properties": {
           "files": {
@@ -2522,6 +2752,11 @@
           "cache_check": {
             "type": "boolean",
             "title": "Cache Check",
+            "default": true
+          },
+          "judge_quality": {
+            "type": "boolean",
+            "title": "Judge Quality",
             "default": true
           }
         },
@@ -2807,6 +3042,29 @@
         "type": "object",
         "title": "DeployWorkflowBody"
       },
+      "DeploymentNote": {
+        "properties": {
+          "changeKind": {
+            "type": "string",
+            "title": "Changekind"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "changeKind",
+          "action",
+          "detail"
+        ],
+        "title": "DeploymentNote"
+      },
       "DocumentDefSchema": {
         "properties": {
           "id": {
@@ -2853,6 +3111,12 @@
             "type": "string",
             "title": "Extractioninstructions",
             "default": ""
+          },
+          "markdownExtraction": {
+            "type": "boolean",
+            "title": "Markdownextraction",
+            "description": "Run NuExtract document-to-Markdown in parallel with field extraction.",
+            "default": false
           }
         },
         "type": "object",
@@ -3275,9 +3539,9 @@
           "workerPools": {
             "$ref": "#/components/schemas/WorkerPoolsHealth"
           },
-          "hatchetConfigured": {
+          "taskiqConfigured": {
             "type": "boolean",
-            "title": "Hatchetconfigured"
+            "title": "Taskiqconfigured"
           }
         },
         "type": "object",
@@ -3300,7 +3564,7 @@
           "authEnabled",
           "oidcEnabled",
           "workerPools",
-          "hatchetConfigured"
+          "taskiqConfigured"
         ],
         "title": "HealthReadinessResponse"
       },
@@ -3617,6 +3881,169 @@
         ],
         "title": "ModelActionRequest"
       },
+      "ModelConfigField": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "envVar": {
+            "type": "string",
+            "title": "Envvar"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "platform",
+              "worker_runtime",
+              "inference_server"
+            ],
+            "title": "Scope"
+          },
+          "restart": {
+            "type": "string",
+            "enum": [
+              "worker",
+              "api",
+              "inference",
+              "helm",
+              "none"
+            ],
+            "title": "Restart"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "configured": {
+            "type": "boolean",
+            "title": "Configured",
+            "default": true
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "default": "platform"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "envVar",
+          "label",
+          "description",
+          "scope",
+          "restart"
+        ],
+        "title": "ModelConfigField"
+      },
+      "ModelRuntimeConfigResponse": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/ModelRuntimeProfile"
+            },
+            "type": "array",
+            "title": "Models"
+          },
+          "shared": {
+            "items": {
+              "$ref": "#/components/schemas/ModelConfigField"
+            },
+            "type": "array",
+            "title": "Shared"
+          },
+          "deploymentNotes": {
+            "items": {
+              "$ref": "#/components/schemas/DeploymentNote"
+            },
+            "type": "array",
+            "title": "Deploymentnotes"
+          }
+        },
+        "type": "object",
+        "title": "ModelRuntimeConfigResponse"
+      },
+      "ModelRuntimeProfile": {
+        "properties": {
+          "modelId": {
+            "type": "string",
+            "title": "Modelid"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime"
+          },
+          "runtimeModel": {
+            "type": "string",
+            "title": "Runtimemodel"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "inferenceUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inferenceurl"
+          },
+          "renderPolicy": {
+            "type": "string",
+            "title": "Renderpolicy",
+            "default": ""
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/ModelConfigField"
+            },
+            "type": "array",
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "modelId",
+          "label",
+          "runtime",
+          "runtimeModel",
+          "enabled"
+        ],
+        "title": "ModelRuntimeProfile"
+      },
       "ModelsCatalogResponse": {
         "properties": {
           "models": {
@@ -3745,24 +4172,7 @@
             "default": ""
           },
           "settings": {
-            "additionalProperties": {
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            },
-            "type": "object",
-            "title": "Settings"
+            "$ref": "#/components/schemas/OcrDiagnosticSettingsSchema"
           }
         },
         "type": "object",
@@ -3771,6 +4181,222 @@
           "model"
         ],
         "title": "OcrDiagnosticResponse"
+      },
+      "OcrDiagnosticSettingsSchema": {
+        "properties": {
+          "extractor": {
+            "type": "string",
+            "title": "Extractor",
+            "default": ""
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode",
+            "default": ""
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": ""
+          },
+          "documentModelPdfDpi": {
+            "type": "integer",
+            "title": "Documentmodelpdfdpi",
+            "default": 0
+          },
+          "documentModelMaxEdgePx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentmodelmaxedgepx"
+          },
+          "llmValidationEnabled": {
+            "type": "boolean",
+            "title": "Llmvalidationenabled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "OcrDiagnosticSettingsSchema"
+      },
+      "OperatorJobAcceptedResponse": {
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/OperatorJobSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job"
+        ],
+        "title": "OperatorJobAcceptedResponse"
+      },
+      "OperatorJobSchema": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "completedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completedat"
+          },
+          "progress": {
+            "type": "string",
+            "title": "Progress",
+            "default": ""
+          },
+          "output": {
+            "type": "string",
+            "title": "Output",
+            "default": ""
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "hasReport": {
+            "type": "boolean",
+            "title": "Hasreport",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "label",
+          "status",
+          "createdAt"
+        ],
+        "title": "OperatorJobSchema"
+      },
+      "OperatorJobsResponse": {
+        "properties": {
+          "jobs": {
+            "items": {
+              "$ref": "#/components/schemas/OperatorJobSchema"
+            },
+            "type": "array",
+            "title": "Jobs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobs"
+        ],
+        "title": "OperatorJobsResponse"
+      },
+      "OperatorLimitsSchema": {
+        "properties": {
+          "maxUploadBytes": {
+            "type": "integer",
+            "title": "Maxuploadbytes"
+          },
+          "ocrMaxPages": {
+            "type": "integer",
+            "title": "Ocrmaxpages"
+          },
+          "taskTimeoutMinutes": {
+            "type": "integer",
+            "title": "Tasktimeoutminutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxUploadBytes",
+          "ocrMaxPages",
+          "taskTimeoutMinutes"
+        ],
+        "title": "OperatorLimitsSchema"
+      },
+      "OperatorStatusResponse": {
+        "properties": {
+          "actionsEnabled": {
+            "type": "boolean",
+            "title": "Actionsenabled"
+          },
+          "reportDirectory": {
+            "type": "string",
+            "title": "Reportdirectory"
+          },
+          "warmup": {
+            "$ref": "#/components/schemas/OperatorWarmupConfig"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/OperatorLimitsSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "actionsEnabled",
+          "reportDirectory",
+          "warmup",
+          "limits"
+        ],
+        "title": "OperatorStatusResponse"
+      },
+      "OperatorWarmupConfig": {
+        "properties": {
+          "documentModelOnStart": {
+            "type": "boolean",
+            "title": "Documentmodelonstart"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentModelOnStart"
+        ],
+        "title": "OperatorWarmupConfig"
       },
       "PerformancePoint": {
         "properties": {
@@ -3894,9 +4520,9 @@
             "type": "integer",
             "title": "Queuedstaletimeoutminutes"
           },
-          "hatchetTaskTimeoutMinutes": {
+          "workerTaskTimeoutMinutes": {
             "type": "integer",
-            "title": "Hatchettasktimeoutminutes"
+            "title": "Workertasktimeoutminutes"
           },
           "maintenanceIntervalSeconds": {
             "type": "integer",
@@ -3909,9 +4535,9 @@
             "type": "object",
             "title": "Workerpools"
           },
-          "hatchetConfigured": {
+          "taskiqConfigured": {
             "type": "boolean",
-            "title": "Hatchetconfigured",
+            "title": "Taskiqconfigured",
             "default": false
           },
           "llmValidationEnabled": {
@@ -3951,7 +4577,7 @@
           "maxUploadFiles",
           "staleRunTimeoutMinutes",
           "queuedStaleTimeoutMinutes",
-          "hatchetTaskTimeoutMinutes",
+          "workerTaskTimeoutMinutes",
           "maintenanceIntervalSeconds"
         ],
         "title": "PlatformConfigResponse"
@@ -4647,6 +5273,22 @@
             ],
             "title": "Ocrtext"
           },
+          "rawText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rawtext"
+          },
+          "markdownExtraction": {
+            "type": "boolean",
+            "title": "Markdownextraction",
+            "default": false
+          },
           "pagesRendered": {
             "anyOf": [
               {
@@ -5112,6 +5754,39 @@
         },
         "type": "object",
         "title": "UpdateIamUserRequest"
+      },
+      "UploadCapabilitiesResponse": {
+        "properties": {
+          "storageBackend": {
+            "type": "string",
+            "title": "Storagebackend"
+          },
+          "directUploadEnabled": {
+            "type": "boolean",
+            "title": "Directuploadenabled"
+          },
+          "uploadMode": {
+            "type": "string",
+            "title": "Uploadmode"
+          },
+          "maxUploadBytes": {
+            "type": "integer",
+            "title": "Maxuploadbytes"
+          },
+          "maxUploadFiles": {
+            "type": "integer",
+            "title": "Maxuploadfiles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "storageBackend",
+          "directUploadEnabled",
+          "uploadMode",
+          "maxUploadBytes",
+          "maxUploadFiles"
+        ],
+        "title": "UploadCapabilitiesResponse"
       },
       "UploadItem": {
         "properties": {

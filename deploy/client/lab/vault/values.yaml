@@ -1,0 +1,30 @@
+# In-cluster Vault for enterprise lab (OpenShift Local, kind, EKS, etc.).
+# Production clients use their own HA Vault; this chart layout matches the same
+# Kubernetes auth + KV v2 paths consumed by ClusterSecretStore vault-repody.
+global:
+  enabled: true
+
+server:
+  dev:
+    enabled: true
+    devRootToken: root
+  ha:
+    enabled: false
+  standalone:
+    enabled: true
+  dataStorage:
+    enabled: false
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+    limits:
+      memory: 256Mi
+      cpu: 250m
+
+injector:
+  enabled: false
+
+ui:
+  enabled: true
+  serviceType: ClusterIP

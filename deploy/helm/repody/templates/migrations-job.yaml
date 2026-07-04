@@ -21,12 +21,7 @@ spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        fsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
       initContainers:
@@ -40,10 +35,7 @@ spec:
             - python
             - /app/scripts/bootstrap_migrations.py
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
           env:
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
           resources:

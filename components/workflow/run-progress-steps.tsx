@@ -35,7 +35,7 @@ function modeBadge(step: RunProgress["steps"][number]) {
     return (
       <span className="inline-flex items-center gap-1 rounded bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
         <Brain className="h-3 w-3" />
-        Vision model
+        Document model
       </span>
     );
   }

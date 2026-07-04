@@ -1,0 +1,11 @@
+# Optional — apply before Helm/Argo CD sync.
+# Portable Pod Security labels (Kubernetes 1.25+).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: repody
+  labels:
+    app.kubernetes.io/part-of: repody
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

@@ -27,9 +27,11 @@ async function waitForOk(url: string, label: string, attempts = 90): Promise<voi
 export default async function globalSetup(config: FullConfig) {
   const apiURL = (config.metadata?.apiURL as string) ?? API_URL;
   const webURL = process.env.E2E_WEB_URL ?? WEB_URL;
+  const ignoreHTTPSErrors =
+    process.env.E2E_IGNORE_TLS === "1" || webURL.startsWith("https://");
 
   await waitForOk(`${apiURL}/v1/healthz`, "API");
-  await waitForOk(webURL, "Web");
+  await waitForOk(`${webURL}/login`, "Web");
 
   const oidcEnabled = await fetchOidcEnabled();
   if (!oidcEnabled) {
@@ -43,7 +45,7 @@ export default async function globalSetup(config: FullConfig) {
 
   const browser = await chromium.launch();
   try {
-    const context = await browser.newContext({ baseURL: webURL });
+    const context = await browser.newContext({ baseURL: webURL, ignoreHTTPSErrors });
     const page = await context.newPage();
     await loginViaKeycloak(page, "/dashboard");
     const storageState = await context.storageState();

@@ -1,0 +1,60 @@
+{{- if and .Values.global.openshift.enabled .Values.global.openshift.routes.enabled }}
+{{- $routes := .Values.global.openshift.routes }}
+{{- $webHost := required "global.openshift.routes.webHost is required when OpenShift routes are enabled" $routes.webHost }}
+{{- $apiHost := required "global.openshift.routes.apiHost is required when OpenShift routes are enabled" $routes.apiHost }}
+{{- $filesHost := required "global.openshift.routes.filesHost is required when OpenShift routes are enabled" $routes.filesHost }}
+{{- $tls := $routes.tls | default dict }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "repody.fullname" . }}-web
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+spec:
+  host: {{ $webHost | quote }}
+  to:
+    kind: Service
+    name: {{ include "repody.fullname" . }}-web
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ $tls.termination | default "edge" | quote }}
+    insecureEdgeTerminationPolicy: {{ $tls.insecureEdgeTerminationPolicy | default "Redirect" | quote }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "repody.fullname" . }}-api
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+spec:
+  host: {{ $apiHost | quote }}
+  to:
+    kind: Service
+    name: {{ include "repody.fullname" . }}-api
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ $tls.termination | default "edge" | quote }}
+    insecureEdgeTerminationPolicy: {{ $tls.insecureEdgeTerminationPolicy | default "Redirect" | quote }}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "repody.fullname" . }}-files
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+spec:
+  host: {{ $filesHost | quote }}
+  to:
+    kind: Service
+    name: {{ $routes.filesServiceName | default "repody-data-minio" | quote }}
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ $tls.termination | default "edge" | quote }}
+    insecureEdgeTerminationPolicy: {{ $tls.insecureEdgeTerminationPolicy | default "Redirect" | quote }}
+{{- end }}

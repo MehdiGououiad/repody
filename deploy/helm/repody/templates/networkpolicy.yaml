@@ -6,7 +6,9 @@ metadata:
   labels:
     {{- include "repody.labels" . | nindent 4 }}
 spec:
-  podSelector: {}
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
   policyTypes:
     - Ingress
     - Egress
@@ -24,11 +26,46 @@ spec:
   policyTypes:
     - Egress
   egress:
+    {{- range .Values.networkPolicy.dnsNamespaces }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . | quote }}
+    {{- end }}
     - ports:
         - protocol: UDP
           port: 53
         - protocol: TCP
           port: 53
+---
+{{- if eq (.Values.global.deploymentProfile | default "external") "bundled" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "repody.fullname" . }}-bundled-platform-egress
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: repody-data
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: auth
+              app.kubernetes.io/instance: repody-auth
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+{{- end }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

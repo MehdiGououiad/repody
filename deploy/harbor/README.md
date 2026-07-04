@@ -1,61 +1,24 @@
-# Local Harbor registry
+# Harbor (release registry)
 
-[Harbor](https://goharbor.io/) is the local image registry for kind + Helm dev and GitOps testing (`repody-local` Argo CD app).
+Use Harbor to **push images for clients**. Not required for Compose local dev.
 
-## Quick start
+Official documentation: [Harbor 2.14 install-config](https://goharbor.io/docs/2.14.0/install-config/)
 
-```powershell
-pnpm harbor:bootstrap     # prepare + start Harbor + login + repody project
-pnpm k8s:local:hosts      # once — maps *.repody.local → 127.0.0.1 (admin)
-pnpm registry:warm        # once — cache third-party images in Harbor
-pnpm dev                  # kind + Helm (pushes Repody images to Harbor)
-pnpm dev:sync             # daily Skaffold hot-sync loop
-```
+## Install (manual — official steps)
 
-Harbor UI: http://harbor.repody.lvh.me:8080 (`admin` / password in `paths.harbor.local.env`)
+1. [Download](https://goharbor.io/docs/2.14.0/install-config/download-installer/) `harbor-online-installer-v2.14.0.tgz`
+2. Extract outside this repo (e.g. `C:\harbor`)
+3. Copy [harbor.yml.example](./harbor.yml.example) → `harbor.yml` and set `hostname` + `harbor_admin_password`
+4. Run `./prepare` then `docker compose up -d`
 
-## Configuration
+Full guide: [docs/deploy/HARBOR.md](../../docs/deploy/HARBOR.md)
 
-| File | Purpose |
-|------|---------|
-| `paths.harbor.local.env.example` | Copy → `paths.harbor.local.env` (gitignored) |
-| `harbor.yml.example` | Harbor installer template |
-| `.runtime/harbor/` | Downloaded installer + data (gitignored) |
-
-Default registry: `harbor.repody.lvh.me:8080/repody` — resolves to localhost without a hosts entry. Override `REPODY_HARBOR_HOST` to `harbor.repody.local` if you use `pnpm k8s:local:hosts` and update `deploy/k8s/kind-repody-local.yaml` mirror host to match.
-
-## Scripts
-
-| Command | Action |
-|---------|--------|
-| `pnpm harbor:prepare` | Download Harbor installer |
-| `pnpm harbor:up` / `harbor:down` | Start / stop Harbor |
-| `pnpm harbor:login` | `docker login` to Harbor |
-| `pnpm harbor:project` | Create `repody` project |
-| `pnpm harbor:connect-kind` | Attach Harbor nginx proxy to kind network |
-| `pnpm harbor:bootstrap` | Full Harbor setup |
-
-## GitOps
-
-`repody-local` Argo apps use `values-local-images.yaml` (Repody tags) and
-`values-local-registry.yaml` (third-party Harbor paths from `deploy/pinned-images.env`).
-
-Render registry values: `pnpm registry:render-values` (also runs at start of `pnpm registry:warm`).
+## Push Repody images
 
 ```powershell
-# Full loop (build → Harbor → bump tags in Git → push → Argo sync)
-pnpm gitops:publish -- --all
-
-# Or step by step
-pnpm images:build
-pnpm images:push
-pnpm gitops:publish -- --commit --push --sync
-
-# After someone else pushed tags
-pnpm gitops:sync
+$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_TAG="1.0.0"
+pnpm images:release
 ```
 
-`pnpm k8s:local` (full stack) uses **git SHA** image tags and bumps
-`values-local-images.yaml` locally. Add `--push` to commit/push/sync in the same run.
-
-Daily code edits without a new image: `pnpm dev:sync` (Skaffold).
+## Troubleshooting download

@@ -2,27 +2,22 @@
 
 [Bugsink](https://www.bugsink.com/) is self-hosted, Sentry-SDK-compatible error tracking.
 
-## Local (kind cluster)
+## Local Compose dev
 
-Bugsink is deployed by `pnpm k8s:local` via `deploy/k8s/local-addons.yaml`.
+Bugsink is **not** bundled in Compose. Use client-managed Bugsink or skip error tracking locally.
 
-| | |
-|-|-|
-| URL | http://bugsink.repody.local |
-| Default login | `admin@example.com` / `admin` |
+## Kubernetes
 
-Requires `pnpm k8s:local:hosts`.
+Deploy Bugsink with your observability stack (upstream Helm or compose). See [docs/deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md).
 
-1. Open Bugsink and create a project.
-2. Copy the project **DSN**.
-3. Set Helm values or secrets for the Repody release:
+Set Helm values for the Repody release:
 
 ```yaml
 observability:
-  bugsinkDsn: http://<key>@bugsink.repody.local/<project-id>
+  bugsinkDsn: http://<key>@bugsink.example.com/<project-id>
 ```
 
-4. Rebuild/redeploy web if the browser DSN changes (`NEXT_PUBLIC_BUGSINK_DSN` is baked at image build).
+Rebuild/redeploy web if the browser DSN changes (`NEXT_PUBLIC_BUGSINK_DSN` is baked at image build).
 
 ## What gets reported
 
@@ -39,13 +34,13 @@ Bugsink does **not** support performance traces, sessions, or client reports —
 - Run Bugsink as a separate deployment or use a managed Sentry-compatible endpoint.
 - Set `BUGSINK_BASE_URL` to your public URL (e.g. `https://errors.example.com`).
 - Behind HTTPS: set `BUGSINK_BEHIND_HTTPS_PROXY=true` per [Bugsink docs](https://www.bugsink.com/docs/docker-compose-install/#reverse-proxy).
-- Kubernetes: `observability.bugsinkDsn` in Helm values (see [CLOUD-K8S.md](./CLOUD-K8S.md)).
+- Kubernetes: `observability.bugsinkDsn` in Helm values (see [deploy/CLIENT.md](./deploy/CLIENT.md)).
 
 ## Verify
 
 Trigger a test error from the browser console or an API route that raises. The issue should appear in the Bugsink project within seconds.
 
-Platform logs remain in **Loki/Grafana** — see [OBSERVABILITY.md](./OBSERVABILITY.md).
+Platform logs remain in your log stack — see [OBSERVABILITY.md](./OBSERVABILITY.md).
 
 ## Environment variables
 

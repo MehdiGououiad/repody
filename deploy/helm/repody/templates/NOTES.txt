@@ -5,8 +5,15 @@ Namespace: {{ .Release.Namespace }}
 
 {{- if .Values.ingress.enabled }}
 
-UI:  https://{{ .Values.ingress.host }}
-API: https://{{ .Values.ingress.host }}/api/v1/healthz  (via web rewrite; internal: {{ include "repody.fullname" . }}-api:8000)
+UI:    https://{{ .Values.ingress.host }}
+{{- if .Values.ingress.apiHost }}
+API:   https://{{ .Values.ingress.apiHost }}/v1/healthz/live
+{{- else }}
+API:   internal {{ include "repody.fullname" . }}-api:8000
+{{- end }}
+{{- if .Values.ingress.filesHost }}
+Files: https://{{ .Values.ingress.filesHost }}
+{{- end }}
 
 {{- else }}
 
@@ -19,7 +26,7 @@ Worker OCR replicas:  {{ .Values.workerOcr.replicas }} (HPA max {{ .Values.worke
 Worker fast replicas: {{ .Values.workerFast.replicas }} (HPA max {{ .Values.workerFast.autoscaling.maxReplicas }})
 
 Set secrets before production:
-  AUTH_SECRET, AUTH_KEYCLOAK_CLIENT_SECRET, HATCHET_CLIENT_TOKEN,
+  AUTH_SECRET, AUTH_KEYCLOAK_CLIENT_SECRET,
   AUDIT_DATABASE_URL, AUDIT_REDIS_URL, object-storage credentials, and optional AUDIT_VLLM_API_KEY
 
 Inference runs outside this chart; point config.vllmBaseUrl at your vLLM, llama-server, or managed GPU endpoint.

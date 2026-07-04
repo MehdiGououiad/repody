@@ -22,12 +22,29 @@ function parseArgs(argv) {
   let skipHelm = false;
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--version") version = argv[++i] ?? "";
-    else if (arg === "--output") output = argv[++i] ?? "";
-    else if (arg === "--skip-helm") skipHelm = true;
+    if (arg === "--version") {
+      version = argv[++i] ?? "";
+      if (!version || version.startsWith("--")) {
+        console.error("Missing value for --version.");
+        process.exit(1);
+      }
+    } else if (arg === "--output") {
+      output = argv[++i] ?? "";
+      if (!output || output.startsWith("--")) {
+        console.error("Missing value for --output.");
+        process.exit(1);
+      }
+    } else if (arg === "--skip-helm") {
+      skipHelm = true;
+    } else {
+      console.error(`Unknown option: ${arg}`);
+      console.error("Usage: pnpm airgap:build -- --version X.Y.Z [--output DIR] [--skip-helm]");
+      process.exit(1);
+    }
   }
   if (!version) {
     console.error("Missing --version.");
+    console.error("Usage: pnpm airgap:build -- --version X.Y.Z [--output DIR] [--skip-helm]");
     process.exit(1);
   }
   return {
@@ -41,7 +58,7 @@ function run(cmd, args, opts = {}) {
   const result = spawnSync(cmd, args, {
     stdio: "inherit",
     cwd: root,
-    shell: process.platform === "win32",
+    shell: false,
     ...opts,
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -71,12 +88,13 @@ function writeSha256Sums(dir) {
   writeFileSync(path.join(dir, "SHA256SUMS"), `${lines.join("\n")}\n`, "utf8");
 }
 
+const { version, bundleRoot, skipHelm } = parseArgs(process.argv);
+
 if (process.platform === "win32") {
   console.error("Build air-gap releases on Linux CI.");
   process.exit(1);
 }
 
-const { version, bundleRoot, skipHelm } = parseArgs(process.argv);
 const tag = version;
 const manifest = airgapImageManifest({ tag });
 

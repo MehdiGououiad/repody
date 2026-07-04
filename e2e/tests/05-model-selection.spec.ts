@@ -20,7 +20,7 @@ test("users can select Repody VLM for document extraction", async ({
   const readPath = page.getByLabel("Read path");
   if (await readPath.isVisible().catch(() => false)) {
     await readPath.click();
-    await page.getByRole("option", { name: "Vision model" }).click();
+    await page.getByRole("option", { name: "Document model" }).click();
   }
 
   await page.locator('[id^="extraction-model-"]').click();

@@ -60,7 +60,7 @@ export function SettingsPanel({
         ["Upload size", formatBytes(platform.maxUploadBytes)],
         ["Upload files", `${platform.maxUploadFiles}`],
         ["OCR max pages", `${platform.ocrMaxPages}`],
-        ["Task timeout", `${platform.hatchetTaskTimeoutMinutes} min`],
+        ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
         ["Stale run timeout", `${platform.staleRunTimeoutMinutes} min`],
         ["Queued stale timeout", `${platform.queuedStaleTimeoutMinutes} min`],
         ["Maintenance interval", `${platform.maintenanceIntervalSeconds}s`],

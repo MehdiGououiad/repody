@@ -9,7 +9,7 @@ export type PlatformHealth = {
   queuedRuns: number;
   runningRuns: number;
   inflightRuns: number;
-  hatchetConfigured: boolean;
+  taskiqConfigured: boolean;
   workerPools: Record<string, string>;
 };
 

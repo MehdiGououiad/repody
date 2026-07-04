@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { API, apiAuthHeaders, apiGet } from "../helpers/api";
-import { REPODY_VLM_CATALOG_ID, SURYA_OCR2_CATALOG_ID } from "../../lib/document-model-branding";
+import { REPODY_VLM_CATALOG_ID } from "../../lib/document-model-branding";
 
 test.describe.configure({ timeout: 300_000 });
 
-test("benchmarks UI runs Repody VLM and Surya OCR in parallel", async ({ page, request }) => {
+test("benchmarks UI runs Repody VLM document-model profile", async ({ page, request }) => {
   const statusRes = await request.get(`${API}/v1/operator/status`, {
     headers: apiAuthHeaders(),
   });
@@ -16,21 +16,16 @@ test("benchmarks UI runs Repody VLM and Surya OCR in parallel", async ({ page, r
     models: Array<{ id: string; label: string; available?: boolean; kind: string }>;
   }>("/models/catalog");
 
-  const benchmarkModels = catalog.models.filter(
-    (model) => model.kind === "document_model" || model.kind === "ocr_compare",
-  );
+  const benchmarkModels = catalog.models.filter((model) => model.kind === "document_model");
   const repody = benchmarkModels.find((model) => model.id === REPODY_VLM_CATALOG_ID);
-  const surya = benchmarkModels.find((model) => model.id === SURYA_OCR2_CATALOG_ID);
   expect(repody, "Repody VLM missing from catalog").toBeTruthy();
-  expect(surya, "Surya OCR 2 missing from catalog").toBeTruthy();
   expect(repody?.available !== false, "Repody VLM not available").toBeTruthy();
-  expect(surya?.available !== false, "Surya OCR 2 not available").toBeTruthy();
 
   await page.goto("/settings?tab=benchmarks");
   await expect(page.getByRole("heading", { name: "Run benchmark suite" })).toBeVisible();
 
   await page.locator("#benchmark-profile").click();
-  await page.getByRole("option", { name: "Vision models" }).click();
+  await page.getByRole("option", { name: "Document models" }).click();
 
   await page.locator("#benchmark-warm-runs").fill("0");
 
@@ -42,11 +37,8 @@ test("benchmarks UI runs Repody VLM and Surya OCR in parallel", async ({ page, r
   }
 
   const repodyCheckbox = page.getByRole("checkbox", { name: /^Repody VLM$/ });
-  const suryaCheckbox = page.getByRole("checkbox", { name: /Surya OCR 2/ });
   await expect(repodyCheckbox).toBeVisible();
-  await expect(suryaCheckbox).toBeVisible();
   if (!(await repodyCheckbox.isChecked())) await repodyCheckbox.check();
-  if (!(await suryaCheckbox.isChecked())) await suryaCheckbox.check();
 
   const runButton = page.getByRole("button", { name: "Run benchmark" });
   await expect(runButton).toBeEnabled();
@@ -64,13 +56,11 @@ test("benchmarks UI runs Repody VLM and Surya OCR in parallel", async ({ page, r
   });
 
   const reportTable = page.locator("table").filter({ hasText: "Model" });
-  await expect(reportTable.getByText("surya-ocr2")).toBeVisible();
   await expect(reportTable.getByText("repody-vlm")).toBeVisible();
-  await expect(reportTable.getByText("surya:ocr2")).toBeVisible();
   await expect(reportTable.getByText("repody:vlm")).toBeVisible();
 
   const passedBadges = reportTable.getByText("passed", { exact: true });
-  await expect(passedBadges).toHaveCount(2);
+  await expect(passedBadges).toHaveCount(1);
 
   await expect(page.getByText("Text preview", { exact: false }).first()).toBeVisible();
 });

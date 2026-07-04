@@ -1,4 +1,16 @@
 {{- if .Values.ingress.enabled }}
+{{- $apiHost := .Values.ingress.apiHost | default "" }}
+{{- $filesHost := .Values.ingress.filesHost | default "" }}
+{{- $filesSvc := "" }}
+{{- $filesPort := .Values.ingress.filesServicePort | default 9000 }}
+{{- if .Values.minio.enabled }}
+{{- $filesSvc = printf "%s-minio" .Release.Name }}
+{{- else if .Values.ingress.filesServiceName }}
+{{- $filesSvc = .Values.ingress.filesServiceName }}
+{{- else if eq (.Values.global.deploymentProfile | default "external") "bundled" }}
+{{- $filesSvc = "repody-data-minio" }}
+{{- end }}
+{{- $exposeFiles := and $filesHost $filesSvc }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,22 +18,30 @@ metadata:
   labels:
     {{- include "repody.labels" . | nindent 4 }}
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    {{- range $key, $value := .Values.ingress.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- range $key, $value := .Values.ingress.controllerAnnotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
-  ingressClassName: {{ .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className | quote }}
   {{- end }}
   {{- if .Values.ingress.tls.enabled }}
   tls:
     - hosts:
-        - {{ .Values.ingress.host }}
-        {{- if and .Values.ingress.filesHost .Values.minio.enabled }}
-        - {{ .Values.ingress.filesHost }}
+        - {{ required "ingress.host is required when ingress.tls.enabled" .Values.ingress.host | quote }}
+        {{- if $apiHost }}
+        - {{ $apiHost | quote }}
         {{- end }}
-      secretName: {{ .Values.ingress.tls.secretName }}
+        {{- if $exposeFiles }}
+        - {{ $filesHost | quote }}
+        {{- end }}
+      secretName: {{ required "ingress.tls.secretName is required when ingress.tls.enabled" .Values.ingress.tls.secretName | quote }}
   {{- end }}
   rules:
-    - host: {{ .Values.ingress.host }}
+    - host: {{ required "ingress.host is required when ingress.enabled" .Values.ingress.host | quote }}
       http:
         paths:
           - path: /
@@ -31,16 +51,28 @@ spec:
                 name: {{ include "repody.fullname" . }}-web
                 port:
                   number: 3000
-    {{- if and .Values.ingress.filesHost .Values.minio.enabled }}
-    - host: {{ .Values.ingress.filesHost }}
+    {{- if $apiHost }}
+    - host: {{ $apiHost | quote }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ .Release.Name }}-minio
+                name: {{ include "repody.fullname" . }}-api
                 port:
-                  number: 9000
+                  number: 8000
+    {{- end }}
+    {{- if $exposeFiles }}
+    - host: {{ $filesHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $filesSvc | quote }}
+                port:
+                  number: {{ $filesPort }}
     {{- end }}
 {{- end }}

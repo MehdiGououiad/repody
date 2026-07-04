@@ -8,7 +8,7 @@ does not own database, Redis, or object-storage lifecycle.
 
 ```text
 repody namespace
-  repody-api / repody-web / repody-workers
+  repody-api / repody-web / repody-worker-* deployments
   repody-runtime-secrets
 
 repody-data namespace
@@ -17,9 +17,8 @@ repody-data namespace
   ScheduledBackup: repody-postgres-daily
 
 external or platform services
-  Redis or Valkey
+  Redis or Valkey (Taskiq broker)
   S3-compatible object storage
-  Hatchet engine / workflow service
   Vault / External Secrets Operator / SOPS
   external VLM endpoint
 ```
@@ -84,7 +83,6 @@ repody-runtime-secrets
   AUDIT_MINIO_ACCESS_KEY
   AUDIT_MINIO_SECRET_KEY
   AUDIT_VLLM_API_KEY
-  HATCHET_CLIENT_TOKEN
   BUGSINK_DSN
 ```
 
@@ -97,9 +95,9 @@ postgresql+asyncpg://audit:<password>@repody-postgres-pooler-rw.repody-data.svc.
 Use the examples in `deploy/managed/external-secrets/` when Vault and External
 Secrets Operator are available.
 
-## Redis / Valkey
+## Redis / Valkey (Taskiq)
 
-Run Redis or Valkey as a platform service, not inside the Repody chart. Good options:
+Taskiq uses Redis Streams for background jobs. The API and workers must share the same `AUDIT_REDIS_URL`. Run Redis or Valkey as a platform service, not inside the Repody chart. Good options:
 
 - an existing on-prem Redis/Valkey service,
 - a dedicated Redis/Valkey operator managed by your platform team,
@@ -130,27 +128,6 @@ Repody only needs endpoint, bucket, access key, secret key, and public file endp
 For on-prem MinIO, prefer MinIO Operator/Tenant managed by the platform team instead
 of the single MinIO pod bundled in the Repody app chart.
 
-## Hatchet
-
-Run Hatchet outside the Repody chart for enterprise deployments. Acceptable options:
-
-- a client-managed Hatchet service,
-- Hatchet Cloud when policy allows,
-- a separately operated self-hosted Hatchet deployment with its own database,
-  backups, monitoring, and upgrade lifecycle.
-
-Repody only needs:
-
-```text
-HATCHET_CLIENT_TOKEN=<token from Hatchet>
-externalHatchet.hostPort=hatchet-grpc.example.com:443
-externalHatchet.serverUrl=https://hatchet.example.com
-externalHatchet.tlsStrategy=tls
-```
-
-Do not deploy Hatchet Lite for enterprise production. It remains available only in
-`values-local.yaml` for kind/local tests.
-
 ## Install Repody against managed data
 
 ```bash
@@ -176,5 +153,5 @@ hostnames, image tags, storage endpoints, and VLM base URL.
 - [ ] Repody API readiness `/v1/healthz` is green.
 - [ ] Redis/Valkey uses TLS/auth.
 - [ ] Object storage bucket has lifecycle/retention policy.
-- [ ] External Hatchet is backed up, monitored, and reachable from API/workers.
+- [ ] External Redis/Valkey is backed up, monitored, and reachable from API/workers.
 - [ ] NetworkPolicies are enabled in both `repody` and `repody-data`.

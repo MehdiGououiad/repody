@@ -74,7 +74,7 @@ MTP speculative decoding — see [numind/NuExtract3-GGUF](https://huggingface.co
 
 ## llama-server (local GGUF)
 
-For `NuExtract3-Q8_0.gguf` on a developer machine:
+Local Compose default: **`NuExtract3-Q4_K_M.gguf`** with served id **`nuextract3-q4_k_m`**.
 
 ```powershell
 winget install llama.cpp
@@ -86,9 +86,10 @@ pnpm llamacpp:verify
 Full guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md)
 
 ```powershell
-$env:REPODY_VLLM_BASE_URL="http://host.docker.internal:8000/v1"
-$env:REPODY_VLLM_SERVED_MODEL="nuextract3-q8_0"
-pnpm k8s:local
+# Host API (see backend/.env)
+$env:AUDIT_VLLM_BASE_URL="http://127.0.0.1:8081/v1"
+$env:AUDIT_VLLM_SERVED_MODEL="nuextract3-q4_k_m"
+pnpm dev:all
 ```
 
 ## Kubernetes values

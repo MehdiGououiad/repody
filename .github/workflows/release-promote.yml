@@ -1,0 +1,66 @@
+name: Release promotion
+
+# Verify an already-published tag (signatures + client contract) before client handoff.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published image tag (e.g. v1.2.3)
+        required: true
+        type: string
+      channel:
+        description: Promotion channel label recorded in the manifest
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      registry:
+        description: Image registry (default ghcr.io/<owner>)
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+  id-token: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Resolve registry
+        id: coords
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.registry }}" ]; then
+            reg="${{ inputs.registry }}"
+          else
+            reg="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          fi
+          echo "registry=${reg}" >> "${GITHUB_OUTPUT}"
+
+      - name: Login to GHCR
+        if: startsWith(steps.coords.outputs.registry, 'ghcr.io/')
+        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Promotion gate
+        env:
+          REPODY_IMAGE_REGISTRY: ${{ steps.coords.outputs.registry }}
+          REPODY_IMAGE_TAG: ${{ inputs.tag }}
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
+        run: node deploy/scripts/release-supply-chain.mjs promote --channel=${{ inputs.channel }}
+
+      - name: Upload promotion manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: repody-promotion-${{ inputs.tag }}-${{ inputs.channel }}
+          path: dist/release/**/*
+          retention-days: 365

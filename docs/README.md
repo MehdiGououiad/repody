@@ -1,57 +1,89 @@
-# Documentation index
+# Documentation
 
-Repody runs on **Kubernetes** (local kind cluster or production cluster).
+Single map for all Repody docs. Start at the root guides, then drill into topic docs here.
 
 ## Start here
 
-| Doc | Audience | Contents |
-|-----|----------|----------|
-| [../README.md](../README.md) | Everyone | Product overview and quick start |
-| [../DEV.md](../DEV.md) | Developers | Local kind + Helm workflow |
-| [../DEPLOY.md](../DEPLOY.md) | Ops | Production Helm install |
-| [../CONTEXT.md](../CONTEXT.md) | Tech leads | Architecture map and glossary |
+| Need | Doc |
+|------|-----|
+| **All commands** | [COMMANDS.md](./COMMANDS.md) |
+| Product overview and quick start | [../README.md](../README.md) |
+| Local development | [../DEV.md](../DEV.md) · [deploy/LOCAL.md](./deploy/LOCAL.md) |
+| Production deployment | [deploy/README.md](./deploy/README.md) · [../DEPLOY.md](../DEPLOY.md) |
+| **Client integration (their cluster)** | [deploy/CLIENT.md](./deploy/CLIENT.md) |
+| **Secrets + hardening** | [deploy/SECRETS.md](./deploy/SECRETS.md) |
+| **OpenShift (client + CRC lab)** | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| Architecture context and glossary | [../CONTEXT.md](../CONTEXT.md) |
+| Agent / Cursor workflow | [../AGENTS.md](../AGENTS.md) |
+
+## Namespaces
+
+| Scope | Namespace | Contents |
+|-------|-----------|----------|
+| Compose dev | (none — Docker) | API :8000, UI :3000, Keycloak :8080 |
+| OpenShift / client | `repody` | API, web, workers; bundled data in same namespace |
+| Optional CNPG | `repody-data` | Managed Postgres operator manifests |
+
+**kubectl examples (OpenShift / client):**
+
+```powershell
+kubectl -n repody logs -f deploy/repody-api
+kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200
+```
+
+## Local URLs
+
+| Path | URLs |
+|------|------|
+| Compose dev | API http://localhost:8000 · UI http://localhost:3000 · Keycloak http://localhost:8080 |
+| OpenShift CRC | `*.apps-crc.testing` routes — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
 ## Operations
 
-| Doc | Contents |
-|-----|----------|
-| [CLOUD-K8S.md](./CLOUD-K8S.md) | Helm values, secrets, Gateway API, scaling |
-| [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) | CloudNativePG, External Secrets, on-prem data plane |
-| [AIRGAP.md](./AIRGAP.md) | Air-gapped image bundles and install |
-| [../deploy/k8s/README.md](../deploy/k8s/README.md) | Local kind cluster (`pnpm k8s:local`) |
-| [../deploy/ENV.md](../deploy/ENV.md) | Environment variables and secrets |
-| [../deploy/argocd/README.md](../deploy/argocd/README.md) | GitOps with Argo CD |
-
-## Platform features
-
-| Doc | Contents |
-|-----|----------|
-| [PLATFORM.md](./PLATFORM.md) | Module layout (control, workers, edge, data plane) |
-| [REPODY-VLM.md](./REPODY-VLM.md) | External document-model inference contract |
-| [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md) | llama-server for local NuExtract3 GGUF |
-| [OBSERVABILITY.md](./OBSERVABILITY.md) | Logs, traces, Grafana |
-| [BUGSINK.md](./BUGSINK.md) | Error tracking (Sentry-compatible) |
-| [BENCHMARKING.md](./BENCHMARKING.md) | Performance benchmarks against live API |
-| [E2E.md](./E2E.md) | Playwright + live pytest |
+| Topic | Doc |
+|-------|-----|
+| Deploy guides (all lanes) | [deploy/README.md](./deploy/README.md) |
+| Client production | [deploy/CLIENT.md](./deploy/CLIENT.md) |
+| On-prem managed data plane | [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) |
+| Air-gapped bundle and install | [AIRGAP.md](./AIRGAP.md) |
+| Runtime env and secrets | [../deploy/ENV.md](../deploy/ENV.md) |
+| Container registry (GHCR / Harbor) | [../deploy/registry/README.md](../deploy/registry/README.md) |
+| Harbor release registry | [../deploy/harbor/README.md](../deploy/harbor/README.md) |
+| Host llama-server helpers | [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md) |
+| External Secrets example | [../deploy/managed/external-secrets/README.md](../deploy/managed/external-secrets/README.md) |
 
 ## Engineering
 
-| Doc | Contents |
-|-----|----------|
-| [BACKEND.md](./BACKEND.md) | Backend layout and conventions |
-| [BACKEND_STEPS.md](./BACKEND_STEPS.md) | Pointer to backend docs |
-| [VERSIONS.md](./VERSIONS.md) | Pinned runtime versions |
-| [adr/README.md](./adr/README.md) | Architecture decision records |
+| Topic | Doc |
+|-------|-----|
+| Backend layout and API inventory | [BACKEND.md](./BACKEND.md) |
+| Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |
+| External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
+| Observability (logs, traces, Grafana) | [OBSERVABILITY.md](./OBSERVABILITY.md) |
+| Error tracking (Bugsink) | [BUGSINK.md](./BUGSINK.md) |
+| E2E and live tests | [E2E.md](./E2E.md) |
+| Benchmarks | [BENCHMARKING.md](./BENCHMARKING.md) |
+| Pinned runtime versions | [VERSIONS.md](./VERSIONS.md) |
+| Architecture decisions | [adr/README.md](./adr/README.md) |
 
-## Local URLs (after `pnpm k8s:local:hosts`)
+## Deploy directory
 
-| Service | URL |
-|---------|-----|
-| Web | http://app.repody.local |
-| API | http://api.repody.local |
-| Keycloak | http://auth.repody.local |
-| Grafana | http://grafana.repody.local |
-| Bugsink | http://bugsink.repody.local |
-| Argo CD (optional GitOps) | `pnpm argocd:port-forward` → https://127.0.0.1:8080 |
+Implementation files live under [../deploy/](../deploy/). Read [../deploy/README.md](../deploy/README.md) for the layout.
 
-Sign in: `operator@repody.local` / `repody-dev`
+| Path | Purpose |
+|------|---------|
+| `helm/repody/` | Application chart (API, web, Taskiq workers) |
+| `helm/repody/values-common.yaml` | **Shared values layer** (local + production) |
+| `helm/repody-data/` | Bundled data plane (Postgres, Redis, MinIO) |
+| `helm/repody-auth/` | Optional Keycloak |
+| `client/` | **Client integration kit** (values, secrets, Argo CD app) |
+| `scripts/` | build, registry, Helm, OpenShift promote, smoke helpers |
+| `managed/` | Optional production data-plane manifests |
+
+## Conventions
+
+- **How-to guides** live at the repo root: `README.md`, `DEV.md`, `DEPLOY.md`, `CONTEXT.md`.
+- **Topic references** live in `docs/`.
+- **Deploy implementation** lives in `deploy/` with short READMEs per subdirectory.
+- **Decisions** are recorded in `docs/adr/` and summarized in `CONTEXT.md`.
+- Do not write platform logs to workspace files - use `kubectl` or Grafana ([OBSERVABILITY.md](./OBSERVABILITY.md)).

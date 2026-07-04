@@ -30,22 +30,8 @@ spec:
               app.kubernetes.io/component: worker-ocr
       {{- end }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        fsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
-      initContainers:
-        {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
-      volumes:
-        - name: hatchet-client-token
-          secret:
-            secretName: {{ include "repody.hatchetTokenSecretName" . }}
-            optional: true
-      {{- end }}
       containers:
         - name: worker
           image: {{ include "repody.backendImage" . | quote }}
@@ -53,12 +39,9 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.hatchet.worker
+            - audit_workbench.taskiq.worker
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
             - configMapRef:
                 name: {{ include "repody.fullname" . }}-config
@@ -81,7 +64,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.hatchet.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3
@@ -120,22 +103,8 @@ spec:
               app.kubernetes.io/component: worker-fast
       {{- end }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        fsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
-      initContainers:
-        {{- include "repody.waitHatchetTokenInit" . | nindent 8 }}
-      volumes:
-        - name: hatchet-client-token
-          secret:
-            secretName: {{ include "repody.hatchetTokenSecretName" . }}
-            optional: true
-      {{- end }}
       containers:
         - name: worker
           image: {{ include "repody.backendImage" . | quote }}
@@ -143,12 +112,9 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.hatchet.worker
+            - audit_workbench.taskiq.worker
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
             - configMapRef:
                 name: {{ include "repody.fullname" . }}-config
@@ -171,7 +137,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.hatchet.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3

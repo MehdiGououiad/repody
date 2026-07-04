@@ -29,18 +29,13 @@ spec:
               app.kubernetes.io/component: edge
       {{- end }}
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 10001
-        runAsGroup: 10001
-        fsGroup: 10001
-        seccompProfile:
-          type: RuntimeDefault
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
       {{- include "repody.imagePullSecrets" . | nindent 6 }}
       {{- $authHost := .Values.gatewayApi.authHost }}
       {{- $authSvc := .Values.gatewayApi.authServiceName | default "keycloak" }}
       {{- $authNs := .Values.gatewayApi.authServiceNamespace | default .Release.Namespace }}
       {{- $authHostAliasIp := .Values.gatewayApi.authHostAliasIp }}
-      {{- $authHostInit := and .Values.gatewayApi.enabled $authHost .Values.gatewayApi.authServiceName (not $authHostAliasIp) }}
+      {{- $authHostInit := and .Values.gatewayApi.enabled $authHost .Values.gatewayApi.authServiceName (not $authHostAliasIp) .Values.gatewayApi.authHostAliasInitEnabled }}
       {{- if and .Values.gatewayApi.enabled $authHost $authHostAliasIp }}
       hostAliases:
         - ip: {{ $authHostAliasIp | quote }}
@@ -50,7 +45,7 @@ spec:
       {{- if $authHostInit }}
       initContainers:
         - name: auth-host-alias
-          image: {{ .Values.gatewayApi.authHostAliasInitImage | default .Values.hatchet.waitInitImage | quote }}
+          image: {{ .Values.gatewayApi.authHostAliasInitImage | default .Values.init.waitImage | quote }}
           securityContext:
             runAsUser: 0
             runAsNonRoot: false
@@ -85,10 +80,7 @@ spec:
           image: "{{ include "repody.webImageRepository" . }}:{{ .Values.images.web.tag }}"
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-                - ALL
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
           ports:
             - name: http
               containerPort: 3000

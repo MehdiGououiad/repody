@@ -1,0 +1,90 @@
+# Bundled profile — in-cluster Postgres, Redis, MinIO (same namespace).
+# Install data chart first: deploy/client/bundled/values.data.yaml
+# Registry: CHANGE_ME_REGISTRY = harbor.example.com/repody (Harbor host + project)
+# Images resolve to: {CHANGE_ME_REGISTRY}/repody-backend and .../repody-web
+# Secrets: Vault → ESO → repody-runtime-secrets (see docs/deploy/SECRETS.md)
+# migrations.enabled comes from values-common.yaml (Helm hook job)
+
+global:
+  deploymentEnvironment: production
+  deploymentProfile: bundled
+  imagePullSecrets:
+    - name: registry-pull-secret
+
+images:
+  backend:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+    pullPolicy: IfNotPresent
+  api:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+    pullPolicy: IfNotPresent
+  worker:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+    pullPolicy: IfNotPresent
+  web:
+    repository: CHANGE_ME_REGISTRY/repody-web
+    tag: CHANGE_ME_TAG
+    pullPolicy: IfNotPresent
+
+secrets:
+  existingSecret: repody-runtime-secrets
+
+externalDatabase:
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_DATABASE_URL
+
+externalRedis:
+  existingSecret: repody-runtime-secrets
+  urlKey: AUDIT_REDIS_URL
+
+externalObjectStorage:
+  endpoint: repody-data-minio:9000
+  bucket: audit-documents
+  existingSecret: repody-runtime-secrets
+  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
+  secretKeyKey: AUDIT_MINIO_SECRET_KEY
+  secure: false
+  publicEndpoint: CHANGE_ME_FILES_HOST
+
+ingress:
+  enabled: true
+  host: CHANGE_ME_APP_HOST
+  apiHost: CHANGE_ME_API_HOST
+  filesHost: CHANGE_ME_FILES_HOST
+  filesServiceName: repody-data-minio
+  filesServicePort: 9000
+  tls:
+    enabled: true
+    secretName: repody-tls
+
+gatewayApi:
+  enabled: false
+
+config:
+  authUrl: https://CHANGE_ME_APP_HOST
+  oidcIssuer: https://CHANGE_ME_AUTH_HOST/realms/repody
+  corsOrigins: '["https://CHANGE_ME_APP_HOST"]'
+  vllmBaseUrl: https://CHANGE_ME_VLM_HOST/v1
+  vllmServedModel: numind/NuExtract3
+
+observability:
+  existingSecret: repody-runtime-secrets
+  bugsinkDsnKey: BUGSINK_DSN
+  otelEnabled: true
+  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
+
+workerOcr:
+  replicas: 2
+  warmupOnStart: false
+  autoscaling:
+    enabled: true
+    maxReplicas: 15
+
+workerFast:
+  replicas: 2
+  autoscaling:
+    enabled: true
+    maxReplicas: 10

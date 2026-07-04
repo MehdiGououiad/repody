@@ -1,0 +1,59 @@
+# Shared app-plane contract — portable Kubernetes Ingress edge (networking.k8s.io/v1).
+#
+# Helm layering:
+#   values.yaml → values-common.yaml → profile overlay → optional enterprise
+#
+# Profiles (global.deploymentProfile):
+#   external  — client-managed Postgres, Redis, S3 (default)
+#   bundled   — in-cluster data chart (see docs/deploy/CLIENT.md)
+
+global:
+  deploymentProfile: external
+
+platform:
+  compatibility:
+    restricted: true
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: false
+
+minio:
+  enabled: false
+
+keycloak:
+  enabled: false
+
+ingress:
+  enabled: true
+
+gatewayApi:
+  enabled: false
+  authHostAliasInitEnabled: false
+
+externalDatabase:
+  enabled: true
+
+externalRedis:
+  enabled: true
+
+externalObjectStorage:
+  enabled: true
+
+migrations:
+  enabled: true
+
+secrets:
+  create: false
+
+config:
+  oidcEnabled: true
+  inferenceMode: vllm
+  oidcAudience: repody-api
+  keycloakClientId: repody-web
+  logJson: true
+
+networkPolicy:
+  enabled: true

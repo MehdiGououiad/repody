@@ -11,15 +11,14 @@ the Repody release as **vLLM** or **llama-server**.
 
 ## Decision
 
-- **Kubernetes with Helm** for production and local kind (`pnpm k8s:local`, alias `pnpm dev`).
+- **Kubernetes with Helm** for production (client OpenShift or generic K8s). Daily dev: Docker Compose (`pnpm dev`). Vendor cluster smoke: OpenShift CRC ([docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md)).
 - The Repody Helm chart does **not** deploy inference.
 - `config.inferenceMode: vllm` and `config.vllmBaseUrl` point workers at the external endpoint.
 - Inference credentials live in Kubernetes Secret key `AUDIT_VLLM_API_KEY`.
-- Local values: `deploy/helm/repody/values-local.yaml`.
 
 ## Consequences
 
-- Deploy validation focuses on Helm, Kubernetes secrets, ingress/gateway, worker scaling,
+- Deploy validation focuses on Helm, Kubernetes secrets, routes/ingress, worker scaling,
   cluster logging, and external VLM connectivity.
 - Air-gap bundles include platform images and the Repody chart; inference is mirrored and
   operated separately by the target environment.
@@ -28,4 +27,4 @@ the Repody release as **vLLM** or **llama-server**.
 
 - [DEV.md](../../DEV.md)
 - [docs/REPODY-VLM.md](../REPODY-VLM.md)
-- [deploy/k8s/README.md](../../deploy/k8s/README.md)
+- [docs/deploy/CLIENT.md](../deploy/CLIENT.md)

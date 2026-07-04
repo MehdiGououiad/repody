@@ -51,54 +51,52 @@ export function DocumentCard({
         title={tCommon("confirmDelete")}
         description={`${doc.documentType || t("docSource.documentTypePlaceholder")} — ${tCommon("deleteWarning")}`}
       />
-      <button
-        type="button"
-        className="flex w-full items-center gap-3 px-5 py-4 cursor-pointer select-none hover:bg-surface-bright transition-colors text-left"
-        onClick={() => setOpen((v: boolean) => !v)}
-        aria-expanded={open}
-        aria-controls={`doc-panel-${doc.id}`}
-      >
-        <div className="size-8 rounded-lg bg-accent-blue/15 ring-1 ring-accent-blue/20 flex items-center justify-center shrink-0">
-          <FileText className="h-4 w-4 text-primary" />
-        </div>
+      <div className="flex w-full items-center gap-3 px-5 py-4 select-none hover:bg-surface-bright transition-colors">
+        <button
+          type="button"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left text-on-surface"
+          onClick={() => setOpen((v: boolean) => !v)}
+          aria-expanded={open}
+          aria-controls={`doc-panel-${doc.id}`}
+        >
+          <div className="size-8 rounded-lg bg-accent-blue/15 ring-1 ring-accent-blue/20 flex items-center justify-center shrink-0">
+            <FileText className="h-4 w-4 text-primary" />
+          </div>
 
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold">
-            {doc.documentType || (
-              <span className="text-on-surface-variant font-normal">
-                {t("docSource.unnamedDoc")} {index + 1}
-              </span>
-            )}
-          </span>
-          <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
-            {namedFieldNames.length > 0
-              ? `${namedFieldNames.length} ${namedFieldNames.length !== 1 ? t("schema.fieldsLabel") : t("schema.fieldLabel")} · ${namedFieldNames.join(", ")}`
-              : t("schema.emptyShort")}
-          </p>
-        </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-semibold">
+              {doc.documentType || (
+                <span className="text-on-surface-variant font-normal">
+                  {t("docSource.unnamedDoc")} {index + 1}
+                </span>
+              )}
+            </span>
+            <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
+              {namedFieldNames.length > 0
+                ? `${namedFieldNames.length} ${namedFieldNames.length !== 1 ? t("schema.fieldsLabel") : t("schema.fieldLabel")} · ${namedFieldNames.join(", ")}`
+                : t("schema.emptyShort")}
+            </p>
+          </div>
 
-        <div className="flex items-center gap-1 shrink-0">
-          {canRemove ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7 text-outline hover:text-danger"
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmOpen(true);
-              }}
-              aria-label={tCommon("delete")}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          ) : null}
           {open ? (
             <ChevronDown className="h-4 w-4 text-on-surface-variant" />
           ) : (
             <ChevronRight className="h-4 w-4 text-on-surface-variant" />
           )}
-        </div>
-      </button>
+        </button>
+
+        {canRemove ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-outline hover:text-danger"
+            onClick={() => setConfirmOpen(true)}
+            aria-label={tCommon("delete")}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        ) : null}
+      </div>
 
       {open ? (
         <div id={`doc-panel-${doc.id}`} className="px-5 pb-5 pt-2 space-y-4 border-t border-border">

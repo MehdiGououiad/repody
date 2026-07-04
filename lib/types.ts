@@ -61,7 +61,7 @@ export interface SchemaField {
  * One document type processed by this workflow (platform + type + fields to extract).
  * A workflow can process multiple document types for cross-document validation.
  */
-/** Document extraction uses a registered document model (Docker Model Runner). */
+/** Document extraction uses a registered document model. */
 export type ReadPathId = "document_model";
 
 export type ProcessingPathId = ReadPathId;

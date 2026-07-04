@@ -41,4 +41,4 @@ minio:
     enabled: true
     size: 50Gi
 
-gatewayConsumerNamespace: repody-app
+gatewayConsumerNamespace: repody

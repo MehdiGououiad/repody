@@ -1,0 +1,22 @@
+{{- if and .Values.global.openshift.enabled .Values.global.openshift.routes.enabled .Values.keycloak.enabled }}
+{{- $routes := .Values.global.openshift.routes }}
+{{- $authHost := required "global.openshift.routes.authHost is required when OpenShift auth route is enabled" $routes.authHost }}
+{{- $tls := $routes.tls | default dict }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "repody-auth.fullname" . }}-keycloak
+  labels:
+    {{- include "repody-auth.labels" . | nindent 4 }}
+spec:
+  host: {{ $authHost | quote }}
+  to:
+    kind: Service
+    name: keycloak
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: {{ $tls.termination | default "edge" | quote }}
+    insecureEdgeTerminationPolicy: {{ $tls.insecureEdgeTerminationPolicy | default "Redirect" | quote }}
+{{- end }}

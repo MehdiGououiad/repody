@@ -1,44 +1,9 @@
 # E2E sample documents
 
-Place your test files here. The platform E2E suite will pick them up automatically.
-
-## Supported files
-
-| File | Used when |
-|------|-----------|
-| `sample-invoice.pdf` | Preferred — full document upload test |
-| `sample-invoice.png` | Image invoice |
-| `sample-invoice.jpg` | Image invoice |
-| Any `*.pdf` / `*.png` / `*.jpg` in this folder | First match wins |
-
-## Override path
-
-Set an explicit path before running tests:
-
-```powershell
-$env:E2E_SAMPLE_DOCUMENT = "C:\path\to\your-invoice.pdf"
-pnpm test:e2e
-```
-
-## What gets tested
-
-1. **API journey** — health, workflows, dry-run, test-run, audit detail, deploy + API run (live stack)
-2. **UI journey** — dashboard, workflow builder, test run, audit report, optional file upload
+Place test files here. See [docs/E2E.md](../../../docs/E2E.md).
 
 ## Prerequisites
 
-Stack must be running:
+**Compose (default):** `pnpm dev:all`, then `pnpm test:platform`.
 
-```powershell
-pnpm k8s:local:hosts   # once (admin)
-pnpm k8s:local
-pnpm k8s:local:smoke   # optional
-```
-
-Then:
-
-```powershell
-pnpm test:platform
-```
-
-See [docs/E2E.md](../../docs/E2E.md).
+**OpenShift CRC:** [docs/deploy/OPENSHIFT.md](../../../docs/deploy/OPENSHIFT.md), then `pnpm test:platform` with CRC env vars from [E2E.md](../../../docs/E2E.md).

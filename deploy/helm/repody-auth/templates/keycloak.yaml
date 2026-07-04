@@ -33,6 +33,17 @@ spec:
       containers:
         - name: keycloak
           image: {{ .Values.keycloak.image | quote }}
+          {{- if .Values.global.openshift.enabled }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          {{- end }}
           args:
             - start-dev
             - --import-realm

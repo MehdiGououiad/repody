@@ -9,7 +9,6 @@
  *   - external OpenAI-compatible VLM endpoint
  *
  *   pnpm deploy:staging
- *   pnpm deploy:staging -- --argocd
  */
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -24,21 +23,45 @@ const IMAGE_TAG =
     const r = spawnSync("git", ["rev-parse", "--short=12", "HEAD"], {
       encoding: "utf8",
       cwd: root,
+      shell: false,
     });
     return r.status === 0 ? r.stdout.trim() : "latest";
   })();
 
 const CHART_REPODY = path.join(root, "deploy/helm/repody");
 const VALUES_STAGING = path.join(CHART_REPODY, "values-staging.yaml");
-const ARGO_DIR = path.join(root, "deploy/argocd");
-
-const useArgo = process.argv.includes("--argocd");
 
 function run(cmd, args) {
   const result = spawnSync(cmd, args, {
     stdio: "inherit",
     cwd: root,
-    shell: process.platform === "win32",
+    shell: false,
+    env: process.env,
+  });
+  if (result.status !== 0) process.exit(result.status ?? 1);
+}
+
+function capture(cmd, args) {
+  const result = spawnSync(cmd, args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: false,
+    env: process.env,
+  });
+  if (result.status !== 0) {
+    process.stderr.write(result.stderr ?? "");
+    process.exit(result.status ?? 1);
+  }
+  return result.stdout;
+}
+
+function runWithInput(cmd, args, input) {
+  const result = spawnSync(cmd, args, {
+    cwd: root,
+    input,
+    stdio: ["pipe", "inherit", "inherit"],
+    encoding: "utf8",
+    shell: false,
     env: process.env,
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -68,8 +91,8 @@ function helmImageSets() {
 }
 
 function ensureNamespace() {
-  run("kubectl", ["create", "namespace", NS, "--dry-run=client", "-o", "yaml"]);
-  run("kubectl", ["create", "namespace", NS]);
+  const manifest = capture("kubectl", ["create", "namespace", NS, "--dry-run=client", "-o", "yaml"]);
+  runWithInput("kubectl", ["apply", "-f", "-"], manifest);
 }
 
 function deployHelm() {
@@ -95,24 +118,10 @@ function deployHelm() {
   ]);
 }
 
-function deployArgo() {
-  heading("Registering Argo CD Applications");
-  run("kubectl", ["apply", "-n", "argocd", "-f", path.join(ARGO_DIR, "repody-project.yaml")]);
-  run("kubectl", ["apply", "-n", "argocd", "-f", path.join(ARGO_DIR, "repody-staging.application.yaml")]);
-  console.error(`
-Argo CD app registered. Sync when values-staging.yaml and images are ready:
-  argocd app sync repody-staging
-`);
-}
-
 heading("Repody staging deploy");
 ensureNamespace();
-
-if (useArgo) {
-  deployArgo();
-} else {
-  deployHelm();
-  console.error(`
+deployHelm();
+console.error(`
 Staging Helm release installed in namespace ${NS}.
 Repody: ${REPODY_RELEASE} | tag: ${IMAGE_TAG}
 
@@ -120,4 +129,3 @@ Next: configure DNS/TLS and ensure the external VLM endpoint in values-staging.y
 is reachable from worker pods. Add AUDIT_VLLM_API_KEY to repody-runtime-secrets
 when the endpoint requires auth.
 `);
-}

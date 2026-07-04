@@ -1,6 +1,0 @@
-spec:
-  infrastructure:
-    parametersRef:
-      group: gateway.envoyproxy.io
-      kind: EnvoyProxy
-      name: repody-kind-nodeport

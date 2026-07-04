@@ -51,6 +51,7 @@
     "history": "Historique",
     "accountInitials": "Compte : MA",
     "searchShortcut": "Commande K",
+    "comingSoon": "Bientôt disponible.",
     "commandGroups": {
       "navigate": "Naviguer",
       "audits": "Audits",
@@ -501,7 +502,7 @@
       "extraction": {
         "readPathLabel": "Lecture",
         "readPathPlaceholder": "Comment lire le document",
-        "readPathHintDefault": "Extraction structurée avec le modèle de vision sélectionné.",
+        "readPathHintDefault": "Extraction structurée avec le modèle document sélectionné.",
         "validationModeLabel": "Validation",
         "validationModePlaceholder": "Règles logiques",
         "validationModeHintDefault": "Les règles logiques s'exécutent sur les valeurs extraites.",
@@ -509,7 +510,7 @@
         "pathPlaceholder": "Lecture et validation",
         "pathLoading": "Chargement…",
         "pathHintDefault": "Extraire les champs, puis valider avec vos règles.",
-        "documentModelLabel": "Modèle de vision",
+        "documentModelLabel": "Modèle document",
         "ocrModelPlaceholder": "Choisir le modèle",
         "ocrModelLoading": "Chargement…",
         "configurationUnavailable": "Options de traitement indisponibles",
@@ -520,9 +521,7 @@
         "directModelLogicValidationHint": "Repody VLM extrait directement les champs du schéma. Les règles logiques s'exécutent localement sur les valeurs extraites.",
         "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme.",
         "markdownExtractionLabel": "Aperçu Markdown du document",
-        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché.",
-        "suryaMarkdownLabel": "Extraction texte Surya",
-        "suryaMarkdownHint": "Exécute Surya OCR 2 et enregistre le texte des pages dans le rapport d'audit. Les champs du schéma ne sont pas remplis automatiquement — utilisez Repody VLM pour du JSON direct, ou ajoutez une étape LLM de structuration plus tard."
+        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché."
       },
       "docSource": {
         "title": "Documents et champs à extraire",
@@ -661,7 +660,7 @@
         "hint": "Choisissez logique ou LLM lors de l'ajout d'une règle. Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites.",
         "runsOnOcr": "Repody VLM extrait d'abord les champs du schéma. Les contrôles logiques s'exécutent localement sur les valeurs extraites.",
         "validationEngineTitle": "Moteur de validation LLM",
-        "validationEngineHint": "Les règles LLM utilisent le modèle de validation de la plateforme lorsqu'il est activé. L'extraction utilise le modèle de vision sélectionné.",
+        "validationEngineHint": "Les règles LLM utilisent le modèle de validation de la plateforme lorsqu'il est activé. L'extraction utilise le modèle document sélectionné.",
         "fixedValidationModel": "Modèle de validation plateforme",
         "fieldReferenceHint": "Référencez les champs extraits avec @nom_du_champ. Seules ces valeurs sont envoyées au modèle de validation.",
         "noFieldsForPrompt": "Sélectionnez d'abord un document contenant des champs.",
@@ -838,7 +837,7 @@
       "inference": "Inférence",
       "queue": "File de jobs",
       "storage": "Stockage",
-      "ocrModel": "Modèle OCR par défaut",
+      "ocrModel": "Modèle document par défaut",
       "ocrLangs": "Langues OCR",
       "maxUpload": "Taille max. upload",
       "workerPools": "Pools workers"

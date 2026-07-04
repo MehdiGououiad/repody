@@ -85,7 +85,7 @@ export function TopBar() {
           className="relative"
           aria-label={tBar("notifications")}
           onClick={() =>
-            toast.message(tBar("notifications"), { description: "Coming soon." })
+            toast.message(tBar("notifications"), { description: tBar("comingSoon") })
           }
         >
           <Bell className="h-4 w-4" />
@@ -96,7 +96,7 @@ export function TopBar() {
           size="icon"
           className="hidden sm:inline-flex"
           aria-label={tBar("help")}
-          onClick={() => toast.message(tBar("help"), { description: "Coming soon." })}
+          onClick={() => toast.message(tBar("help"), { description: tBar("comingSoon") })}
         >
           <HelpCircle className="h-4 w-4" />
         </Button>
@@ -105,7 +105,7 @@ export function TopBar() {
           size="icon"
           className="hidden sm:inline-flex"
           aria-label={tBar("history")}
-          onClick={() => toast.message(tBar("history"), { description: "Coming soon." })}
+          onClick={() => toast.message(tBar("history"), { description: tBar("comingSoon") })}
         >
           <History className="h-4 w-4" />
         </Button>

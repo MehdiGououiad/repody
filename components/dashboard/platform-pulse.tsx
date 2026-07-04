@@ -62,7 +62,7 @@ export async function PlatformPulse({
   const queued = healthz?.queuedRuns ?? 0;
   const running = healthz?.runningRuns ?? Math.max(0, (healthz?.inflightRuns ?? 0) - queued);
   const queueTotal = queued + running;
-  const hatchetOk = healthz?.hatchetConfigured ?? platform?.hatchetConfigured ?? false;
+  const queueOk = healthz?.taskiqConfigured ?? platform?.taskiqConfigured ?? false;
 
   return (
     <section className="space-y-3">
@@ -92,7 +92,7 @@ export async function PlatformPulse({
         />
         <PulseCard
           label={t("workers")}
-          value={hatchetOk ? t("workersReady") : t("workersAttention")}
+          value={queueOk ? t("workersReady") : t("workersAttention")}
           detail={
             healthz
               ? `fast: ${healthz.workerPools.fast ?? "—"} · ocr: ${healthz.workerPools.ocr ?? "—"}`
@@ -100,7 +100,7 @@ export async function PlatformPulse({
                 ? Object.values(platform.workerPools).join(" · ")
                 : "—"
           }
-          tone={hatchetOk ? "success" : "warning"}
+          tone={queueOk ? "success" : "warning"}
         />
         <PulseCard
           label={t("extraction")}
