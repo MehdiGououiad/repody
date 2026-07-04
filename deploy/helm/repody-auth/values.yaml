@@ -1,8 +1,22 @@
 global:
   imagePullSecrets: []
   deploymentEnvironment: production
+  openshift:
+    enabled: false
+    routes:
+      enabled: false
+      authHost: ""
 
-gatewayConsumerNamespace: repody-app
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  annotations: {}
+  tls:
+    enabled: true
+    secretName: repody-tls
+
+gatewayConsumerNamespace: repody
 
 keycloak:
   enabled: false
@@ -14,6 +28,7 @@ keycloak:
   proxyHeaders: xforwarded
   adminUsername: admin
   adminPassword: ""
+  # Production / lab: set existingSecret (e.g. repody-runtime-secrets) and store KEYCLOAK_ADMIN_PASSWORD in Vault.
   existingSecret: ""
   resources:
     requests:

@@ -67,11 +67,16 @@ next-env.d.ts
 .ruff_cache/
 backend/.agents/
 deploy/llamacpp/paths.local.env
-deploy/llamacpp/surya-paths.local.env
 deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
 deploy/harbor/.runtime/
+deploy/client/lab/.runtime/
+deploy/client/lab/.runtime-k3s/
+deploy/client/lab/.runtime-enterprise/
+.runtime-enterprise/
+backend/.venv/
 deploy/harbor/paths.harbor.local.env
+deploy/k8s/k3s/
 /harbor/
 /harbor.yml
 /harbor-online-installer-*.tgz

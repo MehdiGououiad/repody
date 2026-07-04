@@ -10,7 +10,6 @@ function fieldRef(token: string): string | null {
   const t = token.trim();
   if (!t) return null;
   if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(t)) return t;
-  if (/^[A-Za-z_][A-Za-z0-9_.]*$/.test(t) && !/\s/.test(t)) return t.replace(/\./g, "__");
   if (t.includes(".")) {
     const parts = t.split(".").map((part) => fieldToken(part));
     if (parts.every((part) => /^[a-z_][a-z0-9_]*$/.test(part))) {

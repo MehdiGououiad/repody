@@ -1,0 +1,40 @@
+# Enterprise security overlay — merge on top of external or bundled profile.
+# Secrets always from Vault / External Secrets; never in Git.
+
+platform:
+  compatibility:
+    restricted: true
+
+secrets:
+  create: false
+  existingSecret: repody-runtime-secrets
+
+networkPolicy:
+  enabled: true
+  externalEgress:
+    enabled: true
+
+api:
+  podDisruptionBudget:
+    enabled: true
+  autoscaling:
+    enabled: true
+
+workerOcr:
+  podDisruptionBudget:
+    enabled: true
+
+workerFast:
+  podDisruptionBudget:
+    enabled: true
+
+web:
+  podDisruptionBudget:
+    enabled: true
+
+config:
+  logJson: true
+  rateLimitFailClosed: true
+
+observability:
+  otelEnabled: true

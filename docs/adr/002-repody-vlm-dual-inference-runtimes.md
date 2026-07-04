@@ -8,7 +8,7 @@
 
 Structured field extraction uses **Repody VLM** (image → JSON schema). Inference runs outside the Repody Helm release:
 
-- **Local:** llama-server or vLLM on the host (`REPODY_VLLM_*` env vars)
+- **Local:** llama-server or vLLM on the host (`AUDIT_VLLM_*` env vars)
 - **Production:** vLLM or llama-server
 
 The product will add more document models later; routing must not hard-code a single endpoint.
@@ -19,7 +19,7 @@ The product will add more document models later; routing must not hard-code a si
 2. **Document extraction:** `AUDIT_INFERENCE_MODE=vllm` → `AUDIT_VLLM_BASE_URL` (external OpenAI-compatible endpoint).
 3. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py`.
 4. **LLM rule validation** uses a separate small text model, never the document-model runtime.
-5. **Live probes** live in `services/document_model_catalog.py`.
+5. **Live probes** live in `catalog/probes.py`.
 
 Default catalog id: `repody:vlm`.
 

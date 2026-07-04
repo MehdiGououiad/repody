@@ -1,6 +1,6 @@
 # Staging overrides — Harbor registry, Gateway API edge, in-cluster Keycloak + CPU vLLM.
 # Copy/adapt for your cluster; keep secrets out of Git (use secrets.existingSecret).
-# Argo CD: deploy/argocd/repody-staging.application.yaml
+# GitOps promotion: deploy/scripts/gitops-promote-staging.mjs
 
 global:
   deploymentEnvironment: staging
@@ -116,8 +116,8 @@ config:
   vllmBaseUrl: https://vlm.staging.yourdomain.com/v1
   vllmServedModel: numind/NuExtract3
   dockerModelRunnerBaseUrl: ""
-  repodyVlmPdfDpi: 120
-  repodyVlmMaxEdgePx: 1024
+  repodyVlmPdfDpi: 170
+  repodyVlmMaxEdgePx: ""
   ocrMaxPages: 4
   logJson: true
 
@@ -129,17 +129,6 @@ redis:
 
 minio:
   enabled: false
-
-hatchet:
-  enabled: false
-
-externalHatchet:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  tokenKey: HATCHET_CLIENT_TOKEN
-  hostPort: hatchet-grpc.staging.yourdomain.com:443
-  serverUrl: https://hatchet.staging.yourdomain.com
-  tlsStrategy: tls
 
 observability:
   bugsinkDsn: ""

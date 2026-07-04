@@ -11,12 +11,16 @@ global:
     - name: ghcr-pull-secret
 
 images:
+  backend:
+    repository: ghcr.io/YOUR_ORG/repody-backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
   api:
-    repository: ghcr.io/YOUR_ORG/repody-api
+    repository: ghcr.io/YOUR_ORG/repody-backend
     tag: "0.1.0"
     pullPolicy: IfNotPresent
   worker:
-    repository: ghcr.io/YOUR_ORG/repody-worker
+    repository: ghcr.io/YOUR_ORG/repody-backend
     tag: "0.1.0"
     pullPolicy: IfNotPresent
   web:
@@ -90,17 +94,6 @@ observability:
   bugsinkDsn: ""  # Optional fallback; prefer observability.existingSecret.
   otelEnabled: true
   otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
-
-hatchet:
-  enabled: false
-
-externalHatchet:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  tokenKey: HATCHET_CLIENT_TOKEN
-  hostPort: hatchet-grpc.yourdomain.com:443
-  serverUrl: https://hatchet.yourdomain.com
-  tlsStrategy: tls
 
 migrations:
   enabled: true

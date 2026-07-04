@@ -1,0 +1,36 @@
+# OpenShift Local overlay — portable Ingress (networking.k8s.io/v1), no Gateway API or Routes.
+# Merge after values-bundled.example.yaml and values-enterprise.example.yaml.
+
+global:
+  deploymentEnvironment: production
+  deploymentProfile: bundled
+
+gatewayApi:
+  enabled: false
+
+ingress:
+  enabled: true
+
+# Filled by openshift-local-promote.mjs from the cluster apps domain.
+images:
+  backend:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+  api:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+  worker:
+    repository: CHANGE_ME_REGISTRY/repody-backend
+    tag: CHANGE_ME_TAG
+  web:
+    repository: CHANGE_ME_REGISTRY/repody-web
+    tag: CHANGE_ME_TAG
+
+config:
+  authUrl: https://CHANGE_ME_APP_HOST
+  oidcIssuer: https://CHANGE_ME_AUTH_HOST/realms/repody
+  corsOrigins: '["https://CHANGE_ME_APP_HOST"]'
+  vllmBaseUrl: https://CHANGE_ME_VLM_HOST/v1
+
+externalObjectStorage:
+  publicEndpoint: CHANGE_ME_FILES_HOST

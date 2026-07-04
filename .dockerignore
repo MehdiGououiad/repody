@@ -1,43 +1,50 @@
-# Dependencies and build output
+# Dependency and build output
 node_modules
 .next
+build-next
+.turbo
+coverage
+htmlcov
 .git
 .docker-cache
 **/__pycache__
 *.pyc
 .pytest_cache
 backend/.venv
+*.tsbuildinfo
+
+# Local configuration and logs
 .env
 .env.local
 .env.*
+*.log
+*.tmp
 
-# Backend — not needed for web image
+# Backend and deploy assets are not needed for the web image
 backend/
-e2e/
 deploy/
 docs/
 scripts/
+src/
+e2e/
 .github/
 .agents/
 .cursor/
 *.md
 !README.md
 
-# Benchmark / reports / local artifacts
+# Benchmark, reports, and local artifacts
 backend/benchmark-fixtures
 benchmark-reports
-*.log
 carte-*.txt
 carte-*.json
-
-# Playwright / test fixtures at repo root
 playwright-report
 test-results
+test-results-*
+*.har
+*.webm
 
 # IDE / OS
 .DS_Store
 Thumbs.db
 *.swp
-
-# Airgap / helm archives
-deploy/helm/repody/charts/*.tgz

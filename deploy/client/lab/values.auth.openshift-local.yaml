@@ -1,0 +1,26 @@
+# OpenShift Local — in-cluster Keycloak + standard Ingress (lab IdP).
+
+global:
+  openshift:
+    enabled: true
+    routes:
+      enabled: false
+
+gatewayConsumerNamespace: repody
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    route.openshift.io/termination: edge
+  tls:
+    enabled: true
+    secretName: repody-tls
+
+keycloak:
+  enabled: true
+  existingSecret: repody-runtime-secrets
+  adminPassword: ""
+  hostnameStrict: false
+  hostnameStrictHttps: false
+  proxyHeaders: xforwarded

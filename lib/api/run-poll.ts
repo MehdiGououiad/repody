@@ -103,7 +103,7 @@ export async function pollRunUntilDone(
     intervalMs = nextPollInterval(intervalMs, body);
     await sleep(withJitter(intervalMs));
   }
-  raiseRunError("Run timed out - check worker and Docker Model Runner logs", {
+  raiseRunError("Run timed out - check worker and inference logs", {
     step: "Audit worker",
     runId,
   });

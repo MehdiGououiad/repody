@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { spawnSync } from "child_process";
 import type { Page } from "@playwright/test";
 import {
   API_TOKEN_PATH,
@@ -55,6 +56,14 @@ export async function fetchKeycloakToken(): Promise<string> {
 }
 
 export function readApiToken(): string | null {
+  const token = readApiTokenFromFile();
+  if (!token) return null;
+  if (!isApiTokenExpired(token)) return token;
+  refreshApiTokenSync();
+  return readApiTokenFromFile();
+}
+
+function readApiTokenFromFile(): string | null {
   try {
     const token = fs.readFileSync(path.join(process.cwd(), API_TOKEN_PATH), "utf8").trim();
     return token || null;
@@ -63,10 +72,45 @@ export function readApiToken(): string | null {
   }
 }
 
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const segment = token.split(".")[1];
+    if (!segment) return null;
+    const padded = segment.padEnd(segment.length + ((4 - (segment.length % 4)) % 4), "=");
+    return JSON.parse(Buffer.from(padded, "base64url").toString("utf8")) as { exp?: number };
+  } catch {
+    return null;
+  }
+}
+
+export function isApiTokenExpired(token: string, skewSeconds = 60): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return true;
+  return payload.exp * 1000 <= Date.now() + skewSeconds * 1000;
+}
+
+function refreshApiTokenSync(): void {
+  const script = path.join(process.cwd(), "e2e/helpers/refresh-api-token.mjs");
+  const result = spawnSync(process.execPath, [script], {
+    cwd: process.cwd(),
+    env: process.env,
+    encoding: "utf8",
+  });
+  if (result.status !== 0) {
+    throw new Error(result.stderr || result.stdout || "Failed to refresh API token");
+  }
+}
+
+export function writeApiToken(token: string): void {
+  const dir = path.join(process.cwd(), path.dirname(API_TOKEN_PATH));
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(process.cwd(), API_TOKEN_PATH), token, "utf8");
+}
+
 export function writeAuthArtifacts(token: string, storageStateJson: string): void {
   const dir = path.join(process.cwd(), path.dirname(AUTH_STORAGE_PATH));
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(process.cwd(), API_TOKEN_PATH), token, "utf8");
+  writeApiToken(token);
   fs.writeFileSync(path.join(process.cwd(), AUTH_STORAGE_PATH), storageStateJson, "utf8");
 }
 
@@ -92,7 +136,8 @@ export async function loginViaKeycloak(page: Page, callbackPath = "/dashboard"):
     await page.goto(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
     const keycloakBtn = page.getByRole("button", { name: /Continue with Keycloak/i });
     await keycloakBtn.click();
-    await page.waitForURL(/auth\.repody\.local/, { timeout: 30_000 });
+    const authHost = new URL(AUTH_URL).hostname.replace(/\./g, "\\.");
+    await page.waitForURL(new RegExp(authHost), { timeout: 30_000 });
   }
 
   const username = page.locator("#username, input[name='username']").first();

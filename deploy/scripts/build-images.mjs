@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { cpSync, mkdirSync, rmSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -18,9 +18,16 @@ const webTag =
   process.env.REPODY_IMAGE_TAG ??
   process.env.TAG ??
   backendTag;
-const push = process.argv.includes("--push");
-const onlyArg = process.argv.find((arg) => arg.startsWith("--only="));
-const only = onlyArg ? onlyArg.slice("--only=".length) : "all";
+const { push, pushOnly, only } = parseArgs(process.argv);
+const legacyAliases = /^(1|true|yes)$/i.test(
+  process.env.REPODY_LEGACY_IMAGE_ALIASES ?? "",
+);
+const backendExtras = normalizeBackendExtras(
+  process.env.REPODY_BACKEND_EXTRAS ?? "otel",
+);
+const includeBenchmarkFixtures = /^(1|true|yes)$/i.test(
+  process.env.REPODY_INCLUDE_BENCHMARK_FIXTURES ?? "",
+);
 const localCacheRoot =
   process.env.REPODY_BUILDKIT_LOCAL_CACHE_DIR ??
   (process.platform === "win32" && root.toLowerCase().includes(`${path.sep}onedrive${path.sep}`)
@@ -30,14 +37,71 @@ const localCacheRoot =
 const image = (name, tag) =>
   registry ? `${registry}/${name}:${tag}` : `${name}:${tag}`;
 
-function stageBenchmarkFixtures() {
-  const fixtureRoot = path.join(root, "e2e", "fixtures", "documents");
-  const stageDir = path.join(root, "backend", "benchmark-fixtures");
-  rmSync(stageDir, { recursive: true, force: true });
-  mkdirSync(stageDir, { recursive: true });
-  for (const name of ["Facture.pdf", "Facture.benchmark.json"]) {
-    cpSync(path.join(fixtureRoot, name), path.join(stageDir, name));
+function failConfig(message) {
+  console.error(message);
+  process.exit(1);
+}
+
+function parseArgs(argv) {
+  let push = false;
+  let pushOnly = false;
+  let only = "all";
+  for (let i = 2; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === "--push") {
+      push = true;
+    } else if (arg === "--push-only") {
+      pushOnly = true;
+    } else if (arg === "--only") {
+      const value = argv[++i] ?? "";
+      if (!value || value.startsWith("--")) {
+        failConfig("Missing value for --only. Use one of: all, backend, web, none.");
+      }
+      only = normalizeOnly(value);
+    } else if (arg.startsWith("--only=")) {
+      only = normalizeOnly(arg.slice("--only=".length));
+    } else {
+      failConfig(`Unknown option: ${arg}`);
+    }
   }
+  if (push && pushOnly) {
+    failConfig("Use either --push or --push-only, not both.");
+  }
+  return { push, pushOnly, only };
+}
+
+function normalizeOnly(raw) {
+  const value = raw.trim().toLowerCase();
+  if (value === "api" || value === "worker") {
+    return "backend";
+  }
+  if (["all", "backend", "web", "none"].includes(value)) {
+    return value;
+  }
+  failConfig(
+    `Invalid --only=${raw}. Use one of: all, backend, web, none. Legacy api/worker selectors map to backend.`,
+  );
+}
+
+function normalizeBackendExtras(raw) {
+  const extras = raw
+    .split(/[,\s]+/)
+    .map((extra) => extra.trim())
+    .filter(Boolean);
+  for (const extra of extras) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(extra)) {
+      failConfig(
+        `Invalid REPODY_BACKEND_EXTRAS entry "${extra}". Use comma-separated Python extra names, for example "otel".`,
+      );
+    }
+  }
+  return extras.length ? extras.join(",") : "otel";
+}
+
+if ((push || pushOnly) && !registry) {
+  failConfig(
+    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your Harbor/GHCR path, for example harbor.yourdomain.com/repody.",
+  );
 }
 
 function runAsync(cmd, args, env = process.env) {
@@ -45,7 +109,7 @@ function runAsync(cmd, args, env = process.env) {
     const child = spawn(cmd, args, {
       stdio: "inherit",
       cwd: root,
-      shell: process.platform === "win32",
+      shell: false,
       env,
     });
     child.on("error", reject);
@@ -62,15 +126,33 @@ const buildEnv = {
 };
 
 const builds = [];
+const cleanupDirs = [];
 
 function want(target) {
   return only === "all" || only === target;
 }
 
+function benchmarkFixturesContext() {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "repody-benchmark-fixtures-"));
+  cleanupDirs.push(dir);
+  if (includeBenchmarkFixtures) {
+    const fixtureRoot = path.join(root, "e2e", "fixtures", "documents");
+    for (const name of ["Facture.pdf", "Facture.benchmark.json"]) {
+      cpSync(path.join(fixtureRoot, name), path.join(dir, name));
+    }
+    return dir;
+  }
+  writeFileSync(path.join(dir, ".keep"), "", "utf8");
+  return dir;
+}
+
 /** @param {string[]} args @param {string} cacheName */
 function appendBuildKitCacheFlags(args, cacheName) {
-  const cacheFrom = process.env.REPODY_BUILDKIT_CACHE_FROM;
-  const cacheTo = process.env.REPODY_BUILDKIT_CACHE_TO;
+  const envPrefix = `REPODY_BUILDKIT_${cacheName.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
+  const cacheFrom =
+    process.env[`${envPrefix}_CACHE_FROM`] ?? process.env.REPODY_BUILDKIT_CACHE_FROM;
+  const cacheTo =
+    process.env[`${envPrefix}_CACHE_TO`] ?? process.env.REPODY_BUILDKIT_CACHE_TO;
   if (cacheFrom) {
     for (const ref of cacheFrom.split(",")) {
       const trimmed = ref.trim();
@@ -90,35 +172,38 @@ function appendBuildKitCacheFlags(args, cacheName) {
   }
 }
 
-if (want("backend") || want("api") || want("worker")) {
-  stageBenchmarkFixtures();
-}
-
-if (want("backend") || want("api") || want("worker")) {
+if (!pushOnly && want("backend")) {
   builds.push(
     (async () => {
       const backendImage = image("repody-backend", backendTag);
+      const fixturesContext = benchmarkFixturesContext();
       const dockerArgs = [
         "build",
         "--target",
         "backend",
+        "--build-context",
+        `benchmark-fixtures=${fixturesContext}`,
         "--build-arg",
-        "BACKEND_EXTRAS=otel,ocr",
+        `BACKEND_EXTRAS=${backendExtras}`,
+        "--build-arg",
+        `INCLUDE_BENCHMARK_FIXTURES=${includeBenchmarkFixtures ? "true" : "false"}`,
         "-t",
         backendImage,
         "backend",
       ];
       appendBuildKitCacheFlags(dockerArgs, "backend");
       await runAsync("docker", dockerArgs, buildEnv);
-      // Legacy names — same image ID, for registries/tools not yet on repody-backend.
-      for (const legacy of ["repody-api", "repody-worker"]) {
-        await runAsync("docker", ["tag", backendImage, image(legacy, backendTag)], buildEnv);
+      if (legacyAliases) {
+        // Compatibility aliases for registries/tools not yet on repody-backend.
+        for (const legacy of ["repody-api", "repody-worker"]) {
+          await runAsync("docker", ["tag", backendImage, image(legacy, backendTag)], buildEnv);
+        }
       }
     })(),
   );
 }
 
-if (want("web") || only === "all") {
+if (!pushOnly && (want("web") || only === "all")) {
   const webArgs = [
     "build",
     "-f",
@@ -147,22 +232,32 @@ if (want("web") || only === "all") {
 }
 
 console.log(
-  `Building Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"})`,
+  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"}, legacyAliases=${legacyAliases ? "on" : "off"})`,
 );
 
+let buildFailed = false;
 try {
   await Promise.all(builds);
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
+  buildFailed = true;
+} finally {
+  for (const dir of cleanupDirs) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+if (buildFailed) {
   process.exit(1);
 }
 
-if (push) {
+if (push || pushOnly) {
   const toPush = [];
-  if (want("backend") || want("api") || want("worker") || only === "all") {
+  if (want("backend") || only === "all") {
     toPush.push(image("repody-backend", backendTag));
-    toPush.push(image("repody-api", backendTag));
-    toPush.push(image("repody-worker", backendTag));
+    if (legacyAliases) {
+      toPush.push(image("repody-api", backendTag));
+      toPush.push(image("repody-worker", backendTag));
+    }
   }
   if (want("web") || only === "all") {
     toPush.push(image("repody-web", webTag));

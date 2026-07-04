@@ -26,8 +26,8 @@ export function DiagnosticsTab({
     },
     {
       label: "Queue dispatch",
-      ok: !!platform?.hatchetConfigured,
-      detail: platform?.hatchetConfigured ? `${platform.queueBackend} is configured` : "Queue is not configured",
+      ok: !!platform?.taskiqConfigured,
+      detail: platform?.taskiqConfigured ? `${platform.queueBackend} is configured` : "Queue is not configured",
     },
     {
       label: "Operator controls",

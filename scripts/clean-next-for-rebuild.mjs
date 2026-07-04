@@ -42,4 +42,4 @@ function removeNextOutput() {
 
 stopStaleStandaloneWeb();
 removeNextOutput();
-console.error("✓ Cleaned .next for rebuild");
+console.error("ok: Cleaned .next for rebuild");

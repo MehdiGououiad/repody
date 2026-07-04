@@ -1,0 +1,12 @@
+# OpenShift / CRC — HashiCorp chart adjusts UID ranges and securityContext.
+global:
+  openshift: true
+
+server:
+  image:
+    repository: docker.io/hashicorp/vault
+    tag: "1.18.1"
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault

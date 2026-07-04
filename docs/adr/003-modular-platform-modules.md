@@ -11,20 +11,19 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | `control` | `repody-api` | API, dispatch, uploads |
-| `workers` | `repody-worker-ocr`, `repody-worker-fast` | Hatchet worker pools |
+| `workers` | `repody-worker-ocr`, `repody-worker-fast` | Taskiq worker pools |
 | `edge` | `repody-web` | Next.js UI |
-| `data` | Postgres, Redis, object storage | Durable state (bundled locally; external in production) |
-| `queue` | Hatchet | Workflow engine (bundled locally; external in production) |
+| `data` | Postgres, Redis, object storage | Durable state and Taskiq broker (bundled locally; external in production) |
 | `auth` | Keycloak | OIDC (bundled locally; external IdP in production) |
 | `obs` | Grafana, Loki, Promtail | Logs (local addons) |
 | `traces` | Tempo, OTEL | Traces (local addons) |
 | `bugsink` | Bugsink | Error tracking (local addons) |
 
-**Module catalog:** [deploy/platform-modules.mjs](../../deploy/platform-modules.mjs)
+**Module catalog:** Helm charts under `deploy/helm/` (see [docs/PLATFORM.md](../PLATFORM.md)).
 
-**Local CLI:** `deploy/scripts/k8s-local.mjs` via `pnpm k8s:local` (alias `pnpm dev`)
+**Local dev:** Docker Compose (`pnpm dev`) for fast iteration. Cluster validation: OpenShift CRC ([docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md)).
 
-**Recipes:** `pnpm dev` · `pnpm stop` · `pnpm k8s:local:smoke`
+**Recipes:** `pnpm dev` · `pnpm dev:api` · `pnpm ui` · `pnpm dev:down`
 
 Production entrypoint: Helm (`deploy/helm/repody`).
 

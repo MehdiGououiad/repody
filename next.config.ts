@@ -11,12 +11,9 @@ const allowedDevOrigins = process.env.NEXT_ALLOWED_DEV_ORIGINS
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   allowedDevOrigins,
   experimental: {
     optimizePackageImports: [
-      "lucide-react",
-      "recharts",
       "@radix-ui/react-dialog",
       "@radix-ui/react-dropdown-menu",
       "@radix-ui/react-select",

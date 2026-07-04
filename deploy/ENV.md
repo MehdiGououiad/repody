@@ -2,8 +2,9 @@
 
 Single reference for secrets and `AUDIT_*` configuration.
 
-Production and local values are supplied through Helm values and Kubernetes Secrets.
-Local kind uses `deploy/helm/repody/values-local.yaml`.
+Daily local values are copied from `deploy/env/compose.env.example` into
+`backend/.env`, with Auth.js values in `.env.local` from `deploy/env.auth.example`.
+Kubernetes values are supplied through Helm values and Kubernetes Secrets (see [docs/deploy/SECRETS.md](../docs/deploy/SECRETS.md)).
 
 ## Production Secret
 
@@ -52,23 +53,54 @@ workerOcr:
 | `AUDIT_LOG_JSON` | `true` | Structured logs |
 | `AUDIT_CORS_ORIGINS` | JSON array | Browser origins |
 
+## Admission Control
+
+| Variable | Local Compose | Production default | Description |
+|----------|---------------|--------------------|-------------|
+| `AUDIT_ADMISSION_CONTROL_ENABLED` | default from settings | `true` | Enable queue/inflight admission limits |
+| `AUDIT_ADMISSION_MAX_QUEUED` | `50` | `50` | Maximum queued runs before rejecting new work |
+| `AUDIT_ADMISSION_MAX_INFLIGHT` | `32` | `64` | Maximum inflight runs across pools |
+| `AUDIT_ADMISSION_MAX_OCR_INFLIGHT` | `2` | `8` | Maximum OCR/document-model work in flight |
+| `AUDIT_ADMISSION_RETRY_AFTER_SECONDS` | `60` | `60` | Retry hint returned when admission rejects work |
+
 ## Image Build
 
 | Variable | Purpose |
 |----------|---------|
-| `REPODY_IMAGE_REGISTRY` | e.g. `ghcr.io/org` |
+| `REPODY_IMAGE_REGISTRY` | e.g. `ghcr.io/org`; required for `pnpm images:release` and `pnpm images:push` |
 | `REPODY_IMAGE_TAG` | Image tag (`latest` default) |
+| `REPODY_BACKEND_IMAGE_TAG` | Backend image tag override |
+| `REPODY_WEB_IMAGE_TAG` | Web image tag override |
 | `REPODY_WEB_BACKEND_URL` | Backend URL baked into web image rewrites |
+| `REPODY_BACKEND_EXTRAS` | Backend Python extras (`otel` default) |
+| `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
+| `REPODY_LEGACY_IMAGE_ALIASES` | Set `true` only when an older registry integration still needs `repody-api` and `repody-worker` aliases |
+| `REPODY_BUILDKIT_BACKEND_CACHE_FROM` / `REPODY_BUILDKIT_BACKEND_CACHE_TO` | Backend BuildKit cache refs |
+| `REPODY_BUILDKIT_WEB_CACHE_FROM` / `REPODY_BUILDKIT_WEB_CACHE_TO` | Web BuildKit cache refs |
 
-Used by `pnpm images:build` and `pnpm images:push`.
+Used by `pnpm images:build`, `pnpm images:push`, and `pnpm images:release`.
 
-## Local (kind) overrides
+## Local Compose
 
-Set before `pnpm k8s:local` to point workers at an external VLM:
+`pnpm dev:setup` copies `deploy/env/compose.env.example` to `backend/.env`.
+
+Use these runtime overrides for local API/UI work:
 
 | Variable | Description |
 |----------|-------------|
-| `REPODY_VLLM_BASE_URL` | External OpenAI-compatible root, e.g. `http://host.docker.internal:1234/v1` |
-| `REPODY_VLLM_SERVED_MODEL` | Model id from `/v1/models` |
+| `REPODY_API_PORT` | Host API port for `pnpm dev:api` / `pnpm dev:app` (`8000` default) |
+| `REPODY_DEV_API_RELOAD` | Set `1` to opt into Uvicorn reload on Windows |
+| `AUDIT_VLLM_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
+| `AUDIT_VLLM_SERVED_MODEL` | Model id from `/v1/models` |
+
+## Kubernetes Lab Overrides
+
+Use Helm values for Kubernetes lab/local overrides:
+
+| Helm value | Env emitted |
+|------------|-------------|
+| `config.vllmBaseUrl` | `AUDIT_VLLM_BASE_URL` |
+| `config.vllmServedModel` | `AUDIT_VLLM_SERVED_MODEL` |
+| `workerOcr.warmupOnStart` | `AUDIT_REPODY_VLM_WARMUP_ON_START` |
 
 Observability and Bugsink DSNs are configured in Helm values (`observability.bugsinkDsn`) or the runtime Secret (`BUGSINK_DSN`, `NEXT_PUBLIC_BUGSINK_DSN` at web image build).

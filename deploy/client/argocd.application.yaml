@@ -1,0 +1,37 @@
+# Apply in the client's Argo CD (namespace argocd).
+#
+# Prerequisites:
+#   1. Client GitOps repo contains values.yaml (from values-external.example.yaml or values-bundled.example.yaml)
+#   2. ExternalSecrets created repody-runtime-secrets + registry-pull-secret
+#   3. Replace CHANGE_ME_* below
+#
+# Multi-source: chart from vendor release tag, values from client private repo.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+    - repoURL: CHANGE_ME_VENDOR_REPO_URL
+      targetRevision: CHANGE_ME_VENDOR_TAG
+      path: deploy/helm/repody
+      helm:
+        releaseName: repody
+        valueFiles:
+          - values-common.yaml
+          - $values/values.yaml
+    - repoURL: CHANGE_ME_CLIENT_GITOPS_REPO_URL
+      targetRevision: CHANGE_ME_CLIENT_GITOPS_BRANCH
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: repody
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+  revisionHistoryLimit: 10

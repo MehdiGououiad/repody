@@ -25,6 +25,63 @@ app.kubernetes.io/part-of: repody
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{- define "repody.restrictedCompatibility" -}}
+{{- $restricted := true -}}
+{{- with .Values.platform -}}
+{{- with .compatibility -}}
+{{- if hasKey . "restricted" -}}
+{{- $restricted = .restricted -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $restricted -}}
+{{- end }}
+
+{{- define "repody.podSecurityContext" -}}
+{{- if eq (include "repody.restrictedCompatibility" . | trim) "true" -}}
+runAsNonRoot: true
+runAsUser: 10001
+runAsGroup: 10001
+fsGroup: 10001
+seccompProfile:
+  type: RuntimeDefault
+{{- else -}}
+{}
+{{- end -}}
+{{- end }}
+
+{{- define "repody.containerSecurityContext" -}}
+{{- if eq (include "repody.restrictedCompatibility" . | trim) "true" -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
+runAsNonRoot: true
+runAsUser: 10001
+runAsGroup: 10001
+seccompProfile:
+  type: RuntimeDefault
+{{- else -}}
+{}
+{{- end -}}
+{{- end }}
+
+{{- define "repody.initContainerSecurityContext" -}}
+{{- if eq (include "repody.restrictedCompatibility" . | trim) "true" -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
+runAsNonRoot: true
+runAsUser: 10001
+runAsGroup: 10001
+seccompProfile:
+  type: RuntimeDefault
+{{- else -}}
+{}
+{{- end -}}
+{{- end }}
+
 {{- define "repody.imageRepository" -}}
 {{- $repo := .repo -}}
 {{- $registry := .root.Values.global.imageRegistry | default "" -}}
@@ -139,24 +196,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
       name: {{ .Release.Name }}-minio
       key: root-password
 {{- end }}
-{{- if .Values.hatchet.enabled }}
-- name: HATCHET_CLIENT_TOKEN
-  {{- if .Values.hatchet.clientToken }}
-  value: {{ .Values.hatchet.clientToken | quote }}
-  {{- else }}
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "repody.hatchetClientTokenSecret" . }}
-      key: {{ include "repody.hatchetClientTokenKey" . }}
-      optional: true
-  {{- end }}
-{{- else if .Values.externalHatchet.enabled }}
-- name: HATCHET_CLIENT_TOKEN
-  valueFrom:
-    secretKeyRef:
-      name: {{ required "externalHatchet.existingSecret is required when externalHatchet.enabled" .Values.externalHatchet.existingSecret }}
-      key: {{ .Values.externalHatchet.tokenKey }}
-{{- end }}
 {{- end }}
 
 {{- define "repody.bugsinkEnv" -}}
@@ -211,26 +250,12 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
-{{- define "repody.hatchetStackEngineHost" -}}
-{{- (index .Values "hatchet-stack").engine.fullnameOverride | default (printf "%s-hatchet-engine" (include "repody.fullname" .)) -}}
-{{- end -}}
-
-{{- define "repody.hatchetStackApiHost" -}}
-{{- (index .Values "hatchet-stack").api.fullnameOverride | default (printf "%s-hatchet-api" (include "repody.fullname" .)) -}}
-{{- end -}}
-
-{{- define "repody.hatchetClientTokenSecret" -}}
-{{- .Values.hatchet.clientTokenSecret | default "hatchet-client-config" -}}
-{{- end -}}
-
-{{- define "repody.hatchetClientTokenKey" -}}
-{{- .Values.hatchet.clientTokenKey | default "HATCHET_CLIENT_TOKEN" -}}
-{{- end -}}
-
 {{- define "repody.waitPostgresInit" -}}
 {{- if and .Values.externalDatabase.enabled .Values.externalDatabase.host }}
 - name: wait-postgres
-  image: {{ .Values.hatchet.waitInitImage | quote }}
+  image: {{ .Values.init.waitImage | quote }}
+  securityContext:
+    {{- include "repody.initContainerSecurityContext" . | nindent 4 }}
   command:
     - sh
     - -c
@@ -249,7 +274,9 @@ imagePullSecrets:
       exit 1
 {{- else if and .Values.postgresql.enabled (not .Values.externalDatabase.enabled) }}
 - name: wait-postgres
-  image: {{ .Values.hatchet.waitInitImage | quote }}
+  image: {{ .Values.init.waitImage | quote }}
+  securityContext:
+    {{- include "repody.initContainerSecurityContext" . | nindent 4 }}
   command:
     - sh
     - -c
@@ -265,39 +292,6 @@ imagePullSecrets:
       done
       echo "Timed out waiting for PostgreSQL" >&2
       exit 1
-{{- end }}
-{{- end }}
-
-{{- define "repody.hatchetTokenSecretName" -}}
-{{- if .Values.hatchet.enabled -}}
-{{- include "repody.hatchetClientTokenSecret" . -}}
-{{- else if .Values.externalHatchet.enabled -}}
-{{- .Values.externalHatchet.existingSecret -}}
-{{- end -}}
-{{- end -}}
-
-{{- define "repody.waitHatchetTokenInit" -}}
-{{- if or (and .Values.hatchet.enabled (not .Values.hatchet.clientToken)) (and .Values.externalHatchet.enabled .Values.externalHatchet.waitForTokenSecret) }}
-- name: wait-hatchet-token
-  image: {{ .Values.hatchet.waitInitImage | quote }}
-  command:
-    - sh
-    - -c
-    - |
-      echo "Waiting for Hatchet client token..."
-      for i in $(seq 1 120); do
-        if [ -s /hatchet-secret/{{ include "repody.hatchetClientTokenKey" . }} ]; then
-          echo "Hatchet token ready"
-          exit 0
-        fi
-        sleep 3
-      done
-      echo "Timed out waiting for {{ include "repody.hatchetTokenSecretName" . }}"
-      exit 1
-  volumeMounts:
-    - name: hatchet-client-token
-      mountPath: /hatchet-secret
-      readOnly: true
 {{- end }}
 {{- end }}
 

@@ -26,10 +26,10 @@ export function OverviewTab({
     ["Storage", platform.storageBackend],
     ["Default model", defaultModelLabel],
     ["Read path", platform.defaultReadPath],
-    ["Vision models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
+    ["Document models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
     ["Worker pools", Object.values(platform.workerPools).join(", ")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
-    ["Task timeout", `${platform.hatchetTaskTimeoutMinutes} min`],
+    ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
   ];
 
   return (
@@ -38,7 +38,7 @@ export function OverviewTab({
         <MetricCard
           label="Execution"
           value={platform.queueBackend}
-          detail={platform.hatchetConfigured ? "Queue configured" : "Queue needs attention"}
+          detail={platform.taskiqConfigured ? "Queue configured" : "Queue needs attention"}
           Icon={Zap}
         />
         <MetricCard

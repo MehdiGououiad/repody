@@ -5,6 +5,8 @@ import { AUTH_STORAGE_PATH } from "./e2e/helpers/env";
 
 const baseURL = process.env.E2E_WEB_URL ?? "http://app.repody.local";
 const apiURL = process.env.E2E_API_URL ?? "http://api.repody.local";
+const ignoreHTTPSErrors =
+  process.env.E2E_IGNORE_TLS === "1" || baseURL.startsWith("https://");
 const storageStatePath = path.join(process.cwd(), AUTH_STORAGE_PATH);
 const storageState = existsSync(storageStatePath) ? storageStatePath : undefined;
 
@@ -20,6 +22,7 @@ export default defineConfig({
   globalSetup: path.join(__dirname, "e2e/global-setup.ts"),
   use: {
     baseURL,
+    ignoreHTTPSErrors,
     storageState,
     trace: "on-first-retry",
     screenshot: "only-on-failure",

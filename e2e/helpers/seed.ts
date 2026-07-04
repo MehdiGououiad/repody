@@ -3,6 +3,8 @@ import { apiGet } from "./api";
 
 const SEED_WORKFLOW_ID = "wf-invoice-audit";
 
+const API_NAMESPACE = process.env.E2E_K8S_NAMESPACE ?? "repody";
+
 function seedViaKubectl(): void {
   const code = `
 import asyncio
@@ -18,7 +20,7 @@ asyncio.run(main())
 `;
   const result = spawnSync(
     "kubectl",
-    ["-n", "repody", "exec", "-i", "deploy/repody-api", "--", "python", "-"],
+    ["-n", API_NAMESPACE, "exec", "-i", "deploy/repody-api", "--", "python", "-"],
     { input: code, encoding: "utf8", shell: false }
   );
   if (result.status !== 0) {

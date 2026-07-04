@@ -7,26 +7,60 @@ function parseArgs(argv) {
   let bundle = "";
   let registry = "";
   let verify = true;
+  let localOnly = false;
   for (let i = 2; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--bundle") bundle = argv[++i] ?? "";
-    else if (arg === "--registry") registry = argv[++i] ?? "";
-    else if (arg === "--no-verify") verify = false;
+    if (arg === "--bundle") {
+      bundle = argv[++i] ?? "";
+      if (!bundle || bundle.startsWith("--")) {
+        console.error("Missing value for --bundle.");
+        usage();
+      }
+    } else if (arg === "--registry") {
+      registry = argv[++i] ?? "";
+      if (!registry || registry.startsWith("--")) {
+        console.error("Missing value for --registry.");
+        usage();
+      }
+    } else if (arg === "--no-verify") {
+      verify = false;
+    } else if (arg === "--local-only") {
+      localOnly = true;
+    } else {
+      console.error(`Unknown option: ${arg}`);
+      usage();
+    }
   }
   if (!bundle) {
     console.error("Missing --bundle.");
-    process.exit(1);
+    usage();
+  }
+  if (registry && localOnly) {
+    console.error("Use either --registry or --local-only, not both.");
+    usage();
+  }
+  if (!registry && !localOnly) {
+    console.error("Missing --registry. Use --local-only only when you intentionally want a local Docker load.");
+    usage();
   }
   return { bundle: path.resolve(bundle), registry: registry.replace(/\/$/, ""), verify };
 }
 
+function usage() {
+  console.error(
+    "Usage: pnpm airgap:import -- --bundle DIR --registry registry.example.com/repody [--no-verify]",
+  );
+  console.error("       pnpm airgap:import -- --bundle DIR --local-only [--no-verify]");
+  process.exit(1);
+}
+
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, { stdio: "inherit", shell: process.platform === "win32", ...opts });
+  const result = spawnSync(cmd, args, { stdio: "inherit", shell: false, ...opts });
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
 function runCapture(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, { encoding: "utf8", shell: process.platform === "win32", ...opts });
+  const result = spawnSync(cmd, args, { encoding: "utf8", shell: false, ...opts });
   if (result.status !== 0) process.exit(result.status ?? 1);
   return result.stdout ?? "";
 }

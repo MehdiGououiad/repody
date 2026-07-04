@@ -63,10 +63,9 @@ function TemplateTypeSelect({
   return (
     <Select value={current} onValueChange={(next) => onChange(next as NuExtractTemplateType)}>
       <SelectTrigger className="h-auto min-h-8 py-1 text-xs border-transparent bg-transparent shadow-none focus:bg-card">
+        <SelectValue className="sr-only" aria-label={label(current)} />
         <div className="flex min-w-0 flex-col items-start text-left">
-          <SelectValue asChild>
-            <span className="truncate font-medium leading-tight">{label(current)}</span>
-          </SelectValue>
+          <span className="truncate font-medium leading-tight">{label(current)}</span>
           <span className="truncate text-[10px] text-on-surface-variant leading-tight">
             {description(current)}
           </span>

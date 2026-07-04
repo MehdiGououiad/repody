@@ -1,0 +1,155 @@
+# Local dependencies — official images, no custom orchestrator.
+# Docs: docs/deploy/LOCAL.md
+#
+#   docker compose up -d
+#   pnpm db:migrate
+#   copy deploy\env\compose.env.example backend\.env
+#   copy deploy\env.auth.example .env.local
+#   pnpm dev:setup        # once — env files + migrate
+#   pnpm dev:all          # daily — stack + API + UI (one terminal)
+#   pnpm dev              # background only (Compose + workers + NuExtract)
+#   pnpm dev:app          # foreground API + UI
+#   pnpm dev:stop         # stop everything
+
+name: repody
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: audit
+      POSTGRES_PASSWORD: audit-local-dev
+      POSTGRES_DB: audit_workbench
+    ports:
+      - "5432:5432"
+    volumes:
+      - repody-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U audit -d audit_workbench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minio-local-dev
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - repody-minio:/data
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3 &&
+      mc alias set local http://minio:9000 minioadmin minio-local-dev &&
+      mc mb --ignore-existing local/audit-documents
+      "
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.6.3
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: localhost
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./deploy/helm/repody-auth/files/realm-repody.json:/opt/keycloak/data/import/realm-repody.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # Taskiq workers — Linux containers (same image as API).
+  worker-ocr:
+    profiles: [workers]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    environment:
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_STORAGE_BACKEND: s3
+      AUDIT_MINIO_ENDPOINT: minio:9000
+      AUDIT_MINIO_BUCKET: audit-documents
+      AUDIT_MINIO_ACCESS_KEY: minioadmin
+      AUDIT_MINIO_SECRET_KEY: minio-local-dev
+      AUDIT_MINIO_SECURE: "false"
+      AUDIT_OIDC_ENABLED: "false"
+      AUDIT_VLLM_BASE_URL: http://host.docker.internal:8081/v1
+      AUDIT_VLLM_SERVED_MODEL: nuextract3-q4_k_m
+      AUDIT_INFERENCE_MODE: vllm
+      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "true"
+      AUDIT_REPODY_VLM_PDF_DPI: "170"
+      AUDIT_REPODY_VLM_ENABLE_THINKING: "false"
+      AUDIT_REPODY_VLM_MAX_TOKENS: "224"
+      AUDIT_LLM_VALIDATION_ENABLED: "false"
+      AUDIT_ADMISSION_MAX_OCR_INFLIGHT: "2"
+      AUDIT_WORKER_POOL: ocr
+      AUDIT_WORKER_OCR_MAX_JOBS: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  worker-fast:
+    profiles: [workers]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_STORAGE_BACKEND: s3
+      AUDIT_MINIO_ENDPOINT: minio:9000
+      AUDIT_MINIO_BUCKET: audit-documents
+      AUDIT_MINIO_ACCESS_KEY: minioadmin
+      AUDIT_MINIO_SECRET_KEY: minio-local-dev
+      AUDIT_MINIO_SECURE: "false"
+      AUDIT_OIDC_ENABLED: "false"
+      AUDIT_ADMISSION_MAX_INFLIGHT: "32"
+      AUDIT_WORKER_POOL: fast
+    restart: unless-stopped
+
+volumes:
+  repody-postgres:
+  repody-minio:

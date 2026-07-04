@@ -22,7 +22,8 @@ Use the device id in `paths.local.env` (e.g. `Vulkan0`, `CUDA0`).
 
 | File | Purpose |
 |------|---------|
-| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) — NuExtract recommended quality |
+| `NuExtract3-Q4_K_M.gguf` | Text weights (~2.5 GB) — **local Compose default** (Arc Vulkan tuned) |
+| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) — higher quality, slower |
 | `mmproj-NuExtract3-BF16.gguf` | Vision projector (required for images) |
 
 ## 3. Configure paths
@@ -38,99 +39,75 @@ pnpm llamacpp:serve
 pnpm llamacpp:verify
 ```
 
+Command reference: [../../docs/COMMANDS.md](../../docs/COMMANDS.md).
+
+### Profiles (Vulkan / Intel Arc)
+
+| Profile | When | Key flags | Facture (typical) |
+|---------|------|-----------|-------------------|
+| **`speed`** (default) | Daily dev | `-fa on`, `-ub 1024`, prompt cache, `GGML_VK_MAX_NODES_PER_SUBMIT=1` | **~7–13 s warm** (Q4, prompt cache) |
+| **`stability`** | After `ErrorDeviceLost` | `-fa off`, `-ub 1024`, `-ctv f16`, `--no-cache-prompt`, `GGML_VK_MAX_NODES_PER_SUBMIT=1` | ~2 min |
+
+Set in `paths.local.env`:
+
+```env
+LLAMACPP_PROFILE=speed      # default
+# LLAMACPP_PROFILE=stability
+```
+
 ### Load settings (NuExtract + Repody defaults)
 
-Aligned with NuExtract’s low-memory vLLM profile and official non-thinking mode:
+Aligned with NuExtract’s low-memory vLLM profile and llama.cpp vision guidance:
 
 | Setting | Value |
 |---------|-------|
-| Quantization | **Q8_0** weights + BF16 mmproj |
+| Quantization | **Q4_K_M** local default (or **Q8_0**) + BF16 mmproj |
 | Context | **16384** |
-| Flash attention | on (`-fa on`) |
-| KV cache | **q8_0** for K and V |
-| Physical batch | **256** (`-ub 256`) |
+| Flash attention | **on** in `speed` profile; **off** in `stability` (Intel Vulkan DeviceLost workaround) |
+| KV cache | **q8_0** K+V with FA on; **f16** V when FA off |
+| Physical batch | **1024** (`speed`, Arc tuned) / **1024** (`stability`) |
+| MTMD encode batch | **1024** on Vulkan (`--mtmd-batch-max-tokens`) |
 | GPU offload | all layers (`-ngl 99`) + `--mmproj-offload` |
+| Parallel slots | **1** (`-np 1`) — full 16k context |
+| Image tokens | `--image-min-tokens 1024` (NuExtract / Qwen-VL) |
+| Prompt cache | **on** (`speed`) / **off** (`stability`) |
 | Server reasoning | off (`-rea off`) — Repody sends `enable_thinking` per request |
 | Chat template | `--jinja` (required for `chat_template_kwargs`) |
 
-API: `http://127.0.0.1:8000/v1` (model id `nuextract3-q8_0`).
+Tune in `paths.local.env` — see `paths.local.env.example`.
+
+API: `http://127.0.0.1:8081/v1` (model id `nuextract3-q4_k_m` by default; set `LLAMACPP_MODEL_ALIAS`).
 
 ## 5. Point Repody at llama-server
 
 ```powershell
-$env:REPODY_VLLM_BASE_URL="http://host.docker.internal:8000/v1"
-$env:REPODY_VLLM_SERVED_MODEL="nuextract3-q8_0"
-pnpm k8s:local
-kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-ocr
+# backend/.env already sets AUDIT_VLLM_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
+pnpm dev:restart
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
 
-## Manual command
+## Manual command (Vulkan / Intel Arc)
 
 ```powershell
 llama-server `
-  -m C:\path\to\NuExtract3-Q8_0.gguf `
+  -m C:\path\to\NuExtract3-Q4_K_M.gguf `
   --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
-  --host 0.0.0.0 --port 8000 `
-  -c 16384 -fa on -ctk q8_0 -ctv q8_0 `
+  --host 0.0.0.0 --port 8081 `
+  -c 16384 -np 1 -fa on -ctk q8_0 -ctv q8_0 `
   -ngl 99 --device Vulkan0 --mmproj-offload `
-  -ub 256 -a nuextract3-q8_0 --jinja -rea off
+  --image-min-tokens 1024 --mtmd-batch-max-tokens 1024 -ub 1024 `
+  -a nuextract3-q4_k_m --jinja -rea off --cache-ram 2048
 ```
 
 ## Port note
 
-Port **8000** matches the vLLM reference. Avoid **5001** when `pnpm k8s:local` is running
-(local registry). `pnpm dev:api` also uses host port 8000 — do not run both.
+Port **8081** for local dev (`pnpm dev:api` uses `REPODY_API_PORT`, default **8000**).
+Production vLLM reference uses 8000.
 
 ## Smoke test
 
 ```powershell
-python deploy/scripts/test-inference-endpoint.py --host http://127.0.0.1:8000
+python deploy/scripts/test-inference-endpoint.py --host http://127.0.0.1:8081
+pnpm llamacpp:verify
 ```
-
-## Surya OCR 2
-
-Serve [datalab-to/surya-ocr-2-gguf](https://huggingface.co/datalab-to/surya-ocr-2-gguf) on a **second** `llama-server` port for benchmark OCR compare. Follows [datalab-to/surya-ocr-2](https://huggingface.co/datalab-to/surya-ocr-2): `RecognitionPredictor` + `SuryaInferenceManager` with `SURYA_INFERENCE_BACKEND=llamacpp` and `SURYA_INFERENCE_URL`.
-
-| File | Purpose |
-|------|---------|
-| `surya-2.gguf` | Surya 2 weights (~1.2 GB) |
-| `surya-2-mmproj.gguf` | Vision projector (required) |
-
-```powershell
-copy deploy\llamacpp\surya-paths.local.env.example deploy\llamacpp\surya-paths.local.env
-pnpm llamacpp:surya:serve
-pnpm llamacpp:surya:verify
-```
-
-Default API: `http://127.0.0.1:8001/v1` with `--parallel 8` (match `AUDIT_SURYA_INFERENCE_PARALLEL=8`).
-
-Repody workers pass pages as **lossless PNG** (PDF) or **native upload bytes** (images). Surya env follows [datalab-to/surya-ocr-2](https://huggingface.co/datalab-to/surya-ocr-2) — no platform upscale/downscale.
-
-| Setting | Default | Source |
-| --- | --- | --- |
-| `SURYA_MAX_TOKENS_FULL_PAGE` | 12288 | [datalab-to/surya settings.py](https://github.com/datalab-to/surya/blob/master/surya/settings.py) |
-| `IMAGE_DPI` | 96 | datalab-to/surya settings.py |
-| `IMAGE_DPI_HIGHRES` | 192 | datalab-to/surya settings.py |
-| `DETECTOR_TEXT_THRESHOLD` | 0.6 | datalab-to/surya settings.py |
-| `AUDIT_SURYA_LAYOUT_BLOCK_OCR_ENABLED` | false | LayoutPredictor + block OCR (off = full-page) |
-| `AUDIT_SURYA_TABLE_RECOGNITION_ENABLED` | false | TableRecPredictor.predict_full per page |
-| `AUDIT_SURYA_INFERENCE_PARALLEL` | 8 | Match llama-server `--parallel` |
-| `llama-server --ctx-size` | max(16384, parallel × 12288) | datalab-to/surya llamacpp spawn |
-
-Point workers at the host server — see `deploy/llamacpp/repody-surya-llamacpp.env.example` or `values-local.yaml` `suryaInferenceUrl`.
-
-Manual command (matches datalab-to/surya llamacpp spawn):
-
-```powershell
-llama-server `
-  -m C:\path\to\surya-2.gguf `
-  --mmproj C:\path\to\surya-2-mmproj.gguf `
-  --host 0.0.0.0 --port 8001 `
-  -ngl 99 --device Vulkan0 `
-  --parallel 8 --ctx-size 98304 `
-  --alias datalab-to/surya-ocr-2 --jinja
-```
-
-(`98304` = max(16384, 8 × 12288) with default parallel and per-slot ctx.)

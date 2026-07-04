@@ -40,16 +40,5 @@ observability:
   otelEnabled: true
   otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
 
-hatchet:
-  enabled: false
-
-externalHatchet:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  tokenKey: HATCHET_CLIENT_TOKEN
-  hostPort: hatchet-grpc.yourdomain.com:443
-  serverUrl: https://hatchet.yourdomain.com
-  tlsStrategy: tls
-
 migrations:
   enabled: true

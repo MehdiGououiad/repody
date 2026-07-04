@@ -1,16 +1,27 @@
 # Platform benchmarks
 
-The benchmark suite runs against the live API in your Kubernetes cluster using the same multipart upload and polling contract as the Test tab. It measures queue, extraction, and validation latency while checking extracted values and rule outcomes.
+The benchmark suite runs against the live API using the same multipart upload and polling contract as the Test tab. It measures queue, extraction, and validation latency while checking extracted values and rule outcomes.
 
 ## Prerequisites
 
+For daily local development, start Compose plus the API/UI:
+
 ```powershell
-pnpm k8s:local:hosts
-pnpm k8s:local
-pnpm k8s:local:smoke   # optional sanity check
+pnpm dev:setup   # first run only
+pnpm dev:all
+pnpm dev:status
 ```
 
-Configure external inference before starting if you need real VLM extraction (`REPODY_VLLM_BASE_URL`).
+For OpenShift CRC benchmarks, use `pnpm openshift:promote` then set
+`REPODY_K8S_NAMESPACE=repody` and `REPODY_API_DEPLOY=deploy/repody-api` if not using defaults.
+
+Configure external inference before cluster benchmarks (`AUDIT_VLLM_BASE_URL` /
+`AUDIT_VLLM_SERVED_MODEL`). For Compose, start host NuExtract first:
+
+```powershell
+pnpm llamacpp:serve
+pnpm llamacpp:verify
+```
 
 ## Run
 
@@ -18,13 +29,15 @@ Configure external inference before starting if you need real VLM extraction (`R
 pnpm benchmark quick           # quick Repody VLM baseline
 pnpm benchmark models            # all registered document models
 pnpm benchmark full              # baseline + full validation cases
-pnpm benchmark document-models   # single-document model comparison
+pnpm benchmark document-models   # direct in-pod document-model adapter benchmark
 ```
 
 Reports are written to `benchmark-reports/<timestamp>-<suite-id>/` as JSON, CSV, and HTML.
 `latest.json`, `latest.csv`, and `latest.html` point to the newest run.
 
-Benchmarks execute inside the API pod via `kubectl exec`.
+`pnpm benchmark` executes inside the API pod via `kubectl exec`. For local Compose,
+use the operator benchmark UI at `/settings?tab=benchmarks` or run the backend script
+directly with `pnpm test:platform:integration`/API flags when the local API is up.
 
 ## Phases
 
@@ -60,39 +73,15 @@ Useful options:
 
 Unavailable models are skipped by default. Use `--strict-models` to fail on skip.
 
-## OCR compare (Surya OCR 2)
+## Document-model compare
 
-The **Vision models** profile supports multiple engines in parallel (Repody VLM + Surya OCR 2). Select them in **Settings → Benchmarks**.
+The **models** profile exercises the registered document-model catalog. Repody VLM is the
+supported document model today; unavailable models are skipped unless `--strict-models`
+is set.
 
 | Model | Role | Pass criteria |
 | --- | --- | --- |
 | `repody:vlm` | Structured field extraction | Field + rule accuracy |
-| `surya:ocr2` | Layout-aware OCR text (benchmark only) | Non-empty `rawText` + timing |
 
-Surya follows [datalab-to/surya-ocr-2](https://huggingface.co/datalab-to/surya-ocr-2): the worker calls `RecognitionPredictor` with `SuryaInferenceManager` attached to a **pre-running** `llama-server` serving [datalab-to/surya-ocr-2-gguf](https://huggingface.co/datalab-to/surya-ocr-2-gguf). Workers do not auto-spawn inference inside the pod.
-
-On the host:
-
-```powershell
-pnpm llamacpp:surya:serve
-pnpm llamacpp:surya:verify
-```
-
-Rebuild the **worker** image with the optional OCR dependency:
-
-```powershell
-docker build --target worker --build-arg BACKEND_EXTRAS=otel,ocr -t repody-worker ./backend
-```
-
-Platform env (ConfigMap / `.env`):
-
-```text
-AUDIT_SURYA_OCR_ENABLED=true
-AUDIT_SURYA_INFERENCE_BACKEND=llamacpp
-AUDIT_SURYA_INFERENCE_URL=http://host.docker.internal:8001/v1
-AUDIT_SURYA_INFERENCE_PARALLEL=8
-```
-
-Set `AUDIT_SURYA_INFERENCE_PARALLEL` to match `--parallel` on `llama-server` (default 8 per upstream docs).
-
-Workers use Surya-documented env (`IMAGE_DPI=96`, etc.) with native/lossless page input — no platform upscale. See Settings → Models and `deploy/llamacpp/README.md#surya-ocr-2`.
+For Kubernetes benchmarks, point `AUDIT_VLLM_BASE_URL` and `AUDIT_VLLM_SERVED_MODEL`
+at the external vLLM or llama-server endpoint before running the suite.

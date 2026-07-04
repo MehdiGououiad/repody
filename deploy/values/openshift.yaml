@@ -1,0 +1,47 @@
+# OpenShift profile — standard Kubernetes Ingress (portable to any cluster).
+# Install: docs/deploy/OPENSHIFT.md
+#
+# OpenShift IngressController implements networking.k8s.io/v1 Ingress and honors
+# route.openshift.io/termination for edge TLS (Red Hat OCP 4.18+).
+
+global:
+  deploymentEnvironment: openshift
+  openshift:
+    enabled: true
+    routes:
+      enabled: false
+
+platform:
+  compatibility:
+    restricted: true
+    runAsNonRoot: true
+
+gatewayApi:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: ""
+  host: ""
+  apiHost: ""
+  filesHost: ""
+  annotations:
+    route.openshift.io/termination: edge
+
+networkPolicy:
+  enabled: false
+
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+minio:
+  enabled: false
+keycloak:
+  enabled: false
+
+secrets:
+  create: false
+
+observability:
+  otelEnabled: true

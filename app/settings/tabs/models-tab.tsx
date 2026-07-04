@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
-import { startModelAction, type OperatorJob } from "@/lib/api/operator";
+import { warmupModel, type OperatorJob } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { cn } from "@/lib/utils";
@@ -48,7 +48,7 @@ export function ModelsTab({
         ? "Validation LLM"
         : model.markdownOnly
           ? "OCR model"
-          : "Vision model",
+          : "Document model",
       runtime: model.runtime || REPODY_VLM_LABEL,
       available: model.available !== false,
       note: model.availabilityNote,
@@ -56,9 +56,9 @@ export function ModelsTab({
     }));
   }, [catalog]);
 
-  const runAction = async (action: "pull" | "warmup", model: string) => {
+  const runAction = async (model: string) => {
     try {
-      const job = await startModelAction(action, model);
+      const job = await warmupModel(model);
       onJobCreated(job);
       toast.success(`${job.label} started`);
     } catch (error) {
@@ -108,7 +108,7 @@ export function ModelsTab({
                 <Button
                   variant="outline"
                   disabled={!actionsEnabled || !model.available || !!active}
-                  onClick={() => void runAction("warmup", model.id)}
+                  onClick={() => void runAction(model.id)}
                 >
                   {active ? <LoaderCircle className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
                   Warm up
@@ -127,10 +127,13 @@ export function ModelsTab({
           <div className="flex-1">
             <h2 className="font-display text-lg font-semibold">Install {REPODY_VLM_LABEL}</h2>
             <p className="text-sm text-on-surface-variant mt-1">
-              Pull and package {REPODY_VLM_LABEL} for Docker Model Runner from the project root:
+              Local dev: configure NuExtract in{" "}
+              <code className="text-[10px]">deploy/llamacpp/paths.local.env</code>, then{" "}
+              <code className="text-[10px]">pnpm llamacpp:serve</code>. Verify with{" "}
+              <code className="text-[10px]">pnpm llamacpp:verify</code>.
             </p>
             <code className="mt-3 block rounded-lg border border-border bg-surface-container-low px-3 py-2 text-xs">
-              pnpm docker:models:pull
+              pnpm llamacpp:serve
             </code>
           </div>
         </div>

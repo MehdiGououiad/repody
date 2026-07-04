@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { REPODY_VLM_CATALOG_ID, SURYA_OCR2_CATALOG_ID } from "@/lib/document-model-branding";
+import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
 import { normalizeReadPath } from "@/lib/api/processing-paths";
 import type { DocumentDef } from "@/lib/types";
 import type { ProcessingOptions } from "./processing-options";
@@ -39,8 +39,7 @@ export function ProcessingSettings({
   const firstAvailable = modelsForPath.find((m) => m.available !== false);
   const selectedOcr = doc.ocrModel ?? firstAvailable?.id ?? defaultOcr;
   const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? ocrModels.find((m) => m.id === selectedOcr);
-  const suryaMarkdownOnly =
-    selectedOcr === SURYA_OCR2_CATALOG_ID || selectedModel?.markdownOnly === true;
+  const markdownOnlyForced = selectedModel?.markdownOnly === true;
   const readPathId = `read-path-${doc.id}`;
   const extractionModelId = `extraction-model-${doc.id}`;
 
@@ -112,7 +111,7 @@ export function ProcessingSettings({
           onValueChange={(v) => {
             const model = ocrModels.find((m) => m.id === v);
             const patch: Partial<DocumentDef> = { ocrModel: v };
-            if (v === SURYA_OCR2_CATALOG_ID || model?.markdownOnly) {
+            if (model?.markdownOnly) {
               patch.markdownExtraction = true;
             }
             onChange(patch);
@@ -161,20 +160,16 @@ export function ProcessingSettings({
         <input
           type="checkbox"
           className="mt-0.5 size-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
-          checked={suryaMarkdownOnly ? true : (doc.markdownExtraction ?? false)}
+          checked={markdownOnlyForced ? true : (doc.markdownExtraction ?? false)}
           onChange={(e) => onChange({ markdownExtraction: e.target.checked })}
-          disabled={!loaded || error || suryaMarkdownOnly}
+          disabled={!loaded || error || markdownOnlyForced}
         />
         <span className="min-w-0">
           <span className="block text-xs font-semibold text-on-surface">
-            {suryaMarkdownOnly
-              ? t("extraction.suryaMarkdownLabel")
-              : t("extraction.markdownExtractionLabel")}
+            {t("extraction.markdownExtractionLabel")}
           </span>
           <span className="block text-[11px] leading-relaxed text-on-surface-variant mt-0.5">
-            {suryaMarkdownOnly
-              ? t("extraction.suryaMarkdownHint")
-              : t("extraction.markdownExtractionHint")}
+            {t("extraction.markdownExtractionHint")}
           </span>
         </span>
       </label>

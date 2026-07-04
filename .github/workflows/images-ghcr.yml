@@ -7,6 +7,11 @@ on:
         description: Image tag to publish. Defaults to the short git SHA.
         required: false
         type: string
+      promote:
+        description: Run promotion gate (verify + manifest) after publish.
+        required: false
+        type: boolean
+        default: true
   push:
     tags:
       - "v*"
@@ -14,6 +19,8 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
+  attestations: write
 
 jobs:
   publish:
@@ -47,8 +54,10 @@ jobs:
           REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
           REPODY_BACKEND_IMAGE_TAG: ${{ steps.images.outputs.tag }}
           REPODY_WEB_IMAGE_TAG: ${{ steps.images.outputs.tag }}
-          REPODY_BUILDKIT_CACHE_FROM: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
-          REPODY_BUILDKIT_CACHE_TO: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
+          REPODY_BUILDKIT_BACKEND_CACHE_FROM: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
+          REPODY_BUILDKIT_BACKEND_CACHE_TO: type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
+          REPODY_BUILDKIT_WEB_CACHE_FROM: type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache
+          REPODY_BUILDKIT_WEB_CACHE_TO: type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache,mode=max
           AUTH_SECRET: ghcr-ci-placeholder-secret-32chars-min
           AUTH_KEYCLOAK_CLIENT_SECRET: repody-web-ci-secret
           AUTH_KEYCLOAK_ISSUER: https://auth.example.com/realms/repody
@@ -56,29 +65,58 @@ jobs:
           REPODY_WEB_BACKEND_URL: http://repody-api:8000
         run: node deploy/scripts/build-images.mjs --push
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0.17.9
+
+      - name: SBOM, sign, and attest (cosign keyless)
+        env:
+          REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
+          REPODY_IMAGE_TAG: ${{ steps.images.outputs.tag }}
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
+        run: node deploy/scripts/release-supply-chain.mjs attest
+
+      - name: Verify signatures (promotion gate)
+        if: github.event_name != 'workflow_dispatch' || inputs.promote != false
+        env:
+          REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
+          REPODY_IMAGE_TAG: ${{ steps.images.outputs.tag }}
+          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
+        run: node deploy/scripts/release-supply-chain.mjs promote --channel=staging
+
       - name: Write Helm image values
         shell: bash
         run: |
           mkdir -p dist
-          cat > dist/repody-ghcr-images.yaml <<EOF
+          tag="${{ steps.images.outputs.tag }}"
+          tag_safe="${tag//\//_}"
+          if [ -f "dist/release/${tag_safe}/helm-images.yaml" ]; then
+            cp "dist/release/${tag_safe}/helm-images.yaml" dist/repody-ghcr-images.yaml
+          else
+            cat > dist/repody-ghcr-images.yaml <<EOF
           images:
             backend:
               repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${{ steps.images.outputs.tag }}"
+              tag: "${tag}"
             api:
               repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${{ steps.images.outputs.tag }}"
+              tag: "${tag}"
             worker:
               repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${{ steps.images.outputs.tag }}"
+              tag: "${tag}"
             web:
               repository: ${{ steps.images.outputs.registry }}/repody-web
-              tag: "${{ steps.images.outputs.tag }}"
+              tag: "${tag}"
           EOF
+          fi
 
-      - name: Upload Helm image values
+      - name: Upload release bundle
         uses: actions/upload-artifact@v4
         with:
-          name: repody-ghcr-images-${{ steps.images.outputs.tag }}
-          path: dist/repody-ghcr-images.yaml
-          retention-days: 30
+          name: repody-release-${{ steps.images.outputs.tag }}
+          path: |
+            dist/repody-ghcr-images.yaml
+            dist/release/**/*
+          retention-days: 90

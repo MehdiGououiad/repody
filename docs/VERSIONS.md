@@ -24,14 +24,14 @@ client registry.
 | Postgres | Managed Postgres or CloudNativePG |
 | Redis/Valkey | Managed service or operator-backed deployment |
 | Object storage | Enterprise S3-compatible endpoint or MinIO Operator/Tenant |
-| Hatchet | External Hatchet endpoint, not Hatchet Lite |
+| Taskiq broker | Redis / Valkey (`AUDIT_REDIS_URL`) |
 | IdP | Enterprise OIDC provider |
 | Inference | External OpenAI-compatible VLM endpoint |
 
 ## Helm subcharts
 
-The Repody chart still carries conditional subcharts for local/kind development only.
-They are disabled by default and production renders fail if they are enabled.
+The Repody chart still carries conditional subcharts for the **bundled** client profile.
+They are disabled by default and production external-profile renders fail if bundled infra is enabled.
 
 | Chart | Pinned chart version | Production posture |
 |-------|----------------------|--------------------|
@@ -48,7 +48,7 @@ cd backend && uv lock --upgrade
 # Refresh frontend lockfile
 pnpm update --latest
 
-# Helm subcharts for local/kind only
+# Helm subcharts (bundled profile)
 pnpm helm:deps
 
 # Validate enterprise Kubernetes renders

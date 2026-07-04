@@ -114,11 +114,11 @@ def main() -> int:
             failures.append("no model in /v1/models")
         else:
             passed.append("model listed")
-            if "q8" not in model.lower():
-                warnings.append(f"model id {model!r} may not be Q8")
+            if (!/q4_k_m/i.test(model) && !/q8_0/i.test(model)) {
+                warnings.append(f"model id {model!r} — expected nuextract3-q4_k_m or q8_0 alias")
     except Exception as exc:
         failures.append(f"/v1/models: {exc}")
-        model = "NuExtract3-Q8_0.gguf"
+        model = "nuextract3-q4_k_m"
 
     print("\n[3] /props (load config)")
     try:

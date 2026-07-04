@@ -220,7 +220,7 @@ export function BenchmarksTab({
             <div>
               <h2 className="font-display text-lg font-semibold">Run benchmark suite</h2>
               <p className="text-sm text-on-surface-variant mt-1">
-                Compare NuExtract markdown (Repody VLM) and Surya OCR in parallel — you judge text quality from the previews.
+                Compare Repody VLM extraction quality and latency across benchmark documents.
               </p>
             </div>
             <div className="grid sm:grid-cols-2 gap-4">
@@ -230,7 +230,7 @@ export function BenchmarksTab({
                   <SelectTrigger id="benchmark-profile"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="quick">Quick baseline</SelectItem>
-                    <SelectItem value="models">Vision models</SelectItem>
+                    <SelectItem value="models">Document models</SelectItem>
                     <SelectItem value="full">Full platform</SelectItem>
                   </SelectContent>
                 </Select>

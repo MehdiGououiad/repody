@@ -2,7 +2,7 @@ import { browserApi, browserFetch, throwOnApiError } from "@/lib/api/openapi-cli
 
 export type OperatorJob = {
   id: string;
-  kind: "benchmark" | "model_pull" | "model_warmup";
+  kind: "benchmark" | "model_warmup";
   label: string;
   status: "queued" | "running" | "completed" | "failed" | "cancelled";
   createdAt: string;
@@ -96,13 +96,8 @@ export async function fetchJobReport(jobId: string): Promise<BenchmarkReport> {
   return data as BenchmarkReport;
 }
 
-export async function startModelAction(
-  action: "pull" | "warmup",
-  model: string
-): Promise<OperatorJob> {
-  const path =
-    action === "pull" ? "/v1/operator/models/pull" : "/v1/operator/models/warmup";
-  const { data, error, response } = await browserApi.POST(path, {
+export async function warmupModel(model: string): Promise<OperatorJob> {
+  const { data, error, response } = await browserApi.POST("/v1/operator/models/warmup", {
     body: { model },
   });
   if (error || !response.ok || !data) throwOnApiError(error, response);

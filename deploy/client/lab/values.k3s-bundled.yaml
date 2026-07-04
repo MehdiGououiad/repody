@@ -1,0 +1,27 @@
+# k3s client bundled lab — same contract as production client values (Ingress + enterprise).
+global:
+  deploymentProfile: bundled
+
+gatewayApi:
+  enabled: false
+
+ingress:
+  enabled: true
+  className: traefik
+  filesServiceName: repody-data-minio
+  filesServicePort: 9000
+
+networkPolicy:
+  enabled: true
+  externalEgress:
+    enabled: true
+    ports:
+      - 80
+      - 443
+      - 5432
+      - 6379
+      - 6380
+      - 8080
+      - 9000
+      - 4317
+      - 4318

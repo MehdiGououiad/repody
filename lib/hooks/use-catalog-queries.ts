@@ -92,7 +92,6 @@ export type ModelRuntimeConfigResponse = {
     runtime: string;
     runtimeModel: string;
     enabled: boolean;
-    compareOnly?: boolean;
     inferenceUrl?: string | null;
     renderPolicy?: string;
     fields: Array<{

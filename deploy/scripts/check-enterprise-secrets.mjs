@@ -44,8 +44,19 @@ function read(path) {
 }
 
 function section(text, name) {
-  const pattern = new RegExp(`^${name}:\\r?\\n([\\s\\S]*?)(?=^\\S|\\z)`, "m");
-  return text.match(pattern)?.[1] ?? "";
+  const pattern = new RegExp(`^${name}:\\r?\\n([\\s\\S]*?)(?=^\\S|\\z)`, "gm");
+  const matches = Array.from(text.matchAll(pattern));
+  if (matches.length === 0) return "";
+  if (matches.length === 1) return matches[0][1];
+
+  const merged = new Map();
+  for (const match of matches) {
+    for (const line of match[1].split(/\r?\n/)) {
+      const keyMatch = line.match(/^(\s*)([A-Za-z0-9_.]+):\s*(.*)$/);
+      if (keyMatch) merged.set(keyMatch[2], line);
+    }
+  }
+  return `${Array.from(merged.values()).join("\n")}\n`;
 }
 
 function hasLine(text, key, value) {
@@ -94,7 +105,6 @@ for (const [name, requiredLines] of [
       ["secretKeyKey", "AUDIT_MINIO_SECRET_KEY"],
     ],
   ],
-  ["externalHatchet", [["enabled", "true"], ["existingSecret", "repody-runtime-secrets"], ["tokenKey", "HATCHET_CLIENT_TOKEN"]]],
 ]) {
   const block = section(valuesText, name);
   requireCondition(block.length > 0, `values must include ${name}`);
@@ -115,7 +125,6 @@ const requiredKeys = [
   "AUDIT_REDIS_URL",
   "AUDIT_MINIO_ACCESS_KEY",
   "AUDIT_MINIO_SECRET_KEY",
-  "HATCHET_CLIENT_TOKEN",
   "BUGSINK_DSN",
 ];
 if (requireVlmApiKey) requiredKeys.push("AUDIT_VLLM_API_KEY");

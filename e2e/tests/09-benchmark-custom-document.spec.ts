@@ -24,7 +24,7 @@ test("benchmarks UI custom document shows markdown preview", async ({ page, requ
   await page.locator('input[type="file"]').setInputFiles(fixture);
 
   await page.locator("#benchmark-profile").click();
-  await page.getByRole("option", { name: "Vision models" }).click();
+  await page.getByRole("option", { name: "Document models" }).click();
   await page.locator("#benchmark-warm-runs").fill("0");
 
   const cacheCheck = page.getByRole("checkbox", {
@@ -36,9 +36,6 @@ test("benchmarks UI custom document shows markdown preview", async ({ page, requ
 
   const repodyCheckbox = page.getByRole("checkbox", { name: /^Repody VLM$/ });
   if (!(await repodyCheckbox.isChecked())) await repodyCheckbox.check();
-
-  const suryaCheckbox = page.getByRole("checkbox", { name: /Surya OCR 2/ });
-  if (await suryaCheckbox.isChecked()) await suryaCheckbox.uncheck();
 
   await page.getByRole("button", { name: "Run benchmark" }).click();
   await expect(page.getByRole("button", { name: "Benchmark running" })).toBeVisible({

@@ -1,6 +1,15 @@
-# Platform architecture
+# Platform Architecture
 
-Repody has one deployment path: **Kubernetes with Helm**. Local development uses the same chart on a kind cluster (`pnpm k8s:local`).
+Repody deploys on **Kubernetes with Helm** in production (OpenShift client installs). **Local daily dev uses Docker Compose** — [docs/deploy/LOCAL.md](./deploy/LOCAL.md).
+
+Command reference: [COMMANDS.md](./COMMANDS.md)
+
+## Development paths
+
+| Path | When |
+|------|------|
+| Compose (`pnpm dev`) | Daily API/UI work, unit tests, migrations |
+| OpenShift CRC (`pnpm openshift:promote`) | Vendor cluster smoke — [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
 ## Production modules
 
@@ -9,51 +18,29 @@ Repody has one deployment path: **Kubernetes with Helm**. Local development uses
 | control | `repody-api` Deployment | Workflows, runs, uploads, dispatch |
 | workers | `repody-worker-ocr`, `repody-worker-fast` Deployments | Document extraction and fast validation |
 | edge | `repody-web` Deployment | Next.js UI |
-| data plane | Postgres, Redis, object storage (bundled in local values; external in production) | Durable platform state |
-| queue plane | Hatchet (bundled locally; external in production) | Workflow execution |
-| auth | Keycloak (bundled locally; external IdP in production) | OIDC for UI and API JWT |
-| inference | **External** OpenAI-compatible endpoint | Document-model VLM — not in the Repody chart |
+| data plane | Postgres, Redis, object storage | Durable platform state and Taskiq broker |
+| auth | External OIDC provider | Authentication |
+| inference | External OpenAI-compatible endpoint | Document-model VLM; not in the Repody chart |
 
-Module catalog: [deploy/platform-modules.mjs](../deploy/platform-modules.mjs).
+Helm charts: `deploy/helm/repody-data`, `repody-auth`, `repody`.
 
-## Local stack
+## Client delivery
 
-```powershell
-pnpm k8s:local:hosts   # once (admin)
-pnpm k8s:local         # or: pnpm dev
-```
+Vendor image artifacts:
 
-Local values (`deploy/helm/repody/values-local.yaml`) enable bundled Postgres, Redis, MinIO, Hatchet, Keycloak, Gateway API hosts (`*.repody.local`), and observability addons.
+- `repody-backend` for the API and worker roles.
+- `repody-web` for Next.js.
 
-External inference for local runs (vLLM or llama-server on the host):
+Clients install with Helm or Argo CD — [docs/deploy/CLIENT.md](./deploy/CLIENT.md).
 
-```powershell
-$env:REPODY_VLLM_BASE_URL="http://host.docker.internal:8000/v1"
-$env:REPODY_VLLM_SERVED_MODEL="nuextract3-q8_0"   # llama-server; or numind/NuExtract3 for vLLM
-pnpm k8s:local
-```
+Release registry: Harbor 2.14 — [docs/deploy/HARBOR.md](./deploy/HARBOR.md).
 
-See [deploy/llamacpp/README.md](../deploy/llamacpp/README.md), [docs/REPODY-VLM.md](./REPODY-VLM.md), and [DEV.md](../DEV.md).
+## Edge
 
-## Scale priority
+**Standard Kubernetes Ingress** (`networking.k8s.io/v1`) everywhere — same manifests on OpenShift, EKS, GKE, on-prem. OpenShift overlay adds `route.openshift.io/termination` for edge TLS.
 
-1. Worker pool replicas and HPA (`workerOcr`, `workerFast`)
-2. API replicas and HPA
-3. Managed Postgres / Redis / object storage
-4. Web replicas and ingress tuning
-5. External inference capacity
+Optional: Gateway API (Envoy) or OpenShift Routes for clients who prefer them (`gatewayApi.enabled` or `global.openshift.routes.enabled`).
 
-## Helm values (production)
+## Observability
 
-| Concern | Values |
-|---------|--------|
-| API scale | `api.replicas`, `api.autoscaling` |
-| Worker scale | `workerOcr.*`, `workerFast.*` |
-| External inference | `config.inferenceMode`, `config.vllmBaseUrl`, `config.vllmServedModel` |
-| Inference auth | `AUDIT_VLLM_API_KEY` in `secrets.existingSecret` |
-| External Hatchet | `externalHatchet.*`, `HATCHET_CLIENT_TOKEN` in secrets |
-| OIDC | `config.oidcIssuer`, `config.oidcJwksUrl`, Keycloak or external IdP |
-| Logs | `config.logJson` + cluster log collector |
-| Traces | `observability.otelEnabled`, `observability.otelEndpoint` |
-
-See [CLOUD-K8S.md](./CLOUD-K8S.md).
+Client-managed OTEL and log stack — [docs/deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md).

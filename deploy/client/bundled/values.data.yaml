@@ -1,0 +1,39 @@
+# Bundled data plane — production namespace repody.
+# Postgres/Redis/MinIO passwords from ESO (repody-data-credentials), not Helm values.
+
+global:
+  deploymentEnvironment: production
+  imagePullSecrets:
+    - name: registry-pull-secret
+
+gatewayConsumerNamespace: repody
+
+postgresql:
+  enabled: true
+  auth:
+    username: audit
+    database: audit_workbench
+    existingSecret: repody-data-postgresql
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: true
+    existingSecret: repody-data-redis
+    existingSecretPasswordKey: redis-password
+
+minio:
+  enabled: true
+  mode: standalone
+  auth:
+    existingSecret: repody-data-minio
+    rootUserSecretKey: rootUser
+    rootPasswordSecretKey: rootPassword
+  defaultBuckets: audit-documents
+  persistence:
+    enabled: true
+    size: 50Gi
