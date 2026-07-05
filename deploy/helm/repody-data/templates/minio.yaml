@@ -105,6 +105,7 @@ metadata:
     app.kubernetes.io/name: minio-init
   annotations:
     helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "5"
     helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
   ttlSecondsAfterFinished: 300
@@ -141,8 +142,15 @@ spec:
             - /bin/sh
             - -ec
             - |
-              sleep 3
-              mc alias set local http://{{ include "repody-data.minio.fullname" . }}:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+              endpoint="http://{{ include "repody-data.minio.fullname" . }}:9000"
+              for i in $(seq 1 60); do
+                if mc alias set local "$endpoint" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null 2>&1; then
+                  break
+                fi
+                echo "waiting for minio ($i/60)..."
+                sleep 2
+              done
+              mc alias set local "$endpoint" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
               {{- range (splitList "," .Values.minio.defaultBuckets) }}
               mc mb --ignore-existing local/{{ trim . }}
               {{- end }}

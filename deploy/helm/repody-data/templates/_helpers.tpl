@@ -3,6 +3,7 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 app.kubernetes.io/part-of: repody
 app.kubernetes.io/component: data
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{- define "repody-data.postgresql.fullname" -}}

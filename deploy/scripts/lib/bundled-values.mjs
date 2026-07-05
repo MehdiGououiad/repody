@@ -69,6 +69,8 @@ secrets:
 externalDatabase:
   existingSecret: repody-runtime-secrets
   urlKey: AUDIT_DATABASE_URL
+  host: repody-data-postgresql
+  port: 5432
 
 externalRedis:
   existingSecret: repody-runtime-secrets
@@ -182,6 +184,8 @@ secrets:
 externalDatabase:
   existingSecret: repody-runtime-secrets
   urlKey: AUDIT_DATABASE_URL
+  host: repody-data-postgresql
+  port: 5432
 
 externalRedis:
   existingSecret: repody-runtime-secrets
