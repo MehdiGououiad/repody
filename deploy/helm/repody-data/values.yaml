@@ -9,6 +9,10 @@ postgresql:
     database: audit_workbench
     existingSecret: ""
     password: ""
+  image:
+    registry: docker.io
+    repository: bitnamilegacy/postgresql
+    tag: 17.6.0-debian-12-r4
   primary:
     persistence:
       enabled: true
@@ -21,18 +25,16 @@ redis:
     enabled: false
   image:
     repository: bitnamilegacy/redis
-    tag: 8.2.1-debian-12-r0
+    tag: 8.4.0-debian-12-r1
 
 minio:
   enabled: false
   mode: standalone
   image:
-    repository: bitnamilegacy/minio
-    tag: 2025.7.23-debian-12-r3
+    repository: pgsty/minio
+    tag: RELEASE.2026-06-18T00-00-00Z
   console:
-    image:
-      repository: bitnamilegacy/minio-object-browser
-      tag: 2.0.2-debian-12-r3
+    enabled: false
   auth:
     rootUser: minioadmin
     rootPassword: ""

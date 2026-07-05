@@ -1,4 +1,4 @@
-/** CRC lab-only credentials — simulates Vault paths for openshift-local-promote. Not for production. */
+/** OpenShift client test lab credentials — simulates Vault paths. Not for production. */
 export const LAB = {
   pgUser: "audit",
   pgUserPassword: "bundled-e2e-pg-user",

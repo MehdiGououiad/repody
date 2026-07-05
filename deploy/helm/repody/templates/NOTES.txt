@@ -22,7 +22,6 @@ Port-forward api:  kubectl port-forward svc/{{ include "repody.fullname" . }}-ap
 
 {{- end }}
 
-Worker OCR replicas:  {{ .Values.workerOcr.replicas }} (HPA max {{ .Values.workerOcr.autoscaling.maxReplicas }})
 Worker fast replicas: {{ .Values.workerFast.replicas }} (HPA max {{ .Values.workerFast.autoscaling.maxReplicas }})
 
 Set secrets before production:

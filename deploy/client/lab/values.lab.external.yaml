@@ -1,0 +1,25 @@
+# External profile lab — BYO services simulated by pre-deployed data plane (see client-test script).
+global:
+  deploymentProfile: external
+
+# Lab uses in-cluster MinIO without TLS; production external profile sets secure: true.
+externalObjectStorage:
+  secure: false
+
+workerExtract:
+  replicas: 1
+  autoscaling:
+    enabled: false
+
+workerFast:
+  replicas: 1
+  autoscaling:
+    enabled: false
+
+api:
+  replicas: 1
+  autoscaling:
+    enabled: false
+
+web:
+  replicas: 1

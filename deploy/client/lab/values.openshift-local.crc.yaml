@@ -30,7 +30,7 @@ web:
     limits:
       memory: 384Mi
 
-workerOcr:
+workerExtract:
   replicas: 1
   autoscaling:
     enabled: false

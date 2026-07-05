@@ -1,0 +1,87 @@
+# Argo CD Applications — bundled profile (sync waves: data → auth → app).
+# Repo URL/revision placeholders replaced by openshift-client-test.mjs register.
+# Cluster-specific hosts/registry: deploy/client/lab/values.*.promoted.yaml (commit before sync).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody-data
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: VENDOR_REPO_URL
+    targetRevision: VENDOR_REVISION
+    path: deploy/helm/repody-data
+    helm:
+      releaseName: repody-data
+      valueFiles:
+        - values.yaml
+        - ../../client/bundled/values.data.yaml
+        - ../../client/lab/values.data.openshift-local.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: repody
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody-auth
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  source:
+    repoURL: VENDOR_REPO_URL
+    targetRevision: VENDOR_REVISION
+    path: deploy/helm/repody-auth
+    helm:
+      releaseName: repody-auth
+      valueFiles:
+        - values.yaml
+        - ../../client/lab/values.auth.openshift-local.yaml
+        - ../../client/lab/values.auth.openshift-local.promoted.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: repody
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: repody
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  project: default
+  source:
+    repoURL: VENDOR_REPO_URL
+    targetRevision: VENDOR_REVISION
+    path: deploy/helm/repody
+    helm:
+      releaseName: repody
+      valueFiles:
+        - values.yaml
+        - values-common.yaml
+        - ../../client/values-bundled.example.yaml
+        - ../../client/values-enterprise.example.yaml
+        - ../../values/openshift.yaml
+        - ../../client/lab/values.lab.common.yaml
+        - ../../client/lab/values.openshift-local.yaml
+        - ../../client/lab/values.openshift-local.promoted.yaml
+        - ../../client/lab/values.openshift-local.crc.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: repody
+  syncPolicy:
+    syncOptions:
+      - ServerSideApply=true
