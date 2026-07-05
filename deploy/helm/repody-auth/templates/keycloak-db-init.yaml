@@ -1,0 +1,78 @@
+{{- if and .Values.keycloak.enabled .Values.keycloak.database.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "repody-auth.fullname" . }}-keycloak-db-init
+  labels:
+    {{- include "repody-auth.labels" . | nindent 4 }}
+    app.kubernetes.io/name: keycloak-db-init
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "-10"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        {{- include "repody-auth.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: auth
+        app.kubernetes.io/name: keycloak-db-init
+    spec:
+      restartPolicy: OnFailure
+      {{- include "repody-auth.imagePullSecrets" . | nindent 6 }}
+      {{- if .Values.global.openshift.enabled }}
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      {{- end }}
+      containers:
+        - name: psql
+          image: {{ .Values.keycloak.database.initImage | quote }}
+          {{- if .Values.global.openshift.enabled }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
+          {{- end }}
+          env:
+            - name: PGHOST
+              value: {{ .Values.keycloak.database.host | quote }}
+            - name: PGPORT
+              value: {{ .Values.keycloak.database.port | quote }}
+            - name: PGUSER
+              value: {{ .Values.keycloak.database.adminUsername | quote }}
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.database.adminExistingSecret }}
+                  key: {{ .Values.keycloak.database.adminPasswordKey | quote }}
+            - name: KEYCLOAK_DB_NAME
+              value: {{ .Values.keycloak.database.name | quote }}
+            - name: KEYCLOAK_DB_USER
+              value: {{ .Values.keycloak.database.username | quote }}
+            - name: KEYCLOAK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.keycloak.existingSecret }}
+                  key: {{ .Values.keycloak.database.passwordKey | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              if ! psql -d postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='${KEYCLOAK_DB_USER}'" | grep -q 1; then
+                psql -d postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE \"${KEYCLOAK_DB_USER}\" LOGIN PASSWORD '${KEYCLOAK_DB_PASSWORD}'"
+              fi
+              if ! psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${KEYCLOAK_DB_NAME}'" | grep -q 1; then
+                psql -d postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE \"${KEYCLOAK_DB_NAME}\" OWNER \"${KEYCLOAK_DB_USER}\""
+              fi
+{{- end }}

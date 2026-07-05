@@ -22,11 +22,10 @@ keycloak:
   existingSecret: repody-runtime-secrets
   adminPassword: ""
   hostnameStrict: false
-  hostnameStrictHttps: false
   proxyHeaders: xforwarded
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      memory: 512Mi
+  httpEnabled: true
+  database:
+    enabled: true
+    host: repody-data-postgresql
+    adminExistingSecret: repody-data-postgresql
+    adminUsername: audit

@@ -9,6 +9,7 @@ export const LAB = {
   authSecret: "bundled-e2e-auth-secret-32chars!!",
   keycloakClientSecret: "repody-web-dev-secret",
   keycloakAdminPassword: "bundled-e2e-kc-admin",
+  keycloakDbPassword: "bundled-e2e-kc-db",
   bugsinkDsn: "",
   vllmApiKey: "",
 };

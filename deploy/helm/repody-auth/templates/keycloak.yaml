@@ -1,4 +1,12 @@
 {{- if .Values.keycloak.enabled }}
+{{- $hostnameUrl := .Values.keycloak.hostnameUrl }}
+{{- if not $hostnameUrl }}
+{{- if and .Values.ingress.enabled .Values.ingress.tls.enabled }}
+{{- $hostnameUrl = printf "https://%s" .Values.keycloak.hostname }}
+{{- else }}
+{{- $hostnameUrl = .Values.keycloak.hostname }}
+{{- end }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -45,8 +53,11 @@ spec:
               type: RuntimeDefault
           {{- end }}
           args:
-            - start-dev
+            - start
             - --import-realm
+            {{- if .Values.keycloak.httpEnabled }}
+            - --http-enabled=true
+            {{- end }}
           ports:
             - name: http
               containerPort: 8080
@@ -65,28 +76,60 @@ spec:
             {{- end }}
             - name: KC_HTTP_PORT
               value: "8080"
+            {{- if .Values.keycloak.httpEnabled }}
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            {{- end }}
             - name: KC_HOSTNAME
-              value: {{ .Values.keycloak.hostname | quote }}
+              value: {{ $hostnameUrl | quote }}
             - name: KC_HOSTNAME_STRICT
               value: {{ .Values.keycloak.hostnameStrict | quote }}
-            - name: KC_HOSTNAME_STRICT_HTTPS
-              value: {{ .Values.keycloak.hostnameStrictHttps | quote }}
             {{- if .Values.keycloak.proxyHeaders }}
             - name: KC_PROXY_HEADERS
               value: {{ .Values.keycloak.proxyHeaders | quote }}
             {{- end }}
             - name: KC_HEALTH_ENABLED
               value: "true"
+            {{- if .Values.keycloak.database.enabled }}
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL_HOST
+              value: {{ .Values.keycloak.database.host | quote }}
+            - name: KC_DB_URL_PORT
+              value: {{ .Values.keycloak.database.port | quote }}
+            - name: KC_DB_URL_DATABASE
+              value: {{ .Values.keycloak.database.name | quote }}
+            - name: KC_DB_USERNAME
+              value: {{ .Values.keycloak.database.username | quote }}
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "keycloak.existingSecret required when keycloak.database.enabled" .Values.keycloak.existingSecret }}
+                  key: {{ .Values.keycloak.database.passwordKey | quote }}
+            {{- end }}
           volumeMounts:
             - name: realm-import
               mountPath: /opt/keycloak/data/import
               readOnly: true
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: http
+            initialDelaySeconds: {{ .Values.keycloak.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.keycloak.probes.startup.periodSeconds }}
+            failureThreshold: {{ .Values.keycloak.probes.startup.failureThreshold }}
           readinessProbe:
             httpGet:
-              path: /realms/{{ .Values.keycloak.realm }}
+              path: /health/ready
               port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            periodSeconds: {{ .Values.keycloak.probes.readiness.periodSeconds }}
+            failureThreshold: {{ .Values.keycloak.probes.readiness.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            periodSeconds: {{ .Values.keycloak.probes.liveness.periodSeconds }}
+            failureThreshold: {{ .Values.keycloak.probes.liveness.failureThreshold }}
           resources:
             {{- toYaml .Values.keycloak.resources | nindent 12 }}
       volumes:
