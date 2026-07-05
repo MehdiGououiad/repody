@@ -123,6 +123,11 @@ keycloak:
   hostname: ${authHost}
   existingSecret: repody-runtime-secrets
   adminPassword: ""
+  database:
+    enabled: true
+    host: repody-data-postgresql
+    adminExistingSecret: repody-data-postgresql
+    adminUsername: audit
 `;
 }
 

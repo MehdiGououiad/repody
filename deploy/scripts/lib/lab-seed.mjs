@@ -17,6 +17,7 @@ export function buildLabVaultKvs({ dockerConfigJson }) {
     AUTH_SECRET: LAB.authSecret,
     AUTH_KEYCLOAK_CLIENT_SECRET: LAB.keycloakClientSecret,
     KEYCLOAK_ADMIN_PASSWORD: LAB.keycloakAdminPassword,
+    KEYCLOAK_DB_PASSWORD: LAB.keycloakDbPassword,
     AUDIT_DATABASE_URL: auditDatabaseUrl(),
     AUDIT_REDIS_URL: auditRedisUrl(),
     AUDIT_MINIO_ACCESS_KEY: LAB.minioUser,

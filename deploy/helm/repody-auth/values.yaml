@@ -22,17 +22,44 @@ keycloak:
   enabled: false
   image: quay.io/keycloak/keycloak:26.6.4
   realm: repody
+  # Public hostname (host only). When ingress TLS is enabled, KC_HOSTNAME becomes https://<hostname>.
   hostname: auth.example.com
+  # Optional full public URL (scheme + host). Overrides automatic https:// construction.
+  hostnameUrl: ""
   hostnameStrict: false
-  hostnameStrictHttps: false
   proxyHeaders: xforwarded
+  httpEnabled: true
   adminUsername: admin
   adminPassword: ""
-  # Production / lab: set existingSecret (e.g. repody-runtime-secrets) and store KEYCLOAK_ADMIN_PASSWORD in Vault.
+  # Production / lab: set existingSecret (e.g. repody-runtime-secrets) and store passwords in Vault.
   existingSecret: ""
+  # PostgreSQL (required for production start mode — see keycloak.org/server/containers).
+  database:
+    enabled: false
+    host: repody-data-postgresql
+    port: 5432
+    name: keycloak
+    username: keycloak
+    initImage: postgres:17.10-alpine
+    adminUsername: audit
+    adminExistingSecret: repody-data-postgresql
+    adminPasswordKey: password
+    passwordKey: KEYCLOAK_DB_PASSWORD
+  probes:
+    startup:
+      initialDelaySeconds: 30
+      periodSeconds: 5
+      failureThreshold: 60
+    readiness:
+      periodSeconds: 10
+      failureThreshold: 6
+    liveness:
+      periodSeconds: 30
+      failureThreshold: 3
+  # Memory: Keycloak JVM uses ~70% of container limit; first start builds Quarkus (~750MB–2Gi).
   resources:
     requests:
       cpu: 250m
       memory: 512Mi
     limits:
-      memory: 1Gi
+      memory: 1536Mi
