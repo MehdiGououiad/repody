@@ -31,7 +31,9 @@ spec:
   template:
     metadata:
       labels:
+        app.kubernetes.io/instance: repody
         app.kubernetes.io/component: migrations
+        app.kubernetes.io/part-of: repody
     spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false

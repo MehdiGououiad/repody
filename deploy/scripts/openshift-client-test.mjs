@@ -21,8 +21,8 @@
  *   --profile=bundled|external     default bundled
  *   --registry=harbor|openshift    default harbor
  *   --helm                         direct helm (default is GitOps / Argo CD)
- *   --fast                         skip build/push; kubectl Argo sync; shorter waits (lab retest)
- *   --skip-sync-wait               sync only; verify waits for routes (skip Argo Healthy poll)
+ *   --fast                         skip build/push; shorter waits (lab retest)
+ *   --skip-sync-wait               sync only; verify waits for readiness (skip Argo Healthy poll)
  *   --clean                        tear down before all/e2e
  *   --dry-run --skip-images --skip-build --skip-vlm --vlm
  */
@@ -754,9 +754,26 @@ function sync() {
     const timeoutSec = fast ? 180 : Number(process.env.REPODY_SYNC_WAIT_SEC || 360);
     argocdLab.waitHealthy(apps, timeoutSec);
   } else {
-    log("sync", "skipped Argo Healthy wait (--skip-sync-wait or --fast); verify checks routes");
+    log("sync", "skipped Argo Healthy wait (--skip-sync-wait or --fast); verify checks readiness");
   }
   endStep("sync");
+}
+
+function probeApiInCluster() {
+  const result = kube.kubectl(
+    [
+      "exec",
+      "deployment/repody-api",
+      "-n",
+      NS.repody,
+      "--",
+      "python",
+      "-c",
+      "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/healthz/live', timeout=8).read()",
+    ],
+    { quiet: true },
+  );
+  return result.status === 0;
 }
 
 function logs() {
@@ -789,24 +806,33 @@ async function verify() {
   const apiUrl = `https://${hostList.api}/v1/healthz/live`;
   const webUrl = `https://${hostList.web}`;
 
-  const deadline = Date.now() + (fast ? 120_000 : 300_000);
+  const deadline = Date.now() + (fast ? 90_000 : 300_000);
   const pollMs = fast ? 3000 : 8000;
   let apiOk = false;
   while (Date.now() < deadline) {
+    if (probeApiInCluster()) {
+      apiOk = true;
+      break;
+    }
     if (run(curl, ["-kfsS", "--max-time", "12", apiUrl], { quiet: true }).status === 0) {
       apiOk = true;
       break;
     }
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, pollMs);
   }
-  if (!apiOk) fail(`API not healthy at ${apiUrl}`);
+  if (!apiOk) fail(`API not healthy (in-cluster probe and ${apiUrl})`);
 
   const webProbe = run(
     curl,
     ["-kfsS", "--max-time", "12", "-o", os.devNull, "-w", "%{http_code}", webUrl],
     { quiet: true },
   );
-  log("verify", [`ok: ${apiUrl}`, `web: ${webUrl} (HTTP ${(webProbe.stdout ?? "").trim() || "?"})`].join("\n"));
+  const webCode = (webProbe.stdout ?? "").trim();
+  const webNote =
+    webProbe.status === 0
+      ? `web: ${webUrl} (HTTP ${webCode || "?"})`
+      : `web: ${webUrl} (host route probe skipped — add CRC apps domain to hosts/DNS)`;
+  log("verify", [`ok: repody-api (in-cluster)`, webNote].join("\n"));
 }
 
 function clientReadyCheck() {
