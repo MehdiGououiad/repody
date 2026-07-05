@@ -34,3 +34,22 @@ imagePullSecrets:
   {{- toYaml . | nindent 2 }}
 {{- end }}
 {{- end }}
+
+{{- define "repody-data.podSecurityContext" -}}
+runAsNonRoot: true
+fsGroup: {{ .fsGroup }}
+seccompProfile:
+  type: RuntimeDefault
+{{- end }}
+
+{{- define "repody-data.containerSecurityContext" -}}
+allowPrivilegeEscalation: false
+capabilities:
+  drop:
+    - ALL
+runAsNonRoot: true
+runAsUser: {{ .runAsUser }}
+runAsGroup: {{ .runAsGroup | default .runAsUser }}
+seccompProfile:
+  type: RuntimeDefault
+{{- end }}
