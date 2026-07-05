@@ -26,6 +26,9 @@ metadata:
 spec:
   serviceName: {{ include "repody-data.postgresql.fullname" . }}
   replicas: 1
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
   selector:
     matchLabels:
       app.kubernetes.io/name: postgresql
