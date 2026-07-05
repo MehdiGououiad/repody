@@ -11,7 +11,7 @@ api:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 128Mi
     limits:
       memory: 512Mi
 
@@ -31,7 +31,7 @@ web:
       memory: 384Mi
 
 workerExtract:
-  replicas: 1
+  replicas: 0
   autoscaling:
     enabled: false
   podDisruptionBudget:
@@ -46,7 +46,7 @@ workerExtract:
       memory: 1Gi
 
 workerFast:
-  replicas: 1
+  replicas: 0
   autoscaling:
     enabled: false
   podDisruptionBudget:
