@@ -3,6 +3,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
+
 
 @dataclass
 class SchemaFieldSpec:
@@ -30,10 +32,8 @@ class ExtractionMetadata:
     read_path_label: str
     validation_mode: str
     validation_label: str
-    ocr_model: str | None = None
-    llm_model: str | None = None
+    document_model_id: str | None = None
     extraction_ms: int = 0
-    combined_llm: bool = False
     cache_hit: bool = False
     gpu_cold_start_likely: bool = False
     fields_extracted: int = 0
@@ -97,14 +97,12 @@ class DocumentExtractor(ABC):
         document_type: str,
         schema: list[SchemaFieldSpec],
         *,
-        extraction_mode: str = "auto",
-        ocr_model: str | None = None,
+        extraction_mode: str = DEFAULT_READ_PATH_ID,
+        document_model_id: str | None = None,
         storage_key: str | None = None,
         file_size: int | None = None,
         bundle: object | None = None,
         validation_mode: str = "logic_only",
-        llm_rules: list[dict] | None = None,
-        llm_model: str | None = None,
         extraction_instructions: str = "",
         markdown_extraction: bool = False,
     ) -> ExtractionResult: ...

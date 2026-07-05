@@ -22,7 +22,7 @@ from audit_workbench.api import (
 )
 from audit_workbench.api.openapi_config import install_openapi
 from audit_workbench.auth.dependencies import require_permission
-from audit_workbench.db.base import Base, async_session_factory, engine
+from audit_workbench.db.base import async_session_factory, engine
 from audit_workbench.db.seed import seed_database
 from audit_workbench.inference.openai_compat import close_openai_clients
 from audit_workbench.observability.bootstrap import init_observability
@@ -47,10 +47,6 @@ async def lifespan(app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    if settings.use_create_all and ":memory:" not in settings.database_url:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-        log.info("database_schema_create_all", event_domain="platform")
     await init_storage()
     from audit_workbench.services.operator import hydrate_operator_jobs_from_redis
     from audit_workbench.taskiq.broker import startup_taskiq_brokers
@@ -88,8 +84,7 @@ async def lifespan(app: FastAPI):
     await close_taskiq_brokers()
     await close_redis_pool()
     await close_openai_clients()
-    if not settings.use_create_all:
-        await engine.dispose()
+    await engine.dispose()
 
 
 def create_app() -> FastAPI:

@@ -18,7 +18,7 @@ AUDIT_VLLM_BASE_URL=https://your-vlm-host/v1
 AUDIT_VLLM_SERVED_MODEL=numind/NuExtract3
 AUDIT_VLLM_API_KEY=
 
-AUDIT_REPODY_VLM_TIMEOUT_SECONDS=600
+AUDIT_REPODY_VLM_TIMEOUT_SECONDS=180
 AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST=6
 AUDIT_REPODY_VLM_WARMUP_ON_START=false
 AUDIT_REPODY_VLM_ENABLE_THINKING=false
@@ -100,7 +100,7 @@ config:
   vllmBaseUrl: https://your-vlm-host/v1
   vllmServedModel: numind/NuExtract3
 
-workerOcr:
+workerExtract:
   warmupOnStart: false
   resources:
     requests:

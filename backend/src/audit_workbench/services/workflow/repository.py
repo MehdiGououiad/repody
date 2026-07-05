@@ -42,7 +42,6 @@ async def upsert_workflow_aggregate(
     wf.description = payload.description
     wf.status = payload.status
     wf.owner = payload.owner
-    wf.default_llm_model = payload.default_llm_model
 
     await _upsert_documents(session, wf, payload)
     await _upsert_rules(session, wf, payload)
@@ -57,13 +56,13 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
         keep_ids.add(doc_id)
         read_id, val_id = normalize_document_modes(doc.extraction_mode, doc.validation_mode)
         row = existing.get(doc_id)
-        ocr_id = normalize_model_id(doc.ocr_model)
+        ocr_id = normalize_model_id(doc.document_model_id)
         if row:
             row.document_type = doc.document_type
             row.position = di
             row.extraction_mode = read_id
             row.validation_mode = val_id
-            row.ocr_model = ocr_id
+            row.document_model_id = ocr_id
             row.extraction_instructions = doc.extraction_instructions or ""
             row.markdown_extraction = doc.markdown_extraction
             await session.execute(delete(SchemaField).where(SchemaField.document_id == doc_id))
@@ -75,7 +74,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 position=di,
                 extraction_mode=read_id,
                 validation_mode=val_id,
-                ocr_model=ocr_id,
+                document_model_id=ocr_id,
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=doc.markdown_extraction,
             )

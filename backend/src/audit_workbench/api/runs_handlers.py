@@ -5,32 +5,13 @@ from __future__ import annotations
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.auth.dependencies import extract_bearer
-from audit_workbench.auth.jwt_validator import JwtValidationError, principal_from_bearer
+from audit_workbench.auth.run_access import resolve_owner_subject
 from audit_workbench.schemas.run_requests import RunSnapshotBody, StoredFileBinding
 from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
 from audit_workbench.services.run_enqueue import RunSnapshot
 from audit_workbench.services.run_service import FileBinding
 from audit_workbench.services.run_upload_bindings import parse_json_form
 from audit_workbench.services.upload_intents import UploadIntentError, bindings_from_confirmed_uploads
-from audit_workbench.settings import Settings, get_settings
-
-
-def owner_subject_from_authorization(
-    authorization: str | None,
-    *,
-    settings: Settings | None = None,
-) -> str | None:
-    cfg = settings or get_settings()
-    if not cfg.oidc_enabled:
-        return "dev-local"
-    token = extract_bearer(authorization)
-    if not token:
-        return None
-    try:
-        return principal_from_bearer(token, cfg).subject
-    except JwtValidationError:
-        return None
 
 
 async def bindings_from_stored(
@@ -52,7 +33,7 @@ async def bindings_from_stored(
         return await bindings_from_confirmed_uploads(
             session,
             requested,
-            owner_subject=owner_subject_from_authorization(authorization),
+            owner_subject=resolve_owner_subject(authorization),
         )
     except UploadIntentError as exc:
         raise HTTPException(400, str(exc)) from exc

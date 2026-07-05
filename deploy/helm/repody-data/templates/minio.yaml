@@ -1,0 +1,139 @@
+{{- if .Values.minio.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "repody-data.minio.fullname" . }}
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+    app.kubernetes.io/name: minio
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 9000
+      targetPort: api
+  selector:
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "repody-data.minio.fullname" . }}
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+    app.kubernetes.io/name: minio
+spec:
+  serviceName: {{ include "repody-data.minio.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: minio
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "repody-data.labels" . | nindent 8 }}
+        app.kubernetes.io/name: minio
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: minio
+          image: {{ include "repody-data.image" .Values.minio.image }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - server
+            - /data
+          ports:
+            - name: api
+              containerPort: 9000
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "minio.auth.existingSecret is required when enabled" .Values.minio.auth.existingSecret }}
+                  key: {{ .Values.minio.auth.rootUserKey | default "rootUser" }}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.auth.existingSecret }}
+                  key: {{ .Values.minio.auth.rootPasswordKey | default "rootPassword" }}
+          readinessProbe:
+            httpGet:
+              path: /minio/health/ready
+              port: api
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: api
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          {{- with .Values.minio.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  {{- if .Values.minio.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.minio.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.minio.persistence.size | quote }}
+  {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "repody-data.minio.fullname" . }}-init
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+    app.kubernetes.io/name: minio-init
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        {{- include "repody-data.labels" . | nindent 8 }}
+        app.kubernetes.io/name: minio-init
+    spec:
+      restartPolicy: OnFailure
+      {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: mc
+          image: {{ include "repody-data.image" .Values.minio.mcImage }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.auth.existingSecret }}
+                  key: {{ .Values.minio.auth.rootUserKey | default "rootUser" }}
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.minio.auth.existingSecret }}
+                  key: {{ .Values.minio.auth.rootPasswordKey | default "rootPassword" }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              sleep 3
+              mc alias set local http://{{ include "repody-data.minio.fullname" . }}:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+              {{- range (splitList "," .Values.minio.defaultBuckets) }}
+              mc mb --ignore-existing local/{{ trim . }}
+              {{- end }}
+{{- end }}

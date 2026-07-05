@@ -455,6 +455,66 @@
         }
       }
     },
+    "/v1/workflows/validate-rules": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Validate Rules",
+        "description": "Authoritative rule validation for the workflow builder.",
+        "operationId": "validate_rules_v1_workflows_validate_rules_post",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRulesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateRulesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/workflows/{workflow_id}/dry-run": {
       "post": {
         "tags": [
@@ -1523,7 +1583,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OcrDiagnosticResponse"
+                  "$ref": "#/components/schemas/DocumentModelDiagnosticResponse"
                 }
               }
             }
@@ -3088,7 +3148,7 @@
             "description": "logic_only",
             "default": "logic_only"
           },
-          "ocrModel": {
+          "documentModelId": {
             "anyOf": [
               {
                 "type": "string"
@@ -3097,7 +3157,7 @@
                 "type": "null"
               }
             ],
-            "title": "Ocrmodel",
+            "title": "Documentmodelid",
             "default": "repody:vlm"
           },
           "schema": {
@@ -3124,6 +3184,125 @@
           "id"
         ],
         "title": "DocumentDefSchema"
+      },
+      "DocumentModelDiagnosticResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": ""
+          },
+          "inferenceReachable": {
+            "type": "boolean",
+            "title": "Inferencereachable",
+            "default": false
+          },
+          "modelInRegistry": {
+            "type": "boolean",
+            "title": "Modelinregistry",
+            "default": false
+          },
+          "modelLoaded": {
+            "type": "boolean",
+            "title": "Modelloaded",
+            "default": false
+          },
+          "extractor": {
+            "type": "string",
+            "title": "Extractor",
+            "default": ""
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode",
+            "default": ""
+          },
+          "inferMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inferms"
+          },
+          "sampleExtracted": {
+            "type": "boolean",
+            "title": "Sampleextracted",
+            "default": false
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail",
+            "default": ""
+          },
+          "hint": {
+            "type": "string",
+            "title": "Hint",
+            "default": ""
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DocumentModelDiagnosticSettingsSchema"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "model"
+        ],
+        "title": "DocumentModelDiagnosticResponse"
+      },
+      "DocumentModelDiagnosticSettingsSchema": {
+        "properties": {
+          "extractor": {
+            "type": "string",
+            "title": "Extractor",
+            "default": ""
+          },
+          "inferenceMode": {
+            "type": "string",
+            "title": "Inferencemode",
+            "default": ""
+          },
+          "runtime": {
+            "type": "string",
+            "title": "Runtime",
+            "default": ""
+          },
+          "documentModelPdfDpi": {
+            "type": "integer",
+            "title": "Documentmodelpdfdpi",
+            "default": 0
+          },
+          "documentModelMaxEdgePx": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentmodelmaxedgepx"
+          },
+          "llmValidationEnabled": {
+            "type": "boolean",
+            "title": "Llmvalidationenabled",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "DocumentModelDiagnosticSettingsSchema"
       },
       "DocumentModelSummary": {
         "properties": {
@@ -3451,8 +3630,15 @@
         "properties": {
           "status": {
             "type": "string",
-            "const": "ok",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
             "title": "Status"
+          },
+          "redisOk": {
+            "type": "boolean",
+            "title": "Redisok"
           },
           "extractor": {
             "type": "string",
@@ -3547,6 +3733,7 @@
         "type": "object",
         "required": [
           "status",
+          "redisOk",
           "extractor",
           "inference",
           "modelRunner",
@@ -4105,125 +4292,6 @@
         ],
         "title": "ModelsCatalogResponse"
       },
-      "OcrDiagnosticResponse": {
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "title": "Ok"
-          },
-          "model": {
-            "type": "string",
-            "title": "Model"
-          },
-          "runtime": {
-            "type": "string",
-            "title": "Runtime",
-            "default": ""
-          },
-          "inferenceReachable": {
-            "type": "boolean",
-            "title": "Inferencereachable",
-            "default": false
-          },
-          "modelInRegistry": {
-            "type": "boolean",
-            "title": "Modelinregistry",
-            "default": false
-          },
-          "modelLoaded": {
-            "type": "boolean",
-            "title": "Modelloaded",
-            "default": false
-          },
-          "extractor": {
-            "type": "string",
-            "title": "Extractor",
-            "default": ""
-          },
-          "inferenceMode": {
-            "type": "string",
-            "title": "Inferencemode",
-            "default": ""
-          },
-          "inferMs": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Inferms"
-          },
-          "sampleExtracted": {
-            "type": "boolean",
-            "title": "Sampleextracted",
-            "default": false
-          },
-          "detail": {
-            "type": "string",
-            "title": "Detail",
-            "default": ""
-          },
-          "hint": {
-            "type": "string",
-            "title": "Hint",
-            "default": ""
-          },
-          "settings": {
-            "$ref": "#/components/schemas/OcrDiagnosticSettingsSchema"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ok",
-          "model"
-        ],
-        "title": "OcrDiagnosticResponse"
-      },
-      "OcrDiagnosticSettingsSchema": {
-        "properties": {
-          "extractor": {
-            "type": "string",
-            "title": "Extractor",
-            "default": ""
-          },
-          "inferenceMode": {
-            "type": "string",
-            "title": "Inferencemode",
-            "default": ""
-          },
-          "runtime": {
-            "type": "string",
-            "title": "Runtime",
-            "default": ""
-          },
-          "documentModelPdfDpi": {
-            "type": "integer",
-            "title": "Documentmodelpdfdpi",
-            "default": 0
-          },
-          "documentModelMaxEdgePx": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Documentmodelmaxedgepx"
-          },
-          "llmValidationEnabled": {
-            "type": "boolean",
-            "title": "Llmvalidationenabled",
-            "default": false
-          }
-        },
-        "type": "object",
-        "title": "OcrDiagnosticSettingsSchema"
-      },
       "OperatorJobAcceptedResponse": {
         "properties": {
           "job": {
@@ -4477,9 +4545,9 @@
             "type": "boolean",
             "title": "Structuredllm"
           },
-          "defaultOcrModel": {
+          "defaultDocumentModelId": {
             "type": "string",
-            "title": "Defaultocrmodel"
+            "title": "Defaultdocumentmodelid"
           },
           "defaultReadPath": {
             "type": "string",
@@ -4567,7 +4635,7 @@
           "cacheEnabled",
           "rateLimitEnabled",
           "structuredLlm",
-          "defaultOcrModel",
+          "defaultDocumentModelId",
           "defaultReadPath",
           "documentModels",
           "ocrMaxPages",
@@ -4740,9 +4808,9 @@
             "type": "string",
             "title": "Readkind"
           },
-          "showOcrModel": {
+          "showDocumentModel": {
             "type": "boolean",
-            "title": "Showocrmodel"
+            "title": "Showdocumentmodel"
           },
           "ocrEngine": {
             "anyOf": [
@@ -4762,7 +4830,7 @@
           "label",
           "description",
           "readKind",
-          "showOcrModel"
+          "showDocumentModel"
         ],
         "title": "ReadPathOption"
       },
@@ -4852,6 +4920,27 @@
           "severity"
         ],
         "title": "RuleTemplateSchema"
+      },
+      "RuleValidationItem": {
+        "properties": {
+          "ruleId": {
+            "type": "string",
+            "title": "Ruleid"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ruleId",
+          "issues"
+        ],
+        "title": "RuleValidationItem"
       },
       "RunAuditDetail": {
         "properties": {
@@ -5210,7 +5299,7 @@
             "type": "string",
             "title": "Validationlabel"
           },
-          "ocrModel": {
+          "documentModelId": {
             "anyOf": [
               {
                 "type": "string"
@@ -5219,28 +5308,12 @@
                 "type": "null"
               }
             ],
-            "title": "Ocrmodel"
-          },
-          "llmModel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Llmmodel"
+            "title": "Documentmodelid"
           },
           "extractionMs": {
             "type": "integer",
             "title": "Extractionms",
             "default": 0
-          },
-          "combinedLlm": {
-            "type": "boolean",
-            "title": "Combinedllm",
-            "default": false
           },
           "cacheHit": {
             "type": "boolean",
@@ -5494,7 +5567,7 @@
             ],
             "title": "Validationmode"
           },
-          "ocrModel": {
+          "documentModelId": {
             "anyOf": [
               {
                 "type": "string"
@@ -5503,7 +5576,7 @@
                 "type": "null"
               }
             ],
-            "title": "Ocrmodel"
+            "title": "Documentmodelid"
           },
           "durationMs": {
             "anyOf": [
@@ -5515,6 +5588,11 @@
               }
             ],
             "title": "Durationms"
+          },
+          "cacheHit": {
+            "type": "boolean",
+            "title": "Cachehit",
+            "default": false
           },
           "gpuColdStartHint": {
             "type": "boolean",
@@ -5837,6 +5915,46 @@
         ],
         "title": "UploadResponse"
       },
+      "ValidateRulesBody": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDefSchema"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRuleSchema"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "rules"
+        ],
+        "title": "ValidateRulesBody"
+      },
+      "ValidateRulesResponse": {
+        "properties": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleValidationItem"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rules"
+        ],
+        "title": "ValidateRulesResponse"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -5929,15 +6047,15 @@
             "type": "string",
             "title": "Fast"
           },
-          "ocr": {
+          "extract": {
             "type": "string",
-            "title": "Ocr"
+            "title": "Extract"
           }
         },
         "type": "object",
         "required": [
           "fast",
-          "ocr"
+          "extract"
         ],
         "title": "WorkerPoolsHealth"
       },
@@ -6176,17 +6294,6 @@
             ],
             "title": "Apikeyhint",
             "description": "Masked hint for deployed workflows."
-          },
-          "defaultLlmModel": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Defaultllmmodel"
           },
           "apiStats": {
             "anyOf": [

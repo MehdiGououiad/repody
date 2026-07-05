@@ -25,6 +25,11 @@ const anchorCache = new Map();
 const commandPattern = /\bpnpm\s+([A-Za-z][A-Za-z0-9:_-]*)/g;
 const markdownLinkPattern = /!?\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
 const headingPattern = /^#{1,6}\s+(.+?)\s*#*\s*$/gm;
+const forbiddenText = [
+  { pattern: /�/, label: "Unicode replacement character" },
+  { pattern: /[ÂÃ]/, label: "mojibake marker" },
+  { pattern: /â(?:€|†|„|…|œ|�)/, label: "mojibake marker" },
+];
 
 function discoverMarkdownDocs() {
   const docs = [];
@@ -67,6 +72,13 @@ function walk(dir, docs) {
 
 for (const abs of discoverMarkdownDocs()) {
   const text = readFileSync(abs, "utf8");
+  for (const { pattern, label } of forbiddenText) {
+    const match = pattern.exec(text);
+    if (match?.index !== undefined) {
+      const line = text.slice(0, match.index).split(/\r?\n/).length;
+      missing.push(`${relative(root, abs)}:${line} contains ${label}`);
+    }
+  }
   for (const match of text.matchAll(commandPattern)) {
     const command = match[1];
     if (scripts.has(command) || pnpmBuiltins.has(command)) {
@@ -144,4 +156,4 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log("ok: documented pnpm commands, local links, and local anchors exist");
+console.log("ok: documented pnpm commands, local links, local anchors, and doc hygiene");

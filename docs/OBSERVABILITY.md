@@ -29,6 +29,6 @@ Clients ship pod logs and OTLP to their platform. Repody sets `config.logJson: t
 | `event` / `body` | e.g. `repody_vlm_done` |
 | `run_id`, `workflow_id` | Audit correlation |
 | `trace_id` | OpenTelemetry |
-| `service.name` | `repody-api`, `repody-worker-ocr`, … |
+| `service.name` | `repody-api`, `repody-worker-extract`, … |
 
 See [BUGSINK.md](./BUGSINK.md) for error tracking (client-managed DSN).

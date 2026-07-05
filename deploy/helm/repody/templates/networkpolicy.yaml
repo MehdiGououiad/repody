@@ -135,7 +135,7 @@ spec:
         operator: In
         values:
           - control
-          - worker-ocr
+          - worker-extract
           - worker-fast
           - edge
           - migrations

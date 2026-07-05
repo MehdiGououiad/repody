@@ -14,6 +14,7 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import {
   fetchOk,
@@ -141,10 +142,10 @@ async function stack() {
   syncVlmServedModel();
 
   const workerArgs = ["compose", "--profile", "workers", "up", "-d", "--build"];
-  if (flags.has("--ocr-only")) {
-    workerArgs.push("worker-ocr");
+  if (flags.has("--extract-only") || flags.has("--ocr-only")) {
+    workerArgs.push("worker-extract");
   } else {
-    workerArgs.push("worker-ocr", "worker-fast");
+    workerArgs.push("worker-extract", "worker-fast");
   }
   run("docker", workerArgs);
 
@@ -279,6 +280,55 @@ function killDevUi() {
   spawnSync("sh", ["-c", "pkill -f 'next/dist/bin/next' 2>/dev/null || true"], { shell: false });
 }
 
+async function reset() {
+  console.log("=== Full platform reset (Compose volumes + DB + seed) ===\n");
+  killDevUi();
+  killDevApi();
+  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], { allowFail: true, inherit: true });
+
+  run("docker", ["compose", "--profile", "workers", "down", "--remove-orphans", "-v"], {
+    inherit: true,
+  });
+
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
+  copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS, "paths.local.env");
+
+  run("docker", ["compose", "up", "-d"], { inherit: true });
+  console.log("Waiting for Postgres…");
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const probe = run(
+      "docker",
+      ["compose", "exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "audit_workbench"],
+      { allowFail: true },
+    );
+    if (probe.status === 0) break;
+    if (attempt === 29) {
+      console.error("Postgres did not become ready in time.");
+      process.exit(1);
+    }
+    await sleep(2000);
+  }
+  syncVlmServedModel();
+  run("pnpm", ["db:reset"], { inherit: true });
+
+  console.log("\nRebuilding worker pools…");
+  const workerArgs = ["compose", "--profile", "workers", "up", "-d", "--build"];
+  if (flags.has("--extract-only") || flags.has("--ocr-only")) {
+    workerArgs.push("worker-extract");
+  } else {
+    workerArgs.push("worker-extract", "worker-fast");
+  }
+  run("docker", workerArgs, { inherit: true });
+
+  if (!flags.has("--no-llama") && llamaConfigured()) {
+    run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "serve"], { inherit: true });
+  }
+
+  console.log("\nPlatform reset complete.");
+  printQuickStart();
+}
+
 function stop() {
   console.log(`Stopping host dev servers (UI :3000, API :${API_PORT}, NuExtract :8081)...`);
   killDevUi();
@@ -296,8 +346,8 @@ function stop() {
 
 function restart() {
   run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "restart"], { inherit: true });
-  run("docker", ["compose", "--profile", "workers", "restart", "worker-ocr"], { inherit: true });
-  if (!flags.has("--ocr-only")) {
+  run("docker", ["compose", "--profile", "workers", "restart", "worker-extract"], { inherit: true });
+  if (!flags.has("--extract-only") && !flags.has("--ocr-only")) {
     run("docker", ["compose", "--profile", "workers", "restart", "worker-fast"], {
       inherit: true,
       allowFail: true,
@@ -440,12 +490,15 @@ async function main() {
     case "stop":
       stop();
       break;
+    case "reset":
+      await reset();
+      break;
     case "restart":
       restart();
       break;
     default:
       console.error(
-        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|restart [--no-llama] [--ocr-only]",
+        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart [--no-llama] [--extract-only]",
       );
       process.exit(1);
   }

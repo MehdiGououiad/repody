@@ -59,6 +59,7 @@ async def _reap_stale_running_runs(session: AsyncSession, *, minutes: int) -> in
         if await fail_run_terminal(
             run_id,
             _stale_running_message(minutes),
+            session=session,
             expected_status=RunStatus.running.value,
         ):
             reaped += 1
@@ -94,6 +95,7 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
         if await fail_run_terminal(
             run_id,
             _stale_queued_message(minutes),
+            session=session,
             expected_status=RunStatus.queued.value,
         ):
             reaped += 1

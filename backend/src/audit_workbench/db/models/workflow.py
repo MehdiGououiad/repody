@@ -24,7 +24,6 @@ class Workflow(Base):
     deployed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     api_key: Mapped[str | None] = mapped_column(String(128), nullable=True)
     api_key_hint: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    default_llm_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -50,7 +49,7 @@ class Document(Base):
     position: Mapped[int] = mapped_column(Integer, default=0)
     extraction_mode: Mapped[str] = mapped_column(String(32), default="document_model")
     validation_mode: Mapped[str] = mapped_column(String(32), default="logic_only")
-    ocr_model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    document_model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     extraction_instructions: Mapped[str] = mapped_column(Text, default="")
     markdown_extraction: Mapped[bool] = mapped_column(default=False)
 

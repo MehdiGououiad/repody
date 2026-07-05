@@ -4,7 +4,7 @@ from tests.helpers.db import DEFAULT_TEST_DATABASE_URL
 
 # Test defaults — production uses Postgres + Alembic; live tests use the docker stack.
 _db_url = os.environ.get("AUDIT_DATABASE_URL", "")
-if not _db_url or "sqlite" in _db_url:
+if not _db_url:
     os.environ["AUDIT_DATABASE_URL"] = DEFAULT_TEST_DATABASE_URL
 os.environ["AUDIT_RUN_EVENTS_ENABLED"] = os.environ.get("AUDIT_RUN_EVENTS_ENABLED", "false")
 os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
@@ -13,7 +13,6 @@ os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
 os.environ["AUDIT_OIDC_ENABLED"] = "false"
 os.environ["AUDIT_RUN_MIGRATIONS_ON_STARTUP"] = "false"
 os.environ["AUDIT_SEED_ON_STARTUP"] = "false"
-os.environ["AUDIT_USE_CREATE_ALL"] = "false"
 os.environ["AUDIT_STORAGE_BACKEND"] = "local"
 os.environ["AUDIT_LOCAL_STORAGE_PATH"] = os.path.join(os.path.dirname(__file__), ".storage")
 os.environ["AUDIT_GPU_LIVE_PROBE"] = "false"
@@ -27,6 +26,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
+from unittest.mock import AsyncMock
 
 from audit_workbench.main import create_app
 from audit_workbench.settings import clear_settings_cache, get_settings
@@ -49,6 +49,17 @@ def fresh_settings():
     clear_settings_cache()
     yield
     clear_settings_cache()
+
+
+@pytest.fixture(autouse=True)
+def mock_redis_readiness_for_inprocess_tests(monkeypatch, request):
+    """Unit/e2e ASGI tests have no Redis; readiness still validates the probe path."""
+    if request.node.get_closest_marker("live"):
+        return
+    monkeypatch.setattr(
+        "audit_workbench.services.platform_health.ping_redis",
+        AsyncMock(return_value=True),
+    )
 
 
 @pytest.fixture

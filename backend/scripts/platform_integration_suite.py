@@ -234,7 +234,7 @@ async def main() -> int:
         )
         await _timed("Platform config", report, _check_platform_config(client))
         await _timed("Models catalog (paths)", report, _check_models_catalog_paths(client))
-        await _timed("Document model catalog", report, _check_ocr_models(client))
+        await _timed("Document model catalog", report, _check_document_model_catalog(client))
         await _timed("Upload capabilities", report, _check_upload_capabilities(client))
         await _timed("Diagnostics (registry)", report, _check_diagnostics(client))
 
@@ -366,7 +366,7 @@ async def _check_models_catalog_paths(client: httpx.AsyncClient) -> dict:
     return body
 
 
-async def _check_ocr_models(client: httpx.AsyncClient) -> dict:
+async def _check_document_model_catalog(client: httpx.AsyncClient) -> dict:
     res = await client.get("/v1/models/catalog")
     res.raise_for_status()
     body = res.json()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 
 class InferenceSettingsFields:
@@ -29,8 +29,9 @@ class InferenceSettingsFields:
         description="Model id served by vLLM (upstream weights for Repody VLM).",
     )
 
-    default_ocr_model: str = Field(
+    default_document_model_id: str = Field(
         default="repody:vlm",
+        validation_alias=AliasChoices("AUDIT_DEFAULT_DOCUMENT_MODEL_ID"),
         description="Default document model id from the registry.",
     )
     repody_vlm_enabled: bool = Field(
@@ -58,7 +59,12 @@ class InferenceSettingsFields:
         le=100,
         description="Fallback JPEG quality for non-PDF/non-image inputs.",
     )
-    repody_vlm_timeout_seconds: float = Field(default=600.0, ge=30)
+    repody_vlm_timeout_seconds: float = Field(
+        default=180.0,
+        ge=30,
+        le=180.0,
+        description="VLM HTTP client ceiling; must not exceed worker task timeout.",
+    )
     repody_vlm_warmup_on_start: bool = Field(
         default=False,
         description=(

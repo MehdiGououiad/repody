@@ -9,7 +9,7 @@ import type { ValidationModeId } from "@/lib/types";
 export type ProcessingOptions = {
   paths: ReadPathOption[];
   validationModes: ValidationModeOption[];
-  ocrModels: CatalogModelEntry[];
+  documentModelIds: CatalogModelEntry[];
   defaultPath: string;
   defaultValidation: ValidationModeId;
   defaultOcr: string;
@@ -20,7 +20,7 @@ export type ProcessingOptions = {
 export const EMPTY_PROCESSING_OPTIONS: ProcessingOptions = {
   paths: [],
   validationModes: [],
-  ocrModels: [],
+  documentModelIds: [],
   defaultPath: "document_model",
   defaultValidation: "logic_only",
   defaultOcr: REPODY_VLM_CATALOG_ID,

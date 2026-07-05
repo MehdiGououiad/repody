@@ -16,7 +16,6 @@ import {
 import { ConditionBuilder } from "../condition-builder";
 import { conditionsToExpression } from "@/lib/rules/expression";
 import { resolveDocumentFields } from "@/lib/rules/document-fields";
-import { getRuleIssues } from "@/lib/rules/rule-validation";
 import { cn } from "@/lib/utils";
 import type {
   ConditionJunction,
@@ -32,12 +31,14 @@ import { KindToggle, ScopeToggle } from "./kind-scope-toggles";
 export function RuleCard({
   rule,
   documents,
+  issues,
   onChange,
   onRemove,
   llmValidationEnabled = false,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
+  issues?: string[];
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
   llmValidationEnabled?: boolean;
@@ -93,10 +94,7 @@ export function RuleCard({
     });
   };
 
-  const ruleIssues = getRuleIssues(
-    rule,
-    isLlm ? fields.map((field) => field.token) : undefined
-  );
+  const ruleIssues = issues ?? [];
 
   return (
     <div

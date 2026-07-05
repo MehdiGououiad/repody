@@ -19,25 +19,25 @@ spec:
           averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
 ---
-{{- if .Values.workerOcr.autoscaling.enabled }}
+{{- if .Values.workerExtract.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "repody.fullname" . }}-worker-ocr
+  name: {{ include "repody.fullname" . }}-worker-extract
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "repody.fullname" . }}-worker-ocr
-  minReplicas: {{ .Values.workerOcr.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.workerOcr.autoscaling.maxReplicas }}
+    name: {{ include "repody.fullname" . }}-worker-extract
+  minReplicas: {{ .Values.workerExtract.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.workerExtract.autoscaling.maxReplicas }}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.workerOcr.autoscaling.targetCPUUtilizationPercentage }}
+          averageUtilization: {{ .Values.workerExtract.autoscaling.targetCPUUtilizationPercentage }}
 {{- end }}
 ---
 {{- if .Values.workerFast.autoscaling.enabled }}

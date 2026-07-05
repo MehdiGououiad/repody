@@ -28,7 +28,7 @@ Single map for all Repody docs. Start at the root guides, then drill into topic 
 
 ```powershell
 kubectl -n repody logs -f deploy/repody-api
-kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200
+kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 ```
 
 ## Local URLs
@@ -44,11 +44,11 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200
 |-------|-----|
 | Deploy guides (all lanes) | [deploy/README.md](./deploy/README.md) |
 | Client production | [deploy/CLIENT.md](./deploy/CLIENT.md) |
+| Prod observability | [deploy/PROD-OBSERVABILITY.md](./deploy/PROD-OBSERVABILITY.md) |
 | On-prem managed data plane | [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) |
 | Air-gapped bundle and install | [AIRGAP.md](./AIRGAP.md) |
 | Runtime env and secrets | [../deploy/ENV.md](../deploy/ENV.md) |
-| Container registry (GHCR / Harbor) | [../deploy/registry/README.md](../deploy/registry/README.md) |
-| Harbor release registry | [../deploy/harbor/README.md](../deploy/harbor/README.md) |
+| Container registry (GHCR / on-prem) | [../deploy/registry/README.md](../deploy/registry/README.md) |
 | Host llama-server helpers | [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md) |
 | External Secrets example | [../deploy/managed/external-secrets/README.md](../deploy/managed/external-secrets/README.md) |
 
@@ -57,6 +57,7 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-ocr --tail=200
 | Topic | Doc |
 |-------|-----|
 | Backend layout and API inventory | [BACKEND.md](./BACKEND.md) |
+| Code quality review checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
 | Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |
 | External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
 | Observability (logs, traces, Grafana) | [OBSERVABILITY.md](./OBSERVABILITY.md) |

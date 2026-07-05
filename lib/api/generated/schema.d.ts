@@ -115,6 +115,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workflows/validate-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Rules
+         * @description Authoritative rule validation for the workflow builder.
+         */
+        post: operations["validate_rules_v1_workflows_validate_rules_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workflows/{workflow_id}/dry-run": {
         parameters: {
             query?: never;
@@ -1035,10 +1055,10 @@ export interface components {
              */
             validationMode: string;
             /**
-             * Ocrmodel
+             * Documentmodelid
              * @default repody:vlm
              */
-            ocrModel: string | null;
+            documentModelId: string | null;
             /** Schema */
             schema?: components["schemas"]["SchemaFieldSchema"][];
             /**
@@ -1052,6 +1072,91 @@ export interface components {
              * @default false
              */
             markdownExtraction: boolean;
+        };
+        /** DocumentModelDiagnosticResponse */
+        DocumentModelDiagnosticResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Model */
+            model: string;
+            /**
+             * Runtime
+             * @default
+             */
+            runtime: string;
+            /**
+             * Inferencereachable
+             * @default false
+             */
+            inferenceReachable: boolean;
+            /**
+             * Modelinregistry
+             * @default false
+             */
+            modelInRegistry: boolean;
+            /**
+             * Modelloaded
+             * @default false
+             */
+            modelLoaded: boolean;
+            /**
+             * Extractor
+             * @default
+             */
+            extractor: string;
+            /**
+             * Inferencemode
+             * @default
+             */
+            inferenceMode: string;
+            /** Inferms */
+            inferMs?: number | null;
+            /**
+             * Sampleextracted
+             * @default false
+             */
+            sampleExtracted: boolean;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Hint
+             * @default
+             */
+            hint: string;
+            settings?: components["schemas"]["DocumentModelDiagnosticSettingsSchema"];
+        };
+        /** DocumentModelDiagnosticSettingsSchema */
+        DocumentModelDiagnosticSettingsSchema: {
+            /**
+             * Extractor
+             * @default
+             */
+            extractor: string;
+            /**
+             * Inferencemode
+             * @default
+             */
+            inferenceMode: string;
+            /**
+             * Runtime
+             * @default
+             */
+            runtime: string;
+            /**
+             * Documentmodelpdfdpi
+             * @default 0
+             */
+            documentModelPdfDpi: number;
+            /** Documentmodelmaxedgepx */
+            documentModelMaxEdgePx?: number | null;
+            /**
+             * Llmvalidationenabled
+             * @default false
+             */
+            llmValidationEnabled: boolean;
         };
         /** DocumentModelSummary */
         DocumentModelSummary: {
@@ -1184,9 +1289,11 @@ export interface components {
         HealthReadinessResponse: {
             /**
              * Status
-             * @constant
+             * @enum {string}
              */
-            status: "ok";
+            status: "ok" | "degraded";
+            /** Redisok */
+            redisOk: boolean;
             /** Extractor */
             extractor: string;
             /** Inference */
@@ -1413,91 +1520,6 @@ export interface components {
              */
             defaultValidationMode: string;
         };
-        /** OcrDiagnosticResponse */
-        OcrDiagnosticResponse: {
-            /** Ok */
-            ok: boolean;
-            /** Model */
-            model: string;
-            /**
-             * Runtime
-             * @default
-             */
-            runtime: string;
-            /**
-             * Inferencereachable
-             * @default false
-             */
-            inferenceReachable: boolean;
-            /**
-             * Modelinregistry
-             * @default false
-             */
-            modelInRegistry: boolean;
-            /**
-             * Modelloaded
-             * @default false
-             */
-            modelLoaded: boolean;
-            /**
-             * Extractor
-             * @default
-             */
-            extractor: string;
-            /**
-             * Inferencemode
-             * @default
-             */
-            inferenceMode: string;
-            /** Inferms */
-            inferMs?: number | null;
-            /**
-             * Sampleextracted
-             * @default false
-             */
-            sampleExtracted: boolean;
-            /**
-             * Detail
-             * @default
-             */
-            detail: string;
-            /**
-             * Hint
-             * @default
-             */
-            hint: string;
-            settings?: components["schemas"]["OcrDiagnosticSettingsSchema"];
-        };
-        /** OcrDiagnosticSettingsSchema */
-        OcrDiagnosticSettingsSchema: {
-            /**
-             * Extractor
-             * @default
-             */
-            extractor: string;
-            /**
-             * Inferencemode
-             * @default
-             */
-            inferenceMode: string;
-            /**
-             * Runtime
-             * @default
-             */
-            runtime: string;
-            /**
-             * Documentmodelpdfdpi
-             * @default 0
-             */
-            documentModelPdfDpi: number;
-            /** Documentmodelmaxedgepx */
-            documentModelMaxEdgePx?: number | null;
-            /**
-             * Llmvalidationenabled
-             * @default false
-             */
-            llmValidationEnabled: boolean;
-        };
         /** OperatorJobAcceptedResponse */
         OperatorJobAcceptedResponse: {
             job: components["schemas"]["OperatorJobSchema"];
@@ -1603,8 +1625,8 @@ export interface components {
             rateLimitEnabled: boolean;
             /** Structuredllm */
             structuredLlm: boolean;
-            /** Defaultocrmodel */
-            defaultOcrModel: string;
+            /** Defaultdocumentmodelid */
+            defaultDocumentModelId: string;
             /** Defaultreadpath */
             defaultReadPath: string;
             /** Documentmodels */
@@ -1714,8 +1736,8 @@ export interface components {
             description: string;
             /** Readkind */
             readKind: string;
-            /** Showocrmodel */
-            showOcrModel: boolean;
+            /** Showdocumentmodel */
+            showDocumentModel: boolean;
             /** Ocrengine */
             ocrEngine?: string | null;
         };
@@ -1751,6 +1773,13 @@ export interface components {
             body: string;
             /** Severity */
             severity: string;
+        };
+        /** RuleValidationItem */
+        RuleValidationItem: {
+            /** Ruleid */
+            ruleId: string;
+            /** Issues */
+            issues: string[];
         };
         /** RunAuditDetail */
         RunAuditDetail: {
@@ -1912,20 +1941,13 @@ export interface components {
             validationMode: string;
             /** Validationlabel */
             validationLabel: string;
-            /** Ocrmodel */
-            ocrModel?: string | null;
-            /** Llmmodel */
-            llmModel?: string | null;
+            /** Documentmodelid */
+            documentModelId?: string | null;
             /**
              * Extractionms
              * @default 0
              */
             extractionMs: number;
-            /**
-             * Combinedllm
-             * @default false
-             */
-            combinedLlm: boolean;
             /**
              * Cachehit
              * @default false
@@ -2002,10 +2024,15 @@ export interface components {
             readPath?: string | null;
             /** Validationmode */
             validationMode?: string | null;
-            /** Ocrmodel */
-            ocrModel?: string | null;
+            /** Documentmodelid */
+            documentModelId?: string | null;
             /** Durationms */
             durationMs?: number | null;
+            /**
+             * Cachehit
+             * @default false
+             */
+            cacheHit: boolean;
             /**
              * Gpucoldstarthint
              * @default false
@@ -2127,6 +2154,18 @@ export interface components {
             /** Uploads */
             uploads: components["schemas"]["UploadItem"][];
         };
+        /** ValidateRulesBody */
+        ValidateRulesBody: {
+            /** Documents */
+            documents: components["schemas"]["DocumentDefSchema"][];
+            /** Rules */
+            rules: components["schemas"]["WorkflowRuleSchema"][];
+        };
+        /** ValidateRulesResponse */
+        ValidateRulesResponse: {
+            /** Rules */
+            rules: components["schemas"]["RuleValidationItem"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -2162,8 +2201,8 @@ export interface components {
         WorkerPoolsHealth: {
             /** Fast */
             fast: string;
-            /** Ocr */
-            ocr: string;
+            /** Extract */
+            extract: string;
         };
         /** WorkflowApiStatsSchema */
         WorkflowApiStatsSchema: {
@@ -2280,8 +2319,6 @@ export interface components {
              * @description Masked hint for deployed workflows.
              */
             apiKeyHint?: string | null;
-            /** Defaultllmmodel */
-            defaultLlmModel?: string | null;
             apiStats?: components["schemas"]["WorkflowApiStatsSchema"] | null;
         };
     };
@@ -2557,6 +2594,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_rules_v1_workflows_validate_rules_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRulesBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateRulesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -3184,7 +3256,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OcrDiagnosticResponse"];
+                    "application/json": components["schemas"]["DocumentModelDiagnosticResponse"];
                 };
             };
             /** @description Validation Error */

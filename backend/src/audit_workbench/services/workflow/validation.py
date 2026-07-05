@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
-from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.rules.rule_syntax import validate_rule_dict
-from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowSchema
+import re
+
+from audit_workbench.catalog.registry import normalize_model_id
+from audit_workbench.extraction.document_model_branding import UnknownCatalogIdError
+from audit_workbench.rules.conditions import NO_RIGHT, resolve_rule_body
+from audit_workbench.rules.llm_fields import referenced_fields
+from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema, WorkflowSchema
 
 
 def normalize_schema_field_name(name: str) -> str:
@@ -41,6 +46,10 @@ def validate_workflow_schema(payload: WorkflowSchema) -> None:
                 f'{doc_label}: duplicate field name(s) {joined}. '
                 "Each field name must be unique (case-insensitive)."
             )
+        try:
+            normalize_model_id(doc.document_model_id)
+        except UnknownCatalogIdError as exc:
+            raise ValueError(f"{doc_label}: {exc}") from exc
 
 
 def validate_document_schema(doc: DocumentDefSchema) -> list[str]:
@@ -59,33 +68,126 @@ def validate_document_schema(doc: DocumentDefSchema) -> list[str]:
 def validate_workflow_rules(payload: WorkflowSchema) -> None:
     """Raise ValueError when any rule fails validation."""
     for rule in payload.rules:
-        resolved_body = resolve_rule_body(
-            {
-                "body": rule.body,
-                "conditions": rule.conditions,
-                "condition_junction": rule.condition_junction,
-            }
-        )
-        rule_errors = validate_rule_dict(
-            {
-                "id": rule.id,
-                "name": rule.name,
-                "kind": rule.kind,
-                "body": resolved_body,
-            }
-        )
-        if rule_errors:
-            raise ValueError("; ".join(rule_errors))
+        issues = validate_workflow_rule(rule, payload.documents)
+        if issues:
+            raise ValueError("; ".join(issues))
 
 
-def validate_rule_preview(rule: dict) -> list[str]:
-    """Return validation errors for a single rule dict (API + client preview)."""
-    resolved_body = resolve_rule_body(rule)
-    return validate_rule_dict(
-        {
-            "id": rule.get("id"),
-            "name": rule.get("name"),
-            "kind": rule.get("kind"),
-            "body": resolved_body,
-        }
+def _schema_fields(doc: DocumentDefSchema | dict) -> list:
+    if isinstance(doc, dict):
+        return doc.get("schema_fields") or doc.get("schemaFields") or doc.get("schema") or []
+    return doc.schema_fields
+
+
+def _document_type(doc: DocumentDefSchema | dict) -> str:
+    if isinstance(doc, dict):
+        return str(doc.get("document_type") or doc.get("documentType") or "")
+    return doc.document_type or ""
+
+
+def resolve_document_field_tokens(
+    documents: list[DocumentDefSchema],
+    applies_to: list[str],
+) -> list[str]:
+    """Field tokens available to LLM rules — matches the workflow builder UI."""
+    targets = (
+        [doc for doc in documents if doc.id in applies_to]
+        if applies_to
+        else list(documents)
     )
+    multi = len(documents) > 1
+    tokens: list[str] = []
+    for doc in targets:
+        doc_token = normalize_schema_field_name(_document_type(doc))
+        for field in _schema_fields(doc):
+            raw_name = getattr(field, "name", None) or (
+                field.get("name") if isinstance(field, dict) else ""
+            )
+            name = str(raw_name or "").strip()
+            if not name:
+                continue
+            field_token = normalize_schema_field_name(name)
+            tokens.append(f"{doc_token}.{field_token}" if multi else field_token)
+    return tokens
+
+
+def _condition_incomplete(condition: dict) -> bool:
+    left = condition.get("left") or {}
+    if not str(left.get("value") or "").strip():
+        return True
+    operator = condition.get("operator") or "=="
+    if operator in NO_RIGHT:
+        return False
+    right = condition.get("right") or {}
+    return not str(right.get("value") or "").strip()
+
+
+def _validate_logic_rule_conditions(rule: WorkflowRuleSchema | dict) -> list[str]:
+    conditions = (
+        rule.conditions
+        if isinstance(rule, WorkflowRuleSchema)
+        else rule.get("conditions") or []
+    )
+    rule_dict = (
+        rule.model_dump(by_alias=False)
+        if isinstance(rule, WorkflowRuleSchema)
+        else dict(rule)
+    )
+    if not conditions:
+        return ["Add at least one condition."]
+    if any(_condition_incomplete(condition) for condition in conditions):
+        return ["Complete every condition (field, operator, and value)."]
+    expression = resolve_rule_body(rule_dict)
+    if not expression:
+        return ["Could not build an expression from these conditions."]
+    if re.search(r"\b(AND|OR)\b", expression):
+        return ["Expression uses invalid AND/OR — save again to recompile."]
+    err = validate_logic_rule_body(expression)
+    return [err] if err else []
+
+
+def validate_workflow_rule(
+    rule: WorkflowRuleSchema | dict,
+    documents: list[DocumentDefSchema],
+) -> list[str]:
+    """Return user-facing validation errors for one workflow rule."""
+    if isinstance(rule, WorkflowRuleSchema):
+        kind = (rule.kind or "logic").lower()
+        label = (rule.name or "").strip() or rule.id or "Rule"
+        applies_to = rule.applies_to or []
+        body = rule.body or ""
+    else:
+        kind = (rule.get("kind") or "logic").lower()
+        label = (rule.get("name") or "").strip() or rule.get("id") or "Rule"
+        applies_to = rule.get("applies_to") or rule.get("appliesTo") or []
+        body = rule.get("body") or ""
+
+    if kind == "llm":
+        text = (body or "").strip()
+        if not text:
+            return ["LLM prompt is empty."]
+        available = set(resolve_document_field_tokens(documents, applies_to))
+        unknown = [field for field in referenced_fields(text) if field not in available]
+        if unknown:
+            refs = ", ".join(f"@{field}" for field in unknown)
+            plural = "references" if len(unknown) > 1 else "reference"
+            return [f"Unknown field {plural}: {refs}."]
+        err = validate_llm_rule_body(text)
+        return [f"{label}: {err}"] if err else []
+
+    issues = _validate_logic_rule_conditions(rule)
+    return [f"{label}: {issue}" if not issue.startswith(label) else issue for issue in issues]
+
+
+def validate_rules_preview(
+    documents: list[DocumentDefSchema],
+    rules: list[WorkflowRuleSchema],
+) -> list[dict[str, object]]:
+    """Validate all rules for builder preview — one result per rule id."""
+    return [
+        {
+            "rule_id": rule.id,
+            "issues": validate_workflow_rule(rule, documents),
+        }
+        for rule in rules
+    ]

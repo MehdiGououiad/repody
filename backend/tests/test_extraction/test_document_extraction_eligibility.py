@@ -14,7 +14,7 @@ def test_document_has_schema_fields_false_when_empty() -> None:
         position=0,
         extraction_mode="document_model",
         validation_mode="logic_only",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         schema_fields=[],
     )
     assert document_has_schema_fields(doc) is False
@@ -27,7 +27,7 @@ def test_document_needs_extraction_with_markdown_only() -> None:
         position=0,
         extraction_mode="document_model",
         validation_mode="logic_only",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         markdown_extraction=True,
         schema_fields=[],
     )
@@ -41,7 +41,7 @@ def test_document_needs_extraction_false_without_file_or_trigger() -> None:
         position=0,
         extraction_mode="document_model",
         validation_mode="logic_only",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         schema_fields=[],
     )
     assert document_needs_extraction(doc, has_file=False) is False

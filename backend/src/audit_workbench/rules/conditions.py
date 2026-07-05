@@ -118,7 +118,11 @@ def conditions_to_expression(
 
 
 def resolve_rule_body(rule: dict) -> str:
-    """Compile visual conditions when present; otherwise use stored body."""
+    """Compile logic rules from conditions, or use the persisted compiled expression in ``body``."""
+    kind = (rule.get("kind") or "logic").lower()
+    if kind == "llm":
+        return (rule.get("body") or "").strip()
+
     junction = rule.get("condition_junction") or rule.get("conditionJunction") or "AND"
     conditions = rule.get("conditions")
     if conditions:
@@ -144,7 +148,7 @@ def logic_check_entries(rule: dict) -> list[dict]:
     """One validation check per visual condition (no combined AND/OR)."""
     conditions = rule.get("conditions") or []
     if not conditions:
-        body = resolve_rule_body(rule)
+        body = (rule.get("body") or "").strip()
         if not body:
             return []
         rid = rule.get("id") or "rule"

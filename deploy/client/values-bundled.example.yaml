@@ -1,6 +1,6 @@
 # Bundled profile — in-cluster Postgres, Redis, MinIO (same namespace).
 # Install data chart first: deploy/client/bundled/values.data.yaml
-# Registry: CHANGE_ME_REGISTRY = harbor.example.com/repody (Harbor host + project)
+# Registry: CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody (host + project)
 # Images resolve to: {CHANGE_ME_REGISTRY}/repody-backend and .../repody-web
 # Secrets: Vault → ESO → repody-runtime-secrets (see docs/deploy/SECRETS.md)
 # migrations.enabled comes from values-common.yaml (Helm hook job)
@@ -69,6 +69,11 @@ config:
   corsOrigins: '["https://CHANGE_ME_APP_HOST"]'
   vllmBaseUrl: https://CHANGE_ME_VLM_HOST/v1
   vllmServedModel: numind/NuExtract3
+  workerTaskTimeoutMinutes: 3
+  staleRunTimeoutMinutes: 5
+  queuedStaleTimeoutMinutes: 60
+  dbPoolSize: 5
+  redisMaxConnections: 20
 
 observability:
   existingSecret: repody-runtime-secrets
@@ -76,7 +81,7 @@ observability:
   otelEnabled: true
   otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
 
-workerOcr:
+workerExtract:
   replicas: 2
   warmupOnStart: false
   autoscaling:

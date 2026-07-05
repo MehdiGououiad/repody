@@ -92,31 +92,25 @@ export function buildClientProgress(
   };
 }
 
-export function mergeServerProgress(
+export function appendWorkerProgress(
   client: RunProgress,
   server: RunProgress
 ): RunProgress {
-  const clientDone = client.steps.map((s) => ({
-    ...s,
+  const clientDone = client.steps.map((step) => ({
+    ...step,
     status: "done" as const,
-    detail: s.detail,
   }));
-  const serverSteps = server.steps.map((s) => ({
-    ...s,
-    id: `worker-${s.id}`,
+  const workerSteps = server.steps.map((step) => ({
+    ...step,
+    id: `worker-${step.id}`,
   }));
-  const steps = [...clientDone, ...serverSteps];
-  const activeIdx = steps.findIndex((s) => s.status === "active");
-  const cacheStep = serverSteps.find((s) => s.detail?.toLowerCase().includes("cache hit"));
+  const steps = [...clientDone, ...workerSteps];
+  const activeIdx = steps.findIndex((step) => step.status === "active");
   return {
     currentIndex: activeIdx >= 0 ? activeIdx : steps.length - 1,
     label: server.label || client.label,
     queuePosition: server.queuePosition,
     queueDepth: server.queueDepth,
-    steps: cacheStep
-      ? steps.map((s) =>
-          s.id === cacheStep.id ? { ...s, cacheHit: true } : s
-        )
-      : steps,
+    steps,
   };
 }

@@ -109,7 +109,7 @@ Only **references** (`existingSecret`, `urlKey`, Vault `remoteRef` paths) belong
 
 ## Lab vs production
 
-| | CRC lab (`openshift-local-promote`) | Production client |
+| | Client test lab (`openshift-client-test`) | Production client |
 |--|-------------------------------------|-------------------|
 | Vault | In-cluster dev server (fast unseal) | Client HA Vault (HTTPS) |
 | ESO + paths | Same layout as production | Same |

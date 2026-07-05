@@ -87,6 +87,11 @@ config:
   vllmBaseUrl: https://vlm.yourdomain.com/v1
   vllmServedModel: numind/NuExtract3
   dockerModelRunnerBaseUrl: ""
+  workerTaskTimeoutMinutes: 3
+  staleRunTimeoutMinutes: 5
+  queuedStaleTimeoutMinutes: 60
+  dbPoolSize: 5
+  redisMaxConnections: 20
 
 observability:
   existingSecret: repody-runtime-secrets
@@ -98,7 +103,7 @@ observability:
 migrations:
   enabled: true
 
-workerOcr:
+workerExtract:
   replicas: 2
   warmupOnStart: false
   resources:

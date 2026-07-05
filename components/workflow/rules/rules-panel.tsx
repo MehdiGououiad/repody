@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRulesLibraryCatalog, usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
+import { useRuleValidationIssues } from "@/lib/hooks/use-rule-validation";
 import { cn, shortId } from "@/lib/utils";
 import { SectionHeading } from "@/components/layout/section-heading";
 import type {
@@ -41,6 +42,7 @@ export function RulesPanel({
   const { data: platform } = usePlatformConfig();
   const llmValidationEnabled = platform?.llmValidationEnabled === true;
   const ruleLibrary = initialRuleLibrary ?? fetchedLibrary;
+  const ruleIssuesById = useRuleValidationIssues(documents, rules);
 
   const updateRule = (id: string, patch: Partial<WorkflowRule>) => {
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -133,6 +135,7 @@ export function RulesPanel({
                 key={r.id}
                 rule={r}
                 documents={documents}
+                issues={ruleIssuesById[r.id]}
                 llmValidationEnabled={llmValidationEnabled}
                 onChange={(patch) => updateRule(r.id, patch)}
                 onRemove={() => remove(r.id)}

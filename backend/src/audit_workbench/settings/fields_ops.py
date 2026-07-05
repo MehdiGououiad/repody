@@ -1,12 +1,23 @@
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 
 class OpsSettingsFields:
-    stale_run_timeout_minutes: int = Field(default=3)
-    queued_stale_timeout_minutes: int = Field(default=30)
-    maintenance_interval_seconds: int = Field(default=60)
+    stale_run_timeout_minutes: int = Field(
+        default=5,
+        validation_alias=AliasChoices("AUDIT_STALE_RUN_TIMEOUT_MINUTES"),
+        description="Fail running runs older than this (maintenance reap).",
+    )
+    queued_stale_timeout_minutes: int = Field(
+        default=60,
+        validation_alias=AliasChoices("AUDIT_QUEUED_STALE_TIMEOUT_MINUTES"),
+        description="Fail queued runs when no workers are running and age exceeds this.",
+    )
+    maintenance_interval_seconds: int = Field(
+        default=60,
+        validation_alias=AliasChoices("AUDIT_MAINTENANCE_INTERVAL_SECONDS"),
+    )
     dispatch_max_attempts: int = Field(
         default=8,
         ge=1,
@@ -37,9 +48,13 @@ class OpsSettingsFields:
         default=64,
         description="Max queued+running runs before HTTP 503.",
     )
-    admission_max_ocr_inflight: int = Field(
+    admission_max_extract_inflight: int = Field(
         default=8,
-        description="Max queued+running OCR/document-model runs before HTTP 503.",
+        validation_alias=AliasChoices(
+            "AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT",
+            "AUDIT_ADMISSION_MAX_OCR_INFLIGHT",
+        ),
+        description="Max queued+running document-model runs before HTTP 503.",
     )
     admission_retry_after_seconds: int = Field(
         default=60,

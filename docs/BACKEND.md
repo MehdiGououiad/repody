@@ -107,7 +107,7 @@ Consolidated config, catalog, and diagnostics.
 | `benchmark_document_models.py` | Single-file document model benchmark |
 | `benchmark_suite.py` | Full API benchmark (`quick` / `models` / `full` profiles) |
 | `benchmark_ui_route.py` | Presign + `/runs/json` path benchmark |
-| `bootstrap_migrations.py` | Alembic upgrade / baseline stamp |
+| `bootstrap_migrations.py` | Alembic upgrade to head |
 | `docker-entrypoint.sh` | Container entry (migrations, exec) |
 | `export_openapi.py` | Export OpenAPI to `lib/api/openapi.json` |
 | `generate_facture_fixture.py` | Generate `e2e/fixtures/documents/Facture.pdf` |
@@ -210,8 +210,11 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 
 | Area | Files |
 |------|-------|
-| **Runs** | `run_enqueue.py`, `run_enqueue_errors.py`, HTTP mapping in `api/run_enqueue_http.py`, `queue/` (position + progress), `run_service.py`, `run_dispatch.py`, `dispatch_outbox.py`, `run_processor.py`, `run_events.py`, `run_progress.py`, `run_lock.py`, `run_terminal.py`, `run_upload_bindings.py`, `run_pool_classifier.py` |
+| **Runs** | `run_enqueue.py`, `run_enqueue_errors.py`, HTTP mapping in `api/run_enqueue_http.py`, `queue/` (position + progress), `run_service.py`, `run_dispatch.py`, `dispatch_outbox.py`, `run_processor.py`, `run_events.py`, `run/progress_plan.py`, `run/progress_persist.py`, `run_lock.py`, `run_terminal.py`, `run_upload_bindings.py`, `run_pool_classifier.py` |
 | **Run phases** | `run/extraction.py`, `run/validation.py`, `run/snapshot.py`, `run/phase_state.py`, `run/helpers.py`, `run/extraction_jobs.py` |
+| **Run domain (DDD)** | `run/domain/` entity + lifecycle + events + ports |
+| **Run application** | `run/application/use_cases.py` — `FailRun`, `CompleteRun` interactors |
+| **Run adapters** | `run/adapters/persistence.py` (gateway), `event_publisher.py`, `composition.py` (wiring) |
 | **Workflows** | `services/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
 | **Platform** | `platform_health.py`, `catalog/`, `metrics_service.py`, `maintenance.py`, `admission.py`, `rate_limit.py` |
 | **Operator** | `services/operator/` (`jobs`, `job_model`, `benchmarks`, `requests`, `reports`, `auth`) |
@@ -260,4 +263,4 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | `GET /runs/{id}/status` vs `GET /runs/{id}?full=false` | Frontend poll uses `/status`; alias documented |
 | `GET /audits/{id}` vs `GET /runs/{id}` when done | Admin audit namespace vs run poll |
 | `platform/config` vs `models/catalog` | Static config vs live catalog + paths |
-| `workflow_service` vs `workflow_repository` | Orchestration vs persistence |
+| `services/workflow/service.py` vs `services/workflow/repository.py` | Orchestration vs persistence |

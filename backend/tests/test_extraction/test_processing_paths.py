@@ -19,7 +19,7 @@ def test_document_model_read_path():
 
 
 def test_unknown_read_path_normalizes_to_document_model():
-    read, val = normalize_document_modes("unknown_legacy_mode", "anything")
+    read, val = normalize_document_modes("unknown_mode", "anything")
     assert read == "document_model"
     assert val == LOGIC_VALIDATION
 

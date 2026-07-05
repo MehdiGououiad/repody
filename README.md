@@ -32,19 +32,16 @@ Prerequisites: Docker Desktop, Node 24.x, Corepack-managed pnpm 11.7.0.
 corepack enable
 pnpm install
 pnpm doctor
-pnpm dev
-pnpm db:migrate
-copy deploy\env\compose.env.example backend\.env
-pnpm dev:api    # terminal 1
-pnpm ui         # terminal 2
-pnpm llamacpp:serve   # terminal 3 (extraction)
+pnpm dev:setup   # first run only
+pnpm dev:all     # daily: stack + API + UI
 ```
 
-Sign in at http://localhost:3000 with Keycloak from Compose (see [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md)).
+Sign in at http://localhost:3000 with Keycloak from Compose. For split terminals,
+NuExtract tuning, and troubleshooting, see [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md).
 
 **Client OpenShift:** [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) · **CRC lab:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md)
 
-**Release to a client:** `pnpm images:release` to Harbor; they deploy with Helm or Argo CD. See [docs/COMMANDS.md](./docs/COMMANDS.md).
+**Release to a client:** `pnpm images:release` to GHCR or client registry; they deploy with Helm or Argo CD. See [docs/COMMANDS.md](./docs/COMMANDS.md).
 
 ## Documentation
 
@@ -54,6 +51,7 @@ Sign in at http://localhost:3000 with Keycloak from Compose (see [docs/deploy/LO
 | Local development | [DEV.md](./DEV.md) |
 | Production deployment | [DEPLOY.md](./DEPLOY.md) |
 | Architecture | [CONTEXT.md](./CONTEXT.md) |
+| Code quality review | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
 | Full docs map | [docs/README.md](./docs/README.md) |
 
 ## Stack

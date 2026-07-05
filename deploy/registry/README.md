@@ -6,7 +6,7 @@ Git stores desired Kubernetes state; the **registry** stores built images.
 
 | Role | Responsibility |
 |------|----------------|
-| **You (vendor)** | `pnpm images:release` to **your** Harbor or GHCR |
+| **You (vendor)** | `pnpm images:release` to **your** GHCR or client registry |
 | **Client** | Pull from your registry; deploy with **their** Argo CD or Helm |
 
 Repody does not ship Argo CD for client production.
@@ -39,28 +39,36 @@ global:
     - name: ghcr-pull-secret
 ```
 
-## Harbor
-
-Run **your** Harbor. Push images; expose it or replicate it so the **client's** cluster can pull.
+Vendor push from a workstation:
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="<release>"
+docker login ghcr.io
 pnpm images:release
 ```
 
-Install Harbor manually from [docs/deploy/HARBOR.md](../../docs/deploy/HARBOR.md)
-before pushing release images.
+## On-prem / client registry
 
-The client creates a pull secret and points **their** Argo CD values at your registry.
+Use any OCI-compatible registry the client can reach (ACR, ECR, GCR, self-hosted Distribution, etc.).
+
+```powershell
+$env:REPODY_IMAGE_REGISTRY="registry.example.com/repody"
+$env:REPODY_IMAGE_TAG="<release>"
+docker login registry.example.com
+pnpm images:release
+```
+
 Image push commands fail unless `REPODY_IMAGE_REGISTRY` is set, so release images
 cannot be pushed accidentally to an implicit registry namespace.
 
+The client creates a pull secret and points **their** Argo CD values at your registry:
+
 ```bash
-kubectl -n repody create secret docker-registry harbor-pull-secret \
-  --docker-server=harbor.example.com \
-  --docker-username='robot$repody+pull' \
-  --docker-password='<robot-token>' \
+kubectl -n repody create secret docker-registry registry-pull-secret \
+  --docker-server=registry.example.com \
+  --docker-username='<pull-user>' \
+  --docker-password='<token>' \
   --docker-email=platform@example.com
 ```
 
@@ -87,7 +95,3 @@ pnpm images:build -- --only=web
 ```
 
 Use `pnpm images:push` only after `pnpm images:build` when you want to push an already-built registry-tagged image without rebuilding.
-
-Only set `REPODY_LEGACY_IMAGE_ALIASES=true` if an older integration still requires
-`repody-api` and `repody-worker` tags. New installs should use `repody-backend` and
-`repody-web`.

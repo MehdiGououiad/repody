@@ -35,9 +35,14 @@ def test_resolve_rule_body_arithmetic():
     assert "subtotal" in expr and "tax" in expr and "total_amount" in expr
 
 
-def test_conditions_to_expression_prefers_stored_body():
+def test_resolve_rule_body_uses_stored_compiled_expression():
     rule = {"body": "total_amount == 6000", "conditions": []}
     assert resolve_rule_body(rule) == "total_amount == 6000"
+
+
+def test_llm_rule_uses_body():
+    rule = {"kind": "llm", "body": "Verify totals.", "conditions": []}
+    assert resolve_rule_body(rule) == "Verify totals."
 
 
 def test_resolve_rule_body_spaced_field_names():

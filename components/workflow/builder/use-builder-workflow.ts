@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { browserApi } from "@/lib/api/openapi-client";
 import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
-import { getRuleIssues } from "@/lib/rules/rule-validation";
+import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { emptyTestSession, type TestSessionState } from "@/components/workflow/builder/test-run-panel";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
@@ -45,7 +45,6 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       name: workflow.name,
       documents: workflow.documents,
       rules: syncRuleBodies(workflow.rules),
-      defaultLlmModel: workflow.defaultLlmModel ?? null,
     })
   );
 
@@ -77,7 +76,6 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     rules: syncRuleBodies(rules),
     deployedAt: workflow.deployedAt,
     apiKey: apiKey || workflow.apiKey,
-    defaultLlmModel: workflow.defaultLlmModel ?? null,
   });
 
   const persistWorkflow = async (options?: {
@@ -93,32 +91,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     if (schemaErrors.length) {
       throw new Error(schemaErrors[0]);
     }
-    for (const rule of payload.rules) {
-      const selectedDocuments = payload.documents.filter((document) =>
-        rule.appliesTo.includes(document.id)
-      );
-      const multipleDocuments = selectedDocuments.length > 1;
-      const availableFields = selectedDocuments.flatMap((document) =>
-        document.schema
-          .filter((field) => field.name.trim())
-          .map((field) => {
-            const fieldName = field.name.trim().toLowerCase().replace(/\s+/g, "_");
-            if (!multipleDocuments) return fieldName;
-            const documentName = document.documentType
-              .trim()
-              .toLowerCase()
-              .replace(/\s+/g, "_");
-            return `${documentName}.${fieldName}`;
-          })
-      );
-      const issues = getRuleIssues(
-        rule,
-        rule.kind === "llm" ? availableFields : undefined
-      );
-      if (issues.length) {
-        const label = rule.name?.trim() || rule.id;
-        throw new Error(`${label}: ${issues[0]}`);
-      }
+    const ruleResults = await validateRulesViaApi(payload.documents, payload.rules);
+    const ruleError = firstRuleIssue(ruleResults, payload.rules);
+    if (ruleError) {
+      throw new Error(ruleError);
     }
     const { error, response } = await browserApi.PUT("/v1/workflows/{workflow_id}", {
       params: { path: { workflow_id: id } },
@@ -146,7 +122,6 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
         name: payload.name,
         documents: payload.documents,
         rules: payload.rules,
-        defaultLlmModel: payload.defaultLlmModel ?? null,
       })
     );
     return id;

@@ -1,6 +1,10 @@
 packages:
   - "."
 
+overrides:
+  postcss: "^8.5.15"
+  "@opentelemetry/core": "^2.8.0"
+
 minimumReleaseAge: 0
 
 allowBuilds:

@@ -27,9 +27,9 @@ class DocumentDefSchema(CamelModel):
         serialization_alias="validationMode",
         description="logic_only",
     )
-    ocr_model: str | None = Field(
+    document_model_id: str | None = Field(
         default="repody:vlm",
-        serialization_alias="ocrModel",
+        serialization_alias="documentModelId",
     )
     schema_fields: list[SchemaFieldSchema] = Field(
         default_factory=list,
@@ -99,7 +99,6 @@ class WorkflowSchema(CamelModel):
         serialization_alias="apiKeyHint",
         description="Masked hint for deployed workflows.",
     )
-    default_llm_model: str | None = Field(default=None, serialization_alias="defaultLlmModel")
     api_stats: WorkflowApiStatsSchema | None = None
 
 
@@ -169,6 +168,20 @@ class DryRunResponse(CamelModel):
     rule_results: list[DryRunRuleResult] = Field(serialization_alias="ruleResults")
 
 
+class ValidateRulesBody(CamelModel):
+    documents: list[DocumentDefSchema]
+    rules: list[WorkflowRuleSchema]
+
+
+class RuleValidationItem(CamelModel):
+    rule_id: str = Field(serialization_alias="ruleId")
+    issues: list[str]
+
+
+class ValidateRulesResponse(CamelModel):
+    rules: list[RuleValidationItem]
+
+
 class RunCreatedResponse(CamelModel):
     run_id: str = Field(serialization_alias="runId")
     job_id: str | None = Field(default=None, serialization_alias="jobId")
@@ -184,8 +197,9 @@ class RunProgressStepSchema(CamelModel):
     detail: str | None = None
     read_path: str | None = Field(default=None, serialization_alias="readPath")
     validation_mode: str | None = Field(default=None, serialization_alias="validationMode")
-    ocr_model: str | None = Field(default=None, serialization_alias="ocrModel")
+    document_model_id: str | None = Field(default=None, serialization_alias="documentModelId")
     duration_ms: int | None = Field(default=None, serialization_alias="durationMs")
+    cache_hit: bool = Field(default=False, serialization_alias="cacheHit")
     gpu_cold_start_hint: bool = Field(default=False, serialization_alias="gpuColdStartHint")
 
 

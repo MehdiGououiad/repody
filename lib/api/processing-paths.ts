@@ -3,7 +3,7 @@ export type ReadPathOption = {
   label: string;
   description: string;
   readKind: string;
-  showOcrModel?: boolean;
+  showDocumentModel?: boolean;
   ocrEngine?: string | null;
 };
 

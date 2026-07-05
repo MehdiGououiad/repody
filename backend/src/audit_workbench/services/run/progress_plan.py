@@ -42,7 +42,7 @@ def _step(
     detail: str | None = None,
     read_path: str | None = None,
     validation_mode: str | None = None,
-    ocr_model: str | None = None,
+    document_model_id: str | None = None,
     duration_ms: int | None = None,
     gpu_cold_start_hint: bool = False,
 ) -> dict[str, Any]:
@@ -57,8 +57,8 @@ def _step(
         row["readPath"] = read_path
     if validation_mode:
         row["validationMode"] = validation_mode
-    if ocr_model:
-        row["ocrModel"] = normalize_public_catalog_id(ocr_model)
+    if document_model_id:
+        row["documentModelId"] = normalize_public_catalog_id(document_model_id)
     if duration_ms is not None:
         row["durationMs"] = duration_ms
     if gpu_cold_start_hint:
@@ -85,7 +85,7 @@ def _read_path_for_doc(doc: Any, *, has_file: bool) -> tuple[str, str, str | Non
         return "schema", "schema", None
     ext_mode = _value(doc, "extraction_mode", "document_model")
     path = parse_read_path(ext_mode)
-    ocr = _value(doc, "ocr_model")
+    ocr = _value(doc, "document_model_id")
     return "document_model", path.id, ocr
 
 
@@ -109,7 +109,7 @@ def build_run_progress_plan(
         if not document_needs_extraction(doc, has_file=has_file):
             continue
         doc_type = _value(doc, "document_type", "Document")
-        mode, read_path, ocr_model = _read_path_for_doc(doc, has_file=has_file)
+        mode, read_path, document_model_id = _read_path_for_doc(doc, has_file=has_file)
         steps.append(
             _step(
                 f"extract-{doc_id}",
@@ -117,7 +117,7 @@ def build_run_progress_plan(
                 mode=mode,
                 read_path=read_path,
                 validation_mode=run_validation_mode,
-                ocr_model=ocr_model,
+                document_model_id=document_model_id,
                 detail=plan_extraction_detail(
                     doc, has_file=has_file, run_validation_mode=run_validation_mode
                 ),
@@ -196,6 +196,7 @@ def mark_step_done(
     *,
     duration_ms: int | None = None,
     detail: str | None = None,
+    cache_hit: bool = False,
 ) -> None:
     for step in steps:
         if step.get("id") == step_id:
@@ -203,4 +204,6 @@ def mark_step_done(
                 step["durationMs"] = duration_ms
             if detail:
                 step["detail"] = detail
+            if cache_hit:
+                step["cacheHit"] = True
             return

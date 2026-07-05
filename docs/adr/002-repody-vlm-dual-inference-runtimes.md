@@ -15,7 +15,7 @@ The product will add more document models later; routing must not hard-code a si
 
 ## Decision
 
-1. **Single catalog** in `extraction/model_registry.py` — each entry has `runtime` + `runtime_model`.
+1. **Single catalog** in `catalog/registry.py` — each entry has `runtime` + `runtime_model`.
 2. **Document extraction:** `AUDIT_INFERENCE_MODE=vllm` → `AUDIT_VLLM_BASE_URL` (external OpenAI-compatible endpoint).
 3. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py`.
 4. **LLM rule validation** uses a separate small text model, never the document-model runtime.
@@ -45,7 +45,7 @@ Default catalog id: `repody:vlm`.
 ## Adding another document model
 
 ```python
-# extraction/model_registry.py — _registered_models()
+# catalog/registry.py — _registered_models()
 models["vendor:MyModel"] = DocumentModelSpec(
     id="vendor:MyModel",
     label="My Model",

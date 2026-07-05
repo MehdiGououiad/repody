@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.services import run_progress
+from audit_workbench.services.run.progress_persist import (
+    _last_progress_commit,
+    set_run_progress,
+)
+from audit_workbench.services.run.progress_plan import _step, build_run_progress_plan
 from audit_workbench.services.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 @pytest.fixture(autouse=True)
 def _clear_progress_throttle():
-    run_progress._last_progress_commit.clear()
+    _last_progress_commit.clear()
     yield
-    run_progress._last_progress_commit.clear()
+    _last_progress_commit.clear()
 
 
 class _ThrottleSettings:
@@ -24,7 +28,7 @@ def test_progress_plan_supports_snapshot_documents():
         position=0,
         extraction_mode="document_model",
         validation_mode="logic_only",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         schema_fields=[
             SnapshotSchemaField(
                 id="field-1",
@@ -35,7 +39,7 @@ def test_progress_plan_supports_snapshot_documents():
         ],
     )
 
-    steps = run_progress.build_run_progress_plan(
+    steps = build_run_progress_plan(
         workflow_docs=[document],
         rules=[],
         docs_with_files={"doc-1"},
@@ -54,12 +58,12 @@ def test_progress_plan_includes_markdown_only_documents():
         position=0,
         extraction_mode="document_model",
         validation_mode="logic_only",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         markdown_extraction=True,
         schema_fields=[],
     )
 
-    steps = run_progress.build_run_progress_plan(
+    steps = build_run_progress_plan(
         workflow_docs=[document],
         rules=[],
         docs_with_files={"doc-md"},
@@ -103,12 +107,12 @@ async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
         lambda: _ThrottleSettings(),
     )
 
-    steps = [run_progress._step("queue", "Queued")]
-    await run_progress.set_run_progress(None, "run-1", steps, 0, "Primed", force=True)
+    steps = [_step("queue", "Queued")]
+    await set_run_progress(None, "run-1", steps, 0, "Primed", force=True)
     published.clear()
     db_opened = False
 
-    await run_progress.set_run_progress(None, "run-1", steps, 0, "Working…", force=False)
+    await set_run_progress(None, "run-1", steps, 0, "Working…", force=False)
 
     assert len(published) == 1
     assert published[0]["progress"]["label"] == "Working…"
@@ -150,8 +154,8 @@ async def test_progress_db_written_when_forced(monkeypatch):
         lambda: _ThrottleSettings(),
     )
 
-    steps = [run_progress._step("queue", "Queued")]
-    await run_progress.set_run_progress(None, "run-2", steps, 0, "Done", force=True)
+    steps = [_step("queue", "Queued")]
+    await set_run_progress(None, "run-2", steps, 0, "Done", force=True)
 
     assert len(published) == 1
     assert db_writes == 1

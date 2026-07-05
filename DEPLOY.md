@@ -11,7 +11,7 @@
 ## Vendor — push images
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="1.2.3"
 pnpm images:release
 ```

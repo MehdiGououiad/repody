@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { Brain, Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "lucide-react";
+import { Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "lucide-react";
 
 import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/types/audit";
 import { formatDurationMs } from "@/lib/types/audit";
@@ -71,15 +71,9 @@ export function DocumentExtractionMeta({
         <ShieldCheck className="h-3 w-3" />
         {extraction.validationLabel}
       </span>
-      {extraction.ocrModel && (
+      {extraction.documentModelId && (
         <span className="rounded-full bg-surface-container px-2 py-0.5">
-          Model: {publicDocumentModelLabel(extraction.ocrModel)}
-        </span>
-      )}
-      {extraction.combinedLlm && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-0.5">
-          <Brain className="h-3 w-3" />
-          Combined extract + LLM
+          Model: {publicDocumentModelLabel(extraction.documentModelId)}
         </span>
       )}
       {extraction.cacheHit && (

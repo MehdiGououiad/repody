@@ -41,7 +41,7 @@ def build_processing_paths(
             label=p.label,
             description=p.description,
             read_kind=p.read,
-            show_ocr_model=p.show_ocr_model,
+            show_document_model=p.show_document_model,
             ocr_engine=p.ocr_engine,
         )
         for p in list_read_paths()

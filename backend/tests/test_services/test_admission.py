@@ -8,7 +8,7 @@ from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.services.admission import (
     QueueCapacityExceeded,
     check_admission,
-    count_ocr_inflight,
+    count_extract_inflight,
     count_queued,
     count_running,
 )
@@ -121,7 +121,7 @@ async def test_count_running_excludes_queued(admission_session):
 
 
 @pytest.mark.asyncio
-async def test_count_ocr_inflight_uses_worker_pool_column(admission_session):
+async def test_count_extract_inflight_uses_worker_pool_column(admission_session):
     from audit_workbench.db.models import RunDocument
 
     session, workflow_id = admission_session
@@ -131,7 +131,7 @@ async def test_count_ocr_inflight_uses_worker_pool_column(admission_session):
             workflow_id=workflow_id,
             source="test",
             status=RunStatus.running.value,
-            worker_pool="ocr",
+            worker_pool="extract",
         )
     )
     session.add(
@@ -152,4 +152,4 @@ async def test_count_ocr_inflight_uses_worker_pool_column(admission_session):
         )
     )
     await session.flush()
-    assert await count_ocr_inflight(session) == 1
+    assert await count_extract_inflight(session) == 1

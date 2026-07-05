@@ -34,7 +34,7 @@ config:
   vllmBaseUrl: https://vlm.example.com/v1
   vllmServedModel: numind/NuExtract3
 
-workerOcr:
+workerExtract:
   warmupOnStart: false
 ```
 
@@ -43,7 +43,6 @@ workerOcr:
 | Variable | Production value | Description |
 |----------|------------------|-------------|
 | `AUDIT_SEED_ON_STARTUP` | `false` | Demo data on API boot |
-| `AUDIT_USE_CREATE_ALL` | `false` | Use Alembic migrations |
 | `AUDIT_RUN_MIGRATIONS_ON_STARTUP` | `true` | Alembic on API start |
 | `AUDIT_OIDC_ENABLED` | `true` | JWT auth on management API |
 | `AUDIT_OIDC_AUDIENCE` | required | Expected JWT audience |
@@ -60,7 +59,7 @@ workerOcr:
 | `AUDIT_ADMISSION_CONTROL_ENABLED` | default from settings | `true` | Enable queue/inflight admission limits |
 | `AUDIT_ADMISSION_MAX_QUEUED` | `50` | `50` | Maximum queued runs before rejecting new work |
 | `AUDIT_ADMISSION_MAX_INFLIGHT` | `32` | `64` | Maximum inflight runs across pools |
-| `AUDIT_ADMISSION_MAX_OCR_INFLIGHT` | `2` | `8` | Maximum OCR/document-model work in flight |
+| `AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT` | `2` | `8` | Maximum OCR/document-model work in flight |
 | `AUDIT_ADMISSION_RETRY_AFTER_SECONDS` | `60` | `60` | Retry hint returned when admission rejects work |
 
 ## Image Build
@@ -74,7 +73,6 @@ workerOcr:
 | `REPODY_WEB_BACKEND_URL` | Backend URL baked into web image rewrites |
 | `REPODY_BACKEND_EXTRAS` | Backend Python extras (`otel` default) |
 | `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
-| `REPODY_LEGACY_IMAGE_ALIASES` | Set `true` only when an older registry integration still needs `repody-api` and `repody-worker` aliases |
 | `REPODY_BUILDKIT_BACKEND_CACHE_FROM` / `REPODY_BUILDKIT_BACKEND_CACHE_TO` | Backend BuildKit cache refs |
 | `REPODY_BUILDKIT_WEB_CACHE_FROM` / `REPODY_BUILDKIT_WEB_CACHE_TO` | Web BuildKit cache refs |
 
@@ -101,6 +99,6 @@ Use Helm values for Kubernetes lab/local overrides:
 |------------|-------------|
 | `config.vllmBaseUrl` | `AUDIT_VLLM_BASE_URL` |
 | `config.vllmServedModel` | `AUDIT_VLLM_SERVED_MODEL` |
-| `workerOcr.warmupOnStart` | `AUDIT_REPODY_VLM_WARMUP_ON_START` |
+| `workerExtract.warmupOnStart` | `AUDIT_REPODY_VLM_WARMUP_ON_START` |
 
 Observability and Bugsink DSNs are configured in Helm values (`observability.bugsinkDsn`) or the runtime Secret (`BUGSINK_DSN`, `NEXT_PUBLIC_BUGSINK_DSN` at web image build).

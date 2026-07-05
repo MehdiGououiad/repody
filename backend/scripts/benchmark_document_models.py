@@ -42,7 +42,7 @@ async def _run_model(
                 schema,
                 extraction_mode="document_model",
                 validation_mode="logic_only",
-                ocr_model=model,
+                document_model_id=model,
             )
             timings.append(time.perf_counter() - started)
         except Exception as exc:

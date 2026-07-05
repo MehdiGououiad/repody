@@ -12,7 +12,7 @@ pnpm dev:all
 pnpm dev:status
 ```
 
-For OpenShift CRC benchmarks, use `pnpm openshift:promote` then set
+For OpenShift CRC benchmarks, use `pnpm openshift:client-test` then set
 `REPODY_K8S_NAMESPACE=repody` and `REPODY_API_DEPLOY=deploy/repody-api` if not using defaults.
 
 Configure external inference before cluster benchmarks (`AUDIT_VLLM_BASE_URL` /
@@ -48,7 +48,7 @@ directly with `pnpm test:platform:integration`/API flags when the local API is u
 For a process-cold measurement, restart OCR workers first:
 
 ```powershell
-kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-ocr
+kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-extract
 pnpm benchmark models
 ```
 

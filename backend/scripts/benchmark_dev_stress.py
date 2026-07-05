@@ -122,7 +122,7 @@ def _doc_def(doc_id: str, *, probe: str | None = None) -> dict[str, Any]:
         "documentType": "Invoice",
         "extractionMode": "document_model",
         "validationMode": "logic_only",
-        "ocrModel": REPODY_VLM_CATALOG_ID,
+        "documentModelId": REPODY_VLM_CATALOG_ID,
         "schema": schema,
     }
 

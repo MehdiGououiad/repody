@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import structlog
-from sqlalchemy import delete, select, text, update
+from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -16,6 +16,8 @@ from audit_workbench.db.models import (
     RunStatus,
     Workflow,
 )
+from audit_workbench.services.run.adapters.composition import get_claim_run, get_run_publisher, run_claim_store
+from audit_workbench.services.run.application.use_cases import ClaimRunRequest
 from audit_workbench.services.run.extraction import run_extraction_phase
 from audit_workbench.services.run.phase_state import build_phase_state
 from audit_workbench.services.run.validation import run_validation_phase
@@ -77,24 +79,13 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
         )
         return None
 
-    claim = await session.execute(
-        update(Run)
-        .where(Run.id == run_id, Run.status == RunStatus.queued.value)
-        .values(
-            status=RunStatus.running.value,
-            started_at=datetime.now(UTC),
-            finished_at=None,
-            error=None,
-            overall_status=None,
-            summary_total=0,
-            summary_passed=0,
-            summary_failed=0,
-            fields_extracted=0,
-            run_metadata=None,
-        )
-        .returning(Run.id)
+    now = datetime.now(UTC)
+    claim_result = await get_claim_run().execute(
+        ClaimRunRequest(run_id=run_id),
+        claim_store=run_claim_store(session),
+        now=now,
     )
-    if claim.scalar_one_or_none() is None:
+    if claim_result is None:
         run = await session.get(Run, run_id)
         if run:
             log.info(
@@ -108,12 +99,7 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
     await _clear_prior_run_results(session, run_id)
     await session.commit()
 
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.queue import refresh_queued_positions
-
-    async with async_session_factory() as refresh_session:
-        await refresh_queued_positions(refresh_session)
-        await refresh_session.commit()
+    await get_run_publisher().publish(claim_result.events)
 
     result = await session.execute(
         select(Run)

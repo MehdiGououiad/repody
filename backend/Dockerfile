@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 # One backend image for api + workers (role chosen by Kubernetes command).
 #   pnpm images:build -- --only=backend
-# Legacy aliases (same layers): --target api | --target worker
+# Role-specific targets (same layers): --target api | --target worker
 
 FROM python:3.13.14-slim AS runtime-base
 
@@ -25,7 +25,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 FROM runtime-base AS build
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /bin/
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*

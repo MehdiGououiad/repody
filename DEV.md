@@ -25,11 +25,11 @@ Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md)
 | Need | Guide |
 |------|--------|
 | Client production on OpenShift | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) + [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
-| Vendor CRC smoke test | `pnpm openshift:promote` — [OPENSHIFT.md](./docs/deploy/OPENSHIFT.md#crc-lab-verification) |
+| Vendor OpenShift client test | `pnpm openshift:client-test` — [OPENSHIFT.md](./docs/deploy/OPENSHIFT.md#client-test-lab) |
 
-## Release images (Harbor)
+## Release images (GHCR / client registry)
 
-[Harbor 2.14](./docs/deploy/HARBOR.md) + `pnpm images:release`
+[docs/deploy/RELEASE.md](./docs/deploy/RELEASE.md) + `pnpm images:release`
 
 ## Command reference
 

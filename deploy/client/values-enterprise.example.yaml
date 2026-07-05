@@ -20,7 +20,7 @@ api:
   autoscaling:
     enabled: true
 
-workerOcr:
+workerExtract:
   podDisruptionBudget:
     enabled: true
 

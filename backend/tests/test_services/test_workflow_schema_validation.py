@@ -32,3 +32,22 @@ def test_validate_workflow_schema_blocks_duplicates():
     )
     with pytest.raises(ValueError, match="duplicate field name"):
         validate_workflow_schema(payload)
+
+
+def test_validate_workflow_schema_rejects_unknown_document_model():
+    payload = WorkflowSchema(
+        id="wf-test",
+        name="Test",
+        documents=[
+            DocumentDefSchema(
+                id="doc-1",
+                document_type="Invoice",
+                document_model_id="not-a-real-model",
+                schema_fields=[
+                    SchemaFieldSchema(id="a", name="total", description=""),
+                ],
+            )
+        ],
+    )
+    with pytest.raises(ValueError, match="not-a-real-model"):
+        validate_workflow_schema(payload)

@@ -44,10 +44,10 @@ def cache_key(
     content_hash: str,
     schema_fp: str,
     extraction_mode: str,
-    ocr_model: str | None,
+    document_model_id: str | None,
     extractor: str,
 ) -> str:
-    model_part = ocr_model or "default"
+    model_part = document_model_id or "default"
     return (
         f"extract:{CACHE_VERSION}:{extractor}:{extraction_mode}:"
         f"{model_part}:{schema_fp}:{content_hash}"
@@ -61,11 +61,11 @@ def cache_key_from_storage(
     content_hash: str,
     schema_fp: str,
     extraction_mode: str,
-    ocr_model: str | None,
+    document_model_id: str | None,
     extractor: str,
 ) -> str:
     """Cache lookup keyed by storage path, size, and content hash."""
-    model_part = ocr_model or "default"
+    model_part = document_model_id or "default"
     safe_key = storage_key.replace(":", "_")
     return (
         f"extract:{CACHE_VERSION}s:{extractor}:{extraction_mode}:{model_part}:"

@@ -59,15 +59,15 @@ async def count_running(session: AsyncSession) -> int:
     )
 
 
-async def count_ocr_inflight(session: AsyncSession) -> int:
-    """Inflight runs classified for the OCR/document-model worker pool."""
+async def count_extract_inflight(session: AsyncSession) -> int:
+    """Inflight runs classified for the document-model worker pool."""
     return int(
         await session.scalar(
             select(func.count())
             .select_from(Run)
             .where(
                 Run.status.in_(_INFLIGHT),
-                Run.worker_pool == "ocr",
+                Run.worker_pool == "extract",
             )
         )
         or 0
@@ -91,7 +91,7 @@ async def check_admission(
     pool = await predict_worker_pool(session, workflow_id, file_bindings=file_bindings)
     queued = await count_queued(session)
     inflight = await count_inflight(session)
-    ocr_inflight = await count_ocr_inflight(session)
+    extract_inflight = await count_extract_inflight(session)
 
     if queued >= settings.admission_max_queued:
         log.warning(
@@ -121,17 +121,17 @@ async def check_admission(
             retry_after_seconds=settings.admission_retry_after_seconds,
         )
 
-    if pool == "ocr" and ocr_inflight >= settings.admission_max_ocr_inflight:
+    if pool == "extract" and extract_inflight >= settings.admission_max_extract_inflight:
         log.warning(
-            "admission_ocr_limit",
+            "admission_extract_limit",
             event_domain="admission",
-            ocr_inflight=ocr_inflight,
-            limit=settings.admission_max_ocr_inflight,
+            extract_inflight=extract_inflight,
+            limit=settings.admission_max_extract_inflight,
         )
         raise QueueCapacityExceeded(
-            scope="ocr",
-            limit=settings.admission_max_ocr_inflight,
-            current=ocr_inflight,
+            scope="extract",
+            limit=settings.admission_max_extract_inflight,
+            current=extract_inflight,
             retry_after_seconds=settings.admission_retry_after_seconds,
         )
 

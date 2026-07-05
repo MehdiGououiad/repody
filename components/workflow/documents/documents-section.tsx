@@ -36,7 +36,7 @@ export function DocumentsSection({
       defaultPath: pathsQuery.data.defaultPath,
       defaultValidation:
         (pathsQuery.data.defaultValidationMode as ValidationModeId) || "logic_only",
-      ocrModels: documentModels,
+      documentModelIds: documentModels,
       defaultOcr: catalogQuery.data.defaultDocumentModel,
       loaded: true,
       error: false,
@@ -67,7 +67,7 @@ export function DocumentsSection({
         schema: [],
         extractionMode: "document_model",
         validationMode: "logic_only",
-        ocrModel: processingOptions.defaultOcr,
+        documentModelId: processingOptions.defaultOcr,
       },
     ]);
 

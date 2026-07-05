@@ -19,9 +19,6 @@ const webTag =
   process.env.TAG ??
   backendTag;
 const { push, pushOnly, only } = parseArgs(process.argv);
-const legacyAliases = /^(1|true|yes)$/i.test(
-  process.env.REPODY_LEGACY_IMAGE_ALIASES ?? "",
-);
 const backendExtras = normalizeBackendExtras(
   process.env.REPODY_BACKEND_EXTRAS ?? "otel",
 );
@@ -72,14 +69,11 @@ function parseArgs(argv) {
 
 function normalizeOnly(raw) {
   const value = raw.trim().toLowerCase();
-  if (value === "api" || value === "worker") {
-    return "backend";
-  }
   if (["all", "backend", "web", "none"].includes(value)) {
     return value;
   }
   failConfig(
-    `Invalid --only=${raw}. Use one of: all, backend, web, none. Legacy api/worker selectors map to backend.`,
+    `Invalid --only=${raw}. Use one of: all, backend, web, none.`,
   );
 }
 
@@ -100,7 +94,7 @@ function normalizeBackendExtras(raw) {
 
 if ((push || pushOnly) && !registry) {
   failConfig(
-    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your Harbor/GHCR path, for example harbor.yourdomain.com/repody.",
+    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your GHCR or client registry path, for example ghcr.io/yourorg/repody.",
   );
 }
 
@@ -193,12 +187,6 @@ if (!pushOnly && want("backend")) {
       ];
       appendBuildKitCacheFlags(dockerArgs, "backend");
       await runAsync("docker", dockerArgs, buildEnv);
-      if (legacyAliases) {
-        // Compatibility aliases for registries/tools not yet on repody-backend.
-        for (const legacy of ["repody-api", "repody-worker"]) {
-          await runAsync("docker", ["tag", backendImage, image(legacy, backendTag)], buildEnv);
-        }
-      }
     })(),
   );
 }
@@ -232,7 +220,7 @@ if (!pushOnly && (want("web") || only === "all")) {
 }
 
 console.log(
-  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"}, legacyAliases=${legacyAliases ? "on" : "off"})`,
+  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"})`,
 );
 
 let buildFailed = false;
@@ -254,10 +242,6 @@ if (push || pushOnly) {
   const toPush = [];
   if (want("backend") || only === "all") {
     toPush.push(image("repody-backend", backendTag));
-    if (legacyAliases) {
-      toPush.push(image("repody-api", backendTag));
-      toPush.push(image("repody-worker", backendTag));
-    }
   }
   if (want("web") || only === "all") {
     toPush.push(image("repody-web", webTag));

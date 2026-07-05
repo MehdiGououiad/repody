@@ -15,24 +15,21 @@ postgresql:
     database: audit_workbench
     existingSecret: repody-data-postgresql
     secretKeys:
-      adminPasswordKey: postgres-password
-      userPasswordKey: password
+      passwordKey: password
 
 redis:
   enabled: true
-  architecture: standalone
   auth:
     enabled: true
     existingSecret: repody-data-redis
-    existingSecretPasswordKey: redis-password
+    passwordKey: redis-password
 
 minio:
   enabled: true
-  mode: standalone
   auth:
     existingSecret: repody-data-minio
-    rootUserSecretKey: rootUser
-    rootPasswordSecretKey: rootPassword
+    rootUserKey: rootUser
+    rootPasswordKey: rootPassword
   defaultBuckets: audit-documents
   persistence:
     enabled: true

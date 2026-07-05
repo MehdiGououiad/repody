@@ -9,10 +9,8 @@ import structlog
 from asgi_correlation_id import correlation_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.auth.casbin_authorizer import get_authorizer
 from audit_workbench.auth.dependencies import extract_bearer
-from audit_workbench.auth.jwt_validator import JwtValidationError, principal_from_bearer
-from audit_workbench.db.models import Workflow
+from audit_workbench.auth.run_access import RunSource, resolve_run_enqueue_source
 from audit_workbench.schemas.workflow import (
     DocumentDefSchema,
     RunCreatedResponse,
@@ -20,24 +18,13 @@ from audit_workbench.schemas.workflow import (
 )
 from audit_workbench.services import run_service
 from audit_workbench.services.admission import QueueCapacityExceeded, check_admission
-from audit_workbench.services.api_keys import verify_api_key
 from audit_workbench.services.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
 from audit_workbench.services.queue import refresh_queued_positions
 from audit_workbench.services.rate_limit import RunRateLimitExceeded, check_run_rate_limits
-from audit_workbench.services.run_enqueue_errors import (
-    ForbiddenRunError,
-    RunEnqueueError,
-    UnauthorizedRunError,
-    WorkflowNotDeployedError,
-    WorkflowNotFoundError,
-)
+from audit_workbench.services.run_enqueue_errors import WorkflowNotDeployedError
 from audit_workbench.services.run_service import FileBinding
-from audit_workbench.services.workflow import load_workflow
-from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
-
-RunSource = str  # "test" | "api"
 
 
 @dataclass(frozen=True)
@@ -68,58 +55,12 @@ def client_key_from_request(
     return client_host
 
 
-async def resolve_run_source(
-    session: AsyncSession,
-    workflow_id: str,
-    authorization: str | None,
-    *,
-    has_snapshot: bool = False,
-    production_api_shape: bool = False,
-) -> tuple[RunSource, Workflow]:
-    """Infer test vs production API run from the bearer credential and request shape."""
-    settings = get_settings()
-    token = extract_bearer(authorization)
-
-    wf = await load_workflow(session, workflow_id)
-    if not wf:
-        raise WorkflowNotFoundError
-
-    if token and wf.deployed_at and verify_api_key(token, wf.api_key):
-        return "api", wf
-
-    if token and settings.oidc_enabled:
-        try:
-            principal = principal_from_bearer(token, settings)
-        except JwtValidationError as exc:
-            raise UnauthorizedRunError(f"Unauthorized — {exc}") from exc
-
-        if not principal.has_app_role():
-            raise ForbiddenRunError("No application role assigned in Keycloak.")
-
-        authorizer = get_authorizer()
-        if not authorizer.authorize(principal, "run", "execute"):
-            raise ForbiddenRunError("Forbidden — operator role required for test runs.")
-
-        return "test", wf
-
-    if token and not settings.oidc_enabled:
-        raise UnauthorizedRunError("Invalid API key.")
-
-    if settings.oidc_enabled:
-        raise UnauthorizedRunError("Missing bearer token.")
-
-    if production_api_shape or (wf.deployed_at and not has_snapshot):
-        raise UnauthorizedRunError("Invalid API key.")
-
-    return "test", wf
-
-
 async def enqueue_run(
     session: AsyncSession,
     req: EnqueueRunRequest,
 ) -> RunCreatedResponse:
     """Create and queue a Run — single interface for all HTTP entry shapes."""
-    source, wf = await resolve_run_source(
+    source, wf = await resolve_run_enqueue_source(
         session,
         req.workflow_id,
         req.authorization,

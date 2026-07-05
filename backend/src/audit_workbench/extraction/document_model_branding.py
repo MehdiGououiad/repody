@@ -11,13 +11,17 @@ REPODY_VLM_DESCRIPTION = (
 PUBLIC_CATALOG_IDS = frozenset({REPODY_VLM_CATALOG_ID})
 
 
+class UnknownCatalogIdError(ValueError):
+    """Raised when a document model catalog id is not registered."""
+
+
 def normalize_public_catalog_id(model_id: str | None) -> str:
-    if not model_id:
+    if not model_id or not str(model_id).strip():
         return REPODY_VLM_CATALOG_ID
-    stripped = model_id.strip()
+    stripped = str(model_id).strip()
     if stripped in PUBLIC_CATALOG_IDS:
         return stripped
-    return REPODY_VLM_CATALOG_ID
+    raise UnknownCatalogIdError(f"Unknown document model catalog id: {stripped!r}")
 
 
 def public_runtime_model_name(runtime_model: str) -> str:

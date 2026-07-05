@@ -9,14 +9,14 @@ Command reference: [COMMANDS.md](./COMMANDS.md)
 | Path | When |
 |------|------|
 | Compose (`pnpm dev`) | Daily API/UI work, unit tests, migrations |
-| OpenShift CRC (`pnpm openshift:promote`) | Vendor cluster smoke — [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| OpenShift client test (`pnpm openshift:client-test`) | Vendor cluster smoke — [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
 ## Production modules
 
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | control | `repody-api` Deployment | Workflows, runs, uploads, dispatch |
-| workers | `repody-worker-ocr`, `repody-worker-fast` Deployments | Document extraction and fast validation |
+| workers | `repody-worker-extract`, `repody-worker-fast` Deployments | Document extraction and fast validation |
 | edge | `repody-web` Deployment | Next.js UI |
 | data plane | Postgres, Redis, object storage | Durable platform state and Taskiq broker |
 | auth | External OIDC provider | Authentication |
@@ -33,7 +33,7 @@ Vendor image artifacts:
 
 Clients install with Helm or Argo CD — [docs/deploy/CLIENT.md](./deploy/CLIENT.md).
 
-Release registry: Harbor 2.14 — [docs/deploy/HARBOR.md](./deploy/HARBOR.md).
+Release registry: GHCR or client container registry — [deploy/registry/README.md](../deploy/registry/README.md).
 
 ## Edge
 

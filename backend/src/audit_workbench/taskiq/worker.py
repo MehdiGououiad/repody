@@ -1,4 +1,4 @@
-"""Taskiq worker entrypoint — one pool per process (ocr or fast)."""
+"""Taskiq worker entrypoint — one pool per process (extract or fast)."""
 
 from __future__ import annotations
 
@@ -21,23 +21,23 @@ broker = get_broker(pool)
 _process_audit_run_task = get_process_audit_run_task(pool)
 
 
-async def _warmup_ocr_models(worker_pool: str) -> None:
+async def _warmup_document_models(worker_pool: str) -> None:
     from audit_workbench.extraction.repody_vlm import warmup_repody_vlm
 
-    if worker_pool != "ocr":
+    if worker_pool != "extract":
         return
 
     vlm_status = await warmup_repody_vlm() if settings.repody_vlm_warmup_on_start else "disabled"
     log.info(
-        "ocr_worker_warmup_done",
+        "extract_pool_warmup_done",
         repody_vlm=vlm_status,
     )
 
 
 async def _startup_warmup(worker_pool: str) -> None:
     try:
-        if worker_pool == "ocr":
-            await _warmup_ocr_models(worker_pool)
+        if worker_pool == "extract":
+            await _warmup_document_models(worker_pool)
     finally:
         from audit_workbench.inference.openai_compat import close_openai_clients
 
@@ -51,8 +51,8 @@ async def _on_worker_startup(_state: object) -> None:
 
 
 def _worker_slots() -> int:
-    if pool == "ocr":
-        return settings.worker_ocr_max_jobs
+    if pool == "extract":
+        return settings.worker_extract_max_jobs
     return settings.worker_fast_max_jobs
 
 

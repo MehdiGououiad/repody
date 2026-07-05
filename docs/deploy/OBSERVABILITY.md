@@ -26,7 +26,7 @@ Recommended stack (pick one):
 
 ## CRC lab (optional)
 
-After `pnpm openshift:promote` and a healthy `repody` namespace:
+After `pnpm openshift:client-test` and a healthy `repody` namespace:
 
 ```powershell
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts

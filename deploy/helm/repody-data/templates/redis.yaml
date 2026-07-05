@@ -1,0 +1,111 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "repody-data.redis.fullname" . }}
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+    app.kubernetes.io/name: redis
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: redis
+  selector:
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "repody-data.redis.fullname" . }}
+  labels:
+    {{- include "repody-data.labels" . | nindent 4 }}
+    app.kubernetes.io/name: redis
+spec:
+  serviceName: {{ include "repody-data.redis.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        {{- include "repody-data.labels" . | nindent 8 }}
+        app.kubernetes.io/name: redis
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: redis
+          image: {{ include "repody-data.image" .Values.redis.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: redis
+              containerPort: 6379
+          {{- if .Values.redis.auth.enabled }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "redis.auth.existingSecret is required when auth enabled" .Values.redis.auth.existingSecret }}
+                  key: {{ .Values.redis.auth.passwordKey | default .Values.redis.auth.existingSecretPasswordKey | default "redis-password" }}
+          command:
+            - /bin/sh
+            - -ec
+            - exec redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes
+          {{- else }}
+          command:
+            - redis-server
+            - --appendonly
+            - "yes"
+          {{- end }}
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  {{- if .Values.redis.auth.enabled }}
+                  redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG
+                  {{- else }}
+                  redis-cli ping | grep -q PONG
+                  {{- end }}
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  {{- if .Values.redis.auth.enabled }}
+                  redis-cli -a "$REDIS_PASSWORD" ping | grep -q PONG
+                  {{- else }}
+                  redis-cli ping | grep -q PONG
+                  {{- end }}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          {{- with .Values.redis.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  {{- if .Values.redis.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        {{- with .Values.redis.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.redis.persistence.size | quote }}
+  {{- end }}
+{{- end }}

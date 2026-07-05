@@ -24,7 +24,7 @@ export function SettingsPanel({
   refreshing: boolean;
 }) {
   const defaultModelLabel =
-    platform?.documentModels.find((model) => model.id === platform.defaultOcrModel)?.label ??
+    platform?.documentModels.find((model) => model.id === platform.defaultDocumentModelId)?.label ??
     REPODY_VLM_LABEL;
   const roleCount = catalog?.appRoles.length ?? 0;
   const permissionCount =

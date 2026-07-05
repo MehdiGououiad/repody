@@ -11,7 +11,7 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | `control` | `repody-api` | API, dispatch, uploads |
-| `workers` | `repody-worker-ocr`, `repody-worker-fast` | Taskiq worker pools |
+| `workers` | `repody-worker-extract`, `repody-worker-fast` | Taskiq worker pools |
 | `edge` | `repody-web` | Next.js UI |
 | `data` | Postgres, Redis, object storage | Durable state and Taskiq broker (bundled locally; external in production) |
 | `auth` | Keycloak | OIDC (bundled locally; external IdP in production) |

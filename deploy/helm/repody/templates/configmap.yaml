@@ -27,7 +27,7 @@ data:
   AUDIT_VLLM_BASE_URL: {{ .Values.config.vllmBaseUrl | quote }}
   AUDIT_VLLM_SERVED_MODEL: {{ .Values.config.vllmServedModel | quote }}
   AUDIT_DOCKER_MODEL_RUNNER_BASE_URL: {{ .Values.config.dockerModelRunnerBaseUrl | quote }}
-  AUDIT_DEFAULT_OCR_MODEL: {{ .Values.config.defaultOcrModel | quote }}
+  AUDIT_DEFAULT_DOCUMENT_MODEL_ID: {{ .Values.config.defaultDocumentModelId | quote }}
   AUDIT_REPODY_VLM_ENABLED: {{ .Values.config.repodyVlmEnabled | quote }}
   AUDIT_REPODY_VLM_MODEL: {{ .Values.config.repodyVlmModel | quote }}
   AUDIT_REPODY_VLM_MAX_TOKENS: {{ .Values.config.repodyVlmMaxTokens | quote }}
@@ -40,16 +40,22 @@ data:
   AUDIT_REPODY_VLM_ENABLE_THINKING: {{ .Values.config.repodyVlmEnableThinking | quote }}
   AUDIT_REPODY_VLM_JPEG_QUALITY: {{ .Values.config.repodyVlmJpegQuality | quote }}
   AUDIT_REPODY_VLM_TIMEOUT_SECONDS: {{ .Values.config.repodyVlmTimeoutSeconds | quote }}
+  AUDIT_WORKER_TASK_TIMEOUT_MINUTES: {{ .Values.config.workerTaskTimeoutMinutes | quote }}
+  AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}
+  AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: {{ .Values.config.queuedStaleTimeoutMinutes | quote }}
+  AUDIT_MAINTENANCE_INTERVAL_SECONDS: {{ .Values.config.maintenanceIntervalSeconds | quote }}
+  AUDIT_DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
+  AUDIT_DB_MAX_OVERFLOW: {{ .Values.config.dbMaxOverflow | quote }}
+  AUDIT_REDIS_MAX_CONNECTIONS: {{ .Values.config.redisMaxConnections | quote }}
   AUDIT_OCR_MAX_PAGES: {{ .Values.config.ocrMaxPages | quote }}
   AUDIT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
   AUDIT_SEED_ON_STARTUP: "false"
-  AUDIT_USE_CREATE_ALL: "false"
   AUDIT_RATE_LIMIT_FAIL_CLOSED: {{ .Values.config.rateLimitFailClosed | quote }}
   AUDIT_ADMISSION_CONTROL_ENABLED: {{ .Values.config.admissionControlEnabled | quote }}
   AUDIT_ADMISSION_MAX_QUEUED: {{ .Values.config.admissionMaxQueued | quote }}
   AUDIT_ADMISSION_MAX_INFLIGHT: {{ .Values.config.admissionMaxInflight | quote }}
-  AUDIT_ADMISSION_MAX_OCR_INFLIGHT: {{ .Values.config.admissionMaxOcrInflight | quote }}
+  AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT: {{ .Values.config.admissionMaxExtractInflight | quote }}
   AUDIT_ADMISSION_RETRY_AFTER_SECONDS: {{ .Values.config.admissionRetryAfterSeconds | quote }}
   AUDIT_OPERATOR_ACTIONS_ENABLED: {{ .Values.config.operatorActionsEnabled | quote }}
   {{- if .Values.config.operatorBenchmarkUser }}

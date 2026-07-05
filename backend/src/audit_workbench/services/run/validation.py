@@ -10,19 +10,22 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from audit_workbench.db.models import OverallStatus, RuleResult, Run, RunDocument, RunStatus
+from audit_workbench.db.models import OverallStatus, RuleResult, Run, RunDocument
 from audit_workbench.extraction.document_modes import ValidationMode, validation_mode_label
 from audit_workbench.rules.runner import validate_extractions
 from audit_workbench.services.mappers import duration_ms_between
+from audit_workbench.services.run.adapters.composition import (
+    get_complete_run,
+    run_lifecycle_store,
+)
+from audit_workbench.services.run.application.use_cases import CompleteRunRequest
+from audit_workbench.services.run.domain.lifecycle import RunCompletionOutcome
 from audit_workbench.services.run.helpers import new_id
 from audit_workbench.services.run.phase_state import (
     RunPhaseState,
 )
-from audit_workbench.services.run_progress import (
-    mark_step_done,
-    progress_snapshot,
-    set_run_progress,
-)
+from audit_workbench.services.run.progress_persist import set_run_progress
+from audit_workbench.services.run.progress_plan import mark_step_done, progress_snapshot
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
@@ -148,32 +151,40 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
     else:
         overall = OverallStatus.warning.value
 
-    run.status = RunStatus.done.value
-    run.overall_status = overall
-    run.summary_total = len(rule_evals)
-    run.summary_passed = sum(1 for row in rule_evals if row.status == "passed")
-    run.summary_failed = failed_count
-    run.fields_extracted = state.fields_extracted
-    run.finished_at = datetime.now(UTC)
-    duration_ms = duration_ms_between(run.started_at, run.finished_at)
+    finished_at = datetime.now(UTC)
+    duration_ms = duration_ms_between(run.started_at, finished_at)
     started_at = run.started_at
-    finished_at = run.finished_at
-    run.run_metadata = {
-        "startedAt": started_at.isoformat() if started_at else None,
-        "finishedAt": finished_at.isoformat() if finished_at else None,
-        "durationMs": duration_ms,
-        "extractionMs": state.extraction_total_ms,
-        "validationMs": validation_ms,
-        "validationMode": state.validation_mode,
-        "validationLabel": validation_mode_label(state.validation_mode),
-        "llmModel": get_settings().validation_model,
-    }
+    progress: dict | None = None
     if progress_steps:
         progress = progress_snapshot(progress_steps, len(progress_steps) - 1, "Complete")
-        run.progress = progress
         for step in progress["steps"]:
             step["status"] = "done"
-    await session.commit()
+
+    await get_complete_run().execute(
+        CompleteRunRequest(
+            run_id=run_id,
+            outcome=RunCompletionOutcome(
+                overall_status=overall,
+                summary_total=len(rule_evals),
+                summary_passed=sum(1 for row in rule_evals if row.status == "passed"),
+                summary_failed=failed_count,
+                fields_extracted=state.fields_extracted,
+                run_metadata={
+                    "startedAt": started_at.isoformat() if started_at else None,
+                    "finishedAt": finished_at.isoformat(),
+                    "durationMs": duration_ms,
+                    "extractionMs": state.extraction_total_ms,
+                    "validationMs": validation_ms,
+                    "validationMode": state.validation_mode,
+                    "validationLabel": validation_mode_label(state.validation_mode),
+                    "llmModel": get_settings().validation_model,
+                },
+                progress=progress,
+            ),
+        ),
+        store=run_lifecycle_store(session),
+        now=finished_at,
+    )
     log.info(
         "run_validation_completed",
         event_domain="audit_run",
@@ -182,6 +193,3 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
         rules_total=len(rule_evals),
         rules_failed=failed_count,
     )
-    from audit_workbench.services.run_events import publish_run_terminal
-
-    await publish_run_terminal(run_id, status=RunStatus.done.value)

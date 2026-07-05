@@ -7,12 +7,12 @@ export type RunProgressStep = {
   id: string;
   label: string;
   status: "pending" | "active" | "done";
-  mode?: "ocr" | "schema" | "text" | "auto" | "vlm" | "document_model";
+  mode?: "schema" | "text" | "auto" | "vlm" | "document_model";
   kind?: "logic" | "llm";
   detail?: string;
   readPath?: string;
   validationMode?: string;
-  ocrModel?: string;
+  documentModelId?: string;
   durationMs?: number;
   cacheHit?: boolean;
   gpuColdStartHint?: boolean;
@@ -33,7 +33,7 @@ type RunPollResponse = {
   error?: string;
 };
 
-const DEFAULT_RUN_TIMEOUT_MS = 13 * 60_000;
+const DEFAULT_RUN_TIMEOUT_MS = 4 * 60_000;
 const MIN_POLL_INTERVAL_MS = 400;
 const MAX_POLL_INTERVAL_MS = 8_000;
 const RATE_LIMIT_POLL_INTERVAL_MS = 4_000;

@@ -1,12 +1,12 @@
 import type { UploadedFile } from "@/components/workflow/ingestion-section";
-import type { RunProgress, TestRunResult } from "@/lib/api/workflow-run";
+import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
 
 export type TestPhase = "idle" | "running" | "done";
 
 export interface TestSessionState {
   phase: TestPhase;
   progress: RunProgress | null;
-  result: TestRunResult | null;
+  result: WorkflowRunResult | null;
   error: string | null;
   errorRunId: string | null;
   filesByDocId: Record<string, File>;

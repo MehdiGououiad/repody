@@ -108,6 +108,43 @@ export function createArgocdLab({
     log("argocd", `installed (${ARGO_NS}) — see getting_started for argocd app sync`);
   }
 
+  /**
+   * Private repos — official repository credentials (getting started / private repos).
+   * @see https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/
+   */
+  function ensureGitRepository() {
+    const url = vendorRepoUrl();
+    const token =
+      process.env.REPODY_GITHUB_TOKEN?.trim() ||
+      process.env.GITHUB_TOKEN?.trim() ||
+      process.env.GH_TOKEN?.trim();
+    if (!token) {
+      fail(
+        `Argo CD cannot clone ${url} (private). Set REPODY_GITHUB_TOKEN to a GitHub PAT with repo read access.`,
+      );
+    }
+
+    mkdirSync(runtimeDir, { recursive: true });
+    const secretPath = path.join(runtimeDir, "argocd-repo-secret.yaml");
+    const secretYaml = `apiVersion: v1
+kind: Secret
+metadata:
+  name: repody-vendor-git
+  namespace: ${ARGO_NS}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  type: git
+  url: ${url}
+  username: git
+  password: ${token}
+`;
+    writeFileSync(secretPath, secretYaml, "utf8");
+    const result = kubectl(["apply", "-f", secretPath], { dryRun });
+    if (result.status !== 0) fail("Argo CD repository secret apply failed");
+    log("argocd", `git repository credentials registered for ${url}`);
+  }
+
   function applyApplications(profile) {
     const templatePath = path.join(root, "deploy/client/lab/argocd", `applications-${profile}.yaml`);
     let yaml = readFileSync(templatePath, "utf8");
@@ -222,6 +259,7 @@ export function createArgocdLab({
 
   return {
     install,
+    ensureGitRepository,
     applyApplications,
     syncApps,
     waitHealthy,

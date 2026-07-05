@@ -15,25 +15,25 @@ Both profiles merge `values-enterprise.example.yaml` for production hardening.
 
 ## Image registry convention
 
-`REPODY_IMAGE_REGISTRY` and Helm `images.*.repository` use the **Harbor project path**:
+`REPODY_IMAGE_REGISTRY` and Helm `images.*.repository` use the **registry project path**:
 
 ```yaml
-# CHANGE_ME_REGISTRY = harbor.client.example.com/repody   (host + project)
+# CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody   (host + project)
 images:
   api:
-    repository: harbor.client.example.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "1.0.0"
 ```
 
 Build/push uses the same base:
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.client.example.com/repody"
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="1.0.0"
 pnpm images:release
 ```
 
-Official Harbor push/pull: [Harbor docs — working with images](https://goharbor.io/docs/main/working-with-projects/working-with-images/pulling-pushing-images/)
+On-prem example: `registry.example.com/repody` — see [deploy/registry/README.md](../registry/README.md).
 
 ## Directory layout
 

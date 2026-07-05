@@ -17,7 +17,7 @@ export function OverviewTab({
     return <div className="panel-elevated rounded-xl h-48 animate-pulse" />;
   }
   const defaultModelLabel =
-    platform.documentModels.find((m) => m.id === platform.defaultOcrModel)?.label ??
+    platform.documentModels.find((m) => m.id === platform.defaultDocumentModelId)?.label ??
     REPODY_VLM_LABEL;
   const runtimeRows = [
     ["Extractor", platform.extractor],

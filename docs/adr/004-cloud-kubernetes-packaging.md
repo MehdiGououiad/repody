@@ -14,7 +14,7 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 |------|----------|-----------|
 | **Orchestrator** | Kubernetes, Helm-first | Portable across clouds; HPA, ingress, secrets native |
 | **Local dev** | Docker Compose (`pnpm dev`) | Fast daily iteration |
-| **Cluster validation** | OpenShift CRC bundled smoke (`pnpm openshift:promote`) | Same charts clients receive |
+| **Cluster validation** | OpenShift client test (`pnpm openshift:client-test`) | Same charts clients receive |
 | **Data plane** | External or operator-managed Postgres, Redis/Valkey, and object storage by default | Enterprise installs need independent lifecycle, backups, upgrades, and ownership |
 | **Bundled profile** | `repody-data` chart + `values-bundled.example.yaml` | Smaller tenants / air-gapped stacks |
 | **Queue** | Taskiq over Redis Streams; Redis from `repody-data` or external | Reuses existing Redis; no separate workflow engine |

@@ -1,11 +1,10 @@
-# Vendor → client: Harbor push and cluster deploy
+# Vendor → client: push images and cluster deploy
 
 End-to-end flow so the **vendor ships images** and the **client pulls and deploys** with Helm or Argo CD — no vendor access to the client cluster.
 
 Official references:
 
-- [Harbor — push and pull images](https://goharbor.io/docs/main/working-with-projects/working-with-images/pulling-pushing-images/)
-- [Harbor — install and configure](https://goharbor.io/docs/main/install-config/installation-intro/)
+- [GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [External Secrets Operator](https://external-secrets.io/latest/)
 - [Kubernetes Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
 - [Helm install](https://helm.sh/docs/intro/install/)
@@ -17,7 +16,7 @@ Official references:
 ```mermaid
 flowchart LR
   subgraph vendor [Vendor]
-    V1[Build images] --> V2[Push to Harbor]
+    V1[Build images] --> V2[Push to GHCR or client registry]
     V2 --> V3[SBOM + cosign optional]
     V3 --> V4[Hand off tag + charts + docs]
   end
@@ -31,43 +30,37 @@ flowchart LR
 
 | Role | Responsibility |
 |------|----------------|
-| **Vendor** | Build, push to Harbor/GHCR, publish Helm charts, document tag |
-| **Client** | Harbor pull secret, Vault secrets, values in private GitOps, Helm/Argo |
+| **Vendor** | Build, push to GHCR or client registry, publish Helm charts, document tag |
+| **Client** | Registry pull secret, Vault secrets, values in private GitOps, Helm/Argo |
 
 ---
 
-## Part 1 — Vendor: install Harbor and push images
+## Part 1 — Vendor: push images
 
-### Step 1: Install Harbor (once per vendor environment)
+### Step 1: Choose a registry
 
-Follow the [official Harbor installer](https://goharbor.io/docs/main/install-config/installation-intro/):
+| Option | When | Example base |
+|--------|------|--------------|
+| **GHCR** | GitHub-hosted releases | `ghcr.io/yourorg/repody` |
+| **Client registry** | On-prem or cloud registry the client operates | `registry.example.com/repody` |
 
-1. Download [Harbor online installer](https://github.com/goharbor/harbor/releases)
-2. Copy [`deploy/harbor/harbor.yml.example`](../../deploy/harbor/harbor.yml.example) → `harbor.yml`
-3. Set `hostname`, TLS, and `harbor_admin_password`
-4. Run `./prepare` then `docker compose up -d`
+See [deploy/registry/README.md](../../deploy/registry/README.md) for GHCR setup and pull-secret examples.
 
-See [HARBOR.md](./HARBOR.md) for details.
+### Step 2: Create credentials (recommended)
 
-### Step 2: Create project and robot account (recommended)
-
-In Harbor UI or API:
-
-1. Create project **`repody`** (private)
-2. Create a **robot account** with push permission (vendor CI) and/or pull permission (share with client)
-
-Harbor docs: [Managing robots](https://goharbor.io/docs/main/working-with-projects/project-configuration/create-robot-accounts/)
+- **GHCR:** GitHub PAT with `write:packages` (vendor CI) and `read:packages` (share with client)
+- **On-prem:** Robot account or service principal with push (vendor) and pull (client) scopes
 
 ### Step 3: Log in and push from the vendor workstation
 
-Registry base must include the **project name**:
+Registry base must include the **project or namespace path**:
 
 ```powershell
-# harbor.example.com/repody  ← host + project (not just host)
-$env:REPODY_IMAGE_REGISTRY="harbor.example.com/repody"
+# ghcr.io/yourorg/repody  ← host + project (not just host)
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="1.0.0"
 
-docker login harbor.example.com -u admin
+docker login ghcr.io -u <github-user>
 pnpm images:release
 ```
 
@@ -75,10 +68,12 @@ This builds and pushes:
 
 | Image | Full reference |
 |-------|----------------|
-| Backend (API + workers) | `harbor.example.com/repody/repody-backend:1.0.0` |
-| Web UI | `harbor.example.com/repody/repody-web:1.0.0` |
+| Backend (API + workers) | `ghcr.io/yourorg/repody/repody-backend:1.0.0` |
+| Web UI | `ghcr.io/yourorg/repody/repody-web:1.0.0` |
 
 Implementation: [`deploy/scripts/build-images.mjs`](../../deploy/scripts/build-images.mjs) (BuildKit).
+
+GitHub tag workflow: push `v*` → [images-ghcr.yml](../../.github/workflows/images-ghcr.yml) builds, signs, and uploads release artifacts.
 
 ### Step 4: Supply chain (recommended)
 
@@ -95,9 +90,9 @@ Deliver:
 
 | Item | Example |
 |------|---------|
-| Registry host + project | `harbor.example.com/repody` |
+| Registry host + project | `ghcr.io/yourorg/repody` |
 | Immutable image tag | `1.0.0` |
-| Pull credentials | Robot account or client-specific Harbor user |
+| Pull credentials | PAT, robot account, or client-specific pull user |
 | Helm charts | Git path `deploy/helm/repody`, `repody-data`, `repody-auth` |
 | Values templates | `deploy/client/values-{external,bundled}.example.yaml` |
 | This guide + [CLIENT.md](./CLIENT.md) + [SECRETS.md](./SECRETS.md) |
@@ -123,15 +118,15 @@ kubectl apply -f deploy/client/namespace.example.yaml
 
 Install Vault and ESO per [SECRETS.md](./SECRETS.md). Configure a `ClusterSecretStore` pointing at client Vault.
 
-### Step 4: Store Harbor pull credentials in Vault
+### Step 4: Store registry pull credentials in Vault
 
-Create a docker config JSON for the Harbor registry **host:port** the kubelet will use:
+Create a docker config JSON for the registry **host** the kubelet will use:
 
 ```json
 {
   "auths": {
-    "harbor.client.example.com": {
-      "username": "robot$client-pull",
+    "ghcr.io": {
+      "username": "client-pull-bot",
       "password": "…",
       "auth": "…"
     }
@@ -140,8 +135,6 @@ Create a docker config JSON for the Harbor registry **host:port** the kubelet wi
 ```
 
 Store at Vault path `secret/repody/production` key `REGISTRY_DOCKERCONFIGJSON`.
-
-Harbor pull docs: [Pulling and pushing images](https://goharbor.io/docs/main/working-with-projects/working-with-images/pulling-pushing-images/)
 
 ### Step 5: Apply ExternalSecrets
 
@@ -177,7 +170,7 @@ Edit placeholders:
 
 | Placeholder | Set to |
 |-------------|--------|
-| `CHANGE_ME_REGISTRY` | `harbor.client.example.com/repody` |
+| `CHANGE_ME_REGISTRY` | `ghcr.io/yourorg/repody` or `registry.client.example.com/repody` |
 | `CHANGE_ME_TAG` | `1.0.0` (immutable tag from vendor) |
 | `CHANGE_ME_*_HOST` | Client DNS names |
 | `config.vllmBaseUrl` | Client VLM endpoint ([REPODY-VLM.md](../REPODY-VLM.md)) |
@@ -188,7 +181,7 @@ Image repositories in values resolve to:
 ```yaml
 images:
   api:
-    repository: harbor.client.example.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "1.0.0"
 ```
 
@@ -251,9 +244,7 @@ Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/us
 | Lab | Command | Proves |
 |-----|---------|--------|
 | Local Compose | `pnpm dev:all` | Daily dev — [LOCAL.md](./LOCAL.md) |
-| k3s bundled client | `pnpm k3s:client` | Generic K8s client — [K3S-CLIENT.md](./K3S-CLIENT.md) |
-| OpenShift CRC | `pnpm openshift:promote` | OpenShift client — [OPENSHIFT.md](./OPENSHIFT.md) |
-| Enterprise GitOps | `pnpm enterprise:lab` | Harbor + Gitea + Argo CD — [ENTERPRISE-GITOPS.md](./ENTERPRISE-GITOPS.md) |
+| OpenShift client test | `pnpm openshift:client-test` | Harbor + Vault + Argo CD + OTEL — [OPENSHIFT.md](./OPENSHIFT.md) |
 
 ---
 
@@ -285,4 +276,4 @@ Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/us
 | `deploy/scripts/lib/lab-security.mjs` | Restricted PodSecurity fragments |
 | `deploy/client/` | Client YAML kit only |
 
-Lab scripts (`k3s-client-bundled.mjs`, `enterprise-gitops-lab.mjs`, `openshift-local-promote.mjs`) share the lib modules above.
+Lab script: `deploy/scripts/openshift-client-test.mjs` (shared lib modules under `deploy/scripts/lib/`).

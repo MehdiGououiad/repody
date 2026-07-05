@@ -5,6 +5,7 @@ from audit_workbench.extraction.base import (
     ExtractionResult,
     SchemaFieldSpec,
 )
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
 from audit_workbench.extraction.schema_fields import empty_fields_from_schema
 
 
@@ -40,8 +41,8 @@ class StubDocumentExtractor(DocumentExtractor):
         document_type: str,
         schema: list[SchemaFieldSpec],
         *,
-        extraction_mode: str = "auto",
-        ocr_model: str | None = None,
+        extraction_mode: str = DEFAULT_READ_PATH_ID,
+        document_model_id: str | None = None,
         storage_key: str | None = None,
         file_size: int | None = None,
         bundle: object | None = None,
@@ -52,7 +53,7 @@ class StubDocumentExtractor(DocumentExtractor):
             mime_type,
             document_type,
             extraction_mode,
-            ocr_model,
+            document_model_id,
             storage_key,
             file_size,
             bundle,

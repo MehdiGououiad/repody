@@ -28,7 +28,7 @@ function buildBlankWorkflow(): Workflow {
         schema: [],
         extractionMode: "auto",
         validationMode: "logic_only",
-        ocrModel: null,
+        documentModelId: null,
       },
     ],
     rules: [],

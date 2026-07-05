@@ -142,7 +142,7 @@ for (const entry of steps) {
   run(label, cmd, args, opts);
 }
 
-const registry = process.env.REPODY_IMAGE_REGISTRY ?? "harbor.example.com/repody";
+const registry = process.env.REPODY_IMAGE_REGISTRY ?? "ghcr.io/yourorg/repody";
 console.error(`\ninfo: set REPODY_IMAGE_REGISTRY for release pushes (current: ${registry})\n`);
 
 const apiPort = process.env.REPODY_API_PORT || "8000";
@@ -174,5 +174,5 @@ Next steps for the client:
   4. Verify: curl https://api.<client-domain>/v1/healthz/live
 
 Vendor release images:
-  REPODY_IMAGE_REGISTRY=harbor.vendor.example.com/repody pnpm images:release
+  REPODY_IMAGE_REGISTRY=ghcr.io/yourorg/repody pnpm images:release
 `);
