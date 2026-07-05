@@ -38,10 +38,14 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "repody-data.podSecurityContext" (dict "fsGroup" 999) | nindent 8 }}
       containers:
         - name: redis
           image: {{ include "repody-data.image" .Values.redis.image }}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "repody-data.containerSecurityContext" (dict "runAsUser" 999 "runAsGroup" 999) | nindent 12 }}
           ports:
             - name: redis
               containerPort: 6379

@@ -38,10 +38,14 @@ spec:
         app.kubernetes.io/instance: {{ .Release.Name }}
     spec:
       {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "repody-data.podSecurityContext" (dict "fsGroup" 1000) | nindent 8 }}
       containers:
         - name: minio
           image: {{ include "repody-data.image" .Values.minio.image }}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "repody-data.containerSecurityContext" (dict "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
           args:
             - server
             - /data
@@ -112,10 +116,14 @@ spec:
     spec:
       restartPolicy: OnFailure
       {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
+      securityContext:
+        {{- include "repody-data.podSecurityContext" (dict "fsGroup" 1000) | nindent 8 }}
       containers:
         - name: mc
           image: {{ include "repody-data.image" .Values.minio.mcImage }}
           imagePullPolicy: IfNotPresent
+          securityContext:
+            {{- include "repody-data.containerSecurityContext" (dict "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
           env:
             - name: MINIO_ROOT_USER
               valueFrom:
