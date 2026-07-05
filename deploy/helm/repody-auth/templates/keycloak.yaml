@@ -61,6 +61,8 @@ spec:
           ports:
             - name: http
               containerPort: 8080
+            - name: management
+              containerPort: 9000
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: {{ .Values.keycloak.adminUsername | quote }}
@@ -114,20 +116,20 @@ spec:
           startupProbe:
             httpGet:
               path: /health/started
-              port: http
+              port: management
             initialDelaySeconds: {{ .Values.keycloak.probes.startup.initialDelaySeconds }}
             periodSeconds: {{ .Values.keycloak.probes.startup.periodSeconds }}
             failureThreshold: {{ .Values.keycloak.probes.startup.failureThreshold }}
           readinessProbe:
             httpGet:
               path: /health/ready
-              port: http
+              port: management
             periodSeconds: {{ .Values.keycloak.probes.readiness.periodSeconds }}
             failureThreshold: {{ .Values.keycloak.probes.readiness.failureThreshold }}
           livenessProbe:
             httpGet:
               path: /health/live
-              port: http
+              port: management
             periodSeconds: {{ .Values.keycloak.probes.liveness.periodSeconds }}
             failureThreshold: {{ .Values.keycloak.probes.liveness.failureThreshold }}
           resources:
