@@ -13,7 +13,7 @@
  *
  * Commands:
  *   preflight | clean | infra | build | push | seed | register | sync |
- *   deploy | logs | verify | e2e | all
+ *   deploy | logs | verify | e2e | redeploy | all
  *
  * Legacy aliases: platform, harbor, registry, images, observability, argocd
  *
@@ -21,6 +21,8 @@
  *   --profile=bundled|external     default bundled
  *   --registry=harbor|openshift    default harbor
  *   --helm                         direct helm (default is GitOps / Argo CD)
+ *   --fast                         skip build/push; kubectl Argo sync; shorter waits (lab retest)
+ *   --skip-sync-wait               sync only; verify waits for routes (skip Argo Healthy poll)
  *   --clean                        tear down before all/e2e
  *   --dry-run --skip-images --skip-build --skip-vlm --vlm
  */
@@ -72,6 +74,29 @@ const profile = flagValue("--profile") === "external" ? "external" : "bundled";
 const registryMode = flagValue("--registry") === "openshift" ? "openshift" : "harbor";
 const gitops = !args.flags.has("--helm");
 const dryRun = args.flags.has("--dry-run");
+const fast = args.flags.has("--fast");
+const skipBuild = args.flags.has("--skip-build") || args.flags.has("--skip-images") || fast;
+const skipImages = args.flags.has("--skip-images") || fast;
+const skipSyncWait = args.flags.has("--skip-sync-wait") || fast;
+
+const stepTimes = [];
+let stepStartedAt = Date.now();
+
+function beginStep(name) {
+  stepStartedAt = Date.now();
+}
+
+function endStep(name) {
+  const seconds = ((Date.now() - stepStartedAt) / 1000).toFixed(1);
+  stepTimes.push({ name, seconds });
+  log("timing", `${name}: ${seconds}s`);
+}
+
+function logTimingSummary() {
+  const total = stepTimes.reduce((sum, step) => sum + Number(step.seconds), 0).toFixed(1);
+  const lines = stepTimes.map((step) => `  ${step.name}: ${step.seconds}s`).join("\n");
+  log("timing", `total: ${total}s\n${lines}`);
+}
 
 const kube = createKubeCli({ fail, sleep, env: process.env, dryRun });
 
@@ -542,8 +567,8 @@ function configureRegistryForPush() {
 }
 
 function buildImages() {
-  if (args.flags.has("--skip-build") || args.flags.has("--skip-images")) {
-    log("build", "skipped");
+  if (skipBuild) {
+    log("build", "skipped (--skip-build, --skip-images, or --fast)");
     return;
   }
   const result = run(commandFor("pnpm"), ["images:build"], { cwd: root, shell: process.platform === "win32" });
@@ -552,8 +577,8 @@ function buildImages() {
 }
 
 function pushImages() {
-  if (args.flags.has("--skip-images")) {
-    log("push", "skipped (--skip-images)");
+  if (skipImages) {
+    log("push", "skipped (--skip-images or --fast)");
     return;
   }
   kube.requireCluster();
@@ -604,7 +629,7 @@ function seed() {
         { quiet: true },
       );
     }
-    vaultEso.waitExternalSecrets();
+    vaultEso.waitExternalSecrets(fast ? 90 : 300);
   }
 
   log("seed", `Vault seeded (${profile}); pull secrets synced`);
@@ -723,8 +748,15 @@ function deploy() {
 
 function sync() {
   const apps = argocdLab.appNames(profile);
+  beginStep("sync");
   argocdLab.syncApps(apps);
-  argocdLab.waitHealthy(apps);
+  if (!skipSyncWait) {
+    const timeoutSec = fast ? 180 : Number(process.env.REPODY_SYNC_WAIT_SEC || 360);
+    argocdLab.waitHealthy(apps, timeoutSec);
+  } else {
+    log("sync", "skipped Argo Healthy wait (--skip-sync-wait or --fast); verify checks routes");
+  }
+  endStep("sync");
 }
 
 function logs() {
@@ -757,14 +789,15 @@ async function verify() {
   const apiUrl = `https://${hostList.api}/v1/healthz/live`;
   const webUrl = `https://${hostList.web}`;
 
-  const deadline = Date.now() + 300_000;
+  const deadline = Date.now() + (fast ? 120_000 : 300_000);
+  const pollMs = fast ? 3000 : 8000;
   let apiOk = false;
   while (Date.now() < deadline) {
     if (run(curl, ["-kfsS", "--max-time", "12", apiUrl], { quiet: true }).status === 0) {
       apiOk = true;
       break;
     }
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 8000);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, pollMs);
   }
   if (!apiOk) fail(`API not healthy at ${apiUrl}`);
 
@@ -797,19 +830,53 @@ function clientReadyCheck() {
 }
 
 async function e2e() {
+  beginStep("build");
   buildImages();
+  endStep("build");
+  beginStep("push");
   pushImages();
+  endStep("push");
+  beginStep("seed");
   seed();
+  endStep("seed");
   if (gitops) {
+    beginStep("register");
     registerGitOps();
+    endStep("register");
     sync();
   } else {
+    beginStep("deploy");
     deployHelm();
+    endStep("deploy");
   }
   if (args.flags.has("--vlm")) startVlm();
+  beginStep("verify");
   await verify();
-  logs();
-  clientReadyCheck();
+  endStep("verify");
+  if (!fast) {
+    beginStep("logs");
+    logs();
+    endStep("logs");
+    beginStep("client-ready");
+    clientReadyCheck();
+    endStep("client-ready");
+  }
+  logTimingSummary();
+}
+
+/** Lab retest: no image build/push, kubectl GitOps sync, timed steps. */
+async function redeploy() {
+  beginStep("seed");
+  seed();
+  endStep("seed");
+  beginStep("register");
+  registerGitOps();
+  endStep("register");
+  sync();
+  beginStep("verify");
+  await verify();
+  endStep("verify");
+  logTimingSummary();
 }
 
 async function all() {
@@ -836,6 +903,7 @@ const handlers = {
   logs,
   verify,
   e2e,
+  redeploy,
   all,
   registry: configureRegistryForPush,
   argocd: () => argocdLab.install(),
@@ -849,7 +917,7 @@ if (process.argv.includes("--check")) {
 if (!handler) {
   console.error(`Unknown command: ${args.cmd ?? "(none)"}`);
   console.error(
-    "Commands: preflight clean infra build push seed register sync deploy logs verify e2e all",
+    "Commands: preflight clean infra build push seed register sync deploy logs verify e2e redeploy all",
   );
   console.error(
     "Flags: --profile=bundled|external --registry=harbor|openshift --helm --clean --dry-run --skip-* --vlm",

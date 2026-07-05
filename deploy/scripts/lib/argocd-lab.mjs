@@ -192,12 +192,22 @@ stringData:
     };
   }
 
+  /** Prefer kubectl patch sync on Windows — argocd login --core often hangs there. */
+  function useArgocdCli() {
+    if (dryRun) return false;
+    const mode = process.env.REPODY_ARGOCD_USE_CLI?.trim();
+    if (mode === "1" || mode === "true") return true;
+    if (mode === "0" || mode === "false") return false;
+    return process.platform !== "win32";
+  }
+
   /** Official sync: argocd login --core then argocd app sync (getting started §7). */
   function syncApps(names) {
-    const bin = resolveExecutable("argocd");
-    const hasCli = spawnSync(bin, ["version", "--client"], { encoding: "utf8", stdio: "pipe" }).status === 0;
-
-    if (hasCli && !dryRun) {
+    const revision = vendorRevision();
+    if (useArgocdCli()) {
+      const bin = resolveExecutable("argocd");
+      const hasCli = spawnSync(bin, ["version", "--client"], { encoding: "utf8", stdio: "pipe" }).status === 0;
+      if (!hasCli) fail("REPODY_ARGOCD_USE_CLI=1 but argocd CLI not found");
       kubectl(["config", "set-context", "--current", `--namespace=${ARGO_NS}`], { quiet: true });
       const login = spawnSync(bin, ["login", "--core"], {
         encoding: "utf8",
@@ -219,6 +229,7 @@ stringData:
       return;
     }
 
+    log("argocd", `sync via kubectl patch (${names.join(", ")}) @ ${revision}`);
     for (const name of names) {
       kubectl(
         ["annotate", "application", name, "-n", ARGO_NS, "argocd.argoproj.io/refresh=hard", "--overwrite"],
@@ -234,14 +245,14 @@ stringData:
           "--type",
           "merge",
           "-p",
-          '{"operation":{"sync":{"revision":"HEAD","prune":true}}}',
+          JSON.stringify({ operation: { sync: { revision, prune: true } } }),
         ],
         { quiet: true },
       );
     }
   }
 
-  function waitHealthy(appNames, timeoutSec = 720) {
+  function waitHealthy(appNames, timeoutSec = 360) {
     if (dryRun) return;
     const deadline = Date.now() + timeoutSec * 1000;
     while (Date.now() < deadline) {
