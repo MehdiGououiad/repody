@@ -108,19 +108,41 @@ export function createArgocdLab({
     log("argocd", `installed (${ARGO_NS}) — see getting_started for argocd app sync`);
   }
 
+  function gitLsRemote(url, revision = "HEAD") {
+    const ref = revision === "HEAD" ? "HEAD" : revision;
+    return spawnSync("git", ["ls-remote", "--heads", url, ref], {
+      encoding: "utf8",
+      stdio: "pipe",
+      shell: false,
+      timeout: 30_000,
+    });
+  }
+
+  function repoAccessibleWithoutAuth(url) {
+    const revision = vendorRevision();
+    const probe = gitLsRemote(url, revision);
+    return probe.status === 0;
+  }
+
   /**
    * Private repos — official repository credentials (getting started / private repos).
+   * Public repos skip credentials (anonymous git ls-remote succeeds).
    * @see https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/
    */
   function ensureGitRepository() {
     const url = vendorRepoUrl();
+    if (repoAccessibleWithoutAuth(url)) {
+      log("argocd", `git repository ${url} is reachable without credentials`);
+      return;
+    }
+
     const token =
       process.env.REPODY_GITHUB_TOKEN?.trim() ||
       process.env.GITHUB_TOKEN?.trim() ||
       process.env.GH_TOKEN?.trim();
     if (!token) {
       fail(
-        `Argo CD cannot clone ${url} (private). Set REPODY_GITHUB_TOKEN to a GitHub PAT with repo read access.`,
+        `Argo CD cannot clone ${url}. Set REPODY_GITHUB_TOKEN to a GitHub PAT with repo read access, or make the repository public.`,
       );
     }
 
