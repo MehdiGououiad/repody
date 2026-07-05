@@ -1,27 +1,27 @@
-# Staging overrides — Harbor registry, Gateway API edge, in-cluster Keycloak + CPU vLLM.
+# Staging overrides — GHCR registry, Gateway API edge, in-cluster Keycloak + CPU vLLM.
 # Copy/adapt for your cluster; keep secrets out of Git (use secrets.existingSecret).
 # GitOps promotion: deploy/scripts/gitops-promote-staging.mjs
 
 global:
   deploymentEnvironment: staging
   imagePullSecrets:
-    - name: harbor-pull-secret
+    - name: registry-pull-secret
 
 images:
   backend:
-    repository: harbor.yourdomain.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "<git-sha>"
     pullPolicy: IfNotPresent
   api:
-    repository: harbor.yourdomain.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "<git-sha>"
     pullPolicy: IfNotPresent
   worker:
-    repository: harbor.yourdomain.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "<git-sha>"
     pullPolicy: IfNotPresent
   web:
-    repository: harbor.yourdomain.com/repody/repody-web
+    repository: ghcr.io/yourorg/repody/repody-web
     tag: "<git-sha>"
     pullPolicy: IfNotPresent
 
@@ -32,7 +32,7 @@ api:
   podDisruptionBudget:
     enabled: false
 
-workerOcr:
+workerExtract:
   replicas: 1
   warmupOnStart: false
   autoscaling:

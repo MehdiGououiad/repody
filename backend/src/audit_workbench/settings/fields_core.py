@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 
 
 class CoreSettingsFields:
@@ -10,12 +10,25 @@ class CoreSettingsFields:
     database_url: str = Field(
         default="postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench"
     )
-    db_pool_size: int = Field(default=5, description="SQLAlchemy async pool size per process.")
-    db_max_overflow: int = Field(default=10, description="Extra DB connections beyond pool_size.")
-    db_pool_timeout: int = Field(default=30, description="Seconds to wait for a DB connection.")
+    db_pool_size: int = Field(
+        default=5,
+        validation_alias=AliasChoices("AUDIT_DB_POOL_SIZE"),
+        description="SQLAlchemy async pool size per process.",
+    )
+    db_max_overflow: int = Field(
+        default=10,
+        validation_alias=AliasChoices("AUDIT_DB_MAX_OVERFLOW"),
+        description="Extra DB connections beyond pool_size.",
+    )
+    db_pool_timeout: int = Field(
+        default=30,
+        validation_alias=AliasChoices("AUDIT_DB_POOL_TIMEOUT"),
+        description="Seconds to wait for a DB connection.",
+    )
     redis_url: str = Field(default="redis://localhost:6379/0")
     redis_max_connections: int = Field(
         default=20,
+        validation_alias=AliasChoices("AUDIT_REDIS_MAX_CONNECTIONS"),
         description="Shared Redis pool size (cache + SSE pub/sub).",
     )
 
@@ -31,10 +44,6 @@ class CoreSettingsFields:
     )
 
     seed_on_startup: bool = False
-    use_create_all: bool = Field(
-        default=False,
-        description="Create tables on startup (local tests only). Use Alembic in production.",
-    )
 
     log_json: bool = Field(default=True)
 

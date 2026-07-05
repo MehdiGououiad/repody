@@ -1,5 +1,13 @@
 import { cache } from "react";
-import type { Workflow } from "@/lib/types";
+import type {
+  Audit,
+  HealthAlert,
+  KpiMetric,
+  PerformancePoint,
+  RuleTemplate,
+  ViolationBreakdown,
+  Workflow,
+} from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { serverApi, throwOnApiError } from "@/lib/api/openapi-client";
 
@@ -24,17 +32,17 @@ export async function fetchWorkflow(id: string): Promise<Workflow | null> {
 export async function fetchAudits() {
   const { data, error, response } = await serverApi.GET("/v1/audits");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as { audits: import("@/lib/types").Audit[] };
+  return data as { audits: Audit[] };
 }
 
 export async function fetchMetrics() {
   const { data, error, response } = await serverApi.GET("/v1/metrics");
   if (error || !response.ok || !data) throwOnApiError(error, response);
   return data as {
-    kpis: import("@/lib/types").KpiMetric[];
-    performanceSeries: import("@/lib/types").PerformancePoint[];
-    violationBreakdown: import("@/lib/types").ViolationBreakdown[];
-    healthAlerts?: import("@/lib/types").HealthAlert[];
+    kpis: KpiMetric[];
+    performanceSeries: PerformancePoint[];
+    violationBreakdown: ViolationBreakdown[];
+    healthAlerts?: HealthAlert[];
   };
 }
 
@@ -53,5 +61,5 @@ export async function fetchAuditDetail(id: string): Promise<RunAuditDetail | nul
 export const fetchRulesLibrary = cache(async () => {
   const { data, error, response } = await serverApi.GET("/v1/rules/library");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as { rules: import("@/lib/types").RuleTemplate[] };
+  return data as { rules: RuleTemplate[] };
 });

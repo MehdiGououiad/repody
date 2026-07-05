@@ -249,7 +249,7 @@ async def _run_once(
         "schema": schema,
     }
     if case.model:
-        document["ocrModel"] = case.model
+        document["documentModelId"] = case.model
     if judge_quality:
         document["markdownExtraction"] = True
     rules = _rule_payload(expected_rules, id_prefix)

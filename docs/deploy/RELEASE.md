@@ -6,7 +6,6 @@ Official references:
 
 - [Sigstore cosign](https://docs.sigstore.dev/cosign/overview/)
 - [Syft SBOM](https://github.com/anchore/syft)
-- [Harbor 2.14](https://goharbor.io/docs/2.14.0/install-config/)
 - [Helm](https://helm.sh/docs/intro/install/)
 - [External Secrets Operator](https://external-secrets.io/)
 
@@ -15,7 +14,7 @@ Official references:
 | Lane | Registry | Signing | When |
 |------|----------|---------|------|
 | **GitHub release** | GHCR (`ghcr.io/<owner>`) | cosign keyless (OIDC) | Tag `v*` or workflow dispatch |
-| **Harbor / on-prem** | `harbor.example.com/repody` | cosign with `COSIGN_KEY` | Customer-facing registry |
+| **On-prem / client registry** | `registry.example.com/repody` | cosign with `COSIGN_KEY` | Customer-facing registry |
 | **Air-gap** | Client import | SHA256 bundle + optional cosign pubkey | Disconnected sites |
 
 Client install (values, Vault, Helm) is unchanged — see [CLIENT.md](./CLIENT.md).
@@ -60,17 +59,17 @@ Workflow [`.github/workflows/images-ghcr.yml`](../../.github/workflows/images-gh
 3. `release-supply-chain.mjs promote --channel=staging`
 4. Upload `dist/release/<tag>/` artifact (manifest, SBOMs, `helm-images.yaml`)
 
-**Harbor / manual:**
+**On-prem / manual push:**
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_REGISTRY="registry.example.com/repody"
 $env:REPODY_IMAGE_TAG="1.2.3"
 pnpm images:release
 pnpm release:attest    # requires syft + cosign locally
 pnpm release:promote -- --channel=staging
 ```
 
-For Harbor, use a **private key** (not keyless):
+For on-prem registries, use a **private key** (not keyless):
 
 ```powershell
 $env:COSIGN_KEY="C:\secrets\cosign.key"
@@ -114,7 +113,7 @@ After `pnpm release:promote`, bundle at `dist/release/<tag>/`:
 | `sbom/*.spdx.json` | SPDX SBOM per image |
 | `SHA256SUMS` | SBOM checksums |
 
-Send artifact + public cosign key (Harbor lane) to the client.
+Send artifact + public cosign key (on-prem lane) to the client.
 
 ### 5. Client promotion
 
@@ -138,13 +137,7 @@ Send artifact + public cosign key (Harbor lane) to the client.
 | `pnpm release:promote` | Verify + client contract + manifest |
 | `pnpm release:all` | push + attest + promote |
 | `pnpm client:check` | Client Helm/ESO preflight |
-| `pnpm airgap:build` | Offline tarball lane |
-
----
-
-## Air-gap
-
-`pnpm airgap:build -- --version X.Y.Z` bundles images + SHA256 sums. Import with `pnpm airgap:import`. Combine with cosign public key verification when images were signed before export.
+| `pnpm openshift:client-test` | OpenShift client lab (Harbor, Vault, OTEL) |
 
 ---
 
@@ -155,6 +148,6 @@ Send artifact + public cosign key (Harbor lane) to the client.
 | `syft not found` | Install syft or run attest in CI only |
 | `cosign verify` identity mismatch | Set `COSIGN_CERTIFICATE_IDENTITY` to workflow `@.*` pattern |
 | Digest lookup fails | Login to registry; image must exist after push |
-| Harbor keyless blocked | Use `COSIGN_KEY` + distribute `cosign.pub` to clients |
+| On-prem keyless blocked | Use `COSIGN_KEY` + distribute `cosign.pub` to clients |
 
-See also [HARBOR.md](./HARBOR.md), [CLIENT.md](./CLIENT.md).
+See also [CLIENT.md](./CLIENT.md), [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md).

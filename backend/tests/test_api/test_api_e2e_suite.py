@@ -8,6 +8,7 @@ import uuid
 import pytest
 
 from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from tests.helpers.workflow_rules import logic_field_gt
 from audit_workbench.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_PDF,
@@ -48,10 +49,11 @@ async def test_healthz_reports_configured_queue_backend(client):
     assert res.status_code == 200
     body = res.json()
     assert body["status"] == "ok"
+    assert body["redisOk"] is True
     assert body["queueBackend"] == "taskiq"
     assert "workerPools" in body
     assert body["workerPools"]["fast"] == "fast"
-    assert body["workerPools"]["ocr"] == "ocr"
+    assert body["workerPools"]["extract"] == "extract"
 
 
 @pytest.mark.asyncio
@@ -76,7 +78,7 @@ async def test_models_catalog_includes_processing_paths(client):
 
 
 @pytest.mark.asyncio
-async def test_ocr_model_catalog_reports_runtime_availability(client, monkeypatch):
+async def test_document_model_id_catalog_reports_runtime_availability(client, monkeypatch):
     from audit_workbench.settings import get_settings
 
     settings = get_settings()
@@ -130,15 +132,13 @@ async def test_workflow_lifecycle_deploy_and_auth(client):
                 }
             ],
             "rules": [
-                {
-                    "id": f"rule-{suffix}",
-                    "name": "Positive total",
-                    "kind": "logic",
-                    "scope": "intra",
-                    "appliesTo": [doc_id],
-                    "body": "total_amount > 0",
-                    "severity": "reject",
-                }
+                logic_field_gt(
+                    rule_id=f"rule-{suffix}",
+                    name="Positive total",
+                    doc_id=doc_id,
+                    field="total_amount",
+                    value="0",
+                )
             ],
         },
     )

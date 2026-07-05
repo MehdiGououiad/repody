@@ -1,33 +1,33 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "repody.fullname" . }}-worker-ocr
+  name: {{ include "repody.fullname" . }}-worker-extract
   labels:
     {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-ocr
+    app.kubernetes.io/component: worker-extract
 spec:
-  replicas: {{ .Values.workerOcr.replicas }}
+  replicas: {{ .Values.workerExtract.replicas }}
   selector:
     matchLabels:
       {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-ocr
+      app.kubernetes.io/component: worker-extract
   template:
     metadata:
       labels:
         {{- include "repody.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: worker-ocr
+        app.kubernetes.io/component: worker-extract
     spec:
       automountServiceAccountToken: false
-      terminationGracePeriodSeconds: {{ .Values.workerOcr.terminationGracePeriodSeconds }}
-      {{- if .Values.workerOcr.topologySpreadConstraints.enabled }}
+      terminationGracePeriodSeconds: {{ .Values.workerExtract.terminationGracePeriodSeconds }}
+      {{- if .Values.workerExtract.topologySpreadConstraints.enabled }}
       topologySpreadConstraints:
-        - maxSkew: {{ .Values.workerOcr.topologySpreadConstraints.maxSkew }}
-          topologyKey: {{ .Values.workerOcr.topologySpreadConstraints.topologyKey | quote }}
-          whenUnsatisfiable: {{ .Values.workerOcr.topologySpreadConstraints.whenUnsatisfiable }}
+        - maxSkew: {{ .Values.workerExtract.topologySpreadConstraints.maxSkew }}
+          topologyKey: {{ .Values.workerExtract.topologySpreadConstraints.topologyKey | quote }}
+          whenUnsatisfiable: {{ .Values.workerExtract.topologySpreadConstraints.whenUnsatisfiable }}
           labelSelector:
             matchLabels:
               {{- include "repody.selectorLabels" . | nindent 14 }}
-              app.kubernetes.io/component: worker-ocr
+              app.kubernetes.io/component: worker-extract
       {{- end }}
       securityContext:
         {{- include "repody.podSecurityContext" . | nindent 8 }}
@@ -49,13 +49,13 @@ spec:
             - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
               value: "false"
             - name: AUDIT_WORKER_POOL
-              value: {{ .Values.workerOcr.pool | quote }}
-            - name: AUDIT_WORKER_OCR_MAX_JOBS
-              value: {{ .Values.workerOcr.maxJobs | quote }}
+              value: {{ .Values.workerExtract.pool | quote }}
+            - name: AUDIT_WORKER_EXTRACT_MAX_JOBS
+              value: {{ .Values.workerExtract.maxJobs | quote }}
             - name: AUDIT_REPODY_VLM_WARMUP_ON_START
-              value: {{ .Values.workerOcr.warmupOnStart | quote }}
+              value: {{ .Values.workerExtract.warmupOnStart | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
-              value: repody-worker-ocr
+              value: repody-worker-extract
             {{- include "repody.vllmSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
@@ -69,7 +69,7 @@ spec:
             periodSeconds: 30
             failureThreshold: 3
           resources:
-            {{- toYaml .Values.workerOcr.resources | nindent 12 }}
+            {{- toYaml .Values.workerExtract.resources | nindent 12 }}
 ---
 apiVersion: apps/v1
 kind: Deployment

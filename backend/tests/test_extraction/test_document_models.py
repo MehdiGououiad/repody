@@ -8,7 +8,10 @@ import pytest
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import DocumentBundle
 from audit_workbench.extraction.field_json import parse_fields_json
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.extraction.document_model_branding import (
+    REPODY_VLM_CATALOG_ID,
+    UnknownCatalogIdError,
+)
 from audit_workbench.catalog.registry import (
     normalize_model_id,
     parse_document_model,
@@ -26,14 +29,15 @@ from audit_workbench.extraction.repody_vlm import (
 )
 
 
-def test_model_registry_routes_repody_vlm_to_docker_model_runner():
+def test_catalog_routes_repody_vlm_to_docker_model_runner():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     assert spec.runtime == "docker_model_runner"
     assert spec.engine == "document_model"
 
 
-def test_unknown_model_id_falls_back_to_default():
-    assert normalize_model_id("unknown-model") == REPODY_VLM_CATALOG_ID
+def test_unknown_model_id_raises():
+    with pytest.raises(UnknownCatalogIdError, match="unknown-model"):
+        normalize_model_id("unknown-model")
 
 
 def test_repody_vlm_template_and_flat_json_normalize_money():
@@ -201,7 +205,7 @@ def test_strip_vlm_thinking_removes_reasoning_wrapper():
 
 
 @pytest.mark.asyncio
-async def test_pipeline_calls_document_model_registry(monkeypatch):
+async def test_pipeline_calls_document_model_catalog(monkeypatch):
     direct_result = ExtractionResult(fields=[])
     extract_mock = AsyncMock(return_value=direct_result)
     monkeypatch.setattr(
@@ -233,7 +237,7 @@ async def test_pipeline_calls_document_model_registry(monkeypatch):
         "Invoice",
         [SchemaFieldSpec(name="total_amount", description="Total TTC")],
         extraction_mode="document_model",
-        ocr_model=REPODY_VLM_CATALOG_ID,
+        document_model_id=REPODY_VLM_CATALOG_ID,
         validation_mode="logic_only",
     )
 

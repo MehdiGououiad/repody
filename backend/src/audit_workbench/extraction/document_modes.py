@@ -24,10 +24,6 @@ class ReadPathSpec:
     show_document_model: bool = True
 
     @property
-    def show_ocr_model(self) -> bool:
-        return self.show_document_model
-
-    @property
     def ocr_engine(self) -> str:
         return self.read
 

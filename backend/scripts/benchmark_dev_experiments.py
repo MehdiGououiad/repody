@@ -52,7 +52,7 @@ def _doc_defs(doc_ids: list[str]) -> list[dict[str, Any]]:
                 "documentType": types[min(index, len(types) - 1)],
                 "extractionMode": "document_model",
                 "validationMode": "logic_only",
-                "ocrModel": REPODY_VLM_CATALOG_ID,
+                "documentModelId": REPODY_VLM_CATALOG_ID,
                 "schema": schema,
             }
         )

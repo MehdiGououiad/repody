@@ -28,7 +28,7 @@ API-only tests: `pnpm test:api` (no cluster).
 
 ## OpenShift CRC
 
-After `pnpm openshift:promote`:
+After `pnpm openshift:client-test`:
 
 ```powershell
 $env:E2E_WEB_URL="https://repody-web.apps-crc.testing"

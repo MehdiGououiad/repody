@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.base import ExtractionResult
 from audit_workbench.services.run.snapshot import resolve_run_documents, resolve_run_rules
-from audit_workbench.services.run_progress import build_run_progress_plan, mark_step_done
+from audit_workbench.services.run.progress_plan import build_run_progress_plan, mark_step_done
 
 
 @dataclass

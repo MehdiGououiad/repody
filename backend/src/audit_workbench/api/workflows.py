@@ -14,11 +14,15 @@ from audit_workbench.schemas.workflow import (
     DryRunExtracted,
     DryRunResponse,
     DryRunRuleResult,
+    RuleValidationItem,
+    ValidateRulesBody,
+    ValidateRulesResponse,
     WorkflowListResponse,
     WorkflowResponse,
     WorkflowSchema,
 )
 from audit_workbench.services.workflow import workflow_service
+from audit_workbench.services.workflow.validation import validate_rules_preview
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
@@ -112,6 +116,22 @@ async def deploy_workflow(
     if not wf:
         raise HTTPException(404, "Workflow not found")
     return WorkflowResponse(workflow=wf)
+
+
+@router.post(
+    "/validate-rules",
+    response_model=ValidateRulesResponse,
+    dependencies=[Depends(require_permission("workflow", "read"))],
+)
+async def validate_rules(body: ValidateRulesBody):
+    """Authoritative rule validation for the workflow builder."""
+    rows = validate_rules_preview(body.documents, body.rules)
+    return ValidateRulesResponse(
+        rules=[
+            RuleValidationItem(rule_id=str(row["rule_id"]), issues=list(row["issues"]))
+            for row in rows
+        ]
+    )
 
 
 def _normalize_dry_run_rules(rules: list) -> list[dict]:

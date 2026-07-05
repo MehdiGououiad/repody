@@ -4,6 +4,15 @@ Repody pins patch-level image tags and dependency floors for reproducible deploy
 Production values must not use `latest` image tags or bundled local infrastructure.
 
 Canonical local/dev image env file: [`deploy/pinned-images.env`](../deploy/pinned-images.env).
+
+| Service | Pinned tag |
+|---------|------------|
+| Postgres | `postgres:17.10-alpine` |
+| Redis | `redis:8.8.0-alpine` |
+| MinIO | `pgsty/minio:RELEASE.2026-06-18T00-00-00Z` |
+| MinIO CLI (`mc`) | `pgsty/mc:RELEASE.2026-04-17T00-00-00Z` |
+| Keycloak | `quay.io/keycloak/keycloak:26.6.4` |
+
 Enterprise production images should be promoted by immutable tag or digest from the
 client registry.
 
@@ -13,7 +22,7 @@ client registry.
 |---------|---------|
 | Python backend base | `python:3.13.14-slim` |
 | Node web base | `node:24-alpine` |
-| uv in Dockerfile | `0.11.21` |
+| uv in Dockerfile | `0.11.26` |
 | pnpm | `11.7.0` |
 
 ## Enterprise production
@@ -28,16 +37,40 @@ client registry.
 | IdP | Enterprise OIDC provider |
 | Inference | External OpenAI-compatible VLM endpoint |
 
-## Helm subcharts
+## Helm data plane (`repody-data`)
 
-The Repody chart still carries conditional subcharts for the **bundled** client profile.
-They are disabled by default and production external-profile renders fail if bundled infra is enabled.
+The bundled data chart ships **native StatefulSets** with official upstream images (no Bitnami subcharts).
+Production external-profile values must point at managed Postgres, Redis/Valkey, and object storage instead.
 
-| Chart | Pinned chart version | Production posture |
-|-------|----------------------|--------------------|
-| Bitnami PostgreSQL | `18.7.6` | Disabled; use managed Postgres/CloudNativePG |
-| Bitnami Redis | `27.0.10` | Disabled; use managed Redis/Valkey |
-| Bitnami MinIO | `17.0.21` | Disabled; use external object storage |
+| Workload | Image (bundled lab) | Production posture |
+|----------|---------------------|--------------------|
+| PostgreSQL | `postgres:17.10-alpine` | Managed Postgres or CloudNativePG |
+| Redis | `redis:8.8.0-alpine` | Managed Redis/Valkey |
+| MinIO | `pgsty/minio:RELEASE.2026-06-18T00-00-00Z` | External S3 or MinIO Operator/Tenant |
+
+The main `repody` chart keeps conditional subchart slots disabled by default; bundled infra is deployed via `repody-data`.
+
+## Supply-chain overrides
+
+pnpm workspace overrides (see `pnpm-workspace.yaml`) pin patched transitive deps until upstream bundles them:
+
+| Package | Reason |
+|---------|--------|
+| `postcss@^8.5.15` | Next.js still pulls 8.4.x ([GHSA-qx2v-qp2m-jg93](https://github.com/advisories/GHSA-qx2v-qp2m-jg93)) |
+| `@opentelemetry/core@^2.8.0` | Sentry OTel exporters ([GHSA-8988-4f7v-96qf](https://github.com/advisories/GHSA-8988-4f7v-96qf)) |
+
+## Security scanners (CI + local)
+
+| Tool | Pinned version | Role |
+|------|----------------|------|
+| Trivy | `0.72.0` | Primary — fs, IaC, secrets, container images |
+| Grype | `v0.110.0` | SBOM validation (Syft SPDX input) |
+| Syft | `v1.40.0` | SBOM generation (shared with `pnpm release:attest`) |
+| `aquasecurity/trivy-action` | `0.33.1` | GitHub Actions integration |
+| `anchore/scan-action` | `v7` | Grype in CI |
+| `github/codeql-action/upload-sarif` | `v3` | GitHub Security tab |
+
+Gate: **CRITICAL + HIGH**, unfixed only (Trivy/Grype). Merged report: `dist/security/report.md`.
 
 ## Upgrading
 
@@ -48,8 +81,8 @@ cd backend && uv lock --upgrade
 # Refresh frontend lockfile
 pnpm update --latest
 
-# Helm subcharts (bundled profile)
-pnpm helm:deps
+# Helm data plane (bundled profile — no subchart deps)
+pnpm helm:lint
 
 # Validate enterprise Kubernetes renders
 pnpm deploy:check

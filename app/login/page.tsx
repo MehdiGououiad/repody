@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -9,6 +9,7 @@ import { LoaderCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 const ERROR_KEYS: Record<string, string> = {
   Configuration: "errorConfiguration",
@@ -36,18 +37,32 @@ function LoginContent() {
   const errorCode = searchParams.get("error");
   const { oidcEnabled, loading: authLoading } = usePlatformAuth();
   const enforceAuth = useAuthEnforcement();
+  const hydrated = useHydrated();
   const { data: session, status } = useSession();
+  const clearingSessionRef = useRef(false);
+
+  const sessionError = session?.error;
+  const accessToken = session?.accessToken;
 
   useEffect(() => {
-    if (status !== "authenticated") return;
-    if (session?.error || !session?.accessToken) {
+    if (!hydrated || status !== "authenticated") {
+      if (status !== "authenticated") {
+        clearingSessionRef.current = false;
+      }
+      return;
+    }
+    if (sessionError || !accessToken) {
+      if (clearingSessionRef.current) {
+        return;
+      }
+      clearingSessionRef.current = true;
       void signOut({ redirectTo: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` });
       return;
     }
     router.replace(callbackUrl);
-  }, [status, session, callbackUrl, router]);
+  }, [accessToken, callbackUrl, hydrated, router, sessionError, status]);
 
-  if (status === "loading" || status === "authenticated") {
+  if (!hydrated || status === "loading" || status === "authenticated") {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
         <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />

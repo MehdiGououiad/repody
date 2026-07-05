@@ -2,7 +2,7 @@
 
 Install Repody on **the client's** Kubernetes or OpenShift cluster. Same Helm charts as vendor QA; secrets and endpoints are client-owned.
 
-**Vendor shipped images?** Start with [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) (Harbor push → pull secret → Helm/Argo).
+**Vendor shipped images?** Start with [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) (registry push → pull secret → Helm/Argo).
 
 **Security first:** [SECRETS.md](./SECRETS.md) — apply before Helm.
 
@@ -190,13 +190,13 @@ valueFiles:
 
 | Role | Delivers | Does not deploy |
 |------|----------|-----------------|
-| **Vendor** | Images in Harbor/GHCR + Helm charts in Git | Client cluster |
+| **Vendor** | Images in GHCR / client registry + Helm charts in Git | Client cluster |
 | **Client** | Cluster, Vault/ESO, private values, Helm/GitOps | Build images |
 
-Vendor release lane: [RELEASE.md](./RELEASE.md) · [HARBOR.md](./HARBOR.md).
+Vendor release lane: [RELEASE.md](./RELEASE.md).
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.yourdomain.com/repody"
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="1.0.0"
 pnpm images:release
 pnpm release:attest

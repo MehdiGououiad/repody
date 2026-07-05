@@ -1,6 +1,6 @@
 # External services profile — client-managed Postgres, Redis, S3, IdP.
 # Copy to GitOps repo as values.yaml; merge with deploy/helm/repody/values-common.yaml on install.
-# Registry: CHANGE_ME_REGISTRY = harbor.example.com/repody (Harbor host + project)
+# Registry: CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody (host + project)
 # Images resolve to: {CHANGE_ME_REGISTRY}/repody-backend and .../repody-web
 # Full flow: docs/deploy/VENDOR-TO-CLIENT.md
 
@@ -73,7 +73,7 @@ observability:
   otelEnabled: true
   otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
 
-workerOcr:
+workerExtract:
   replicas: 2
   warmupOnStart: false
   autoscaling:

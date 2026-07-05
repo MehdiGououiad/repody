@@ -16,10 +16,8 @@ export interface RunDocumentExtractionMeta {
   readPathLabel: string;
   validationMode: string;
   validationLabel: string;
-  ocrModel?: string | null;
-  llmModel?: string | null;
+  documentModelId?: string | null;
   extractionMs: number;
-  combinedLlm: boolean;
   cacheHit: boolean;
   gpuColdStartLikely?: boolean;
   ocrSkipped: boolean;

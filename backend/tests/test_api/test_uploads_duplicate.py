@@ -126,7 +126,7 @@ async def test_duplicate_file_upload_run_completes(live_client):
                 "schema": [{"id": "f-total", "name": "total_amount", "description": "Total"}],
                 "extractionMode": "document_model",
                 "validationMode": "logic_only",
-                "ocrModel": "repody:vlm",
+                "documentModelId": "repody:vlm",
             }
         ],
         "rules": [

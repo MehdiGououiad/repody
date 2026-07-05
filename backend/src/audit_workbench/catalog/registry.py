@@ -17,6 +17,7 @@ from audit_workbench.extraction.document_model_branding import (
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_DESCRIPTION,
     REPODY_VLM_LABEL,
+    UnknownCatalogIdError,
     normalize_public_catalog_id,
 )
 from audit_workbench.inference.runtime import default_document_runtime
@@ -66,16 +67,17 @@ def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
 
 def normalize_model_id(model_id: str | None, *, settings: Settings | None = None) -> str:
     settings = settings or get_settings()
-    raw = (model_id or settings.default_ocr_model or REPODY_VLM_CATALOG_ID).strip()
+    raw = (model_id or settings.default_document_model_id or REPODY_VLM_CATALOG_ID).strip()
     if not raw:
         return _default_catalog_id(settings)
     normalized = normalize_public_catalog_id(raw)
     registry = _registered_models(settings)
     if normalized in registry:
         return normalized
-    if settings.default_ocr_model in registry:
-        return normalize_public_catalog_id(settings.default_ocr_model)
-    return _default_catalog_id(settings)
+    raise UnknownCatalogIdError(
+        f"Document model {normalized!r} is not registered. "
+        f"Available: {', '.join(sorted(registry)) or '(none)'}"
+    )
 
 
 def _default_catalog_id(settings: Settings) -> str:
@@ -94,9 +96,7 @@ def parse_document_model(model_id: str | None) -> DocumentModelSpec:
     spec = registry.get(normalized)
     if spec is not None:
         return spec
-    if registry:
-        return next(iter(registry.values()))
-    raise RuntimeError("No document models are enabled. Enable Repody VLM.")
+    raise UnknownCatalogIdError(f"Document model {normalized!r} is not registered.")
 
 
 def list_document_models() -> list[DocumentModelSpec]:

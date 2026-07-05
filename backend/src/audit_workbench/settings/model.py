@@ -13,7 +13,11 @@ from audit_workbench.settings.fields_inference import InferenceSettingsFields
 from audit_workbench.settings.fields_ops import OpsSettingsFields
 from audit_workbench.settings.fields_storage import StorageSettingsFields
 from audit_workbench.settings.fields_workers import WorkerSettingsFields
-from audit_workbench.settings.validators import apply_inference_probe_defaults, warn_postgres_create_all
+from audit_workbench.settings.validators import (
+    apply_inference_probe_defaults,
+    validate_production_guardrails,
+    validate_timeout_alignment,
+)
 
 
 class Settings(
@@ -41,7 +45,8 @@ class Settings(
         if not self.vllm_api_key:
             self.vllm_api_key = os.getenv("AUDIT_VLLM_API_KEY", "").strip() or None
         apply_inference_probe_defaults(self)
-        warn_postgres_create_all(self)
+        validate_production_guardrails(self)
+        validate_timeout_alignment(self)
         return self
 
 

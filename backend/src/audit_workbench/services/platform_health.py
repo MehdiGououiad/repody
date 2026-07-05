@@ -12,6 +12,7 @@ from audit_workbench.schemas.health import (
 )
 from audit_workbench.services.admission import count_inflight, count_queued, count_running
 from audit_workbench.catalog.probes import probe_active_runtime
+from audit_workbench.services.redis_health import ping_redis
 from audit_workbench.settings import get_settings
 
 
@@ -21,6 +22,7 @@ async def probe_liveness() -> HealthLiveResponse:
 
 async def probe_readiness() -> HealthReadinessResponse:
     settings = get_settings()
+    redis_ok = await ping_redis()
     async with db_base.async_session_factory() as session:
         await session.execute(text("SELECT 1"))
         try:
@@ -37,8 +39,10 @@ async def probe_readiness() -> HealthReadinessResponse:
     if settings.healthz_probe_inference:
         inference_reachable = await probe_active_runtime(settings)
 
+    ready = redis_ok
     return HealthReadinessResponse(
-        status="ok",
+        status="ok" if ready else "degraded",
+        redis_ok=redis_ok,
         extractor=settings.extractor,
         inference=settings.inference_mode,
         model_runner=inference_reachable,
@@ -58,7 +62,11 @@ async def probe_readiness() -> HealthReadinessResponse:
         oidc_enabled=settings.oidc_enabled,
         worker_pools=WorkerPoolsHealth(
             fast=settings.worker_pool_fast,
-            ocr=settings.worker_pool_ocr,
+            extract=settings.worker_pool_extract,
         ),
         taskiq_configured=bool(settings.redis_url),
     )
+
+
+def is_readiness_ok(response: HealthReadinessResponse) -> bool:
+    return response.status == "ok" and response.redis_ok

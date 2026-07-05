@@ -79,16 +79,23 @@ vault kv put ${mountPath} @/tmp/payload.json`;
     "deploy/client/secrets/runtime-bundled.externalsecret.example.yaml",
   ];
 
+  /** External profile lab — registry + runtime only (data plane managed out-of-band). */
+  const externalExternalSecretFiles = [
+    "deploy/client/secrets/registry-pull.externalsecret.example.yaml",
+    "deploy/client/secrets/runtime.externalsecret.example.yaml",
+  ];
+
   return {
     patchEsYaml,
     putVaultKv,
     applyExternalSecrets,
     waitExternalSecrets,
     bundledExternalSecretFiles,
+    externalExternalSecretFiles,
   };
 }
 
-/** @param {string} registryHost e.g. harbor.example.com/repody or 127.0.0.1:30500/repody */
+/** @param {string} registryHost e.g. ghcr.io/yourorg/repody or 127.0.0.1:30500/repody */
 export function dockerConfigJson(registryHost, username, password) {
   const auth = Buffer.from(`${username}:${password}`).toString("base64");
   return JSON.stringify({

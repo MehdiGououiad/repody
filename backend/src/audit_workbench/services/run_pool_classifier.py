@@ -1,4 +1,4 @@
-"""Classify audit runs into Taskiq worker pools (ocr | fast)."""
+"""Classify audit runs into Taskiq worker pools (extract | fast)."""
 
 from __future__ import annotations
 
@@ -9,20 +9,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Run, Workflow
-from audit_workbench.extraction.document_modes import parse_read_path
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID, parse_read_path
 
-WorkerPool = str  # "ocr" | "fast"
+WorkerPool = str  # "extract" | "fast"
 
-_OCR_READ_KINDS = frozenset({"document_model"})
+_EXTRACT_READ_KINDS = frozenset({"document_model"})
 
 
 class FileBindingLike(Protocol):
     document_id: str | None
 
 
-def needs_ocr_pool(extraction_mode: str | None) -> bool:
+def needs_extract_pool(extraction_mode: str | None) -> bool:
     read = parse_read_path(extraction_mode).read
-    return read in _OCR_READ_KINDS
+    return read in _EXTRACT_READ_KINDS
 
 
 def classify_bindings_for_workflow(
@@ -37,9 +37,9 @@ def classify_bindings_for_workflow(
     for binding in file_bindings:
         doc_id = getattr(binding, "document_id", None)
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = _value(wf_doc, "extraction_mode", "auto") if wf_doc else "auto"
-        if needs_ocr_pool(mode):
-            return "ocr"
+        mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
+        if needs_extract_pool(mode):
+            return "extract"
     return "fast"
 
 
@@ -56,9 +56,9 @@ def classify_run_documents(
     for rd in uploaded:
         doc_id = _value(rd, "document_id")
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = _value(wf_doc, "extraction_mode", "auto") if wf_doc else "auto"
-        if needs_ocr_pool(mode):
-            return "ocr"
+        mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
+        if needs_extract_pool(mode):
+            return "extract"
     return "fast"
 
 
@@ -89,7 +89,7 @@ async def predict_worker_pool(
         )
     ).scalar_one_or_none()
     if not wf:
-        return "ocr"
+        return "extract"
     return classify_bindings_for_workflow(wf.documents, file_bindings)
 
 
@@ -113,5 +113,5 @@ async def resolve_worker_pool(session: AsyncSession, run_id: str) -> WorkerPool:
         )
     ).scalar_one_or_none()
     if not wf:
-        return "ocr"
+        return "extract"
     return classify_run_documents(wf.documents, run.documents)

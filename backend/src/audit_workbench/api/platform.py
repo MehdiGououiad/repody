@@ -13,8 +13,8 @@ from audit_workbench.extraction.template_type_inference import suggest_template_
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
 from audit_workbench.schemas.platform import (
     DocumentModelSummary,
-    OcrDiagnosticResponse,
-    OcrDiagnosticSettingsSchema,
+    DocumentModelDiagnosticResponse,
+    DocumentModelDiagnosticSettingsSchema,
     PlatformConfigResponse,
     SuggestTemplateTypeResponse,
 )
@@ -67,7 +67,7 @@ async def get_platform_config() -> PlatformConfigResponse:
         cache_enabled=settings.extraction_cache_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
         structured_llm=settings.structured_llm_enabled,
-        default_ocr_model=normalize_public_catalog_id(settings.default_ocr_model),
+        default_document_model_id=normalize_public_catalog_id(settings.default_document_model_id),
         default_read_path="document_model",
         document_models=models,
         ocr_max_pages=settings.ocr_max_pages,
@@ -81,7 +81,7 @@ async def get_platform_config() -> PlatformConfigResponse:
         maintenance_interval_seconds=settings.maintenance_interval_seconds,
         worker_pools={
             "fast": settings.worker_pool_fast,
-            "ocr": settings.worker_pool_ocr,
+            "extract": settings.worker_pool_extract,
         },
         taskiq_configured=bool(settings.redis_url),
         llm_validation_enabled=settings.llm_validation_enabled,
@@ -111,16 +111,16 @@ async def get_models_catalog() -> ModelsCatalogResponse:
 
 @router.get(
     "/diagnostics/ocr",
-    response_model=OcrDiagnosticResponse,
+    response_model=DocumentModelDiagnosticResponse,
     dependencies=[Depends(require_permission("diagnostics", "read"))],
 )
 async def ocr_diagnostic(
     run_infer: bool = Query(False, description="Run a short Repody VLM probe."),
-) -> OcrDiagnosticResponse:
+) -> DocumentModelDiagnosticResponse:
     """Document model runtime status (Docker Model Runner or vLLM)."""
     settings = get_settings()
     state = await probe_document_model_state(settings)
-    snapshot = OcrDiagnosticSettingsSchema(
+    snapshot = DocumentModelDiagnosticSettingsSchema(
         extractor=settings.extractor,
         inference_mode=settings.inference_mode,
         runtime=state.runtime,
@@ -139,9 +139,9 @@ async def ocr_diagnostic(
     }
     if not state.reachable or not state.model_loaded:
         detail, hint = unreachable_detail(state.runtime)
-        return OcrDiagnosticResponse(ok=False, detail=detail, hint=hint, **common)
+        return DocumentModelDiagnosticResponse(ok=False, detail=detail, hint=hint, **common)
     if not run_infer:
-        return OcrDiagnosticResponse(
+        return DocumentModelDiagnosticResponse(
             ok=True,
             detail=reachable_detail(state.runtime, live_probe=settings.gpu_live_probe),
             hint="Add ?run_infer=true to run one billed GPU test.",
@@ -149,7 +149,7 @@ async def ocr_diagnostic(
         )
 
     probe = await run_generation_probe(settings)
-    return OcrDiagnosticResponse(
+    return DocumentModelDiagnosticResponse(
         ok=probe.ok,
         model_loaded=True,
         infer_ms=probe.infer_ms,

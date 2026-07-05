@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
 from audit_workbench.schemas.audit import AuditListItem
 from audit_workbench.schemas.run import (
     RunAuditDetail,
@@ -62,9 +63,9 @@ def workflow_to_schema(
             DocumentDefSchema(
                 id=doc.id,
                 document_type=doc.document_type,
-                extraction_mode=doc.extraction_mode or "auto",
+                extraction_mode=doc.extraction_mode or DEFAULT_READ_PATH_ID,
                 validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
-                ocr_model=normalize_public_catalog_id(doc.ocr_model),
+                document_model_id=normalize_public_catalog_id(doc.document_model_id),
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
                 schema_fields=[
@@ -106,7 +107,6 @@ def workflow_to_schema(
         deployed_at=_fmt_dt(wf.deployed_at),
         api_key=reveal_api_key,
         api_key_hint=wf.api_key_hint,
-        default_llm_model=wf.default_llm_model,
         api_stats=api_stats,
     )
 

@@ -91,7 +91,7 @@ export function humanizeRunError(raw: string, ctx?: RunErrorContext): string {
     return "The audit job never left the queue. Ensure Taskiq workers are running (`kubectl -n repody get pods -l app.kubernetes.io/component=worker-fast`).";
   }
   if (lower.includes("stale running") || lower.includes("worker timeout")) {
-    return "The worker stopped responding. Restart workers (`kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-ocr`) and run the test again.";
+    return "The worker stopped responding. Restart workers (`kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-extract`) and run the test again.";
   }
   if (lower.includes("run timed out")) {
     return "The audit run took too long (>5 min). Check worker and inference logs.";

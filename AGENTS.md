@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## Commands
 
-[docs/COMMANDS.md](./docs/COMMANDS.md) — **develop** (Compose), **OpenShift client**, **release** (Harbor push).
+[docs/COMMANDS.md](./docs/COMMANDS.md) — **develop** (Compose), **OpenShift client**, **release** (GHCR push).
 
 Daily: `pnpm dev:all` · or `pnpm dev` + `pnpm dev:app` · `pnpm dev:stop`
 

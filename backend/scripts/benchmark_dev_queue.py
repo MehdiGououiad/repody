@@ -62,7 +62,7 @@ async def _save_workflow_once(
             "documentType": "Invoice",
             "extractionMode": "document_model",
             "validationMode": "logic_only",
-            "ocrModel": REPODY_VLM_CATALOG_ID,
+            "documentModelId": REPODY_VLM_CATALOG_ID,
             "schema": [
                 {"id": f"f-{uuid.uuid4().hex[:8]}", "name": "total_amount", "description": "Total TTC"},
             ],
@@ -101,7 +101,7 @@ def _run_snapshot(*, doc_id: str, probe: str, workflow_id: str) -> dict[str, Any
             "documentType": "Invoice",
             "extractionMode": "document_model",
             "validationMode": "logic_only",
-            "ocrModel": REPODY_VLM_CATALOG_ID,
+            "documentModelId": REPODY_VLM_CATALOG_ID,
             "schema": [
                 {"id": f"f-{uuid.uuid4().hex[:8]}", "name": "total_amount", "description": "Total TTC"},
                 {"id": f"f-{uuid.uuid4().hex[:8]}", "name": probe, "description": "cache bust"},

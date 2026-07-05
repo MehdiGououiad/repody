@@ -21,7 +21,7 @@ async def test_multipart_run_accepts_document_types(live_client):
                 "schema": [{"id": "f-total", "name": "total_amount", "description": "Total"}],
                 "extractionMode": "document_model",
                 "validationMode": "logic_only",
-                "ocrModel": "repody:vlm",
+                "documentModelId": "repody:vlm",
             }
         ],
         "rules": [],

@@ -52,7 +52,7 @@ async def test_document_model_path_returns_fields(mock_document_model):
         "Invoice",
         schema,
         extraction_mode="document_model",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
     )
     assert result.raw_text is not None
     assert any(f.key == "total_amount" and f.value == "6000.00" for f in result.fields)
@@ -88,7 +88,7 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         "Document",
         [],
         extraction_mode="document_model",
-        ocr_model="repody:vlm",
+        document_model_id="repody:vlm",
         markdown_extraction=True,
     )
     assert result.ocr_text == "## Page 1\n\nHello"

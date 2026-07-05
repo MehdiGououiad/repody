@@ -24,7 +24,7 @@ Repody VLM local development uses NuExtract through the OpenAI-compatible llama-
 | **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
 | **Worker pool `ocr`** | Taskiq worker that runs document-model extraction (GPU/CPU bound) |
 | **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
-| **`AUDIT_DEFAULT_OCR_MODEL`** | Env name for default document model id (`repody:vlm`) |
+| **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Env name for default document model id (`repody:vlm`) |
 
 ## Request lifecycle
 
@@ -34,7 +34,7 @@ sequenceDiagram
   participant API as FastAPI /v1
   participant Store as MinIO / local storage
   participant Q as Redis / Taskiq
-  participant W as Worker (ocr|fast)
+  participant W as Worker (extract|fast)
   participant Inf as External VLM
 
   UI->>API: POST presign / confirm upload
@@ -68,6 +68,18 @@ backend/src/audit_workbench/
 ```
 
 **Intentional coupling:** `api/platform.py` exposes diagnostics and catalog endpoints that call extraction/inference directly for operator visibility. Everything else on the hot path goes through services.
+
+### Bounded contexts (Audit Execution is core)
+
+| Context | Responsibility | Key modules |
+|---------|----------------|-------------|
+| **Workflow configuration** | Templates, rules, deployment | `services/workflow/`, `db/models/workflow.py` |
+| **Audit execution** | Run lifecycle, queue, worker pipeline | `services/run/domain/`, `run_processor.py`, `run_enqueue.py`, `taskiq/` |
+| **Platform / catalog** | Model registry, probes, operator tools | `catalog/`, `services/operator/` |
+
+Cross-context integration uses anti-corruption layers (`catalog/adapters.py` for VLM) and domain events (`RunQueued`, `RunStarted`, `RunCompleted`, `RunFailed`) for side effects such as queue refresh and SSE terminal signals.
+
+**Clean Architecture (Run module):** dependencies point inward — `domain/` (entity, lifecycle) → `application/` (use cases) → `adapters/` (SQLAlchemy gateway, Redis SSE publisher). `composition.py` is the composition root; `run_terminal.py` and `run_processor.py` are outer delivery/worker adapters.
 
 ## Operator tools
 
@@ -131,7 +143,7 @@ Runtime is split into deploy **modules** (`control`, `workers`, `edge`). Product
 |------|---------|
 | **Platform module** | Independently deployable Kubernetes workload group (microservice seam) |
 | **Local stack** | Compose + host processes (`pnpm dev`, `pnpm dev:api`, `pnpm ui`) |
-| **Worker plane** | Horizontally scaled Taskiq workers (`worker-ocr`, `worker-fast`) |
+| **Worker plane** | Horizontally scaled Taskiq workers (`worker-extract`, `worker-fast`) |
 
 ## Local development
 
@@ -139,7 +151,7 @@ See [docs/COMMANDS.md](./docs/COMMANDS.md).
 
 | Lane | Command |
 |------|---------|
-| App development | `pnpm dev` (Compose) + `pnpm dev:api` + `pnpm ui` |
+| App development | `pnpm dev:all` or `pnpm dev` + `pnpm dev:app` |
 | OpenShift CRC lab | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
 | OpenShift verify | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
 | Release to client | `pnpm images:release` → client Helm / Argo CD |

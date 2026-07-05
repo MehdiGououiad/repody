@@ -13,5 +13,5 @@ spec:
   to:
     - group: ""
       kind: Service
-      name: {{ .Release.Name }}-minio
+      name: {{ include "repody-data.minio.fullname" . }}
 {{- end }}

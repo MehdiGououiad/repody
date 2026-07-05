@@ -1,4 +1,6 @@
-# Local dependencies — official images, no custom orchestrator.
+# Local/dev data plane (see deploy/pinned-images.env)
+# MinIO: pgsty community fork — upstream minio/minio no longer publishes images.
+# Redis/Postgres: official Docker Library pins.
 # Docs: docs/deploy/LOCAL.md
 #
 #   docker compose up -d
@@ -15,7 +17,7 @@ name: repody
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17.10-alpine
     environment:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
@@ -31,7 +33,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.8.0-alpine
     ports:
       - "6379:6379"
     healthcheck:
@@ -41,7 +43,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -53,7 +55,7 @@ services:
       - repody-minio:/data
 
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/mc:RELEASE.2026-04-17T00-00-00Z
     depends_on:
       - minio
     restart: on-failure
@@ -65,7 +67,7 @@ services:
       "
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.3
+    image: quay.io/keycloak/keycloak:26.6.4
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -86,7 +88,7 @@ services:
       start_period: 30s
 
   # Taskiq workers — Linux containers (same image as API).
-  worker-ocr:
+  worker-extract:
     profiles: [workers]
     build:
       context: ./backend
@@ -118,9 +120,13 @@ services:
       AUDIT_REPODY_VLM_ENABLE_THINKING: "false"
       AUDIT_REPODY_VLM_MAX_TOKENS: "224"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
-      AUDIT_ADMISSION_MAX_OCR_INFLIGHT: "2"
-      AUDIT_WORKER_POOL: ocr
-      AUDIT_WORKER_OCR_MAX_JOBS: "1"
+      AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "180"
+      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "3"
+      AUDIT_STALE_RUN_TIMEOUT_MINUTES: "5"
+      AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
+      AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT: "2"
+      AUDIT_WORKER_POOL: extract
+      AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

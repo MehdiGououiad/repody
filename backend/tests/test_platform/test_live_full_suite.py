@@ -14,6 +14,7 @@ import pytest
 
 from audit_workbench.db.seed import SEED_WORKFLOW_ID
 from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from tests.helpers.workflow_rules import logic_field_gt
 from audit_workbench.integration.live_stack import (
     assert_metrics_access,
     assert_settings_config_access,
@@ -172,15 +173,13 @@ def test_live_workflow_crud_deploy_and_dry_run(client: httpx.Client):
                 }
             ],
             "rules": [
-                {
-                    "id": _unique_id("rule"),
-                    "name": "Positive total",
-                    "kind": "logic",
-                    "scope": "intra",
-                    "appliesTo": [doc_id],
-                    "body": "total_amount > 0",
-                    "severity": "reject",
-                }
+                logic_field_gt(
+                    rule_id=_unique_id("rule"),
+                    name="Positive total",
+                    doc_id=doc_id,
+                    field="total_amount",
+                    value="0",
+                )
             ],
         },
     )

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from audit_workbench.db.models import Document, Run, Workflow
-from audit_workbench.extraction.document_modes import normalize_document_modes
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID, normalize_document_modes
 from audit_workbench.services.run.helpers import rule_dict_from_row, rules_payload
 
 
@@ -27,7 +27,7 @@ class SnapshotDocument:
     position: int
     extraction_mode: str
     validation_mode: str
-    ocr_model: str | None
+    document_model_id: str | None
     extraction_instructions: str = ""
     markdown_extraction: bool = False
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
@@ -85,7 +85,7 @@ def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
         position=position,
         extraction_mode=read_id,
         validation_mode=val_id,
-        ocr_model=doc.get("ocrModel") or doc.get("ocr_model"),
+        document_model_id=doc.get("documentModelId") or doc.get("document_model_id"),
         extraction_instructions=str(
             doc.get("extractionInstructions") or doc.get("extraction_instructions") or ""
         ),
@@ -101,9 +101,9 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         id=doc.id,
         document_type=doc.document_type,
         position=doc.position,
-        extraction_mode=doc.extraction_mode or "auto",
+        extraction_mode=doc.extraction_mode or DEFAULT_READ_PATH_ID,
         validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
-        ocr_model=doc.ocr_model,
+        document_model_id=doc.document_model_id,
         extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
         markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
         schema_fields=[

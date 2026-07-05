@@ -58,7 +58,6 @@ def _cached_result(
     read_path_id: str,
     val_mode: str,
     model_id: str,
-    llm_model: str | None,
     document_type: str,
     content_hash: str | None = None,
     markdown_extraction: bool = False,
@@ -76,10 +75,8 @@ def _cached_result(
         read_path_label=read_path_used_label(used),
         validation_mode=val_mode,
         validation_label=validation_mode_label(val_mode),
-        ocr_model=model_id,
-        llm_model=llm_model,
+        document_model_id=model_id,
         extraction_ms=0,
-        combined_llm=False,
         cache_hit=True,
         fields_extracted=sum(1 for f in cached.fields if f.extracted),
         markdown_extraction=markdown_extraction,
@@ -103,17 +100,14 @@ class PipelineExtractor(DocumentExtractor):
         schema: list[SchemaFieldSpec],
         *,
         extraction_mode: str = "document_model",
-        ocr_model: str | None = None,
+        document_model_id: str | None = None,
         storage_key: str | None = None,
         file_size: int | None = None,
         bundle: object | None = None,
         validation_mode: str = LOGIC_VALIDATION,
-        llm_rules: list[dict] | None = None,
-        llm_model: str | None = None,
         extraction_instructions: str = "",
         markdown_extraction: bool = False,
     ) -> ExtractionResult:
-        _ = llm_rules, llm_model
         read_path = parse_read_path(extraction_mode)
         val_mode = (
             validation_mode
@@ -127,7 +121,7 @@ class PipelineExtractor(DocumentExtractor):
             )
 
         settings = self._settings
-        model_id = normalize_model_id(ocr_model or settings.default_ocr_model)
+        model_id = normalize_model_id(document_model_id or settings.default_document_model_id)
         model_spec = parse_document_model(model_id)
         has_schema_fields = any(field.name.strip() for field in schema)
         if not has_schema_fields and not markdown_extraction:
@@ -151,14 +145,14 @@ class PipelineExtractor(DocumentExtractor):
                 content_hash=content_hash,
                 schema_fp=schema_fp,
                 extraction_mode=cache_mode,
-                ocr_model=model_id,
+                document_model_id=model_id,
                 extractor=settings.extractor,
             )
             content_ck = cache_key(
                 content_hash=content_hash,
                 schema_fp=schema_fp,
                 extraction_mode=cache_mode,
-                ocr_model=model_id,
+                document_model_id=model_id,
                 extractor=settings.extractor,
             )
         else:
@@ -166,7 +160,7 @@ class PipelineExtractor(DocumentExtractor):
                 content_hash=content_hash,
                 schema_fp=schema_fp,
                 extraction_mode=cache_mode,
-                ocr_model=model_id,
+                document_model_id=model_id,
                 extractor=settings.extractor,
             )
             content_ck = ck
@@ -180,7 +174,6 @@ class PipelineExtractor(DocumentExtractor):
                 read_path_id=read_path.id,
                 val_mode=val_mode,
                 model_id=model_id,
-                llm_model=None,
                 document_type=document_type,
                 content_hash=content_hash,
                 markdown_extraction=markdown_extraction,
@@ -232,10 +225,8 @@ class PipelineExtractor(DocumentExtractor):
             read_path_label=read_path_used_label(used),
             validation_mode=val_mode,
             validation_label=validation_mode_label(val_mode),
-            ocr_model=model_id,
-            llm_model=None,
+            document_model_id=model_id,
             extraction_ms=extraction_ms,
-            combined_llm=False,
             cache_hit=False,
             gpu_cold_start_likely=gpu_cold_start_likely(extraction_ms),
             fields_extracted=sum(1 for f in result.fields if f.extracted),

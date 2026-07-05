@@ -615,6 +615,7 @@ function registerGitOps() {
   const hostList = hosts();
   const repo = imageRepo(hostList);
   promoteGitValues(hostList, repo);
+  argocdLab.ensureGitRepository();
   argocdLab.applyApplications(profile);
 }
 

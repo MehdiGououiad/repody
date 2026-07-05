@@ -116,11 +116,11 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
             restart="api",
         ),
         _platform_field(
-            key="default_ocr_model",
-            env_var="AUDIT_DEFAULT_OCR_MODEL",
+            key="default_document_model_id",
+            env_var="AUDIT_DEFAULT_DOCUMENT_MODEL_ID",
             label="Default catalog id",
             description="Workflow default when no model is selected.",
-            value=settings.default_ocr_model,
+            value=settings.default_document_model_id,
             restart="api",
         ),
         _platform_field(

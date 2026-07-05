@@ -110,7 +110,6 @@ async def upsert_workflow(session: AsyncSession, payload: WorkflowSchema) -> Wor
                         description=payload.description,
                         status=payload.status,
                         owner=payload.owner,
-                        default_llm_model=payload.default_llm_model,
                     )
                 )
                 await session.flush()

@@ -57,7 +57,7 @@ export async function PlatformPulse({
   if (!healthz && !platform) return null;
 
   const defaultModel =
-    platform?.documentModels.find((m) => m.id === platform.defaultOcrModel)?.label ??
+    platform?.documentModels.find((m) => m.id === platform.defaultDocumentModelId)?.label ??
     REPODY_VLM_LABEL;
   const queued = healthz?.queuedRuns ?? 0;
   const running = healthz?.runningRuns ?? Math.max(0, (healthz?.inflightRuns ?? 0) - queued);
@@ -95,7 +95,7 @@ export async function PlatformPulse({
           value={queueOk ? t("workersReady") : t("workersAttention")}
           detail={
             healthz
-              ? `fast: ${healthz.workerPools.fast ?? "—"} · ocr: ${healthz.workerPools.ocr ?? "—"}`
+              ? `fast: ${healthz.workerPools.fast ?? "—"} · extract: ${healthz.workerPools.extract ?? "—"}`
               : platform
                 ? Object.values(platform.workerPools).join(" · ")
                 : "—"

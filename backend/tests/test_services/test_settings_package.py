@@ -10,7 +10,7 @@ def test_settings_package_imports():
     settings = get_settings()
     assert settings.app_name
     assert settings.database_url
-    assert settings.worker_pool in ("ocr", "fast")
+    assert settings.worker_pool in ("extract", "fast")
     assert settings.storage_backend in ("local", "s3")
     assert isinstance(settings.extraction_cache_enabled, bool)
 
@@ -20,10 +20,10 @@ def test_settings_required_fields_present():
         "database_url",
         "redis_url",
         "worker_pool",
-        "worker_ocr_max_jobs",
+        "worker_extract_max_jobs",
         "worker_fast_max_jobs",
         "inference_mode",
-        "default_ocr_model",
+        "default_document_model_id",
         "repody_vlm_enabled",
         "rate_limit_enabled",
         "admission_control_enabled",

@@ -38,24 +38,24 @@ spec:
       app.kubernetes.io/component: edge
 {{- end }}
 ---
-{{- if .Values.workerOcr.podDisruptionBudget.enabled }}
+{{- if .Values.workerExtract.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "repody.fullname" . }}-worker-ocr
+  name: {{ include "repody.fullname" . }}-worker-extract
   labels:
     {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-ocr
+    app.kubernetes.io/component: worker-extract
 spec:
-  {{- if hasKey .Values.workerOcr.podDisruptionBudget "minAvailable" }}
-  minAvailable: {{ .Values.workerOcr.podDisruptionBudget.minAvailable }}
+  {{- if hasKey .Values.workerExtract.podDisruptionBudget "minAvailable" }}
+  minAvailable: {{ .Values.workerExtract.podDisruptionBudget.minAvailable }}
   {{- else }}
-  maxUnavailable: {{ .Values.workerOcr.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.workerExtract.podDisruptionBudget.maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:
       {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-ocr
+      app.kubernetes.io/component: worker-extract
 {{- end }}
 ---
 {{- if .Values.workerFast.podDisruptionBudget.enabled }}

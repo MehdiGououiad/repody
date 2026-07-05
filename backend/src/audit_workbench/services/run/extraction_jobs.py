@@ -8,6 +8,7 @@ from typing import Any
 
 from audit_workbench.db.models import Document, RunDocument
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
+from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
 from audit_workbench.extraction.pipeline import get_extractor
 from audit_workbench.services.run.helpers import resolve_run_doc_mime
 from audit_workbench.settings import get_settings
@@ -38,8 +39,8 @@ async def run_extraction_job(job: DocExtractionJob) -> tuple[DocExtractionJob, E
         job.mime_type,
         doc.document_type,
         job.schema,
-        extraction_mode=doc.extraction_mode or "auto",
-        ocr_model=doc.ocr_model or get_settings().default_ocr_model,
+        extraction_mode=doc.extraction_mode or DEFAULT_READ_PATH_ID,
+        document_model_id=doc.document_model_id or get_settings().default_document_model_id,
         storage_key=job.run_doc.storage_key,
         file_size=job.file_size if job.file_size > 0 else None,
         validation_mode=job.validation_mode,

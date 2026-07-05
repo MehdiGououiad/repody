@@ -24,7 +24,7 @@ class PlatformConfigResponse(CamelModel):
     cache_enabled: bool
     rate_limit_enabled: bool
     structured_llm: bool
-    default_ocr_model: str = Field(serialization_alias="defaultOcrModel")
+    default_document_model_id: str = Field(serialization_alias="defaultDocumentModelId")
     default_read_path: str = Field(serialization_alias="defaultReadPath")
     document_models: list[DocumentModelSummary] = Field(serialization_alias="documentModels")
     ocr_max_pages: int = Field(serialization_alias="ocrMaxPages")
@@ -45,7 +45,7 @@ class PlatformConfigResponse(CamelModel):
     )
 
 
-class OcrDiagnosticSettingsSchema(CamelModel):
+class DocumentModelDiagnosticSettingsSchema(CamelModel):
     extractor: str = ""
     inference_mode: str = Field(default="", serialization_alias="inferenceMode")
     runtime: str = ""
@@ -56,7 +56,7 @@ class OcrDiagnosticSettingsSchema(CamelModel):
     llm_validation_enabled: bool = Field(default=False, serialization_alias="llmValidationEnabled")
 
 
-class OcrDiagnosticResponse(CamelModel):
+class DocumentModelDiagnosticResponse(CamelModel):
     ok: bool
     model: str
     runtime: str = ""
@@ -69,7 +69,7 @@ class OcrDiagnosticResponse(CamelModel):
     sample_extracted: bool = False
     detail: str = ""
     hint: str = ""
-    settings: OcrDiagnosticSettingsSchema = Field(default_factory=OcrDiagnosticSettingsSchema)
+    settings: DocumentModelDiagnosticSettingsSchema = Field(default_factory=DocumentModelDiagnosticSettingsSchema)
 
 
 class SuggestTemplateTypeResponse(CamelModel):

@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from audit_workbench.schemas.health import HealthLiveResponse, HealthReadinessResponse
-from audit_workbench.services.platform_health import probe_liveness, probe_readiness
+from audit_workbench.services.platform_health import (
+    is_readiness_ok,
+    probe_liveness,
+    probe_readiness,
+)
 
 router = APIRouter(tags=["health"])
 
@@ -15,6 +19,9 @@ async def health_live() -> HealthLiveResponse:
 
 
 @router.get("/healthz", response_model=HealthReadinessResponse)
-async def health_readiness() -> HealthReadinessResponse:
+async def health_readiness(response: Response) -> HealthReadinessResponse:
     """Readiness with dependency checks, queue depth, and optional inference probe."""
-    return await probe_readiness()
+    body = await probe_readiness()
+    if not is_readiness_ok(body):
+        response.status_code = 503
+    return body

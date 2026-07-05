@@ -4,9 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const pool = process.argv[2] || "ocr";
-if (!["ocr", "fast"].includes(pool)) {
-  console.error("Usage: node deploy/scripts/run-worker.mjs ocr|fast");
+const pool = process.argv[2] || "extract";
+if (!["extract", "fast"].includes(pool)) {
+  console.error("Usage: node deploy/scripts/run-worker.mjs extract|fast");
   process.exit(1);
 }
 

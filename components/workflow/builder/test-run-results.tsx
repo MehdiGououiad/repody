@@ -25,7 +25,7 @@ import {
   ruleStatusColor,
   ruleStatusLabel,
 } from "@/lib/rule-status";
-import type { RunProgress, TestRunResult } from "@/lib/api/workflow-run";
+import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
 import type { TestPhase } from "@/components/workflow/builder/test-run-session";
 
 const statusColor = {
@@ -41,7 +41,7 @@ export function TestRunResults({
 }: {
   phase: TestPhase;
   progress: RunProgress | null;
-  result: TestRunResult | null;
+  result: WorkflowRunResult | null;
 }) {
   const t = useTranslations("workflows.builder");
   const StatusIcon =

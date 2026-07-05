@@ -1,0 +1,36 @@
+# Trivy configuration — shared by CI and local `pnpm security:scan`.
+# Docs: https://aquasecurity.github.io/trivy/latest/docs/references/configuration/config-file/
+
+scan:
+  skip-dirs:
+    - .next
+    - node_modules
+    - backend/.venv
+    - dist
+    - e2e/report
+    - e2e/test-results
+    - "**/.runtime"
+    - "**/.runtime-k3s"
+    - "**/.runtime-enterprise"
+  skip-files:
+    - "**/*.pdf"
+
+severity:
+  - CRITICAL
+  - HIGH
+  - MEDIUM
+
+vulnerability:
+  ignore-unfixed: true
+
+secret:
+  config: deploy/security/trivy-secret.yaml
+
+misconfiguration:
+  include-non-failures: false
+
+license:
+  full: false
+
+db:
+  no-progress: true

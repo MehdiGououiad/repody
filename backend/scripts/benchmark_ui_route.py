@@ -83,7 +83,7 @@ def _doc_defs(doc_a: str, doc_b: str, *, probe: str | None = None) -> list[dict[
             "documentType": "Facture 1",
             "extractionMode": "document_model",
             "validationMode": "logic_only",
-            "ocrModel": REPODY_VLM_CATALOG_ID,
+            "documentModelId": REPODY_VLM_CATALOG_ID,
             "schema": schema(),
         },
         {
@@ -91,7 +91,7 @@ def _doc_defs(doc_a: str, doc_b: str, *, probe: str | None = None) -> list[dict[
             "documentType": "Facture 2",
             "extractionMode": "document_model",
             "validationMode": "logic_only",
-            "ocrModel": REPODY_VLM_CATALOG_ID,
+            "documentModelId": REPODY_VLM_CATALOG_ID,
             "schema": schema(),
         },
     ]

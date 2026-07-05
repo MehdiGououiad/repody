@@ -25,7 +25,7 @@ class ReadPathOption(CamelModel):
     label: str
     description: str
     read_kind: str = Field(serialization_alias="readKind")
-    show_ocr_model: bool = Field(serialization_alias="showOcrModel")
+    show_document_model: bool = Field(serialization_alias="showDocumentModel")
     ocr_engine: str | None = Field(default=None, serialization_alias="ocrEngine")
 
 

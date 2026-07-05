@@ -39,17 +39,62 @@ def upgrade_database_to_head(database_url: str | None = None) -> None:
     url = configure_test_database_url(database_url)
     env = os.environ.copy()
     env["AUDIT_DATABASE_URL"] = url
-    result = subprocess.run(
+    result = _run_alembic_upgrade(env)
+    if result.returncode != 0 and _needs_fresh_test_schema(result):
+        _recreate_test_schema(url)
+        result = _run_alembic_upgrade(env)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Alembic upgrade failed for test database:\n{result.stderr or result.stdout}"
+        )
+
+
+def _run_alembic_upgrade(env: dict[str, str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         [sys.executable, "-m", "alembic", "upgrade", "head"],
         cwd=BACKEND_ROOT,
         env=env,
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0:
-        raise RuntimeError(
-            f"Alembic upgrade failed for test database:\n{result.stderr or result.stdout}"
-        )
+
+
+def _needs_fresh_test_schema(result: subprocess.CompletedProcess[str]) -> bool:
+    output = f"{result.stderr}\n{result.stdout}"
+    return "Can't locate revision identified by" in output
+
+
+def _recreate_test_schema(database_url: str) -> None:
+    """Drop a stale test schema when the migration chain was squashed locally."""
+    env = os.environ.copy()
+    env["AUDIT_DATABASE_URL"] = configure_test_database_url(database_url)
+    script = """
+import asyncio
+import os
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
+
+async def main() -> None:
+    engine = create_async_engine(os.environ["AUDIT_DATABASE_URL"], isolation_level="AUTOCOMMIT")
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("DROP SCHEMA public CASCADE"))
+            await conn.execute(text("CREATE SCHEMA public"))
+            await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
+    finally:
+        await engine.dispose()
+
+asyncio.run(main())
+"""
+    subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=BACKEND_ROOT,
+        env=env,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
 
 
 def create_test_engine(database_url: str | None = None) -> AsyncEngine:

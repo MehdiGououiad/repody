@@ -39,9 +39,8 @@ test("users can select Repody VLM for document extraction", async ({
     expect(response.ok()).toBeTruthy();
     const workflow = (await response.json()).workflow;
     expect(workflow.documents[0].extractionMode).toBe("document_model");
-    expect(workflow.documents[0].ocrModel).toBe("repody:vlm");
+    expect(workflow.documents[0].documentModelId).toBe("repody:vlm");
     expect(workflow.documents[0].validationMode).toBe("logic_only");
-    expect(workflow.documents[0].defaultLlmModel).toBeFalsy();
   } finally {
     if (workflowId) {
       await request.delete(`${API}/v1/workflows/${workflowId}`, {

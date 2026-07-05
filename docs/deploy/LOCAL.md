@@ -90,7 +90,7 @@ Keep these in sync:
 
 - `deploy/llamacpp/paths.local.env` → `LLAMACPP_MODEL_ALIAS`
 - `backend/.env` → `AUDIT_VLLM_SERVED_MODEL`
-- `compose.yaml` → `worker-ocr` `AUDIT_VLLM_SERVED_MODEL`
+- `compose.yaml` → `worker-extract` `AUDIT_VLLM_SERVED_MODEL`
 
 Tuned defaults in `paths.local.env` when `LLAMACPP_DEVICE=Vulkan0`:
 
@@ -101,6 +101,18 @@ Tuned defaults in `paths.local.env` when `LLAMACPP_DEVICE=Vulkan0`:
 - **`AUDIT_REPODY_VLM_PDF_DPI=170`** — API and OCR worker
 
 After changes: `pnpm llamacpp:restart` and `pnpm dev:restart`.
+
+### OCR run timeouts
+
+Audit tasks are capped at **3 minutes** end-to-end. Keep these aligned in `backend/.env` (see `deploy/env/compose.env.example`):
+
+| Variable | Local default | Role |
+|----------|---------------|------|
+| `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` | 3 | Taskiq + worker hard kill (max 3) |
+| `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` | 180 | VLM HTTP ceiling (must be ≤ worker) |
+| `AUDIT_STALE_RUN_TIMEOUT_MINUTES` | 5 | Maintenance reap for stuck `running` |
+
+Runs that exceed 3 minutes fail with **"task timeout"**. Keep documents small (page count, DPI) so extraction fits the window.
 
 On Linux/macOS you may use `pnpm dev:worker:native` instead of Compose workers.
 

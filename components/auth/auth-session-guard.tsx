@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -8,6 +8,7 @@ import { LoaderCircle } from "lucide-react";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { useHydrated } from "@/lib/hooks/use-hydrated";
 
 const PUBLIC_PATHS = new Set(["/login", "/unauthorized"]);
 
@@ -18,18 +19,32 @@ function isSessionValid(session: {
   return Boolean(session?.accessToken && !session.error);
 }
 
+function AuthGateSpinner({ message }: { message: string }) {
+  return (
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 text-muted-foreground">
+      <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
+      <p className="text-sm">{message}</p>
+    </div>
+  );
+}
+
 export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   const t = useTranslations("auth");
   const router = useRouter();
   const pathname = useClientPathname();
+  const hydrated = useHydrated();
   const enforceAuth = useAuthEnforcement();
   const { loading: authLoading } = usePlatformAuth();
   const { data: session, status } = useSession();
+  const clearingSessionRef = useRef(false);
 
+  const sessionError = session?.error;
+  const accessToken = session?.accessToken;
   const isPublic = PUBLIC_PATHS.has(pathname);
+  const sessionValid = isSessionValid(session);
 
   useEffect(() => {
-    if (isPublic || !enforceAuth || authLoading) {
+    if (!hydrated || !pathname || isPublic || !enforceAuth || authLoading) {
       return;
     }
 
@@ -38,22 +53,30 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
     }
 
     if (status === "unauthenticated") {
+      clearingSessionRef.current = false;
       const callback = encodeURIComponent(pathname);
       router.replace(`/login?callbackUrl=${callback}`);
       return;
     }
 
-    if (status === "authenticated" && !isSessionValid(session)) {
+    if (status === "authenticated" && !sessionValid) {
+      if (clearingSessionRef.current) {
+        return;
+      }
+      clearingSessionRef.current = true;
       const callback = encodeURIComponent(pathname);
       void signOut({ redirectTo: `/login?callbackUrl=${callback}` });
     }
   }, [
+    accessToken,
     authLoading,
     enforceAuth,
+    hydrated,
     isPublic,
     pathname,
     router,
-    session,
+    sessionError,
+    sessionValid,
     status,
   ]);
 
@@ -61,22 +84,12 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (authLoading || status === "loading") {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 text-muted-foreground">
-        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
-        <p className="text-sm">{t("checkingAuth")}</p>
-      </div>
-    );
+  if (!hydrated || !pathname || authLoading || status === "loading") {
+    return <AuthGateSpinner message={t("checkingAuth")} />;
   }
 
-  if (status === "unauthenticated" || !isSessionValid(session)) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 text-muted-foreground">
-        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
-        <p className="text-sm">{t("redirectingToSignIn")}</p>
-      </div>
-    );
+  if (status === "unauthenticated" || !sessionValid) {
+    return <AuthGateSpinner message={t("redirectingToSignIn")} />;
   }
 
   return <>{children}</>;

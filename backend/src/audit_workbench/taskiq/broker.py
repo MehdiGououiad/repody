@@ -1,4 +1,4 @@
-"""Taskiq Redis stream brokers — one queue per worker pool (ocr / fast)."""
+"""Taskiq Redis stream brokers — one queue per worker pool (extract / fast)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ async def startup_taskiq_brokers() -> None:
         if _api_brokers_started:
             return
         settings = get_settings()
-        for pool in (settings.worker_pool_ocr, settings.worker_pool_fast):
+        for pool in (settings.worker_pool_extract, settings.worker_pool_fast):
             broker = get_broker(pool)
             await broker.startup()
             log.info(
@@ -51,7 +51,7 @@ async def shutdown_taskiq_brokers() -> None:
         if not _api_brokers_started:
             return
         settings = get_settings()
-        for pool in (settings.worker_pool_ocr, settings.worker_pool_fast):
+        for pool in (settings.worker_pool_extract, settings.worker_pool_fast):
             broker = get_broker(pool)
             await broker.shutdown()
         _api_brokers_started = False

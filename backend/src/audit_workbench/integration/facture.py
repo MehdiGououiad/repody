@@ -68,7 +68,7 @@ class FacturePathCase:
     id: str
     read_path: str
     validation_mode: ValidationMode
-    ocr_model: str = REPODY_VLM_CATALOG_ID
+    document_model_id: str = REPODY_VLM_CATALOG_ID
     max_wait_ms: float = 900_000
 
 
@@ -106,7 +106,7 @@ def document_def(case: FacturePathCase, *, doc_id: str) -> dict[str, Any]:
         "documentType": "Invoice",
         "extractionMode": case.read_path,
         "validationMode": case.validation_mode,
-        "ocrModel": case.ocr_model,
+        "documentModelId": case.document_model_id,
         "schema": [
             {
                 "id": new_field_id(),

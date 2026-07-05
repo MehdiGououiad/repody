@@ -25,7 +25,6 @@ function releaseNeutralEnv() {
     "REPODY_IMAGE_REGISTRY",
     "REPODY_IMAGE_TAG",
     "REPODY_INCLUDE_BENCHMARK_FIXTURES",
-    "REPODY_LEGACY_IMAGE_ALIASES",
     "REPODY_WEB_IMAGE_TAG",
   ]) {
     delete env[key];
@@ -83,22 +82,10 @@ const checks = [
     stderr: "Invalid REPODY_BACKEND_EXTRAS entry",
   },
   {
-    name: "airgap build reject unknown option",
-    args: ["deploy/scripts/airgap-build-release.mjs", "--wat"],
+    name: "openshift client test reject unknown command",
+    args: ["deploy/scripts/openshift-client-test.mjs", "nope"],
     ok: false,
-    stderr: "Unknown option: --wat",
-  },
-  {
-    name: "airgap build reject missing version",
-    args: ["deploy/scripts/airgap-build-release.mjs"],
-    ok: false,
-    stderr: "Missing --version",
-  },
-  {
-    name: "airgap import reject missing registry",
-    args: ["deploy/scripts/airgap-import.mjs", "--bundle", "."],
-    ok: false,
-    stderr: "Missing --registry",
+    stderr: "Unknown command",
   },
 ];
 

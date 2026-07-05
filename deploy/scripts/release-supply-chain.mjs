@@ -6,7 +6,7 @@
  *
  * Env:
  *   REPODY_IMAGE_REGISTRY, REPODY_IMAGE_TAG (or per-image tags)
- *   COSIGN_KEY — optional private key path (Harbor / on-prem). Omit for keyless (GitHub OIDC).
+ *   COSIGN_KEY — optional private key path (on-prem registry). Omit for keyless (GitHub OIDC).
  *   COSIGN_PASSWORD — key password when using COSIGN_KEY
  *   COSIGN_CERTIFICATE_IDENTITY — verify identity (default: GitHub workflow for this repo)
  *   COSIGN_CERTIFICATE_OIDC_ISSUER — default https://token.actions.githubusercontent.com

@@ -8,7 +8,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 const ns = process.env.REPODY_K8S_NAMESPACE ?? "repody";
 const TIMEOUT_MS = Number(process.env.WARMUP_WAIT_TIMEOUT_MS ?? 600_000);
 const INTERVAL_MS = 3_000;
-const DONE_MARKER = "ocr_worker_warmup_done";
+const DONE_MARKER = "extract_pool_warmup_done";
 const FAILURE_MARKERS = ["repody_vlm_warmup_failed"];
 
 function workerLogs() {
@@ -19,7 +19,7 @@ function workerLogs() {
       ns,
       "logs",
       "-l",
-      "app.kubernetes.io/component=worker-ocr",
+      "app.kubernetes.io/component=worker-extract",
       "--tail=200",
       "--prefix=true",
     ],

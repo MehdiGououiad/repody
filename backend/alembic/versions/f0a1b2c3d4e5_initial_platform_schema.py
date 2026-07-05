@@ -1,8 +1,8 @@
-"""Initial platform schema (squashed through 2026-06).
+"""Initial platform schema (squashed 2026-07).
 
 Revision ID: f0a1b2c3d4e5
 Revises:
-Create Date: 2026-06-15
+Create Date: 2026-07-04
 
 """
 
@@ -42,7 +42,6 @@ def upgrade() -> None:
         sa.Column("deployed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("api_key", sa.String(length=128), nullable=True),
         sa.Column("api_key_hint", sa.String(length=32), nullable=True),
-        sa.Column("default_llm_model", sa.String(length=128), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -65,7 +64,14 @@ def upgrade() -> None:
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("extraction_mode", sa.String(length=32), nullable=False),
         sa.Column("validation_mode", sa.String(length=32), nullable=False),
-        sa.Column("ocr_model", sa.String(length=128), nullable=True),
+        sa.Column("document_model_id", sa.String(length=128), nullable=True),
+        sa.Column("extraction_instructions", sa.Text(), nullable=False, server_default=""),
+        sa.Column(
+            "markdown_extraction",
+            sa.Boolean(),
+            nullable=False,
+            server_default=sa.false(),
+        ),
         sa.ForeignKeyConstraint(["workflow_id"], ["workflows.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -100,6 +106,9 @@ def upgrade() -> None:
     op.create_index(op.f("ix_runs_workflow_id"), "runs", ["workflow_id"], unique=False)
     op.create_index("ix_runs_workflow_created", "runs", ["workflow_id", "created_at"], unique=False)
     op.create_index("ix_runs_status", "runs", ["status"], unique=False)
+    op.create_index("ix_runs_status_worker_pool", "runs", ["status", "worker_pool"], unique=False)
+    op.create_index("ix_runs_status_started_at", "runs", ["status", "started_at"], unique=False)
+    op.create_index("ix_runs_status_created_at", "runs", ["status", "created_at"], unique=False)
     op.create_table(
         "workflow_rules",
         sa.Column("id", sa.String(length=64), nullable=False),
@@ -127,6 +136,7 @@ def upgrade() -> None:
         sa.Column("request_id", sa.String(length=128), nullable=True),
         sa.Column("status", sa.String(length=16), server_default="pending", nullable=False),
         sa.Column("error", sa.Text(), nullable=True),
+        sa.Column("dispatch_attempts", sa.Integer(), nullable=False, server_default="0"),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -141,6 +151,36 @@ def upgrade() -> None:
         "ix_run_dispatch_outbox_status_created",
         "run_dispatch_outbox",
         ["status", "created_at"],
+        unique=False,
+    )
+    op.create_table(
+        "upload_intents",
+        sa.Column("id", sa.String(length=64), nullable=False),
+        sa.Column("storage_key", sa.String(length=512), nullable=False),
+        sa.Column("file_name", sa.String(length=512), nullable=False),
+        sa.Column("mime_type", sa.String(length=128), nullable=False),
+        sa.Column("size", sa.Integer(), nullable=False),
+        sa.Column("document_id", sa.String(length=64), nullable=True),
+        sa.Column("owner_subject", sa.String(length=128), nullable=True),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_index(
+        "ux_upload_intents_storage_key",
+        "upload_intents",
+        ["storage_key"],
+        unique=True,
+    )
+    op.create_index(
+        "ix_upload_intents_created",
+        "upload_intents",
+        ["created_at"],
         unique=False,
     )
     op.create_table(
@@ -182,6 +222,7 @@ def upgrade() -> None:
         sa.Column("document_id", sa.String(length=64), nullable=False),
         sa.Column("name", sa.String(length=128), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
+        sa.Column("template_type", sa.String(length=32), nullable=False),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.ForeignKeyConstraint(["document_id"], ["documents.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
@@ -221,10 +262,16 @@ def downgrade() -> None:
     op.drop_table("run_documents")
     op.drop_index(op.f("ix_rule_results_run_id"), table_name="rule_results")
     op.drop_table("rule_results")
+    op.drop_index("ix_upload_intents_created", table_name="upload_intents")
+    op.drop_index("ux_upload_intents_storage_key", table_name="upload_intents")
+    op.drop_table("upload_intents")
     op.drop_index("ix_run_dispatch_outbox_status_created", table_name="run_dispatch_outbox")
     op.drop_table("run_dispatch_outbox")
     op.drop_index(op.f("ix_workflow_rules_workflow_id"), table_name="workflow_rules")
     op.drop_table("workflow_rules")
+    op.drop_index("ix_runs_status_created_at", table_name="runs")
+    op.drop_index("ix_runs_status_started_at", table_name="runs")
+    op.drop_index("ix_runs_status_worker_pool", table_name="runs")
     op.drop_index("ix_runs_status", table_name="runs")
     op.drop_index("ix_runs_workflow_created", table_name="runs")
     op.drop_index(op.f("ix_runs_workflow_id"), table_name="runs")

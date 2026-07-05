@@ -9,22 +9,21 @@
 | **Local dev** | Developers | [LOCAL.md](./LOCAL.md) | `pnpm dev:all` |
 | **Client external** | Production — BYO Postgres/Redis/S3 | [CLIENT.md](./CLIENT.md#external-profile-byo-services) · [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Helm / Argo CD |
 | **Client bundled** | Production — in-cluster data plane | [CLIENT.md](./CLIENT.md#bundled-profile-in-cluster-data-plane) · [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Helm / Argo CD |
-| **Vendor release** | Ship images to Harbor/GHCR | [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) · [RELEASE.md](./RELEASE.md) · [HARBOR.md](./HARBOR.md) | `pnpm images:release` |
+| **Vendor release** | Ship images to GHCR / client registry | [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) · [RELEASE.md](./RELEASE.md) | `pnpm images:release` |
 
 Command cheat sheet: [docs/COMMANDS.md](../COMMANDS.md).
 
 ---
 
-## Vendor → client in 8 steps
+## Vendor → client in 7 steps
 
-1. **Vendor:** Install Harbor ([HARBOR.md](./HARBOR.md))
-2. **Vendor:** `docker login` + `pnpm images:release` with `REPODY_IMAGE_REGISTRY=harbor.example.com/repody`
-3. **Vendor:** Hand off tag, charts, and [deploy/client/](../../deploy/client/) templates
-4. **Client:** Namespace + Vault + ESO ([SECRETS.md](./SECRETS.md))
-5. **Client:** Store `REGISTRY_DOCKERCONFIGJSON` in Vault → `registry-pull-secret`
-6. **Client:** Copy `values-{external,bundled}.example.yaml` to private GitOps repo
-7. **Client:** `helm upgrade --install` (data chart first if bundled)
-8. **Client:** `curl https://<api>/v1/healthz/live`
+1. **Vendor:** `docker login` + `pnpm images:release` with `REPODY_IMAGE_REGISTRY=ghcr.io/yourorg/repody` (or client registry)
+2. **Vendor:** Hand off tag, charts, and [deploy/client/](../../deploy/client/) templates
+3. **Client:** Namespace + Vault + ESO ([SECRETS.md](./SECRETS.md))
+4. **Client:** Store `REGISTRY_DOCKERCONFIGJSON` in Vault → `registry-pull-secret`
+5. **Client:** Copy `values-{external,bundled}.example.yaml` to private GitOps repo
+6. **Client:** `helm upgrade --install` (data chart first if bundled)
+7. **Client:** `pnpm prod:readiness -- --api-url https://<api>` (see [PROD-OBSERVABILITY.md](./PROD-OBSERVABILITY.md))
 
 Full detail: [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md).
 
@@ -43,13 +42,13 @@ Client kit index: [deploy/client/README.md](../../deploy/client/README.md).
 
 ---
 
-## Vendor QA labs (not client install)
+## Vendor QA (OpenShift client test)
 
 | Lab | Guide | Command |
 |-----|-------|---------|
-| OpenShift CRC | [OPENSHIFT.md](./OPENSHIFT.md) | `pnpm openshift:promote` |
-| k3s client | [K3S-CLIENT.md](./K3S-CLIENT.md) | `pnpm k3s:client` |
-| Enterprise GitOps | [ENTERPRISE-GITOPS.md](./ENTERPRISE-GITOPS.md) | `pnpm enterprise:lab` |
+| OpenShift client test | [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab) | `pnpm openshift:client-test` |
+
+Local daily development uses **Compose only** — see [LOCAL.md](./LOCAL.md).
 
 ---
 
@@ -59,13 +58,10 @@ Client kit index: [deploy/client/README.md](../../deploy/client/README.md).
 |-------|---------|
 | [LOCAL.md](./LOCAL.md) | Compose dev — API, UI, workers, inference |
 | [CLIENT.md](./CLIENT.md) | Client production — Helm, Argo CD, profiles |
-| [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Harbor push → client pull → deploy |
+| [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Registry push → client pull → deploy |
 | [SECRETS.md](./SECRETS.md) | Vault, ESO, hardening |
-| [OPENSHIFT.md](./OPENSHIFT.md) | OpenShift install + CRC lab |
-| [K3S-CLIENT.md](./K3S-CLIENT.md) | k3d bundled client lab |
-| [ENTERPRISE-GITOPS.md](./ENTERPRISE-GITOPS.md) | Harbor + Gitea + Argo CD lab |
+| [OPENSHIFT.md](./OPENSHIFT.md) | OpenShift production + client test lab |
 | [RELEASE.md](./RELEASE.md) | SBOM, cosign, promotion |
-| [HARBOR.md](./HARBOR.md) | Harbor install |
 | [OBSERVABILITY.md](./OBSERVABILITY.md) | OTEL in cluster |
 
 ---
@@ -93,7 +89,7 @@ deploy/helm/repody/values.yaml
 ## Image registry convention
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="harbor.example.com/repody"   # host + Harbor project
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"   # host + project path
 $env:REPODY_IMAGE_TAG="1.0.0"
 ```
 
@@ -102,7 +98,7 @@ Helm values:
 ```yaml
 images:
   api:
-    repository: harbor.example.com/repody/repody-backend
+    repository: ghcr.io/yourorg/repody/repody-backend
     tag: "1.0.0"
 ```
 

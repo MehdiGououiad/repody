@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:17-alpine
+        image: postgres:17.10-alpine
         env:
           POSTGRES_USER: audit
           POSTGRES_PASSWORD: audit
@@ -44,7 +44,6 @@ jobs:
         env:
           AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench_test
           AUDIT_SEED_ON_STARTUP: "false"
-          AUDIT_USE_CREATE_ALL: "false"
       - name: Export OpenAPI
         run: uv run python scripts/export_openapi.py
       - name: OpenAPI drift check

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.db.models import ExtractedField, RunDocument
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.document_modes import (
+    DEFAULT_READ_PATH_ID,
     document_needs_extraction,
     parse_read_path,
     read_path_used_label,
@@ -31,7 +32,8 @@ from audit_workbench.services.run.helpers import (
     progress_mode,
 )
 from audit_workbench.services.run.phase_state import RunPhaseState
-from audit_workbench.services.run_progress import mark_step_done, set_run_progress
+from audit_workbench.services.run.progress_persist import set_run_progress
+from audit_workbench.services.run.progress_plan import mark_step_done
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import get_storage
 
@@ -55,6 +57,7 @@ async def persist_extraction_pair(
             step_id,
             duration_ms=extraction.meta.extraction_ms,
             detail=extraction_step_detail(extraction.meta),
+            cache_hit=extraction.meta.cache_hit,
         )
     for field in extraction.fields:
         session.add(
@@ -165,7 +168,7 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
     else:
         pairs = []
         for idx, job in enumerate(jobs):
-            read_label = read_path_used_label(parse_read_path(job.doc.extraction_mode or "auto").id)
+            read_label = read_path_used_label(parse_read_path(job.doc.extraction_mode or DEFAULT_READ_PATH_ID).id)
             val_label = validation_mode_label(job.validation_mode)
             step_id = f"extract-{job.doc.id}"
             detail = f"{read_label} \u00b7 {val_label}"

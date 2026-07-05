@@ -14,6 +14,7 @@ from audit_workbench.schemas.metrics import (
     PerformancePoint,
     ViolationBreakdown,
 )
+from audit_workbench.settings import get_settings
 
 _DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -220,11 +221,13 @@ async def get_metrics(session: AsyncSession) -> MetricsResponse:
         violations = [ViolationBreakdown(type="none", share=100.0, color="neutral")]
 
     alerts: list[HealthAlert] = []
+    settings = get_settings()
+    stale_minutes = max(settings.stale_run_timeout_minutes, 1)
     stale_q = await session.execute(
         select(func.count(Run.id)).where(
             Run.status == RunStatus.running.value,
             Run.started_at.is_not(None),
-            Run.started_at < datetime.now(UTC) - timedelta(minutes=15),
+            Run.started_at < datetime.now(UTC) - timedelta(minutes=stale_minutes),
         )
     )
     stale = int(stale_q.scalar() or 0)

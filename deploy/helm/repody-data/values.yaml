@@ -2,45 +2,60 @@ global:
   imagePullSecrets: []
   deploymentEnvironment: production
 
+# Official Docker Library + pgsty MinIO fork (see deploy/pinned-images.env, compose.yaml).
 postgresql:
   enabled: false
+  image:
+    registry: docker.io
+    repository: postgres
+    tag: "17.10-alpine"
   auth:
     username: audit
     database: audit_workbench
     existingSecret: ""
-    password: ""
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/postgresql
-    tag: 17.6.0-debian-12-r4
-  primary:
-    persistence:
-      enabled: true
-      size: 20Gi
+    secretKeys:
+      passwordKey: password
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+  resources: {}
 
 redis:
   enabled: false
-  architecture: standalone
+  image:
+    registry: docker.io
+    repository: redis
+    tag: "8.8.0-alpine"
   auth:
     enabled: false
-  image:
-    repository: bitnamilegacy/redis
-    tag: 8.4.0-debian-12-r1
+    existingSecret: ""
+    passwordKey: redis-password
+  persistence:
+    enabled: true
+    size: 4Gi
+    storageClass: ""
+  resources: {}
 
 minio:
   enabled: false
-  mode: standalone
   image:
+    registry: docker.io
     repository: pgsty/minio
     tag: RELEASE.2026-06-18T00-00-00Z
-  console:
-    enabled: false
+  mcImage:
+    registry: docker.io
+    repository: pgsty/mc
+    tag: RELEASE.2026-04-17T00-00-00Z
   auth:
-    rootUser: minioadmin
-    rootPassword: ""
+    existingSecret: ""
+    rootUserKey: rootUser
+    rootPasswordKey: rootPassword
   defaultBuckets: audit-documents
   persistence:
     enabled: true
     size: 50Gi
+    storageClass: ""
+  resources: {}
 
 gatewayConsumerNamespace: repody

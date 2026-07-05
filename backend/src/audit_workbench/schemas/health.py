@@ -15,11 +15,12 @@ class HealthLiveResponse(CamelModel):
 
 class WorkerPoolsHealth(CamelModel):
     fast: str
-    ocr: str
+    extract: str
 
 
 class HealthReadinessResponse(CamelModel):
-    status: Literal["ok"]
+    status: Literal["ok", "degraded"]
+    redis_ok: bool = Field(serialization_alias="redisOk")
     extractor: str
     inference: str
     model_runner: bool | None = Field(serialization_alias="modelRunner")

@@ -33,7 +33,7 @@ async def test_resolve_worker_pool_no_files_uses_fast(pool_settings):
 
 
 @pytest.mark.asyncio
-async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
+async def test_resolve_worker_pool_uploaded_document_model_uses_extract(pool_settings):
     session = AsyncMock()
     run = MagicMock()
     run.worker_pool = None
@@ -42,7 +42,7 @@ async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
     run.documents = [run_doc]
 
     wf = MagicMock()
-    wf_doc = MagicMock(id="doc-1", extraction_mode="auto")
+    wf_doc = MagicMock(id="doc-1", extraction_mode="document_model")
     wf.documents = [wf_doc]
 
     run_result = MagicMock()
@@ -52,11 +52,11 @@ async def test_resolve_worker_pool_uploaded_auto_uses_ocr(pool_settings):
     session.execute = AsyncMock(side_effect=[run_result, wf_result])
 
     pool = await resolve_worker_pool(session, "run-2")
-    assert pool == "ocr"
+    assert pool == "extract"
 
 
 @pytest.mark.asyncio
-async def test_resolve_worker_pool_uploaded_document_model_uses_ocr(pool_settings):
+async def test_resolve_worker_pool_uploaded_document_model_uses_extract(pool_settings):
     session = AsyncMock()
     run = MagicMock()
     run.worker_pool = None
@@ -74,4 +74,4 @@ async def test_resolve_worker_pool_uploaded_document_model_uses_ocr(pool_setting
     session.execute = AsyncMock(side_effect=[run_result, wf_result])
 
     pool = await resolve_worker_pool(session, "run-4")
-    assert pool == "ocr"
+    assert pool == "extract"

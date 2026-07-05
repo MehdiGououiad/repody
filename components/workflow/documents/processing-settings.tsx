@@ -30,15 +30,15 @@ export function ProcessingSettings({
   options: ProcessingOptions;
   onRetry: () => void;
 }) {
-  const { paths, ocrModels, defaultPath, defaultOcr, loaded, error } = options;
+  const { paths, documentModelIds, defaultPath, defaultOcr, loaded, error } = options;
 
   const pathId = normalizeReadPath(doc.extractionMode ?? defaultPath);
   const pathSpec = paths.find((p) => p.id === pathId);
   const showReadPath = paths.length > 1;
-  const modelsForPath = ocrModels;
+  const modelsForPath = documentModelIds;
   const firstAvailable = modelsForPath.find((m) => m.available !== false);
-  const selectedOcr = doc.ocrModel ?? firstAvailable?.id ?? defaultOcr;
-  const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? ocrModels.find((m) => m.id === selectedOcr);
+  const selectedOcr = doc.documentModelId ?? firstAvailable?.id ?? defaultOcr;
+  const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? documentModelIds.find((m) => m.id === selectedOcr);
   const markdownOnlyForced = selectedModel?.markdownOnly === true;
   const readPathId = `read-path-${doc.id}`;
   const extractionModelId = `extraction-model-${doc.id}`;
@@ -49,10 +49,10 @@ export function ProcessingSettings({
       : (selectedModel?.runtime ?? null);
 
   const onPathChange = (v: string) => {
-    const firstModel = ocrModels.find((m) => m.available !== false);
+    const firstModel = documentModelIds.find((m) => m.available !== false);
     onChange({
       extractionMode: v,
-      ocrModel: firstModel?.id ?? doc.ocrModel,
+      documentModelId: firstModel?.id ?? doc.documentModelId,
     });
   };
 
@@ -109,8 +109,8 @@ export function ProcessingSettings({
         <Select
           value={selectedOcr}
           onValueChange={(v) => {
-            const model = ocrModels.find((m) => m.id === v);
-            const patch: Partial<DocumentDef> = { ocrModel: v };
+            const model = documentModelIds.find((m) => m.id === v);
+            const patch: Partial<DocumentDef> = { documentModelId: v };
             if (model?.markdownOnly) {
               patch.markdownExtraction = true;
             }
@@ -119,12 +119,12 @@ export function ProcessingSettings({
           disabled={!loaded || error}
         >
           <SelectTrigger id={extractionModelId} className="h-9">
-            <SelectValue placeholder={t("extraction.ocrModelPlaceholder")} />
+            <SelectValue placeholder={t("extraction.documentModelIdPlaceholder")} />
           </SelectTrigger>
           <SelectContent>
             {modelsForPath.length === 0 ? (
               <SelectItem value={REPODY_VLM_CATALOG_ID} disabled>
-                {t("extraction.ocrModelLoading")}
+                {t("extraction.documentModelIdLoading")}
               </SelectItem>
             ) : (
               modelsForPath.map((m) => (

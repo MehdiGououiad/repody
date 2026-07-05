@@ -117,7 +117,7 @@ async def list_catalog_with_availability(
         )
         entries.append(AvailableModelEntry(spec=spec, available=available, availability_note=note))
 
-    default = normalize_public_catalog_id(settings.default_ocr_model)
+    default = normalize_public_catalog_id(settings.default_document_model_id)
     if not any(entry.spec.id == default and entry.available for entry in entries):
         fallback = next((entry for entry in entries if entry.available), None)
         if fallback is not None:
