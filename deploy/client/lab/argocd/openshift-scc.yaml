@@ -1,0 +1,36 @@
+# OpenShift lab — relaxed SCC for upstream Argo CD stable manifests.
+# Official install sets runAsUser 999 + seccompProfile; restricted-v2 blocks that on CRC.
+# @see https://argo-cd.readthedocs.io/en/stable/getting_started/
+# @see https://docs.redhat.com/en/documentation/openshift_container_platform/latest/html/authentication_and_authorization/managing-pod-security-policies
+# Equivalent to: oc adm policy add-scc-to-user privileged -z <sa> -n argocd (for each SA below).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:scc:privileged
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+  - kind: ServiceAccount
+    name: argocd-application-controller
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-applicationset-controller
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-dex-server
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-notifications-controller
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-redis
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-repo-server
+    namespace: argocd
+  - kind: ServiceAccount
+    name: argocd-server
+    namespace: argocd

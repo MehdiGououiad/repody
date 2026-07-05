@@ -1,0 +1,15 @@
+# Shared OpenShift client lab overlay — enterprise hardening + observability.
+networkPolicy:
+  enabled: true
+
+ingress:
+  annotations:
+    route.openshift.io/termination: edge
+
+config:
+  logJson: true
+  operatorActionsEnabled: false
+
+observability:
+  otelEnabled: true
+  otelEndpoint: http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318/v1/traces

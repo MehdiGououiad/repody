@@ -1,0 +1,39 @@
+# Argo CD lab — official argo-helm chart (non-HA).
+# @see https://argo-cd.readthedocs.io/en/stable/operator-manual/installation/
+global:
+  domain: argocd.example.com
+
+configs:
+  params:
+    server.insecure: true
+
+server:
+  service:
+    type: ClusterIP
+
+redis:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+repoServer:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+applicationSet:
+  enabled: false
+
+notifications:
+  enabled: false
+
+dex:
+  enabled: false

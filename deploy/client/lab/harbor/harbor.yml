@@ -1,0 +1,18 @@
+# Harbor lab — official harbor.yml (Docker Compose installer).
+# @see https://goharbor.io/docs/main/install-config/configure-yml/
+# @see https://goharbor.io/docs/main/install-config/run-installer-script/
+
+hostname: localhost
+
+http:
+  port: 5080
+
+# HTTPS disabled for lab (HTTP only). Enable with certificate/private_key per harbor.yml.tmpl.
+
+harbor_admin_password: Harbor12345
+
+data_volume: harbor-data
+
+# Lab only — HTTP registry for local push; set REPODY_HARBOR_CLUSTER_HOST for CRC pulls.
+trivy:
+  ignore_unfixed: true

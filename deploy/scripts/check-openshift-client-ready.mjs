@@ -1,44 +1,30 @@
 #!/usr/bin/env node
 /**
- * Client-readiness checks for OpenShift bundled lab / handoff validation.
+ * Client-readiness checks for OpenShift client test lab.
  *
  *   node deploy/scripts/check-openshift-client-ready.mjs [--namespace repody]
- *
- * Exits 0 when the cluster matches production-shaped client expectations.
+ *     [--profile=bundled|external] [--registry=harbor|openshift]
  */
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolveExecutable } from "./runtime-env.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const ns = process.argv.includes("--namespace")
-  ? process.argv[process.argv.indexOf("--namespace") + 1]
-  : "repody";
+const argv = process.argv.slice(2);
+const nsIdx = argv.indexOf("--namespace");
+const ns = nsIdx >= 0 ? argv[nsIdx + 1] : "repody";
+const profileArg = argv.find((a) => a.startsWith("--profile="));
+const registryArg = argv.find((a) => a.startsWith("--registry="));
+const profile = profileArg?.slice("--profile=".length) === "external" ? "external" : "bundled";
+const registryMode = registryArg?.slice("--registry=".length) === "openshift" ? "openshift" : "harbor";
 
 const failures = [];
 const warnings = [];
 
-function resolveOc() {
-  const fromEnv = process.env.CRC_OC?.trim() || process.env.OC?.trim();
-  if (fromEnv && existsSync(fromEnv)) return fromEnv;
-  const candidates = [
-    path.join(os.homedir(), ".crc", "bin", "oc", "oc.exe"),
-    path.join(os.homedir(), ".crc", "bin", "oc.exe"),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) return candidate;
-  }
-  return "oc";
+function kubectl(args) {
+  return spawnSync(resolveExecutable("kubectl"), args, { encoding: "utf8" });
 }
 
-function oc(args) {
-  return spawnSync(resolveOc(), args, { encoding: "utf8" });
-}
-
-function ocOut(args) {
-  const result = oc(args);
+function kubectlOut(args) {
+  const result = kubectl(args);
   return result.status === 0 ? (result.stdout ?? "").trim() : "";
 }
 
@@ -51,27 +37,36 @@ function warnIf(condition, message) {
 }
 
 function main() {
-  if (!ocOut(["whoami"])) {
-    console.error("error: oc not logged in");
+  if (!kubectlOut(["config", "current-context"])) {
+    console.error("error: kubectl has no current context");
     process.exit(1);
   }
 
-  const enforce = ocOut(["get", "namespace", ns, "-o", "jsonpath={.metadata.labels.pod-security\\.kubernetes\\.io/enforce}"]);
+  const enforce = kubectlOut([
+    "get",
+    "namespace",
+    ns,
+    "-o",
+    "jsonpath={.metadata.labels.pod-security\\.kubernetes\\.io/enforce}",
+  ]);
   requireOk(
     enforce === "restricted" || enforce === "baseline",
     `namespace ${ns} must use pod-security.kubernetes.io/enforce=restricted or baseline (got: ${enforce || "unset"})`,
   );
   warnIf(enforce === "baseline", `namespace ${ns} uses enforce=baseline; prefer restricted for production-shaped labs`);
 
-  const esNames = [
-    "registry-pull-secret",
-    "repody-data-postgresql",
-    "repody-data-redis",
-    "repody-data-minio",
-    "repody-runtime-secrets",
-  ];
+  const esNames =
+    profile === "external"
+      ? ["registry-pull-secret", "repody-runtime-secrets"]
+      : [
+          "registry-pull-secret",
+          "repody-data-postgresql",
+          "repody-data-redis",
+          "repody-data-minio",
+          "repody-runtime-secrets",
+        ];
   for (const name of esNames) {
-    const ready = ocOut([
+    const ready = kubectlOut([
       "get",
       "externalsecret",
       name,
@@ -83,25 +78,52 @@ function main() {
     requireOk(ready === "True", `ExternalSecret ${name} not Ready (status: ${ready || "missing"})`);
   }
 
-  const storeYaml = ocOut(["get", "clustersecretstore", "vault-repody", "-o", "yaml"]);
-  requireOk(storeYaml.includes("conditions:"), "ClusterSecretStore vault-repody should define spec.conditions (namespace scope)");
+  const storeYaml = kubectlOut(["get", "clustersecretstore", "vault-repody", "-o", "yaml"]);
+  requireOk(storeYaml.includes("conditions:"), "ClusterSecretStore vault-repody should define spec.conditions");
 
-  const netpolCount = ocOut(["get", "networkpolicy", "-n", ns, "--no-headers"]);
+  const netpolCount = kubectlOut(["get", "networkpolicy", "-n", ns, "--no-headers"]);
   const netpolLines = netpolCount ? netpolCount.split("\n").filter(Boolean).length : 0;
   requireOk(netpolLines > 0, `expected NetworkPolicies in ${ns} (enterprise hardening)`);
 
-  const kcAdmin = ocOut([
+  const logJson = kubectlOut([
     "get",
-    "secret",
-    "repody-runtime-secrets",
+    "configmap",
+    "repody-config",
     "-n",
     ns,
     "-o",
-    "jsonpath={.data.KEYCLOAK_ADMIN_PASSWORD}",
+    "jsonpath={.data.AUDIT_LOG_JSON}",
   ]);
-  requireOk(Boolean(kcAdmin), "repody-runtime-secrets missing KEYCLOAK_ADMIN_PASSWORD (Keycloak admin from Vault/ESO)");
+  requireOk(logJson === "true", "repody-config must set AUDIT_LOG_JSON=true (structured JSON logs)");
 
-  const registryData = ocOut([
+  const otelEnabled = kubectlOut([
+    "get",
+    "configmap",
+    "repody-config",
+    "-n",
+    ns,
+    "-o",
+    "jsonpath={.data.AUDIT_OTEL_ENABLED}",
+  ]);
+  if (otelEnabled === "true") {
+    const otelReady = kubectlOut([
+      "get",
+      "deploy",
+      "otel-collector-opentelemetry-collector",
+      "-n",
+      "observability",
+      "-o",
+      "jsonpath={.status.readyReplicas}",
+    ]);
+    requireOk(
+      otelReady === "1",
+      "otel-collector in observability namespace should have 1 ready replica",
+    );
+  } else {
+    warnIf(otelEnabled !== "false", "AUDIT_OTEL_ENABLED not set; skipping otel-collector check");
+  }
+
+  const registryData = kubectlOut([
     "get",
     "secret",
     "registry-pull-secret",
@@ -114,8 +136,15 @@ function main() {
     try {
       const decoded = JSON.parse(Buffer.from(registryData, "base64").toString("utf8"));
       const hosts = Object.keys(decoded.auths ?? {});
-      const hasInternal = hosts.some((h) => h.includes("image-registry.openshift-image-registry.svc"));
-      requireOk(hasInternal, "registry-pull-secret missing internal OpenShift registry auth host");
+      if (registryMode === "openshift") {
+        const hasInternal = hosts.some((h) => h.includes("image-registry.openshift-image-registry.svc"));
+        requireOk(hasInternal, "registry-pull-secret missing internal OpenShift registry auth host");
+      } else {
+        const hasHarbor = hosts.some(
+          (h) => h.includes("5080") || h.includes("harbor") || h.includes("crc.testing") || h.includes("crc.internal"),
+        );
+        requireOk(hasHarbor || hosts.length > 0, "registry-pull-secret should include Harbor registry auth");
+      }
     } catch {
       failures.push("registry-pull-secret .dockerconfigjson is not valid JSON");
     }
@@ -130,16 +159,18 @@ function main() {
       releases = [];
     }
   }
-  for (const release of ["repody-data", "repody-auth", "repody"]) {
+  const expectedReleases =
+    profile === "external" ? ["repody-auth", "repody"] : ["repody-data", "repody-auth", "repody"];
+  for (const release of expectedReleases) {
     const row = releases.find((r) => r.name === release);
     if (!row) {
-      warnIf(true, `helm release ${release} not found in ${ns}`);
+      warnIf(true, `helm release ${release} not found in ${ns} (may be Argo CD managed)`);
     } else {
       requireOk(row.status === "deployed", `helm release ${release} status is ${row.status}, expected deployed`);
     }
   }
 
-  const apiReady = ocOut([
+  const apiReady = kubectlOut([
     "get",
     "deploy",
     "repody-api",
@@ -150,7 +181,7 @@ function main() {
   ]);
   requireOk(apiReady === "1", `repody-api ready replicas: ${apiReady || "0"}`);
 
-  const vaultDev = ocOut([
+  const vaultDev = kubectlOut([
     "get",
     "statefulset",
     "vault",
@@ -159,7 +190,7 @@ function main() {
     "-o",
     "jsonpath={.spec.template.spec.containers[0].env[?(@.name==\"VAULT_DEV_ROOT_TOKEN_ID\")].value}",
   ]);
-  warnIf(Boolean(vaultDev), "Vault dev mode detected — acceptable for CRC lab only");
+  warnIf(Boolean(vaultDev), "Vault dev mode detected — acceptable for client test lab only");
 
   if (warnings.length) {
     console.warn("\nWarnings:");
@@ -172,7 +203,7 @@ function main() {
     process.exit(1);
   }
 
-  console.log(`\nClient readiness OK for namespace ${ns}.\n`);
+  console.log(`\nClient readiness OK (${profile}, registry=${registryMode}, namespace ${ns}).\n`);
 }
 
 main();
