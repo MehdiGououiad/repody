@@ -29,6 +29,7 @@ spec:
   persistentVolumeClaimRetentionPolicy:
     whenDeleted: Retain
     whenScaled: Retain
+  revisionHistoryLimit: 10
   selector:
     matchLabels:
       app.kubernetes.io/name: redis
