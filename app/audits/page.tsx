@@ -10,7 +10,12 @@ export default async function AuditsPage() {
   const [t, tCommon, auditRes] = await Promise.all([
     getTranslations("audits"),
     getTranslations("common"),
-    fetchAudits().catch(() => ({ audits: [] as Awaited<ReturnType<typeof fetchAudits>>["audits"] })),
+    fetchAudits().catch(() => ({
+      audits: [] as Awaited<ReturnType<typeof fetchAudits>>["audits"],
+      total: 0,
+      limit: 200,
+      offset: 0,
+    })),
   ]);
 
   const audits = auditRes.audits;

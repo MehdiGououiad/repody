@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { QueueLiveBadge } from "@/components/dashboard/queue-live-badge";
+import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts";
 import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
 import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
 import { useDashboardLive, type LiveDashboardData } from "@/lib/hooks/use-dashboard-live";
@@ -110,9 +111,11 @@ export function BusinessDashboard({
 
   return (
     <div className="space-y-6">
+      <DashboardAlerts alerts={live.healthAlerts} />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <LiveIndicator updated={live.lastUpdated} />
-        <QueueLiveBadge />
+        <QueueLiveBadge queue={live.queue} />
       </div>
 
       <section className="space-y-3">

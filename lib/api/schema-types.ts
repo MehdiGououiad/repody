@@ -9,4 +9,7 @@ export type RunPollResponse = Schema["RunPollResponse"];
 export type RunCreatedResponse = Schema["RunCreatedResponse"];
 export type HealthLiveResponse = Schema["HealthLiveResponse"];
 export type HealthReadinessResponse = Schema["HealthReadinessResponse"];
+export type AuditListResponse = Schema["AuditListResponse"];
+export type DashboardResponse = Schema["DashboardResponse"];
+export type QueueSnapshot = Schema["QueueSnapshot"];
 export type CreateRunJsonBody = Schema["CreateRunJsonBody"];

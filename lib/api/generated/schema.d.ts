@@ -300,6 +300,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard Bundle */
+        get: operations["dashboard_bundle_v1_dashboard_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/rules/library": {
         parameters: {
             query?: never;
@@ -717,6 +734,12 @@ export interface components {
         AuditListResponse: {
             /** Audits */
             audits: components["schemas"]["AuditListItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
         };
         /** BenchmarkReportSchema */
         BenchmarkReportSchema: {
@@ -1019,6 +1042,15 @@ export interface components {
              */
             owner: string;
         };
+        /** DashboardResponse */
+        DashboardResponse: {
+            metrics: components["schemas"]["MetricsResponse"];
+            /** Audits */
+            audits: components["schemas"]["AuditListItem"][];
+            /** Workflows */
+            workflows: components["schemas"]["WorkflowSchema"][];
+            queue: components["schemas"]["QueueSnapshot"];
+        };
         /** DeployWorkflowBody */
         DeployWorkflowBody: {
             /** Apikey */
@@ -1318,6 +1350,12 @@ export interface components {
             rateLimitEnabled: boolean;
             /** Admissioncontrolenabled */
             admissionControlEnabled: boolean;
+            /** Admissionmaxqueued */
+            admissionMaxQueued?: number | null;
+            /** Admissionmaxinflight */
+            admissionMaxInflight?: number | null;
+            /** Admissionmaxextractinflight */
+            admissionMaxExtractInflight?: number | null;
             /** Queuedruns */
             queuedRuns: number;
             /** Runningruns */
@@ -1725,6 +1763,15 @@ export interface components {
             headers?: {
                 [key: string]: string;
             };
+        };
+        /** QueueSnapshot */
+        QueueSnapshot: {
+            /** Queuedruns */
+            queuedRuns: number;
+            /** Runningruns */
+            runningRuns: number;
+            /** Inflightruns */
+            inflightRuns: number;
         };
         /** ReadPathOption */
         ReadPathOption: {
@@ -2858,7 +2905,10 @@ export interface operations {
     };
     list_audits_v1_audits_get: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
             header?: {
                 authorization?: string | null;
             };
@@ -2938,6 +2988,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MetricsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dashboard_bundle_v1_dashboard_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardResponse"];
                 };
             };
             /** @description Validation Error */

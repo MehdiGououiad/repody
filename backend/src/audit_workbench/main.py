@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from audit_workbench.api import (
     audits,
+    dashboard,
     health,
     iam,
     metrics,
@@ -111,6 +112,11 @@ def create_app() -> FastAPI:
     )
     app.include_router(
         metrics.router,
+        prefix="/v1",
+        dependencies=[Depends(require_permission("metrics", "read"))],
+    )
+    app.include_router(
+        dashboard.router,
         prefix="/v1",
         dependencies=[Depends(require_permission("metrics", "read"))],
     )

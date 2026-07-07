@@ -1,15 +1,12 @@
 from __future__ import annotations
 
-import asyncio
-
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Document, Workflow, WorkflowStatus
 from audit_workbench.schemas.workflow import WorkflowSchema
-from audit_workbench.services.mappers import workflow_to_schema
+from audit_workbench.services.mappers import workflow_to_list_schema, workflow_to_schema
 from audit_workbench.services.workflow.deployment import deploy_workflow
 from audit_workbench.services.workflow.repository import (
     load_workflow,
@@ -17,6 +14,7 @@ from audit_workbench.services.workflow.repository import (
     upsert_workflow_aggregate,
 )
 from audit_workbench.services.workflow.stats import (
+    batch_workflow_api_stats,
     batch_workflow_stats,
     workflow_api_stats,
     workflow_stats,
@@ -28,27 +26,23 @@ async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
     result = await session.execute(
         select(Workflow)
         .where(Workflow.status != WorkflowStatus.archived.value)
-        .options(
-            selectinload(Workflow.documents).selectinload(Document.schema_fields),
-            selectinload(Workflow.rules),
-        )
         .order_by(Workflow.updated_at.desc())
     )
     workflows = result.scalars().all()
-    stats = await batch_workflow_stats(session, [wf.id for wf in workflows])
-    deployed = [wf for wf in workflows if wf.deployed_at]
-    api_stats_results = await asyncio.gather(
-        *[workflow_api_stats(session, wf.id) for wf in deployed]
-    )
-    api_stats_by_id = {
-        wf.id: api_stats for wf, api_stats in zip(deployed, api_stats_results, strict=True)
-    }
+    if not workflows:
+        return []
+
+    workflow_ids = [wf.id for wf in workflows]
+    stats = await batch_workflow_stats(session, workflow_ids)
+    deployed_ids = [wf.id for wf in workflows if wf.deployed_at]
+    api_stats_by_id = await batch_workflow_api_stats(session, deployed_ids)
+
     out: list[WorkflowSchema] = []
     for wf in workflows:
         total, rate, last = stats.get(wf.id, (0, 0.0, None))
-        api_stats = api_stats_by_id.get(wf.id)
+        api_stats = api_stats_by_id.get(wf.id) if wf.deployed_at else None
         out.append(
-            workflow_to_schema(
+            workflow_to_list_schema(
                 wf,
                 total_runs=total,
                 success_rate=rate,

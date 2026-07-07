@@ -7,7 +7,7 @@ Single reference for `backend/` — APIs, scripts, and source layout. For archit
 
 ---
 
-## HTTP API (36 endpoints)
+## HTTP API (37 endpoints)
 
 All routes mount at `/v1`. Admin routes require OIDC JWT (`require_management_access`). Run routes accept admin JWT or workflow API key.
 
@@ -45,7 +45,7 @@ All routes mount at `/v1`. Admin routes require OIDC JWT (`require_management_ac
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/audits` | List completed runs |
+| `GET` | `/audits` | List completed runs (`limit`, `offset`, `total`) |
 | `GET` | `/audits/{id}` | Full audit report (`id` = run id) |
 
 ### Metrics (`api/metrics.py`) — admin
@@ -53,6 +53,14 @@ All routes mount at `/v1`. Admin routes require OIDC JWT (`require_management_ac
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/metrics` | Platform usage metrics |
+
+### Dashboard (`api/dashboard.py`) — admin
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/dashboard` | Bundled dashboard snapshot (metrics + recent audits + workflow summaries + queue) |
+
+The web UI loads the dashboard from `/dashboard` (SSR + live refresh). `/metrics`, `/audits`, and `/workflows` remain available for direct API use.
 
 ### Rules (`api/rules_library.py`) — admin
 

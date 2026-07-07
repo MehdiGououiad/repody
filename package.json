@@ -39,6 +39,7 @@
     "lint": "eslint app components lib proxy.ts",
     "typecheck": "tsc --noEmit",
     "review:check": "pnpm lint && pnpm typecheck && pnpm test:api && pnpm deploy:check",
+    "review:check:fast": "pnpm lint && pnpm typecheck && pnpm test:api:e2e:fast",
     "architecture:check": "node deploy/scripts/check-architecture.mjs",
     "test:auth": "node scripts/backend-run.mjs --dev pytest tests/test_auth -q",
     "test:api": "node scripts/backend-run.mjs --dev pytest tests/ -v -m \"not live\"",

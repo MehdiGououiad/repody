@@ -66,3 +66,11 @@ export function workflowDraftFingerprint(input: {
     rules,
   });
 }
+
+/** Fingerprint for rule validation requests (name excluded). */
+export function rulesValidationFingerprint(
+  documents: DocumentDef[],
+  rules: WorkflowRule[]
+): string {
+  return workflowDraftFingerprint({ name: "", documents, rules });
+}

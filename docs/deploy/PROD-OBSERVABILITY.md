@@ -58,7 +58,7 @@ Configure in Loki/Elastic/Datadog from JSON structlog fields:
 
 ## Metrics dashboard (business API)
 
-`GET /v1/metrics` exposes weekly KPIs. Stale-run alert uses `AUDIT_STALE_RUN_TIMEOUT_MINUTES` (aligned with maintenance reap).
+`GET /v1/dashboard` bundles metrics, recent audits, workflow summaries, and queue depth for the web UI. `GET /v1/metrics` remains available for direct KPI access. Stale-run alerts use `AUDIT_STALE_RUN_TIMEOUT_MINUTES` (aligned with maintenance reap).
 
 **Not included today:** Prometheus `/metrics` scrape endpoint. Use OTLP traces + log alerts until app metrics are added.
 

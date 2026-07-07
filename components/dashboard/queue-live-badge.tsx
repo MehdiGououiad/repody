@@ -2,13 +2,23 @@
 
 import { ListOrdered, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useQueueLive } from "@/lib/hooks/use-queue-live";
+import type { QueueSnapshot } from "@/lib/api/schema-types";
 import { cn } from "@/lib/utils";
 
-export function QueueLiveBadge({ className }: { className?: string }) {
-  const t = useTranslations("dashboard.queueLive");
-  const queue = useQueueLive();
+const EMPTY_QUEUE: QueueSnapshot = {
+  queuedRuns: 0,
+  runningRuns: 0,
+  inflightRuns: 0,
+};
 
+export function QueueLiveBadge({
+  className,
+  queue = EMPTY_QUEUE,
+}: {
+  className?: string;
+  queue?: QueueSnapshot;
+}) {
+  const t = useTranslations("dashboard.queueLive");
   const { runningRuns, queuedRuns } = queue;
   const active = runningRuns > 0 || queuedRuns > 0;
 
