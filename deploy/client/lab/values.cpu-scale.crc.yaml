@@ -1,0 +1,48 @@
+# CRC / single-node CPU tuning — fixed replicas (no HPA: metrics-server often absent on CRC).
+# Fits ~12 GiB node: one extract pod with in-process slots, higher fast-worker concurrency.
+# VLM throughput still caps extract; this profile optimizes PDF prep, storage fetch, and logic runs.
+
+hpaBehavior:
+  enabled: false
+
+api:
+  replicas: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+workerExtract:
+  replicas: 1
+  maxJobs: 2
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+workerFast:
+  replicas: 1
+  maxJobs: 4
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+config:
+  parallelDocExtraction: "true"
+  parallelStorageFetch: true

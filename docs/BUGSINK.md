@@ -4,7 +4,32 @@
 
 ## Local Compose dev
 
-Bugsink is **not** bundled in Compose. Use client-managed Bugsink or skip error tracking locally.
+Bugsink runs in the **observability** profile (`pnpm dev:all` or `pnpm dev:observability`):
+
+| | |
+|--|--|
+| URL | http://localhost:8090 |
+| Login | admin@repody.local / repody-dev |
+
+**First-time setup**
+
+1. Start observability: `pnpm dev:observability`
+2. Open http://localhost:8090 and sign in
+3. Create a project (e.g. `repody-local`) and copy the DSN
+4. Set DSN in `backend/.env` and `.env.local`:
+
+```env
+BUGSINK_DSN=http://<key>@127.0.0.1:8090/<project-id>
+NEXT_PUBLIC_BUGSINK_DSN=http://<key>@127.0.0.1:8090/<project-id>
+```
+
+5. For **Compose workers**, add the same DSN to repo-root `.env` (Compose interpolation) using `host.docker.internal`:
+
+```env
+BUGSINK_DSN=http://<key>@host.docker.internal:8090/<project-id>
+```
+
+6. Restart API and recreate workers: `pnpm dev:restart` (workers) + restart API
 
 ## Kubernetes
 

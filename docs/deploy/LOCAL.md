@@ -56,8 +56,13 @@ Taskiq workers run as **Linux Compose services** (`--profile workers`) — worke
 | MinIO console | http://localhost:9001 | `minioadmin` / `minio-local-dev` |
 | Keycloak | http://localhost:8080 | admin / admin · realm `repody` |
 | NuExtract | http://localhost:8081 | llama-server (host; workers use `host.docker.internal`) |
+| Grafana | http://localhost:3030 | `pnpm dev:all` (default) or `pnpm dev:observability` |
+| Bugsink | http://localhost:8090 | admin@repody.local / repody-dev (observability profile) |
+| OTLP | http://localhost:4318 | traces from API/workers |
 
 Sign in to Repody: `operator@repody.local` / `repody-dev` (use **localhost**, not `127.0.0.1`, for auth).
+
+**Observability:** `pnpm dev:all` starts Grafana, Loki, Tempo, OTEL, and Bugsink by default (`-- --no-obs` to skip). JSON logs ship to Loki; traces correlate via `trace_id`. Restart the API after first enable. See [docs/OBSERVABILITY.md](../OBSERVABILITY.md).
 
 **Pools:** runs **with uploaded PDFs** use the **OCR** pool (NuExtract). Runs without files use **fast**. `pnpm dev` starts both workers by default.
 

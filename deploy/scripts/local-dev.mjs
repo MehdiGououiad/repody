@@ -10,6 +10,7 @@
  *   pnpm dev:status  health summary
  *   pnpm dev:stop    stop API, UI, NuExtract, and full Compose stack
  *   pnpm dev:restart restart NuExtract + worker containers
+ *   pnpm dev:observability  Grafana + Loki + Tempo + OTEL + Bugsink (optional profile)
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -28,6 +29,7 @@ import {
   waitForPortRelease,
 } from "./runtime-env.mjs";
 import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
+import { printDevDashboard } from "./dev-dashboard.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const BACKEND_ENV = path.join(ROOT, "backend/.env");
@@ -39,6 +41,12 @@ const LLAMA_PATHS_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.local.env.exa
 const API_PORT = Number.parseInt(process.env.REPODY_API_PORT || "8000", 10);
 const API_ORIGIN = `http://127.0.0.1:${API_PORT}`;
 const UI_ORIGIN = "http://127.0.0.1:3000";
+const GRAFANA_ORIGIN = "http://127.0.0.1:3030";
+const OTEL_HTTP_ORIGIN = "http://127.0.0.1:4318";
+const BUGSINK_ORIGIN = "http://127.0.0.1:8090";
+const LOG_DIR = path.join(ROOT, ".logs");
+const LOG_FILE = path.join(LOG_DIR, "repody-api.log");
+const OBS_ENV_FILE = path.join(ROOT, "deploy/env/observability.enabled.env");
 
 const args = process.argv.slice(2);
 const command = args[0] || "stack";
@@ -119,7 +127,112 @@ function llamaConfigured() {
   return /LLAMACPP_MODEL=\S/.test(body) && !/LLAMACPP_MODEL=C:\\path/.test(body);
 }
 
-function setup() {
+function isObservabilityRunning() {
+  const result = run("docker", ["compose", "--profile", "observability", "ps", "-q", "loki"], {
+    allowFail: true,
+  });
+  return Boolean(result.stdout?.trim());
+}
+
+function dashboardContext() {
+  return {
+    apiPort: API_PORT,
+    observability: wantsObservability() || isObservabilityRunning(),
+    llama: llamaConfigured() && !flags.has("--no-llama"),
+    extractOnly: flags.has("--extract-only") || flags.has("--ocr-only"),
+  };
+}
+
+async function showDevDashboard({ appRunning = false, probe = true } = {}) {
+  await printDevDashboard({
+    ...dashboardContext(),
+    appRunning,
+    probe,
+    fetchProbe,
+  });
+}
+
+async function waitForDevAppReady(timeoutMs = 120_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const [api, ui] = await Promise.all([isApiRunning(), isUiRunning()]);
+    if (api && ui) return true;
+    await sleep(500);
+  }
+  return false;
+}
+
+function wantsObservability() {
+  if (flags.has("--no-observability") || flags.has("--no-obs")) return false;
+  if (flags.has("--observability") || flags.has("--obs")) return true;
+  return command === "all";
+}
+
+function relativeBackendLogFile() {
+  return path.relative(path.join(ROOT, "backend"), LOG_FILE).replace(/\\/g, "/");
+}
+
+function writeObservabilityWorkerEnv() {
+  fs.mkdirSync(path.dirname(OBS_ENV_FILE), { recursive: true });
+  fs.writeFileSync(OBS_ENV_FILE, "AUDIT_OTEL_ENABLED=true\n");
+}
+
+function removeObservabilityWorkerEnv() {
+  if (fs.existsSync(OBS_ENV_FILE)) fs.unlinkSync(OBS_ENV_FILE);
+}
+
+function upsertEnvLines(filePath, updates) {
+  if (!fs.existsSync(filePath)) return;
+  let body = fs.readFileSync(filePath, "utf8");
+  for (const [key, value] of Object.entries(updates)) {
+    if (new RegExp(`^${key}=`, "m").test(body)) {
+      body = body.replace(new RegExp(`^${key}=.*$`, "m"), `${key}=${value}`);
+    } else {
+      body += `\n${key}=${value}\n`;
+    }
+  }
+  fs.writeFileSync(filePath, body);
+}
+
+/** Enable JSON logs, OTLP traces, Loki file tail, and worker OTEL when stack is up. */
+function enableObservabilityInBackendEnv() {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  writeObservabilityWorkerEnv();
+
+  if (fs.existsSync(BACKEND_ENV)) {
+    upsertEnvLines(BACKEND_ENV, {
+      AUDIT_LOG_JSON: "true",
+      AUDIT_OTEL_ENABLED: "true",
+      AUDIT_OTEL_EXPORTER_ENDPOINT: `${OTEL_HTTP_ORIGIN}/v1/traces`,
+      AUDIT_OTEL_SERVICE_NAME: "repody-api",
+      AUDIT_LOG_FILE: relativeBackendLogFile(),
+    });
+  }
+
+  console.log("enabled observability in backend/.env (restart API to ship logs/traces)");
+}
+
+function recreateWorkersForObservability() {
+  run(
+    "docker",
+    ["compose", "--profile", "workers", "up", "-d", "--force-recreate", "worker-extract", "worker-fast"],
+    { allowFail: true },
+  );
+}
+
+function observabilityStack() {
+  run("docker", ["compose", "--profile", "observability", "up", "-d"]);
+  enableObservabilityInBackendEnv();
+  recreateWorkersForObservability();
+}
+
+function composeDownArgs() {
+  const args = ["compose", "--profile", "workers", "--profile", "observability", "down", "--remove-orphans"];
+  if (flags.has("--volumes") || flags.has("-v")) args.push("-v");
+  return args;
+}
+
+async function setup() {
   copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
   copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
   copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS, "paths.local.env");
@@ -129,10 +242,11 @@ function setup() {
   run("pnpm", ["db:migrate"], { inherit: true });
 
   console.log("\nSetup complete.");
-  printQuickStart();
+  await showDevDashboard({ appRunning: false, probe: false });
 }
 
-async function stack() {
+async function stack(options = {}) {
+  const { suppressDashboard = false } = options;
   if (!fs.existsSync(BACKEND_ENV)) {
     console.error("backend/.env missing — run: pnpm dev:setup");
     process.exit(1);
@@ -160,21 +274,13 @@ async function stack() {
     }
   }
 
-  console.log("\nStack is up (background services).");
-  printQuickStart(false);
-}
-
-function printQuickStart(includeApp = true) {
-  console.log("\n--- Local dev ---");
-  console.log("  UI:       http://localhost:3000");
-  console.log(`  API:      http://localhost:${API_PORT}/v1/healthz`);
-  console.log("  Keycloak: http://localhost:8080  (operator@repody.local / repody-dev)");
-  if (includeApp) {
-    console.log("\n  Foreground app:  pnpm dev:app");
-    console.log("  All-in-one:      pnpm dev:all");
+  if (wantsObservability()) {
+    observabilityStack();
   }
-  console.log("  Status:          pnpm dev:status");
-  console.log("  Stop:            pnpm dev:stop");
+
+  if (!suppressDashboard) {
+    await showDevDashboard({ appRunning: false });
+  }
 }
 
 async function status() {
@@ -183,6 +289,10 @@ async function status() {
     ["UI", UI_ORIGIN],
     ["Keycloak", "http://127.0.0.1:8080"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
+    ["Grafana", `${GRAFANA_ORIGIN}/api/health`],
+    ["Loki", "http://127.0.0.1:3100/ready"],
+    ["Tempo", "http://127.0.0.1:3200/ready"],
+    ["Bugsink", `${BUGSINK_ORIGIN}/`],
   ];
 
   console.log("\n=== Repody local dev status ===\n");
@@ -223,6 +333,15 @@ async function status() {
       "\nWorkers: unavailable — " +
         (workers.stderr || workers.stdout || "docker compose did not return status").trim(),
     );
+  }
+
+  const obs = run(
+    "docker",
+    ["compose", "--profile", "observability", "ps", "--format", "table {{.Name}}\t{{.Status}}"],
+    { allowFail: true },
+  );
+  if (obs.stdout?.trim()) {
+    console.log("\nObservability:\n" + obs.stdout.trim());
   }
 
   if (!llamaConfigured()) {
@@ -289,6 +408,10 @@ async function reset() {
   run("docker", ["compose", "--profile", "workers", "down", "--remove-orphans", "-v"], {
     inherit: true,
   });
+  run("docker", ["compose", "--profile", "observability", "down", "--remove-orphans"], {
+    inherit: true,
+    allowFail: true,
+  });
 
   copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
   copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
@@ -326,7 +449,7 @@ async function reset() {
   }
 
   console.log("\nPlatform reset complete.");
-  printQuickStart();
+  await showDevDashboard({ appRunning: false });
 }
 
 function stop() {
@@ -335,12 +458,12 @@ function stop() {
   killDevApi();
   run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], { allowFail: true, inherit: true });
 
-  const downArgs = ["compose", "--profile", "workers", "down", "--remove-orphans"];
+  const downArgs = composeDownArgs();
   if (flags.has("--volumes") || flags.has("-v")) {
-    downArgs.push("-v");
     console.log("Removing Compose volumes (--volumes)...");
   }
   run("docker", downArgs, { inherit: true });
+  removeObservabilityWorkerEnv();
   console.log("Local dev stopped.");
 }
 
@@ -364,18 +487,58 @@ async function isUiRunning() {
   return fetchOk(UI_ORIGIN);
 }
 
+async function waitForInterrupt() {
+  return new Promise((resolve) => {
+    const onSignal = () => resolve(0);
+    process.once("SIGINT", onSignal);
+    process.once("SIGTERM", onSignal);
+  });
+}
+
+/** Block until Ctrl+C or a foreground child exits; optionally tear down children. */
+async function waitForForeground(children) {
+  if (children.length === 0) {
+    console.log("\n  Press Ctrl+C to close this terminal (services keep running in the background).\n");
+    return waitForInterrupt();
+  }
+
+  return new Promise((resolve) => {
+    let exiting = false;
+    function shutdown(code = 0) {
+      if (exiting) return;
+      exiting = true;
+      for (const child of children) {
+        try {
+          child.kill("SIGTERM");
+        } catch {
+          // ignore
+        }
+      }
+      setTimeout(() => resolve(code), 500);
+    }
+    process.once("SIGINT", () => shutdown(0));
+    process.once("SIGTERM", () => shutdown(0));
+    for (const child of children) {
+      child.on("exit", (code) => {
+        if (!exiting) shutdown(code ?? 1);
+      });
+    }
+  });
+}
+
 async function app(options = {}) {
-  const { forceRestartApi = false } = options;
+  const { forceRestartApi = false, forceRestartUi = false, keepAlive = false } = options;
   const backendDir = path.join(ROOT, "backend");
   const nextBin = path.join(ROOT, "node_modules/next/dist/bin/next");
   const uv = resolveExecutable("uv");
   const apiUp = !forceRestartApi && (await isApiRunning());
-  const uiUp = await isUiRunning();
+  const uiUp = !forceRestartUi && (await isUiRunning());
 
-  if (apiUp && uiUp) {
-    console.log("API and UI already running — nothing to start.");
-    console.log(`  API: http://localhost:${API_PORT}`);
-    console.log("  UI:  http://localhost:3000");
+  if (apiUp && uiUp && !forceRestartApi) {
+    await showDevDashboard({ appRunning: true });
+    if (!keepAlive) return;
+    console.log("\n  API + UI already running. Press Ctrl+C to exit this terminal.\n");
+    await waitForInterrupt();
     return;
   }
 
@@ -403,6 +566,7 @@ async function app(options = {}) {
   if (uiUp) {
     console.log("UI already running on :3000 — skipping");
   } else {
+    killDevUi();
     children.push(
       spawnPrefixed("ui", process.execPath, [nextBin, "dev", "--turbo"], {
         cwd: ROOT,
@@ -411,30 +575,26 @@ async function app(options = {}) {
     );
   }
 
-  if (children.length === 0) return;
-
-  let exiting = false;
-  function shutdown(code = 0) {
-    if (exiting) return;
-    exiting = true;
-    for (const child of children) {
-      try {
-        child.kill("SIGTERM");
-      } catch {
-        // ignore
-      }
+  if (children.length === 0) {
+    if (keepAlive) {
+      console.log("\n  Press Ctrl+C to exit this terminal.\n");
+      await waitForInterrupt();
     }
-    setTimeout(() => process.exit(code), 500);
+    return;
   }
 
-  process.on("SIGINT", () => shutdown(0));
-  process.on("SIGTERM", () => shutdown(0));
+  void waitForDevAppReady().then(async (ready) => {
+    if (ready) {
+      await showDevDashboard({ appRunning: true });
+    } else {
+      console.warn("warn: API or UI did not become ready in time — run: pnpm dev:status");
+    }
+  });
 
-  for (const child of children) {
-    child.on("exit", (code) => {
-      if (!exiting) shutdown(code ?? 1);
-    });
-  }
+  console.log("\n  Streaming API + UI logs — Ctrl+C stops app processes (Compose stack keeps running).\n");
+
+  const exitCode = await waitForForeground(children);
+  process.exit(exitCode);
 }
 
 async function api() {
@@ -460,23 +620,24 @@ async function api() {
 }
 
 async function all() {
-  await stack();
+  await stack({ suppressDashboard: true });
   console.log("\nStarting API + UI (Ctrl+C stops app processes; stack keeps running)...\n");
   killDevApi();
+  killDevUi();
   await new Promise((r) => setTimeout(r, 1500));
-  await app({ forceRestartApi: true });
+  await app({ forceRestartApi: true, forceRestartUi: true, keepAlive: true });
 }
 
 async function main() {
   switch (command) {
     case "setup":
-      setup();
+      await setup();
       break;
     case "stack":
       await stack();
       break;
     case "app":
-      await app();
+      await app({ keepAlive: true });
       break;
     case "api":
       await api();
@@ -496,9 +657,13 @@ async function main() {
     case "restart":
       restart();
       break;
+    case "observability":
+      observabilityStack();
+      await showDevDashboard({ appRunning: await isApiRunning() && (await isUiRunning()) });
+      break;
     default:
       console.error(
-        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart [--no-llama] [--extract-only]",
+        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-llama] [--extract-only] [--observability] [--no-obs]",
       );
       process.exit(1);
   }

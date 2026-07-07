@@ -116,6 +116,29 @@ migrations:
 dev:
   apiReload: false
 
+# HPA v2 behavior — requires metrics-server (or OpenShift cluster monitoring).
+# Scale up quickly on CPU spikes; scale down slowly to avoid flapping.
+# See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior
+hpaBehavior:
+  enabled: true
+  scaleUp:
+    stabilizationWindowSeconds: 60
+    selectPolicy: Max
+    policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 4
+        periodSeconds: 60
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    selectPolicy: Min
+    policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 60
+
 # ── Control plane (api) ───────────────────────────────────────────────────────
 api:
   replicas: 2
@@ -335,6 +358,10 @@ config:
   logJson: true
   directUploadEnabled: true
   rateLimitFailClosed: true
+  rateLimitEnabled: true
+  rateLimitWindowSeconds: 60
+  rateLimitRunsPerWorkflow: 30
+  rateLimitRunsPerClient: 120
   admissionControlEnabled: true
   admissionMaxQueued: 50
   admissionMaxInflight: 64
@@ -343,6 +370,10 @@ config:
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: true
   gpuLiveProbe: false
+  healthzProbeInference: false
+  # CPU-side extraction parallelism (vllm mode defaults parallel when unset).
+  parallelDocExtraction: ""
+  parallelStorageFetch: true
 
 observability:
   bugsinkDsn: ""

@@ -7,11 +7,12 @@ Deploy follows **official upstream docs** — see [docs/deploy/README.md](./depl
 | Command | When |
 |---------|------|
 | `pnpm dev:setup` | **Once** — copy env files, start Compose, migrate |
-| `pnpm dev:all` | **Daily** — full stack + API + UI in one terminal |
+| `pnpm dev:all` | **Daily** — full stack + API + UI + observability (use `-- --no-obs` to skip) |
 | `pnpm dev` | Background only — Compose, workers, NuExtract (then exit) |
 | `pnpm dev:app` | Foreground API + UI (stack already running) |
-| `pnpm dev:status` | Health summary (API, UI, NuExtract, workers) |
+| `pnpm dev:status` | Health summary (API, UI, NuExtract, workers, Grafana, Loki, Bugsink) |
 | `pnpm dev:stop` | Stop API, UI, NuExtract, and full Compose stack |
+| `pnpm dev:observability` | Grafana + Loki + Tempo + OTEL + Bugsink (optional profile) |
 | `pnpm dev:restart` | After Vulkan GPU reset — restart NuExtract + workers |
 | `pnpm db:migrate` | Apply Alembic migrations |
 | `pnpm db:reset` | Drop schema, migrate to head, re-seed demo data |

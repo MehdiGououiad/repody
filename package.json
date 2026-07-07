@@ -23,6 +23,7 @@
     "dev:stop": "node deploy/scripts/local-dev.mjs stop",
     "dev:reset": "node deploy/scripts/local-dev.mjs reset",
     "dev:restart": "node deploy/scripts/local-dev.mjs restart",
+    "dev:observability": "node deploy/scripts/local-dev.mjs observability",
     "dev:down": "node deploy/scripts/local-dev.mjs stop",
     "dev:api": "node deploy/scripts/local-dev.mjs api",
     "dev:worker": "docker compose --profile workers up -d --build worker-extract worker-fast",
@@ -93,7 +94,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:platform": "node scripts/run-platform-e2e.mjs",
-    "benchmark": "node scripts/benchmark.mjs"
+    "benchmark": "node scripts/benchmark.mjs",
+    "stress:prod": "node scripts/prod-stress.mjs full",
+    "stress:prod:smoke": "node scripts/prod-stress.mjs smoke"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.8",

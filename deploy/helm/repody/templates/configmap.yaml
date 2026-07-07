@@ -52,6 +52,10 @@ data:
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
   AUDIT_SEED_ON_STARTUP: "false"
   AUDIT_RATE_LIMIT_FAIL_CLOSED: {{ .Values.config.rateLimitFailClosed | quote }}
+  AUDIT_RATE_LIMIT_ENABLED: {{ .Values.config.rateLimitEnabled | quote }}
+  AUDIT_RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimitWindowSeconds | quote }}
+  AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW: {{ .Values.config.rateLimitRunsPerWorkflow | quote }}
+  AUDIT_RATE_LIMIT_RUNS_PER_CLIENT: {{ .Values.config.rateLimitRunsPerClient | quote }}
   AUDIT_ADMISSION_CONTROL_ENABLED: {{ .Values.config.admissionControlEnabled | quote }}
   AUDIT_ADMISSION_MAX_QUEUED: {{ .Values.config.admissionMaxQueued | quote }}
   AUDIT_ADMISSION_MAX_INFLIGHT: {{ .Values.config.admissionMaxInflight | quote }}
@@ -69,6 +73,11 @@ data:
   {{- end }}
   AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT: {{ .Values.config.repodyVlmMarkdownOnExtract | quote }}
   AUDIT_GPU_LIVE_PROBE: {{ .Values.config.gpuLiveProbe | quote }}
+  AUDIT_HEALTHZ_PROBE_INFERENCE: {{ .Values.config.healthzProbeInference | quote }}
+  {{- if ne (toString .Values.config.parallelDocExtraction) "" }}
+  AUDIT_PARALLEL_DOC_EXTRACTION: {{ .Values.config.parallelDocExtraction | quote }}
+  {{- end }}
+  AUDIT_PARALLEL_STORAGE_FETCH: {{ .Values.config.parallelStorageFetch | quote }}
   {{- if .Values.externalObjectStorage.publicEndpoint }}
   AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.externalObjectStorage.publicEndpoint | quote }}
   {{- else if .Values.ingress.enabled }}

@@ -1,7 +1,12 @@
+import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
 import type { DocumentDef } from "@/lib/types";
 import { fieldToken } from "@/lib/rules/expression";
 
-export type DocumentFieldOption = { label: string; token: string };
+export type DocumentFieldOption = {
+  label: string;
+  token: string;
+  templateType: string;
+};
 
 export function resolveDocumentFields(
   documents: DocumentDef[],
@@ -22,6 +27,7 @@ export function resolveDocumentFields(
       fields.push({
         label: multi ? `${doc.documentType}.${field.name}` : field.name,
         token,
+        templateType: field.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
       });
     }
   }

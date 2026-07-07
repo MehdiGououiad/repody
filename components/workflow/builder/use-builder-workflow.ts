@@ -9,6 +9,7 @@ import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
+import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
 import { emptyTestSession, type TestSessionState } from "@/components/workflow/builder/test-run-panel";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
@@ -41,20 +42,16 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const [activeWorkflowId, setActiveWorkflowId] = useState(workflow.id);
   const [testSession, setTestSession] = useState<TestSessionState>(emptyTestSession);
   const [savedFingerprint, setSavedFingerprint] = useState(() =>
-    JSON.stringify({
+    workflowDraftFingerprint({
       name: workflow.name,
       documents: workflow.documents,
-      rules: syncRuleBodies(workflow.rules),
+      rules: workflow.rules,
     })
   );
 
   const dirty = useMemo(
     () =>
-      JSON.stringify({
-        name,
-        documents,
-        rules: syncRuleBodies(rules),
-      }) !== savedFingerprint,
+      workflowDraftFingerprint({ name, documents, rules }) !== savedFingerprint,
     [name, documents, rules, savedFingerprint]
   );
 
@@ -118,7 +115,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       });
     }
     setSavedFingerprint(
-      JSON.stringify({
+      workflowDraftFingerprint({
         name: payload.name,
         documents: payload.documents,
         rules: payload.rules,
@@ -144,10 +141,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       rememberApiKey(id, revealed);
       setStep(2);
       setSavedFingerprint(
-        JSON.stringify({
+        workflowDraftFingerprint({
           name: name || workflow.name,
           documents,
-          rules: syncRuleBodies(rules),
+          rules,
         })
       );
       toast.success(t("toasts.deployed"), {

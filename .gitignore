@@ -43,6 +43,8 @@ yarn-error.log*
 .pnpm-debug.log*
 *.log
 /logs/
+/.logs/
+deploy/env/observability.enabled.env
 
 # local HTTP/auth scratch artifacts
 /body.txt

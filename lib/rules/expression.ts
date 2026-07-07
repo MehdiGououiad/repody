@@ -2,6 +2,15 @@ import type { ComparisonOp, ConditionJunction, ConditionOperand, RuleCondition }
 
 const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const ISO_TIME = /^\d{2}:\d{2}(:\d{2})?$/;
+
+function isIsoDateLike(value: string): boolean {
+  const trimmed = value.trim();
+  return ISO_DATE.test(trimmed) || ISO_DATETIME.test(trimmed) || ISO_TIME.test(trimmed);
+}
+
 export function fieldToken(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
@@ -23,6 +32,7 @@ function fieldRef(token: string): string | null {
 function literalToPy(value: string): string | null {
   const v = value.trim();
   if (!v) return null;
+  if (isIsoDateLike(v)) return JSON.stringify(v);
   const num = Number(v);
   if (!Number.isNaN(num) && v !== "") return String(num);
   return JSON.stringify(v);

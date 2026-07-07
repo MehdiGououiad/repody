@@ -23,7 +23,11 @@ export const ARITH_OPS: { value: ArithmeticOp; label: string }[] = [
 
 export const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 
-export type ConditionFieldOption = { label: string; token: string };
+export type ConditionFieldOption = {
+  label: string;
+  token: string;
+  templateType?: string;
+};
 
 export function newCondition(): RuleCondition {
   return {

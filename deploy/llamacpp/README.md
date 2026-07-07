@@ -68,8 +68,8 @@ Aligned with NuExtract’s low-memory vLLM profile and llama.cpp vision guidance
 | Physical batch | **1024** (`speed`, Arc tuned) / **1024** (`stability`) |
 | MTMD encode batch | **1024** on Vulkan (`--mtmd-batch-max-tokens`) |
 | GPU offload | all layers (`-ngl 99`) + `--mmproj-offload` |
-| Parallel slots | **1** (`-np 1`) — full 16k context |
-| Image tokens | `--image-min-tokens 1024` (NuExtract / Qwen-VL) |
+| Parallel slots | **1** (`-np 1`) default — full 16k context per slot |
+| Image tokens | `--image-min-tokens 1024 --image-max-tokens 1024` (Qwen-VL grounding floor without 2048-token cold prompts) |
 | Prompt cache | **on** (`speed`) / **off** (`stability`) |
 | Server reasoning | off (`-rea off`) — Repody sends `enable_thinking` per request |
 | Chat template | `--jinja` (required for `chat_template_kwargs`) |
@@ -96,9 +96,35 @@ llama-server `
   --host 0.0.0.0 --port 8081 `
   -c 16384 -np 1 -fa on -ctk q8_0 -ctv q8_0 `
   -ngl 99 --device Vulkan0 --mmproj-offload `
-  --image-min-tokens 1024 --mtmd-batch-max-tokens 1024 -ub 1024 `
-  -a nuextract3-q4_k_m --jinja -rea off --cache-ram 2048
+  --image-min-tokens 1024 --image-max-tokens 1024 `
+  --mtmd-batch-max-tokens 1024 -ub 1024 `
+  -a nuextract3-q4_k_m --jinja -rea off --cache-ram 4096
 ```
+
+## Throughput scaling (`-np` / parallel slots)
+
+Each parallel slot reserves a full context window. Throughput scales roughly linearly with `-np` until VRAM or CPU saturates.
+
+| Slots | When | Helm / admission |
+|-------|------|------------------|
+| **1** | CRC lab, Arc 8 GB, daily dev | `admissionMaxExtractInflight: 1` |
+| **2** | Arc 16 GB+, dedicated stress runs | `admissionMaxExtractInflight: 2` + 2 extract workers |
+| **4+** | Multi-GPU / production vLLM | Match `admissionMaxExtractInflight` to GPU concurrency |
+
+In `paths.local.env`:
+
+```env
+LLAMACPP_PARALLEL=2
+```
+
+Then align cluster admission (see `deploy/client/lab/values.stress-test.crc.yaml`) and restart:
+
+```powershell
+pnpm llamacpp:restart
+kubectl rollout restart deployment/repody-worker-extract -n repody
+```
+
+Stress harness ceiling ≈ **`LLAMACPP_PARALLEL × (60 / warm_seconds)` runs/min** per host.
 
 ## Port note
 

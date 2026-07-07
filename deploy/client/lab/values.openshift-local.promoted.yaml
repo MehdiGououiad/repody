@@ -65,10 +65,50 @@ config:
   vllmBaseUrl: http://192.168.11.117:8081/v1
   vllmServedModel: nuextract3-q4_k_m
   operatorActionsEnabled: false
+  # Stress-test caps (see deploy/client/lab/values.stress-test.crc.yaml)
+  admissionMaxQueued: 1500
+  admissionMaxInflight: 1200
+  admissionMaxExtractInflight: 2
+  admissionRetryAfterSeconds: 15
+  rateLimitEnabled: true
+  rateLimitWindowSeconds: 3600
+  rateLimitRunsPerWorkflow: 2000
+  rateLimitRunsPerClient: 5000
+  dbPoolSize: 10
+  dbMaxOverflow: 25
+  redisMaxConnections: 50
+  healthzProbeInference: false
+  parallelDocExtraction: "true"
+  parallelStorageFetch: true
+
+workerExtract:
+  replicas: 1
+  maxJobs: 2
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+workerFast:
+  replicas: 1
+  maxJobs: 4
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
 
 observability:
-  otelEnabled: true
-  otelEndpoint: http://otel-collector-opentelemetry-collector.observability.svc.cluster.local:4318/v1/traces
+  otelEnabled: false
 
 migrations:
   enabled: true

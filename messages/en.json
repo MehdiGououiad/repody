@@ -109,6 +109,9 @@
     "gpuColdStartActive": "Warming up serverless GPU… {elapsed}",
     "gpuColdStartDone": "Included GPU cold start",
     "pagesTruncated": "Only {sent} of {total} pages analyzed",
+    "queuePosition": "Queue position {position} of {depth}",
+    "queueWaiting": "Waiting in queue…",
+    "queueOrdered": "Runs are processed in order. Your position updates automatically.",
     "queueServerless": "Runs are processed in order. Serverless GPU jobs may also wait 1–2 minutes on the first request after idle."
   },
   "dashboard": {
@@ -691,6 +694,10 @@
         "added": "Added",
         "conditions": {
           "literalPlaceholder": "value…",
+          "literalDatePlaceholder": "YYYY-MM-DD",
+          "literalDateTimePlaceholder": "YYYY-MM-DD HH:MM",
+          "literalTimePlaceholder": "HH:MM",
+          "literalNumberPlaceholder": "0",
           "switchToField": "→ field",
           "switchToValue": "→ value",
           "pickField": "Pick field",

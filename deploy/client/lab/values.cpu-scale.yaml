@@ -1,0 +1,64 @@
+# CPU-first autoscaling profile — merge after production/promoted values.
+# Requires cluster metrics (metrics-server or OpenShift monitoring) for HPA.
+#
+# Extract workers spend most time blocked on VLM/GPU — CPU HPA stays low and mis-scales.
+# Scale extract via maxJobs + admissionMaxExtractInflight + VLM slots instead.
+# Fast workers and API are CPU-bound and scale well on averageUtilization.
+
+hpaBehavior:
+  enabled: true
+
+api:
+  replicas: 2
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+web:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 70
+
+workerExtract:
+  replicas: 2
+  maxJobs: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+workerFast:
+  replicas: 2
+  maxJobs: 8
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 65
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+config:
+  parallelDocExtraction: "true"
+  parallelStorageFetch: true

@@ -45,10 +45,19 @@ def _experiments_parser(sub: argparse._SubParsersAction) -> None:
     parser.set_defaults(_runner=lambda args: asyncio.run(run_experiments(args)))
 
 
+def _prod_parser(sub: argparse._SubParsersAction) -> None:
+    from scripts.prod_stress_test import add_arguments, run_prod_stress
+
+    parser = sub.add_parser("prod", help="Production-scale stress test (1000 documents)")
+    add_arguments(parser)
+    parser.set_defaults(_runner=lambda args: asyncio.run(run_prod_stress(args)))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     _stress_parser(sub)
+    _prod_parser(sub)
     _queue_parser(sub)
     _experiments_parser(sub)
     args = parser.parse_args()

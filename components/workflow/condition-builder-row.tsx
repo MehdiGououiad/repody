@@ -15,12 +15,79 @@ import {
 } from "@/components/ui/select";
 import {
   ARITH_OPS,
-  COMPARISON_OP_DEFS,
   NO_RIGHT,
   type ConditionFieldOption,
 } from "@/components/workflow/condition-builder-model";
+import {
+  comparisonOpsForTemplateType,
+  literalInputKindForTemplateType,
+  resolveFieldTemplateType,
+  type LiteralInputKind,
+} from "@/lib/rules/condition-input-kind";
 import { cn } from "@/lib/utils";
 import type { ArithmeticOp, ComparisonOp, ConditionOperand, RuleCondition } from "@/lib/types";
+
+function literalPlaceholderForKind(
+  kind: LiteralInputKind,
+  t: ReturnType<typeof useTranslations>
+): string | undefined {
+  switch (kind) {
+    case "date":
+      return t("literalDatePlaceholder");
+    case "datetime-local":
+      return t("literalDateTimePlaceholder");
+    case "time":
+      return t("literalTimePlaceholder");
+    case "number":
+      return t("literalNumberPlaceholder");
+    default:
+      return t("literalPlaceholder");
+  }
+}
+
+function LiteralValueInput({
+  value,
+  onChange,
+  inputKind,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  inputKind: LiteralInputKind;
+  placeholder?: string;
+}) {
+  if (inputKind === "boolean") {
+    return (
+      <Select value={value || "true"} onValueChange={onChange}>
+        <SelectTrigger className="h-8 text-xs w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="true" className="text-xs font-mono">
+            true
+          </SelectItem>
+          <SelectItem value="false" className="text-xs font-mono">
+            false
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  return (
+    <Input
+      type={inputKind === "text" ? "text" : inputKind}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      step={inputKind === "number" ? "any" : undefined}
+      className={cn(
+        "h-8 text-xs font-mono",
+        inputKind === "datetime-local" ? "w-48" : "w-40"
+      )}
+    />
+  );
+}
 
 function OperandPicker({
   operand,
@@ -28,23 +95,25 @@ function OperandPicker({
   onChange,
   placeholder,
   allowLiteral = true,
+  literalInputKind = "text",
 }: {
   operand: ConditionOperand;
   fields: ConditionFieldOption[];
   onChange: (operand: ConditionOperand) => void;
   placeholder?: string;
   allowLiteral?: boolean;
+  literalInputKind?: LiteralInputKind;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
 
   if (operand.kind === "literal") {
     return (
       <div className="flex items-center gap-1">
-        <Input
+        <LiteralValueInput
           value={operand.value}
-          onChange={(event) => onChange({ kind: "literal", value: event.target.value })}
-          placeholder={t("literalPlaceholder")}
-          className="h-8 text-xs w-32 font-mono"
+          onChange={(value) => onChange({ kind: "literal", value })}
+          inputKind={literalInputKind}
+          placeholder={literalPlaceholderForKind(literalInputKind, t)}
         />
         {fields.length > 0 ? (
           <Button
@@ -113,7 +182,18 @@ export function ConditionRow({
   const tCommon = useTranslations("common");
   const hasArith = Boolean(condition.arithmeticOp);
   const noRight = NO_RIGHT.includes(condition.operator);
-  const comparisonOps = COMPARISON_OP_DEFS.map((definition) => ({
+  const leftTemplateType =
+    condition.left.kind === "field"
+      ? resolveFieldTemplateType(condition.left.value, fields)
+      : undefined;
+  const rightTemplateType =
+    condition.right?.kind === "field"
+      ? resolveFieldTemplateType(condition.right.value, fields)
+      : undefined;
+  const literalInputKind = literalInputKindForTemplateType(
+    leftTemplateType ?? rightTemplateType
+  );
+  const comparisonOps = comparisonOpsForTemplateType(leftTemplateType).map((definition) => ({
     value: definition.value,
     label: t(definition.key as Parameters<typeof t>[0]),
     noRight: definition.noRight,
@@ -231,6 +311,7 @@ export function ConditionRow({
             fields={fields}
             onChange={(operand) => onChange({ right: operand })}
             placeholder={t("pickFieldOrValue")}
+            literalInputKind={literalInputKind}
           />
         </div>
       ) : null}

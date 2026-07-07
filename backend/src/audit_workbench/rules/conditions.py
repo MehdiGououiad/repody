@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import re
 
+from audit_workbench.rules.value_coercion import is_iso_date_like
+
 NO_RIGHT = frozenset({"EXISTS", "IS_EMPTY"})
 
 
@@ -32,6 +34,8 @@ def _literal_to_py(value: str) -> str | None:
     v = (value or "").strip()
     if not v:
         return None
+    if is_iso_date_like(v):
+        return json.dumps(v)
     cleaned = v.replace(" ", "").replace(",", ".")
     try:
         if cleaned.replace(".", "", 1).replace("-", "", 1).isdigit() or re.match(

@@ -1,0 +1,56 @@
+# CRC / single-node stress profile — merge with promoted values before bulk stress tests.
+# Aligns with docs/BENCHMARKING.md and docs/deploy/PROD-OBSERVABILITY.md (timeout + pool budget).
+#
+# Apply: append keys to deploy/client/lab/values.openshift-local.promoted.yaml then register sync,
+# or patch live ConfigMap for lab-only experiments (see docs/BENCHMARKING.md).
+
+config:
+  admissionMaxQueued: 1500
+  admissionMaxInflight: 1200
+  # Match single llama-server slot (-np 1); avoid 503 while enqueue bursts overlap inflight extract.
+  admissionMaxExtractInflight: 2
+  admissionRetryAfterSeconds: 15
+  rateLimitEnabled: true
+  rateLimitWindowSeconds: 3600
+  rateLimitRunsPerWorkflow: 2000
+  rateLimitRunsPerClient: 5000
+  workerTaskTimeoutMinutes: 3
+  repodyVlmTimeoutSeconds: 180
+  staleRunTimeoutMinutes: 5
+  queuedStaleTimeoutMinutes: 180
+  dbPoolSize: 10
+  dbMaxOverflow: 25
+  redisMaxConnections: 50
+  gpuLiveProbe: false
+  # Keep healthchecks cheap — inference reachability is probed at enqueue/worker time.
+  healthzProbeInference: false
+
+workerExtract:
+  replicas: 1
+  maxJobs: 2
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+workerFast:
+  replicas: 1
+  maxJobs: 4
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+config:
+  parallelDocExtraction: "true"
+  parallelStorageFetch: true
