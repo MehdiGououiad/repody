@@ -47,6 +47,10 @@ workerExtract:
 | `AUDIT_OIDC_ENABLED` | `true` | JWT auth on management API |
 | `AUDIT_OIDC_AUDIENCE` | required | Expected JWT audience |
 | `AUDIT_RATE_LIMIT_FAIL_CLOSED` | `true` | Reject when rate limit backend is unavailable |
+| `AUDIT_RATE_LIMIT_ENABLED` | `true` | Enable run enqueue rate limits |
+| `AUDIT_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window |
+| `AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW` | `30` | Max runs per workflow per window |
+| `AUDIT_RATE_LIMIT_RUNS_PER_CLIENT` | `120` | Max runs per client per window |
 | `AUDIT_DIRECT_UPLOAD_ENABLED` | `true` | Presigned object-storage uploads |
 | `AUDIT_STORAGE_BACKEND` | `s3` | Object storage |
 | `AUDIT_LOG_JSON` | `true` | Structured logs |

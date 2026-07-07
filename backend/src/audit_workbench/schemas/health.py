@@ -33,6 +33,11 @@ class HealthReadinessResponse(CamelModel):
     structured_llm: bool = Field(serialization_alias="structuredLlm")
     rate_limit_enabled: bool = Field(serialization_alias="rateLimitEnabled")
     admission_control_enabled: bool = Field(serialization_alias="admissionControlEnabled")
+    admission_max_queued: int | None = Field(default=None, serialization_alias="admissionMaxQueued")
+    admission_max_inflight: int | None = Field(default=None, serialization_alias="admissionMaxInflight")
+    admission_max_extract_inflight: int | None = Field(
+        default=None, serialization_alias="admissionMaxExtractInflight"
+    )
     queued_runs: int = Field(serialization_alias="queuedRuns")
     running_runs: int = Field(serialization_alias="runningRuns")
     inflight_runs: int = Field(serialization_alias="inflightRuns")

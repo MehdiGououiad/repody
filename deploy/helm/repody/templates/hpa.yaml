@@ -17,6 +17,7 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
+{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}
 ---
 {{- if .Values.workerExtract.autoscaling.enabled }}
@@ -38,6 +39,7 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.workerExtract.autoscaling.targetCPUUtilizationPercentage }}
+{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}
 ---
 {{- if .Values.workerFast.autoscaling.enabled }}
@@ -59,6 +61,7 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.workerFast.autoscaling.targetCPUUtilizationPercentage }}
+{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}
 ---
 {{- if .Values.web.autoscaling.enabled }}
@@ -80,4 +83,5 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.web.autoscaling.targetCPUUtilizationPercentage }}
+{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}

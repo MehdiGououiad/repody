@@ -128,16 +128,25 @@ def _doc_def(doc_id: str, *, probe: str | None = None) -> dict[str, Any]:
 
 
 def _snapshot(doc_id: str, *, probe: str | None = None) -> dict[str, Any]:
+    rule_id = f"rule-{uuid.uuid4().hex[:6]}"
     return {
         "documents": [_doc_def(doc_id, probe=probe)],
         "rules": [
             {
-                "id": f"rule-{uuid.uuid4().hex[:6]}",
+                "id": rule_id,
                 "name": "Total is 6000",
                 "kind": "logic",
                 "scope": "intra",
                 "appliesTo": [doc_id],
                 "body": "total_amount == 6000",
+                "conditions": [
+                    {
+                        "id": f"{rule_id}-c1",
+                        "left": {"kind": "field", "value": "total_amount"},
+                        "operator": "==",
+                        "right": {"kind": "literal", "value": "6000"},
+                    }
+                ],
                 "severity": "reject",
             }
         ],
@@ -160,12 +169,21 @@ async def _record(
     )
 
 
+def _parse_json_body(res: httpx.Response) -> dict[str, Any]:
+    """Parse health/readiness JSON even when HTTP status is 503 (admission/degraded)."""
+    try:
+        payload = res.json()
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 async def _healthz(client: httpx.AsyncClient, report: StressReport, t0: float) -> dict[str, Any]:
     start = time.perf_counter()
     res = await client.get("/v1/healthz")
     latency = (time.perf_counter() - start) * 1000
     await _record(report, phase="health", method="GET", path="/v1/healthz", status=res.status_code, latency_ms=latency)
-    body = res.json() if res.is_success else {}
+    body = _parse_json_body(res)
     sample = {
         "t_ms": round((time.perf_counter() - t0) * 1000),
         "queuedRuns": body.get("queuedRuns"),
@@ -177,6 +195,7 @@ async def _healthz(client: httpx.AsyncClient, report: StressReport, t0: float) -
 
 
 async def _save_workflow(client: httpx.AsyncClient, workflow_id: str, doc_id: str) -> None:
+    snap = _snapshot(doc_id)
     res = await client.put(
         f"/v1/workflows/{workflow_id}",
         json={
@@ -185,8 +204,8 @@ async def _save_workflow(client: httpx.AsyncClient, workflow_id: str, doc_id: st
             "description": "stress_test_platform.py",
             "status": "draft",
             "owner": "stress",
-            "documents": [_doc_def(doc_id)],
-            "rules": _snapshot(doc_id)["rules"],
+            "documents": snap["documents"],
+            "rules": snap["rules"],
         },
     )
     res.raise_for_status()
@@ -234,6 +253,29 @@ async def _multipart_run(
             ("files", (filename, data, mime)),
         ],
     )
+
+
+async def _wait_run_terminal(
+    client: httpx.AsyncClient,
+    run_id: str,
+    *,
+    timeout_s: float = 300.0,
+    poll_s: float = 2.0,
+) -> str | None:
+    deadline = time.perf_counter() + timeout_s
+    while time.perf_counter() < deadline:
+        try:
+            res = await client.get(f"/v1/runs/{run_id}/status")
+            if not res.is_success:
+                await asyncio.sleep(_jitter(poll_s))
+                continue
+            status = str(res.json().get("status") or "")
+            if status in ("done", "failed"):
+                return status
+        except httpx.HTTPError:
+            pass
+        await asyncio.sleep(_jitter(poll_s))
+    return None
 
 
 async def phase_invalid_files(
@@ -287,6 +329,34 @@ async def phase_invalid_files(
                 "body": body_snip,
             }
         )
+        if name == "valid_pdf" and res.status_code == 202:
+            try:
+                run_id = res.json().get("runId")
+                if run_id:
+                    await _wait_run_terminal(client, str(run_id))
+            except (httpx.HTTPError, ValueError, TypeError):
+                pass
+        elif name == "minimal_pdf" and res.status_code == 503 and expected == 202:
+            for attempt in range(8):
+                await asyncio.sleep(_jitter(min(30.0, 2.0 ** attempt)))
+                retry = await _multipart_run(
+                    client,
+                    workflow_id=workflow_id,
+                    doc_id=doc_id,
+                    filename=filename,
+                    data=data,
+                    mime=mime,
+                )
+                if retry.status_code == expected:
+                    report.invalid_file_results[-1] = {
+                        **report.invalid_file_results[-1],
+                        "status": retry.status_code,
+                        "pass": True,
+                        "body": (retry.text[:300] if retry.text else ""),
+                    }
+                    break
+                if retry.status_code not in (429, 503):
+                    break
 
     # Presign with disallowed mime
     start = time.perf_counter()
@@ -522,14 +592,18 @@ async def _wait_drain(
     poll_s: float,
 ) -> None:
     deadline = time.perf_counter() + timeout_s
+    idle_streak = 0
     while time.perf_counter() < deadline:
-        await _healthz(client, report, t0)
-        pending = [r for r in report.runs if r.terminal_status is None and not r.run_id.startswith("rejected")]
-        if not pending:
-            # double-check health
-            body = await _healthz(client, report, t0)
-            if int(body.get("queuedRuns") or 0) == 0 and int(body.get("runningRuns") or 0) == 0:
+        body = await _healthz(client, report, t0)
+        queued = int(body.get("queuedRuns") or 0)
+        running = int(body.get("runningRuns") or 0)
+        inflight = int(body.get("inflightRuns") or 0)
+        if queued == 0 and running == 0 and inflight == 0:
+            idle_streak += 1
+            if idle_streak >= 3:
                 return
+        else:
+            idle_streak = 0
         await asyncio.sleep(poll_s)
     raise TimeoutError(f"Queue did not drain within {timeout_s:.0f}s")
 

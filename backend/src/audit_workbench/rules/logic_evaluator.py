@@ -7,6 +7,7 @@ from simpleeval import EvalWithCompoundTypes, simple_eval
 
 from audit_workbench.extraction.field_json import parse_numeric_value
 from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields
+from audit_workbench.rules.value_coercion import is_iso_date_like
 
 _IDENTIFIER = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
 _RESERVED = {
@@ -60,6 +61,8 @@ def coerce_field_value(raw: str) -> Any:
     text = (raw or "").strip()
     if not text or text == "—":
         return None
+    if is_iso_date_like(text):
+        return text
     numeric = parse_numeric_value(text)
     if numeric is not None:
         return numeric

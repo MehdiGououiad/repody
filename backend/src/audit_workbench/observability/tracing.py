@@ -30,7 +30,15 @@ def setup_tracing(settings: Settings) -> None:
     resource = Resource.create({"service.name": settings.otel_service_name})
     provider = TracerProvider(resource=resource)
     exporter = OTLPSpanExporter(endpoint=settings.otel_exporter_endpoint)
-    provider.add_span_processor(BatchSpanProcessor(exporter))
+    provider.add_span_processor(
+        BatchSpanProcessor(
+            exporter,
+            max_queue_size=2048,
+            schedule_delay_millis=5000,
+            export_timeout_millis=5000,
+            max_export_batch_size=256,
+        )
+    )
     trace.set_tracer_provider(provider)
     _tracer = trace.get_tracer(settings.otel_service_name)
     log.info("otel_tracing_enabled", endpoint=settings.otel_exporter_endpoint)

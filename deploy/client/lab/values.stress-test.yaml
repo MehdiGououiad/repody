@@ -1,0 +1,65 @@
+# Production-scale stress profile — apply before `pnpm stress:prod`.
+# Merge after promoted values, e.g. append to deploy/client/lab/values.openshift-local.promoted.yaml
+# or pass as an extra `-f` when rendering the repody Helm chart.
+
+api:
+  replicas: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+config:
+  # Allow a 1000-run backlog with headroom for inflight extraction.
+  admissionMaxQueued: 1500
+  admissionMaxInflight: 1200
+  admissionMaxExtractInflight: 64
+  admissionRetryAfterSeconds: 15
+  rateLimitEnabled: true
+  rateLimitWindowSeconds: 3600
+  rateLimitRunsPerWorkflow: 2000
+  rateLimitRunsPerClient: 5000
+  workerTaskTimeoutMinutes: 3
+  queuedStaleTimeoutMinutes: 180
+  staleRunTimeoutMinutes: 15
+  dbPoolSize: 10
+  dbMaxOverflow: 25
+  redisMaxConnections: 50
+  healthzProbeInference: false
+
+workerExtract:
+  replicas: 3
+  maxJobs: 1
+  autoscaling:
+    enabled: false
+  resources:
+    requests:
+      cpu: 500m
+      memory: 768Mi
+    limits:
+      cpu: "2"
+      memory: 2Gi
+
+workerFast:
+  replicas: 2
+  maxJobs: 8
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 12
+    targetCPUUtilizationPercentage: 65
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+config:
+  parallelDocExtraction: "true"
+  parallelStorageFetch: true

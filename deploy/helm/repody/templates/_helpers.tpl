@@ -312,3 +312,31 @@ http://{{ .Values.gatewayApi.authServiceName | default "keycloak" }}.{{ .Values.
 http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080
 {{- end -}}
 {{- end }}
+
+{{- /*
+  HPA v2 scaling behavior — scale up quickly, scale down slowly (Kubernetes docs).
+  Pass .Values.hpaBehavior; set hpaBehavior.enabled=false to omit behavior blocks.
+*/ -}}
+{{- define "repody.hpaBehavior" -}}
+{{- if .enabled }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ .scaleUp.stabilizationWindowSeconds }}
+      policies:
+        {{- range .scaleUp.policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .scaleUp.selectPolicy }}
+    scaleDown:
+      stabilizationWindowSeconds: {{ .scaleDown.stabilizationWindowSeconds }}
+      policies:
+        {{- range .scaleDown.policies }}
+        - type: {{ .type }}
+          value: {{ .value }}
+          periodSeconds: {{ .periodSeconds }}
+        {{- end }}
+      selectPolicy: {{ .scaleDown.selectPolicy }}
+{{- end }}
+{{- end }}

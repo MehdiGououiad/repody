@@ -29,3 +29,13 @@ def test_configure_logging_json_smoke() -> None:
     settings = Settings(log_json=True, otel_service_name="test-service")
     configure_logging(settings)
     get_logger("test").info("logging_smoke", event_domain="test")
+
+
+def test_configure_logging_writes_log_file(tmp_path) -> None:
+    from audit_workbench.observability.logging import configure_logging
+
+    log_path = tmp_path / "repody-api.log"
+    settings = Settings(log_json=True, log_file=str(log_path), otel_service_name="test-service")
+    configure_logging(settings)
+    assert log_path.exists()
+    assert "logging_configured" in log_path.read_text(encoding="utf-8")

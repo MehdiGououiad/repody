@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from audit_workbench.extraction.base import ExtractedFieldResult, SchemaFieldSpec
+from audit_workbench.rules.value_coercion import is_iso_date_like
 
 _NUMERIC_HINTS = (
     "amount",
@@ -84,6 +85,8 @@ def parse_numeric_value(value: str) -> float | None:
     """Parse a numeric field value, ignoring trailing currency labels."""
     s = value.strip()
     if not s or s == "—":
+        return None
+    if is_iso_date_like(s):
         return None
     match = _NUMERIC_RUN.search(s.replace("\u00a0", " "))
     if not match:

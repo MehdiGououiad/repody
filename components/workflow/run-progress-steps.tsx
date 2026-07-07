@@ -118,8 +118,11 @@ export function RunProgressSteps({
   const elapsedMs = useActiveStepElapsed(activeStep?.id);
   const showQueue =
     progress.queuePosition != null &&
-    progress.queueDepth != null &&
-    progress.queueDepth > 1;
+    progress.queueDepth != null;
+  const queueStep = progress.steps.find((s) => s.id === "queue");
+  const isQueued =
+    queueStep != null &&
+    (queueStep.status === "active" || queueStep.status === "pending");
 
   const serverlessGpu = inferenceMode === "vllm";
   const extractStepActive =
@@ -135,14 +138,20 @@ export function RunProgressSteps({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {showQueue ? (
+      {showQueue || isQueued ? (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-on-surface">
           <p className="font-medium">
-            Queue position {progress.queuePosition} of {progress.queueDepth}
+            {progress.queuePosition != null && progress.queueDepth != null
+              ? t("queuePosition", {
+                  position: progress.queuePosition,
+                  depth: progress.queueDepth,
+                })
+              : t("queueWaiting")}
           </p>
           <p className="text-on-surface-variant mt-1 leading-snug">
-            {activeStep?.detail ??
-              (serverlessGpu ? t("queueServerless") : "Runs are processed in order.")}
+            {queueStep?.detail ??
+              activeStep?.detail ??
+              (serverlessGpu ? t("queueServerless") : t("queueOrdered"))}
           </p>
         </div>
       ) : null}

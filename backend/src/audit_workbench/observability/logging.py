@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import sys
+from pathlib import Path
+from typing import TextIO
 
 import structlog
 
@@ -90,6 +92,32 @@ def _rename_event_to_body() -> structlog.types.Processor:
     return processor
 
 
+class _MultiWriter:
+    """Write structlog output to stdout and an optional log file."""
+
+    def __init__(self, *streams: TextIO) -> None:
+        self._streams = streams
+
+    def write(self, message: str) -> None:
+        for stream in self._streams:
+            stream.write(message)
+
+    def flush(self) -> None:
+        for stream in self._streams:
+            stream.flush()
+
+
+def _log_output_streams(settings: Settings) -> TextIO:
+    streams: list[TextIO] = [sys.stdout]
+    if settings.log_file:
+        log_path = Path(settings.log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        streams.append(log_path.open("a", encoding="utf-8"))
+    if len(streams) == 1:
+        return streams[0]
+    return _MultiWriter(*streams)
+
+
 def configure_logging(settings: Settings) -> None:
     """Configure structlog for dev (console) or prod (JSON, OTEL-friendly fields)."""
     log_level = logging.DEBUG if settings.debug else logging.INFO
@@ -119,7 +147,7 @@ def configure_logging(settings: Settings) -> None:
         ],
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        logger_factory=structlog.PrintLoggerFactory(file=_log_output_streams(settings)),
         cache_logger_on_first_use=True,
     )
 
@@ -141,4 +169,5 @@ def configure_logging(settings: Settings) -> None:
         event_domain="platform",
         log_format="json" if settings.log_json else "console",
         log_level=logging.getLevelName(log_level),
+        log_file=settings.log_file,
     )

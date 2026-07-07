@@ -273,6 +273,11 @@ async function serve() {
   const args = buildArgs(paths);
 
   console.log(`Starting llama-server on :${paths.port} (${paths.device}, -np ${paths.parallel})...`);
+  if (paths.parallel > 1) {
+    console.log(
+      `  hint: set admissionMaxExtractInflight >= ${paths.parallel} and scale worker-extract to match.`,
+    );
+  }
   console.log(`  model:  ${paths.model}`);
   console.log(`  mmproj: ${paths.mmproj}`);
   console.log(`  logs:   ${LOG_DIR}`);
@@ -352,7 +357,9 @@ async function verify(port = Number(process.env.LLAMACPP_PORT || 8081)) {
   console.log("models:     ", ids.join(", ") || "(none)");
 
   const failures = [];
-  if (nCtx < 16384) failures.push(`n_ctx ${nCtx} < 16384`);
+  const parallel = Number(process.env.LLAMACPP_PARALLEL || paths?.parallel || 1);
+  const minCtx = parallel > 1 ? Math.floor(16384 / parallel) : 16384;
+  if (nCtx < minCtx) failures.push(`n_ctx ${nCtx} < ${minCtx} (parallel=${parallel})`);
   if (!caps.includes("multimodal")) failures.push("multimodal capability missing (mmproj not loaded?)");
   if (!ids.some((id) => /nuextract/i.test(id))) failures.push("NuExtract model not in /v1/models");
   if (!ids.includes(expectedAlias)) {

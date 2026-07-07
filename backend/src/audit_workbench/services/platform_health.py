@@ -55,6 +55,11 @@ async def probe_readiness() -> HealthReadinessResponse:
         structured_llm=settings.structured_llm_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
         admission_control_enabled=settings.admission_control_enabled,
+        admission_max_queued=settings.admission_max_queued if settings.admission_control_enabled else None,
+        admission_max_inflight=settings.admission_max_inflight if settings.admission_control_enabled else None,
+        admission_max_extract_inflight=(
+            settings.admission_max_extract_inflight if settings.admission_control_enabled else None
+        ),
         queued_runs=queued_runs,
         running_runs=running_runs,
         inflight_runs=inflight_runs,

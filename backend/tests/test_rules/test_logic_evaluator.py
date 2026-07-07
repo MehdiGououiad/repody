@@ -65,3 +65,22 @@ def test_ocr_locale_amount_coerces():
     fields = {"total_amount": "6 000,00 Dh TTC"}
     passed, _, _ = evaluate_logic_expression("total_amount > 1000", fields)
     assert passed is True
+
+
+def test_iso_date_less_than_literal():
+    fields = {"invoice_date": "2024-06-15"}
+    passed, _, _ = evaluate_logic_expression('invoice_date < "2025-01-01"', fields)
+    assert passed is True
+
+
+def test_iso_date_before_cutoff_fails():
+    fields = {"due_date": "2025-06-01"}
+    passed, _, _ = evaluate_logic_expression('due_date < "2025-01-01"', fields)
+    assert passed is False
+
+
+def test_iso_date_value_not_coerced_to_year_number():
+    """2025-01-01 must stay a string, not float 2025.0, when compared to a date literal."""
+    fields = {"invoice_date": "2025-01-01"}
+    passed, detail, _ = evaluate_logic_expression('invoice_date <= "2025-12-31"', fields)
+    assert passed is True, detail

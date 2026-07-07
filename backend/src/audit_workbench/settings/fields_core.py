@@ -46,6 +46,11 @@ class CoreSettingsFields:
     seed_on_startup: bool = False
 
     log_json: bool = Field(default=True)
+    log_file: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("AUDIT_LOG_FILE"),
+        description="Optional path for JSON log lines (Promtail → Loki in local dev).",
+    )
 
     otel_enabled: bool = Field(default=False)
     otel_service_name: str = Field(default="repody-api")

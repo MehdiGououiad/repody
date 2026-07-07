@@ -31,7 +31,7 @@ web:
       memory: 384Mi
 
 workerExtract:
-  replicas: 0
+  replicas: 1
   autoscaling:
     enabled: false
   podDisruptionBudget:
@@ -46,7 +46,7 @@ workerExtract:
       memory: 1Gi
 
 workerFast:
-  replicas: 0
+  replicas: 1
   autoscaling:
     enabled: false
   podDisruptionBudget:
