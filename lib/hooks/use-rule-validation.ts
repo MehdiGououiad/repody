@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { rulesValidationFingerprint } from "@/lib/workflow/draft-fingerprint";
 import { issuesByRuleId, validateRulesViaApi } from "@/lib/rules/rule-preview";
 
 const DEBOUNCE_MS = 400;
@@ -12,10 +13,19 @@ export function useRuleValidationIssues(
   rules: WorkflowRule[]
 ): Record<string, string[]> {
   const [issuesMap, setIssuesMap] = useState<Record<string, string[]>>({});
+  const lastValidatedRef = useRef<string | null>(null);
+  const fingerprint = useMemo(
+    () => rulesValidationFingerprint(documents, rules),
+    [documents, rules]
+  );
 
   useEffect(() => {
     if (rules.length === 0) {
-      setIssuesMap({});
+      lastValidatedRef.current = null;
+      return;
+    }
+
+    if (fingerprint === lastValidatedRef.current) {
       return;
     }
 
@@ -23,7 +33,10 @@ export function useRuleValidationIssues(
     const timer = window.setTimeout(() => {
       void validateRulesViaApi(documents, rules)
         .then((results) => {
-          if (!cancelled) setIssuesMap(issuesByRuleId(results));
+          if (!cancelled) {
+            lastValidatedRef.current = fingerprint;
+            setIssuesMap(issuesByRuleId(results));
+          }
         })
         .catch(() => {
           if (!cancelled) setIssuesMap({});
@@ -34,7 +47,7 @@ export function useRuleValidationIssues(
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [documents, rules]);
+  }, [documents, fingerprint, rules]);
 
-  return issuesMap;
+  return rules.length === 0 ? {} : issuesMap;
 }

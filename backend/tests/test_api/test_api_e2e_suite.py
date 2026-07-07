@@ -188,7 +188,19 @@ async def test_audits_and_metrics_endpoints(client):
 
     audits = await client.get("/v1/audits")
     assert audits.status_code == 200
-    assert isinstance(audits.json()["audits"], list)
+    body = audits.json()
+    assert isinstance(body["audits"], list)
+    assert "total" in body
+    assert "limit" in body
+    assert "offset" in body
+
+    dashboard = await client.get("/v1/dashboard")
+    assert dashboard.status_code == 200
+    dash = dashboard.json()
+    assert "metrics" in dash
+    assert "audits" in dash
+    assert "workflows" in dash
+    assert "queue" in dash
 
     rules = await client.get("/v1/rules/library")
     assert rules.status_code == 200

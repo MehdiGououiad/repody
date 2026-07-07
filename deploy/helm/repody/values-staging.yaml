@@ -28,7 +28,10 @@ images:
 api:
   replicas: 1
   autoscaling:
-    enabled: false
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 75
   podDisruptionBudget:
     enabled: false
 
@@ -36,14 +39,20 @@ workerExtract:
   replicas: 1
   warmupOnStart: false
   autoscaling:
-    enabled: false
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80
   podDisruptionBudget:
     enabled: false
 
 workerFast:
   replicas: 1
   autoscaling:
-    enabled: false
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 2
+    targetCPUUtilizationPercentage: 80
   podDisruptionBudget:
     enabled: false
 

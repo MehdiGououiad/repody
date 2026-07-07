@@ -48,6 +48,31 @@ def duration_ms_between(start: datetime | None, end: datetime | None) -> int:
     return int((_as_utc(end) - _as_utc(start)).total_seconds() * 1000)
 
 
+def workflow_to_list_schema(
+    wf: Workflow,
+    *,
+    total_runs: int = 0,
+    success_rate: float = 0.0,
+    last_run: str | None = None,
+    api_stats: WorkflowApiStatsSchema | None = None,
+) -> WorkflowSchema:
+    return WorkflowSchema(
+        id=wf.id,
+        name=wf.name,
+        description=wf.description,
+        status=wf.status,
+        owner=wf.owner,
+        last_run=last_run,
+        success_rate=success_rate,
+        total_runs=total_runs,
+        documents=[],
+        rules=[],
+        deployed_at=_fmt_dt(wf.deployed_at),
+        api_key_hint=wf.api_key_hint,
+        api_stats=api_stats,
+    )
+
+
 def workflow_to_schema(
     wf: Workflow,
     *,

@@ -21,6 +21,8 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-tooltip",
       "@radix-ui/react-popover",
       "cmdk",
+      "lucide-react",
+      "recharts",
     ],
   },
   async rewrites() {

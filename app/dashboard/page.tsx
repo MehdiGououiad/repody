@@ -5,7 +5,6 @@ import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts";
 import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
 import { fetchDashboardBundle } from "@/lib/api/dashboard";
 
@@ -69,24 +68,20 @@ export default async function DashboardPage() {
         }
       />
 
-      <DashboardAlerts alerts={data.healthAlerts} />
-
       <GetStartedPanel show={showGetStarted} />
 
-      {data.apiLive ? (
-        <BusinessDashboard
-          initial={{
-            apiLive: data.apiLive,
-            kpis: data.kpis,
-            audits: data.audits,
-            workflows: data.workflows,
-            performanceSeries: data.performanceSeries,
-            violationBreakdown: data.violationBreakdown,
-          }}
-        />
-      ) : (
-        <EmptyDashboard t={t} />
-      )}
+      <BusinessDashboard
+        initial={{
+          apiLive: data.apiLive,
+          kpis: data.kpis,
+          audits: data.audits,
+          workflows: data.workflows,
+          performanceSeries: data.performanceSeries,
+          violationBreakdown: data.violationBreakdown,
+          healthAlerts: data.healthAlerts,
+          queue: data.queue,
+        }}
+      />
     </PageShell.Stagger>
   );
 }

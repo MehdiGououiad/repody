@@ -6,6 +6,7 @@ import type { ModelsCatalogResponse, PlatformConfigResponse } from "@/lib/api/sc
 import type { ProcessingPathsResponse } from "@/lib/api/processing-paths";
 import type { RuleTemplate } from "@/lib/types";
 
+const CATALOG_QUERY_KEY = ["catalog", "models"] as const;
 const CATALOG_STALE_MS = 5 * 60_000;
 
 async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
@@ -40,18 +41,16 @@ export function processingPathsFromCatalog(
 
 export function useProcessingPathsCatalog() {
   return useQuery({
-    queryKey: ["catalog", "processing-paths"],
-    queryFn: async (): Promise<ProcessingPathsResponse> => {
-      const catalog = await fetchModelsCatalog();
-      return processingPathsFromCatalog(catalog);
-    },
+    queryKey: CATALOG_QUERY_KEY,
+    queryFn: fetchModelsCatalog,
     staleTime: CATALOG_STALE_MS,
+    select: processingPathsFromCatalog,
   });
 }
 
 export function useUnifiedModelsCatalog(enabled = true) {
   return useQuery({
-    queryKey: ["catalog", "models-unified"],
+    queryKey: CATALOG_QUERY_KEY,
     enabled,
     queryFn: fetchModelsCatalog,
     staleTime: CATALOG_STALE_MS,

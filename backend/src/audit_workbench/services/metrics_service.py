@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import RuleResult, Run, RunStatus
@@ -22,26 +22,6 @@ _DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 def _week_start() -> datetime:
     now = datetime.now(UTC)
     return (now - timedelta(days=6)).replace(hour=0, minute=0, second=0, microsecond=0)
-
-
-async def _daily_run_counts(
-    session: AsyncSession,
-    *,
-    since: datetime,
-    status: str | None = None,
-    overall: str | None = None,
-) -> dict[str, int]:
-    stmt = (
-        select(func.date(Run.created_at), func.count(Run.id))
-        .where(Run.created_at >= since)
-        .group_by(func.date(Run.created_at))
-    )
-    if status:
-        stmt = stmt.where(Run.status == status)
-    if overall:
-        stmt = stmt.where(Run.overall_status == overall)
-    rows = await session.execute(stmt)
-    return {str(row[0]): int(row[1]) for row in rows.all()}
 
 
 def _series_from_counts(counts: dict[str, int], since: datetime) -> list[KpiSeriesPoint]:
@@ -64,71 +44,73 @@ def _delta(current: float, previous: float) -> tuple[float, str, bool]:
 async def get_metrics(session: AsyncSession) -> MetricsResponse:
     since = _week_start()
     mid = since + timedelta(days=3)
+    done = RunStatus.done.value
+    running = (RunStatus.running.value, RunStatus.queued.value)
 
-    total_week_q = await session.execute(select(func.count(Run.id)).where(Run.created_at >= since))
-    total_week = int(total_week_q.scalar() or 0)
-
-    done_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status == RunStatus.done.value,
-            Run.created_at >= since,
+    summary_q = await session.execute(
+        select(
+            func.count(Run.id).filter(Run.created_at >= since).label("total_week"),
+            func.count(Run.id)
+            .filter(and_(Run.created_at >= since, Run.status == done))
+            .label("done_week"),
+            func.count(Run.id)
+            .filter(and_(Run.created_at >= since, Run.status == done, Run.overall_status == "passed"))
+            .label("passed_week"),
+            func.count(Run.id)
+            .filter(and_(Run.created_at >= since, Run.status == done, Run.overall_status == "failed"))
+            .label("failed_week"),
+            func.count(Run.id).filter(Run.status.in_(running)).label("pending"),
+            func.count(Run.id)
+            .filter(and_(Run.created_at >= since, Run.created_at < mid, Run.status == done))
+            .label("prev_done"),
+            func.count(Run.id)
+            .filter(
+                and_(
+                    Run.created_at >= since,
+                    Run.created_at < mid,
+                    Run.status == done,
+                    Run.overall_status == "passed",
+                )
+            )
+            .label("prev_passed"),
         )
     )
-    done_week = int(done_q.scalar() or 0)
-
-    passed_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status == RunStatus.done.value,
-            Run.overall_status == "passed",
-            Run.created_at >= since,
-        )
-    )
-    passed_week = int(passed_q.scalar() or 0)
-
-    failed_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status == RunStatus.done.value,
-            Run.overall_status == "failed",
-            Run.created_at >= since,
-        )
-    )
-    failed_week = int(failed_q.scalar() or 0)
-
-    running_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status.in_((RunStatus.running.value, RunStatus.queued.value))
-        )
-    )
-    pending = int(running_q.scalar() or 0)
+    row = summary_q.one()
+    total_week = int(row.total_week or 0)
+    done_week = int(row.done_week or 0)
+    passed_week = int(row.passed_week or 0)
+    failed_week = int(row.failed_week or 0)
+    pending = int(row.pending or 0)
+    prev_done = int(row.prev_done or 0)
+    prev_passed = int(row.prev_passed or 0)
 
     rate = (passed_week / done_week) if done_week else 0.0
-
-    prev_done_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status == RunStatus.done.value,
-            Run.created_at >= since,
-            Run.created_at < mid,
-        )
-    )
-    prev_done = int(prev_done_q.scalar() or 0)
-    prev_passed_q = await session.execute(
-        select(func.count(Run.id)).where(
-            Run.status == RunStatus.done.value,
-            Run.overall_status == "passed",
-            Run.created_at >= since,
-            Run.created_at < mid,
-        )
-    )
-    prev_passed = int(prev_passed_q.scalar() or 0)
     prev_rate = (prev_passed / prev_done) if prev_done else 0.0
 
-    week_counts = await _daily_run_counts(session, since=since)
-    passed_counts = await _daily_run_counts(
-        session, since=since, status=RunStatus.done.value, overall="passed"
+    daily_q = await session.execute(
+        select(func.date(Run.created_at), Run.status, Run.overall_status, func.count(Run.id))
+        .where(Run.created_at >= since - timedelta(days=7))
+        .group_by(func.date(Run.created_at), Run.status, Run.overall_status)
     )
-    failed_counts = await _daily_run_counts(
-        session, since=since, status=RunStatus.done.value, overall="failed"
-    )
+    week_counts: dict[str, int] = {}
+    passed_counts: dict[str, int] = {}
+    failed_counts: dict[str, int] = {}
+    prev_week_counts: dict[str, int] = {}
+    since_date = since.date()
+    prev_start_date = (since - timedelta(days=7)).date()
+
+    for day, status, overall, count in daily_q.all():
+        day_str = str(day)
+        day_date = day if hasattr(day, "year") else datetime.fromisoformat(day_str).date()
+        value = int(count)
+        if day_date >= since_date:
+            week_counts[day_str] = week_counts.get(day_str, 0) + value
+            if status == done and overall == "passed":
+                passed_counts[day_str] = passed_counts.get(day_str, 0) + value
+            if status == done and overall == "failed":
+                failed_counts[day_str] = failed_counts.get(day_str, 0) + value
+        elif day_date >= prev_start_date:
+            prev_week_counts[day_str] = prev_week_counts.get(day_str, 0) + value
 
     audits_delta, audits_unit, audits_up = _delta(float(total_week), float(total_week // 2))
     rate_delta, rate_unit, rate_up = _delta(rate * 100, prev_rate * 100)
@@ -184,7 +166,6 @@ async def get_metrics(session: AsyncSession) -> MetricsResponse:
         ),
     ]
 
-    prev_week_counts = await _daily_run_counts(session, since=since - timedelta(days=7))
     performance = [
         PerformancePoint(
             day=_DAY_LABELS[i % 7],

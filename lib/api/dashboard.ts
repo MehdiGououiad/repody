@@ -1,60 +1,58 @@
-import type { Workflow } from "@/lib/types";
-import type { Audit, HealthAlert, KpiMetric, PerformancePoint, ViolationBreakdown } from "@/lib/types";
-import { fetchAudits, fetchMetrics, fetchWorkflows } from "@/lib/api/client";
+import { cache } from "react";
+import type { Audit, HealthAlert, KpiMetric, PerformancePoint, ViolationBreakdown, Workflow } from "@/lib/types";
+import type { DashboardResponse, QueueSnapshot } from "@/lib/api/schema-types";
+import { serverApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export type PlatformHealth = {
-  status: string;
-  extractor: string;
-  inference: string;
-  queuedRuns: number;
-  runningRuns: number;
-  inflightRuns: number;
-  taskiqConfigured: boolean;
-  workerPools: Record<string, string>;
-};
+export type { QueueSnapshot };
 
-export type OcrDiagnostic = {
-  ok: boolean;
-  model: string;
-  runtime: string;
-  inferenceReachable: boolean;
-  modelLoaded: boolean;
-  detail: string;
-  hint: string;
-};
-
-export type DashboardBundle = {
-  apiLive: boolean;
+export type DashboardSnapshot = {
   kpis: KpiMetric[];
   performanceSeries: PerformancePoint[];
   violationBreakdown: ViolationBreakdown[];
   healthAlerts: HealthAlert[];
   audits: Audit[];
   workflows: Workflow[];
+  queue: QueueSnapshot;
 };
 
-export async function fetchDashboardBundle(): Promise<DashboardBundle> {
-  const [metricsResult, auditsResult, workflowsResult] = await Promise.allSettled([
-    fetchMetrics(),
-    fetchAudits(),
-    fetchWorkflows(),
-  ]);
+export type DashboardBundle = DashboardSnapshot & {
+  apiLive: boolean;
+};
 
-  const metrics = metricsResult.status === "fulfilled" ? metricsResult.value : null;
-  const audits =
-    auditsResult.status === "fulfilled" ? auditsResult.value.audits : [];
-  const workflows =
-    workflowsResult.status === "fulfilled" ? workflowsResult.value : [];
+const EMPTY_QUEUE: QueueSnapshot = {
+  queuedRuns: 0,
+  runningRuns: 0,
+  inflightRuns: 0,
+};
 
-  const apiLive = metrics !== null;
-
+export function dashboardSnapshotFromResponse(body: DashboardResponse): DashboardSnapshot {
+  const metrics = body.metrics;
   return {
-    apiLive,
-    kpis: metrics?.kpis ?? [],
-    performanceSeries: metrics?.performanceSeries ?? [],
-    violationBreakdown: metrics?.violationBreakdown ?? [],
-    healthAlerts: metrics?.healthAlerts ?? [],
-    audits,
-    workflows,
+    kpis: metrics.kpis as KpiMetric[],
+    performanceSeries: metrics.performanceSeries as PerformancePoint[],
+    violationBreakdown: metrics.violationBreakdown as ViolationBreakdown[],
+    healthAlerts: (metrics.healthAlerts ?? []) as HealthAlert[],
+    audits: body.audits as Audit[],
+    workflows: body.workflows as Workflow[],
+    queue: body.queue ?? EMPTY_QUEUE,
   };
 }
+
+export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => {
+  try {
+    const { data, error, response } = await serverApi.GET("/v1/dashboard");
+    if (error || !response.ok || !data) throwOnApiError(error, response);
+    return { apiLive: true, ...dashboardSnapshotFromResponse(data) };
+  } catch {
+    return {
+      apiLive: false,
+      kpis: [],
+      performanceSeries: [],
+      violationBreakdown: [],
+      healthAlerts: [],
+      audits: [],
+      workflows: [],
+      queue: EMPTY_QUEUE,
+    };
+  }
+});

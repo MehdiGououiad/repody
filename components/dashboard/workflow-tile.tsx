@@ -1,15 +1,23 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Copy, Check, Play, Pencil, FileSearch, AlertTriangle, XCircle, Clock, Zap } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { Workflow } from "@/lib/types";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
+
+const WorkflowCallSparkline = dynamic(
+  () =>
+    import("@/components/dashboard/workflow-call-sparkline").then((m) => ({
+      default: m.WorkflowCallSparkline,
+    })),
+  { ssr: false, loading: () => <div className="h-9 w-full animate-pulse rounded bg-surface-container-low" /> }
+);
 
 function useCopy() {
   const [copied, setCopied] = useState(false);
@@ -109,19 +117,9 @@ function DeployedTile({ workflow }: { workflow: Workflow }) {
           <p className="text-lg font-bold text-on-surface mt-0.5">{stats.avgLatencyMs}ms</p>
         </div>
         <div className="flex items-end">
-          {mounted && (
-            <ResponsiveContainer width="100%" height={36}>
-              <BarChart data={stats.callSeries} margin={{ top: 0, right: 0, bottom: 0, left: 0 }} barSize={5}>
-                <Bar dataKey="calls" fill="var(--color-primary)" opacity={0.7} radius={[2, 2, 0, 0]} />
-                <Tooltip
-                  contentStyle={{ fontSize: 10, background: "var(--color-surface-container-high)", border: "none", borderRadius: 6 }}
-                  itemStyle={{ color: "var(--color-on-surface)" }}
-                  labelStyle={{ color: "var(--color-on-surface-variant)" }}
-                  cursor={{ fill: "var(--color-surface-container-highest)" }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+          {mounted && stats.callSeries.length > 0 ? (
+            <WorkflowCallSparkline data={stats.callSeries} />
+          ) : null}
         </div>
       </div>
 

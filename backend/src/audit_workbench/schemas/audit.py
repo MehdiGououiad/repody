@@ -14,6 +14,9 @@ class AuditListItem(CamelModel):
 
 class AuditListResponse(CamelModel):
     audits: list[AuditListItem]
+    total: int
+    limit: int
+    offset: int
 
 
 class AuditDetailResponse(CamelModel):

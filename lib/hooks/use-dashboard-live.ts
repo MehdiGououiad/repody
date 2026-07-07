@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
-import type { Audit, KpiMetric, PerformancePoint, ViolationBreakdown, Workflow } from "@/lib/types";
+import {
+  dashboardSnapshotFromResponse,
+  type DashboardSnapshot,
+} from "@/lib/api/dashboard";
+import type { DashboardResponse } from "@/lib/api/schema-types";
 
-export type LiveDashboardData = {
-  kpis: KpiMetric[];
-  audits: Audit[];
-  workflows: Workflow[];
-  performanceSeries: PerformancePoint[];
-  violationBreakdown: ViolationBreakdown[];
+export type LiveDashboardData = DashboardSnapshot & {
   apiLive: boolean;
   lastUpdated: Date | null;
 };
 
-const REFRESH_MS = 20_000;
+const REFRESH_MS = 30_000;
 
 export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">): LiveDashboardData {
   const [data, setData] = useState<LiveDashboardData>({
@@ -27,35 +26,13 @@ export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">
 
     async function refresh() {
       try {
-        const [metricsRes, auditsRes, workflowsRes] = await Promise.all([
-          browserApi.GET("/v1/metrics"),
-          browserApi.GET("/v1/audits"),
-          browserApi.GET("/v1/workflows"),
-        ]);
-
-        if (cancelled) return;
-
-        if (!metricsRes.response.ok || !auditsRes.response.ok || !workflowsRes.response.ok) {
-          return;
-        }
-
-        if (metricsRes.error) throwOnApiError(metricsRes.error, metricsRes.response);
-        if (auditsRes.error) throwOnApiError(auditsRes.error, auditsRes.response);
-        if (workflowsRes.error) throwOnApiError(workflowsRes.error, workflowsRes.response);
-
-        const metrics = metricsRes.data as {
-          kpis: KpiMetric[];
-          performanceSeries: PerformancePoint[];
-          violationBreakdown: ViolationBreakdown[];
-        };
+        const { data: body, error, response } = await browserApi.GET("/v1/dashboard");
+        if (cancelled || !response.ok || !body) return;
+        if (error) throwOnApiError(error, response);
 
         setData({
           apiLive: true,
-          kpis: metrics.kpis ?? [],
-          performanceSeries: metrics.performanceSeries ?? [],
-          violationBreakdown: metrics.violationBreakdown ?? [],
-          audits: (auditsRes.data as { audits: Audit[] }).audits ?? [],
-          workflows: (workflowsRes.data as { workflows: Workflow[] }).workflows ?? [],
+          ...dashboardSnapshotFromResponse(body as DashboardResponse),
           lastUpdated: new Date(),
         });
       } catch {

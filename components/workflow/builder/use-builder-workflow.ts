@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -165,6 +165,22 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       setSaving(false);
     }
   };
+
+  const persistRef = useRef(persistWorkflow);
+
+  useEffect(() => {
+    persistRef.current = persistWorkflow;
+  });
+
+  useEffect(() => {
+    if (!dirty || saving || isNew) return;
+    const timer = window.setTimeout(() => {
+      void persistRef
+        .current({ navigate: false, toastOnSuccess: false })
+        .catch(() => {});
+    }, 2500);
+    return () => window.clearTimeout(timer);
+  }, [dirty, saving, isNew, name, documents, rules]);
 
   return {
     step,

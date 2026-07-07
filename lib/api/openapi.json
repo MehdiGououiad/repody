@@ -921,6 +921,26 @@
         "operationId": "list_audits_v1_audits_get",
         "parameters": [
           {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 200,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
             "name": "authorization",
             "in": "header",
             "required": false,
@@ -1051,6 +1071,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "summary": "Dashboard Bundle",
+        "operationId": "dashboard_bundle_v1_dashboard_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
                 }
               }
             }
@@ -2406,11 +2475,26 @@
             },
             "type": "array",
             "title": "Audits"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
           }
         },
         "type": "object",
         "required": [
-          "audits"
+          "audits",
+          "total",
+          "limit",
+          "offset"
         ],
         "title": "AuditListResponse"
       },
@@ -3085,6 +3169,38 @@
         "type": "object",
         "title": "CreateWorkflowBody"
       },
+      "DashboardResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/MetricsResponse"
+          },
+          "audits": {
+            "items": {
+              "$ref": "#/components/schemas/AuditListItem"
+            },
+            "type": "array",
+            "title": "Audits"
+          },
+          "workflows": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowSchema"
+            },
+            "type": "array",
+            "title": "Workflows"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueSnapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metrics",
+          "audits",
+          "workflows",
+          "queue"
+        ],
+        "title": "DashboardResponse"
+      },
       "DeployWorkflowBody": {
         "properties": {
           "apiKey": {
@@ -3701,6 +3817,39 @@
           "admissionControlEnabled": {
             "type": "boolean",
             "title": "Admissioncontrolenabled"
+          },
+          "admissionMaxQueued": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admissionmaxqueued"
+          },
+          "admissionMaxInflight": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admissionmaxinflight"
+          },
+          "admissionMaxExtractInflight": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admissionmaxextractinflight"
           },
           "queuedRuns": {
             "type": "integer",
@@ -4789,6 +4938,29 @@
           "size"
         ],
         "title": "PresignedUploadItem"
+      },
+      "QueueSnapshot": {
+        "properties": {
+          "queuedRuns": {
+            "type": "integer",
+            "title": "Queuedruns"
+          },
+          "runningRuns": {
+            "type": "integer",
+            "title": "Runningruns"
+          },
+          "inflightRuns": {
+            "type": "integer",
+            "title": "Inflightruns"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queuedRuns",
+          "runningRuns",
+          "inflightRuns"
+        ],
+        "title": "QueueSnapshot"
       },
       "ReadPathOption": {
         "properties": {

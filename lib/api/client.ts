@@ -1,21 +1,18 @@
 import { cache } from "react";
-import type {
-  Audit,
-  HealthAlert,
-  KpiMetric,
-  PerformancePoint,
-  RuleTemplate,
-  ViolationBreakdown,
-  Workflow,
-} from "@/lib/types";
+import type { Audit, RuleTemplate, Workflow } from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
+import type { AuditListResponse } from "@/lib/api/schema-types";
 import { serverApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export async function fetchWorkflows(): Promise<Workflow[]> {
+export type AuditListResult = Omit<AuditListResponse, "audits"> & {
+  audits: Audit[];
+};
+
+export const fetchWorkflows = cache(async (): Promise<Workflow[]> => {
   const { data, error, response } = await serverApi.GET("/v1/workflows");
   if (error || !response.ok || !data) throwOnApiError(error, response);
   return (data as { workflows: Workflow[] }).workflows;
-}
+});
 
 export async function fetchWorkflow(id: string): Promise<Workflow | null> {
   try {
@@ -29,22 +26,18 @@ export async function fetchWorkflow(id: string): Promise<Workflow | null> {
   }
 }
 
-export async function fetchAudits() {
-  const { data, error, response } = await serverApi.GET("/v1/audits");
+export const fetchAudits = cache(async (limit = 200, offset = 0): Promise<AuditListResult> => {
+  const { data, error, response } = await serverApi.GET("/v1/audits", {
+    params: { query: { limit, offset } },
+  });
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as { audits: Audit[] };
-}
-
-export async function fetchMetrics() {
-  const { data, error, response } = await serverApi.GET("/v1/metrics");
-  if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as {
-    kpis: KpiMetric[];
-    performanceSeries: PerformancePoint[];
-    violationBreakdown: ViolationBreakdown[];
-    healthAlerts?: HealthAlert[];
+  return {
+    total: data.total,
+    limit: data.limit,
+    offset: data.offset,
+    audits: data.audits as Audit[],
   };
-}
+});
 
 export async function fetchAuditDetail(id: string): Promise<RunAuditDetail | null> {
   try {
