@@ -4,9 +4,21 @@ global:
   deploymentProfile: bundled
   imagePullSecrets:
     - name: registry-pull-secret
+  openshift:
+    enabled: true
+    routes:
+      enabled: true
+      webHost: repody-web.apps-crc.testing
+      apiHost: repody-api.apps-crc.testing
+      filesHost: repody-files.apps-crc.testing
+      filesServiceName: repody-data-minio
+      filesServicePort: 9000
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
 
 ingress:
-  enabled: true
+  enabled: false
   host: repody-web.apps-crc.testing
   apiHost: repody-api.apps-crc.testing
   filesHost: repody-files.apps-crc.testing
@@ -72,9 +84,3 @@ observability:
 
 migrations:
   enabled: true
-
-global:
-  openshift:
-    enabled: true
-    routes:
-      enabled: false
