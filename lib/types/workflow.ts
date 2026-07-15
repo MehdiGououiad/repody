@@ -11,8 +11,17 @@ export interface SchemaField {
   description: string;
   /** NuExtract template leaf type, e.g. verbatim-string, number, date-time. */
   templateType?: string;
+  /** Allowed values for enum / multi-enum NuExtract templates. */
+  enumValues?: string[];
+  /** Nested columns for object-array (repeating row) templates. */
+  children?: SchemaField[];
   /** Optional value for dry-run rule validation without uploading a file. */
   sampleValue?: string;
+}
+
+export interface ExtractionIclExample {
+  input: string;
+  output: string;
 }
 
 export type ReadPathId = "document_model";
@@ -28,6 +37,7 @@ export interface DocumentDef {
   documentModelId?: string | null;
   extractionInstructions?: string;
   markdownExtraction?: boolean;
+  extractionIclExamples?: ExtractionIclExample[];
 }
 
 export type ArithmeticOp = "+" | "-" | "*" | "/";
@@ -44,11 +54,22 @@ export interface ConditionOperand {
   value: string;
 }
 
+export type TableAggregateFn = "sum_rows" | "sum_rows_where" | "count_rows_where";
+
+export interface TableAggregateLeft {
+  fn: TableAggregateFn;
+  tableField: string;
+  amountColumn?: string;
+  filterColumn?: string;
+  filterContains?: string;
+}
+
 export interface RuleCondition {
   id: string;
   left: ConditionOperand;
   arithmeticOp?: ArithmeticOp;
   leftExtra?: ConditionOperand;
+  tableAggregate?: TableAggregateLeft;
   operator: ComparisonOp;
   right?: ConditionOperand;
 }

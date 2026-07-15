@@ -31,7 +31,9 @@ pnpm openshift:client-test:helm
 pnpm openshift:client-ready -- --profile=bundled --registry=harbor
 ```
 
-Full guide: [docs/deploy/OPENSHIFT.md](../../docs/deploy/OPENSHIFT.md#client-test-lab)
+Full guide: [docs/deploy/OPENSHIFT.md](../../docs/deploy/OPENSHIFT.md#argo-cd-and-lab-ui-openshift-routes)
+
+**Lab UI URLs** (OpenShift Routes — no port-forward): see the table in OPENSHIFT.md. Infra routes are applied by `pnpm openshift:infra`; Repody routes after GitOps sync.
 
 Teardown:
 

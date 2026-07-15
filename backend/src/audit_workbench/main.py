@@ -48,12 +48,15 @@ async def lifespan(app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    await init_storage()
     from audit_workbench.services.operator import hydrate_operator_jobs_from_redis
     from audit_workbench.taskiq.broker import startup_taskiq_brokers
 
-    await hydrate_operator_jobs_from_redis()
-    await startup_taskiq_brokers()
+    # Independent startup work — FastAPI lifespan guidance: keep critical path short.
+    await asyncio.gather(
+        init_storage(),
+        hydrate_operator_jobs_from_redis(),
+        startup_taskiq_brokers(),
+    )
     if settings.oidc_enabled:
         from audit_workbench.auth.jwt_validator import warm_jwks_cache
 

@@ -105,6 +105,4 @@ def model_is_available(expected: str, installed: set[str]) -> bool:
     target = normalize_openai_model_name(expected)
     if not target:
         return False
-    if target in installed:
-        return True
-    return any(target in candidate or candidate in target for candidate in installed)
+    return target in installed

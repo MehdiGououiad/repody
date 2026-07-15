@@ -89,7 +89,7 @@ Populate Vault paths before applying ExternalSecrets. Full key list: [SECRETS.md
 ```bash
 cp deploy/client/values-external.example.yaml ~/repody-gitops/values.yaml
 # Edit: images.*, externalDatabase, externalRedis, externalObjectStorage,
-#       config.oidcIssuer, config.vllmBaseUrl, ingress or gatewayApi hosts
+#       config.oidcIssuer, config.llamacppBaseUrl, ingress or gatewayApi hosts
 ```
 
 ### 3. Helm install
@@ -226,8 +226,8 @@ Namespace labels: `deploy/client/namespace.example.yaml` uses **restricted** Pod
 | Symptom | Check |
 |---------|-------|
 | API stuck in init | `AUDIT_REDIS_URL` in runtime secret; worker pods running |
-| Workers cannot extract | Worker pods reach `config.vllmBaseUrl` ([REPODY-VLM.md](../REPODY-VLM.md)) |
-| 401 from inference | `AUDIT_VLLM_API_KEY` in runtime secret |
+| Workers cannot extract | Worker pods reach `config.llamacppBaseUrl` ([REPODY-VLM.md](../REPODY-VLM.md)) |
+| 401 from inference | `AUDIT_LLAMACPP_API_KEY` in runtime secret |
 | Upload failures | `filesHost` / public object-storage endpoint |
 | Auth failures | OIDC issuer and JWKS reachable from API pods |
 | Helm render fails in production | Bundled Postgres/Redis/MinIO disabled — use external or bundled **profile** values correctly |

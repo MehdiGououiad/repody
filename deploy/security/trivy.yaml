@@ -10,7 +10,6 @@ scan:
     - e2e/report
     - e2e/test-results
     - "**/.runtime"
-    - "**/.runtime-k3s"
     - "**/.runtime-enterprise"
   skip-files:
     - "**/*.pdf"

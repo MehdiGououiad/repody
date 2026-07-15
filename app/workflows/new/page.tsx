@@ -26,7 +26,7 @@ function buildBlankWorkflow(): Workflow {
         id: `doc${shortId()}`,
         documentType: "",
         schema: [],
-        extractionMode: "auto",
+        extractionMode: "document_model",
         validationMode: "logic_only",
         documentModelId: null,
       },

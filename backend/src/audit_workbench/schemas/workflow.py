@@ -4,6 +4,11 @@ from audit_workbench.schemas.common import CamelModel
 from audit_workbench.schemas.run import RunAuditDetail, RunAuditField, RunAuditRule
 
 
+class ExtractionIclExampleSchema(CamelModel):
+    input: str = ""
+    output: str = ""
+
+
 class SchemaFieldSchema(CamelModel):
     id: str
     name: str
@@ -12,6 +17,11 @@ class SchemaFieldSchema(CamelModel):
         default="verbatim-string",
         serialization_alias="templateType",
     )
+    enum_values: list[str] = Field(default_factory=list, serialization_alias="enumValues")
+    children: list["SchemaFieldSchema"] = Field(default_factory=list)
+
+
+SchemaFieldSchema.model_rebuild()
 
 
 class DocumentDefSchema(CamelModel):
@@ -44,6 +54,11 @@ class DocumentDefSchema(CamelModel):
         default=False,
         serialization_alias="markdownExtraction",
         description="Run NuExtract document-to-Markdown in parallel with field extraction.",
+    )
+    extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
+        default_factory=list,
+        serialization_alias="extractionIclExamples",
+        description="NuExtract in-context extraction examples (developer message pairs).",
     )
 
 

@@ -28,7 +28,7 @@ secret/repody/production/
   AUDIT_MINIO_ACCESS_KEY
   AUDIT_MINIO_SECRET_KEY
   BUGSINK_DSN
-  AUDIT_VLLM_API_KEY
+  AUDIT_LLAMACPP_API_KEY
   REGISTRY_DOCKERCONFIGJSON     # dockerconfigjson for registry-pull-secret
 
 secret/repody/production/data/   # bundled data-plane only

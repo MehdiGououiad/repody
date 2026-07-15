@@ -16,7 +16,7 @@ from audit_workbench.rules.llm_evaluator import (
     evaluate_llm_rules_batch,
 )
 from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
-from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields
+from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields, rule_kind
 from audit_workbench.services.field_namespace import (
     field_values_for_rule,
     field_values_from_extractions,
@@ -31,7 +31,7 @@ def rules_for_validation(
     active: list[dict] = []
     skipped: list[dict] = []
     for rule in rules:
-        kind = (rule.get("kind") or "logic").lower()
+        kind = rule_kind(rule)
         if validation_mode == LOGIC_VALIDATION and kind == "llm":
             skipped.append(rule)
         else:
@@ -107,7 +107,7 @@ async def evaluate_rules(
     precomputed_llm: dict[str, tuple[RuleStatus, str]] | None = None,
 ) -> list[RuleEvalResult]:
     expanded = expand_rules_for_evaluation(rules)
-    llm_rules = [r for r in rules if (r.get("kind") or "logic").lower() == "llm"]
+    llm_rules = [r for r in rules if rule_kind(r) == "llm"]
     precomputed = precomputed_llm or {}
     remaining_llm = [r for r in llm_rules if (r.get("id") or "") not in precomputed]
 
@@ -119,7 +119,7 @@ async def evaluate_rules(
 
     results: list[RuleEvalResult] = []
     for rule in expanded:
-        kind = (rule.get("kind") or "logic").lower()
+        kind = rule_kind(rule)
         if on_rule_start is not None and kind == "llm":
             await on_rule_start(rule)
         rule_id = rule.get("id") or ""

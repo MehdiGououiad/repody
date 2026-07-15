@@ -40,6 +40,7 @@ export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">
       }
     }
 
+    // SSR already hydrated the first snapshot — skip an immediate duplicate fetch.
     const id = window.setInterval(() => void refresh(), REFRESH_MS);
     return () => {
       cancelled = true;

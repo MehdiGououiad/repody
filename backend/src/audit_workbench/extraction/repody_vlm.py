@@ -8,12 +8,12 @@ from audit_workbench.extraction.repody_vlm_pages import (
     _vlm_pages,
     cap_vlm_pages,
 )
+from audit_workbench.extraction.nuextract_template import build_vlm_template
 from audit_workbench.extraction.repody_vlm_payloads import (
     _fields_payload,
     _markdown_payload,
     _structured_payload,
     build_vlm_instructions,
-    build_vlm_template,
     strip_vlm_thinking,
 )
 from audit_workbench.extraction.repody_vlm_warmup import warmup_repody_vlm

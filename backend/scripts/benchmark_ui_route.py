@@ -482,8 +482,7 @@ async def run(args: argparse.Namespace) -> int:
         route = args.route or default_route
         print(f"API: {args.api}  route: {route}  cold: {args.cold}  auth: {'yes' if token else 'no'}")
         print(
-            f"LLM validation: {environment.get('diagnostics', {}).get('llmValidationEnabled')}  "
-            f"parallel extraction: {environment.get('platform', {}).get('parallelDocExtraction', 'unknown')}"
+            f"LLM validation: {environment.get('diagnostics', {}).get('llmValidationEnabled')}"
         )
 
         suite_id = uuid.uuid4().hex[:8]

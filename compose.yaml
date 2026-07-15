@@ -119,14 +119,12 @@ services:
       AUDIT_OTEL_EXPORTER_ENDPOINT: http://otel-collector:4318/v1/traces
       AUDIT_OTEL_SERVICE_NAME: repody-worker-extract
       BUGSINK_DSN: ${BUGSINK_DSN:-}
-      AUDIT_VLLM_BASE_URL: http://host.docker.internal:8081/v1
-      AUDIT_VLLM_SERVED_MODEL: nuextract3-q4_k_m
-      AUDIT_INFERENCE_MODE: vllm
-      AUDIT_EXTRACTION_CACHE_ENABLED: "true"
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "true"
-      AUDIT_REPODY_VLM_PDF_DPI: "170"
-      AUDIT_REPODY_VLM_ENABLE_THINKING: "false"
-      AUDIT_REPODY_VLM_MAX_TOKENS: "224"
+      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
+      AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
+      AUDIT_INFERENCE_MODE: llamacpp
+      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
+      # Host `pnpm llamacpp:serve` already warms NuExtract; keep worker boot fast.
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
       AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "180"
       AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "3"

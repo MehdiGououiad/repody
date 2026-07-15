@@ -1,10 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+
 import { AlertCircle, RefreshCw } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -12,49 +13,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { REPODY_VLM_CATALOG_ID } from "@/lib/document-model-branding";
-import { normalizeReadPath } from "@/lib/api/processing-paths";
+import {
+  REPODY_VLM_CATALOG_ID,
+  publicDocumentModelLabel,
+} from "@/lib/document-model-branding";
 import type { DocumentDef } from "@/lib/types";
+
 import type { ProcessingOptions } from "./processing-options";
 
 export function ProcessingSettings({
-  doc,
-  onChange,
   t,
+  doc,
   options,
+  onChange,
   onRetry,
 }: {
-  doc: DocumentDef;
-  onChange: (patch: Partial<DocumentDef>) => void;
   t: ReturnType<typeof useTranslations>;
+  doc: DocumentDef;
   options: ProcessingOptions;
+  onChange: (patch: Partial<DocumentDef>) => void;
   onRetry: () => void;
 }) {
-  const { paths, documentModelIds, defaultPath, defaultOcr, loaded, error } = options;
-
-  const pathId = normalizeReadPath(doc.extractionMode ?? defaultPath);
-  const pathSpec = paths.find((p) => p.id === pathId);
-  const showReadPath = paths.length > 1;
-  const modelsForPath = documentModelIds;
-  const firstAvailable = modelsForPath.find((m) => m.available !== false);
-  const selectedOcr = doc.documentModelId ?? firstAvailable?.id ?? defaultOcr;
-  const selectedModel = modelsForPath.find((m) => m.id === selectedOcr) ?? documentModelIds.find((m) => m.id === selectedOcr);
-  const markdownOnlyForced = selectedModel?.markdownOnly === true;
-  const readPathId = `read-path-${doc.id}`;
-  const extractionModelId = `extraction-model-${doc.id}`;
-
-  const runtimeLabel =
-    selectedModel?.runtime === "docker_model_runner"
-      ? t("extraction.runtimeDirect")
-      : (selectedModel?.runtime ?? null);
-
-  const onPathChange = (v: string) => {
-    const firstModel = documentModelIds.find((m) => m.available !== false);
-    onChange({
-      extractionMode: v,
-      documentModelId: firstModel?.id ?? doc.documentModelId,
-    });
-  };
+  const { error, loaded, documentModelIds, defaultDocumentModel } = options;
+  const selected =
+    doc.documentModelId?.trim() ||
+    defaultDocumentModel ||
+    REPODY_VLM_CATALOG_ID;
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
@@ -79,100 +63,52 @@ export function ProcessingSettings({
         </div>
       ) : null}
 
-      {showReadPath ? (
-        <div className="space-y-1.5">
-          <Label htmlFor={readPathId} className="text-xs font-semibold">
-            {t("extraction.readPathLabel")}
-          </Label>
-          <Select value={pathId} onValueChange={onPathChange} disabled={!loaded || error}>
-            <SelectTrigger id={readPathId} className="h-9">
-              <SelectValue placeholder={t("extraction.readPathPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent>
-              {paths.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-[11px] text-on-surface-variant">
-            {pathSpec?.description ?? t("extraction.readPathHintDefault")}
-          </p>
-        </div>
-      ) : null}
-
-      <div className="space-y-1.5">
-        <Label htmlFor={extractionModelId} className="text-xs font-semibold">
+      <div className="max-w-sm space-y-1.5">
+        <Label htmlFor={`extraction-model-${doc.id}`} className="text-xs font-semibold">
           {t("extraction.documentModelLabel")}
         </Label>
         <Select
-          value={selectedOcr}
-          onValueChange={(v) => {
-            const model = documentModelIds.find((m) => m.id === v);
-            const patch: Partial<DocumentDef> = { documentModelId: v };
-            if (model?.markdownOnly) {
-              patch.markdownExtraction = true;
-            }
-            onChange(patch);
-          }}
-          disabled={!loaded || error}
+          value={selected}
+          disabled={!loaded || documentModelIds.length === 0}
+          onValueChange={(value) =>
+            onChange({
+              documentModelId: value,
+              extractionMode: "document_model",
+            })
+          }
         >
-          <SelectTrigger id={extractionModelId} className="h-9">
-            <SelectValue placeholder={t("extraction.documentModelIdPlaceholder")} />
+          <SelectTrigger id={`extraction-model-${doc.id}`} className="h-9">
+            <SelectValue
+              placeholder={
+                loaded
+                  ? t("extraction.documentModelIdPlaceholder")
+                  : t("extraction.documentModelIdLoading")
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {modelsForPath.length === 0 ? (
-              <SelectItem value={REPODY_VLM_CATALOG_ID} disabled>
-                {t("extraction.documentModelIdLoading")}
+            {documentModelIds.map((model) => (
+              <SelectItem
+                key={model.id}
+                value={model.id}
+                disabled={model.available === false}
+              >
+                {publicDocumentModelLabel(model.id)}
+                {model.id === defaultDocumentModel ? " · default" : ""}
+                {model.available === false ? " · offline" : ""}
               </SelectItem>
-            ) : (
-              modelsForPath.map((m) => (
-                <SelectItem key={m.id} value={m.id} disabled={m.available === false}>
-                  {m.available === false
-                    ? `${m.label} — ${t("extraction.unavailable")}`
-                    : m.label}
-                </SelectItem>
-              ))
-            )}
+            ))}
+            {documentModelIds.length === 0 ? (
+              <SelectItem value={REPODY_VLM_CATALOG_ID}>
+                {publicDocumentModelLabel(REPODY_VLM_CATALOG_ID)}
+              </SelectItem>
+            ) : null}
           </SelectContent>
         </Select>
-        {selectedModel?.description ? (
-          <div className="rounded-lg border border-border/70 bg-card/70 px-3 py-2">
-            <div className="mb-1 flex items-center gap-2">
-              {runtimeLabel ? (
-                <Badge variant="info" className="text-[9px]">
-                  {runtimeLabel}
-                </Badge>
-              ) : null}
-            </div>
-            <p className="text-[11px] leading-relaxed text-on-surface-variant">
-              {selectedModel.description}
-              {selectedModel.available === false && selectedModel.availabilityNote
-                ? ` ${selectedModel.availabilityNote}`
-                : ""}
-            </p>
-          </div>
-        ) : null}
+        <p className="text-[11px] leading-relaxed text-on-surface-variant">
+          {t("extraction.profileNuextractQ4Hint")}
+        </p>
       </div>
-
-      <label className="flex items-start gap-2.5 rounded-lg border border-border/70 bg-card/70 px-3 py-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          className="mt-0.5 size-4 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
-          checked={markdownOnlyForced ? true : (doc.markdownExtraction ?? false)}
-          onChange={(e) => onChange({ markdownExtraction: e.target.checked })}
-          disabled={!loaded || error || markdownOnlyForced}
-        />
-        <span className="min-w-0">
-          <span className="block text-xs font-semibold text-on-surface">
-            {t("extraction.markdownExtractionLabel")}
-          </span>
-          <span className="block text-[11px] leading-relaxed text-on-surface-variant mt-0.5">
-            {t("extraction.markdownExtractionHint")}
-          </span>
-        </span>
-      </label>
     </div>
   );
 }

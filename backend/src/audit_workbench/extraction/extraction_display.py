@@ -26,13 +26,13 @@ def plan_extraction_detail(
     if not has_file:
         return "Schema placeholders (no file uploaded)"
     read_spec = parse_read_path(_doc_value(doc, "extraction_mode", DEFAULT_READ_PATH_ID))
-    ocr = _doc_value(doc, "document_model_id")
+    document_model_id = _doc_value(doc, "document_model_id")
     parts = [
         f"Read: {read_spec.label}",
         f"Validation: {validation_mode_label(run_validation_mode)}",
     ]
-    if ocr and read_spec.show_document_model:
-        parts.append(f"Model: {public_document_model_label(ocr)}")
+    if document_model_id and read_spec.show_document_model:
+        parts.append(f"Model: {public_document_model_label(document_model_id)}")
     return " · ".join(parts)
 
 
@@ -46,7 +46,7 @@ def completed_extraction_detail(meta) -> str:
     if meta.cache_hit:
         parts.insert(
             0,
-            "Same document as a previous run — reusing cached extraction (skipped OCR/LLM)",
+            "Same document as a previous run — reusing cached extraction (skipped extraction/LLM)",
         )
     if meta.gpu_cold_start_likely:
         parts.append("Slow extraction may include GPU warm-up (first request after idle)")

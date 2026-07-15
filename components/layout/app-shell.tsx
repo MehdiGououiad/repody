@@ -13,7 +13,9 @@ const MINIMAL_LAYOUT_PATHS = new Set(["/login", "/unauthorized"]);
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const pathname = useClientPathname();
-  const minimal = MINIMAL_LAYOUT_PATHS.has(pathname);
+  // Empty pathname = pre-hydration; keep shell minimal so /login is not wrapped
+  // in AuthSessionGuard (which would flash "Checking sign-in…" forever-looking).
+  const minimal = !pathname || MINIMAL_LAYOUT_PATHS.has(pathname);
 
   if (minimal) {
     return <>{children}</>;

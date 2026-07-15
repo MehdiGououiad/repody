@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import AliasChoices, Field
+from pydantic import Field
 
 
 class CoreSettingsFields:
@@ -12,23 +12,19 @@ class CoreSettingsFields:
     )
     db_pool_size: int = Field(
         default=5,
-        validation_alias=AliasChoices("AUDIT_DB_POOL_SIZE"),
         description="SQLAlchemy async pool size per process.",
     )
     db_max_overflow: int = Field(
         default=10,
-        validation_alias=AliasChoices("AUDIT_DB_MAX_OVERFLOW"),
         description="Extra DB connections beyond pool_size.",
     )
     db_pool_timeout: int = Field(
         default=30,
-        validation_alias=AliasChoices("AUDIT_DB_POOL_TIMEOUT"),
         description="Seconds to wait for a DB connection.",
     )
     redis_url: str = Field(default="redis://localhost:6379/0")
     redis_max_connections: int = Field(
         default=20,
-        validation_alias=AliasChoices("AUDIT_REDIS_MAX_CONNECTIONS"),
         description="Shared Redis pool size (cache + SSE pub/sub).",
     )
 
@@ -48,7 +44,6 @@ class CoreSettingsFields:
     log_json: bool = Field(default=True)
     log_file: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("AUDIT_LOG_FILE"),
         description="Optional path for JSON log lines (Promtail → Loki in local dev).",
     )
 

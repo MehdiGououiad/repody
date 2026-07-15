@@ -67,8 +67,27 @@ export function SettingsPageClient({
 
   useEffect(() => {
     if (!jobs.some((job) => ACTIVE_STATUSES.has(job.status))) return;
-    const timer = window.setInterval(() => void refresh(), 2000);
-    return () => window.clearInterval(timer);
+
+    let cancelled = false;
+    let timer: number | undefined;
+
+    const tick = () => {
+      if (cancelled) return;
+      if (document.visibilityState === "hidden") {
+        timer = window.setTimeout(tick, 10_000);
+        return;
+      }
+      void refresh().finally(() => {
+        if (cancelled) return;
+        timer = window.setTimeout(tick, 5_000);
+      });
+    };
+
+    timer = window.setTimeout(tick, 5_000);
+    return () => {
+      cancelled = true;
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
   }, [jobs, refresh]);
 
   const addJob = (job: OperatorJob) => {

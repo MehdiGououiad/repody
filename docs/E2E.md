@@ -42,7 +42,7 @@ pnpm test:platform
 
 See [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
 
-**Document extraction (live):** skipped when `GET /v1/healthz` reports `modelRunner != true`. Start host inference — [REPODY-VLM.md](./REPODY-VLM.md).
+**Document extraction (live):** skipped when `GET /v1/healthz` reports `llamacpp != true` (when probing is enabled). Start host inference — [REPODY-VLM.md](./REPODY-VLM.md).
 
 ## Sample document
 

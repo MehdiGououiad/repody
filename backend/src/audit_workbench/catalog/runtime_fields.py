@@ -5,9 +5,8 @@ from __future__ import annotations
 from typing import Any, Literal
 
 from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
-from audit_workbench.extraction.document_render import RENDER_POLICIES
 from audit_workbench.catalog.registry import list_document_models
-from audit_workbench.inference.runtime import default_document_runtime
+from audit_workbench.extraction.document_render import RENDER_POLICIES
 from audit_workbench.schemas.model_runtime import (
     ConfigScope,
     DeploymentNote,
@@ -78,22 +77,6 @@ def _inference_field(
 def _shared_fields(settings: Settings) -> list[ModelConfigField]:
     return [
         _platform_field(
-            key="ocr_max_pages",
-            env_var="AUDIT_OCR_MAX_PAGES",
-            label="Max PDF pages",
-            description="Maximum pages rasterized per document.",
-            value=settings.ocr_max_pages,
-            restart="worker",
-        ),
-        _platform_field(
-            key="document_render_max_edge_px",
-            env_var="AUDIT_DOCUMENT_RENDER_MAX_EDGE_PX",
-            label="Bundle render max edge (px)",
-            description="Long-edge cap when building the shared document bundle cache.",
-            value=settings.document_render_max_edge_px,
-            restart="worker",
-        ),
-        _platform_field(
             key="extraction_cache_enabled",
             env_var="AUDIT_EXTRACTION_CACHE_ENABLED",
             label="Extraction cache",
@@ -105,7 +88,6 @@ def _shared_fields(settings: Settings) -> list[ModelConfigField]:
 
 
 def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
-    runtime = default_document_runtime(settings)
     fields: list[ModelConfigField] = [
         _platform_field(
             key="repody_vlm_enabled",
@@ -127,59 +109,24 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
             key="inference_mode",
             env_var="AUDIT_INFERENCE_MODE",
             label="Inference mode",
-            description="docker_model_runner or vllm.",
+            description="llamacpp (local llama-server OpenAI API).",
             value=settings.inference_mode,
             restart="worker",
         ),
         _platform_field(
-            key="repody_vlm_model",
-            env_var="AUDIT_REPODY_VLM_MODEL",
-            label="Docker Model Runner id",
-            description="Model id when inference_mode=docker_model_runner.",
-            value=settings.repody_vlm_model,
+            key="llamacpp_base_url",
+            env_var="AUDIT_LLAMACPP_BASE_URL",
+            label="llama-server base URL",
+            description="OpenAI-compatible llama-server endpoint.",
+            value=settings.llamacpp_base_url,
             restart="worker",
         ),
         _platform_field(
-            key="repody_vlm_max_tokens",
-            env_var="AUDIT_REPODY_VLM_MAX_TOKENS",
-            label="Max completion tokens",
-            description="Token budget for structured field extraction.",
-            value=settings.repody_vlm_max_tokens,
-            restart="worker",
-        ),
-        _platform_field(
-            key="repody_vlm_max_edge_px",
-            env_var="AUDIT_REPODY_VLM_MAX_EDGE_PX",
-            label="Page max edge (px)",
-            description="Optional downscale before VLM. Empty preserves rendered size.",
-            value=settings.repody_vlm_max_edge_px,
-            restart="worker",
-            scope="worker_runtime",
-        ),
-        _platform_field(
-            key="repody_vlm_pdf_dpi",
-            env_var="AUDIT_REPODY_VLM_PDF_DPI",
-            label="PDF raster DPI",
-            description="DPI when rasterizing PDF pages for VLM.",
-            value=settings.repody_vlm_pdf_dpi,
-            restart="worker",
-            scope="worker_runtime",
-        ),
-        _platform_field(
-            key="repody_vlm_jpeg_quality",
-            env_var="AUDIT_REPODY_VLM_JPEG_QUALITY",
-            label="JPEG quality",
-            description="Fallback JPEG quality for non-PDF inputs.",
-            value=settings.repody_vlm_jpeg_quality,
-            restart="worker",
-            scope="worker_runtime",
-        ),
-        _platform_field(
-            key="repody_vlm_max_pages_per_request",
-            env_var="AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST",
-            label="Max pages per request",
-            description="Pages batched into one VLM call.",
-            value=settings.repody_vlm_max_pages_per_request,
+            key="llamacpp_served_model",
+            env_var="AUDIT_LLAMACPP_SERVED_MODEL",
+            label="Served model id",
+            description="Model id exposed by llama-server.",
+            value=settings.llamacpp_served_model,
             restart="worker",
         ),
         _platform_field(
@@ -191,22 +138,6 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
             restart="worker",
         ),
         _platform_field(
-            key="repody_vlm_markdown_max_tokens",
-            env_var="AUDIT_REPODY_VLM_MARKDOWN_MAX_TOKENS",
-            label="Markdown max tokens",
-            description="Completion budget for markdown conversion.",
-            value=settings.repody_vlm_markdown_max_tokens,
-            restart="worker",
-        ),
-        _platform_field(
-            key="repody_vlm_enable_thinking",
-            env_var="AUDIT_REPODY_VLM_ENABLE_THINKING",
-            label="Enable thinking",
-            description="NuExtract reasoning mode for difficult layouts.",
-            value=settings.repody_vlm_enable_thinking,
-            restart="worker",
-        ),
-        _platform_field(
             key="repody_vlm_timeout_seconds",
             env_var="AUDIT_REPODY_VLM_TIMEOUT_SECONDS",
             label="Request timeout (s)",
@@ -214,64 +145,28 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
             value=settings.repody_vlm_timeout_seconds,
             restart="worker",
         ),
+        _inference_field(
+            key="llamacpp_port",
+            env_var="LLAMACPP_PORT",
+            label="llama-server port",
+            description="Host process started by pnpm llamacpp:serve.",
+            value=8081,
+        ),
+        _inference_field(
+            key="llamacpp_context",
+            env_var="LLAMACPP_CONTEXT",
+            label="llama-server context",
+            description="NuExtract official low-memory context (16384).",
+            value=16384,
+        ),
+        _inference_field(
+            key="llamacpp_gpu_layers",
+            env_var="LLAMACPP_GPU_LAYERS",
+            label="GPU layers",
+            description="Offloaded layers for llama-server.",
+            value=99,
+        ),
     ]
-    if runtime == "vllm":
-        fields.extend(
-            [
-                _platform_field(
-                    key="vllm_base_url",
-                    env_var="AUDIT_VLLM_BASE_URL",
-                    label="vLLM base URL",
-                    description="OpenAI-compatible inference endpoint.",
-                    value=settings.vllm_base_url,
-                    restart="worker",
-                ),
-                _platform_field(
-                    key="vllm_served_model",
-                    env_var="AUDIT_VLLM_SERVED_MODEL",
-                    label="vLLM served model",
-                    description="Model id exposed by the vLLM server.",
-                    value=settings.vllm_served_model,
-                    restart="worker",
-                ),
-            ]
-        )
-    else:
-        fields.append(
-            _platform_field(
-                key="docker_model_runner_base_url",
-                env_var="AUDIT_DOCKER_MODEL_RUNNER_BASE_URL",
-                label="Docker Model Runner URL",
-                description="Host inference for Repody VLM.",
-                value=settings.docker_model_runner_base_url,
-                restart="worker",
-            )
-        )
-        fields.extend(
-            [
-                _inference_field(
-                    key="llamacpp_port",
-                    env_var="LLAMACPP_PORT",
-                    label="llama-server port",
-                    description="Host process started by pnpm llamacpp:serve.",
-                    value=8000,
-                ),
-                _inference_field(
-                    key="llamacpp_context",
-                    env_var="LLAMACPP_CONTEXT",
-                    label="llama-server context",
-                    description="Context size for NuExtract on host.",
-                    value=16384,
-                ),
-                _inference_field(
-                    key="llamacpp_gpu_layers",
-                    env_var="LLAMACPP_GPU_LAYERS",
-                    label="GPU layers",
-                    description="Offloaded layers for llama-server.",
-                    value=99,
-                ),
-            ]
-        )
     return fields
 
 
@@ -297,7 +192,7 @@ def _deployment_notes() -> list[DeploymentNote]:
             change_kind="Host inference (llama-server)",
             action="Edit deploy/llamacpp/*.local.env and restart the host process",
             detail=(
-                "NuExtract runs on host llama-server for vLLM mode. "
+                "NuExtract runs on host llama-server. "
                 "Start with pnpm llamacpp:serve on the host."
             ),
         ),
@@ -311,11 +206,7 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
     for spec in list_document_models():
         if spec.id == REPODY_VLM_CATALOG_ID:
             fields = _repody_vlm_fields(settings)
-            inference_url = (
-                settings.vllm_base_url
-                if default_document_runtime(settings) == "vllm"
-                else settings.docker_model_runner_base_url
-            )
+            inference_url = settings.llamacpp_base_url
         else:
             fields = []
             inference_url = None

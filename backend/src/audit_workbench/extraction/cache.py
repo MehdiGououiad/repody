@@ -9,14 +9,14 @@ from audit_workbench.extraction.base import (
     ExtractedFieldResult,
     ExtractionResult,
     SchemaFieldSpec,
-    truncate_ocr_text,
+    truncate_markdown_text,
 )
 from audit_workbench.services.redis_pool import get_redis
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
 
-CACHE_VERSION = "v7"
+CACHE_VERSION = "v22"
 
 
 async def _redis_client():
@@ -35,8 +35,25 @@ def schema_fingerprint(schema: list[SchemaFieldSpec]) -> str:
             continue
         description = (field.description or "").strip()
         template_type = (field.template_type or "").strip()
-        parts.append(f"{name}\x1f{description}\x1f{template_type}")
+        parts.append(
+            f"{name}\x1f{description}\x1f{template_type}\x1f{_field_config_fingerprint(field)}"
+        )
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+
+
+def _field_config_fingerprint(field: SchemaFieldSpec) -> str:
+    chunks: list[str] = []
+    if field.enum_values:
+        chunks.append("enum:" + ",".join(field.enum_values))
+    if field.children:
+        for child in field.children:
+            child_name = child.name.strip().lower()
+            if not child_name:
+                continue
+            chunks.append(
+                f"{child_name}:{child.template_type or ''}:{child.description.strip()}"
+            )
+    return "|".join(chunks)
 
 
 def cache_key(
@@ -78,12 +95,10 @@ def hash_bytes(data: bytes) -> str:
 
 
 def should_cache_result(result: ExtractionResult) -> bool:
-    """Do not cache stub fallbacks; cache field or text-only extractions."""
-    if result.raw_text and str(result.raw_text).startswith("stub_fallback:"):
-        return False
+    """Cache field or text-only extractions."""
     if sum(1 for f in result.fields if f.extracted) > 0:
         return True
-    text = (result.ocr_text or result.raw_text or "").strip()
+    text = (result.markdown_text or result.raw_text or "").strip()
     return len(text) > 0
 
 
@@ -94,8 +109,8 @@ def _serialize_result(result: ExtractionResult) -> str:
             rid: [status, detail] for rid, (status, detail) in result.llm_rule_results.items()
         }
     payload = {
-        "rawText": truncate_ocr_text(result.raw_text),
-        "ocrText": truncate_ocr_text(result.ocr_text),
+        "rawText": truncate_markdown_text(result.raw_text),
+        "markdownText": truncate_markdown_text(result.markdown_text),
         "readPathUsed": result.read_path_used,
         "llmRuleResults": llm_rules,
         "fields": [
@@ -135,7 +150,7 @@ def _deserialize_result(raw: str) -> ExtractionResult:
     return ExtractionResult(
         fields=fields,
         raw_text=data.get("rawText"),
-        ocr_text=data.get("ocrText"),
+        markdown_text=data.get("markdownText"),
         read_path_used=data.get("readPathUsed"),
         llm_rule_results=llm_rule_results or None,
     )

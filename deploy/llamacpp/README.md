@@ -1,8 +1,7 @@
 # llama-server + NuExtract3 for Repody
 
 Serve [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) with the official
-**llama-server** binary (`winget install llama.cpp`). This is Repody’s supported local GGUF runtime;
-production reference remains vLLM — see `docs/REPODY-VLM.md`.
+**llama-server** binary (`winget install llama.cpp`). Platform wiring: `docs/REPODY-VLM.md`.
 
 ## 1. Install llama.cpp
 
@@ -22,8 +21,7 @@ Use the device id in `paths.local.env` (e.g. `Vulkan0`, `CUDA0`).
 
 | File | Purpose |
 |------|---------|
-| `NuExtract3-Q4_K_M.gguf` | Text weights (~2.5 GB) — **local Compose default** (Arc Vulkan tuned) |
-| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) — higher quality, slower |
+| `NuExtract3-Q4_K_M.gguf` | Text weights (~2.5 GB) — **only supported local model** |
 | `mmproj-NuExtract3-BF16.gguf` | Vision projector (required for images) |
 
 ## 3. Configure paths
@@ -41,64 +39,48 @@ pnpm llamacpp:verify
 
 Command reference: [../../docs/COMMANDS.md](../../docs/COMMANDS.md).
 
-### Profiles (Vulkan / Intel Arc)
+### Server flags (aligned with NuExtract + llama.cpp docs)
 
-| Profile | When | Key flags | Facture (typical) |
-|---------|------|-----------|-------------------|
-| **`speed`** (default) | Daily dev | `-fa on`, `-ub 1024`, prompt cache, `GGML_VK_MAX_NODES_PER_SUBMIT=1` | **~7–13 s warm** (Q4, prompt cache) |
-| **`stability`** | After `ErrorDeviceLost` | `-fa off`, `-ub 1024`, `-ctv f16`, `--no-cache-prompt`, `GGML_VK_MAX_NODES_PER_SUBMIT=1` | ~2 min |
+The launcher (`deploy/scripts/llamacpp-nuextract3.mjs`) starts llama-server with the official
+minimal multimodal command plus accuracy / GPU knobs from upstream docs:
 
-Set in `paths.local.env`:
+| Setting | Value | Source |
+|---------|-------|--------|
+| Context | **16384** (`-c`) | NuExtract vLLM `--max-model-len 16384` |
+| Model + mmproj | **Q4_K_M** + BF16 mmproj | NuExtract3-GGUF (official local) |
+| GPU offload | `-ngl 99` + `--mmproj-offload` + `--device Vulkan0` | llama.cpp multimodal |
+| Flash Attention | `-fa on` | llama.cpp (`LLAMACPP_FLASH_ATTN`) |
+| Chat template | `--jinja` | Required for `chat_template_kwargs` |
+| Server reasoning | `-rea off` | Official non-thinking (`enable_thinking=false`) |
+| Parallel slots | **1** (`-np 1`) default | Full 16k context per slot |
+| Vision tokens | `--image-min-tokens 1024 --image-max-tokens 1024` | Min = Qwen-VL accuracy floor; max caps vision budget (required on Arc 140V) |
+| Vision batch | `-ub 1024` + `--mtmd-batch-max-tokens 1024` | Match the 1024 vision budget |
 
-```env
-LLAMACPP_PROFILE=speed      # default
-# LLAMACPP_PROFILE=stability
-```
-
-### Load settings (NuExtract + Repody defaults)
-
-Aligned with NuExtract’s low-memory vLLM profile and llama.cpp vision guidance:
-
-| Setting | Value |
-|---------|-------|
-| Quantization | **Q4_K_M** local default (or **Q8_0**) + BF16 mmproj |
-| Context | **16384** |
-| Flash attention | **on** in `speed` profile; **off** in `stability` (Intel Vulkan DeviceLost workaround) |
-| KV cache | **q8_0** K+V with FA on; **f16** V when FA off |
-| Physical batch | **1024** (`speed`, Arc tuned) / **1024** (`stability`) |
-| MTMD encode batch | **1024** on Vulkan (`--mtmd-batch-max-tokens`) |
-| GPU offload | all layers (`-ngl 99`) + `--mmproj-offload` |
-| Parallel slots | **1** (`-np 1`) default — full 16k context per slot |
-| Image tokens | `--image-min-tokens 1024 --image-max-tokens 1024` (Qwen-VL grounding floor without 2048-token cold prompts) |
-| Prompt cache | **on** (`speed`) / **off** (`stability`) |
-| Server reasoning | off (`-rea off`) — Repody sends `enable_thinking` per request |
-| Chat template | `--jinja` (required for `chat_template_kwargs`) |
-
-Tune in `paths.local.env` — see `paths.local.env.example`.
+Solo A/B: `node deploy/llamacpp/bench-stability.mjs` · speed: `node deploy/llamacpp/bench-solo.mjs`
 
 API: `http://127.0.0.1:8081/v1` (model id `nuextract3-q4_k_m` by default; set `LLAMACPP_MODEL_ALIAS`).
 
 ## 5. Point Repody at llama-server
 
 ```powershell
-# backend/.env already sets AUDIT_VLLM_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
+# backend/.env already sets AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
 pnpm dev:restart
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
 
-## Manual command (Vulkan / Intel Arc)
+## Manual command (minimal)
 
 ```powershell
 llama-server `
   -m C:\path\to\NuExtract3-Q4_K_M.gguf `
   --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
   --host 0.0.0.0 --port 8081 `
-  -c 16384 -np 1 -fa on -ctk q8_0 -ctv q8_0 `
-  -ngl 99 --device Vulkan0 --mmproj-offload `
+  -c 16384 -np 1 -ub 1024 `
+  -ngl 99 -fa on --device Vulkan0 --mmproj-offload `
   --image-min-tokens 1024 --image-max-tokens 1024 `
-  --mtmd-batch-max-tokens 1024 -ub 1024 `
-  -a nuextract3-q4_k_m --jinja -rea off --cache-ram 4096
+  --mtmd-batch-max-tokens 1024 `
+  -a nuextract3-q4_k_m --jinja -rea off
 ```
 
 ## Throughput scaling (`-np` / parallel slots)
@@ -121,19 +103,16 @@ Then align cluster admission (see `deploy/client/lab/values.stress-test.crc.yaml
 
 ```powershell
 pnpm llamacpp:restart
-kubectl rollout restart deployment/repody-worker-extract -n repody
+pnpm dev:restart
 ```
 
-Stress harness ceiling ≈ **`LLAMACPP_PARALLEL × (60 / warm_seconds)` runs/min** per host.
+## Troubleshooting
 
-## Port note
+| Symptom | Fix |
+|---------|-----|
+| Slow first request | Run `pnpm llamacpp:warmup` or set `LLAMACPP_WARMUP=on` |
+| `failed to process image` / Vulkan `ErrorDeviceLost` | Ensure `--image-max-tokens 1024` and `-ub 1024` / `--mtmd-batch-max-tokens 1024`. Restart with `pnpm llamacpp:restart`. |
+| `/v1/models` missing multimodal | Check `LLAMACPP_MMPROJ` path and `--mmproj-offload` |
+| Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |
 
-Port **8081** for local dev (`pnpm dev:api` uses `REPODY_API_PORT`, default **8000**).
-Production vLLM reference uses 8000.
-
-## Smoke test
-
-```powershell
-python deploy/scripts/test-inference-endpoint.py --host http://127.0.0.1:8081
-pnpm llamacpp:verify
-```
+Logs: `deploy/llamacpp/logs/`.

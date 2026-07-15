@@ -82,7 +82,7 @@ repody-runtime-secrets
   AUDIT_REDIS_URL
   AUDIT_MINIO_ACCESS_KEY
   AUDIT_MINIO_SECRET_KEY
-  AUDIT_VLLM_API_KEY
+  AUDIT_LLAMACPP_API_KEY
   BUGSINK_DSN
 ```
 
@@ -135,7 +135,7 @@ helm upgrade --install repody deploy/helm/repody \
   -n repody --create-namespace \
   -f deploy/helm/repody/values-production.yaml.example \
   -f deploy/helm/repody/values-production.onprem-managed.yaml.example \
-  -f deploy/helm/repody/values-production.gateway.yaml.example \
+  -f deploy/values/openshift.yaml \
   -f my-values.yaml
 ```
 

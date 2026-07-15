@@ -131,8 +131,8 @@ async def seed_database(session: AsyncSession) -> None:
                 {
                     "id": "c1",
                     "left": {"kind": "field", "value": "subtotal"},
-                    "arithmeticOp": "+",
-                    "leftExtra": {"kind": "field", "value": "tax"},
+                    "arithmetic_op": "+",
+                    "left_extra": {"kind": "field", "value": "tax"},
                     "operator": "==",
                     "right": {"kind": "field", "value": "total_amount"},
                 }

@@ -14,7 +14,7 @@ Repody previously used Hatchet (`hatchet-stack` / Hatchet Lite + `hatchet-sdk`).
 
 Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the background job queue:
 
-- One Redis stream queue per worker pool: `repody:audit:ocr` and `repody:audit:fast`
+- One Redis stream queue per worker pool: `repody:audit:extract` and `repody:audit:fast`
 - API enqueues via `services/run_dispatch.py` after the Postgres dispatch outbox commits
 - Workers run `python -m audit_workbench.taskiq.worker` (Taskiq CLI, async tasks)
 - Durable dispatch replay remains in Postgres (`run_dispatch_outbox`)

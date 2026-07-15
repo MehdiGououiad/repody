@@ -16,7 +16,10 @@ class OperatorWarmupConfig(CamelModel):
 
 class OperatorLimitsSchema(CamelModel):
     max_upload_bytes: int = Field(serialization_alias="maxUploadBytes")
-    ocr_max_pages: int = Field(serialization_alias="ocrMaxPages")
+    nuextract_max_pages_per_request: int = Field(
+        default=6,
+        serialization_alias="nuextractMaxPagesPerRequest",
+    )
     task_timeout_minutes: int = Field(serialization_alias="taskTimeoutMinutes")
 
 
@@ -56,7 +59,6 @@ class BenchmarkSummarySchema(CamelModel):
     field_accuracy: float = Field(default=0.0, serialization_alias="fieldAccuracy")
     rule_accuracy: float = Field(default=0.0, serialization_alias="ruleAccuracy")
     median_wall_ms: float | None = Field(default=None, serialization_alias="medianWallMs")
-    ocr_compare_runs: int | None = Field(default=None, serialization_alias="ocrCompareRuns")
     median_raw_text_chars: float | None = Field(
         default=None, serialization_alias="medianRawTextChars"
     )
@@ -75,10 +77,8 @@ class BenchmarkResultSchema(CamelModel):
     validation_ms: float | None = Field(default=None, serialization_alias="validationMs")
     field_accuracy: float | None = Field(default=None, serialization_alias="fieldAccuracy")
     rule_accuracy: float | None = Field(default=None, serialization_alias="ruleAccuracy")
-    ocr_compare: bool | None = Field(default=None, serialization_alias="ocrCompare")
     judge_quality: bool | None = Field(default=None, serialization_alias="judgeQuality")
     raw_text_chars: int | None = Field(default=None, serialization_alias="rawTextChars")
-    ocr_text_chars: int | None = Field(default=None, serialization_alias="ocrTextChars")
     text_preview: str | None = Field(default=None, serialization_alias="textPreview")
     cache_hit: bool | None = Field(default=None, serialization_alias="cacheHit")
     error: str | None = None

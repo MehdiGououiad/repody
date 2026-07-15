@@ -6,7 +6,8 @@ from audit_workbench.extraction.base import (
     SchemaFieldSpec,
 )
 from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
-from audit_workbench.extraction.schema_fields import empty_fields_from_schema
+from audit_workbench.extraction.schema_fields import empty_fields_from_schema, fields_from_sample_values
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 def extract_document_fields(
@@ -15,16 +16,15 @@ def extract_document_fields(
     sample_values: dict[str, str] | None = None,
 ) -> list:
     """Sync helper for dry-run callers — never injects hardcoded demo data."""
-    from audit_workbench.extraction.schema_fields import fields_from_sample_values
-
     specs = [
         SchemaFieldSpec(
-            name=(f.get("name") or "").strip(),
-            description=f.get("description") or "",
-            template_type=f.get("templateType") or f.get("template_type"),
+            name=(row.get("name") or "").strip(),
+            description=row.get("description") or "",
+            template_type=row.get("template_type"),
         )
         for f in schema
-        if (f.get("name") or "").strip()
+        for row in [normalize_keys_to_snake(f) if isinstance(f, dict) else f]
+        if isinstance(row, dict) and (row.get("name") or "").strip()
     ]
     if sample_values:
         return fields_from_sample_values(specs, sample_values)

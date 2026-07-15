@@ -30,9 +30,8 @@ import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shar
 const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
 
 function scoreLabel(row: BenchmarkResult): string {
-  if (row.judgeQuality || row.ocrCompare) {
-    const chars = row.ocrCompare ? row.rawTextChars : row.ocrTextChars;
-    return chars != null ? `${chars} chars` : "—";
+  if (row.judgeQuality) {
+    return row.rawTextChars != null ? `${row.rawTextChars} chars` : "—";
   }
   return formatPercent(row.fieldAccuracy);
 }
@@ -117,7 +116,7 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
                   <td colSpan={8} className="px-4 py-3">
                     <DocumentTextPreviewPanel
                       text={row.textPreview}
-                      label={`Rendered preview (${row.ocrCompare ? "OCR" : "NuExtract markdown"})`}
+                      label="Rendered preview (NuExtract markdown)"
                     />
                   </td>
                 </tr>
@@ -267,7 +266,7 @@ export function BenchmarksTab({
               <span className="text-sm">
                 <span className="font-medium block">Judge text quality manually</span>
                 <span className="text-on-surface-variant text-xs">
-                  Enables NuExtract <code className="text-[10px]">mode: markdown</code> on Repody VLM and passes when markdown/OCR text is non-empty.
+                  Enables NuExtract <code className="text-[10px]">mode: markdown</code> on Repody VLM and passes when markdown text is non-empty.
                 </span>
               </span>
             </label>
@@ -286,11 +285,6 @@ export function BenchmarksTab({
                     <input type="checkbox" checked={selected.includes(model.id)} onChange={() => toggleModel(model.id)} className="size-4 mt-0.5 accent-primary" />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{model.label}</span>
-                      {model.kind === "ocr_compare" ? (
-                        <span className="block text-[11px] text-on-surface-variant mt-0.5">
-                          OCR compare — text output only (no structured fields)
-                        </span>
-                      ) : null}
                     </span>
                   </label>
                 ))}
@@ -300,7 +294,7 @@ export function BenchmarksTab({
               <p className="text-sm font-semibold">Dataset</p>
               <p className="text-xs text-on-surface-variant mt-1">
                 Default: built-in invoice PDF — no upload needed. For your own file, upload the document only;
-                fields are optional when judging markdown/OCR text quality.
+                fields are optional when judging markdown text quality.
               </p>
               <label className="mt-3 flex items-center gap-3 cursor-pointer">
                 <input

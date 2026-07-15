@@ -145,10 +145,8 @@ def csv_report(rows: list[dict[str, Any]]) -> str:
         "extractionMs",
         "validationMs",
         "cacheHit",
-        "ocrCompare",
         "judgeQuality",
         "rawTextChars",
-        "ocrTextChars",
         "fieldAccuracy",
         "ruleAccuracy",
         "readPathUsed",
@@ -186,7 +184,7 @@ def html_report(report: dict[str, Any]) -> str:
             f"<td>{cell(row.get('extractionMs'))}</td>"
             f"<td>{cell(row.get('validationMs'))}</td>"
             f"<td>{cell(row.get('cacheHit'))}</td>"
-            f"<td>{cell(row.get('rawTextChars') if row.get('ocrCompare') else row.get('fieldAccuracy'))}</td>"
+            f"<td>{cell(row.get('rawTextChars') if row.get('judgeQuality') else row.get('fieldAccuracy'))}</td>"
             f"<td>{cell(row.get('ruleAccuracy'))}</td>"
             f"<td>{cell(row.get('error'))}</td>"
             "</tr>"
@@ -198,7 +196,7 @@ def html_report(report: dict[str, Any]) -> str:
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Repody OCR benchmark</title>
+<title>Repody extraction benchmark</title>
 <style>
 :root {{ color-scheme: light dark; font-family: Inter, system-ui, sans-serif; }}
 body {{ margin: 0; padding: 32px; background: #0b1020; color: #e8edf7; }}
@@ -220,7 +218,7 @@ pre {{ overflow: auto; background: #11182a; border-radius: 12px; padding: 16px; 
 </style>
 </head>
 <body><main>
-<h1>OCR benchmark report</h1>
+<h1>Extraction benchmark report</h1>
 <div class="muted">{cell(report.get("generatedAt"))} · {cell(report.get("profile"))}</div>
 <section class="cards">
 <div class="card"><div class="muted">Passed</div><div class="value">{summary["passed"]}</div></div>
@@ -232,7 +230,7 @@ pre {{ overflow: auto; background: #11182a; border-radius: 12px; padding: 16px; 
 <div class="table-wrap"><table>
 <thead><tr><th>Case</th><th>Model</th><th>Phase</th><th>Status</th><th>Wall ms</th>
 <th>Queue ms</th><th>Extract ms</th><th>Validate ms</th><th>Cache</th>
-<th>Field / OCR</th><th>Rule acc.</th><th>Error</th></tr></thead>
+<th>Field / extract</th><th>Rule acc.</th><th>Error</th></tr></thead>
 <tbody>{"".join(table_rows)}</tbody>
 </table></div>
 <details><summary>Environment</summary><pre>{metadata}</pre></details>

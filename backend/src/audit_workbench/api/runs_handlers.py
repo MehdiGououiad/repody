@@ -12,6 +12,7 @@ from audit_workbench.services.run_enqueue import RunSnapshot
 from audit_workbench.services.run_service import FileBinding
 from audit_workbench.services.run_upload_bindings import parse_json_form
 from audit_workbench.services.upload_intents import UploadIntentError, bindings_from_confirmed_uploads
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 async def bindings_from_stored(
@@ -55,8 +56,9 @@ def snapshot_from_form_payload(payload: str | None) -> RunSnapshot | None:
     data = parse_json_form(payload, "payload")
     if not isinstance(data, dict):
         raise HTTPException(400, "Invalid JSON in payload — expected an object.")
+    data = normalize_keys_to_snake(data)
     return RunSnapshot(
         documents=[DocumentDefSchema.model_validate(d) for d in data.get("documents", [])],
         rules=[WorkflowRuleSchema.model_validate(r) for r in data.get("rules", [])],
-        workflow_name=data.get("workflowName") or data.get("workflow_name"),
+        workflow_name=data.get("workflow_name"),
     )

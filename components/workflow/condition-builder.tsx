@@ -10,16 +10,19 @@ import {
   type ConditionFieldOption,
 } from "@/components/workflow/condition-builder-model";
 import type { RuleCondition } from "@/lib/types";
+import type { TableFieldOption } from "@/lib/rules/document-fields";
 
 export { conditionToString, conditionsToExpression, fieldToken } from "@/lib/rules/expression";
 
 export function ConditionBuilder({
   conditions,
   fields,
+  tableFields,
   onConditionsChange,
 }: {
   conditions: RuleCondition[];
   fields: ConditionFieldOption[];
+  tableFields: TableFieldOption[];
   onConditionsChange: (conditions: RuleCondition[]) => void;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
@@ -43,6 +46,7 @@ export function ConditionBuilder({
           <ConditionRow
             condition={condition}
             fields={fields}
+            tableFields={tableFields}
             onChange={(patch) => update(condition.id, patch)}
             onRemove={() => remove(condition.id)}
             canRemove={conditions.length > 1}

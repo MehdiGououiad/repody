@@ -6,17 +6,14 @@
 
 ## Context
 
-Structured field extraction uses **Repody VLM** (image → JSON schema). Inference runs outside the Repody Helm release:
-
-- **Local:** llama-server or vLLM on the host (`AUDIT_VLLM_*` env vars)
-- **Production:** vLLM or llama-server
+Structured field extraction uses **Repody VLM** (image → JSON schema). Inference runs outside the Repody Helm release on an OpenAI-compatible **llama-server** endpoint (`AUDIT_LLAMACPP_*` env vars).
 
 The product will add more document models later; routing must not hard-code a single endpoint.
 
 ## Decision
 
 1. **Single catalog** in `catalog/registry.py` — each entry has `runtime` + `runtime_model`.
-2. **Document extraction:** `AUDIT_INFERENCE_MODE=vllm` → `AUDIT_VLLM_BASE_URL` (external OpenAI-compatible endpoint).
+2. **Document extraction:** `AUDIT_INFERENCE_MODE=llamacpp` → `AUDIT_LLAMACPP_BASE_URL` (external OpenAI-compatible endpoint).
 3. **Shared client code** in `inference/openai_compat.py` and `extraction/repody_vlm.py`.
 4. **LLM rule validation** uses a separate small text model, never the document-model runtime.
 5. **Live probes** live in `catalog/probes.py`.
@@ -27,14 +24,14 @@ Default catalog id: `repody:vlm`.
 
 | Concern | Runtime selector |
 |---------|------------------|
-| Document extraction | `AUDIT_INFERENCE_MODE` → external vLLM-compatible endpoint |
+| Document extraction | `AUDIT_INFERENCE_MODE` → external llama-server endpoint |
 | LLM rule validation | `get_inference_client()` → separate text model or stub |
 
 ## Consequences
 
 **Positive**
 
-- Matches upstream vLLM deployment notes for Repody VLM weights
+- Matches NuExtract llama-server deployment for Repody VLM weights
 - Adding a model is one registry entry plus endpoint configuration
 - Health/diagnostics expose runtime-specific availability
 
@@ -50,16 +47,16 @@ models["vendor:MyModel"] = DocumentModelSpec(
     id="vendor:MyModel",
     label="My Model",
     engine="document_model",
-    runtime="vllm",
+    runtime="llamacpp",
     runtime_model="org/MyModel",
     description="…",
 )
 ```
 
-If the new model needs a different serve profile, point `AUDIT_VLLM_BASE_URL` at a dedicated endpoint (or add per-model base URLs in the registry).
+If the new model needs a different serve profile, point `AUDIT_LLAMACPP_BASE_URL` at a dedicated endpoint (or add per-model base URLs in the registry).
 
 ## References
 
 - [docs/REPODY-VLM.md](../REPODY-VLM.md)
 - [DEPLOY.md](../../DEPLOY.md)
-- `backend/tests/test_inference/test_vllm_runtime.py`
+- `backend/tests/test_inference/test_llamacpp_runtime.py`

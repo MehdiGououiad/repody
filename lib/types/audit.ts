@@ -20,9 +20,8 @@ export interface RunDocumentExtractionMeta {
   extractionMs: number;
   cacheHit: boolean;
   gpuColdStartLikely?: boolean;
-  ocrSkipped: boolean;
   fieldsExtracted: number;
-  ocrText?: string | null;
+  markdownText?: string | null;
   rawText?: string | null;
   markdownExtraction?: boolean;
   pagesRendered?: number | null;

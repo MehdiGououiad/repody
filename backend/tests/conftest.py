@@ -17,8 +17,8 @@ os.environ["AUDIT_STORAGE_BACKEND"] = "local"
 os.environ["AUDIT_LOCAL_STORAGE_PATH"] = os.path.join(os.path.dirname(__file__), ".storage")
 os.environ["AUDIT_GPU_LIVE_PROBE"] = "false"
 os.environ["AUDIT_HEALTHZ_PROBE_INFERENCE"] = "false"
-os.environ["AUDIT_INFERENCE_MODE"] = "docker_model_runner"
-os.environ["AUDIT_DOCKER_MODEL_RUNNER_BASE_URL"] = "http://model-runner-mock.test/v1"
+os.environ["AUDIT_INFERENCE_MODE"] = "llamacpp"
+os.environ["AUDIT_LLAMACPP_BASE_URL"] = "http://llamacpp-mock.test/v1"
 os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
 os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
 

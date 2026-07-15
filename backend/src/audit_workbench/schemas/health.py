@@ -23,8 +23,7 @@ class HealthReadinessResponse(CamelModel):
     redis_ok: bool = Field(serialization_alias="redisOk")
     extractor: str
     inference: str
-    model_runner: bool | None = Field(serialization_alias="modelRunner")
-    vllm: bool | None = None
+    llamacpp: bool | None = None
     storage_backend: str = Field(serialization_alias="storageBackend")
     direct_upload_enabled: bool = Field(serialization_alias="directUploadEnabled")
     cache_enabled: bool = Field(serialization_alias="cacheEnabled")

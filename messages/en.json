@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Repody",
-    "tagline": "Enterprise Audit"
+    "tagline": "Agent Platform"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -231,12 +231,6 @@
       "profile": "Profile",
       "recentJobs": "Recent operator jobs",
       "noJobs": "No operator jobs yet — run a benchmark from Settings."
-    },
-    "quickNav": {
-      "newWorkflow": "New workflow",
-      "workflows": "Workflow builder",
-      "audits": "Audit reports",
-      "console": "Operator console"
     }
   },
   "audits": {
@@ -432,7 +426,7 @@
         "uploadHint": "Upload one file per document type. The test runs the selected extraction model, then validates the extracted values.",
         "runBtn": "Extract + validate",
         "running": "Running…",
-        "uploadFilesFirst": "Upload at least one sample file to run OCR and validate your rules.",
+        "uploadFilesFirst": "Upload at least one sample file to run extraction and validate your rules.",
         "runningOcr": "Document extraction, then logic and LLM validation…",
         "noFilesHint": "Upload files for real extraction, or run without files to validate rules on schema placeholders.",
         "idle": "No test run yet",
@@ -524,7 +518,8 @@
         "directModelLogicValidationHint": "Repody VLM extracts schema fields directly. Logic rules run locally on the extracted values.",
         "directModelLlmValidationHint": "Repody VLM extracts schema fields directly. Optional LLM validation runs only when enabled on the platform.",
         "markdownExtractionLabel": "Document markdown preview",
-        "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only."
+        "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only.",
+        "profileNuextractQ4Hint": "Official NuExtract3-GGUF: PDF → PNG @ 170 DPI → structured vision extraction."
       },
       "docSource": {
         "title": "Documents & fields to extract",
@@ -550,15 +545,30 @@
         "intent": "What to extract",
         "typeGroups": {
           "common": "Common",
+          "structure": "Structures",
           "advanced": "Advanced"
         },
+        "enumValuesLabel": "Allowed values",
+        "enumValuePlaceholder": "e.g. USD",
+        "addEnumValue": "Add value",
+        "removeEnumValue": "Remove value",
+        "rowColumnsLabel": "Columns per row",
+        "addRowColumn": "Add column",
+        "removeRowColumn": "Remove column",
         "suggestedType": "Suggested: {label}",
         "applySuggestedType": "Use suggestion",
         "duplicateName": "Name must be unique",
+        "listModeLabel": "JSON array",
+        "listModeHint": "Return multiple values as a list (one per row or item)",
+        "listModeSuffix": "JSON array",
         "templateTypes": {
           "verbatim-string": {
             "label": "Exact text",
             "description": "Copy text exactly as it appears in the document"
+          },
+          "verbatim-string-list": {
+            "label": "Exact text list",
+            "description": "One exact text value per row or item, returned as a JSON array"
           },
           "string": {
             "label": "Text",
@@ -571,6 +581,46 @@
           "number": {
             "label": "Number",
             "description": "An integer or decimal, e.g. 12.50"
+          },
+          "number-list": {
+            "label": "Number list",
+            "description": "One number per row or transaction, returned as a JSON array"
+          },
+          "integer-list": {
+            "label": "Integer list",
+            "description": "Whole numbers as a JSON array"
+          },
+          "string-list": {
+            "label": "Text list",
+            "description": "Free text values as a JSON array"
+          },
+          "date-list": {
+            "label": "Date list",
+            "description": "ISO dates as a JSON array"
+          },
+          "date-time-list": {
+            "label": "Date-time list",
+            "description": "ISO date-times as a JSON array"
+          },
+          "time-list": {
+            "label": "Time list",
+            "description": "ISO times as a JSON array"
+          },
+          "boolean-list": {
+            "label": "Yes/No list",
+            "description": "Boolean values as a JSON array"
+          },
+          "object-array": {
+            "label": "Repeating rows",
+            "description": "One JSON object per table row (e.g. invoice line items)"
+          },
+          "enum": {
+            "label": "Choice (enum)",
+            "description": "Pick one value from a fixed list"
+          },
+          "multi-enum": {
+            "label": "Multi-choice",
+            "description": "Pick zero or more values from a fixed list"
           },
           "date": {
             "label": "Date",
@@ -635,6 +685,62 @@
           "unit-code": {
             "label": "Unit of measure",
             "description": "Standard unit code, e.g. kg or m"
+          },
+          "region:US": {
+            "label": "United States",
+            "description": "Regional field format for US documents"
+          },
+          "region:FR": {
+            "label": "France",
+            "description": "Regional field format for French documents"
+          },
+          "region:IE": {
+            "label": "Ireland",
+            "description": "Regional field format for Irish documents"
+          },
+          "region:GB": {
+            "label": "United Kingdom",
+            "description": "Regional field format for UK documents"
+          },
+          "region:IT": {
+            "label": "Italy",
+            "description": "Regional field format for Italian documents"
+          },
+          "region:ES": {
+            "label": "Spain",
+            "description": "Regional field format for Spanish documents"
+          },
+          "region:DE": {
+            "label": "Germany",
+            "description": "Regional field format for German documents"
+          },
+          "region:PT": {
+            "label": "Portugal",
+            "description": "Regional field format for Portuguese documents"
+          },
+          "region:CA": {
+            "label": "Canada",
+            "description": "Regional field format for Canadian documents"
+          },
+          "region:MX": {
+            "label": "Mexico",
+            "description": "Regional field format for Mexican documents"
+          },
+          "region:BR": {
+            "label": "Brazil",
+            "description": "Regional field format for Brazilian documents"
+          },
+          "region:AU": {
+            "label": "Australia",
+            "description": "Regional field format for Australian documents"
+          },
+          "region:JP": {
+            "label": "Japan",
+            "description": "Regional field format for Japanese documents"
+          },
+          "region:KR": {
+            "label": "South Korea",
+            "description": "Regional field format for Korean documents"
           }
         },
         "examples": "Examples (optional)",
@@ -725,7 +831,15 @@
           "opIn": "∈ is in list",
           "opNotIn": "∉ not in list",
           "opExists": "✓ exists / not empty",
-          "opIsEmpty": "∅ is empty / missing"
+          "opIsEmpty": "∅ is empty / missing",
+          "tableAggregate": "Table",
+          "aggSumRows": "Sum column",
+          "aggSumRowsWhere": "Sum where contains",
+          "aggCountRowsWhere": "Count where contains",
+          "pickTable": "Table field",
+          "amountColumn": "Amount column",
+          "filterColumn": "Filter column",
+          "filterContains": "Contains text"
         }
       },
       "api": {
@@ -768,8 +882,8 @@
         "shareable": "Shareable · printable · exportable",
         "keyUnavailable": "Full API key is only shown once at deploy — redeploy to run a live test from the UI, or paste a saved key below."
       },
-      "ocrOutput": {
-        "title": "OCR document text",
+      "documentMarkdown": {
+        "title": "Document markdown",
         "subtitle": "{lines} lines · {chars} characters",
         "hasTables": "tables detected",
         "previewTab": "Preview",
@@ -797,7 +911,7 @@
         "results": "Rule results",
         "running": "Running…",
         "idle": "Adjust the schema or rules to trigger a preview.",
-        "idleHint": "Rules need sample values or a test run with OCR — empty fields show as skipped, not failed.",
+        "idleHint": "Rules need sample values or a test extraction — empty fields show as skipped, not failed.",
         "passed": "{count} Passed",
         "failed": "{count} Failed"
       },
@@ -845,7 +959,6 @@
       "queue": "Job queue",
       "storage": "Storage",
       "documentModelId": "Default document model",
-      "ocrLangs": "OCR languages",
       "maxUpload": "Max upload size",
       "workerPools": "Worker pools"
     },

@@ -85,7 +85,7 @@ Consolidated config, catalog, and diagnostics.
 |--------|------|---------|
 | `GET` | `/platform/config` | Safe `AUDIT_*` snapshot for settings UI |
 | `GET` | `/models/catalog` | Document models + paths + validation modes (live probes) |
-| `GET` | `/diagnostics/ocr` | Document model reachability (`?run_infer=true` for probe) |
+| `GET` | `/diagnostics/document-model` | Document model reachability (`?run_infer=true` for probe) |
 
 ### Operator (`api/operator.py`) — admin, gated by `AUDIT_OPERATOR_ACTIONS_ENABLED`
 
@@ -189,7 +189,7 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | `cache.py` | Extraction result cache |
 | `base.py` | Types + `ExtractionResult` |
 | `stub.py` | Test stub extractor |
-| `ocr_markdown.py` | Normalize markdown in raw text |
+| `markdown_normalize.py` | Normalize NuExtract markdown for UI preview |
 | `gpu_cold_start.py` | Serverless GPU cold-start hints |
 | `extraction_display.py` | Progress UI strings |
 | `schema_fields.py` | Empty/sample schema helpers |

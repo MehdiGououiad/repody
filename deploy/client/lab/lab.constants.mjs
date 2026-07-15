@@ -11,7 +11,7 @@ export const LAB = {
   keycloakAdminPassword: "bundled-e2e-kc-admin",
   keycloakDbPassword: "bundled-e2e-kc-db",
   bugsinkDsn: "",
-  vllmApiKey: "",
+  llamacppApiKey: "",
 };
 
 export function auditDatabaseUrl() {

@@ -14,25 +14,25 @@ When `secrets.create=false`, create `repody-runtime-secrets` with:
 |-----|---------|
 | `AUTH_SECRET` | Auth.js session encryption |
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | Keycloak client secret for `repody-web` |
-| `AUDIT_VLLM_API_KEY` | Optional bearer token for external VLM |
+| `AUDIT_LLAMACPP_API_KEY` | Optional bearer token for external VLM |
 
 ## External Inference
 
 | Variable / value | Purpose |
 |------------------|---------|
-| `AUDIT_INFERENCE_MODE=vllm` | Use external OpenAI-compatible document-model runtime |
-| `AUDIT_VLLM_BASE_URL` | Endpoint root, e.g. `https://vlm.example.com/v1` |
-| `AUDIT_VLLM_SERVED_MODEL` | Model id from `/v1/models` |
-| `AUDIT_VLLM_API_KEY` | Optional bearer token |
+| `AUDIT_INFERENCE_MODE=llamacpp` | Use external OpenAI-compatible document-model runtime |
+| `AUDIT_LLAMACPP_BASE_URL` | Endpoint root, e.g. `https://vlm.example.com/v1` |
+| `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |
+| `AUDIT_LLAMACPP_API_KEY` | Optional bearer token |
 | `AUDIT_REPODY_VLM_WARMUP_ON_START=false` | Recommended for remote/serverless endpoints |
 
 Helm values:
 
 ```yaml
 config:
-  inferenceMode: vllm
-  vllmBaseUrl: https://vlm.example.com/v1
-  vllmServedModel: numind/NuExtract3
+  inferenceMode: llamacpp
+  llamacppBaseUrl: https://vlm.example.com/v1
+  llamacppServedModel: numind/NuExtract3
 
 workerExtract:
   warmupOnStart: false
@@ -63,7 +63,7 @@ workerExtract:
 | `AUDIT_ADMISSION_CONTROL_ENABLED` | default from settings | `true` | Enable queue/inflight admission limits |
 | `AUDIT_ADMISSION_MAX_QUEUED` | `50` | `50` | Maximum queued runs before rejecting new work |
 | `AUDIT_ADMISSION_MAX_INFLIGHT` | `32` | `64` | Maximum inflight runs across pools |
-| `AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT` | `2` | `8` | Maximum OCR/document-model work in flight |
+| `AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT` | `2` | `8` | Maximum document-model extraction work in flight |
 | `AUDIT_ADMISSION_RETRY_AFTER_SECONDS` | `60` | `60` | Retry hint returned when admission rejects work |
 
 ## Image Build
@@ -92,8 +92,8 @@ Use these runtime overrides for local API/UI work:
 |----------|-------------|
 | `REPODY_API_PORT` | Host API port for `pnpm dev:api` / `pnpm dev:app` (`8000` default) |
 | `REPODY_DEV_API_RELOAD` | Set `1` to opt into Uvicorn reload on Windows |
-| `AUDIT_VLLM_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
-| `AUDIT_VLLM_SERVED_MODEL` | Model id from `/v1/models` |
+| `AUDIT_LLAMACPP_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
+| `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |
 
 ## Kubernetes Lab Overrides
 
@@ -101,8 +101,8 @@ Use Helm values for Kubernetes lab/local overrides:
 
 | Helm value | Env emitted |
 |------------|-------------|
-| `config.vllmBaseUrl` | `AUDIT_VLLM_BASE_URL` |
-| `config.vllmServedModel` | `AUDIT_VLLM_SERVED_MODEL` |
+| `config.llamacppBaseUrl` | `AUDIT_LLAMACPP_BASE_URL` |
+| `config.llamacppServedModel` | `AUDIT_LLAMACPP_SERVED_MODEL` |
 | `workerExtract.warmupOnStart` | `AUDIT_REPODY_VLM_WARMUP_ON_START` |
 
 Observability and Bugsink DSNs are configured in Helm values (`observability.bugsinkDsn`) or the runtime Secret (`BUGSINK_DSN`, `NEXT_PUBLIC_BUGSINK_DSN` at web image build).

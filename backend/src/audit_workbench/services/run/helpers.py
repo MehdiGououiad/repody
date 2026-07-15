@@ -9,6 +9,7 @@ from audit_workbench.extraction.document_model_branding import normalize_public_
 from audit_workbench.extraction.extraction_display import completed_extraction_detail
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.storage.mime import resolve_mime as resolve_storage_mime
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 def new_id(prefix: str) -> str:
@@ -53,9 +54,8 @@ def meta_to_dict(meta) -> dict:
         "gpuColdStartLikely": meta.gpu_cold_start_likely,
         "fieldsExtracted": meta.fields_extracted,
         "markdownExtraction": meta.markdown_extraction,
-        "ocrText": meta.ocr_text,
+        "markdownText": meta.markdown_text,
         "rawText": meta.raw_text,
-        "ocrSkipped": meta.ocr_skipped,
         "pagesRendered": meta.pages_rendered,
         "pagesSent": meta.pages_sent,
         "pagesDropped": meta.pages_dropped,
@@ -78,6 +78,7 @@ def rule_dict_from_row(
     conditions,
     condition_junction,
 ) -> dict:
+    normalized_conditions = normalize_keys_to_snake(conditions) if conditions else conditions
     return {
         "id": rule_id,
         "name": name,
@@ -87,12 +88,12 @@ def rule_dict_from_row(
         "body": resolve_rule_body(
             {
                 "body": body,
-                "conditions": conditions,
+                "conditions": normalized_conditions,
                 "condition_junction": condition_junction,
             }
         ),
         "severity": severity,
-        "conditions": conditions,
+        "conditions": normalized_conditions,
         "condition_junction": condition_junction,
     }
 

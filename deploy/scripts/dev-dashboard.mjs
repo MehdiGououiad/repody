@@ -87,7 +87,7 @@ export function buildDevDashboardSections(ctx) {
       rows: [
         {
           name: "worker-extract",
-          role: "Document-model pool — NuExtract VLM OCR + field extraction (PDF runs)",
+          role: "Document-model pool — NuExtract VLM + field extraction (PDF runs)",
         },
         {
           name: "worker-fast",

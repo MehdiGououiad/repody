@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Start llama-server for NuExtract3 Repody (Q4_K_M default + mmproj + 16k, Vulkan by default).
+ * llama-server for NuExtract3-GGUF (OpenAI-compatible).
  *
- * Usage:
- *   node deploy/scripts/llamacpp-nuextract3.mjs serve|stop|restart|verify
+ * Flags follow official docs only:
+ *   - https://huggingface.co/numind/NuExtract3-GGUF (vLLM low-memory: max-model-len 16384)
+ *   - https://github.com/ggml-org/llama.cpp/blob/master/docs/multimodal.md
+ *   - Qwen-VL accuracy floor: --image-min-tokens 1024 (llama.cpp)
  *
- * Paths: deploy/llamacpp/paths.local.env (copy from paths.local.env.example)
+ * Usage: node deploy/scripts/llamacpp-nuextract3.mjs serve|stop|restart|verify|warmup
  */
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -29,38 +31,22 @@ function findLlamaServerExe() {
 }
 
 function inferModelAlias(modelPath, explicitAlias) {
-  if (explicitAlias?.trim()) return explicitAlias.trim();
-  const base = modelPath ? path.basename(modelPath, ".gguf") : "";
-  if (/Q4_K_M/i.test(base)) return "nuextract3-q4_k_m";
-  if (/Q8_0/i.test(base)) return "nuextract3-q8_0";
-  return "nuextract3-q4_k_m";
-}
-
-function resolveProfileDefaults(isVulkan, env) {
-  const profile = (env.LLAMACPP_PROFILE || "speed").trim().toLowerCase();
-  if (profile === "stability") {
-    return {
-      profile,
-      flashAttn: "off",
-      cacheTypeK: "q8_0",
-      cacheTypeV: "f16",
-      ubatch: 1024,
-      mtmdBatchMaxTokens: 1024,
-      vkMaxNodesPerSubmit: isVulkan ? 1 : 0,
-      cachePrompt: false,
-    };
+  if (explicitAlias?.trim()) {
+    const alias = explicitAlias.trim();
+    if (alias !== "nuextract3-q4_k_m") {
+      console.warn(
+        `warn: official local path uses alias nuextract3-q4_k_m; got ${alias}`,
+      );
+    }
+    return alias;
   }
-  // speed (default): Arc Vulkan tuned — see deploy/llamacpp/README.md (~7–13s warm)
-  return {
-    profile,
-    flashAttn: "on",
-    cacheTypeK: "q8_0",
-    cacheTypeV: "q8_0",
-    ubatch: 1024,
-    mtmdBatchMaxTokens: 1024,
-    vkMaxNodesPerSubmit: isVulkan ? 1 : 0,
-    cachePrompt: true,
-  };
+  const base = modelPath ? path.basename(modelPath, ".gguf") : "";
+  if (base && !/Q4_K_M/i.test(base)) {
+    console.warn(
+      `warn: expected NuExtract3-Q4_K_M.gguf (official docs); got ${base}`,
+    );
+  }
+  return "nuextract3-q4_k_m";
 }
 
 function resolvePaths() {
@@ -72,34 +58,15 @@ function resolvePaths() {
   const port = Number(env.LLAMACPP_PORT || 8081);
   const context = Number(env.LLAMACPP_CONTEXT || 16384);
   const gpuLayers = Number(env.LLAMACPP_GPU_LAYERS || 99);
-  const device = env.LLAMACPP_DEVICE?.trim() || "Vulkan0";
-  const isVulkan = device.toLowerCase().startsWith("vulkan");
+  const device = env.LLAMACPP_DEVICE?.trim() || "";
   const parallel = Number(env.LLAMACPP_PARALLEL || 1);
-  const imageMinTokens = Number(env.LLAMACPP_IMAGE_MIN_TOKENS || 1024);
-  const imageMaxTokens = env.LLAMACPP_IMAGE_MAX_TOKENS?.trim()
-    ? Number(env.LLAMACPP_IMAGE_MAX_TOKENS)
-    : null;
-  const cacheRamMiB = Number(env.LLAMACPP_CACHE_RAM_MIB || 2048);
-  const fit = (env.LLAMACPP_FIT || "on").trim().toLowerCase();
-  const profileDefaults = resolveProfileDefaults(isVulkan, env);
-  const flashAttn = (env.LLAMACPP_FLASH_ATTN || profileDefaults.flashAttn).trim().toLowerCase();
-  const cacheTypeK = (env.LLAMACPP_CACHE_TYPE_K || profileDefaults.cacheTypeK).trim().toLowerCase();
-  let cacheTypeV = (env.LLAMACPP_CACHE_TYPE_V || profileDefaults.cacheTypeV).trim().toLowerCase();
-  if (cacheTypeV !== "f16" && flashAttn === "off") {
-    cacheTypeV = "f16";
-  }
-  const ubatch = Number(env.LLAMACPP_UBATCH || profileDefaults.ubatch);
-  const mtmdBatchMaxTokens = Number(
-    env.LLAMACPP_MTMD_BATCH_MAX_TOKENS || profileDefaults.mtmdBatchMaxTokens,
-  );
-  const vkMaxNodesPerSubmit = env.LLAMACPP_VK_MAX_NODES_PER_SUBMIT?.trim()
-    ? Number(env.LLAMACPP_VK_MAX_NODES_PER_SUBMIT)
-    : profileDefaults.vkMaxNodesPerSubmit;
-  const vkDisableCoopmat = (env.LLAMACPP_VK_DISABLE_COOPMAT || "").trim() === "1";
-  const cachePrompt = env.LLAMACPP_CACHE_PROMPT
-    ? env.LLAMACPP_CACHE_PROMPT.trim().toLowerCase() !== "off"
-    : profileDefaults.cachePrompt;
   const modelAlias = inferModelAlias(model, env.LLAMACPP_MODEL_ALIAS);
+  // Qwen-VL accuracy floor + Arc vision budget (llama.cpp). Do not lower min below 1024.
+  const imageMinTokens = Number(env.LLAMACPP_IMAGE_MIN_TOKENS || 1024);
+  const imageMaxTokens = Number(env.LLAMACPP_IMAGE_MAX_TOKENS || 1024);
+  const ubatchSize = Number(env.LLAMACPP_UBATCH_SIZE || 1024);
+  const mtmdBatchMaxTokens = Number(env.LLAMACPP_MTMD_BATCH_MAX_TOKENS || 1024);
+  const flashAttn = (env.LLAMACPP_FLASH_ATTN || "on").trim().toLowerCase();
   if (env.LLAMACPP_WARMUP?.trim()) {
     process.env.LLAMACPP_WARMUP = env.LLAMACPP_WARMUP.trim();
   }
@@ -115,49 +82,41 @@ function resolvePaths() {
     context,
     gpuLayers,
     device,
-    isVulkan,
     parallel,
+    modelAlias,
     imageMinTokens,
     imageMaxTokens,
-    cacheRamMiB,
-    fit,
-    profile: profileDefaults.profile,
-    flashAttn,
-    cacheTypeK,
-    cacheTypeV,
-    ubatch,
+    ubatchSize,
     mtmdBatchMaxTokens,
-    vkMaxNodesPerSubmit,
-    vkDisableCoopmat,
-    cachePrompt,
-    modelAlias,
+    flashAttn,
     missing,
   };
 }
 
-function buildChildEnv(paths) {
-  const childEnv = { ...process.env };
-  if (paths.isVulkan && paths.vkMaxNodesPerSubmit > 0) {
-    childEnv.GGML_VK_MAX_NODES_PER_SUBMIT = String(paths.vkMaxNodesPerSubmit);
-  }
-  if (paths.isVulkan && paths.vkDisableCoopmat) {
-    childEnv.GGML_VK_DISABLE_COOPMAT = "1";
-  }
-  return childEnv;
+function buildServerEnv() {
+  // Strip leftover CoopMat overrides so a stale user/system env cannot re-enable them.
+  const env = { ...process.env };
+  delete env.GGML_VK_DISABLE_COOPMAT;
+  delete env.GGML_VK_DISABLE_COOPMAT2;
+  delete env.LLAMACPP_STABILITY;
+  return env;
 }
 
-function logStabilityProfile(paths) {
+function logLaunchFlags(paths) {
   const parts = [
-    `profile=${paths.profile}`,
+    `-c ${paths.context}`,
+    `-np ${paths.parallel}`,
+    `-ngl ${paths.gpuLayers}`,
     `-fa ${paths.flashAttn}`,
-    `-ctk ${paths.cacheTypeK} -ctv ${paths.cacheTypeV}`,
-    `-ub ${paths.ubatch}`,
+    `-ub ${paths.ubatchSize}`,
+    `--image-min-tokens ${paths.imageMinTokens}`,
+    `--image-max-tokens ${paths.imageMaxTokens}`,
     `--mtmd-batch-max-tokens ${paths.mtmdBatchMaxTokens}`,
+    "--mmproj-offload",
+    "--jinja",
+    "-rea off",
   ];
-  if (paths.isVulkan && paths.vkMaxNodesPerSubmit > 0) {
-    parts.push(`GGML_VK_MAX_NODES_PER_SUBMIT=${paths.vkMaxNodesPerSubmit}`);
-  }
-  if (!paths.cachePrompt) parts.push("--no-cache-prompt");
+  if (paths.device) parts.push(`--device ${paths.device}`);
   console.log(`  ${parts.join(", ")}`);
 }
 
@@ -188,6 +147,7 @@ async function waitForServer(port, { timeoutMs = 300_000 } = {}) {
 }
 
 function buildArgs(paths) {
+  // Official multimodal serve + Qwen-VL vision budget + flash-attn.
   const args = [
     "-m",
     paths.model,
@@ -201,40 +161,27 @@ function buildArgs(paths) {
     String(paths.context),
     "-np",
     String(paths.parallel),
-    "-fa",
-    paths.flashAttn === "on" ? "on" : "off",
-    "-ctk",
-    paths.cacheTypeK,
-    "-ctv",
-    paths.cacheTypeV,
+    "-ub",
+    String(paths.ubatchSize),
     "-ngl",
     String(paths.gpuLayers),
-    "--device",
-    paths.device,
-    "--mmproj-offload",
+    "-fa",
+    paths.flashAttn,
     "--image-min-tokens",
     String(paths.imageMinTokens),
+    "--image-max-tokens",
+    String(paths.imageMaxTokens),
     "--mtmd-batch-max-tokens",
     String(paths.mtmdBatchMaxTokens),
-    "-ub",
-    String(paths.ubatch),
+    "--mmproj-offload",
     "-a",
     paths.modelAlias,
     "--jinja",
     "-rea",
     "off",
   ];
-  if (paths.imageMaxTokens != null && Number.isFinite(paths.imageMaxTokens)) {
-    args.push("--image-max-tokens", String(paths.imageMaxTokens));
-  }
-  if (paths.fit === "off") {
-    args.push("--fit", "off");
-  }
-  if (!paths.cachePrompt) {
-    args.push("--no-cache-prompt");
-  }
-  if (Number.isFinite(paths.cacheRamMiB) && paths.cacheRamMiB >= 0) {
-    args.push("--cache-ram", String(paths.cacheRamMiB));
+  if (paths.device) {
+    args.push("--device", paths.device);
   }
   return args;
 }
@@ -272,22 +219,17 @@ async function serve() {
   const errLog = path.join(LOG_DIR, "llama-server.err.log");
   const args = buildArgs(paths);
 
-  console.log(`Starting llama-server on :${paths.port} (${paths.device}, -np ${paths.parallel})...`);
-  if (paths.parallel > 1) {
-    console.log(
-      `  hint: set admissionMaxExtractInflight >= ${paths.parallel} and scale worker-extract to match.`,
-    );
-  }
+  console.log(`Starting llama-server on :${paths.port}...`);
   console.log(`  model:  ${paths.model}`);
   console.log(`  mmproj: ${paths.mmproj}`);
   console.log(`  logs:   ${LOG_DIR}`);
-  logStabilityProfile(paths);
+  logLaunchFlags(paths);
 
   const child = spawn(paths.exe, args, {
     cwd: LLAMA_DIR,
     detached: true,
     stdio: ["ignore", fs.openSync(outLog, "a"), fs.openSync(errLog, "a")],
-    env: buildChildEnv(paths),
+    env: buildServerEnv(),
   });
   child.unref();
 
@@ -298,10 +240,12 @@ async function serve() {
   }
   console.log("llama-server is up.");
   await verify(paths.port);
-  warmupRepodyVlm(paths.port, { force: false });
+  // Background warmup so `pnpm dev` / stack can continue to API+UI.
+  // Force-sync via: pnpm llamacpp:warmup
+  warmupRepodyVlm(paths.port, { force: false, background: true });
 }
 
-function warmupRepodyVlm(port, { force = false } = {}) {
+function warmupRepodyVlm(port, { force = false, background = false } = {}) {
   if ((process.env.LLAMACPP_WARMUP || "on").trim().toLowerCase() === "off") {
     console.log("\nSkipping NuExtract warmup (LLAMACPP_WARMUP=off).");
     return;
@@ -315,12 +259,25 @@ function warmupRepodyVlm(port, { force = false } = {}) {
   const backendDir = path.join(ROOT, "backend");
   const warmupEnv = {
     ...process.env,
-    AUDIT_INFERENCE_MODE: "vllm",
-    AUDIT_VLLM_BASE_URL: `http://127.0.0.1:${port}/v1`,
+    AUDIT_INFERENCE_MODE: "llamacpp",
+    AUDIT_LLAMACPP_BASE_URL: `http://127.0.0.1:${port}/v1`,
     AUDIT_REPODY_VLM_WARMUP_ON_START: "true",
   };
 
-  console.log("\nPriming NuExtract prompt cache (Facture.pdf, invoice + total-only schemas)...");
+  console.log("\nPriming NuExtract (Facture.pdf, invoice + total-only schemas)...");
+  if (background) {
+    console.log("(background — stack continues; marker written by warmup_repody_vlm.py)");
+    const child = spawn(uv, ["run", "python", "scripts/warmup_repody_vlm.py"], {
+      cwd: backendDir,
+      detached: true,
+      stdio: "ignore",
+      shell: false,
+      env: warmupEnv,
+    });
+    child.unref();
+    return;
+  }
+
   const result = spawnSync(
     uv,
     ["run", "python", "scripts/warmup_repody_vlm.py"],
@@ -372,13 +329,8 @@ async function verify(port = Number(process.env.LLAMACPP_PORT || 8081)) {
     process.exit(1);
   }
   console.log("\nREADY for Repody:");
-  console.log(`  AUDIT_VLLM_BASE_URL=http://host.docker.internal:${port}/v1`);
-  console.log(`  AUDIT_VLLM_SERVED_MODEL=${expectedAlias}`);
-}
-
-async function serveWithWarmup(paths) {
-  await verify(paths.port);
-  warmupRepodyVlm(paths.port, { force: true });
+  console.log(`  AUDIT_LLAMACPP_BASE_URL=http://host.docker.internal:${port}/v1`);
+  console.log(`  AUDIT_LLAMACPP_SERVED_MODEL=${expectedAlias}`);
 }
 
 const cmd = process.argv[2] || "serve";

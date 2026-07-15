@@ -72,9 +72,13 @@ backend/.agents/
 deploy/llamacpp/paths.local.env
 deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
+deploy/mineru/paths.local.env
+deploy/mineru/.venv/
+deploy/mineru/logs/
+deploy/mineru/output/
 deploy/client/lab/.runtime/
 deploy/client/lab/.runtime-k3s/
 deploy/client/lab/.runtime-enterprise/
 .runtime-enterprise/
 backend/.venv/
-deploy/k8s/k3s/
+*.tgz

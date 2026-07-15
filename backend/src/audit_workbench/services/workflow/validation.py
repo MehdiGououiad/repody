@@ -9,7 +9,9 @@ from audit_workbench.extraction.document_model_branding import UnknownCatalogIdE
 from audit_workbench.rules.conditions import NO_RIGHT, resolve_rule_body
 from audit_workbench.rules.llm_fields import referenced_fields
 from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from audit_workbench.rules.types import rule_applies_to, rule_kind
 from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema, WorkflowSchema
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 def normalize_schema_field_name(name: str) -> str:
@@ -75,13 +77,15 @@ def validate_workflow_rules(payload: WorkflowSchema) -> None:
 
 def _schema_fields(doc: DocumentDefSchema | dict) -> list:
     if isinstance(doc, dict):
-        return doc.get("schema_fields") or doc.get("schemaFields") or doc.get("schema") or []
+        doc = normalize_keys_to_snake(doc)
+        return doc.get("schema_fields") or doc.get("schema") or []
     return doc.schema_fields
 
 
 def _document_type(doc: DocumentDefSchema | dict) -> str:
     if isinstance(doc, dict):
-        return str(doc.get("document_type") or doc.get("documentType") or "")
+        doc = normalize_keys_to_snake(doc)
+        return str(doc.get("document_type") or "")
     return doc.document_type or ""
 
 
@@ -157,9 +161,10 @@ def validate_workflow_rule(
         applies_to = rule.applies_to or []
         body = rule.body or ""
     else:
-        kind = (rule.get("kind") or "logic").lower()
+        rule = normalize_keys_to_snake(rule)
+        kind = rule_kind(rule)
         label = (rule.get("name") or "").strip() or rule.get("id") or "Rule"
-        applies_to = rule.get("applies_to") or rule.get("appliesTo") or []
+        applies_to = rule_applies_to(rule)
         body = rule.get("body") or ""
 
     if kind == "llm":

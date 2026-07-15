@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 from typing import Self
 
@@ -42,8 +41,6 @@ class Settings(
             self.structured_llm_enabled = True
         if self.oidc_enabled and not self.oidc_issuer:
             raise ValueError("AUDIT_OIDC_ISSUER is required when AUDIT_OIDC_ENABLED=true.")
-        if not self.vllm_api_key:
-            self.vllm_api_key = os.getenv("AUDIT_VLLM_API_KEY", "").strip() or None
         apply_inference_probe_defaults(self)
         validate_production_guardrails(self)
         validate_timeout_alignment(self)

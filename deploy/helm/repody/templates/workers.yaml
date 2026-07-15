@@ -56,7 +56,7 @@ spec:
               value: {{ .Values.workerExtract.warmupOnStart | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-extract
-            {{- include "repody.vllmSecretEnv" . | nindent 12 }}
+            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:
@@ -129,7 +129,7 @@ spec:
               value: {{ .Values.workerFast.warmupOnStart | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-fast
-            {{- include "repody.vllmSecretEnv" . | nindent 12 }}
+            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:

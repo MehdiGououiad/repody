@@ -31,7 +31,7 @@ async def run_session(postgres_session):
         workflow_id=wf.id,
         document_type="Invoice",
         position=0,
-        extraction_mode="text_logic",
+        extraction_mode="document_model",
     )
     field = SchemaField(
         id="sf-1",

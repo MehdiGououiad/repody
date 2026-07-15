@@ -7,6 +7,10 @@ function normalizeSchemaField(field: SchemaField): SchemaField {
     name: field.name ?? "",
     description: field.description ?? "",
     ...(field.templateType ? { templateType: field.templateType } : {}),
+    ...(field.enumValues?.length ? { enumValues: [...field.enumValues] } : {}),
+    ...(field.children?.length
+      ? { children: field.children.map(normalizeSchemaField).sort((a, b) => a.id.localeCompare(b.id)) }
+      : {}),
     ...(field.sampleValue !== undefined && field.sampleValue !== ""
       ? { sampleValue: field.sampleValue }
       : {}),
@@ -25,6 +29,7 @@ function normalizeDocument(doc: DocumentDef): DocumentDef {
     documentModelId: doc.documentModelId ?? null,
     extractionInstructions: doc.extractionInstructions ?? "",
     markdownExtraction: doc.markdownExtraction ?? false,
+    extractionIclExamples: [...(doc.extractionIclExamples ?? [])],
   };
 }
 

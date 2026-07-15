@@ -1,6 +1,6 @@
 """Per-model document input policies (upstream docs only, no platform tuning).
 
-NuExtract3: native image bytes; PDF → lossless PNG @ 170 DPI (official example).
+NuExtract3-GGUF: native image bytes; PDF → lossless PNG @ 170 DPI via PyMuPDF (official example).
 """
 
 from __future__ import annotations
@@ -10,9 +10,6 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from audit_workbench.extraction.document_bundle import DocumentBundle
-    from audit_workbench.settings import Settings
-
-RenderFormat = Literal["native", "png"]
 
 
 @dataclass(frozen=True)
@@ -27,7 +24,7 @@ class ModelRenderPolicy:
     max_edge_px: int | None = None
 
 
-# https://huggingface.co/numind/NuExtract3 — pdf_to_png_data_urls(..., dpi=170)
+# https://huggingface.co/numind/NuExtract3-GGUF — pdf_to_png_data_urls(..., dpi=170)
 REPODY_VLM_RENDER = ModelRenderPolicy(
     model_id="repody:vlm",
     doc_ref="numind/NuExtract3 (dpi=170 PNG, native image uploads)",
@@ -54,10 +51,6 @@ def _is_image_upload(mime_type: str, raw_bytes: bytes) -> bool:
     return mime.startswith("image/")
 
 
-def repody_vlm_pdf_dpi(settings: Settings) -> int:
-    return settings.repody_vlm_pdf_dpi
-
-
 def native_image_mime_type(mime_type: str, image_bytes: bytes) -> str:
     mime = (mime_type or "").lower()
     if mime == "image/png" or image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -69,27 +62,23 @@ def native_image_mime_type(mime_type: str, image_bytes: bytes) -> str:
     return "image/jpeg"
 
 
-def repody_vlm_pages(bundle: DocumentBundle, settings: Settings) -> tuple[list[tuple[bytes, str]], int]:
-    """Pages for Repody VLM: native uploads; PDF → lossless PNG per NuExtract docs."""
+def repody_vlm_pages(
+    bundle: DocumentBundle,
+) -> tuple[list[tuple[bytes, str]], int]:
+    """Pages for Repody VLM: native uploads; PDF → PNG @ official DPI."""
     if _is_image_upload(bundle.mime_type, bundle.raw_bytes):
         bundle.page_count = 1
         mime = native_image_mime_type(bundle.mime_type, bundle.raw_bytes)
         return [(bundle.raw_bytes, mime)], 1
 
     if _is_pdf(bundle.mime_type, bundle.raw_bytes):
-        from audit_workbench.extraction.preprocess import render_pdf_pages_png
+        from audit_workbench.extraction.preprocess import render_nuextract_pdf_pages
 
-        pages = render_pdf_pages_png(
-            bundle.raw_bytes,
-            settings=settings,
-            dpi=repody_vlm_pdf_dpi(settings),
-            max_edge=REPODY_VLM_RENDER.max_edge_px,
-        )
+        pages = render_nuextract_pdf_pages(bundle.raw_bytes)
         bundle.page_count = len(pages)
         return [(page, "image/png") for page in pages], len(pages)
 
-    from audit_workbench.extraction.preprocess import render_document_pages_jpeg
-
-    pages = render_document_pages_jpeg(bundle.raw_bytes, bundle.mime_type, settings=settings)
-    bundle.page_count = len(pages)
-    return [(page, "image/jpeg") for page in pages], len(pages)
+    raise ValueError(
+        f"Unsupported document type for NuExtract vision: {bundle.mime_type!r}. "
+        "Upload a PDF or image (PNG, JPEG, WebP)."
+    )

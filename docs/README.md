@@ -14,6 +14,7 @@ Single map for all Repody docs. Start at the root guides, then drill into topic 
 | **Secrets + hardening** | [deploy/SECRETS.md](./deploy/SECRETS.md) |
 | **OpenShift (client + CRC lab)** | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 | Architecture context and glossary | [../CONTEXT.md](../CONTEXT.md) |
+| **Diagrammes architecture & séquences (FR, Mermaid)** | [diagrams/README.md](./diagrams/README.md) |
 | Agent / Cursor workflow | [../AGENTS.md](../AGENTS.md) |
 
 ## Namespaces
@@ -46,7 +47,6 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 | Client production | [deploy/CLIENT.md](./deploy/CLIENT.md) |
 | Prod observability | [deploy/PROD-OBSERVABILITY.md](./deploy/PROD-OBSERVABILITY.md) |
 | On-prem managed data plane | [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) |
-| Air-gapped bundle and install | [AIRGAP.md](./AIRGAP.md) |
 | Runtime env and secrets | [../deploy/ENV.md](../deploy/ENV.md) |
 | Container registry (GHCR / on-prem) | [../deploy/registry/README.md](../deploy/registry/README.md) |
 | Host llama-server helpers | [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md) |
@@ -56,6 +56,7 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 
 | Topic | Doc |
 |-------|-----|
+| **Full platform inventory (features, security, libs, prod)** | [PLATFORM-INVENTORY.md](./PLATFORM-INVENTORY.md) |
 | Backend layout and API inventory | [BACKEND.md](./BACKEND.md) |
 | Code quality review checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
 | Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |

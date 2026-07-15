@@ -45,8 +45,8 @@ def _snapshot_from_payload(
     rules: list[WorkflowRuleSchema] | None = None,
     workflow_name: str | None = None,
 ) -> dict | None:
-    doc_rows = [doc.model_dump(by_alias=True) for doc in documents] if documents else None
-    rule_rows = [rule.model_dump(by_alias=True) for rule in rules] if rules else None
+    doc_rows = [doc.model_dump(by_alias=False) for doc in documents] if documents else None
+    rule_rows = [rule.model_dump(by_alias=False) for rule in rules] if rules else None
     return build_run_snapshot(
         documents=doc_rows,
         rules=rule_rows,

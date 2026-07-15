@@ -64,7 +64,7 @@ Sign in to Repody: `operator@repody.local` / `repody-dev` (use **localhost**, no
 
 **Observability:** `pnpm dev:all` starts Grafana, Loki, Tempo, OTEL, and Bugsink by default (`-- --no-obs` to skip). JSON logs ship to Loki; traces correlate via `trace_id`. Restart the API after first enable. See [docs/OBSERVABILITY.md](../OBSERVABILITY.md).
 
-**Pools:** runs **with uploaded PDFs** use the **OCR** pool (NuExtract). Runs without files use **fast**. `pnpm dev` starts both workers by default.
+**Pools:** runs **with uploaded PDFs** use the **extract** pool (NuExtract). Runs without files use **fast**. `pnpm dev` starts both workers by default.
 
 The API port defaults to **8000**. If Windows keeps a stale listener after a killed
 dev process, use a temporary fallback:
@@ -94,20 +94,19 @@ Repody local default: **`NuExtract3-Q4_K_M.gguf`** with alias `nuextract3-q4_k_m
 Keep these in sync:
 
 - `deploy/llamacpp/paths.local.env` → `LLAMACPP_MODEL_ALIAS`
-- `backend/.env` → `AUDIT_VLLM_SERVED_MODEL`
-- `compose.yaml` → `worker-extract` `AUDIT_VLLM_SERVED_MODEL`
+- `backend/.env` → `AUDIT_LLAMACPP_SERVED_MODEL`
+- `compose.yaml` → `worker-extract` `AUDIT_LLAMACPP_SERVED_MODEL`
 
 Tuned defaults in `paths.local.env` when `LLAMACPP_DEVICE=Vulkan0`:
 
-- **`LLAMACPP_PROFILE=speed`** — ~7–13 s warm extraction with prompt cache; use **`stability`** only after `ErrorDeviceLost`
+- **`LLAMACPP_IMAGE_MIN_TOKENS=1024`** / **`LLAMACPP_IMAGE_MAX_TOKENS=1024`** — Qwen-VL accuracy floor + fixed vision budget (unbounded max → Arc `ErrorDeviceLost`)
+- **`LLAMACPP_UBATCH_SIZE=1024`** / **`LLAMACPP_MTMD_BATCH_MAX_TOKENS=1024`** — match the vision token budget
 - **`LLAMACPP_PARALLEL=1`** — one slot, full 16k context
-- **`LLAMACPP_IMAGE_MIN_TOKENS=1024`** — NuExtract / Qwen-VL requirement
-- **`LLAMACPP_UBATCH=1024`** and **`LLAMACPP_MTMD_BATCH_MAX_TOKENS=1024`** — Arc Vulkan sweet spot
-- **`AUDIT_REPODY_VLM_PDF_DPI=170`** — API and OCR worker
+- PDF rasterization is fixed in code at **170 DPI** PNG (`nuextract_contract.py`)
 
 After changes: `pnpm llamacpp:restart` and `pnpm dev:restart`.
 
-### OCR run timeouts
+### Extract run timeouts
 
 Audit tasks are capped at **3 minutes** end-to-end. Keep these aligned in `backend/.env` (see `deploy/env/compose.env.example`):
 

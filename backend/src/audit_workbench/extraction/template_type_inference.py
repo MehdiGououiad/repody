@@ -4,10 +4,7 @@ from __future__ import annotations
 
 import re
 
-from audit_workbench.extraction.nuextract_types import (
-    DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-    normalize_template_type,
-)
+from audit_workbench.extraction.nuextract_types import DEFAULT_NUEXTRACT_TEMPLATE_TYPE, normalize_template_type
 
 _EMAIL = re.compile(r"\b(email|e-mail|courriel|mail)\b", re.I)
 _PHONE = re.compile(r"\b(phone|tel|mobile|téléphone|telephone|fax)\b", re.I)
@@ -31,50 +28,59 @@ _VERBATIM = re.compile(
     r"\b(number|numéro|numero|id|ref|reference|invoice|facture|order|commande|sku|code)\b",
     re.I,
 )
+_LIST = re.compile(
+    r"\b(liste|list|each|every|tous les|all|multiple)\b",
+    re.I,
+)
 
 
 def _hint_blob(name: str, description: str = "") -> str:
     return f"{name} {description}".replace("_", " ").lower()
 
 
+def _with_list_suffix(leaf: str) -> str:
+    return f"{leaf}-list"
+
+
 def suggest_template_type(name: str, description: str = "") -> str:
     """Infer a NuExtract leaf type from field name and extraction intent."""
     blob = _hint_blob(name, description)
+    wants_list = bool(_LIST.search(blob))
     if _EMAIL.search(blob):
-        return "email-address"
+        return _with_list_suffix("email-address") if wants_list else "email-address"
     if _PHONE.search(blob):
-        return "phone-number"
+        return _with_list_suffix("phone-number") if wants_list else "phone-number"
     if _URL.search(blob):
-        return "url"
+        return _with_list_suffix("url") if wants_list else "url"
     if _IBAN.search(blob):
-        return "iban"
+        return _with_list_suffix("iban") if wants_list else "iban"
     if _BIC.search(blob):
-        return "bic"
+        return _with_list_suffix("bic") if wants_list else "bic"
     if _COUNTRY.search(blob):
-        return "country"
+        return _with_list_suffix("country") if wants_list else "country"
     if _CURRENCY.search(blob):
-        return "currency"
+        return _with_list_suffix("currency") if wants_list else "currency"
     if _AMOUNT.search(blob):
-        return "number"
+        return _with_list_suffix("number") if wants_list else "number"
     if _INTEGER.search(blob):
-        return "integer"
+        return _with_list_suffix("integer") if wants_list else "integer"
     if _DATETIME.search(blob):
-        return "date-time"
+        return _with_list_suffix("date-time") if wants_list else "date-time"
     if _TIME.search(blob):
-        return "time"
+        return _with_list_suffix("time") if wants_list else "time"
     if _DATE.search(blob):
-        return "date"
+        return _with_list_suffix("date") if wants_list else "date"
     if _DURATION.search(blob):
-        return "duration"
+        return _with_list_suffix("duration") if wants_list else "duration"
     if _LANGUAGE.search(blob):
-        return "language"
+        return _with_list_suffix("language") if wants_list else "language"
     if _PERCENT.search(blob) or "%" in blob:
         return "number"
     if _BOOLEAN.search(blob):
-        return "boolean"
+        return _with_list_suffix("boolean") if wants_list else "boolean"
     if _VERBATIM.search(blob):
-        return "verbatim-string"
-    return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+        return _with_list_suffix("verbatim-string") if wants_list else "verbatim-string"
+    return _with_list_suffix(DEFAULT_NUEXTRACT_TEMPLATE_TYPE) if wants_list else DEFAULT_NUEXTRACT_TEMPLATE_TYPE
 
 
 def resolve_template_type(field_name: str, description: str = "", template_type: str | None = None) -> str:
@@ -83,30 +89,3 @@ def resolve_template_type(field_name: str, description: str = "", template_type:
     if explicit:
         return normalize_template_type(explicit)
     return suggest_template_type(field_name, description)
-
-
-def vlm_max_tokens_for_field_count(
-    field_count: int,
-    *,
-    ceiling: int = 4096,
-    enable_thinking: bool = False,
-) -> int:
-    """Scale completion budget with schema size: min(4096, 128 + 48 × fields)."""
-    base = min(ceiling, max(128, 128 + 48 * max(field_count, 0)))
-    if enable_thinking:
-        # NuExtract reasoning can consume most of the budget before JSON output.
-        return min(ceiling, max(base, 1024))
-    return base
-
-
-def vlm_max_tokens_for_markdown(
-    *,
-    page_count: int = 1,
-    ceiling: int = 8192,
-    enable_thinking: bool = False,
-) -> int:
-    """Scale markdown budget with page count for NuExtract document-to-Markdown."""
-    base = min(ceiling, max(1024, 768 + 640 * max(page_count, 1)))
-    if enable_thinking:
-        return min(ceiling, max(base, 2048))
-    return base

@@ -6,7 +6,7 @@ from audit_workbench.settings import Settings, get_settings
 
 VALIDATION_MODEL_REQUIRED_MSG = (
     "LLM validation requires AUDIT_VALIDATION_MODEL "
-    "(a dedicated text model in Docker Model Runner). "
+    "(a dedicated text model on the inference endpoint). "
     "Repody VLM is not used for rule validation."
 )
 

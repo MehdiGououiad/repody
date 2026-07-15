@@ -30,7 +30,7 @@ config:
   authUrl: https://CHANGE_ME_APP_HOST
   oidcIssuer: https://CHANGE_ME_AUTH_HOST/realms/repody
   corsOrigins: '["https://CHANGE_ME_APP_HOST"]'
-  vllmBaseUrl: https://CHANGE_ME_VLM_HOST/v1
+  llamacppBaseUrl: https://CHANGE_ME_VLM_HOST/v1
 
 externalObjectStorage:
   publicEndpoint: CHANGE_ME_FILES_HOST

@@ -85,8 +85,7 @@ async def test_document_model_id_catalog_reports_runtime_availability(client, mo
 
     async def fake_installed_runtime_models(_settings=None):
         return {
-            "docker_model_runner": {settings.repody_vlm_model.lower()},
-            "vllm": set(),
+            "llamacpp": {settings.llamacpp_served_model.lower()},
         }
 
     monkeypatch.setattr(

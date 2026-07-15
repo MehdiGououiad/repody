@@ -32,7 +32,7 @@ def _stress_parser(sub: argparse._SubParsersAction) -> None:
 def _queue_parser(sub: argparse._SubParsersAction) -> None:
     from scripts.benchmark_dev_queue import add_arguments, run_benchmark
 
-    parser = sub.add_parser("queue", help="Benchmark queue depth while OCR worker is busy")
+    parser = sub.add_parser("queue", help="Benchmark queue depth while extract worker is busy")
     add_arguments(parser)
     parser.set_defaults(_runner=lambda args: asyncio.run(run_benchmark(args)))
 

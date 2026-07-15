@@ -19,7 +19,6 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-select",
       "@radix-ui/react-tabs",
       "@radix-ui/react-tooltip",
-      "@radix-ui/react-popover",
       "cmdk",
       "lucide-react",
       "recharts",

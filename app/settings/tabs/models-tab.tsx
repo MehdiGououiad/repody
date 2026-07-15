@@ -47,7 +47,7 @@ export function ModelsTab({
       kind: model.kind === "validation"
         ? "Validation LLM"
         : model.markdownOnly
-          ? "OCR model"
+          ? "Markdown model"
           : "Document model",
       runtime: model.runtime || REPODY_VLM_LABEL,
       available: model.available !== false,

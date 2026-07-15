@@ -62,11 +62,22 @@ function LoginContent() {
     router.replace(callbackUrl);
   }, [accessToken, callbackUrl, hydrated, router, sessionError, status]);
 
-  if (!hydrated || status === "loading" || status === "authenticated") {
+  // Only block on session bootstrap. Authenticated-but-invalid is cleared in the
+  // effect above; still show the sign-in form so a stuck signOut cannot hang the UI.
+  if (!hydrated || status === "loading") {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
         <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
-        <p className="text-sm">{status === "authenticated" ? t("continueToApp") : t("checkingAuth")}</p>
+        <p className="text-sm">{t("checkingAuth")}</p>
+      </div>
+    );
+  }
+
+  if (status === "authenticated" && accessToken && !sessionError) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
+        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
+        <p className="text-sm">{t("continueToApp")}</p>
       </div>
     );
   }

@@ -4,7 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
-import { normalizeOcrMarkdown, splitOcrMarkdownPages } from "@/lib/ocr-markdown/normalize";
+import { normalizeDocumentMarkdown, splitDocumentMarkdownPages } from "@/lib/document-markdown/normalize";
 
 const MARKDOWN_COMPONENTS = {
   h1: ({ children }: { children?: ReactNode }) => (
@@ -106,7 +106,7 @@ export function DocumentMarkdownPreview({
   className?: string;
   compact?: boolean;
 }) {
-  const sections = useMemo(() => splitOcrMarkdownPages(text), [text]);
+  const sections = useMemo(() => splitDocumentMarkdownPages(text), [text]);
 
   if (!sections.length) return null;
 
@@ -147,7 +147,7 @@ export function DocumentTextPreviewPanel({
   label: string;
   className?: string;
 }) {
-  const normalized = useMemo(() => normalizeOcrMarkdown(text), [text]);
+  const normalized = useMemo(() => normalizeDocumentMarkdown(text), [text]);
 
   return (
     <details className={cn("group rounded-xl border border-border/70 bg-card overflow-hidden", className)} open>

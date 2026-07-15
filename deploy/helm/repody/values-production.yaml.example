@@ -76,7 +76,7 @@ ingress:
 secrets:
   create: false
   existingSecret: repody-runtime-secrets
-  # Put AUDIT_VLLM_API_KEY in this Secret when the external vLLM endpoint requires auth.
+  # Put AUDIT_LLAMACPP_API_KEY in this Secret when the external vLLM endpoint requires auth.
 
 config:
   oidcIssuer: https://auth.yourdomain.com/realms/repody
@@ -84,9 +84,9 @@ config:
   keycloakClientId: repody-web
   corsOrigins: '["https://app.yourdomain.com"]'
   # External OpenAI-compatible endpoint: vLLM, llama-server, or managed GPU service.
-  vllmBaseUrl: https://vlm.yourdomain.com/v1
-  vllmServedModel: numind/NuExtract3
-  dockerModelRunnerBaseUrl: ""
+  llamacppBaseUrl: https://vlm.yourdomain.com/v1
+  # Must match the client's llama-server model id (official local: nuextract3-q4_k_m).
+  llamacppServedModel: nuextract3-q4_k_m
   workerTaskTimeoutMinutes: 3
   staleRunTimeoutMinutes: 5
   queuedStaleTimeoutMinutes: 60

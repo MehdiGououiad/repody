@@ -22,13 +22,12 @@ from audit_workbench.inference.openai_compat import (
     post_chat_completion,
 )
 from audit_workbench.inference.runtime import (
-    default_document_runtime,
-    openai_base_url_for_runtime,
+    llamacpp_base_url,
     openai_probe_timeout_seconds,
 )
 from audit_workbench.settings import Settings, get_settings
 
-RUNTIMES = ("docker_model_runner", "vllm")
+RUNTIMES = ("llamacpp",)
 
 SERVERLESS_CATALOG_NOTE = (
     "Serverless GPU — billed only on extraction runs (idle GPU probes disabled)."
@@ -63,15 +62,13 @@ async def installed_runtime_models(
 ) -> dict[str, set[str]]:
     settings = settings or get_settings()
     installed: dict[str, set[str]] = {runtime: set() for runtime in RUNTIMES}
-    if not settings.gpu_live_probe:
-        return installed
-    runtime = default_document_runtime(settings)
-    base_url = openai_base_url_for_runtime(runtime, settings)
-    if base_url.strip():
-        installed[runtime] = await list_openai_models(
-            base_url,
-            timeout=openai_probe_timeout_seconds(base_url),
-        )
+    if settings.gpu_live_probe:
+        base_url = llamacpp_base_url(settings)
+        if base_url.strip():
+            installed["llamacpp"] = await list_openai_models(
+                base_url,
+                timeout=openai_probe_timeout_seconds(base_url),
+            )
     return installed
 
 
@@ -87,14 +84,11 @@ def availability_for_spec(
         return True, SERVERLESS_CATALOG_NOTE
     runtime_models = installed_by_runtime.get(spec.runtime) or set()
     installed = model_is_available(spec.runtime_model or "", runtime_models)
-    if spec.runtime == "docker_model_runner":
-        note = None if installed else "Enable the document model runtime and install Repody VLM."
-        return installed, note
-    if spec.runtime == "vllm":
+    if spec.runtime == "llamacpp":
         if not live_probe:
             return True, SERVERLESS_CATALOG_NOTE
         note = None if installed else (
-            "Start vLLM or llama-server and set AUDIT_VLLM_BASE_URL / AUDIT_VLLM_SERVED_MODEL."
+            "Start llama-server and set AUDIT_LLAMACPP_BASE_URL / AUDIT_LLAMACPP_SERVED_MODEL."
         )
         return installed, note
     return False, "Unsupported document model runtime."
@@ -105,7 +99,6 @@ async def list_catalog_with_availability(
 ) -> tuple[list[AvailableModelEntry], str]:
     settings = settings or get_settings()
     live_probe = settings.gpu_live_probe
-    active_runtime = default_document_runtime(settings)
     installed = await installed_runtime_models(settings)
     entries: list[AvailableModelEntry] = []
     for spec in list_document_models():
@@ -113,7 +106,6 @@ async def list_catalog_with_availability(
             spec,
             installed_by_runtime=installed,
             live_probe=live_probe,
-            active_runtime=active_runtime,
         )
         entries.append(AvailableModelEntry(spec=spec, available=available, availability_note=note))
 
@@ -130,10 +122,9 @@ async def probe_active_runtime(settings: Settings | None = None) -> bool | None:
     if not settings.gpu_live_probe:
         return None
     mode = settings.inference_mode.lower()
-    if mode not in RUNTIMES:
+    if mode != "llamacpp":
         return None
-    runtime = "vllm" if mode == "vllm" else "docker_model_runner"
-    base_url = openai_base_url_for_runtime(runtime, settings)
+    base_url = llamacpp_base_url(settings)
     return await ping_openai_compat(
         base_url,
         timeout=openai_probe_timeout_seconds(base_url, default=5.0),
@@ -152,7 +143,7 @@ async def probe_document_model_state(
             reachable=True,
             model_loaded=True,
         )
-    base_url = openai_base_url_for_runtime(spec.runtime, settings)
+    base_url = llamacpp_base_url(settings)
     probe_timeout = openai_probe_timeout_seconds(base_url, default=5.0)
     installed = await list_openai_models(base_url, timeout=probe_timeout)
     reachable = bool(installed) or await ping_openai_compat(base_url, timeout=probe_timeout)
@@ -166,31 +157,23 @@ async def probe_document_model_state(
 
 
 def unreachable_detail(runtime: str) -> tuple[str, str]:
-    if runtime == "docker_model_runner":
-        return (
-            "Repody VLM is unavailable.",
-            "Run: pnpm llamacpp:serve",
-        )
+    _ = runtime
     return (
-        "Repody VLM is unavailable on the GPU inference service.",
-        "Check the external document-model runtime and wait for the served model to load.",
+        "Repody VLM is unavailable.",
+        "Run: pnpm llamacpp:serve",
     )
 
 
 def reachable_detail(runtime: str, *, live_probe: bool = True) -> str:
+    _ = runtime
     if not live_probe:
         return "Live GPU probe disabled. Use ?run_infer=true to run one connectivity test."
-    if runtime == "docker_model_runner":
-        return "Document model runtime is reachable and Repody VLM is installed."
-    return "GPU inference is reachable and Repody VLM is loaded."
+    return "Inference endpoint is reachable and Repody VLM is loaded."
 
 
 def generation_failure_hint(runtime: str) -> str:
-    if runtime == "docker_model_runner":
-        return "Check Docker Model Runner logs with: docker model logs"
-    return (
-        "Check vLLM or llama-server logs on the inference host."
-    )
+    _ = runtime
+    return "Check llama-server logs on the inference host."
 
 
 async def run_generation_probe(
@@ -198,7 +181,7 @@ async def run_generation_probe(
 ) -> GenerationProbeResult:
     settings = settings or get_settings()
     spec = parse_document_model(None)
-    base_url = openai_base_url_for_runtime(spec.runtime, settings)
+    base_url = llamacpp_base_url(settings)
     started = time.perf_counter()
     try:
         data = await post_chat_completion(

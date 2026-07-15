@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import type { ModelsCatalogResponse, PlatformConfigResponse } from "@/lib/api/schema-types";
-import type { ProcessingPathsResponse } from "@/lib/api/processing-paths";
 import type { RuleTemplate } from "@/lib/types";
 
 const CATALOG_QUERY_KEY = ["catalog", "models"] as const;
@@ -21,31 +20,9 @@ export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
   );
 }
 
-/** Document + OCR-compare models for operator benchmarks. */
+/** Document models for operator benchmarks. */
 export function benchmarkModelsFromCatalog(catalog: ModelsCatalogResponse) {
-  return catalog.models.filter(
-    (model) => model.kind === "document_model" || model.kind === "ocr_compare",
-  );
-}
-
-export function processingPathsFromCatalog(
-  catalog: ModelsCatalogResponse,
-): ProcessingPathsResponse {
-  return {
-    paths: catalog.paths ?? [],
-    validationModes: catalog.validationModes ?? [],
-    defaultPath: catalog.defaultPath ?? "document_model",
-    defaultValidationMode: catalog.defaultValidationMode ?? "logic_only",
-  };
-}
-
-export function useProcessingPathsCatalog() {
-  return useQuery({
-    queryKey: CATALOG_QUERY_KEY,
-    queryFn: fetchModelsCatalog,
-    staleTime: CATALOG_STALE_MS,
-    select: processingPathsFromCatalog,
-  });
+  return catalog.models.filter((model) => model.kind === "document_model");
 }
 
 export function useUnifiedModelsCatalog(enabled = true) {

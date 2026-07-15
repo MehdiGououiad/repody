@@ -14,6 +14,7 @@ from audit_workbench.catalog.registry import normalize_model_id
 from audit_workbench.extraction.nuextract_types import normalize_template_type
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.schemas.workflow import WorkflowSchema
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 def short_id() -> str:
@@ -48,6 +49,31 @@ async def upsert_workflow_aggregate(
     await session.flush()
 
 
+def _field_config_payload(field) -> dict | None:
+    config: dict = {}
+    enum_values = getattr(field, "enum_values", None) or []
+    if enum_values:
+        config["enum_values"] = [str(v).strip() for v in enum_values if str(v).strip()]
+    children = getattr(field, "children", None) or []
+    child_rows: list[dict] = []
+    for child in children:
+        name = (getattr(child, "name", None) or "").strip()
+        if not name:
+            continue
+        row = {
+            "name": name,
+            "description": getattr(child, "description", None) or "",
+            "template_type": normalize_template_type(getattr(child, "template_type", None)),
+        }
+        child_enum = getattr(child, "enum_values", None) or []
+        if child_enum:
+            row["enum_values"] = [str(v).strip() for v in child_enum if str(v).strip()]
+        child_rows.append(row)
+    if child_rows:
+        config["children"] = child_rows
+    return config or None
+
+
 async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: WorkflowSchema) -> None:
     existing = {doc.id: doc for doc in wf.documents}
     keep_ids: set[str] = set()
@@ -56,15 +82,20 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
         keep_ids.add(doc_id)
         read_id, val_id = normalize_document_modes(doc.extraction_mode, doc.validation_mode)
         row = existing.get(doc_id)
-        ocr_id = normalize_model_id(doc.document_model_id)
+        document_model_id = normalize_model_id(doc.document_model_id)
         if row:
             row.document_type = doc.document_type
             row.position = di
             row.extraction_mode = read_id
             row.validation_mode = val_id
-            row.document_model_id = ocr_id
+            row.document_model_id = document_model_id
             row.extraction_instructions = doc.extraction_instructions or ""
             row.markdown_extraction = doc.markdown_extraction
+            row.extraction_icl_examples = [
+                {"input": ex.input, "output": ex.output}
+                for ex in (doc.extraction_icl_examples or [])
+                if ex.input.strip() and ex.output.strip()
+            ]
             await session.execute(delete(SchemaField).where(SchemaField.document_id == doc_id))
         else:
             row = Document(
@@ -74,9 +105,14 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 position=di,
                 extraction_mode=read_id,
                 validation_mode=val_id,
-                document_model_id=ocr_id,
+                document_model_id=document_model_id,
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=doc.markdown_extraction,
+                extraction_icl_examples=[
+                    {"input": ex.input, "output": ex.output}
+                    for ex in (doc.extraction_icl_examples or [])
+                    if ex.input.strip() and ex.output.strip()
+                ],
             )
             session.add(row)
             await session.flush()
@@ -92,6 +128,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                     name=field.name,
                     description=field.description,
                     template_type=normalize_template_type(field.template_type),
+                    field_config=_field_config_payload(field),
                     position=fi,
                 )
             )
@@ -109,10 +146,14 @@ async def _upsert_rules(session: AsyncSession, wf: Workflow, payload: WorkflowSc
         if existing_rule is not None and existing_rule.workflow_id != wf.id:
             rule_id = f"r-{short_id()}"
         keep_ids.add(rule_id)
+        normalized_conditions = (
+            normalize_keys_to_snake(rule.conditions) if rule.conditions else rule.conditions
+        )
         resolved_body = resolve_rule_body(
             {
+                "kind": rule.kind,
                 "body": rule.body,
-                "conditions": rule.conditions,
+                "conditions": normalized_conditions,
                 "condition_junction": rule.condition_junction,
             }
         )
@@ -124,7 +165,7 @@ async def _upsert_rules(session: AsyncSession, wf: Workflow, payload: WorkflowSc
             row.body = resolved_body
             row.severity = rule.severity
             row.applies_to = rule.applies_to
-            row.conditions = rule.conditions
+            row.conditions = normalized_conditions
             row.condition_junction = rule.condition_junction
             row.position = ri
         else:
@@ -138,7 +179,7 @@ async def _upsert_rules(session: AsyncSession, wf: Workflow, payload: WorkflowSc
                     body=resolved_body,
                     severity=rule.severity,
                     applies_to=rule.applies_to,
-                    conditions=rule.conditions,
+                    conditions=normalized_conditions,
                     condition_junction=rule.condition_junction,
                     position=ri,
                 )

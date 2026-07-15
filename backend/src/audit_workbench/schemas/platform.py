@@ -27,9 +27,11 @@ class PlatformConfigResponse(CamelModel):
     default_document_model_id: str = Field(serialization_alias="defaultDocumentModelId")
     default_read_path: str = Field(serialization_alias="defaultReadPath")
     document_models: list[DocumentModelSummary] = Field(serialization_alias="documentModels")
-    ocr_max_pages: int = Field(serialization_alias="ocrMaxPages")
-    docker_model_runner_base_url: str = Field(serialization_alias="dockerModelRunnerBaseUrl")
-    vllm_base_url: str = Field(serialization_alias="vllmBaseUrl")
+    nuextract_max_pages_per_request: int = Field(
+        default=6,
+        serialization_alias="nuextractMaxPagesPerRequest",
+    )
+    llamacpp_base_url: str = Field(serialization_alias="llamacppBaseUrl")
     max_upload_bytes: int = Field(serialization_alias="maxUploadBytes")
     max_upload_files: int = Field(serialization_alias="maxUploadFiles")
     stale_run_timeout_minutes: int = Field(serialization_alias="staleRunTimeoutMinutes")

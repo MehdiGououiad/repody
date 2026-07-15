@@ -1,0 +1,54 @@
+%% Diagramme de séquence — authentification OIDC (détail)
+%% Éditable : Mermaid sequenceDiagram
+%% Entrées code : auth.ts · proxy.ts · auth/jwt_validator.py · auth/dependencies.py
+
+sequenceDiagram
+  autonumber
+  actor U as Utilisateur
+  participant Nav as Navigateur
+  participant UI as Next.js
+  participant Auth as Auth.js
+  participant KC as Keycloak<br/>realm repody
+  participant API as FastAPI
+  participant Casbin as Casbin RBAC
+
+  U->>Nav: Accède à une page protégée
+  Nav->>UI: Requête
+  UI->>Auth: Session ?
+  alt Pas de session
+    Auth-->>Nav: Redirection /login
+    U->>UI: Clic connexion
+    UI->>Auth: signIn("keycloak")
+    Auth->>KC: /protocol/openid-connect/auth
+    U->>KC: Login + consentement
+    KC-->>Auth: Authorization code
+    Auth->>KC: Échange code → tokens
+    KC-->>Auth: access_token + id_token + refresh
+    Auth->>Auth: Session JWT côté UI<br/>rôles realm dans claims
+    Auth-->>Nav: Cookie session Auth.js
+  end
+
+  U->>Nav: Action métier (API)
+  Nav->>UI: /api/v1/...
+  UI->>Auth: Lit accessToken session
+  Note over UI: proxy.ts injecte<br/>Authorization: Bearer
+  UI->>API: HTTP /v1/... + Bearer
+
+  API->>API: get_current_principal()
+  API->>KC: JWKS / validation JWT
+  KC-->>API: Clés / OK signature
+  API->>API: Map rôles → principal
+  API->>Casbin: require_permission<br/>resource, action
+  alt Autorisé
+    Casbin-->>API: OK
+    API-->>Nav: 200 + corps
+  else Refusé
+    Casbin-->>API: Deny
+    API-->>Nav: 403 Forbidden
+  end
+
+  Note over API,Casbin: Rôles typiques :<br/>viewer = lecture<br/>operator = écriture + runs<br/>admin = métriques + diagnostics
+
+  opt Dev local AUDIT_OIDC_ENABLED=false
+    Note over API: Principal fixe platform_admin<br/>sans appel Keycloak
+  end

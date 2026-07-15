@@ -5,12 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-DEFAULT_READ_PATH_ID = "document_model"
+from audit_workbench.rules.types import rule_kind
 from audit_workbench.settings import Settings, get_settings
 
 ValidationMode = Literal["logic_only", "logic_and_llm"]
 LOGIC_VALIDATION: ValidationMode = "logic_only"
 RUN_VALIDATION_LLM: ValidationMode = "logic_and_llm"
+
+DOCUMENT_MODEL_READ_PATH_ID = "document_model"
+DEFAULT_READ_PATH_ID = DOCUMENT_MODEL_READ_PATH_ID
 
 ReadKind = Literal["document_model"]
 
@@ -23,10 +26,6 @@ class ReadPathSpec:
     read: ReadKind
     show_document_model: bool = True
 
-    @property
-    def ocr_engine(self) -> str:
-        return self.read
-
 
 @dataclass(frozen=True)
 class ValidationModeSpec:
@@ -37,9 +36,9 @@ class ValidationModeSpec:
 
 READ_PATHS: tuple[ReadPathSpec, ...] = (
     ReadPathSpec(
-        id=DEFAULT_READ_PATH_ID,
-        label="Document model",
-        description="Structured field extraction with a registered vision/document model.",
+        id=DOCUMENT_MODEL_READ_PATH_ID,
+        label="NuExtract vision",
+        description="PDF PNG @ 170 DPI or native image upload (NuExtract3 official).",
         read="document_model",
     ),
 )
@@ -61,12 +60,14 @@ VALIDATION_MODE_OPTIONS: tuple[ValidationModeSpec, ...] = (
 
 
 def normalize_read_path_id(mode: str | None) -> str:
-    if not mode:
+    if mode is None or not str(mode).strip():
         return DEFAULT_READ_PATH_ID
-    raw = mode.strip().lower()
+    raw = str(mode).strip().lower()
     if raw in _READ_BY_ID:
         return raw
-    return DEFAULT_READ_PATH_ID
+    raise ValueError(
+        f"Unknown read path {mode!r}. Supported: {', '.join(sorted(_READ_BY_ID))}."
+    )
 
 
 def normalize_validation_mode(
@@ -95,15 +96,26 @@ def parse_read_path(mode: str | None) -> ReadPathSpec:
     return _READ_BY_ID[normalize_read_path_id(mode)]
 
 
+def resolve_read_path_for_document(
+    extraction_mode: str | None,
+) -> tuple[ReadPathSpec, str]:
+    spec = parse_read_path(extraction_mode)
+    return spec, spec.id
+
+
 def read_path_used_label(path_id: str) -> str:
     return read_path_label(path_id)
 
 
 def read_path_label(path_id: str) -> str:
+    try:
+        normalized = normalize_read_path_id(path_id)
+    except ValueError:
+        return READ_PATHS[0].label
     for path in READ_PATHS:
-        if path.id == path_id:
+        if path.id == normalized:
             return path.label
-    return "Document model"
+    return READ_PATHS[0].label
 
 
 def validation_mode_label(mode: ValidationMode | str) -> str:
@@ -130,7 +142,7 @@ def run_uses_llm_validation(
     cfg = settings or get_settings()
     if not cfg.llm_validation_enabled:
         return False
-    return any((rule.get("kind") or "logic").lower() == "llm" for rule in rules or [])
+    return any(rule_kind(rule) == "llm" for rule in rules or [])
 
 
 def resolve_run_validation_mode(
@@ -169,7 +181,5 @@ def document_needs_extraction(doc: object, *, has_file: bool) -> bool:
     if document_has_schema_fields(doc):
         return True
     if bool(_read_doc_value(doc, "markdown_extraction", False)):
-        return True
-    if isinstance(doc, dict) and bool(doc.get("markdownExtraction")):
         return True
     return False

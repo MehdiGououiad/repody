@@ -50,7 +50,7 @@ def test_should_not_cache_empty_extractions():
             )
         ],
         raw_text=None,
-        ocr_text=None,
+        markdown_text=None,
     )
     text_only = ExtractionResult(
         fields=[
@@ -58,7 +58,7 @@ def test_should_not_cache_empty_extractions():
                 key="x", description="", value="—", type="string", confidence=None, extracted=False
             )
         ],
-        ocr_text="## Page 1\n\nInvoice total 6000",
+        markdown_text="## Page 1\n\nInvoice total 6000",
     )
     good = ExtractionResult(
         fields=[
@@ -147,7 +147,7 @@ async def test_llm_unavailable_is_skipped_in_stub_mode(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_llm_unavailable_is_error_when_model_runner_down(monkeypatch):
+async def test_llm_unavailable_is_error_when_inference_down(monkeypatch):
     import httpx
     import respx
 
@@ -156,8 +156,8 @@ async def test_llm_unavailable_is_error_when_model_runner_down(monkeypatch):
     from audit_workbench.settings import get_settings
 
     base = "http://model-runner-down.test/v1"
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "docker_model_runner")
-    monkeypatch.setenv("AUDIT_DOCKER_MODEL_RUNNER_BASE_URL", base)
+    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
+    monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", base)
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
     monkeypatch.setenv("AUDIT_VALIDATION_MODEL", "repody/validation:test")
     get_settings.cache_clear()
@@ -274,7 +274,7 @@ def test_resolve_llm_validation_model_never_falls_back_to_repody_vlm(monkeypatch
     from audit_workbench.inference.validation_model import resolve_llm_validation_model
     from audit_workbench.settings import get_settings
 
-    monkeypatch.setenv("AUDIT_REPODY_VLM_MODEL", "repody/repody-vlm:q4_k_m-16k")
+    monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "numind/NuExtract3")
     monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)
     get_settings.cache_clear()
 

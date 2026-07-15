@@ -26,6 +26,6 @@ Worker fast replicas: {{ .Values.workerFast.replicas }} (HPA max {{ .Values.work
 
 Set secrets before production:
   AUTH_SECRET, AUTH_KEYCLOAK_CLIENT_SECRET,
-  AUDIT_DATABASE_URL, AUDIT_REDIS_URL, object-storage credentials, and optional AUDIT_VLLM_API_KEY
+  AUDIT_DATABASE_URL, AUDIT_REDIS_URL, object-storage credentials, and optional AUDIT_LLAMACPP_API_KEY
 
-Inference runs outside this chart; point config.vllmBaseUrl at your vLLM, llama-server, or managed GPU endpoint.
+Inference runs outside this chart; point config.llamacppBaseUrl at your vLLM, llama-server, or managed GPU endpoint.

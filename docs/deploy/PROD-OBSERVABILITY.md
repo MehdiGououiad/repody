@@ -1,10 +1,10 @@
-# Production observability baseline (bundled + OCR)
+# Production observability baseline (bundled + extract)
 
 Minimum signals, alerts, and connection budgeting for Repody production. Clients own Prometheus/Grafana/Loki; this doc defines **what to watch** and **how settings align**.
 
 See also [OBSERVABILITY.md](./OBSERVABILITY.md) for OTLP and log shipping.
 
-## Timeout alignment (OCR)
+## Timeout alignment (extract)
 
 These must be set together in Helm `config` (wired to `AUDIT_*` in the app ConfigMap):
 
@@ -18,16 +18,16 @@ These must be set together in Helm `config` (wired to `AUDIT_*` in the app Confi
 
 **Rule:** `repodyVlmTimeoutSeconds` ≤ `workerTaskTimeoutMinutes` × 60; `staleRunTimeoutMinutes` ≥ worker timeout + one maintenance interval.
 
-## Connection pool budget (bundled OCR)
+## Connection pool budget (bundled extract)
 
 Defaults from Helm (`dbPoolSize: 5`, `dbMaxOverflow: 10`, `redisMaxConnections: 20`):
 
 ```
-Postgres connections (worst case) ≈ (api_replicas + ocr_replicas + fast_replicas) × (dbPoolSize + dbMaxOverflow)
-Redis connections ≈ (api_replicas + ocr_replicas + fast_replicas) × redisMaxConnections  # upper bound if each pool maxes out
+Postgres connections (worst case) ≈ (api_replicas + extract_replicas + fast_replicas) × (dbPoolSize + dbMaxOverflow)
+Redis connections ≈ (api_replicas + extract_replicas + fast_replicas) × redisMaxConnections  # upper bound if each pool maxes out
 ```
 
-Example: 2 API + 2 OCR + 2 fast → up to 6 × 15 = **90** Postgres connections at peak overflow. Size RDS `max_connections` accordingly.
+Example: 2 API + 2 extract + 2 fast → up to 6 × 15 = **90** Postgres connections at peak overflow. Size RDS `max_connections` accordingly.
 
 Tune via Helm:
 
@@ -69,7 +69,7 @@ Configure in Loki/Elastic/Datadog from JSON structlog fields:
 | Run stuck `running` | `kubectl logs deploy/repody-worker-extract`; VLM reachability; stale reap logs |
 | Run stuck `queued` | Redis; outbox maintenance; admission 503; worker replicas |
 | SSE silent | Redis; `redisOk` on healthz; API redis pool |
-| 503 on create | Admission caps; scale OCR workers or raise `admissionMaxExtractInflight` |
+| 503 on create | Admission caps; scale extract workers or raise `admissionMaxExtractInflight` |
 
 Platform logs (Kubernetes):
 
@@ -82,5 +82,5 @@ kubectl -n repody-app logs -f deploy/repody-worker-extract
 
 ```bash
 pnpm prod:readiness -- --api-url https://api.staging.example.com
-pnpm ocr:soak -- --api-url https://api.staging.example.com --token $TOKEN --concurrency 8 --duration-minutes 30
+pnpm extract:soak -- --api-url https://api.staging.example.com --token $TOKEN --concurrency 8 --duration-minutes 30
 ```

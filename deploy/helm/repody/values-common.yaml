@@ -50,7 +50,7 @@ secrets:
 
 config:
   oidcEnabled: true
-  inferenceMode: vllm
+  inferenceMode: llamacpp
   oidcAudience: repody-api
   keycloakClientId: repody-web
   logJson: true

@@ -6,6 +6,7 @@ from audit_workbench.db.models import Run, Workflow
 from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
 from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
 from audit_workbench.schemas.audit import AuditListItem
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 from audit_workbench.schemas.run import (
     RunAuditDetail,
     RunAuditDocument,
@@ -17,11 +18,40 @@ from audit_workbench.schemas.run import (
 )
 from audit_workbench.schemas.workflow import (
     DocumentDefSchema,
+    ExtractionIclExampleSchema,
     SchemaFieldSchema,
     WorkflowApiStatsSchema,
     WorkflowRuleSchema,
     WorkflowSchema,
 )
+
+
+def _schema_field_from_orm(field) -> SchemaFieldSchema:
+    config = normalize_keys_to_snake(getattr(field, "field_config", None) or {})
+    children: list[SchemaFieldSchema] = []
+    for idx, raw_child in enumerate(config.get("children") or []):
+        if not isinstance(raw_child, dict):
+            continue
+        child = normalize_keys_to_snake(raw_child)
+        if not str(child.get("name") or "").strip():
+            continue
+        children.append(
+            SchemaFieldSchema(
+                id=f"{field.id}-c{idx}",
+                name=str(child.get("name") or ""),
+                description=str(child.get("description") or ""),
+                template_type=str(child.get("template_type") or "verbatim-string"),
+                enum_values=list(child.get("enum_values") or []),
+            )
+        )
+    return SchemaFieldSchema(
+        id=field.id,
+        name=field.name,
+        description=field.description,
+        template_type=getattr(field, "template_type", None) or "verbatim-string",
+        enum_values=list(config.get("enum_values") or []),
+        children=children,
+    )
 
 
 def _fmt_dt(dt: datetime | None) -> str | None:
@@ -93,13 +123,16 @@ def workflow_to_schema(
                 document_model_id=normalize_public_catalog_id(doc.document_model_id),
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
-                schema_fields=[
-                    SchemaFieldSchema(
-                        id=f.id,
-                        name=f.name,
-                        description=f.description,
-                        template_type=getattr(f, "template_type", None) or "verbatim-string",
+                extraction_icl_examples=[
+                    ExtractionIclExampleSchema(
+                        input=str(row.get("input") or ""),
+                        output=str(row.get("output") or ""),
                     )
+                    for row in (getattr(doc, "extraction_icl_examples", None) or [])
+                    if isinstance(row, dict)
+                ],
+                schema_fields=[
+                    _schema_field_from_orm(f)
                     for f in sorted(doc.schema_fields, key=lambda x: x.position)
                 ],
             )
@@ -111,7 +144,7 @@ def workflow_to_schema(
             kind=r.kind,
             scope=r.scope,
             applies_to=r.applies_to or [],
-            conditions=r.conditions,
+            conditions=normalize_keys_to_snake(r.conditions) if r.conditions else r.conditions,
             condition_junction=r.condition_junction,
             body=r.body,
             severity=r.severity,

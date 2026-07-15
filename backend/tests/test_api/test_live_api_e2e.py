@@ -1,4 +1,4 @@
-"""Live-stack API E2E suite — requires running Docker stack (Taskiq workers + Model Runner).
+"""Live-stack API E2E suite — requires running Docker stack (Taskiq workers + llama-server).
 
 Run: pnpm test:api:live
 """
@@ -44,7 +44,7 @@ def client():
 @pytest.fixture(scope="module")
 def require_inference(client: httpx.Client):
     if not live_inference_ready(client):
-        pytest.skip("document-model inference not reachable (healthz modelRunner != true)")
+        pytest.skip("document-model inference not reachable (healthz llamacpp != true)")
 
 
 def test_live_health_taskiq(client: httpx.Client):

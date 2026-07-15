@@ -141,10 +141,10 @@ export function DocumentCard({
           />
 
           <ProcessingSettings
-            doc={doc}
-            onChange={onChange}
             t={t}
+            doc={doc}
             options={processingOptions}
+            onChange={onChange}
             onRetry={onRetryProcessingOptions}
           />
         </div>

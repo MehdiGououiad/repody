@@ -11,14 +11,14 @@ MAX_WORKER_TASK_TIMEOUT_MINUTES = 3
 
 
 def apply_inference_probe_defaults(settings: Settings) -> None:
-    from audit_workbench.inference.runtime import is_remote_vllm_url
+    from audit_workbench.inference.runtime import is_remote_inference_url
 
-    if settings.inference_mode.lower() == "vllm":
+    if settings.inference_mode.lower() == "llamacpp":
         probe_env = os.getenv("AUDIT_GPU_LIVE_PROBE", "").strip().lower()
         health_env = os.getenv("AUDIT_HEALTHZ_PROBE_INFERENCE", "").strip().lower()
         probe_on = probe_env in ("true", "1", "yes")
         health_on = health_env in ("true", "1", "yes")
-        if is_remote_vllm_url(settings.vllm_base_url):
+        if is_remote_inference_url(settings.llamacpp_base_url):
             if not probe_on:
                 settings.gpu_live_probe = False
             if not health_on:

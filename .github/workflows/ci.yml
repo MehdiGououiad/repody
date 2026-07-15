@@ -170,4 +170,4 @@ jobs:
           retention-days: 7
       - name: Tear down stack
         if: always()
-        run: pnpm stop
+        run: pnpm dev:stop

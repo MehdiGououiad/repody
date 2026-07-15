@@ -13,6 +13,7 @@ from sqlalchemy.orm import selectinload
 from audit_workbench.db.models import OverallStatus, RuleResult, Run, RunDocument
 from audit_workbench.extraction.document_modes import ValidationMode, validation_mode_label
 from audit_workbench.rules.runner import validate_extractions
+from audit_workbench.rules.types import rule_kind
 from audit_workbench.services.mappers import duration_ms_between
 from audit_workbench.services.run.adapters.composition import (
     get_complete_run,
@@ -54,7 +55,7 @@ async def run_validation_phase(session: AsyncSession, state: RunPhaseState) -> N
         )
 
     async def on_rule_start(rule: dict) -> None:
-        kind = (rule.get("kind") or "logic").lower()
+        kind = rule_kind(rule)
         if kind != "llm":
             return
         state.step_index += 1

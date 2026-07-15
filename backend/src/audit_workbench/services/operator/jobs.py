@@ -118,8 +118,19 @@ def _schedule_redis_delete(job_id: str) -> None:
 
 
 async def hydrate_operator_jobs_from_redis() -> None:
-    """Restore recent operator jobs after API restart (best-effort)."""
+    """Restore recent operator jobs after API restart (best-effort).
+
+    Active jobs cannot resume after process restart — mark them failed so the
+    Settings UI does not poll forever on orphaned queued/running statuses.
+    """
     for job in await load_recent_operator_jobs(max_jobs=MAX_JOBS, existing_ids=set(_jobs)):
+        if job.status in {"queued", "running"}:
+            job.status = "failed"
+            job.error = job.error or "Interrupted by API restart"
+            job.completed_at = job.completed_at or utc_now()
+            if not job.progress:
+                job.progress = "Interrupted by API restart"
+            _schedule_persist(job)
         _register_job(job)
 
 

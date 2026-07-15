@@ -1,4 +1,4 @@
-"""OpenAI-compatible client for LLM rule validation (Docker Model Runner)."""
+"""OpenAI-compatible client for LLM rule validation."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ import structlog
 
 from audit_workbench.inference.base import InferenceClient
 from audit_workbench.inference.openai_compat import ping_openai_compat, post_chat_completion
+from audit_workbench.inference.runtime import llamacpp_base_url
 from audit_workbench.inference.validation_model import VALIDATION_MODEL_REQUIRED_MSG
 from audit_workbench.settings import Settings
 
@@ -16,10 +17,10 @@ log = structlog.get_logger()
 
 
 class ValidationInferenceClient(InferenceClient):
-    """Text chat against the validation model on Docker Model Runner."""
+    """Text chat against the validation model on the inference endpoint."""
 
     def __init__(self, settings: Settings) -> None:
-        self._base_url = settings.docker_model_runner_base_url.rstrip("/")
+        self._base_url = llamacpp_base_url(settings)
         self._default_model = (settings.validation_model or "").strip() or None
         self._timeout = settings.validation_timeout_seconds
 

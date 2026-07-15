@@ -26,7 +26,7 @@ _MIME_BY_SUFFIX = {
 
 
 def minimal_benchmark_manifest(filename: str) -> dict[str, object]:
-    """Workflow stub for markdown/OCR compare — no expected fields or rules."""
+    """Workflow stub for markdown/document-model compare — no expected fields or rules."""
     path = Path(filename or "document.pdf")
     return {
         "name": path.name,
