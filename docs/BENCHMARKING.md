@@ -15,8 +15,8 @@ pnpm dev:status
 For OpenShift CRC benchmarks, use `pnpm openshift:client-test` then set
 `REPODY_K8S_NAMESPACE=repody` and `REPODY_API_DEPLOY=deploy/repody-api` if not using defaults.
 
-Configure external inference before cluster benchmarks (`AUDIT_VLLM_BASE_URL` /
-`AUDIT_VLLM_SERVED_MODEL`). For Compose, start host NuExtract first:
+Configure external inference before cluster benchmarks (`AUDIT_LLAMACPP_BASE_URL` /
+`AUDIT_LLAMACPP_SERVED_MODEL`). For Compose, start host NuExtract first:
 
 ```powershell
 pnpm llamacpp:serve
@@ -45,7 +45,7 @@ directly with `pnpm test:platform:integration`/API flags when the local API is u
 - `warm-N` — warm observation, cache bypassed
 - `cache` — repeated run; `cacheHit` must be true
 
-For a process-cold measurement, restart OCR workers first:
+For a process-cold measurement, restart extract workers first:
 
 ```powershell
 kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-extract
@@ -92,7 +92,7 @@ End-to-end queue + real document-model extraction at scale. Runs inside the API 
    kubectl rollout status deployment/repody-worker-fast -n repody --timeout=300s
    ```
 
-2. Confirm external inference (VLM) is reachable from worker pods (`AUDIT_VLLM_BASE_URL`).
+2. Confirm external inference (VLM) is reachable from worker pods (`AUDIT_LLAMACPP_BASE_URL`).
 
 3. Optional OIDC token for auth-enabled stacks:
 
@@ -143,7 +143,7 @@ Use CPU HPA and in-process concurrency before adding VLM hardware:
 
 - **API / web** — enqueue, auth, SSE polling (`targetCPUUtilizationPercentage: 70`).
 - **worker-fast** — rule validation and logic-only runs (`maxJobs: 8`, HPA max 12).
-- **In-pod extract** — PDF render + MinIO fetch (`parallelStorageFetch`, `parallelDocExtraction`, `workerExtract.maxJobs`).
+- **In-pod extract** — PDF render + MinIO fetch (`workerExtract.maxJobs`).
 
 **What does not scale on CPU HPA**
 
@@ -178,5 +178,5 @@ is set.
 | --- | --- | --- |
 | `repody:vlm` | Structured field extraction | Field + rule accuracy |
 
-For Kubernetes benchmarks, point `AUDIT_VLLM_BASE_URL` and `AUDIT_VLLM_SERVED_MODEL`
+For Kubernetes benchmarks, point `AUDIT_LLAMACPP_BASE_URL` and `AUDIT_LLAMACPP_SERVED_MODEL`
 at the external vLLM or llama-server endpoint before running the suite.

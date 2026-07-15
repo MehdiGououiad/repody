@@ -55,6 +55,6 @@ helm upgrade --install repody deploy/helm/repody \
   -n repody --create-namespace \
   -f deploy/helm/repody/values-production.yaml.example \
   -f deploy/helm/repody/values-production.onprem-managed.yaml.example \
-  -f deploy/helm/repody/values-production.gateway.yaml.example \
+  -f deploy/values/openshift.yaml \
   -f my-values.yaml
 ```

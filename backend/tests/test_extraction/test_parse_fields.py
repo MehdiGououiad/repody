@@ -50,7 +50,19 @@ def test_parse_fields_preserves_identifier_containing_number():
     assert rows[0].value == "FAC-42"
 
 
-def test_parse_numeric_value_rejects_embedded_reference_numbers():
+def test_parse_fields_preserves_date_template_even_when_name_contains_balance():
+    raw = '{"fields":[{"name":"opening_balance_date","value":"2022-02-28","confidence":0.9}]}'
+    schema = [
+        SchemaFieldSpec(
+            name="opening_balance_date",
+            description="SOLDE DEPART date",
+            template_type="date",
+        )
+    ]
+    rows = parse_fields_json(raw, schema)
+    assert rows[0].value == "2022-02-28"
+    assert rows[0].type == "date"
+
     assert parse_numeric_value("PO-2024-991") is None
     assert parse_numeric_value("FAC-42") is None
     assert parse_numeric_value("6000.00") == 6000.0

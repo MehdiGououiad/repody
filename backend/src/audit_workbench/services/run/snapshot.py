@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from audit_workbench.db.models import Document, Run, Workflow
 from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID, normalize_document_modes
 from audit_workbench.services.run.helpers import rule_dict_from_row, rules_payload
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 
 @dataclass
@@ -16,6 +17,7 @@ class SnapshotSchemaField:
     description: str
     position: int
     template_type: str = "verbatim-string"
+    field_config: dict | None = None
 
 
 @dataclass
@@ -30,6 +32,7 @@ class SnapshotDocument:
     document_model_id: str | None
     extraction_instructions: str = ""
     markdown_extraction: bool = False
+    extraction_icl_examples: list[dict] | None = None
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
 
 
@@ -43,18 +46,20 @@ def build_run_snapshot(
         return None
     out: dict = {}
     if documents:
-        out["documents"] = documents
+        out["documents"] = [normalize_keys_to_snake(doc) for doc in documents]
     if rules:
-        out["rules"] = rules
+        out["rules"] = [normalize_keys_to_snake(rule) for rule in rules]
     if workflow_name:
-        out["workflowName"] = workflow_name
+        out["workflow_name"] = workflow_name
     return out
 
 
 def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
-    raw = doc.get("schema") or doc.get("schemaFields") or doc.get("schema_fields") or []
+    raw = doc.get("schema") or doc.get("schema_fields") or []
     fields: list[SnapshotSchemaField] = []
     for idx, field_row in enumerate(raw):
+        if not isinstance(field_row, dict):
+            continue
         name = (field_row.get("name") or "").strip()
         if not name:
             continue
@@ -63,35 +68,41 @@ def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
                 id=str(field_row.get("id") or f"sf-{idx}"),
                 name=name,
                 description=str(field_row.get("description") or ""),
-                template_type=str(
-                    field_row.get("templateType")
-                    or field_row.get("template_type")
-                    or "verbatim-string"
-                ),
+                template_type=str(field_row.get("template_type") or "verbatim-string"),
+                field_config=_field_config_from_snapshot_row(field_row),
                 position=idx,
             )
         )
     return fields
 
 
+def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
+    config: dict = {}
+    enum_values = field_row.get("enum_values")
+    if enum_values:
+        config["enum_values"] = enum_values
+    children = field_row.get("children")
+    if children:
+        config["children"] = children
+    return config or None
+
+
 def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
+    doc = normalize_keys_to_snake(doc)
     read_id, val_id = normalize_document_modes(
-        doc.get("extractionMode") or doc.get("extraction_mode"),
-        doc.get("validationMode") or doc.get("validation_mode"),
+        doc.get("extraction_mode"),
+        doc.get("validation_mode"),
     )
     return SnapshotDocument(
         id=str(doc.get("id") or f"doc-{position}"),
-        document_type=str(doc.get("documentType") or doc.get("document_type") or ""),
+        document_type=str(doc.get("document_type") or ""),
         position=position,
         extraction_mode=read_id,
         validation_mode=val_id,
-        document_model_id=doc.get("documentModelId") or doc.get("document_model_id"),
-        extraction_instructions=str(
-            doc.get("extractionInstructions") or doc.get("extraction_instructions") or ""
-        ),
-        markdown_extraction=bool(
-            doc.get("markdownExtraction") or doc.get("markdown_extraction") or False
-        ),
+        document_model_id=doc.get("document_model_id"),
+        extraction_instructions=str(doc.get("extraction_instructions") or ""),
+        markdown_extraction=bool(doc.get("markdown_extraction") or False),
+        extraction_icl_examples=list(doc.get("extraction_icl_examples") or []),
         schema_fields=_schema_fields_from_snapshot(doc),
     )
 
@@ -106,12 +117,14 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         document_model_id=doc.document_model_id,
         extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
         markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
+        extraction_icl_examples=list(getattr(doc, "extraction_icl_examples", None) or []),
         schema_fields=[
             SnapshotSchemaField(
                 id=f.id,
                 name=f.name,
                 description=f.description or "",
                 template_type=getattr(f, "template_type", None) or "verbatim-string",
+                field_config=normalize_keys_to_snake(getattr(f, "field_config", None) or None),
                 position=f.position,
             )
             for f in sorted(doc.schema_fields, key=lambda x: x.position)
@@ -120,7 +133,7 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
 
 
 def resolve_run_documents(run: Run) -> list[SnapshotDocument]:
-    snapshot = run.run_snapshot or {}
+    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
     raw_docs = snapshot.get("documents")
     if raw_docs:
         return [_document_from_snapshot(doc, idx) for idx, doc in enumerate(raw_docs)]
@@ -131,7 +144,7 @@ def resolve_run_documents(run: Run) -> list[SnapshotDocument]:
 
 
 def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
-    snapshot = run.run_snapshot or {}
+    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
     raw_rules = snapshot.get("rules")
     if raw_rules:
         return [
@@ -140,12 +153,11 @@ def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
                 name=str(rule.get("name") or "Rule"),
                 kind=str(rule.get("kind") or "logic"),
                 scope=str(rule.get("scope") or "intra"),
-                applies_to=rule.get("applies_to") or rule.get("appliesTo") or [],
+                applies_to=rule.get("applies_to") or [],
                 body=str(rule.get("body") or ""),
                 severity=str(rule.get("severity") or "reject"),
                 conditions=rule.get("conditions"),
-                condition_junction=rule.get("condition_junction")
-                or rule.get("conditionJunction"),
+                condition_junction=rule.get("condition_junction"),
             )
             for idx, rule in enumerate(raw_rules)
         ]
@@ -153,5 +165,5 @@ def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
 
 
 def resolve_workflow_display_name(run: Run, workflow: Workflow) -> str:
-    snapshot = run.run_snapshot or {}
-    return str(snapshot.get("workflowName") or workflow.name or "Workflow")
+    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
+    return str(snapshot.get("workflow_name") or workflow.name or "Workflow")

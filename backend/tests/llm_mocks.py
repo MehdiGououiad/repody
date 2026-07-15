@@ -1,4 +1,4 @@
-"""Shared Docker Model Runner mocks for field extraction and validation."""
+"""Shared inference endpoint mocks for field extraction and validation."""
 
 from __future__ import annotations
 
@@ -78,7 +78,7 @@ def _build_combined_json(content: str) -> str:
     )
 
 
-def model_runner_chat_side_effect(request: httpx.Request) -> httpx.Response:
+def inference_chat_side_effect(request: httpx.Request) -> httpx.Response:
     payload = json.loads(request.content.decode())
     user_content = ""
     for msg in payload.get("messages") or []:
@@ -139,15 +139,15 @@ def enable_dmr_mock(
     *,
     base: str = DEFAULT_BASE,
 ) -> respx.MockRouter:
-    """Point inference at a mocked Docker Model Runner."""
+    """Point inference at a mocked OpenAI-compatible endpoint."""
     if monkeypatch is not None:
-        monkeypatch.setenv("AUDIT_INFERENCE_MODE", "docker_model_runner")
-        monkeypatch.setenv("AUDIT_DOCKER_MODEL_RUNNER_BASE_URL", base)
+        monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
+        monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", base)
     else:
         import os
 
-        os.environ["AUDIT_INFERENCE_MODE"] = "docker_model_runner"
-        os.environ["AUDIT_DOCKER_MODEL_RUNNER_BASE_URL"] = base
+        os.environ["AUDIT_INFERENCE_MODE"] = "llamacpp"
+        os.environ["AUDIT_LLAMACPP_BASE_URL"] = base
 
     get_settings.cache_clear()
     get_inference_client.cache_clear()
@@ -156,7 +156,7 @@ def enable_dmr_mock(
     router.get(f"{base}/models").mock(
         return_value=httpx.Response(200, json={"data": []}),
     )
-    router.post(f"{base}/chat/completions").mock(side_effect=model_runner_chat_side_effect)
+    router.post(f"{base}/chat/completions").mock(side_effect=inference_chat_side_effect)
     router.start()
     return router
 

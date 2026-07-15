@@ -32,13 +32,27 @@ _NUMERIC_RUN = re.compile(r"[+-]?[\d][\d\s.,]*")
 _NUMERIC_TYPES = {"integer", "number"}
 
 
+def _is_list_field(spec: SchemaFieldSpec) -> bool:
+    return (spec.template_type or "").strip().endswith("-list")
+
+
+def _is_structure_field(spec: SchemaFieldSpec) -> bool:
+    template_type = (spec.template_type or "").strip()
+    return template_type in {"enum", "multi-enum", "object-array"}
+
+
 def _normalize_key(name: str) -> str:
     return name.strip().lower().replace(" ", "_")
 
 
 def _is_amount_like(spec: SchemaFieldSpec) -> bool:
-    if (spec.template_type or "").strip() in _NUMERIC_TYPES:
+    if _is_list_field(spec) or _is_structure_field(spec):
+        return False
+    template_type = (spec.template_type or "").strip()
+    if template_type in _NUMERIC_TYPES:
         return True
+    if template_type in {"date", "time", "date-time", "duration"}:
+        return False
     blob = f"{spec.name} {spec.description}".lower()
     return any(token in blob for token in _NUMERIC_HINTS)
 
@@ -137,17 +151,17 @@ def parse_fields_json(raw: str, schema: list[SchemaFieldSpec]) -> list[Extracted
     for row in rows:
         if not isinstance(row, dict):
             continue
-        name = str(row.get("name") or row.get("key") or "").strip()
+        name = str(row.get("name") or "").strip()
         if not name:
             continue
         norm = _normalize_key(name)
         spec = expected.get(norm)
         display = spec.name if spec else name
-        value = str(row.get("value") or row.get("text") or "—").strip() or "—"
+        value = str(row.get("value") or "—").strip() or "—"
         conf = row.get("confidence")
         confidence = float(conf) if conf is not None else (0.85 if value != "—" else None)
         amount_like = _is_amount_like(spec) if spec else False
-        normalized = normalize_amount(value) if amount_like and value != "—" else value
+        normalized = normalize_amount(value) if amount_like and value != "—" and not value.startswith("[") else value
         by_name[norm] = ExtractedFieldResult(
             key=display,
             description=spec.description if spec else "",

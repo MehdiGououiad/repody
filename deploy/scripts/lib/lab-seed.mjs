@@ -23,7 +23,7 @@ export function buildLabVaultKvs({ dockerConfigJson }) {
     AUDIT_MINIO_ACCESS_KEY: LAB.minioUser,
     AUDIT_MINIO_SECRET_KEY: LAB.minioPassword,
     BUGSINK_DSN: LAB.bugsinkDsn,
-    AUDIT_VLLM_API_KEY: LAB.vllmApiKey,
+    AUDIT_LLAMACPP_API_KEY: LAB.llamacppApiKey,
     REGISTRY_DOCKERCONFIGJSON: dockerConfigJson,
   };
   return { dataKv, runtimeKv };

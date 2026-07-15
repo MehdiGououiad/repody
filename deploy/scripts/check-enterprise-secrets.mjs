@@ -127,15 +127,15 @@ const requiredKeys = [
   "AUDIT_MINIO_SECRET_KEY",
   "BUGSINK_DSN",
 ];
-if (requireVlmApiKey) requiredKeys.push("AUDIT_VLLM_API_KEY");
+if (requireVlmApiKey) requiredKeys.push("AUDIT_LLAMACPP_API_KEY");
 
 const externalSecretKeys = collectSecretKeys(externalSecretText);
 for (const key of requiredKeys) {
   requireCondition(externalSecretKeys.has(key), `ExternalSecret must map ${key}`);
 }
 
-if (!externalSecretKeys.has("AUDIT_VLLM_API_KEY")) {
-  warnings.push("ExternalSecret does not map AUDIT_VLLM_API_KEY; OK only when the external VLM endpoint has no bearer token.");
+if (!externalSecretKeys.has("AUDIT_LLAMACPP_API_KEY")) {
+  warnings.push("ExternalSecret does not map AUDIT_LLAMACPP_API_KEY; OK only when the external VLM endpoint has no bearer token.");
 }
 
 requireCondition(

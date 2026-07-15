@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.extraction.nuextract_contract import NUEXTRACT_MAX_PAGES_PER_REQUEST
 from audit_workbench.schemas.operator import (
     BenchmarkReportSchema,
     OperatorJobAcceptedResponse,
@@ -80,7 +81,7 @@ async def operator_status() -> OperatorStatusResponse:
         ),
         limits=OperatorLimitsSchema(
             max_upload_bytes=settings.max_upload_bytes,
-            ocr_max_pages=settings.ocr_max_pages,
+            nuextract_max_pages_per_request=NUEXTRACT_MAX_PAGES_PER_REQUEST,
             task_timeout_minutes=settings.worker_task_timeout_minutes,
         ),
     )

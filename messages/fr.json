@@ -1,7 +1,7 @@
 {
   "brand": {
     "name": "Repody",
-    "tagline": "Audit d'entreprise"
+    "tagline": "Plateforme d'agents"
   },
   "nav": {
     "dashboard": "Tableau de bord",
@@ -524,7 +524,8 @@
         "directModelLogicValidationHint": "Repody VLM extrait directement les champs du schéma. Les règles logiques s'exécutent localement sur les valeurs extraites.",
         "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme.",
         "markdownExtractionLabel": "Aperçu Markdown du document",
-        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché."
+        "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché.",
+        "profileNuextractQ4Hint": "NuExtract3-GGUF officiel : PDF → PNG @ 170 DPI → extraction structurée vision."
       },
       "docSource": {
         "title": "Documents et champs à extraire",
@@ -550,15 +551,30 @@
         "intent": "Quoi extraire",
         "typeGroups": {
           "common": "Courants",
+          "structure": "Structures",
           "advanced": "Avancés"
         },
+        "enumValuesLabel": "Valeurs autorisées",
+        "enumValuePlaceholder": "ex. MAD",
+        "addEnumValue": "Ajouter une valeur",
+        "removeEnumValue": "Retirer la valeur",
+        "rowColumnsLabel": "Colonnes par ligne",
+        "addRowColumn": "Ajouter une colonne",
+        "removeRowColumn": "Retirer la colonne",
         "suggestedType": "Suggestion : {label}",
         "applySuggestedType": "Utiliser la suggestion",
         "duplicateName": "Le nom doit être unique",
+        "listModeLabel": "Tableau JSON",
+        "listModeHint": "Renvoyer plusieurs valeurs sous forme de liste (une par ligne ou élément)",
+        "listModeSuffix": "tableau JSON",
         "templateTypes": {
           "verbatim-string": {
             "label": "Texte exact",
             "description": "Reprendre le texte tel qu'il apparaît dans le document"
+          },
+          "verbatim-string-list": {
+            "label": "Liste de textes exacts",
+            "description": "Textes exacts sous forme de tableau JSON"
           },
           "string": {
             "label": "Texte",
@@ -571,6 +587,46 @@
           "number": {
             "label": "Nombre",
             "description": "Un entier ou un décimal, ex. 12,50"
+          },
+          "number-list": {
+            "label": "Liste de nombres",
+            "description": "Un montant par ligne ou transaction, renvoyé sous forme de tableau JSON"
+          },
+          "integer-list": {
+            "label": "Liste d'entiers",
+            "description": "Nombres entiers sous forme de tableau JSON"
+          },
+          "string-list": {
+            "label": "Liste de textes",
+            "description": "Textes libres sous forme de tableau JSON"
+          },
+          "date-list": {
+            "label": "Liste de dates",
+            "description": "Dates ISO sous forme de tableau JSON"
+          },
+          "date-time-list": {
+            "label": "Liste date-heure",
+            "description": "Dates-heures ISO sous forme de tableau JSON"
+          },
+          "time-list": {
+            "label": "Liste d'heures",
+            "description": "Heures ISO sous forme de tableau JSON"
+          },
+          "boolean-list": {
+            "label": "Liste Oui/Non",
+            "description": "Valeurs booléennes sous forme de tableau JSON"
+          },
+          "object-array": {
+            "label": "Lignes répétées",
+            "description": "Un objet JSON par ligne de tableau (ex. lignes de facture)"
+          },
+          "enum": {
+            "label": "Choix (enum)",
+            "description": "Une seule valeur parmi une liste fixe"
+          },
+          "multi-enum": {
+            "label": "Choix multiples",
+            "description": "Une ou plusieurs valeurs parmi une liste fixe"
           },
           "date": {
             "label": "Date",
@@ -635,6 +691,62 @@
           "unit-code": {
             "label": "Unité de mesure",
             "description": "Code d'unité standard, ex. kg ou m"
+          },
+          "region:US": {
+            "label": "États-Unis",
+            "description": "Format régional pour les documents américains"
+          },
+          "region:FR": {
+            "label": "France",
+            "description": "Format régional pour les documents français"
+          },
+          "region:IE": {
+            "label": "Irlande",
+            "description": "Format régional pour les documents irlandais"
+          },
+          "region:GB": {
+            "label": "Royaume-Uni",
+            "description": "Format régional pour les documents britanniques"
+          },
+          "region:IT": {
+            "label": "Italie",
+            "description": "Format régional pour les documents italiens"
+          },
+          "region:ES": {
+            "label": "Espagne",
+            "description": "Format régional pour les documents espagnols"
+          },
+          "region:DE": {
+            "label": "Allemagne",
+            "description": "Format régional pour les documents allemands"
+          },
+          "region:PT": {
+            "label": "Portugal",
+            "description": "Format régional pour les documents portugais"
+          },
+          "region:CA": {
+            "label": "Canada",
+            "description": "Format régional pour les documents canadiens"
+          },
+          "region:MX": {
+            "label": "Mexique",
+            "description": "Format régional pour les documents mexicains"
+          },
+          "region:BR": {
+            "label": "Brésil",
+            "description": "Format régional pour les documents brésiliens"
+          },
+          "region:AU": {
+            "label": "Australie",
+            "description": "Format régional pour les documents australiens"
+          },
+          "region:JP": {
+            "label": "Japon",
+            "description": "Format régional pour les documents japonais"
+          },
+          "region:KR": {
+            "label": "Corée du Sud",
+            "description": "Format régional pour les documents coréens"
           }
         },
         "examples": "Exemples (optionnel)",
@@ -725,7 +837,15 @@
           "opIn": "∈ dans la liste",
           "opNotIn": "∉ hors liste",
           "opExists": "✓ existe / non vide",
-          "opIsEmpty": "∅ vide / manquant"
+          "opIsEmpty": "∅ vide / manquant",
+          "tableAggregate": "Tableau",
+          "aggSumRows": "Somme colonne",
+          "aggSumRowsWhere": "Somme si contient",
+          "aggCountRowsWhere": "Nombre si contient",
+          "pickTable": "Champ tableau",
+          "amountColumn": "Colonne montant",
+          "filterColumn": "Colonne filtre",
+          "filterContains": "Contient le texte"
         }
       },
       "api": {
@@ -768,8 +888,8 @@
         "shareable": "Partageable · imprimable · exportable",
         "keyUnavailable": "La clé API complète n’est affichée qu’au déploiement — redéployez pour tester depuis l’interface, ou utilisez une clé que vous avez enregistrée."
       },
-      "ocrOutput": {
-        "title": "Texte OCR du document",
+      "documentMarkdown": {
+        "title": "Markdown du document",
         "subtitle": "{lines} lignes · {chars} caractères",
         "hasTables": "tableaux détectés",
         "previewTab": "Aperçu",

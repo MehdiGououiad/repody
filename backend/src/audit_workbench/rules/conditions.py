@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import re
 
+from audit_workbench.rules.types import rule_kind
 from audit_workbench.rules.value_coercion import is_iso_date_like
+from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 NO_RIGHT = frozenset({"EXISTS", "IS_EMPTY"})
 
@@ -66,17 +68,42 @@ def _list_literal_to_py(value: str) -> str | None:
     return f"[{', '.join(items)}]"
 
 
+def _aggregate_to_py(aggregate: dict | None) -> str | None:
+    if not aggregate:
+        return None
+    aggregate = normalize_keys_to_snake(aggregate)
+    fn = str(aggregate.get("fn") or "").strip()
+    table = _field_ref(str(aggregate.get("table_field") or ""))
+    if not table:
+        return None
+    amount_col = json.dumps(str(aggregate.get("amount_column") or ""))
+    if fn == "sum_rows":
+        return f"sum_rows({table}, {amount_col})"
+    if fn == "sum_rows_where":
+        filter_col = json.dumps(str(aggregate.get("filter_column") or ""))
+        needle = json.dumps(str(aggregate.get("filter_contains") or ""))
+        return f"sum_rows_where({table}, {amount_col}, {filter_col}, {needle})"
+    if fn == "count_rows_where":
+        filter_col = json.dumps(str(aggregate.get("filter_column") or ""))
+        needle = json.dumps(str(aggregate.get("filter_contains") or ""))
+        return f"count_rows_where({table}, {filter_col}, {needle})"
+    return None
+
+
 def condition_to_string(condition: dict) -> str:
-    left_base = _operand_to_py(condition.get("left"))
+    condition = normalize_keys_to_snake(condition)
+    left_base = _aggregate_to_py(condition.get("table_aggregate"))
+    if not left_base:
+        left_base = _operand_to_py(condition.get("left"))
     if not left_base:
         return ""
 
     left = left_base
-    if condition.get("arithmeticOp") and condition.get("leftExtra"):
-        extra = _operand_to_py(condition.get("leftExtra"))
+    if condition.get("arithmetic_op") and condition.get("left_extra"):
+        extra = _operand_to_py(condition.get("left_extra"))
         if not extra:
             return ""
-        left = f"({left_base} {condition['arithmeticOp']} {extra})"
+        left = f"({left_base} {condition['arithmetic_op']} {extra})"
 
     operator = condition.get("operator") or "=="
     if operator in NO_RIGHT:
@@ -123,11 +150,11 @@ def conditions_to_expression(
 
 def resolve_rule_body(rule: dict) -> str:
     """Compile logic rules from conditions, or use the persisted compiled expression in ``body``."""
-    kind = (rule.get("kind") or "logic").lower()
-    if kind == "llm":
+    rule = normalize_keys_to_snake(rule)
+    if rule_kind(rule) == "llm":
         return (rule.get("body") or "").strip()
 
-    junction = rule.get("condition_junction") or rule.get("conditionJunction") or "AND"
+    junction = rule.get("condition_junction") or "AND"
     conditions = rule.get("conditions")
     if conditions:
         compiled = conditions_to_expression(conditions, str(junction))
@@ -189,8 +216,7 @@ def expand_rules_for_evaluation(rules: list[dict]) -> list[dict]:
     """Logic rules with multiple conditions become one check each; LLM rules pass through."""
     expanded: list[dict] = []
     for rule in rules:
-        kind = (rule.get("kind") or "logic").lower()
-        if kind == "llm":
+        if rule_kind(rule) == "llm":
             expanded.append(rule)
             continue
         checks = logic_check_entries(rule)

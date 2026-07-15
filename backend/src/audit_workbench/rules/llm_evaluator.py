@@ -75,7 +75,7 @@ async def evaluate_llm_rule(
     rule_name: str = "Rule",
     llm_model: str | None = None,
 ) -> tuple[RuleStatus, str]:
-    """Text-only LLM validation on extracted fields (fast on CPU - no re-OCR)."""
+    """Text-only LLM validation on extracted fields (fast on CPU - no re-extraction)."""
     text = (body or "").strip()
     if not text:
         return "failed", "Rule body is empty \u2014 skipped."
@@ -127,7 +127,7 @@ async def evaluate_llm_rules_batch(
     *,
     llm_model: str | None = None,
 ) -> dict[str, tuple[RuleStatus, str]]:
-    """One Docker Model Runner call for all LLM rules (major CPU savings vs N sequential calls)."""
+    """One inference call for all LLM rules (major savings vs N sequential calls)."""
     out: dict[str, tuple[RuleStatus, str]] = {}
     if not rules:
         return out

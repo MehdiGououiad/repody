@@ -65,7 +65,7 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         return ExtractionResult(
             fields=[],
             raw_text=None,
-            ocr_text="## Page 1\n\nHello",
+            markdown_text="## Page 1\n\nHello",
         )
 
     monkeypatch.setattr(
@@ -91,4 +91,4 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         document_model_id="repody:vlm",
         markdown_extraction=True,
     )
-    assert result.ocr_text == "## Page 1\n\nHello"
+    assert result.markdown_text == "## Page 1\n\nHello"

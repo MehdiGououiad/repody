@@ -69,7 +69,7 @@ def oidc_enabled(client: httpx.Client) -> bool:
 @pytest.fixture(scope="module")
 def require_inference(client: httpx.Client):
     if not live_inference_ready(client):
-        pytest.skip("document-model inference not reachable (healthz modelRunner != true)")
+        pytest.skip("document-model inference not reachable (healthz llamacpp != true)")
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ def test_live_uploads_and_diagnostics(client: httpx.Client):
     assert caps.status_code == 200
     assert caps.json()["storageBackend"] in ("local", "s3")
 
-    diag = client.get("/v1/diagnostics/ocr")
+    diag = client.get("/v1/diagnostics/document-model")
     assert diag.status_code == 200
     assert diag.json().get("ok") is True
 

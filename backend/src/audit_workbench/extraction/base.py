@@ -11,6 +11,14 @@ class SchemaFieldSpec:
     name: str
     description: str = ""
     template_type: str | None = None
+    enum_values: list[str] | None = None
+    children: list[SchemaFieldSpec] | None = None
+
+
+@dataclass
+class ExtractionIclExample:
+    input: str
+    output: str
 
 
 @dataclass
@@ -38,18 +46,17 @@ class ExtractionMetadata:
     gpu_cold_start_likely: bool = False
     fields_extracted: int = 0
     markdown_extraction: bool = False
-    ocr_text: str | None = None
+    markdown_text: str | None = None
     raw_text: str | None = None
-    ocr_skipped: bool = False
     pages_rendered: int | None = None
     pages_sent: int | None = None
     pages_dropped: int | None = None
 
 
-OCR_TEXT_MAX_CHARS = 80_000
+MARKDOWN_TEXT_MAX_CHARS = 80_000
 
 
-def truncate_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) -> str | None:
+def truncate_text(text: str | None, *, max_chars: int = MARKDOWN_TEXT_MAX_CHARS) -> str | None:
     if not text:
         return None
     stripped = text.strip()
@@ -60,15 +67,15 @@ def truncate_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) -> s
     return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"
 
 
-def truncate_ocr_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) -> str | None:
+def truncate_markdown_text(text: str | None, *, max_chars: int = MARKDOWN_TEXT_MAX_CHARS) -> str | None:
     if not text:
         return None
     stripped = text.strip()
     if not stripped:
         return None
-    from audit_workbench.extraction.ocr_markdown import normalize_ocr_markdown
+    from audit_workbench.extraction.markdown_normalize import normalize_document_markdown
 
-    stripped = normalize_ocr_markdown(stripped) or stripped
+    stripped = normalize_document_markdown(stripped) or stripped
     if len(stripped) <= max_chars:
         return stripped
     return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"
@@ -78,10 +85,9 @@ def truncate_ocr_text(text: str | None, *, max_chars: int = OCR_TEXT_MAX_CHARS) 
 class ExtractionResult:
     fields: list[ExtractedFieldResult]
     raw_text: str | None = None
-    ocr_text: str | None = None
+    markdown_text: str | None = None
     llm_rule_results: dict[str, tuple[str, str]] | None = None
     read_path_used: str | None = None
-    ocr_skipped: bool = False
     meta: ExtractionMetadata | None = None
     pages_rendered: int | None = None
     pages_sent: int | None = None
@@ -105,4 +111,5 @@ class DocumentExtractor(ABC):
         validation_mode: str = "logic_only",
         extraction_instructions: str = "",
         markdown_extraction: bool = False,
+        extraction_icl_examples: list[ExtractionIclExample] | None = None,
     ) -> ExtractionResult: ...

@@ -20,19 +20,24 @@ import {
   getSelectableTemplateTypes,
   getVisibleTemplateTypes,
   groupTemplateTypes,
+  isListTemplateType,
+  scalarTemplateType,
+  supportsListTemplateType,
+  withListTemplateType,
   type NuExtractTemplateType,
   type NuExtractTypeGroup,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
 import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
+import { SchemaFieldExtraConfig, schemaFieldNeedsExtra } from "@/components/workflow/documents/schema-field-extra";
 import { cn, shortId } from "@/lib/utils";
 
-const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "advanced"];
+const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "structure", "advanced"];
 const VISIBLE_TEMPLATE_TYPES = new Set(getVisibleTemplateTypes());
 
 /** Desktop table columns; minmax(0,…) lets cells shrink without overlapping neighbors. */
 const SCHEMA_ROW_GRID =
-  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,2fr)_2rem] md:gap-0";
+  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,2fr)_auto_2rem] md:gap-0";
 
 const FIELD_LABEL_CLASS =
   "text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant md:sr-only";
@@ -40,14 +45,24 @@ const FIELD_LABEL_CLASS =
 function useTypeLabels(t: ReturnType<typeof useTranslations>) {
   return useMemo(() => {
     const label = (value: string) => {
-      if (!VISIBLE_TEMPLATE_TYPES.has(value as NuExtractTemplateType)) return value;
-      return t(`schema.templateTypes.${value}.label` as "schema.templateTypes.verbatim-string.label");
+      const scalar = scalarTemplateType(value);
+      if (!VISIBLE_TEMPLATE_TYPES.has(scalar as NuExtractTemplateType)) return value;
+      try {
+        return t(`schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label");
+      } catch {
+        return scalar;
+      }
     };
     const description = (value: string) => {
-      if (!VISIBLE_TEMPLATE_TYPES.has(value as NuExtractTemplateType)) return "";
-      return t(
-        `schema.templateTypes.${value}.description` as "schema.templateTypes.verbatim-string.description"
-      );
+      const scalar = scalarTemplateType(value);
+      if (!VISIBLE_TEMPLATE_TYPES.has(scalar as NuExtractTemplateType)) return "";
+      try {
+        return t(
+          `schema.templateTypes.${scalar}.description` as "schema.templateTypes.verbatim-string.description"
+        );
+      } catch {
+        return "";
+      }
     };
     return { label, description };
   }, [t]);
@@ -55,26 +70,34 @@ function useTypeLabels(t: ReturnType<typeof useTranslations>) {
 
 function TemplateTypeSelect({
   value,
+  listMode,
   onChange,
   t,
 }: {
   value: string;
+  listMode: boolean;
   onChange: (value: NuExtractTemplateType) => void;
   t: ReturnType<typeof useTranslations>;
 }) {
   const { label, description } = useTypeLabels(t);
-  const current = value || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
-  const selectable = getSelectableTemplateTypes(current);
+  const scalar = scalarTemplateType(value);
+  const selectable = getSelectableTemplateTypes(scalar);
   const grouped = groupTemplateTypes(selectable);
 
   return (
-    <Select value={current} onValueChange={(next) => onChange(next as NuExtractTemplateType)}>
+    <Select
+      value={scalar}
+      onValueChange={(next) =>
+        onChange(withListTemplateType(next, listMode) as NuExtractTemplateType)
+      }
+    >
       <SelectTrigger className="h-auto min-h-8 w-full min-w-0 py-1 text-xs border-transparent bg-transparent shadow-none focus:bg-card gap-2">
-        <SelectValue className="sr-only" aria-label={label(current)} />
+        <SelectValue className="sr-only" aria-label={label(value)} />
         <div className="flex min-w-0 flex-1 flex-col items-start text-left overflow-hidden">
-          <span className="w-full truncate font-medium leading-tight">{label(current)}</span>
+          <span className="w-full truncate font-medium leading-tight">{label(value)}</span>
           <span className="w-full truncate text-[10px] text-on-surface-variant leading-tight">
-            {description(current)}
+            {description(value)}
+            {listMode ? ` · ${t("schema.listModeSuffix")}` : ""}
           </span>
         </div>
       </SelectTrigger>
@@ -125,6 +148,7 @@ function SchemaFieldRow({
 }) {
   const { label } = useTypeLabels(t);
   const currentType = field.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
+  const listMode = isListTemplateType(currentType);
   const [suggestedType, setSuggestedType] = useState<string | null>(null);
   const normName = normalizeSchemaFieldName(field.name);
   const isDuplicate = normName.length > 0 && duplicateNames.has(normName);
@@ -147,14 +171,14 @@ function SchemaFieldRow({
   }, [field.name, field.description, hasIntent]);
 
   return (
-    <div
-      className={cn(
-        "group flex flex-col gap-3 p-3 hover:bg-surface-bright transition-colors",
-        "border-b border-border last:border-b-0 md:border-b-0",
-        SCHEMA_ROW_GRID
-      )}
-    >
-      <div className="flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border">
+    <div className="border-b border-border last:border-b-0 md:border-b-0">
+      <div
+        className={cn(
+          "group flex flex-col gap-3 p-3 hover:bg-surface-bright transition-colors",
+          SCHEMA_ROW_GRID
+        )}
+      >
+        <div className="flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border">
         <span className={FIELD_LABEL_CLASS}>{t("schema.name")}</span>
         <div className="flex items-center gap-1 min-w-0">
           <GripVertical className="hidden md:block h-3 w-3 text-outline-variant opacity-0 group-hover:opacity-60 cursor-grab shrink-0" />
@@ -177,6 +201,7 @@ function SchemaFieldRow({
         <span className={FIELD_LABEL_CLASS}>{t("schema.type")}</span>
         <TemplateTypeSelect
           value={currentType}
+          listMode={listMode}
           onChange={(templateType) => onUpdate({ templateType })}
           t={t}
         />
@@ -190,8 +215,8 @@ function SchemaFieldRow({
             {t("schema.suggestedType", { label: label(suggestedType!) })}
           </button>
         ) : null}
-      </div>
-      <div className="flex flex-col gap-1 min-w-0 md:flex-row md:items-center md:px-2">
+        </div>
+        <div className="flex flex-col gap-1 min-w-0 md:flex-row md:items-center md:px-2 md:border-r md:border-border">
         <span className={FIELD_LABEL_CLASS}>{t("schema.intent")}</span>
         <Input
           value={field.description}
@@ -199,6 +224,27 @@ function SchemaFieldRow({
           placeholder={t("schema.descriptionPlaceholder")}
           className="text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input"
         />
+      </div>
+      <div className="flex flex-col gap-1 min-w-0 md:items-center md:justify-center md:px-2 md:border-r md:border-border">
+        <span className={FIELD_LABEL_CLASS}>{t("schema.listModeLabel")}</span>
+        {supportsListTemplateType(currentType) ? (
+          <label
+            className="flex items-center justify-end gap-1.5 text-[10px] text-on-surface-variant whitespace-nowrap cursor-pointer md:justify-center"
+            title={t("schema.listModeHint")}
+          >
+            <input
+              type="checkbox"
+              className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
+              checked={listMode}
+              onChange={(e) =>
+                onUpdate({
+                  templateType: withListTemplateType(currentType, e.target.checked),
+                })
+              }
+            />
+            {t("schema.listModeLabel")}
+          </label>
+        ) : null}
       </div>
       <div className="flex justify-end md:items-center md:justify-center md:self-stretch">
         <Button
@@ -211,6 +257,12 @@ function SchemaFieldRow({
           <Trash2 className="h-3 w-3" />
         </Button>
       </div>
+      </div>
+      {schemaFieldNeedsExtra(currentType) ? (
+        <div className="px-3 pb-3">
+          <SchemaFieldExtraConfig field={field} onUpdate={onUpdate} t={t} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -286,8 +338,11 @@ export function SchemaTable({
             <div className="min-w-0 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant border-r border-border break-words leading-snug">
               {t("schema.type")}
             </div>
-            <div className="min-w-0 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant break-words leading-snug">
+            <div className="min-w-0 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant border-r border-border break-words leading-snug">
               {t("schema.intent")}
+            </div>
+            <div className="min-w-0 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant border-r border-border break-words leading-snug text-right md:text-center">
+              {t("schema.listModeLabel")}
             </div>
             <div className="sr-only">{tCommon("delete")}</div>
           </div>

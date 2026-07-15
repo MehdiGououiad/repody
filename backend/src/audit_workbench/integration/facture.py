@@ -17,32 +17,57 @@ TOTAL_FIELD = "total_amount"
 TVA_FIELD = "tva"
 WORKFLOW_NAME = "Facture E2E"
 
-LOGIC_RULE_TOTAL_OK = {
-    "id": "logic-total-6000",
-    "name": "Total TTC equals 6000",
-    "kind": "logic",
-    "scope": "intra",
-    "body": "total_amount == 6000",
-    "severity": "reject",
-}
+def _logic_compare_rule(
+    *,
+    rule_id: str,
+    name: str,
+    field: str,
+    operator: str,
+    value: str,
+) -> dict[str, Any]:
+    """Structured conditions — API rejects body-only logic rules."""
+    return {
+        "id": rule_id,
+        "name": name,
+        "kind": "logic",
+        "scope": "intra",
+        "body": f"{field} {operator} {value}",
+        "conditions": [
+            {
+                "id": f"{rule_id}-c1",
+                "left": {"kind": "field", "value": field},
+                "operator": operator,
+                "right": {"kind": "literal", "value": value},
+            }
+        ],
+        "conditionJunction": "AND",
+        "severity": "reject",
+    }
 
-LOGIC_RULE_TOTAL_FAIL = {
-    "id": "logic-total-wrong",
-    "name": "Total must not be 1",
-    "kind": "logic",
-    "scope": "intra",
-    "body": "total_amount == 1",
-    "severity": "reject",
-}
 
-LOGIC_RULE_TVA_UNDER_500 = {
-    "id": "logic-tva-under-500",
-    "name": "TVA under 500",
-    "kind": "logic",
-    "scope": "intra",
-    "body": "tva < 500",
-    "severity": "reject",
-}
+LOGIC_RULE_TOTAL_OK = _logic_compare_rule(
+    rule_id="logic-total-6000",
+    name="Total TTC equals 6000",
+    field=TOTAL_FIELD,
+    operator="==",
+    value="6000",
+)
+
+LOGIC_RULE_TOTAL_FAIL = _logic_compare_rule(
+    rule_id="logic-total-wrong",
+    name="Total must not be 1",
+    field=TOTAL_FIELD,
+    operator="==",
+    value="1",
+)
+
+LOGIC_RULE_TVA_UNDER_500 = _logic_compare_rule(
+    rule_id="logic-tva-under-500",
+    name="TVA under 500",
+    field=TVA_FIELD,
+    operator="<",
+    value="500",
+)
 
 LOGIC_RULE_TVA_UNDER_500_UI_CONDITIONS = {
     "id": "logic-tva-ui-conditions",
@@ -155,7 +180,9 @@ def tva_from_result(result: dict) -> str | None:
 
 
 def rule_status_from_result(result: dict, *, rule_name: str) -> str | None:
+    # API may append ": <expression>" to the display name.
     for row in result.get("ruleResults") or []:
-        if row.get("name") == rule_name:
+        name = str(row.get("name") or "")
+        if name == rule_name or name.startswith(f"{rule_name}:"):
             return row.get("status")
     return None

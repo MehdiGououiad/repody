@@ -86,27 +86,30 @@ function uiEnv() {
 function inferModelAlias(modelPath, explicitAlias) {
   if (explicitAlias?.trim()) return explicitAlias.trim();
   const base = modelPath ? path.basename(modelPath, ".gguf") : "";
-  if (/Q4_K_M/i.test(base)) return "nuextract3-q4_k_m";
-  if (/Q8_0/i.test(base)) return "nuextract3-q8_0";
+  if (base && !/Q4_K_M/i.test(base)) {
+    console.warn(
+      `warn: expected NuExtract3-Q4_K_M.gguf (official local default); got ${base}`
+    );
+  }
   return "nuextract3-q4_k_m";
 }
 
-/** Keep backend/.env AUDIT_VLLM_SERVED_MODEL aligned with paths.local.env. */
+/** Keep backend/.env AUDIT_LLAMACPP_SERVED_MODEL aligned with paths.local.env. */
 function syncVlmServedModel() {
   if (!fs.existsSync(BACKEND_ENV)) return;
   const paths = parseEnvFile(LLAMA_PATHS);
   const alias = inferModelAlias(paths.LLAMACPP_MODEL, paths.LLAMACPP_MODEL_ALIAS);
   let body = fs.readFileSync(BACKEND_ENV, "utf8");
-  if (/^AUDIT_VLLM_SERVED_MODEL=/m.test(body)) {
-    const next = body.replace(/^AUDIT_VLLM_SERVED_MODEL=.*$/m, `AUDIT_VLLM_SERVED_MODEL=${alias}`);
+  if (/^AUDIT_LLAMACPP_SERVED_MODEL=/m.test(body)) {
+    const next = body.replace(/^AUDIT_LLAMACPP_SERVED_MODEL=.*$/m, `AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
     if (next !== body) {
       fs.writeFileSync(BACKEND_ENV, next);
-      console.log(`synced backend/.env AUDIT_VLLM_SERVED_MODEL=${alias}`);
+      console.log(`synced backend/.env AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
     }
     return;
   }
-  fs.appendFileSync(BACKEND_ENV, `\nAUDIT_VLLM_SERVED_MODEL=${alias}\n`);
-  console.log(`added backend/.env AUDIT_VLLM_SERVED_MODEL=${alias}`);
+  fs.appendFileSync(BACKEND_ENV, `\nAUDIT_LLAMACPP_SERVED_MODEL=${alias}\n`);
+  console.log(`added backend/.env AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
 }
 
 function copyIfMissing(src, dest, label) {
@@ -139,7 +142,7 @@ function dashboardContext() {
     apiPort: API_PORT,
     observability: wantsObservability() || isObservabilityRunning(),
     llama: llamaConfigured() && !flags.has("--no-llama"),
-    extractOnly: flags.has("--extract-only") || flags.has("--ocr-only"),
+    extractOnly: flags.has("--extract-only"),
   };
 }
 
@@ -165,7 +168,22 @@ async function waitForDevAppReady(timeoutMs = 120_000) {
 function wantsObservability() {
   if (flags.has("--no-observability") || flags.has("--no-obs")) return false;
   if (flags.has("--observability") || flags.has("--obs")) return true;
-  return command === "all";
+  // Opt-in only — Grafana/Loki/Tempo/Bugsink add minutes and force-recreate workers.
+  return false;
+}
+
+function wantsWorkerRebuild() {
+  return (
+    flags.has("--rebuild-workers") ||
+    flags.has("--build") ||
+    process.env.REPODY_DEV_REBUILD_WORKERS === "1"
+  );
+}
+
+function phaseMs(label, startedAt) {
+  const ms = Date.now() - startedAt;
+  console.log(`[dev] ${label}: ${ms}ms`);
+  return ms;
 }
 
 function relativeBackendLogFile() {
@@ -212,6 +230,21 @@ function enableObservabilityInBackendEnv() {
   console.log("enabled observability in backend/.env (restart API to ship logs/traces)");
 }
 
+/** Turn off OTEL/Bugsink export when observability profile is not running (avoids retry spam). */
+function disableObservabilityInBackendEnv() {
+  removeObservabilityWorkerEnv();
+  if (!fs.existsSync(BACKEND_ENV)) return;
+  upsertEnvLines(BACKEND_ENV, {
+    AUDIT_OTEL_ENABLED: "false",
+  });
+  // Comment active Bugsink DSN so Sentry SDK does not retry a down :8090.
+  let body = fs.readFileSync(BACKEND_ENV, "utf8");
+  if (/^BUGSINK_DSN=.+/m.test(body) && !/^#\s*BUGSINK_DSN=/m.test(body)) {
+    body = body.replace(/^BUGSINK_DSN=/m, "# BUGSINK_DSN=");
+    fs.writeFileSync(BACKEND_ENV, body);
+  }
+}
+
 function recreateWorkersForObservability() {
   run(
     "docker",
@@ -223,7 +256,14 @@ function recreateWorkersForObservability() {
 function observabilityStack() {
   run("docker", ["compose", "--profile", "observability", "up", "-d"]);
   enableObservabilityInBackendEnv();
-  recreateWorkersForObservability();
+  // Recreate only when explicitly requested — default path just enables OTEL env.
+  if (flags.has("--recreate-workers") || wantsWorkerRebuild()) {
+    recreateWorkersForObservability();
+  } else {
+    console.log(
+      "observability env enabled — restart workers later if needed: pnpm dev:restart",
+    );
+  }
 }
 
 function composeDownArgs() {
@@ -252,21 +292,20 @@ async function stack(options = {}) {
     process.exit(1);
   }
 
+  const stackStarted = Date.now();
+
+  let t = Date.now();
   run("docker", ["compose", "up", "-d"]);
   syncVlmServedModel();
+  phaseMs("compose base", t);
 
-  const workerArgs = ["compose", "--profile", "workers", "up", "-d", "--build"];
-  if (flags.has("--extract-only") || flags.has("--ocr-only")) {
-    workerArgs.push("worker-extract");
-  } else {
-    workerArgs.push("worker-extract", "worker-fast");
-  }
-  run("docker", workerArgs);
-
+  // Start NuExtract before workers so extract pool does not race a cold :8081.
   const skipLlama = flags.has("--no-llama");
   if (!skipLlama) {
     if (llamaConfigured()) {
+      t = Date.now();
       run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "serve"], { inherit: true });
+      phaseMs("nuextract serve+warmup", t);
     } else {
       console.warn(
         "warn: NuExtract not configured — edit deploy/llamacpp/paths.local.env, then pnpm llamacpp:serve",
@@ -274,9 +313,26 @@ async function stack(options = {}) {
     }
   }
 
-  if (wantsObservability()) {
-    observabilityStack();
+  t = Date.now();
+  const workerArgs = ["compose", "--profile", "workers", "up", "-d"];
+  if (wantsWorkerRebuild()) workerArgs.push("--build");
+  if (flags.has("--extract-only")) {
+    workerArgs.push("worker-extract");
+  } else {
+    workerArgs.push("worker-extract", "worker-fast");
   }
+  run("docker", workerArgs);
+  phaseMs(wantsWorkerRebuild() ? "workers up --build" : "workers up", t);
+
+  if (wantsObservability()) {
+    t = Date.now();
+    observabilityStack();
+    phaseMs("observability", t);
+  } else {
+    disableObservabilityInBackendEnv();
+  }
+
+  phaseMs("stack total", stackStarted);
 
   if (!suppressDashboard) {
     await showDevDashboard({ appRunning: false });
@@ -437,7 +493,7 @@ async function reset() {
 
   console.log("\nRebuilding worker pools…");
   const workerArgs = ["compose", "--profile", "workers", "up", "-d", "--build"];
-  if (flags.has("--extract-only") || flags.has("--ocr-only")) {
+  if (flags.has("--extract-only")) {
     workerArgs.push("worker-extract");
   } else {
     workerArgs.push("worker-extract", "worker-fast");
@@ -470,7 +526,7 @@ function stop() {
 function restart() {
   run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "restart"], { inherit: true });
   run("docker", ["compose", "--profile", "workers", "restart", "worker-extract"], { inherit: true });
-  if (!flags.has("--extract-only") && !flags.has("--ocr-only")) {
+  if (!flags.has("--extract-only")) {
     run("docker", ["compose", "--profile", "workers", "restart", "worker-fast"], {
       inherit: true,
       allowFail: true,
@@ -480,7 +536,8 @@ function restart() {
 }
 
 async function isApiRunning() {
-  return fetchOk(`${API_ORIGIN}/v1/healthz`);
+  // Liveness is enough for "process up"; readiness is checked by `dev:status`.
+  return fetchOk(`${API_ORIGIN}/v1/healthz/live`);
 }
 
 async function isUiRunning() {
@@ -549,7 +606,7 @@ async function app(options = {}) {
     console.log(`API already running on :${API_PORT} — skipping`);
   } else {
     killDevApi();
-    const apiArgs = ["run", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
+    const apiArgs = ["run", "--extra", "otel", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
     if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
       apiArgs.push("--reload");
     }
@@ -601,7 +658,7 @@ async function api() {
   const backendDir = path.join(ROOT, "backend");
   const uv = resolveExecutable("uv");
   killDevApi();
-  const apiArgs = ["run", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
+  const apiArgs = ["run", "--extra", "otel", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
   if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
     apiArgs.push("--reload");
   }
@@ -622,10 +679,8 @@ async function api() {
 async function all() {
   await stack({ suppressDashboard: true });
   console.log("\nStarting API + UI (Ctrl+C stops app processes; stack keeps running)...\n");
-  killDevApi();
-  killDevUi();
-  await new Promise((r) => setTimeout(r, 1500));
-  await app({ forceRestartApi: true, forceRestartUi: true, keepAlive: true });
+  // Reuse warm processes when already healthy — avoids killing Turbopack cache.
+  await app({ keepAlive: true });
 }
 
 async function main() {
@@ -663,7 +718,7 @@ async function main() {
       break;
     default:
       console.error(
-        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-llama] [--extract-only] [--observability] [--no-obs]",
+        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-llama] [--extract-only] [--obs] [--no-obs] [--rebuild-workers]",
       );
       process.exit(1);
   }

@@ -9,6 +9,10 @@ from audit_workbench.extraction.document_model_branding import (
     normalize_public_catalog_id,
     public_runtime_model_name,
 )
+from audit_workbench.extraction.nuextract_contract import (
+    NUEXTRACT_MAX_PAGES_PER_REQUEST,
+    NUEXTRACT_PDF_DPI,
+)
 from audit_workbench.extraction.template_type_inference import suggest_template_type
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
 from audit_workbench.schemas.platform import (
@@ -70,9 +74,8 @@ async def get_platform_config() -> PlatformConfigResponse:
         default_document_model_id=normalize_public_catalog_id(settings.default_document_model_id),
         default_read_path="document_model",
         document_models=models,
-        ocr_max_pages=settings.ocr_max_pages,
-        docker_model_runner_base_url=settings.docker_model_runner_base_url,
-        vllm_base_url=settings.vllm_base_url,
+        nuextract_max_pages_per_request=NUEXTRACT_MAX_PAGES_PER_REQUEST,
+        llamacpp_base_url=settings.llamacpp_base_url,
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,
         stale_run_timeout_minutes=settings.stale_run_timeout_minutes,
@@ -110,22 +113,22 @@ async def get_models_catalog() -> ModelsCatalogResponse:
 
 
 @router.get(
-    "/diagnostics/ocr",
+    "/diagnostics/document-model",
     response_model=DocumentModelDiagnosticResponse,
     dependencies=[Depends(require_permission("diagnostics", "read"))],
 )
-async def ocr_diagnostic(
+async def document_model_diagnostic(
     run_infer: bool = Query(False, description="Run a short Repody VLM probe."),
 ) -> DocumentModelDiagnosticResponse:
-    """Document model runtime status (Docker Model Runner or vLLM)."""
+    """Document model runtime status (llama-server OpenAI API)."""
     settings = get_settings()
     state = await probe_document_model_state(settings)
     snapshot = DocumentModelDiagnosticSettingsSchema(
         extractor=settings.extractor,
         inference_mode=settings.inference_mode,
         runtime=state.runtime,
-        document_model_pdf_dpi=settings.repody_vlm_pdf_dpi,
-        document_model_max_edge_px=settings.repody_vlm_max_edge_px,
+        document_model_pdf_dpi=NUEXTRACT_PDF_DPI,
+        document_model_max_edge_px=None,
         llm_validation_enabled=settings.llm_validation_enabled,
     )
     common = {

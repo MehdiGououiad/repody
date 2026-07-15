@@ -234,12 +234,12 @@ seccompProfile:
 {{- end }}
 {{- end }}
 
-{{- define "repody.vllmSecretEnv" -}}
-- name: AUDIT_VLLM_API_KEY
+{{- define "repody.llamacppSecretEnv" -}}
+- name: AUDIT_LLAMACPP_API_KEY
   valueFrom:
     secretKeyRef:
       name: {{ include "repody.secretName" . }}
-      key: AUDIT_VLLM_API_KEY
+      key: AUDIT_LLAMACPP_API_KEY
       optional: true
 {{- end }}
 

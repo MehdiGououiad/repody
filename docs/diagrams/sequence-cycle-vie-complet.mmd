@@ -1,0 +1,206 @@
+---
+config:
+  theme: base
+  themeVariables:
+    background: "#ffffff"
+    mainBkg: "#ffffff"
+    primaryColor: "#ffffff"
+    primaryTextColor: "#111827"
+    primaryBorderColor: "#6b7280"
+    lineColor: "#374151"
+    actorBkg: "#ffffff"
+    actorBorder: "#6b7280"
+    actorTextColor: "#111827"
+    actorLineColor: "#9ca3af"
+    signalColor: "#374151"
+    signalTextColor: "#111827"
+    labelBoxBkgColor: "#ffffff"
+    labelBoxBorderColor: "#9ca3af"
+    labelTextColor: "#111827"
+    loopTextColor: "#111827"
+    noteBkgColor: "#f9fafb"
+    noteBorderColor: "#9ca3af"
+    noteTextColor: "#111827"
+---
+
+%% Vue fonctionnelle reconstruite exclusivement depuis le code source.
+sequenceDiagram
+    autonumber
+
+    actor U as Utilisateur
+    participant C as Client Web / API
+    participant N as Next.js / Auth.js
+    participant K as Keycloak
+    participant A as API Repody
+    participant D as PostgreSQL
+    participant S as Stockage objet
+    participant R as Redis / Taskiq
+    participant W as Worker
+    participant I as Services IA
+
+    Note over U,I: 1. Accès à la plateforme
+    U->>C: Ouvrir Repody
+    C->>N: Demander une page protégée
+    alt OIDC activé et session absente
+        N-->>C: Rediriger vers la connexion
+        C->>K: Authentifier l'utilisateur
+        K-->>N: Retourner les tokens et les rôles
+        N-->>C: Créer la session puis ouvrir l'application
+    else Session valide ou mode développement
+        N-->>C: Ouvrir l'application
+    end
+    Note over N,A: Les appels Web passent par Next.js.<br/>Le JWT de session est ajouté avant l'appel à l'API.
+
+    Note over U,D: 2. Concevoir et publier un workflow
+    U->>C: Créer ou modifier un workflow
+    C->>A: Charger workflow, modèles et règles disponibles
+    A->>D: Lire la configuration
+    D-->>A: Workflow et catalogues
+    A-->>C: Données du builder
+
+    U->>C: Définir documents, champs et règles
+    C->>A: Valider la configuration
+    A-->>C: Erreurs fonctionnelles ou configuration valide
+    alt Sauvegarder le brouillon
+        C->>A: Enregistrer le workflow
+        A->>D: Sauvegarder workflow, documents et règles
+        D-->>A: Confirmation
+        A-->>C: Brouillon sauvegardé
+    else Déployer le workflow
+        C->>A: Sauvegarder puis déployer
+        A->>D: Activer le workflow et stocker la clé hachée
+        D-->>A: Confirmation
+        A-->>C: Clé API affichée une seule fois
+    end
+
+    Note over U,R: 3. Soumettre un audit
+    U->>C: Lancer un test ou appeler l'API
+    opt Des fichiers sont nécessaires
+        C->>A: Demander les capacités et URLs d'upload
+        A->>D: Créer les intentions d'upload
+        A-->>C: URLs signées
+        C->>S: Envoyer directement les fichiers
+        S-->>C: Upload terminé
+        C->>A: Confirmer les fichiers
+        A->>S: Vérifier existence, taille et type
+        A->>D: Confirmer les uploads
+        A-->>C: Fichiers prêts
+    end
+
+    alt Test depuis le builder
+        C->>N: Créer un run avec le JWT et le brouillon courant
+        N->>A: Requête authentifiée
+    else Appel d'intégration
+        C->>A: Créer un run avec la clé du workflow déployé
+    else Client sans upload direct
+        C->>A: Créer un run multipart avec les fichiers
+    end
+
+    A->>A: Vérifier identité, permissions et déploiement
+    A->>R: Vérifier les limites de requêtes
+    A->>D: Vérifier la capacité et choisir le pool worker
+    alt Requête refusée
+        A-->>C: 401 / 403 / 409 / 429 / 503
+    else Requête acceptée
+        A->>D: Créer le run queued et l'outbox
+        D-->>A: Transaction validée
+        A-->>C: 202 + runId
+        A->>R: Publier la tâche après le commit
+    end
+
+    Note over C,I: 4. Traiter l'audit en arrière-plan
+    R-->>W: Distribuer le run au pool fast ou extract
+    W->>D: Réclamer le run de façon atomique
+    alt Run déjà pris ou terminé
+        D-->>W: Ignorer le doublon
+    else Run disponible
+        W->>D: Passer le run à running
+        W->>R: Publier la progression
+
+        loop Chaque document configuré
+            W->>S: Charger le fichier
+            S-->>W: Contenu du document
+            W->>R: Chercher une extraction en cache
+            alt Cache disponible
+                R-->>W: Champs déjà extraits
+            else Extraction nécessaire
+                W->>I: Extraire les champs avec le modèle documentaire
+                I-->>W: Données structurées
+                W->>R: Mettre l'extraction en cache
+            end
+            W->>D: Sauvegarder les champs extraits
+            W->>R: Publier la progression
+        end
+
+        W->>W: Évaluer les règles logiques
+        opt Règles LLM activées
+            W->>I: Évaluer les règles sémantiques en lot
+            I-->>W: Verdicts
+        end
+        W->>D: Sauvegarder les résultats et le statut global
+        W->>R: Publier done
+    end
+
+    alt Erreur, timeout ou échec définitif du dispatch
+        W->>D: Marquer le run failed
+        W->>R: Publier failed
+    end
+
+    Note over C,R: 5. Suivre la progression et obtenir le rapport
+    C->>A: Ouvrir le flux SSE du run
+    A->>R: S'abonner aux événements du run
+    loop Pendant le traitement
+        R-->>A: Progression
+        A-->>C: Étapes en temps réel
+    end
+    alt SSE disponible
+        R-->>A: Événement terminal
+        A-->>C: done ou failed
+    else SSE indisponible ou interrompu
+        loop Jusqu'au statut terminal
+            C->>A: Interroger le statut
+            A->>D: Lire statut et progression
+            D-->>A: queued / running / done / failed
+            A-->>C: État courant
+        end
+    end
+    alt Run terminé avec succès
+        C->>A: Demander le rapport complet
+        A->>D: Charger documents, champs et résultats
+        D-->>A: Rapport d'audit
+        A-->>C: Résultat complet
+        C-->>U: Afficher le rapport
+    else Run en échec
+        A-->>C: Erreur publique et runId
+        C-->>U: Afficher l'erreur exploitable
+    end
+
+    Note over U,D: 6. Piloter et administrer la plateforme
+    par Supervision métier
+        U->>C: Ouvrir dashboard ou historique des audits
+        C->>A: Demander métriques, files et rapports
+        A->>D: Agréger runs et workflows
+        D-->>A: Indicateurs
+        A-->>C: Dashboard et audits
+    and Administration des accès
+        U->>C: Gérer les utilisateurs et permissions
+        C->>A: Demander ou modifier les comptes
+        A->>K: Lire ou mettre à jour utilisateurs et rôles
+        K-->>A: Résultat IAM
+        A-->>C: État des accès
+    and Exploitation des modèles
+        U->>C: Consulter la configuration, warmup ou benchmark
+        C->>A: Lancer une opération
+        A->>R: Créer et suivre le job opérateur
+        A->>I: Vérifier ou préchauffer le modèle
+        I-->>A: État ou résultat
+        A-->>C: Diagnostic
+    end
+
+    Note over A,R: 7. Résilience automatique
+    loop Maintenance périodique
+        A->>D: Détecter les runs bloqués
+        A->>D: Reprendre les outbox non distribuées
+        A->>R: Rejouer les dispatchs éligibles
+        A->>D: Actualiser les positions de file
+    end

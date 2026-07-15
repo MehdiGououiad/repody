@@ -9,7 +9,7 @@ import httpx
 from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync
 
 DEFAULT_API_URL = "http://localhost:8000"
-DEFAULT_AUTH_URL = "http://auth.repody.local"
+DEFAULT_AUTH_URL = "http://localhost:8080"
 DEFAULT_KEYCLOAK_USER = "operator@repody.local"
 DEFAULT_KEYCLOAK_PASSWORD = "repody-dev"
 DEFAULT_KEYCLOAK_CLIENT_ID = "repody-web"
@@ -53,7 +53,10 @@ def live_oidc_enabled(client: httpx.Client | None = None) -> bool:
 
 def live_inference_ready(client: httpx.Client | None = None) -> bool:
     health = live_health(client)
-    return health.get("modelRunner") is True
+    probe = health.get("llamacpp")
+    if probe is None:
+        return str(health.get("inference") or "").lower() == "llamacpp"
+    return probe is True
 
 
 def live_auth_headers() -> dict[str, str]:

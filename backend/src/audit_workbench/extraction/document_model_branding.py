@@ -31,7 +31,7 @@ def public_runtime_model_name(runtime_model: str) -> str:
 
 
 def public_runtime_name(runtime: str) -> str:
-    if runtime in ("docker_model_runner", "vllm"):
+    if runtime == "llamacpp":
         return REPODY_VLM_LABEL
     return runtime
 

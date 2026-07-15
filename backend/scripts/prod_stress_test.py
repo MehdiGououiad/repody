@@ -236,12 +236,12 @@ async def preflight(
     )
 
     mode = str(body.get("inference") or "").lower()
-    vllm_ok = body.get("vllm")
-    if mode == "vllm" and require_workers:
+    llamacpp_ok = body.get("llamacpp")
+    if mode == "llamacpp" and require_workers:
         _check(
-            "vllm_reachable",
-            vllm_ok is True or vllm_ok is None,
-            f"vllm={vllm_ok} (set AUDIT_HEALTHZ_PROBE_INFERENCE=true to probe GPU)",
+            "llamacpp_reachable",
+            llamacpp_ok is True or llamacpp_ok is None,
+            f"llamacpp={llamacpp_ok} (set AUDIT_HEALTHZ_PROBE_INFERENCE=true to probe inference)",
         )
     else:
         _check("inference", bool(mode), f"inference={body.get('inference')}")
@@ -291,8 +291,10 @@ async def preflight(
         if c["name"] in ("healthz", "redis", "taskiq", "admission_headroom")
     ):
         raise RuntimeError("Preflight failed — fix platform health before stress test")
-    if require_workers and mode == "vllm" and vllm_ok is False:
-        raise RuntimeError("VLM inference is not reachable — fix AUDIT_VLLM_BASE_URL before stress test")
+    if require_workers and mode == "llamacpp" and llamacpp_ok is False:
+        raise RuntimeError(
+            "VLM inference is not reachable — fix AUDIT_LLAMACPP_BASE_URL before stress test"
+        )
     return snapshot
 
 

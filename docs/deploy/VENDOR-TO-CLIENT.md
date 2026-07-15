@@ -173,7 +173,7 @@ Edit placeholders:
 | `CHANGE_ME_REGISTRY` | `ghcr.io/yourorg/repody` or `registry.client.example.com/repody` |
 | `CHANGE_ME_TAG` | `1.0.0` (immutable tag from vendor) |
 | `CHANGE_ME_*_HOST` | Client DNS names |
-| `config.vllmBaseUrl` | Client VLM endpoint ([REPODY-VLM.md](../REPODY-VLM.md)) |
+| `config.llamacppBaseUrl` | Client VLM endpoint ([REPODY-VLM.md](../REPODY-VLM.md)) |
 | `config.oidcIssuer` | Client IdP |
 
 Image repositories in values resolve to:
@@ -233,7 +233,7 @@ Use multi-source Applications: vendor chart + client values repo.
 
 Example: [`deploy/client/argocd.application.yaml`](../../deploy/client/argocd.application.yaml)
 
-**Bundled:** sync `repody-data` (wave 0) before `repody` (wave 2). Lab reference: [ENTERPRISE-GITOPS.md](./ENTERPRISE-GITOPS.md).
+**Bundled:** sync `repody-data` (wave 0) before `repody` (wave 2). Lab reference: [OPENSHIFT.md](./OPENSHIFT.md).
 
 Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)
 
@@ -271,7 +271,6 @@ Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/us
 | `deploy/scripts/lib/vault-bootstrap.mjs` | Vault K8s auth bootstrap |
 | `deploy/scripts/lib/bundled-values.mjs` | Bundled Helm values generator |
 | `deploy/scripts/lib/lab-seed.mjs` | Lab Vault KV payloads |
-| `deploy/scripts/lib/lab-tls.mjs` | Self-signed TLS for lab ingress |
 | `deploy/scripts/lib/migrations-job.mjs` | Manual migrations Job (lab fallback) |
 | `deploy/scripts/lib/lab-security.mjs` | Restricted PodSecurity fragments |
 | `deploy/client/` | Client YAML kit only |

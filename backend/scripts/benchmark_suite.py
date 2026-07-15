@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""API-first OCR, extraction, and validation benchmark suite.
+"""API-first extraction and validation benchmark suite.
 
 Dev-only tools (stress, queue, experiments): backend/scripts/benchmark_dev.py
 """
@@ -307,8 +307,8 @@ async def _run_once(
     rule_score = score_rules(result.get("ruleResults") or [], expected_rules)
     raw_text = str(extraction.get("rawText") or document_result.get("rawText") or "")
     raw_text_chars = len(raw_text.strip())
-    ocr_text = str(extraction.get("ocrText") or "")
-    ocr_text_chars = len(ocr_text.strip())
+    markdown_text = str(extraction.get("markdownText") or "")
+    markdown_text_chars = len(markdown_text.strip())
     created_at = _parse_dt(result.get("createdAt"))
     started_at = _parse_dt(metadata.get("startedAt"))
     queue_ms = None
@@ -317,24 +317,16 @@ async def _run_once(
     cache_hit = bool(extraction.get("cacheHit"))
     cache_ok = expect_cache is None or cache_hit is expect_cache
     if judge_quality:
-        text_chars = ocr_text_chars
-        text_preview = _text_preview(ocr_text)
+        text_chars = markdown_text_chars
+        text_preview = _text_preview(markdown_text)
         passed = text_chars > 0 and cache_ok
         error = None
         if not cache_ok:
             error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
         elif text_chars == 0:
             error = "NuExtract markdown output was empty"
-    elif ocr_compare:
-        text_preview = _text_preview(raw_text)
-        passed = raw_text_chars > 0 and cache_ok
-        error = None
-        if not cache_ok:
-            error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
-        elif raw_text_chars == 0:
-            error = "OCR compare model produced no text"
     else:
-        text_preview = _text_preview(ocr_text) if ocr_text_chars else _text_preview(raw_text)
+        text_preview = _text_preview(markdown_text) if markdown_text_chars else _text_preview(raw_text)
         passed = (
             field_score["accuracy"] >= minimum_accuracy
             and rule_score["accuracy"] == 1.0
@@ -358,7 +350,6 @@ async def _run_once(
         "status": "passed" if passed else "failed",
         "passed": passed,
         "skipped": False,
-        "ocrCompare": ocr_compare,
         "judgeQuality": judge_quality,
         "runId": run_id,
         "wallMs": wall_ms,
@@ -372,8 +363,8 @@ async def _run_once(
         "readPathUsed": extraction.get("readPathUsed"),
         "fieldsExtracted": extraction.get("fieldsExtracted"),
         "rawTextChars": raw_text_chars,
-        "ocrTextChars": ocr_text_chars,
-        "textPreview": text_preview if (judge_quality or ocr_compare) else None,
+        "markdownTextChars": markdown_text_chars,
+        "textPreview": text_preview if judge_quality else None,
         "fieldAccuracy": field_score["accuracy"],
         "ruleAccuracy": rule_score["accuracy"],
         "fieldScore": field_score,
@@ -398,17 +389,12 @@ def _skip_row(case: BenchmarkCase, reason: str) -> dict[str, Any]:
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     measured = [row for row in rows if not row.get("skipped")]
-    structured = [
-        row
-        for row in measured
-        if not row.get("ocrCompare") and not row.get("judgeQuality")
-    ]
+    structured = [row for row in measured if not row.get("judgeQuality")]
     field_total = sum(int((row.get("fieldScore") or {}).get("total") or 0) for row in structured)
     field_correct = sum(int((row.get("fieldScore") or {}).get("correct") or 0) for row in structured)
     rule_total = sum(int((row.get("ruleScore") or {}).get("total") or 0) for row in structured)
     rule_correct = sum(int((row.get("ruleScore") or {}).get("correct") or 0) for row in structured)
     wall_times = [int(row["wallMs"]) for row in measured if isinstance(row.get("wallMs"), int)]
-    ocr_rows = [row for row in measured if row.get("ocrCompare")]
     return {
         "passed": sum(1 for row in measured if row.get("passed")),
         "failed": sum(1 for row in measured if not row.get("passed")),
@@ -416,10 +402,6 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "fieldAccuracy": round(field_correct / field_total, 4) if field_total else 1.0,
         "ruleAccuracy": round(rule_correct / rule_total, 4) if rule_total else 1.0,
         "medianWallMs": round(statistics.median(wall_times)) if wall_times else None,
-        "ocrCompareRuns": len(ocr_rows),
-        "medianRawTextChars": round(statistics.median(
-            [int(row.get("rawTextChars") or 0) for row in ocr_rows]
-        )) if ocr_rows else None,
     }
 
 
@@ -435,19 +417,19 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
         "cache",
         "fields",
         "rules",
-        "ocr-chars",
+        "md-chars",
     )
     print("\n" + " | ".join(f"{header:>10}" for header in headers))
     print("-" * 145)
     for row in rows:
         field_display = (
             "-"
-            if row.get("ocrCompare")
+            if row.get("judgeQuality")
             else f"{float(row.get('fieldAccuracy') or 0):.0%}"
         )
         rule_display = (
             "-"
-            if row.get("ocrCompare")
+            if row.get("judgeQuality")
             else f"{float(row.get('ruleAccuracy') or 0):.0%}"
         )
         values = (
@@ -461,7 +443,7 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
             str(row.get("cacheHit") if row.get("cacheHit") is not None else "-"),
             field_display,
             rule_display,
-            str(row.get("rawTextChars") if row.get("ocrCompare") else "-"),
+            str(row.get("markdownTextChars") if row.get("judgeQuality") else "-"),
         )
         print(" | ".join(f"{value:>10}" for value in values))
 
@@ -538,8 +520,8 @@ async def _execute_benchmark_case(
                 }
             case_rows.append(row)
             field_display = (
-                str(row.get("rawTextChars") or "-")
-                if row.get("ocrCompare")
+                str(row.get("markdownTextChars") or "-")
+                if row.get("judgeQuality")
                 else f"{float(row.get('fieldAccuracy') or 0):.0%}"
             )
             print(

@@ -14,10 +14,8 @@ def test_render_policies_follow_upstream_docs():
 
 
 def test_repody_vlm_native_png_unchanged():
-    from audit_workbench.settings import get_settings
-
     raw = b"\x89PNG\r\n\x1a\npixels"
     bundle = DocumentBundle(raw_bytes=raw, mime_type="image/png")
-    pages, count = repody_vlm_pages(bundle, get_settings())
+    pages, count = repody_vlm_pages(bundle)
     assert pages == [(raw, "image/png")]
     assert count == 1

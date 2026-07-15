@@ -18,7 +18,7 @@ that Secret before Argo CD syncs the app.
 - `AUDIT_MINIO_SECRET_KEY`
 - `BUGSINK_DSN`
 
-Add `AUDIT_VLLM_API_KEY` when the external VLM endpoint requires bearer-token
+Add `AUDIT_LLAMACPP_API_KEY` when the external VLM endpoint requires bearer-token
 auth.
 
 ## Vault path

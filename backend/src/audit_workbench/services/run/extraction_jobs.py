@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from typing import Any
 
 from audit_workbench.db.models import Document, RunDocument
-from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
+from audit_workbench.extraction.base import ExtractionIclExample, ExtractionResult, SchemaFieldSpec
+from audit_workbench.extraction.schema_spec import icl_examples_from_document
 from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
 from audit_workbench.extraction.pipeline import get_extractor
 from audit_workbench.services.run.helpers import resolve_run_doc_mime
@@ -29,6 +29,7 @@ class DocExtractionJob:
     validation_mode: str
     extraction_instructions: str = ""
     markdown_extraction: bool = False
+    extraction_icl_examples: list[ExtractionIclExample] | None = None
 
 
 async def run_extraction_job(job: DocExtractionJob) -> tuple[DocExtractionJob, ExtractionResult]:
@@ -46,6 +47,7 @@ async def run_extraction_job(job: DocExtractionJob) -> tuple[DocExtractionJob, E
         validation_mode=job.validation_mode,
         extraction_instructions=job.extraction_instructions,
         markdown_extraction=job.markdown_extraction,
+        extraction_icl_examples=job.extraction_icl_examples,
     )
     return job, result
 
@@ -69,6 +71,7 @@ def _make_extraction_job(
     validation_mode: str,
     extraction_instructions: str = "",
     markdown_extraction: bool = False,
+    extraction_icl_examples: list[ExtractionIclExample] | None = None,
 ) -> DocExtractionJob:
     return DocExtractionJob(
         doc=doc,
@@ -82,6 +85,7 @@ def _make_extraction_job(
         validation_mode=validation_mode,
         extraction_instructions=extraction_instructions,
         markdown_extraction=markdown_extraction,
+        extraction_icl_examples=extraction_icl_examples,
     )
 
 
@@ -89,36 +93,8 @@ async def build_extraction_jobs(
     storage: Any,
     pending: list[PendingFetch],
     *,
-    parallel: bool,
-    parallel_fetch: bool,
     validation_mode: str,
 ) -> list[DocExtractionJob]:
-    if parallel:
-        if parallel_fetch:
-            fetched = await asyncio.gather(
-                *[_fetch_doc_bytes(storage, item[2].storage_key) for item in pending]
-            )
-        else:
-            fetched = [await _fetch_doc_bytes(storage, item[2].storage_key) for item in pending]
-        return [
-            _make_extraction_job(
-                doc=doc,
-                schema=schema,
-                run_doc=run_doc,
-                document_bytes=document_bytes,
-                file_size=file_size,
-                step_index=step_index,
-                prog_mode=prog_mode,
-                validation_mode=validation_mode,
-                extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
-                markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
-            )
-            for (doc, schema, run_doc, step_index, _has_file, prog_mode), (
-                document_bytes,
-                file_size,
-            ) in zip(pending, fetched, strict=True)
-        ]
-
     jobs: list[DocExtractionJob] = []
     for doc, schema, run_doc, step_index, _has_file, prog_mode in pending:
         document_bytes, file_size = await _fetch_doc_bytes(storage, run_doc.storage_key)
@@ -134,6 +110,7 @@ async def build_extraction_jobs(
                 validation_mode=validation_mode,
                 extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
                 markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
+                extraction_icl_examples=icl_examples_from_document(doc),
             )
         )
     return jobs

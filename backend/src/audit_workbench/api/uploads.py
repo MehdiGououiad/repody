@@ -147,7 +147,7 @@ async def confirm_uploads(
         except FileNotFoundError as exc:
             raise HTTPException(404, f"Upload not found: {key}") from exc
         except Exception as exc:
-            raise HTTPException(404, f"Upload not found: {key}") from exc
+            raise HTTPException(503, "Storage unavailable") from exc
 
         if size == 0:
             raise HTTPException(400, f"Upload empty: {key}")

@@ -10,7 +10,7 @@ from audit_workbench.settings import Settings
 from audit_workbench.storage.mime import resolve_mime, sanitize_filename, sniff_mime
 
 
-def test_document_model_path_is_default():
+def test_default_read_path_is_document_model():
     assert parse_read_path(None).id == "document_model"
     assert parse_read_path(None).read == "document_model"
 

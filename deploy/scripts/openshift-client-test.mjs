@@ -15,7 +15,7 @@
  *   preflight | clean | infra | build | push | seed | register | sync |
  *   deploy | logs | verify | e2e | redeploy | all
  *
- * Legacy aliases: platform, harbor, registry, images, observability, argocd
+ * Command aliases (compat): platform, harbor, registry, images, observability, argocd
  *
  * Flags:
  *   --profile=bundled|external     default bundled
@@ -45,6 +45,7 @@ import {
 } from "./lib/bundled-values.mjs";
 import { createHarborLab } from "./lib/harbor-lab.mjs";
 import { createArgocdLab } from "./lib/argocd-lab.mjs";
+import { createLabUiRoutes } from "./lib/lab-ui-routes.mjs";
 import { createLabState } from "./lib/lab-state.mjs";
 import { verifyJsonLogs } from "./lib/lab-logs.mjs";
 
@@ -165,6 +166,14 @@ const argocdLab = createArgocdLab({
   dryRun,
 });
 
+const labUiRoutes = createLabUiRoutes({
+  kubectl: kube.kubectl,
+  kubectlOut: kube.kubectlOut,
+  fail,
+  log,
+  dryRun,
+});
+
 function hosts() {
   return kube.routeHosts(kube.appsDomain());
 }
@@ -184,15 +193,6 @@ function hostVlmUrl() {
     if (ip) return `http://${ip}:8081/v1`;
   }
   return process.env.REPODY_VLM_URL?.trim() || "http://host.crc.testing:8081/v1";
-}
-
-function openshiftOverlay() {
-  return `global:
-  openshift:
-    enabled: true
-    routes:
-      enabled: false
-`;
 }
 
 function imageRepo(hostList) {
@@ -221,8 +221,7 @@ ${bundledRepodyValuesYaml({
     vlmUrl: hostVlmUrl(),
     vlmServedModel: "nuextract3-q4_k_m",
     ingressClassName: "",
-  })}
-${openshiftOverlay()}`;
+  })}`;
 
   const authContent = `${generatorHeader("openshift-client-test.mjs register")}
 ${bundledAuthValuesYaml({ authHost: hostList.auth, className: "" })}`;
@@ -312,14 +311,12 @@ function writeRenderedValues(hostList, repo) {
     vlmUrl: hostVlmUrl(),
     vlmServedModel: "nuextract3-q4_k_m",
     ingressClassName: "",
-  })}
-${openshiftOverlay()}`;
+  })}`;
   const outPath = path.join(runtimeDir, "values.rendered.yaml");
   writeFileSync(outPath, content, "utf8");
 
   const authPath = path.join(runtimeDir, "values.auth.rendered.yaml");
-  const authYaml = `${bundledAuthValuesYaml({ authHost: hostList.auth, className: "" })}
-${openshiftOverlay()}`;
+  const authYaml = `${bundledAuthValuesYaml({ authHost: hostList.auth, className: "" })}`;
   writeFileSync(authPath, authYaml, "utf8");
 
   const inlineForArgo = content
@@ -550,8 +547,9 @@ function infra() {
   platform();
   observability();
   argocdLab.install();
+  labUiRoutes.applyInfraRoutes(kube.appsDomain(), { harbor: registryMode === "harbor" });
   if (profile === "external") deployDataPlane();
-  log("infra", "lab infra ready — Harbor (Compose) + Argo CD (manifests) independent of Repody pushes");
+  log("infra", "lab infra ready — Harbor (Compose) + Argo CD (manifests) + OpenShift UI routes");
 }
 
 function openshiftRegistrySetup() {

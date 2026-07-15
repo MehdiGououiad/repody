@@ -59,7 +59,7 @@ export function SettingsPanel({
     ? [
         ["Upload size", formatBytes(platform.maxUploadBytes)],
         ["Upload files", `${platform.maxUploadFiles}`],
-        ["OCR max pages", `${platform.ocrMaxPages}`],
+        ["NuExtract max pages", `${platform.nuextractMaxPagesPerRequest}`],
         ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
         ["Stale run timeout", `${platform.staleRunTimeoutMinutes} min`],
         ["Queued stale timeout", `${platform.queuedStaleTimeoutMinutes} min`],
@@ -202,7 +202,7 @@ export function SettingsPanel({
         />
         <ConfigTable
           title="Limits and timeouts"
-          description="Operational limits that affect uploads, OCR, queue maintenance, and stuck-run recovery."
+          description="Operational limits that affect uploads, extraction, queue maintenance, and stuck-run recovery."
           rows={limitsRows}
         />
         <section className="panel-elevated overflow-hidden rounded-xl">

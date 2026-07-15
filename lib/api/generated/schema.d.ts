@@ -482,7 +482,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/diagnostics/ocr": {
+    "/v1/diagnostics/document-model": {
         parameters: {
             query?: never;
             header?: never;
@@ -490,10 +490,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Ocr Diagnostic
-         * @description Document model runtime status (Docker Model Runner or vLLM).
+         * Document Model Diagnostic
+         * @description Document model runtime status (llama-server OpenAI API).
          */
-        get: operations["ocr_diagnostic_v1_diagnostics_ocr_get"];
+        get: operations["document_model_diagnostic_v1_diagnostics_document_model_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -807,14 +807,10 @@ export interface components {
             fieldAccuracy?: number | null;
             /** Ruleaccuracy */
             ruleAccuracy?: number | null;
-            /** Ocrcompare */
-            ocrCompare?: boolean | null;
             /** Judgequality */
             judgeQuality?: boolean | null;
             /** Rawtextchars */
             rawTextChars?: number | null;
-            /** Ocrtextchars */
-            ocrTextChars?: number | null;
             /** Textpreview */
             textPreview?: string | null;
             /** Cachehit */
@@ -851,8 +847,6 @@ export interface components {
             ruleAccuracy: number;
             /** Medianwallms */
             medianWallMs?: number | null;
-            /** Ocrcompareruns */
-            ocrCompareRuns?: number | null;
             /** Medianrawtextchars */
             medianRawTextChars?: number | null;
         };
@@ -1048,7 +1042,7 @@ export interface components {
             /** Audits */
             audits: components["schemas"]["AuditListItem"][];
             /** Workflows */
-            workflows: components["schemas"]["WorkflowSchema"][];
+            workflows: components["schemas"]["WorkflowSchema-Output"][];
             queue: components["schemas"]["QueueSnapshot"];
         };
         /** DeployWorkflowBody */
@@ -1066,7 +1060,7 @@ export interface components {
             detail: string;
         };
         /** DocumentDefSchema */
-        DocumentDefSchema: {
+        "DocumentDefSchema-Input": {
             /** Id */
             id: string;
             /**
@@ -1092,7 +1086,7 @@ export interface components {
              */
             documentModelId: string | null;
             /** Schema */
-            schema?: components["schemas"]["SchemaFieldSchema"][];
+            schema?: components["schemas"]["SchemaFieldSchema-Input"][];
             /**
              * Extractioninstructions
              * @default
@@ -1104,6 +1098,56 @@ export interface components {
              * @default false
              */
             markdownExtraction: boolean;
+            /**
+             * Extractioniclexamples
+             * @description NuExtract in-context extraction examples (developer message pairs).
+             */
+            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema"][];
+        };
+        /** DocumentDefSchema */
+        "DocumentDefSchema-Output": {
+            /** Id */
+            id: string;
+            /**
+             * Documenttype
+             * @default
+             */
+            documentType: string;
+            /**
+             * Extractionmode
+             * @description Read path id from GET /processing-paths (document_model).
+             * @default document_model
+             */
+            extractionMode: string;
+            /**
+             * Validationmode
+             * @description logic_only
+             * @default logic_only
+             */
+            validationMode: string;
+            /**
+             * Documentmodelid
+             * @default repody:vlm
+             */
+            documentModelId: string | null;
+            /** Schema */
+            schema?: components["schemas"]["SchemaFieldSchema-Output"][];
+            /**
+             * Extractioninstructions
+             * @default
+             */
+            extractionInstructions: string;
+            /**
+             * Markdownextraction
+             * @description Run NuExtract document-to-Markdown in parallel with field extraction.
+             * @default false
+             */
+            markdownExtraction: boolean;
+            /**
+             * Extractioniclexamples
+             * @description NuExtract in-context extraction examples (developer message pairs).
+             */
+            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema"][];
         };
         /** DocumentModelDiagnosticResponse */
         DocumentModelDiagnosticResponse: {
@@ -1214,7 +1258,7 @@ export interface components {
              */
             rules: components["schemas"]["DryRunRuleInput"][];
             /** Documents */
-            documents?: components["schemas"]["DocumentDefSchema"][] | null;
+            documents?: components["schemas"]["DocumentDefSchema-Input"][] | null;
             /** Rulesfull */
             rulesFull?: components["schemas"]["WorkflowRuleSchema"][] | null;
         };
@@ -1291,6 +1335,19 @@ export interface components {
             /** Detail */
             detail: string;
         };
+        /** ExtractionIclExampleSchema */
+        ExtractionIclExampleSchema: {
+            /**
+             * Input
+             * @default
+             */
+            input: string;
+            /**
+             * Output
+             * @default
+             */
+            output: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1330,10 +1387,8 @@ export interface components {
             extractor: string;
             /** Inference */
             inference: string;
-            /** Modelrunner */
-            modelRunner: boolean | null;
-            /** Vllm */
-            vllm?: boolean | null;
+            /** Llamacpp */
+            llamacpp?: boolean | null;
             /** Storagebackend */
             storageBackend: string;
             /** Directuploadenabled */
@@ -1608,8 +1663,11 @@ export interface components {
         OperatorLimitsSchema: {
             /** Maxuploadbytes */
             maxUploadBytes: number;
-            /** Ocrmaxpages */
-            ocrMaxPages: number;
+            /**
+             * Nuextractmaxpagesperrequest
+             * @default 6
+             */
+            nuextractMaxPagesPerRequest: number;
             /** Tasktimeoutminutes */
             taskTimeoutMinutes: number;
         };
@@ -1669,12 +1727,13 @@ export interface components {
             defaultReadPath: string;
             /** Documentmodels */
             documentModels: components["schemas"]["DocumentModelSummary"][];
-            /** Ocrmaxpages */
-            ocrMaxPages: number;
-            /** Dockermodelrunnerbaseurl */
-            dockerModelRunnerBaseUrl: string;
-            /** Vllmbaseurl */
-            vllmBaseUrl: string;
+            /**
+             * Nuextractmaxpagesperrequest
+             * @default 6
+             */
+            nuextractMaxPagesPerRequest: number;
+            /** Llamacppbaseurl */
+            llamacppBaseUrl: string;
             /** Maxuploadbytes */
             maxUploadBytes: number;
             /** Maxuploadfiles */
@@ -1785,8 +1844,6 @@ export interface components {
             readKind: string;
             /** Showdocumentmodel */
             showDocumentModel: boolean;
-            /** Ocrengine */
-            ocrEngine?: string | null;
         };
         /** RoleDefinition */
         RoleDefinition: {
@@ -2006,17 +2063,12 @@ export interface components {
              */
             gpuColdStartLikely: boolean;
             /**
-             * Ocrskipped
-             * @default false
-             */
-            ocrSkipped: boolean;
-            /**
              * Fieldsextracted
              * @default 0
              */
             fieldsExtracted: number;
-            /** Ocrtext */
-            ocrText?: string | null;
+            /** Markdowntext */
+            markdownText?: string | null;
             /** Rawtext */
             rawText?: string | null;
             /**
@@ -2095,7 +2147,7 @@ export interface components {
              * Documents
              * @default []
              */
-            documents: components["schemas"]["DocumentDefSchema"][];
+            documents: components["schemas"]["DocumentDefSchema-Input"][];
             /**
              * Rules
              * @default []
@@ -2116,7 +2168,7 @@ export interface components {
             fieldsExtracted: number;
         };
         /** SchemaFieldSchema */
-        SchemaFieldSchema: {
+        "SchemaFieldSchema-Input": {
             /** Id */
             id: string;
             /** Name */
@@ -2131,6 +2183,31 @@ export interface components {
              * @default verbatim-string
              */
             templateType: string;
+            /** Enumvalues */
+            enumValues?: string[];
+            /** Children */
+            children?: components["schemas"]["SchemaFieldSchema-Input"][];
+        };
+        /** SchemaFieldSchema */
+        "SchemaFieldSchema-Output": {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Templatetype
+             * @default verbatim-string
+             */
+            templateType: string;
+            /** Enumvalues */
+            enumValues?: string[];
+            /** Children */
+            children?: components["schemas"]["SchemaFieldSchema-Output"][];
         };
         /** StoredFileBinding */
         StoredFileBinding: {
@@ -2204,7 +2281,7 @@ export interface components {
         /** ValidateRulesBody */
         ValidateRulesBody: {
             /** Documents */
-            documents: components["schemas"]["DocumentDefSchema"][];
+            documents: components["schemas"]["DocumentDefSchema-Input"][];
             /** Rules */
             rules: components["schemas"]["WorkflowRuleSchema"][];
         };
@@ -2267,11 +2344,11 @@ export interface components {
         /** WorkflowListResponse */
         WorkflowListResponse: {
             /** Workflows */
-            workflows: components["schemas"]["WorkflowSchema"][];
+            workflows: components["schemas"]["WorkflowSchema-Output"][];
         };
         /** WorkflowResponse */
         WorkflowResponse: {
-            workflow: components["schemas"]["WorkflowSchema"];
+            workflow: components["schemas"]["WorkflowSchema-Output"];
         };
         /** WorkflowRuleSchema */
         WorkflowRuleSchema: {
@@ -2312,7 +2389,7 @@ export interface components {
             severity: string;
         };
         /** WorkflowSchema */
-        WorkflowSchema: {
+        "WorkflowSchema-Input": {
             /** Id */
             id: string;
             /** Name */
@@ -2348,7 +2425,64 @@ export interface components {
              * Documents
              * @default []
              */
-            documents: components["schemas"]["DocumentDefSchema"][];
+            documents: components["schemas"]["DocumentDefSchema-Input"][];
+            /**
+             * Rules
+             * @default []
+             */
+            rules: components["schemas"]["WorkflowRuleSchema"][];
+            /** Deployedat */
+            deployedAt?: string | null;
+            /**
+             * Apikey
+             * @description Plaintext key — returned only once on deploy.
+             */
+            apiKey?: string | null;
+            /**
+             * Apikeyhint
+             * @description Masked hint for deployed workflows.
+             */
+            apiKeyHint?: string | null;
+            apiStats?: components["schemas"]["WorkflowApiStatsSchema"] | null;
+        };
+        /** WorkflowSchema */
+        "WorkflowSchema-Output": {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Status
+             * @default draft
+             */
+            status: string;
+            /**
+             * Owner
+             * @default Me
+             */
+            owner: string;
+            /** Lastrun */
+            lastRun?: string | null;
+            /**
+             * Successrate
+             * @default 0
+             */
+            successRate: number;
+            /**
+             * Totalruns
+             * @default 0
+             */
+            totalRuns: number;
+            /**
+             * Documents
+             * @default []
+             */
+            documents: components["schemas"]["DocumentDefSchema-Output"][];
             /**
              * Rules
              * @default []
@@ -2562,7 +2696,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkflowSchema"];
+                "application/json": components["schemas"]["WorkflowSchema-Input"];
             };
         };
         responses: {
@@ -3317,7 +3451,7 @@ export interface operations {
             };
         };
     };
-    ocr_diagnostic_v1_diagnostics_ocr_get: {
+    document_model_diagnostic_v1_diagnostics_document_model_get: {
         parameters: {
             query?: {
                 /** @description Run a short Repody VLM probe. */

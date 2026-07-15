@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import ExtractedField, RunDocument
 from audit_workbench.extraction.base import ExtractionResult, SchemaFieldSpec
+from audit_workbench.extraction.schema_spec import icl_examples_from_document, schema_specs_from_document
 from audit_workbench.extraction.document_modes import (
     DEFAULT_READ_PATH_ID,
     document_needs_extraction,
@@ -16,8 +15,7 @@ from audit_workbench.extraction.document_modes import (
     resolve_run_validation_mode,
     validation_mode_label,
 )
-from audit_workbench.extraction.gpu_cold_start import is_serverless_vllm
-from audit_workbench.inference.runtime import effective_parallel_doc_extraction
+from audit_workbench.extraction.gpu_cold_start import is_serverless_inference
 from audit_workbench.services.run.extraction_jobs import (
     DocExtractionJob,
     PendingFetch,
@@ -76,7 +74,7 @@ async def persist_extraction_pair(
 
 
 def _annotate_cold_start_hint(steps: list, step_id: str) -> None:
-    if not is_serverless_vllm():
+    if not is_serverless_inference():
         return
     for step in steps:
         if step.get("id") == step_id:
@@ -85,15 +83,7 @@ def _annotate_cold_start_hint(steps: list, step_id: str) -> None:
 
 
 def _schema_for_doc(doc) -> list[SchemaFieldSpec]:
-    return [
-        SchemaFieldSpec(
-            name=field.name,
-            description=field.description,
-            template_type=getattr(field, "template_type", None),
-        )
-        for field in sorted(doc.schema_fields, key=lambda item: item.position)
-        if field.name.strip()
-    ]
+    return schema_specs_from_document(doc)
 
 
 async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> None:
@@ -142,52 +132,34 @@ async def run_extraction_phase(session: AsyncSession, state: RunPhaseState) -> N
         state.validation_mode = resolve_run_validation_mode(rules_payload)
         return
 
-    use_parallel = effective_parallel_doc_extraction(settings) and len(pending) > 1
-
     jobs = await build_extraction_jobs(
         storage,
         pending,
-        parallel=use_parallel,
-        parallel_fetch=settings.parallel_storage_fetch,
         validation_mode=run_validation_mode,
     )
 
-    if use_parallel:
-        for job in jobs:
-            if is_serverless_vllm() and job.progress_mode == "document_model":
-                _annotate_cold_start_hint(progress_steps, f"extract-{job.doc.id}")
+    pairs = []
+    for idx, job in enumerate(jobs):
+        read_label = read_path_used_label(parse_read_path(job.doc.extraction_mode or DEFAULT_READ_PATH_ID).id)
+        val_label = validation_mode_label(job.validation_mode)
+        step_id = f"extract-{job.doc.id}"
+        detail = f"{read_label} \u00b7 {val_label}"
+        if is_serverless_inference() and job.progress_mode == "document_model":
+            detail = f"{detail} \u00b7 {_GPU_COLD_START_DETAIL}"
+            _annotate_cold_start_hint(progress_steps, step_id)
         await set_run_progress(
             session,
             run_id,
             progress_steps,
-            jobs[0].step_index,
-            f"Extracting {len(jobs)} documents in parallel\u2026",
-            force=True,
+            job.step_index,
+            extract_label(
+                job.doc.document_type,
+                mode=job.progress_mode,
+                detail=detail,
+            ),
+            force=(idx == 0 or idx == len(jobs) - 1),
         )
-        pairs = await asyncio.gather(*[run_extraction_job(job) for job in jobs])
-    else:
-        pairs = []
-        for idx, job in enumerate(jobs):
-            read_label = read_path_used_label(parse_read_path(job.doc.extraction_mode or DEFAULT_READ_PATH_ID).id)
-            val_label = validation_mode_label(job.validation_mode)
-            step_id = f"extract-{job.doc.id}"
-            detail = f"{read_label} \u00b7 {val_label}"
-            if is_serverless_vllm() and job.progress_mode == "document_model":
-                detail = f"{detail} \u00b7 {_GPU_COLD_START_DETAIL}"
-                _annotate_cold_start_hint(progress_steps, step_id)
-            await set_run_progress(
-                session,
-                run_id,
-                progress_steps,
-                job.step_index,
-                extract_label(
-                    job.doc.document_type,
-                    mode=job.progress_mode,
-                    detail=detail,
-                ),
-                force=(idx == 0 or idx == len(jobs) - 1),
-            )
-            pairs.append(await run_extraction_job(job))
+        pairs.append(await run_extraction_job(job))
 
     for job, extraction in pairs:
         await persist_extraction_pair(session, state, job, extraction)

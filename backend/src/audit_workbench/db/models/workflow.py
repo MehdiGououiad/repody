@@ -52,6 +52,7 @@ class Document(Base):
     document_model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     extraction_instructions: Mapped[str] = mapped_column(Text, default="")
     markdown_extraction: Mapped[bool] = mapped_column(default=False)
+    extraction_icl_examples: Mapped[list[Any]] = mapped_column(JSON, default=list)
 
     workflow: Mapped[Workflow] = relationship(back_populates="documents")
     schema_fields: Mapped[list[SchemaField]] = relationship(
@@ -68,7 +69,8 @@ class SchemaField(Base):
     )
     name: Mapped[str] = mapped_column(String(128), default="")
     description: Mapped[str] = mapped_column(Text, default="")
-    template_type: Mapped[str] = mapped_column(String(32), default="verbatim-string")
+    template_type: Mapped[str] = mapped_column(String(64), default="verbatim-string")
+    field_config: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     document: Mapped[Document] = relationship(back_populates="schema_fields")

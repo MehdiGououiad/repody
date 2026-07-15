@@ -52,5 +52,3 @@ workerFast:
       memory: 512Mi
 
 config:
-  parallelDocExtraction: "true"
-  parallelStorageFetch: true

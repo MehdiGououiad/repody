@@ -6,6 +6,12 @@ from typing import Any
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
 from audit_workbench.extraction.field_json import parse_numeric_value
+from audit_workbench.rules.table_aggregates import (
+    LOGIC_TABLE_FUNCTIONS,
+    count_rows_where,
+    sum_rows,
+    sum_rows_where,
+)
 from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields
 from audit_workbench.rules.value_coercion import is_iso_date_like
 
@@ -22,7 +28,16 @@ _RESERVED = {
     "in",
     "is",
     "str",
+    *LOGIC_TABLE_FUNCTIONS,
 }
+
+
+def _logic_functions() -> dict[str, Any]:
+    return {
+        "sum_rows": sum_rows,
+        "sum_rows_where": sum_rows_where,
+        "count_rows_where": count_rows_where,
+    }
 
 
 def _normalize_key(name: str) -> str:
@@ -100,6 +115,8 @@ def evaluate_logic_expression(
     missing: list[str] = []
     empty: list[str] = []
     for ident in referenced:
+        if ident in LOGIC_TABLE_FUNCTIONS:
+            continue
         present, value = _lookup_field(names, ident)
         if not present:
             missing.append(ident)
@@ -117,7 +134,7 @@ def evaluate_logic_expression(
         label = ", ".join(empty)
         return (
             None,
-            f"No value yet for {label}. Run OCR or enter a sample value in dry-run.",
+            f"No value yet for {label}. Run a test extraction or enter a sample value in dry-run.",
             empty,
         )
 
@@ -125,7 +142,8 @@ def evaluate_logic_expression(
 
     try:
         evaluator = EvalWithCompoundTypes()
-        result = bool(simple_eval(expression, names=names, functions=evaluator.functions))
+        functions = {**evaluator.functions, **_logic_functions()}
+        result = bool(simple_eval(expression, names=names, functions=functions))
         if result:
             return True, "All conditions satisfied on the extracted values.", affected
         return False, f"Expression evaluated to false: {expression}", affected

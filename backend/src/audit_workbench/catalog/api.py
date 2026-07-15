@@ -42,7 +42,6 @@ def build_processing_paths(
             description=p.description,
             read_kind=p.read,
             show_document_model=p.show_document_model,
-            ocr_engine=p.ocr_engine,
         )
         for p in list_read_paths()
     ]
@@ -83,7 +82,7 @@ async def fetch_models_catalog() -> ModelsCatalogResponse:
                 id=settings.validation_model,
                 label=settings.validation_model,
                 kind="validation",
-                runtime=public_runtime_name("docker_model_runner"),
+                runtime=public_runtime_name("llamacpp"),
                 available=True,
                 is_default=True,
             )

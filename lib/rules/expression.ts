@@ -1,4 +1,4 @@
-import type { ComparisonOp, ConditionJunction, ConditionOperand, RuleCondition } from "@/lib/types";
+import type { ComparisonOp, ConditionJunction, ConditionOperand, RuleCondition, TableAggregateLeft } from "@/lib/types";
 
 const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 
@@ -54,8 +54,29 @@ function listLiteralToPy(value: string): string | null {
   return `[${items.join(", ")}]`;
 }
 
+function aggregateToPy(aggregate: TableAggregateLeft | undefined): string | null {
+  if (!aggregate?.tableField) return null;
+  const table = fieldRef(aggregate.tableField);
+  if (!table) return null;
+  const amountCol = JSON.stringify(aggregate.amountColumn ?? "");
+  if (aggregate.fn === "sum_rows") {
+    return `sum_rows(${table}, ${amountCol})`;
+  }
+  if (aggregate.fn === "sum_rows_where") {
+    const filterCol = JSON.stringify(aggregate.filterColumn ?? "");
+    const needle = JSON.stringify(aggregate.filterContains ?? "");
+    return `sum_rows_where(${table}, ${amountCol}, ${filterCol}, ${needle})`;
+  }
+  if (aggregate.fn === "count_rows_where") {
+    const filterCol = JSON.stringify(aggregate.filterColumn ?? "");
+    const needle = JSON.stringify(aggregate.filterContains ?? "");
+    return `count_rows_where(${table}, ${filterCol}, ${needle})`;
+  }
+  return null;
+}
+
 export function conditionToString(c: RuleCondition): string {
-  const leftBase = operandToPy(c.left);
+  const leftBase = aggregateToPy(c.tableAggregate) ?? operandToPy(c.left);
   if (!leftBase) return "";
 
   let left = leftBase;

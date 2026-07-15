@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { ConditionBuilder } from "../condition-builder";
 import { conditionsToExpression } from "@/lib/rules/expression";
-import { resolveDocumentFields } from "@/lib/rules/document-fields";
+import { resolveDocumentFields, resolveTableFields } from "@/lib/rules/document-fields";
 import { cn } from "@/lib/utils";
 import type {
   ConditionJunction,
@@ -50,6 +50,7 @@ export function RuleCard({
   const isCross = rule.scope === "cross";
   const canCross = documents.length >= 2;
   const fields = resolveDocumentFields(documents, rule.appliesTo);
+  const tableFields = resolveTableFields(documents, rule.appliesTo);
 
   const conditions: RuleCondition[] = rule.conditions ?? [
     {
@@ -198,6 +199,7 @@ export function RuleCard({
           <ConditionBuilder
             conditions={conditions}
             fields={fields}
+            tableFields={tableFields}
             onConditionsChange={handleConditionsChange}
           />
         )}

@@ -1,0 +1,75 @@
+%% Architecture OpenShift / production Repody
+%% Éditable : Mermaid flowchart
+%% Doc : docs/PLATFORM.md · docs/deploy/CLIENT.md · docs/deploy/OPENSHIFT.md · ADR 004 / 005
+
+flowchart TB
+  subgraph Ext["Hors cluster / géré par le client"]
+    User["Utilisateurs métier"]
+    IdP["Fournisseur OIDC<br/>Keycloak ou IdP client"]
+    Inf["Inférence VLM externe<br/>OpenAI-compatible<br/>AUDIT_LLAMACPP_BASE_URL<br/>NuExtract / endpoint client"]
+    Vault["Vault + External Secrets<br/>Operator"]
+    Reg["Registre images<br/>GHCR / Harbor client"]
+    GitOps["Dépôt GitOps<br/>valeurs Helm"]
+    Argo["Argo CD<br/>optionnel"]
+  end
+
+  subgraph Cluster["Cluster OpenShift / Kubernetes<br/>namespace repody PSA restricted"]
+    subgraph Edge["Edge"]
+      Ing["Ingress networking.k8s.io<br/>+ overlay OpenShift Routes<br/>TLS edge"]
+    end
+
+    subgraph App["Chart Helm repody"]
+      Web["Deployment repody-web<br/>Next.js edge"]
+      Ctrl["Deployment repody-api<br/>module control"]
+      WX["Deployment repody-worker-extract<br/>module workers"]
+      WF["Deployment repody-worker-fast<br/>module workers"]
+    end
+
+    subgraph DataPlane["Plan de données"]
+      direction TB
+      Bundled["Profil bundled :<br/>chart repody-data<br/>Postgres + Redis + MinIO"]
+      External["Profil external :<br/>Postgres / Redis / S3<br/>gérés hors chart"]
+    end
+
+    subgraph AuthOpt["Auth optionnelle lab"]
+      KCLab["Chart repody-auth<br/>Keycloak lab CRC"]
+    end
+
+    Secrets["Secret repody-runtime-secrets<br/>injecté par ESO"]
+  end
+
+  User --> Ing
+  Ing --> Web
+  Ing --> Ctrl
+  Web -->|"API /v1 + JWT"| Ctrl
+  User --> IdP
+  Web -->|"OIDC"| IdP
+  Ctrl -->|"JWKS / validation JWT"| IdP
+
+  Ctrl --> DataPlane
+  WX --> DataPlane
+  WF --> DataPlane
+  Ctrl -->|"Redis Streams Taskiq"| DataPlane
+  DataPlane --> Bundled
+  DataPlane --> External
+
+  WX -->|"chat completions"| Inf
+  WF -.->|"règles LLM optionnelles"| Inf
+
+  Vault --> Secrets
+  Secrets --> Ctrl
+  Secrets --> WX
+  Secrets --> WF
+  Secrets --> Web
+
+  Reg -->|"pull images<br/>repody-backend / repody-web"| App
+  GitOps --> Argo
+  Argo -->|"sync Helm"| App
+  KCLab -.-> IdP
+
+  classDef ext fill:#fce8e8,stroke:#8a3a3a
+  classDef app fill:#e8f4fc,stroke:#1a5f8a
+  classDef data fill:#f5f0e6,stroke:#8a6d3b
+  class User,IdP,Inf,Vault,Reg,GitOps,Argo ext
+  class Web,Ctrl,WX,WF,Ing app
+  class Bundled,External,Secrets data

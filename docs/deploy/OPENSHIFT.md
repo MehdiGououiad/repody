@@ -143,6 +143,35 @@ Flags (append to any command or `node deploy/scripts/openshift-client-test.mjs a
 | Argo CD | `argocd` | Infra — once (official `install.yaml`) |
 | Repody stack | `repody` | **Platform e2e** — build/push/sync each run |
 
+### Argo CD and lab UI (OpenShift Routes)
+
+`pnpm openshift:infra` creates **Routes** for infra UIs (no port-forward). Repody app/auth/files routes come from Helm when GitOps sync runs (`global.openshift.routes.enabled: true` in promoted values).
+
+| UI | URL (default CRC) | Login |
+|----|-------------------|-------|
+| **Argo CD** | https://repody-argocd.apps-crc.testing | `admin` + password from `argocd-initial-admin-secret` |
+| **Vault** | https://repody-vault.apps-crc.testing | Token `root` (lab dev mode only) |
+| **Harbor** | https://repody-harbor.apps-crc.testing | `admin` / `Harbor12345` (default lab password) |
+| **Repody web** | https://repody-web.apps-crc.testing | Keycloak (after sync) |
+| **API** | https://repody-api.apps-crc.testing | — |
+| **Auth (Keycloak)** | https://repody-auth.apps-crc.testing | Keycloak admin from runtime secret |
+
+Argo CD admin password:
+
+```powershell
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}')))
+```
+
+**CLI sync** — `argocd login --core` + `argocd app sync` (no port-forward; do not set `ARGOCD_OPTS=--port-forward-namespace argocd` with `--core`).
+
+```powershell
+Remove-Item Env:ARGOCD_OPTS -ErrorAction SilentlyContinue
+argocd login --core
+argocd app list
+```
+
+Port-forward is only needed if Routes are unavailable (non-OpenShift clusters).
+
 ### Step-by-step
 
 ```powershell
@@ -167,7 +196,7 @@ Committed under `deploy/client/lab/`:
 
 - `values.lab.common.yaml` — JSON logs, OTEL, NetworkPolicies
 - `values.lab.bundled.yaml` / `values.lab.external.yaml` — profile sizing
-- `values.openshift-local*.yaml` — CRC ingress sizing (legacy names, still used)
+- `values.openshift-local*.yaml` — CRC ingress sizing
 - `harbor/values.yaml` — Harbor Helm lab sizing
 
 Generated at runtime (gitignored): `deploy/client/lab/.runtime/`

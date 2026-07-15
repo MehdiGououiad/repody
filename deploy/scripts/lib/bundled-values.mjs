@@ -26,16 +26,28 @@ export function bundledRepodyValuesYaml({
   const jwks =
     jwksUrl ?? "http://keycloak.repody.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs";
   const classLine = ingressClassName ? `\n  className: ${ingressClassName}` : "";
-  const modelLine = vlmServedModel ? `\n  vllmServedModel: ${vlmServedModel}` : "";
+  const modelLine = vlmServedModel ? `\n  llamacppServedModel: ${vlmServedModel}` : "";
 
   return `# Generated bundled client values (lab)
 global:
   deploymentProfile: bundled
   imagePullSecrets:
     - name: registry-pull-secret
+  openshift:
+    enabled: true
+    routes:
+      enabled: true
+      webHost: ${hosts.web}
+      apiHost: ${hosts.api}
+      filesHost: ${hosts.files}
+      filesServiceName: repody-data-minio
+      filesServicePort: 9000
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
 
 ingress:
-  enabled: true
+  enabled: false
   host: ${hosts.web}
   apiHost: ${hosts.api}
   filesHost: ${hosts.files}
@@ -91,7 +103,7 @@ config:
   oidcJwksUrl: ${jwks}
   keycloakAdminUrl: https://${hosts.auth}
   corsOrigins: '["https://${hosts.web}"]'
-  vllmBaseUrl: ${vlm}${modelLine}
+  llamacppBaseUrl: ${vlm}${modelLine}
   operatorActionsEnabled: false
 
 observability:
@@ -111,8 +123,18 @@ migrations:
  */
 export function bundledAuthValuesYaml({ authHost, className = "traefik" }) {
   return `# Generated bundled auth values (lab)
+global:
+  openshift:
+    enabled: true
+    routes:
+      enabled: true
+      authHost: ${authHost}
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
+
 ingress:
-  enabled: true
+  enabled: false
   host: ${authHost}
   className: ${className}
   tls:
@@ -148,16 +170,26 @@ export function externalRepodyValuesYaml({
   const jwks =
     jwksUrl ?? "http://keycloak.repody.svc.cluster.local:8080/realms/repody/protocol/openid-connect/certs";
   const classLine = ingressClassName ? `\n  className: ${ingressClassName}` : "";
-  const modelLine = vlmServedModel ? `\n  vllmServedModel: ${vlmServedModel}` : "";
+  const modelLine = vlmServedModel ? `\n  llamacppServedModel: ${vlmServedModel}` : "";
 
   return `# Generated external client values (lab)
 global:
   deploymentProfile: external
   imagePullSecrets:
     - name: registry-pull-secret
+  openshift:
+    enabled: true
+    routes:
+      enabled: true
+      webHost: ${hosts.web}
+      apiHost: ${hosts.api}
+      filesHost: ${hosts.files}
+      tls:
+        termination: edge
+        insecureEdgeTerminationPolicy: Redirect
 
 ingress:
-  enabled: true
+  enabled: false
   host: ${hosts.web}
   apiHost: ${hosts.api}
   filesHost: ${hosts.files}${classLine}
@@ -211,7 +243,7 @@ config:
   oidcJwksUrl: ${jwks}
   keycloakAdminUrl: https://${hosts.auth}
   corsOrigins: '["https://${hosts.web}"]'
-  vllmBaseUrl: ${vlm}${modelLine}
+  llamacppBaseUrl: ${vlm}${modelLine}
 
 observability:
   otelEnabled: true

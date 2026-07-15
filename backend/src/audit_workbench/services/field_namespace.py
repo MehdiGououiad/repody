@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from audit_workbench.rules.types import rule_applies_to
+
 
 def doc_field_prefix(document_type: str, *, multi_document: bool) -> str:
     """Token prefix for cross-document rules (matches workflow UI)."""
@@ -73,11 +75,6 @@ def field_values_from_extractions(
     return values
 
 
-def _rule_applies_to(rule: dict) -> list[str]:
-    raw = rule.get("applies_to") or rule.get("appliesTo") or []
-    return [str(doc_id) for doc_id in raw if doc_id]
-
-
 def field_values_for_rule(
     rows: list[tuple[str, str, str | None]],
     rule: dict,
@@ -86,7 +83,7 @@ def field_values_for_rule(
     multi_document: bool,
 ) -> dict[str, str]:
     """
-    Build field namespace scoped to a rule's appliesTo documents.
+    Build field namespace scoped to a rule's applies_to documents.
 
     Intra rules on one document in a multi-document workflow must see bare field
     keys (e.g. total) even when the same key exists on other documents.
@@ -95,7 +92,7 @@ def field_values_for_rule(
         return field_values_from_extractions(rows, multi_document=False)
 
     scope = (rule.get("scope") or "intra").lower()
-    applies_to = _rule_applies_to(rule)
+    applies_to = rule_applies_to(rule)
 
     if scope == "cross" and len(applies_to) >= 2:
         allowed = {doc_types_by_id[doc_id] for doc_id in applies_to if doc_id in doc_types_by_id}

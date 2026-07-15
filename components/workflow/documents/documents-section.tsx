@@ -3,10 +3,10 @@
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
-import { documentModelsFromCatalog, useProcessingPathsCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { documentModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { cn, shortId } from "@/lib/utils";
-import type { DocumentDef, ValidationModeId } from "@/lib/types";
+import type { DocumentDef } from "@/lib/types";
 import { DocumentCard } from "./document-card";
 import { EMPTY_PROCESSING_OPTIONS, type ProcessingOptions } from "./processing-options";
 
@@ -20,38 +20,23 @@ export function DocumentsSection({
   onChange: (docs: DocumentDef[]) => void;
 }) {
   const t = useTranslations("workflows.builder");
-  const pathsQuery = useProcessingPathsCatalog();
   const catalogQuery = useUnifiedModelsCatalog();
 
   const processingOptions = useMemo((): ProcessingOptions => {
-    const loaded = pathsQuery.isFetched && catalogQuery.isFetched;
-    const error = pathsQuery.isError || catalogQuery.isError;
-    if (!pathsQuery.data || !catalogQuery.data) {
+    const loaded = catalogQuery.isFetched;
+    const error = catalogQuery.isError;
+    if (!catalogQuery.data) {
       return { ...EMPTY_PROCESSING_OPTIONS, loaded, error };
     }
-    const documentModels = documentModelsFromCatalog(catalogQuery.data);
     return {
-      paths: pathsQuery.data.paths,
-      validationModes: pathsQuery.data.validationModes,
-      defaultPath: pathsQuery.data.defaultPath,
-      defaultValidation:
-        (pathsQuery.data.defaultValidationMode as ValidationModeId) || "logic_only",
-      documentModelIds: documentModels,
-      defaultOcr: catalogQuery.data.defaultDocumentModel,
+      documentModelIds: documentModelsFromCatalog(catalogQuery.data),
+      defaultDocumentModel: catalogQuery.data.defaultDocumentModel,
       loaded: true,
       error: false,
     };
-  }, [
-    pathsQuery.data,
-    pathsQuery.isFetched,
-    pathsQuery.isError,
-    catalogQuery.data,
-    catalogQuery.isFetched,
-    catalogQuery.isError,
-  ]);
+  }, [catalogQuery.data, catalogQuery.isFetched, catalogQuery.isError]);
 
   const retryProcessingOptions = () => {
-    void pathsQuery.refetch();
     void catalogQuery.refetch();
   };
 
@@ -67,7 +52,7 @@ export function DocumentsSection({
         schema: [],
         extractionMode: "document_model",
         validationMode: "logic_only",
-        documentModelId: processingOptions.defaultOcr,
+        documentModelId: processingOptions.defaultDocumentModel,
       },
     ]);
 

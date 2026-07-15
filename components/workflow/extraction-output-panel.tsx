@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import type { RunDocumentExtractionMeta } from "@/lib/types/audit";
-import { OcrMarkdownPanel } from "@/components/workflow/ocr-markdown-panel";
+import { DocumentMarkdownPanel } from "@/components/workflow/document-markdown-panel";
 
 function formatJson(text: string): string {
   const trimmed = text.trim();
@@ -99,10 +99,10 @@ export function DocumentExtractionOutput({
   extraction: RunDocumentExtractionMeta;
   className?: string;
 }) {
-  if (extraction.markdownExtraction && extraction.ocrText) {
+  if (extraction.markdownExtraction && extraction.markdownText) {
     return (
-      <OcrMarkdownPanel
-        text={extraction.ocrText}
+      <DocumentMarkdownPanel
+        text={extraction.markdownText}
         readPathUsed={extraction.readPathUsed}
         className={className}
       />

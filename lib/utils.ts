@@ -53,7 +53,7 @@ export function shortId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
 
-/** Parse OCR/LLM amounts: `6000.00`, `6 000,00`, `1.234,56`, `1,234.56`, etc. */
+/** Parse extraction/LLM amounts: `6000.00`, `6 000,00`, `1.234,56`, `1,234.56`, etc. */
 export function parseNumericValue(raw: string): number | null {
   const text = raw.trim();
   if (!text || text === "—" || text === "-") return null;

@@ -185,20 +185,20 @@ stringData:
     return profile === "external" ? ["repody-auth", "repody"] : ["repody-data", "repody-auth", "repody"];
   }
 
-  function argocdEnv() {
-    return {
-      ...process.env,
-      ARGOCD_OPTS: process.env.ARGOCD_OPTS || "--port-forward-namespace argocd",
-    };
+  /** Core mode uses the Kubernetes API; port-forward ARGOCD_OPTS makes app sync hang. */
+  function argocdCoreEnv() {
+    const env = { ...process.env };
+    delete env.ARGOCD_OPTS;
+    return env;
   }
 
-  /** Prefer kubectl patch sync on Windows — argocd login --core often hangs there. */
   function useArgocdCli() {
     if (dryRun) return false;
     const mode = process.env.REPODY_ARGOCD_USE_CLI?.trim();
     if (mode === "1" || mode === "true") return true;
     if (mode === "0" || mode === "false") return false;
-    return process.platform !== "win32";
+    const bin = resolveExecutable("argocd");
+    return spawnSync(bin, ["version", "--client"], { encoding: "utf8", stdio: "pipe" }).status === 0;
   }
 
   /** Official sync: argocd login --core then argocd app sync (getting started §7). */
@@ -207,13 +207,13 @@ stringData:
     if (useArgocdCli()) {
       const bin = resolveExecutable("argocd");
       const hasCli = spawnSync(bin, ["version", "--client"], { encoding: "utf8", stdio: "pipe" }).status === 0;
-      if (!hasCli) fail("REPODY_ARGOCD_USE_CLI=1 but argocd CLI not found");
+      if (!hasCli) fail("argocd CLI not found (install argocd or set REPODY_ARGOCD_USE_CLI=0)");
       kubectl(["config", "set-context", "--current", `--namespace=${ARGO_NS}`], { quiet: true });
       const login = spawnSync(bin, ["login", "--core"], {
         encoding: "utf8",
         stdio: "pipe",
         shell: false,
-        env: argocdEnv(),
+        env: argocdCoreEnv(),
       });
       if (login.status !== 0) {
         fail(`argocd login --core failed: ${(login.stderr ?? login.stdout ?? "").trim()}`);
@@ -222,7 +222,7 @@ stringData:
         const r = spawnSync(
           bin,
           ["app", "sync", name, "--prune", "--timeout", "900"],
-          { encoding: "utf8", stdio: "inherit", shell: false, env: argocdEnv() },
+          { encoding: "utf8", stdio: "inherit", shell: false, env: argocdCoreEnv() },
         );
         if (r.status !== 0) fail(`argocd app sync ${name} failed`);
       }

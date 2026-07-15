@@ -22,11 +22,13 @@ Repody VLM local development uses NuExtract through the OpenAI-compatible llama-
 | **Processing path** | How a document is read (`document_model` = direct image-to-schema) |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
 | **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
-| **Worker pool `ocr`** | Taskiq worker that runs document-model extraction (GPU/CPU bound) |
+| **Worker pool `extract`** | Taskiq worker that runs document-model extraction (GPU/CPU bound) |
 | **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
 | **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Env name for default document model id (`repody:vlm`) |
 
 ## Request lifecycle
+
+Vue détaillée (FR, fichiers Mermaid éditables) : [docs/diagrams/](./docs/diagrams/README.md).
 
 ```mermaid
 sequenceDiagram
@@ -113,7 +115,7 @@ Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` →
 
 | Concern | Configuration |
 |---------|---------------|
-| Document extraction | `AUDIT_INFERENCE_MODE=vllm`, `AUDIT_VLLM_BASE_URL`, `AUDIT_VLLM_SERVED_MODEL` |
+| Document extraction | `AUDIT_INFERENCE_MODE=llamacpp`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
 | LLM rule validation | `get_inference_client()` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
 
 Document extraction and LLM rule validation use **separate** models and endpoints.
@@ -192,6 +194,7 @@ JWT roles map to permissions in `auth/rbac_policy.csv`. Routers use `require_per
 ## Further reading
 
 - [docs/README.md](./docs/README.md) — documentation index
+- [docs/PLATFORM-INVENTORY.md](./docs/PLATFORM-INVENTORY.md) — full platform inventory (features, security, prod, libs)
 - [docs/adr/001-taskiq-async-runs.md](./docs/adr/001-taskiq-async-runs.md)
 - [docs/adr/002-repody-vlm-dual-inference-runtimes.md](./docs/adr/002-repody-vlm-dual-inference-runtimes.md)
 - [docs/BACKEND.md](./docs/BACKEND.md) — backend layout and conventions

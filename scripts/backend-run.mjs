@@ -17,7 +17,7 @@ const uvArgs = ["run"];
 const commandArgs = [];
 for (const arg of rawArgs) {
   if (arg === "--dev") {
-    uvArgs.push("--extra", "dev");
+    uvArgs.push("--extra", "dev", "--extra", "otel");
   } else {
     commandArgs.push(arg);
   }

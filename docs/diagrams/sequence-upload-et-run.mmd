@@ -1,0 +1,93 @@
+%% Diagramme de séquence — upload, enqueue, extraction, règles, SSE (détail)
+%% Éditable : Mermaid sequenceDiagram
+%% Entrées : api/uploads.py · run_enqueue.py · run_dispatch.py · taskiq · run_processor.py · run_events.py
+
+sequenceDiagram
+  autonumber
+  actor U as Utilisateur
+  participant UI as Next.js UI
+  participant API as FastAPI
+  participant PG as PostgreSQL
+  participant S3 as MinIO
+  participant R as Redis Streams<br/>+ pub/sub SSE
+  participant W as Worker extract
+  participant VLM as NuExtract<br/>llama-server
+
+  %% Upload
+  rect rgb(245, 240, 230)
+    Note over U,S3: Upload présigné
+    U->>UI: Choisit fichier
+    UI->>API: POST /uploads/presign<br/>filename, size, mime
+    API->>API: Valide taille / MIME
+    API->>PG: record_upload_intent
+    API->>S3: presign_put runs/{id}/fichier
+    API-->>UI: url, storageKey, uploadId
+    UI->>S3: PUT binaire
+    S3-->>UI: 200 OK
+    UI->>API: POST /uploads/confirm
+    API->>S3: HeadObject / stat
+    API->>API: Sniff MIME réel
+    API->>PG: confirm_upload_intent
+    API-->>UI: binding confirmé
+  end
+
+  %% Enqueue
+  rect rgb(245, 230, 240)
+    Note over UI,R: Création run + outbox + Taskiq
+    UI->>API: POST /workflows/{id}/runs/json<br/>documentBindings + options
+    API->>API: resolve_run_enqueue_source<br/>test JWT vs API key
+    API->>API: Rate limit + admission capacité
+    API->>API: run_pool_classifier<br/>→ extract si PDF+document_model
+    API->>PG: INSERT Run queued<br/>+ RunDocument bindings
+    API->>PG: INSERT outbox dispatch
+    API-->>UI: 202 { runId }
+    API->>API: schedule_outbox_dispatch
+    API->>R: task.kiq process-audit-run<br/>queue repody:audit:extract
+    Note over PG,R: Outbox Postgres = rejeu durable<br/>si Redis momentanément indisponible
+  end
+
+  %% Worker extraction
+  rect rgb(255, 244, 224)
+    Note over R,VLM: Worker extract
+    R->>W: Message Taskiq ACK
+    W->>PG: Advisory lock + CAS<br/>queued → running
+    W->>R: PUBLISH progress running
+    W->>S3: GET objet storageKey
+    S3-->>W: bytes PDF/image
+    W->>W: DocumentBundle + render pages
+    W->>W: catalog parse_document_model<br/>repody:vlm
+    W->>VLM: chat.completions<br/>images + template schéma
+    VLM-->>W: content JSON champs
+    W->>W: parse_fields_json
+    W->>PG: Persist ExtractedField
+    W->>R: PUBLISH progress extraction
+  end
+
+  %% Règles
+  rect rgb(238, 246, 232)
+    Note over W,PG: Validation
+    W->>W: rules/runner validate_extracted
+    loop Chaque règle logic
+      W->>W: simpleeval sur champs
+    end
+    opt AUDIT_LLM_VALIDATION_ENABLED
+      W->>VLM: Modèle validation texte
+      VLM-->>W: pass/fail + motif
+    end
+    W->>PG: INSERT RuleResult
+    W->>PG: UPDATE Run done|failed<br/>overall_status durée
+    W->>R: PUBLISH terminal
+  end
+
+  %% UI follow
+  rect rgb(232, 244, 252)
+    Note over UI,API: Suivi UI
+    UI->>API: GET /runs/{id}/events
+    API->>R: SUBSCRIBE audit:run:progress:{id}
+    R-->>API: événements progress
+    API-->>UI: SSE data
+    UI->>API: GET /runs/{id}?full=true
+    API->>PG: Jointure run + docs + fields + rules
+    API-->>UI: Rapport complet
+    UI-->>U: Affichage audit
+  end

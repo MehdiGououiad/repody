@@ -23,7 +23,7 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/deploy/READM
 | `managed/` | CNPG, External Secrets examples |
 | `registry/` | GHCR and on-prem registry notes |
 | `scripts/` | Build, release, lab automation |
-| `scripts/lib/` | Shared modules (`cli`, `vault-eso`, `vault-bootstrap`, `bundled-values`, `lab-seed`, `lab-tls`, `migrations-job`, `lab-security`) |
+| `scripts/lib/` | Shared modules (`cli`, `vault-eso`, `vault-bootstrap`, `bundled-values`, `lab-seed`, `migrations-job`, `lab-security`) |
 
 ## Image registry convention
 
@@ -53,7 +53,7 @@ Helm `images.*.repository` = `{registry}/repody-backend` (not `{registry}/repody
 |--------|---------|
 | `build-images.mjs` | Build and push container images |
 | `release-supply-chain.mjs` | SBOM, cosign, promotion |
-| `gitops-promote-staging.mjs` | Bump staging image tags in GitOps values |
 | `openshift-client-test.mjs` | OpenShift client test lab (Harbor, Vault, Argo CD, OTEL) |
+| `local-dev.mjs` | Compose local stack (`pnpm dev:*`) |
 
-Shared helpers: `scripts/lib/cli.mjs`, `vault-eso.mjs`, `vault-bootstrap.mjs`, `bundled-values.mjs`, `lab-seed.mjs`, `lab-tls.mjs`, `migrations-job.mjs`.
+Shared helpers: `scripts/lib/cli.mjs`, `vault-eso.mjs`, `vault-bootstrap.mjs`, `bundled-values.mjs`, `lab-seed.mjs`, `migrations-job.mjs`.

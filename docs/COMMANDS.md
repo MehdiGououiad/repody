@@ -7,7 +7,7 @@ Deploy follows **official upstream docs** — see [docs/deploy/README.md](./depl
 | Command | When |
 |---------|------|
 | `pnpm dev:setup` | **Once** — copy env files, start Compose, migrate |
-| `pnpm dev:all` | **Daily** — full stack + API + UI + observability (use `-- --no-obs` to skip) |
+| `pnpm dev:all` | **Daily** — full stack + API + UI (add `-- --obs` for Grafana/Loki/Tempo/Bugsink) |
 | `pnpm dev` | Background only — Compose, workers, NuExtract (then exit) |
 | `pnpm dev:app` | Foreground API + UI (stack already running) |
 | `pnpm dev:status` | Health summary (API, UI, NuExtract, workers, Grafana, Loki, Bugsink) |
@@ -29,7 +29,7 @@ Granular (optional):
 | `pnpm dev:api` | FastAPI only (`REPODY_API_PORT`, default :8000; reload opt-in with `REPODY_DEV_API_RELOAD=1`) |
 | `pnpm ui` | Next.js only (:3000) |
 | `pnpm dev:worker` | Both Taskiq worker pools (Docker) |
-| `pnpm dev:worker:extract` | Document-model extraction pool only (formerly `dev:worker:ocr`) |
+| `pnpm dev:worker:extract` | Document-model extraction pool only |
 | `pnpm dev:worker:fast` | Logic-only pool only |
 | `pnpm llamacpp:serve` | NuExtract / llama-server (:8081) |
 | `pnpm llamacpp:verify` | Check inference endpoint |

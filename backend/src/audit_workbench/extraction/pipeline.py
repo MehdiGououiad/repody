@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import time
 from functools import lru_cache
 
@@ -8,10 +9,11 @@ import structlog
 
 from audit_workbench.extraction.base import (
     DocumentExtractor,
+    ExtractionIclExample,
     ExtractionMetadata,
     ExtractionResult,
     SchemaFieldSpec,
-    truncate_ocr_text,
+    truncate_markdown_text,
     truncate_text,
 )
 from audit_workbench.extraction.cache import (
@@ -27,6 +29,7 @@ from audit_workbench.extraction.document_modes import (
     LOGIC_VALIDATION,
     parse_read_path,
     read_path_used_label,
+    resolve_read_path_for_document,
     validation_mode_label,
 )
 from audit_workbench.extraction.gpu_cold_start import gpu_cold_start_likely
@@ -36,12 +39,22 @@ from audit_workbench.catalog.registry import (
     parse_document_model,
 )
 import audit_workbench.extraction.repody_vlm  # noqa: F401 — register catalog adapters
+from audit_workbench.extraction.nuextract_contract import extraction_inference_profile_key
 from audit_workbench.extraction.schema_fields import empty_fields_from_schema
 from audit_workbench.extraction.stub import StubDocumentExtractor
 from audit_workbench.observability.tracing import start_span
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
+
+
+def _icl_fingerprint(examples: list[ExtractionIclExample] | None) -> str:
+    if not examples:
+        return "0"
+    parts = [f"{ex.input.strip()}\x1f{ex.output.strip()}" for ex in examples if ex.input.strip()]
+    if not parts:
+        return "0"
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:8]
 
 
 @lru_cache
@@ -80,7 +93,7 @@ def _cached_result(
         cache_hit=True,
         fields_extracted=sum(1 for f in cached.fields if f.extracted),
         markdown_extraction=markdown_extraction,
-        ocr_text=truncate_ocr_text(cached.ocr_text) if markdown_extraction else None,
+        markdown_text=truncate_markdown_text(cached.markdown_text) if markdown_extraction else None,
         raw_text=truncate_text(cached.raw_text),
     )
     return cached
@@ -107,8 +120,9 @@ class PipelineExtractor(DocumentExtractor):
         validation_mode: str = LOGIC_VALIDATION,
         extraction_instructions: str = "",
         markdown_extraction: bool = False,
+        extraction_icl_examples: list[ExtractionIclExample] | None = None,
     ) -> ExtractionResult:
-        read_path = parse_read_path(extraction_mode)
+        read_path_config = parse_read_path(extraction_mode)
         val_mode = (
             validation_mode
             if validation_mode in (LOGIC_VALIDATION, "logic_and_llm")
@@ -123,16 +137,22 @@ class PipelineExtractor(DocumentExtractor):
         settings = self._settings
         model_id = normalize_model_id(document_model_id or settings.default_document_model_id)
         model_spec = parse_document_model(model_id)
+        read_path, read_path_used = resolve_read_path_for_document(extraction_mode)
+        if read_path.read == "document_model" and model_spec.read_path_id != read_path.id:
+            read_path = parse_read_path(model_spec.read_path_id)
+            read_path_used = read_path.id
         has_schema_fields = any(field.name.strip() for field in schema)
         if not has_schema_fields and not markdown_extraction:
             return ExtractionResult(
                 fields=empty_fields_from_schema(schema),
                 raw_text=None,
             )
-        if model_spec.read_path_id != read_path.id:
-            read_path = parse_read_path(model_spec.read_path_id)
+        cache_profile = extraction_inference_profile_key(settings=settings)
         cache_mode = (
-            f"read:{read_path.id}:val:{val_mode}:md:{'1' if markdown_extraction else '0'}"
+            f"cfg:{read_path_config.id}:used:{read_path_used}:val:{val_mode}:md:{'1' if markdown_extraction else '0'}"
+            f":{cache_profile}"
+            f":ins:{hashlib.sha256(extraction_instructions.encode()).hexdigest()[:8]}"
+            f":icl:{_icl_fingerprint(extraction_icl_examples)}"
         )
         schema_fp = schema_fingerprint(schema)
 
@@ -171,7 +191,7 @@ class PipelineExtractor(DocumentExtractor):
         if cached is not None:
             return _cached_result(
                 cached,
-                read_path_id=read_path.id,
+                read_path_id=read_path_config.id,
                 val_mode=val_mode,
                 model_id=model_id,
                 document_type=document_type,
@@ -207,20 +227,21 @@ class PipelineExtractor(DocumentExtractor):
                 document_type,
                 extraction_instructions=extraction_instructions,
                 markdown_extraction=markdown_extraction,
+                extraction_icl_examples=extraction_icl_examples,
             )
-            extract_ms = int((time.perf_counter() - te) * 1000)
             log.info(
                 "document_model_extracted",
                 model_id=model_spec.id,
                 runtime=model_spec.runtime,
                 runtime_model=model_spec.runtime_model,
-                ms=extract_ms,
+                ms=int((time.perf_counter() - te) * 1000),
             )
+            extract_ms = int((time.perf_counter() - te) * 1000)
 
         extraction_ms = int((time.perf_counter() - t0) * 1000)
-        used = result.read_path_used or read_path.id
+        used = result.read_path_used or read_path_used
         result.meta = ExtractionMetadata(
-            read_path_config=read_path.id,
+            read_path_config=read_path_config.id,
             read_path_used=used,
             read_path_label=read_path_used_label(used),
             validation_mode=val_mode,
@@ -231,16 +252,16 @@ class PipelineExtractor(DocumentExtractor):
             gpu_cold_start_likely=gpu_cold_start_likely(extraction_ms),
             fields_extracted=sum(1 for f in result.fields if f.extracted),
             markdown_extraction=markdown_extraction,
-            ocr_text=truncate_ocr_text(result.ocr_text) if markdown_extraction else None,
+            markdown_text=truncate_markdown_text(result.markdown_text) if markdown_extraction else None,
             raw_text=truncate_text(result.raw_text),
-            ocr_skipped=result.ocr_skipped,
             pages_rendered=result.pages_rendered,
             pages_sent=result.pages_sent,
             pages_dropped=result.pages_dropped,
         )
         log.info(
             "pipeline_extracted",
-            path=read_path.id,
+            path=read_path_config.id,
+            path_used=used,
             model=model_id,
             document_type=document_type,
             ms=extraction_ms,

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
+from audit_workbench.extraction.document_modes import parse_read_path
 from audit_workbench.services.run_pool_classifier import (
     classify_bindings_for_workflow,
     classify_run_documents,
@@ -15,9 +18,20 @@ def test_needs_extract_pool_document_model():
     assert needs_extract_pool("document_model") is True
 
 
-def test_needs_extract_pool_unknown_modes_default_to_document_model():
-    for mode in ("unknown", "obsolete"):
-        assert needs_extract_pool(mode) is True
+def test_needs_extract_pool_empty_defaults_to_document_model():
+    assert needs_extract_pool(None) is True
+    assert needs_extract_pool("") is True
+
+
+def test_needs_extract_pool_unknown_modes_raise():
+    for mode in ("auto", "pdf_text", "vlm", "vision", "unknown", "obsolete"):
+        with pytest.raises(ValueError, match="Unknown read path"):
+            needs_extract_pool(mode)
+
+
+def test_parse_read_path_document_model():
+    assert parse_read_path("document_model").id == "document_model"
+    assert parse_read_path("document_model").read == "document_model"
 
 
 def test_classify_no_bindings_is_fast():

@@ -49,26 +49,34 @@ export async function watchRunEvents(
 
   return new Promise((resolve) => {
     let settled = false;
+    let eventSource: EventSource | null = null;
+    let controller: AbortController | null = null;
+
     const finish = (outcome: "done" | "failed" | "fallback") => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+      if (controller) {
+        controller.abort();
+        controller = null;
+      }
       resolve(outcome);
     };
 
     const timer = setTimeout(() => finish("fallback"), maxMs);
 
     if (!hasCustomHeaders && typeof EventSource !== "undefined") {
-      const es = new EventSource(url);
-      es.onmessage = (event) => handleEvent(event.data, onProgress, finish);
-      es.onerror = () => {
-        es.close();
-        finish("fallback");
-      };
+      eventSource = new EventSource(url);
+      eventSource.onmessage = (event) => handleEvent(event.data, onProgress, finish);
+      eventSource.onerror = () => finish("fallback");
       return;
     }
 
-    const controller = new AbortController();
+    controller = new AbortController();
     void fetchEventSource(url, {
       signal: controller.signal,
       headers: options?.headers as Record<string, string> | undefined,
@@ -76,8 +84,8 @@ export async function watchRunEvents(
         handleEvent(ev.data, onProgress, finish);
       },
       onerror() {
-        controller.abort();
         finish("fallback");
+        throw new Error("run events stream failed");
       },
     }).catch(() => finish("fallback"));
   });

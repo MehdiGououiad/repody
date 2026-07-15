@@ -20,8 +20,8 @@ async def test_list_catalog_marks_model_available_when_installed(monkeypatch):
         from audit_workbench.settings import get_settings
 
         settings = settings or get_settings()
-        model = settings.repody_vlm_model.lower()
-        return {"docker_model_runner": {model}, "vllm": set()}
+        model = settings.llamacpp_served_model.lower()
+        return {"llamacpp": {model}}
 
     monkeypatch.setattr(
         catalog_probes,
@@ -37,9 +37,9 @@ async def test_list_catalog_marks_model_available_when_installed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_list_catalog_skips_remote_probe(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "vllm")
+    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
     monkeypatch.setenv(
-        "AUDIT_VLLM_BASE_URL",
+        "AUDIT_LLAMACPP_BASE_URL",
         "https://gpu.example.com/v1",
     )
     monkeypatch.setenv("AUDIT_GPU_LIVE_PROBE", "false")
@@ -49,7 +49,7 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
 
     async def fail_if_called(*args, **kwargs):
         raise AssertionError(
-            "installed_runtime_models should not call remote vLLM when probe disabled"
+            "installed_runtime_models should not call remote inference when probe disabled"
         )
 
     from audit_workbench.catalog import probes as catalog_probes
@@ -68,13 +68,13 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
     get_settings.cache_clear()
 
 
-def test_availability_note_for_missing_vllm_model(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "vllm")
+def test_availability_note_for_missing_llamacpp_model(monkeypatch):
+    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
     from audit_workbench.settings import get_settings
 
     get_settings.cache_clear()
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    available, note = availability_for_spec(spec, installed_by_runtime={"vllm": set()})
+    available, note = availability_for_spec(spec, installed_by_runtime={"llamacpp": set()})
     assert available is False
     assert note is not None
     get_settings.cache_clear()

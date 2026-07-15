@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Poll OCR worker logs for Repody VLM warmup completion (Kubernetes).
+ * Poll extract worker logs for Repody VLM warmup completion (Kubernetes).
  */
 import { spawnSync } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
@@ -30,16 +30,16 @@ function workerLogs() {
 
 async function main() {
   const deadline = Date.now() + TIMEOUT_MS;
-  process.stderr.write("Waiting for OCR worker VLM warmup...");
+  process.stderr.write("Waiting for extract worker VLM warmup...");
 
   while (Date.now() < deadline) {
     const logs = workerLogs();
     if (logs.includes(DONE_MARKER)) {
-      process.stderr.write("\nok: OCR worker warmup complete.\n");
+      process.stderr.write("\nok: extract worker warmup complete.\n");
       return;
     }
     if (FAILURE_MARKERS.some((m) => logs.includes(m))) {
-      process.stderr.write("\nerror: OCR worker warmup failed (see worker logs).\n");
+      process.stderr.write("\nerror: extract worker warmup failed (see worker logs).\n");
       process.exit(1);
     }
     await sleep(INTERVAL_MS);
@@ -47,8 +47,8 @@ async function main() {
   }
 
   process.stderr.write(
-    "\nerror: Timed out waiting for OCR worker warmup.\n" +
-      "  Configure external inference with AUDIT_VLLM_BASE_URL or check worker logs.\n",
+    "\nerror: Timed out waiting for extract worker warmup.\n" +
+      "  Configure external inference with AUDIT_LLAMACPP_BASE_URL or check worker logs.\n",
   );
   process.exit(1);
 }

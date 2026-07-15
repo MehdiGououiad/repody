@@ -11,9 +11,10 @@ from audit_workbench.catalog.registry import parse_document_model
 from audit_workbench.extraction.base import SchemaFieldSpec
 from audit_workbench.extraction.document_bundle import load_document_bundle
 from audit_workbench.extraction.repody_vlm_pages import _encode_pages_for_vlm, _vlm_pages, cap_vlm_pages
+from audit_workbench.extraction.nuextract_contract import NUEXTRACT_MAX_PAGES_PER_REQUEST
 from audit_workbench.extraction.repody_vlm_payloads import _structured_payload
 from audit_workbench.inference.openai_compat import post_chat_completion
-from audit_workbench.inference.runtime import openai_base_url_for_runtime
+from audit_workbench.inference.runtime import llamacpp_base_url
 from audit_workbench.settings import Settings, get_settings
 
 log = structlog.get_logger()
@@ -113,13 +114,13 @@ async def warmup_repody_vlm() -> str:
         return "skipped"
 
     spec = parse_document_model(None)
-    base_url = openai_base_url_for_runtime(spec.runtime, settings)
+    base_url = llamacpp_base_url(settings)
     bundle = load_document_bundle(
         fixture_path.read_bytes(),
         _mime_type_for_path(fixture_path),
     )
-    all_pages, pages_rendered = _vlm_pages(bundle, settings)
-    max_pages = min(settings.ocr_max_pages, settings.repody_vlm_max_pages_per_request)
+    all_pages, pages_rendered = _vlm_pages(bundle)
+    max_pages = NUEXTRACT_MAX_PAGES_PER_REQUEST
     pages, dropped = cap_vlm_pages(all_pages, max_pages=max_pages)
     content = await asyncio.to_thread(_encode_pages_for_vlm, pages)
 
@@ -130,7 +131,6 @@ async def warmup_repody_vlm() -> str:
                 content=content,
                 schema=list(schema),
                 extraction_instructions="",
-                settings=settings,
             )
             started = time.perf_counter()
             data = await post_chat_completion(

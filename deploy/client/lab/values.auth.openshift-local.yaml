@@ -1,15 +1,15 @@
-# OpenShift Local — in-cluster Keycloak + standard Ingress (lab IdP).
+# OpenShift Local — Keycloak via OpenShift Route (lab IdP). Hosts filled in *.promoted.yaml.
 
 global:
   openshift:
     enabled: true
     routes:
-      enabled: false
+      enabled: true
 
 gatewayConsumerNamespace: repody
 
 ingress:
-  enabled: true
+  enabled: false
   className: ""
   annotations:
     route.openshift.io/termination: edge

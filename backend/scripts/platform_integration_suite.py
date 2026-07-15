@@ -340,8 +340,8 @@ async def _check_health(client: httpx.AsyncClient) -> dict:
     body = res.json()
     if body.get("status") != "ok":
         raise AssertionError(body)
-    probe = body.get("modelRunner")
-    # When AUDIT_HEALTHZ_PROBE_INFERENCE=false, modelRunner is omitted (no GPU ping).
+    probe = body.get("llamacpp")
+    # When AUDIT_HEALTHZ_PROBE_INFERENCE=false, llamacpp is omitted (no inference ping).
     if probe is not None and probe is not True:
         raise AssertionError("Inference backend not reachable")
     return body
@@ -385,7 +385,7 @@ async def _check_upload_capabilities(client: httpx.AsyncClient) -> dict:
 
 
 async def _check_diagnostics(client: httpx.AsyncClient) -> dict:
-    res = await client.get("/v1/diagnostics/ocr")
+    res = await client.get("/v1/diagnostics/document-model")
     res.raise_for_status()
     body = res.json()
     if not body.get("ok"):

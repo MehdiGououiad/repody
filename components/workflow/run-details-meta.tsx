@@ -63,9 +63,6 @@ export function DocumentExtractionMeta({
       )}
       <span className="inline-flex items-center gap-1 rounded-full bg-accent-blue/10 text-accent-blue px-2 py-0.5 font-medium">
         {extraction.readPathLabel}
-        {extraction.readPathUsed !== extraction.readPathConfig && (
-          <span className="opacity-70">(auto → {extraction.readPathUsed})</span>
-        )}
       </span>
       <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5">
         <ShieldCheck className="h-3 w-3" />
@@ -109,7 +106,7 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
   const hasOutput = result.documents.some(
     (d) =>
       d.extraction &&
-      ((d.extraction.markdownExtraction && d.extraction.ocrText) || d.extraction.rawText)
+      ((d.extraction.markdownExtraction && d.extraction.markdownText) || d.extraction.rawText)
   );
 
   return (
@@ -121,7 +118,7 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
             .filter(
               (d) =>
                 d.extraction &&
-                ((d.extraction.markdownExtraction && d.extraction.ocrText) ||
+                ((d.extraction.markdownExtraction && d.extraction.markdownText) ||
                   d.extraction.rawText)
             )
             .map((doc) => (

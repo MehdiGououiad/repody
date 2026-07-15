@@ -1,4 +1,4 @@
-"""Structured LLM parsing via Docker Model Runner with Pydantic validation."""
+"""Structured LLM parsing via OpenAI-compatible inference with Pydantic validation."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from typing import Any, TypeVar, cast
 import structlog
 from pydantic import BaseModel, ValidationError
 
+from audit_workbench.inference.runtime import openai_api_key_for_base_url, llamacpp_base_url
 from audit_workbench.inference.validation_model import resolve_llm_validation_model
 from audit_workbench.settings import get_settings
 
@@ -45,9 +46,10 @@ def _get_instructor_client() -> Any:
         from openai import AsyncOpenAI
 
         settings = get_settings()
+        base_url = llamacpp_base_url(settings)
         oai = AsyncOpenAI(
-            base_url=settings.docker_model_runner_base_url,
-            api_key="docker-model-runner",
+            base_url=base_url,
+            api_key=openai_api_key_for_base_url(base_url, settings),
             timeout=60.0,
         )
         _instructor_client = instructor.from_openai(oai, mode=instructor.Mode.JSON)
@@ -119,7 +121,7 @@ async def chat_structured(
     use_json_schema: bool = True,
 ) -> T:
     """
-    Request structured JSON from Docker Model Runner.
+    Request structured JSON from the inference endpoint.
 
     Uses JSON-schema constrained decoding when supported, then Pydantic validation.
     Falls back to json_object mode and instructor when parsing fails.

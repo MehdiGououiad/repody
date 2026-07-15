@@ -1,6 +1,6 @@
 /*
   Brand theme layer — edit these tokens to re-skin the app.
-  Preset source of truth (TS): lib/theme/presets/bnp-paribas.ts
+  Brand tokens for Repody (CSS is the source of truth).
   Future user theming: override these CSS variables at runtime (e.g. from settings).
 */
 :root {

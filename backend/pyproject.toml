@@ -12,42 +12,34 @@ dependencies = [
   "python-multipart>=0.0.20",
   "sse-starlette>=2.3.3",
   "asgi-correlation-id>=4.3.4",
-
   # Database
   "sqlalchemy[asyncio]>=2.0.51",
   "asyncpg>=0.30.0",
   "alembic>=1.15.0",
-
   # Queue + cache
   "taskiq>=0.12.0",
   "taskiq-redis>=1.2.0",
   "redis>=5.2.0",
   "limits[async-redis]>=4.4.1",
-
   # Structured LLM
   "instructor>=1.15.3",
   "openai>=1.68.0",
-
   # HTTP + storage
   "httpx>=0.28.0",
   "boto3>=1.43.30",
   "filetype>=1.2.0",
-
   # Rules
   "simpleeval>=1.0.3",
-
   # Auth (Keycloak JWT + Casbin RBAC)
   "pyjwt[crypto]>=2.10.0",
   "cryptography>=44.0.0",
   "casbin>=1.36.0",
-
   # Observability + reliability
   "structlog>=25.1.0",
   "sentry-sdk[fastapi]>=2.20.0",
-
   # Document preprocessing
   "pillow>=11.1.0",
-  "pymupdf>=1.25.0",
+  "pymupdf>=1.28.0",
 ]
 
 [project.optional-dependencies]
@@ -114,5 +106,4 @@ markers = [
   "live: requires running API at E2E_API_URL (default http://localhost:8000)",
   "e2e_facture: Facture.pdf path tests (text / llm / optional vlm)",
   "slow: full document extraction run (Facture PDF pipeline)",
-  "vlm: LightOn vision path — slow, opt-in with RUN_VLM_E2E=1",
 ]

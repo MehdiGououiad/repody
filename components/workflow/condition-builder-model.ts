@@ -27,6 +27,7 @@ export type ConditionFieldOption = {
   label: string;
   token: string;
   templateType?: string;
+  tableParent?: string;
 };
 
 export function newCondition(): RuleCondition {

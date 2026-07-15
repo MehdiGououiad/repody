@@ -302,7 +302,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkflowSchema"
+                "$ref": "#/components/schemas/WorkflowSchema-Input"
               }
             }
           }
@@ -1608,14 +1608,14 @@
         }
       }
     },
-    "/v1/diagnostics/ocr": {
+    "/v1/diagnostics/document-model": {
       "get": {
         "tags": [
           "platform"
         ],
-        "summary": "Ocr Diagnostic",
-        "description": "Document model runtime status (Docker Model Runner or vLLM).",
-        "operationId": "ocr_diagnostic_v1_diagnostics_ocr_get",
+        "summary": "Document Model Diagnostic",
+        "description": "Document model runtime status (llama-server OpenAI API).",
+        "operationId": "document_model_diagnostic_v1_diagnostics_document_model_get",
         "parameters": [
           {
             "name": "run_infer",
@@ -2638,17 +2638,6 @@
             ],
             "title": "Ruleaccuracy"
           },
-          "ocrCompare": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocrcompare"
-          },
           "judgeQuality": {
             "anyOf": [
               {
@@ -2670,17 +2659,6 @@
               }
             ],
             "title": "Rawtextchars"
-          },
-          "ocrTextChars": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocrtextchars"
           },
           "textPreview": {
             "anyOf": [
@@ -2756,17 +2734,6 @@
               }
             ],
             "title": "Medianwallms"
-          },
-          "ocrCompareRuns": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocrcompareruns"
           },
           "medianRawTextChars": {
             "anyOf": [
@@ -3183,7 +3150,7 @@
           },
           "workflows": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowSchema"
+              "$ref": "#/components/schemas/WorkflowSchema-Output"
             },
             "type": "array",
             "title": "Workflows"
@@ -3241,7 +3208,7 @@
         ],
         "title": "DeploymentNote"
       },
-      "DocumentDefSchema": {
+      "DocumentDefSchema-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -3278,7 +3245,7 @@
           },
           "schema": {
             "items": {
-              "$ref": "#/components/schemas/SchemaFieldSchema"
+              "$ref": "#/components/schemas/SchemaFieldSchema-Input"
             },
             "type": "array",
             "title": "Schema"
@@ -3293,6 +3260,82 @@
             "title": "Markdownextraction",
             "description": "Run NuExtract document-to-Markdown in parallel with field extraction.",
             "default": false
+          },
+          "extractionIclExamples": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractionIclExampleSchema"
+            },
+            "type": "array",
+            "title": "Extractioniclexamples",
+            "description": "NuExtract in-context extraction examples (developer message pairs)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "DocumentDefSchema"
+      },
+      "DocumentDefSchema-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype",
+            "default": ""
+          },
+          "extractionMode": {
+            "type": "string",
+            "title": "Extractionmode",
+            "description": "Read path id from GET /processing-paths (document_model).",
+            "default": "document_model"
+          },
+          "validationMode": {
+            "type": "string",
+            "title": "Validationmode",
+            "description": "logic_only",
+            "default": "logic_only"
+          },
+          "documentModelId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documentmodelid",
+            "default": "repody:vlm"
+          },
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaFieldSchema-Output"
+            },
+            "type": "array",
+            "title": "Schema"
+          },
+          "extractionInstructions": {
+            "type": "string",
+            "title": "Extractioninstructions",
+            "default": ""
+          },
+          "markdownExtraction": {
+            "type": "boolean",
+            "title": "Markdownextraction",
+            "description": "Run NuExtract document-to-Markdown in parallel with field extraction.",
+            "default": false
+          },
+          "extractionIclExamples": {
+            "items": {
+              "$ref": "#/components/schemas/ExtractionIclExampleSchema"
+            },
+            "type": "array",
+            "title": "Extractioniclexamples",
+            "description": "NuExtract in-context extraction examples (developer message pairs)."
           }
         },
         "type": "object",
@@ -3470,7 +3513,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/DocumentDefSchema"
+                  "$ref": "#/components/schemas/DocumentDefSchema-Input"
                 },
                 "type": "array"
               },
@@ -3676,6 +3719,22 @@
         ],
         "title": "DryRunRuleResult"
       },
+      "ExtractionIclExampleSchema": {
+        "properties": {
+          "input": {
+            "type": "string",
+            "title": "Input",
+            "default": ""
+          },
+          "output": {
+            "type": "string",
+            "title": "Output",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ExtractionIclExampleSchema"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3764,7 +3823,7 @@
             "type": "string",
             "title": "Inference"
           },
-          "modelRunner": {
+          "llamacpp": {
             "anyOf": [
               {
                 "type": "boolean"
@@ -3773,18 +3832,7 @@
                 "type": "null"
               }
             ],
-            "title": "Modelrunner"
-          },
-          "vllm": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vllm"
+            "title": "Llamacpp"
           },
           "storageBackend": {
             "type": "string",
@@ -3885,7 +3933,6 @@
           "redisOk",
           "extractor",
           "inference",
-          "modelRunner",
           "storageBackend",
           "directUploadEnabled",
           "cacheEnabled",
@@ -4559,9 +4606,10 @@
             "type": "integer",
             "title": "Maxuploadbytes"
           },
-          "ocrMaxPages": {
+          "nuextractMaxPagesPerRequest": {
             "type": "integer",
-            "title": "Ocrmaxpages"
+            "title": "Nuextractmaxpagesperrequest",
+            "default": 6
           },
           "taskTimeoutMinutes": {
             "type": "integer",
@@ -4571,7 +4619,6 @@
         "type": "object",
         "required": [
           "maxUploadBytes",
-          "ocrMaxPages",
           "taskTimeoutMinutes"
         ],
         "title": "OperatorLimitsSchema"
@@ -4709,17 +4756,14 @@
             "type": "array",
             "title": "Documentmodels"
           },
-          "ocrMaxPages": {
+          "nuextractMaxPagesPerRequest": {
             "type": "integer",
-            "title": "Ocrmaxpages"
+            "title": "Nuextractmaxpagesperrequest",
+            "default": 6
           },
-          "dockerModelRunnerBaseUrl": {
+          "llamacppBaseUrl": {
             "type": "string",
-            "title": "Dockermodelrunnerbaseurl"
-          },
-          "vllmBaseUrl": {
-            "type": "string",
-            "title": "Vllmbaseurl"
+            "title": "Llamacppbaseurl"
           },
           "maxUploadBytes": {
             "type": "integer",
@@ -4787,9 +4831,7 @@
           "defaultDocumentModelId",
           "defaultReadPath",
           "documentModels",
-          "ocrMaxPages",
-          "dockerModelRunnerBaseUrl",
-          "vllmBaseUrl",
+          "llamacppBaseUrl",
           "maxUploadBytes",
           "maxUploadFiles",
           "staleRunTimeoutMinutes",
@@ -4983,17 +5025,6 @@
           "showDocumentModel": {
             "type": "boolean",
             "title": "Showdocumentmodel"
-          },
-          "ocrEngine": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Ocrengine"
           }
         },
         "type": "object",
@@ -5497,17 +5528,12 @@
             "title": "Gpucoldstartlikely",
             "default": false
           },
-          "ocrSkipped": {
-            "type": "boolean",
-            "title": "Ocrskipped",
-            "default": false
-          },
           "fieldsExtracted": {
             "type": "integer",
             "title": "Fieldsextracted",
             "default": 0
           },
-          "ocrText": {
+          "markdownText": {
             "anyOf": [
               {
                 "type": "string"
@@ -5516,7 +5542,7 @@
                 "type": "null"
               }
             ],
-            "title": "Ocrtext"
+            "title": "Markdowntext"
           },
           "rawText": {
             "anyOf": [
@@ -5784,7 +5810,7 @@
         "properties": {
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema"
+              "$ref": "#/components/schemas/DocumentDefSchema-Input"
             },
             "type": "array",
             "title": "Documents",
@@ -5842,7 +5868,7 @@
         ],
         "title": "RunSummary"
       },
-      "SchemaFieldSchema": {
+      "SchemaFieldSchema-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -5861,6 +5887,62 @@
             "type": "string",
             "title": "Templatetype",
             "default": "verbatim-string"
+          },
+          "enumValues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enumvalues"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaFieldSchema-Input"
+            },
+            "type": "array",
+            "title": "Children"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "SchemaFieldSchema"
+      },
+      "SchemaFieldSchema-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "templateType": {
+            "type": "string",
+            "title": "Templatetype",
+            "default": "verbatim-string"
+          },
+          "enumValues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Enumvalues"
+          },
+          "children": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaFieldSchema-Output"
+            },
+            "type": "array",
+            "title": "Children"
           }
         },
         "type": "object",
@@ -6091,7 +6173,7 @@
         "properties": {
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema"
+              "$ref": "#/components/schemas/DocumentDefSchema-Input"
             },
             "type": "array",
             "title": "Documents"
@@ -6274,7 +6356,7 @@
         "properties": {
           "workflows": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowSchema"
+              "$ref": "#/components/schemas/WorkflowSchema-Output"
             },
             "type": "array",
             "title": "Workflows"
@@ -6289,7 +6371,7 @@
       "WorkflowResponse": {
         "properties": {
           "workflow": {
-            "$ref": "#/components/schemas/WorkflowSchema"
+            "$ref": "#/components/schemas/WorkflowSchema-Output"
           }
         },
         "type": "object",
@@ -6370,7 +6452,7 @@
         ],
         "title": "WorkflowRuleSchema"
       },
-      "WorkflowSchema": {
+      "WorkflowSchema-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -6418,7 +6500,122 @@
           },
           "documents": {
             "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema"
+              "$ref": "#/components/schemas/DocumentDefSchema-Input"
+            },
+            "type": "array",
+            "title": "Documents",
+            "default": []
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowRuleSchema"
+            },
+            "type": "array",
+            "title": "Rules",
+            "default": []
+          },
+          "deployedAt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deployedat"
+          },
+          "apiKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikey",
+            "description": "Plaintext key \u2014 returned only once on deploy."
+          },
+          "apiKeyHint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apikeyhint",
+            "description": "Masked hint for deployed workflows."
+          },
+          "apiStats": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorkflowApiStatsSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "WorkflowSchema"
+      },
+      "WorkflowSchema-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "default": "draft"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner",
+            "default": "Me"
+          },
+          "lastRun": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastrun"
+          },
+          "successRate": {
+            "type": "number",
+            "title": "Successrate",
+            "default": 0.0
+          },
+          "totalRuns": {
+            "type": "integer",
+            "title": "Totalruns",
+            "default": 0
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDefSchema-Output"
             },
             "type": "array",
             "title": "Documents",

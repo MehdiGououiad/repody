@@ -124,7 +124,7 @@ export function RunProgressSteps({
     queueStep != null &&
     (queueStep.status === "active" || queueStep.status === "pending");
 
-  const serverlessGpu = inferenceMode === "vllm";
+  const serverlessGpu = inferenceMode === "llamacpp";
   const extractStepActive =
     activeStep?.mode === "document_model" && activeStep.status === "active";
   const coldStartContext =

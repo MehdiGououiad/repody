@@ -40,7 +40,8 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
 
   const sessionError = session?.error;
   const accessToken = session?.accessToken;
-  const isPublic = PUBLIC_PATHS.has(pathname);
+  // Empty pathname = pre-hydration snapshot from useClientPathname — do not gate.
+  const isPublic = !pathname || PUBLIC_PATHS.has(pathname);
   const sessionValid = isSessionValid(session);
 
   useEffect(() => {

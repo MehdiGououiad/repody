@@ -314,7 +314,7 @@ gatewayApi:
 secrets:
   authSecret: ""
   keycloakClientSecret: ""
-  vllmApiKey: ""
+  llamacppApiKey: ""
   create: false
   existingSecret: repody-runtime-secrets
 
@@ -328,22 +328,14 @@ config:
   keycloakAdminPassword: ""
   oidcAudience: repody-api
   keycloakClientId: repody-web
-  inferenceMode: vllm
+  inferenceMode: llamacpp
   # External OpenAI-compatible document-model endpoint. This chart does not run inference.
-  vllmBaseUrl: https://vlm.example.com/v1
-  vllmServedModel: numind/NuExtract3
+  llamacppBaseUrl: https://vlm.example.com/v1
+  # Must match llama-server --alias / /v1/models id (local: NuExtract3-Q4_K_M).
+  llamacppServedModel: nuextract3-q4_k_m
   extractor: pipeline
-  dockerModelRunnerBaseUrl: ""
   defaultDocumentModelId: repody:vlm
   repodyVlmEnabled: true
-  repodyVlmModel: repody/repody-vlm:q4_k_m-16k
-  repodyVlmMaxTokens: 512
-  repodyVlmMaxEdgePx: ""
-  repodyVlmPdfDpi: 170
-  repodyVlmMaxPagesPerRequest: 4
-  repodyVlmMarkdownMaxTokens: 8192
-  repodyVlmEnableThinking: false
-  repodyVlmJpegQuality: 95
   repodyVlmTimeoutSeconds: 180
   # Hard cap: audit tasks must finish within 3 minutes (see docs/deploy/PROD-OBSERVABILITY.md)
   workerTaskTimeoutMinutes: 3
@@ -353,7 +345,6 @@ config:
   dbPoolSize: 5
   dbMaxOverflow: 10
   redisMaxConnections: 20
-  ocrMaxPages: 4
   corsOrigins: '["https://app.example.com"]'
   logJson: true
   directUploadEnabled: true
@@ -371,9 +362,6 @@ config:
   repodyVlmMarkdownOnExtract: true
   gpuLiveProbe: false
   healthzProbeInference: false
-  # CPU-side extraction parallelism (vllm mode defaults parallel when unset).
-  parallelDocExtraction: ""
-  parallelStorageFetch: true
 
 observability:
   bugsinkDsn: ""

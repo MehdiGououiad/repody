@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from pydantic import AliasChoices, Field
+from pydantic import Field
 
 
 class AuthSettingsFields:
@@ -14,9 +14,8 @@ class AuthSettingsFields:
         default=None,
         description="OIDC issuer URL, e.g. http://keycloak:8080/realms/repody",
     )
-    oidc_issuer_aliases_env: str = Field(
+    oidc_issuer_aliases: str = Field(
         default="",
-        validation_alias=AliasChoices("OIDC_ISSUER_ALIASES"),
         description="Comma-separated or JSON list of extra accepted JWT issuers.",
     )
     oidc_audience: str | None = Field(
@@ -34,40 +33,30 @@ class AuthSettingsFields:
 
     keycloak_admin_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_URL", "KEYCLOAK_ADMIN_URL"),
         description="Keycloak base URL for Admin REST API (e.g. http://keycloak:8080).",
     )
     keycloak_admin_user: str = Field(
         default="admin",
-        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_USER", "KEYCLOAK_ADMIN_USER"),
+        description="Keycloak admin username for Admin REST API.",
     )
     keycloak_admin_password: str = Field(
         default="admin",
-        validation_alias=AliasChoices("AUDIT_KEYCLOAK_ADMIN_PASSWORD", "KEYCLOAK_ADMIN_PASSWORD"),
+        description="Keycloak admin password for Admin REST API.",
     )
     keycloak_realm: str = Field(
         default="repody",
-        validation_alias=AliasChoices("AUDIT_KEYCLOAK_REALM", "KEYCLOAK_REALM"),
+        description="Keycloak realm name.",
     )
     keycloak_admin_console_url: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "AUDIT_KEYCLOAK_ADMIN_CONSOLE_URL",
-            "KEYCLOAK_ADMIN_CONSOLE_URL",
-        ),
         description="Browser URL for the Keycloak admin console.",
     )
     keycloak_oauth_client_id: str | None = Field(
         default=None,
-        validation_alias=AliasChoices("AUDIT_KEYCLOAK_CLIENT_ID", "AUTH_KEYCLOAK_ID"),
         description="OAuth client id for operator benchmark password-grant tokens.",
     )
     keycloak_oauth_client_secret: str | None = Field(
         default=None,
-        validation_alias=AliasChoices(
-            "AUDIT_KEYCLOAK_CLIENT_SECRET",
-            "AUTH_KEYCLOAK_CLIENT_SECRET",
-        ),
         description="OAuth client secret for operator benchmark password-grant tokens.",
     )
     operator_benchmark_bearer_token: str | None = Field(
@@ -84,7 +73,7 @@ class AuthSettingsFields:
     )
 
     def accepted_oidc_issuer_aliases(self) -> list[str]:
-        return self._parse_oidc_issuer_aliases(self.oidc_issuer_aliases_env)
+        return self._parse_oidc_issuer_aliases(self.oidc_issuer_aliases)
 
     @staticmethod
     def _parse_oidc_issuer_aliases(value: object) -> list[str]:

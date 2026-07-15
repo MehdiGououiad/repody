@@ -5,7 +5,6 @@ from typing import Any
 
 from audit_workbench.extraction.document_bundle import DocumentBundle
 from audit_workbench.extraction.document_render import repody_vlm_pages as _render_repody_vlm_pages
-from audit_workbench.settings import Settings
 
 type VlmPage = tuple[bytes, str]
 
@@ -19,8 +18,8 @@ def cap_vlm_pages(pages: list[bytes], *, max_pages: int) -> tuple[list[bytes], i
     return pages[:max_pages], len(pages) - max_pages
 
 
-def _vlm_pages(bundle: DocumentBundle, settings: Settings) -> tuple[list[VlmPage], int]:
-    return _render_repody_vlm_pages(bundle, settings)
+def _vlm_pages(bundle: DocumentBundle) -> tuple[list[VlmPage], int]:
+    return _render_repody_vlm_pages(bundle)
 
 
 def _encode_pages_for_vlm(pages: list[VlmPage]) -> list[dict[str, Any]]:

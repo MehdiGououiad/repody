@@ -1,0 +1,68 @@
+%% Couches backend + contextes bornés Repody
+%% Éditable : Mermaid flowchart
+%% Doc : CONTEXT.md · docs/BACKEND.md · ADR 003
+
+flowchart TB
+  subgraph Presentation["Couche présentation"]
+    Next["Next.js App Router<br/>app/ · components/"]
+    Proxy["proxy.ts<br/>Auth.js + Bearer vers /api/v1"]
+    APIRouters["FastAPI routers<br/>api/workflows · runs · uploads<br/>platform · operator"]
+  end
+
+  subgraph Application["Couche application / services"]
+    WFSvc["services/workflow/<br/>CRUD · deploy · API key"]
+    RunEnq["services/run_enqueue.py<br/>admission · create Run"]
+    Outbox["services/dispatch_outbox.py<br/>outbox Postgres"]
+    Dispatch["services/run_dispatch.py<br/>Taskiq kiq"]
+    RunProc["services/run_processor.py<br/>claim · phases"]
+    RunExt["services/run/extraction.py"]
+    RunVal["services/run/validation.py"]
+    OpSvc["services/operator/<br/>diagnostics · warmup"]
+  end
+
+  subgraph Domaine["Domaine audit execution"]
+    Domain["services/run/domain/<br/>entité · cycle de vie"]
+    Events["Événements domaine<br/>RunQueued · Started<br/>Completed · Failed"]
+  end
+
+  subgraph Extraction["Extraction & catalogue"]
+    Pipe["extraction/pipeline.py<br/>PipelineExtractor"]
+    Catalog["catalog/registry.py<br/>repody:vlm"]
+    VLM["extraction/repody_vlm_extract.py<br/>PDF→PNG→NuExtract"]
+    Rules["rules/runner.py<br/>logic + LLM"]
+  end
+
+  subgraph Infra["Infrastructure"]
+    DB["db/ SQLAlchemy + Alembic"]
+    Storage["storage/ MinIO ou local"]
+    Taskiq["taskiq/ broker Redis Streams<br/>queues extract | fast"]
+    InfClient["inference/ clients OpenAI-compat"]
+    Auth["auth/ JWT · Casbin RBAC"]
+  end
+
+  Next --> Proxy --> APIRouters
+  APIRouters --> WFSvc
+  APIRouters --> RunEnq
+  APIRouters --> Auth
+  RunEnq --> Outbox --> Dispatch --> Taskiq
+  Taskiq --> RunProc
+  RunProc --> Domain
+  RunProc --> RunExt --> Pipe --> Catalog --> VLM --> InfClient
+  RunProc --> RunVal --> Rules
+  RunProc --> Events
+  RunExt --> Storage
+  RunEnq --> DB
+  RunProc --> DB
+  WFSvc --> DB
+  APIRouters --> OpSvc
+
+  classDef ui fill:#e8f4fc,stroke:#1a5f8a
+  classDef svc fill:#eef6e8,stroke:#3d6b2f
+  classDef dom fill:#f5e6f0,stroke:#6b3d5a
+  classDef ext fill:#fff4e0,stroke:#8a6d3b
+  classDef inf fill:#f0f0f0,stroke:#555
+  class Next,Proxy,APIRouters ui
+  class WFSvc,RunEnq,Outbox,Dispatch,RunProc,RunExt,RunVal,OpSvc svc
+  class Domain,Events dom
+  class Pipe,Catalog,VLM,Rules ext
+  class DB,Storage,Taskiq,InfClient,Auth inf

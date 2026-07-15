@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 from functools import lru_cache
 from typing import Any, cast
 
@@ -34,8 +33,9 @@ def _issuer(settings: Settings) -> str:
 
 def _accepted_issuers(settings: Settings) -> set[str]:
     issuers = {_issuer(settings)}
-    raw = settings.oidc_issuer_aliases_env or os.environ.get("AUDIT_OIDC_ISSUER_ALIASES", "")
-    issuers.update(alias.rstrip("/") for alias in settings._parse_oidc_issuer_aliases(raw))
+    issuers.update(
+        alias.rstrip("/") for alias in settings.accepted_oidc_issuer_aliases()
+    )
     return issuers
 
 

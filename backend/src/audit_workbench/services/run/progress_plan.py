@@ -9,6 +9,7 @@ from audit_workbench.extraction.document_modes import (
     resolve_run_validation_mode,
 )
 from audit_workbench.extraction.extraction_display import plan_extraction_detail
+from audit_workbench.rules.types import rule_kind
 
 StepStatus = Literal["pending", "active", "done"]
 
@@ -67,9 +68,9 @@ def _step(
 
 
 def _queue_wait_detail() -> str:
-    from audit_workbench.extraction.gpu_cold_start import is_serverless_vllm
+    from audit_workbench.extraction.gpu_cold_start import is_serverless_inference
 
-    if is_serverless_vllm():
+    if is_serverless_inference():
         return (
             "Waiting for a worker slot. Serverless GPU extraction can take 1-2 minutes "
             "on the first request after the GPU has been idle."
@@ -85,8 +86,8 @@ def _read_path_for_doc(doc: Any, *, has_file: bool) -> tuple[str, str, str | Non
         return "schema", "schema", None
     ext_mode = _value(doc, "extraction_mode", "document_model")
     path = parse_read_path(ext_mode)
-    ocr = _value(doc, "document_model_id")
-    return "document_model", path.id, ocr
+    document_model_id = _value(doc, "document_model_id")
+    return "document_model", path.id, document_model_id
 
 
 def build_run_progress_plan(
@@ -124,7 +125,7 @@ def build_run_progress_plan(
             )
         )
     for rule in rules:
-        kind = (rule.get("kind") or "logic").lower()
+        kind = rule_kind(rule)
         if kind == "llm":
             rule_id = rule.get("id") or "rule"
             name = rule.get("name") or "Rule"

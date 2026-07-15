@@ -1,0 +1,70 @@
+%% Architecture locale Repody — Docker Compose + processus hôte
+%% Éditable : Mermaid flowchart
+%% Doc : docs/deploy/LOCAL.md · CONTEXT.md
+
+flowchart TB
+  subgraph Utilisateur["Utilisateur développeur"]
+    Dev["Navigateur"]
+  end
+
+  subgraph Hote["Machine hôte (Windows / Linux)"]
+    UI["Next.js UI<br/>:3000<br/>pnpm ui / dev:app"]
+    API["FastAPI / Uvicorn<br/>:8000<br/>pnpm dev:api"]
+    Llama["llama-server<br/>NuExtract3-Q4_K_M<br/>:8081<br/>pnpm llamacpp:serve"]
+  end
+
+  subgraph Compose["Docker Compose"]
+    subgraph Data["Plan de données"]
+      PG[("PostgreSQL<br/>:5432<br/>audit_workbench")]
+      Redis[("Redis<br/>:6379<br/>Taskiq + SSE + cache")]
+      MinIO[("MinIO S3<br/>:9000<br/>bucket audit-documents")]
+    end
+
+    subgraph Auth["Authentification"]
+      KC["Keycloak<br/>:8080<br/>realm repody"]
+    end
+
+    subgraph Workers["Plan workers Taskiq"]
+      WX["worker-extract<br/>pool extract<br/>VLM / PDF"]
+      WF["worker-fast<br/>pool fast<br/>logic-only"]
+    end
+
+    subgraph Obs["Observabilité optionnelle"]
+      Graf["Grafana :3030"]
+      Loki["Loki :3100"]
+      Tempo["Tempo :3200"]
+      OTEL["OTLP collector :4318"]
+      Bug["Bugsink :8090"]
+    end
+  end
+
+  Dev --> UI
+  Dev --> KC
+  UI -->|"/api/v1/* + Bearer JWT"| API
+  UI -->|"OIDC Auth.js"| KC
+  API --> PG
+  API --> Redis
+  API --> MinIO
+  API -->|"enqueue Redis Streams<br/>repody:audit:extract|fast"| Redis
+  Redis --> WX
+  Redis --> WF
+  WX --> PG
+  WX --> Redis
+  WX --> MinIO
+  WX -->|"host.docker.internal:8081<br/>OpenAI /v1/chat/completions"| Llama
+  WF --> PG
+  WF --> Redis
+  API -.->|"JWT JWKS"| KC
+  API -.-> OTEL
+  WX -.-> OTEL
+  OTEL --> Tempo
+  OTEL --> Loki
+  Graf --> Loki
+  Graf --> Tempo
+
+  classDef host fill:#e8f4fc,stroke:#1a5f8a
+  classDef data fill:#f5f0e6,stroke:#8a6d3b
+  classDef work fill:#eef6e8,stroke:#3d6b2f
+  class UI,API,Llama host
+  class PG,Redis,MinIO data
+  class WX,WF work

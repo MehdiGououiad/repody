@@ -22,7 +22,7 @@ export type OperatorStatus = {
   };
   limits: {
     maxUploadBytes: number;
-    ocrMaxPages: number;
+    nuextractMaxPagesPerRequest: number;
     taskTimeoutMinutes: number;
   };
 };
@@ -40,10 +40,8 @@ export type BenchmarkResult = {
   validationMs?: number | null;
   fieldAccuracy?: number | null;
   ruleAccuracy?: number | null;
-  ocrCompare?: boolean;
   judgeQuality?: boolean;
   rawTextChars?: number | null;
-  ocrTextChars?: number | null;
   textPreview?: string | null;
   cacheHit?: boolean | null;
   error?: string | null;
@@ -60,7 +58,6 @@ export type BenchmarkReport = {
     fieldAccuracy: number;
     ruleAccuracy: number;
     medianWallMs?: number | null;
-    ocrCompareRuns?: number;
     medianRawTextChars?: number | null;
   };
   results: BenchmarkResult[];
