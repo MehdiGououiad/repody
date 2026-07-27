@@ -1,0 +1,186 @@
+{
+  "fixture_id": "gououiad-cnie",
+  "description": "Moroccan CNIE recto+verso (Mehdi Gououiad) — hologram, bilingual, MRZ",
+  "front": {
+    "primary_hit": "national_id",
+    "core_fields": [
+      {
+        "id": "national_id",
+        "label": "CIN (N°)",
+        "expected": "BE899456",
+        "compare": "contains",
+        "weight": 3
+      },
+      {
+        "id": "first_name",
+        "label": "Prénom",
+        "expected": "MEHDI",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "last_name",
+        "label": "Nom",
+        "expected": "GOUOUIAD",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "dob_1998",
+        "label": "Birth year",
+        "expected": "1998",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "dob_full",
+        "label": "Date of birth",
+        "expected": "24.02.1998",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "valid_2035",
+        "label": "Valid until",
+        "expected": "04.08.2035",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "can_serial",
+        "label": "CAN serial",
+        "expected": "373473",
+        "compare": "digits",
+        "weight": 2
+      },
+      {
+        "id": "birth_place",
+        "label": "Birth place",
+        "expected": "HAY HASSANI",
+        "compare": "contains",
+        "weight": 1
+      }
+    ],
+    "hard_fields": [
+      {
+        "id": "document_title",
+        "label": "Card title",
+        "expected": "CARTE NATIONALE",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "kingdom_header",
+        "label": "Kingdom header",
+        "expected": "ROYAUME DU MAROC",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "arabic_first",
+        "label": "Arabic first name",
+        "expected": "مهدي",
+        "compare": "contains",
+        "weight": 1
+      }
+    ]
+  },
+  "back": {
+    "primary_hit": "mrz_line1_prefix",
+    "core_fields": [
+      {
+        "id": "national_id",
+        "label": "CIN on verso",
+        "expected": "BE899456",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "father_name",
+        "label": "Father (Fils de)",
+        "expected": "MOHAMED",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "mother_name",
+        "label": "Mother (Et de)",
+        "expected": "KHADDOUJ",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "address_city",
+        "label": "City",
+        "expected": "CASABLANCA",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "address_street",
+        "label": "Street",
+        "expected": "ZIRAOUI",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "gender",
+        "label": "Gender",
+        "expected": "M",
+        "compare": "contains",
+        "weight": 1
+      }
+    ],
+    "hard_fields": [
+      {
+        "id": "mrz_line1_prefix",
+        "label": "MRZ line 1 prefix",
+        "expected": "IDMAROPIEMD92",
+        "compare": "contains",
+        "weight": 3
+      },
+      {
+        "id": "mrz_line2_dob",
+        "label": "MRZ DOB encoding",
+        "expected": "980224",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "mrz_line2_expiry",
+        "label": "MRZ expiry encoding",
+        "expected": "350804",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "mrz_line3_name",
+        "label": "MRZ name line",
+        "expected": "GOUOUIAD<<MEHDI",
+        "compare": "contains",
+        "weight": 2
+      },
+      {
+        "id": "opi_code",
+        "label": "OPI internal code",
+        "expected": "OPIEMD92",
+        "compare": "contains",
+        "weight": 1
+      },
+      {
+        "id": "etat_civil",
+        "label": "État civil number",
+        "expected": "143",
+        "compare": "digits",
+        "weight": 1
+      },
+      {
+        "id": "address_number",
+        "label": "Street number",
+        "expected": "125",
+        "compare": "contains",
+        "weight": 1
+      }
+    ]
+  }
+}

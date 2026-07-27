@@ -6,7 +6,12 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from audit_workbench.auth.dependencies import require_permission
-from audit_workbench.extraction.nuextract_contract import NUEXTRACT_MAX_PAGES_PER_REQUEST
+from audit_workbench.api.errors import raise_app_error
+from audit_workbench.extraction.nuextract import NUEXTRACT_MAX_PAGES_PER_REQUEST
+from audit_workbench.platform.operator.validate import (
+    parse_model_identifier,
+    require_operator_actions,
+)
 from audit_workbench.schemas.operator import (
     BenchmarkReportSchema,
     OperatorJobAcceptedResponse,
@@ -18,19 +23,16 @@ from audit_workbench.schemas.operator import (
 )
 from audit_workbench.schemas.operator_requests import ModelActionRequest
 from audit_workbench.services.operator import (
-    OperatorRequestError,
     create_benchmark_job,
     create_warmup_job,
     get_job,
     list_jobs,
     load_report,
     operator_job_schema,
-    safe_model_identifier,
 )
 from audit_workbench.services.operator.requests import (
     build_benchmark_request,
     operator_root,
-    require_operator_actions,
 )
 from audit_workbench.settings import get_settings
 
@@ -38,17 +40,18 @@ router = APIRouter(prefix="/operator", tags=["operator"])
 
 
 def _require_actions() -> None:
-    try:
-        require_operator_actions(get_settings())
-    except OperatorRequestError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    result = require_operator_actions(get_settings())
+    if not result.is_ok:
+        assert result.error is not None
+        raise_app_error(result.error)
 
 
 def _safe_model(model: str) -> str:
-    try:
-        return safe_model_identifier(model)
-    except OperatorRequestError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    result = parse_model_identifier(model)
+    if not result.is_ok:
+        assert result.error is not None
+        raise_app_error(result.error)
+    return result.unwrap()
 
 
 def _job_or_404(job_id: str):
@@ -60,10 +63,6 @@ def _job_or_404(job_id: str):
 
 def _operator_root() -> Path:
     return operator_root(get_settings())
-
-
-def _raise_operator_error(exc: OperatorRequestError) -> None:
-    raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
 
 @router.get(
@@ -157,12 +156,9 @@ async def latest_benchmark() -> BenchmarkReportSchema:
 )
 async def warmup_model(payload: ModelActionRequest) -> OperatorJobAcceptedResponse:
     _require_actions()
-    _safe_model(payload.model)
+    model = _safe_model(payload.model)
     root = _operator_root()
-    try:
-        job = create_warmup_job(root=root, model=payload.model)
-    except OperatorRequestError as exc:
-        _raise_operator_error(exc)
+    job = create_warmup_job(root=root, model=model)
     return OperatorJobAcceptedResponse(job=operator_job_schema(job))
 
 
@@ -185,21 +181,21 @@ async def start_benchmark(
 ) -> OperatorJobAcceptedResponse:
     _require_actions()
     root = _operator_root()
-    try:
-        benchmark_request = await build_benchmark_request(
-            document=document,
-            manifest=manifest,
-            root=root,
-            max_upload_bytes=get_settings().max_upload_bytes,
-            profile=profile,
-            models=models,
-            validation_mode=validation_mode,
-            warm_runs=warm_runs,
-            minimum_accuracy=minimum_accuracy,
-            cache_check=cache_check,
-            judge_quality=judge_quality,
-        )
-        job = create_benchmark_job(root, benchmark_request)
-    except OperatorRequestError as exc:
-        _raise_operator_error(exc)
+    built = await build_benchmark_request(
+        document=document,
+        manifest=manifest,
+        root=root,
+        max_upload_bytes=get_settings().max_upload_bytes,
+        profile=profile,
+        models=models,
+        validation_mode=validation_mode,
+        warm_runs=warm_runs,
+        minimum_accuracy=minimum_accuracy,
+        cache_check=cache_check,
+        judge_quality=judge_quality,
+    )
+    if not built.is_ok:
+        assert built.error is not None
+        raise_app_error(built.error)
+    job = create_benchmark_job(root, built.unwrap())
     return OperatorJobAcceptedResponse(job=operator_job_schema(job))

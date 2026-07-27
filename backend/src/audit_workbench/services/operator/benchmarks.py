@@ -4,17 +4,13 @@ import shutil
 import sys
 from pathlib import Path
 
-from audit_workbench.extraction.document_model_branding import public_document_model_label
-from audit_workbench.extraction.repody_vlm import warmup_repody_vlm
+from audit_workbench.extraction.branding import public_document_model_label
+from audit_workbench.extraction.warmup import warmup_repody_vlm
+from audit_workbench.platform.operator.job import OperatorJob
+from audit_workbench.platform.operator.validate import parse_model_identifier
 from audit_workbench.services.operator.auth import fetch_operator_benchmark_bearer_token
-from audit_workbench.services.operator.job_model import OperatorJob
-from audit_workbench.services.operator.jobs import append_output, create_job, run_command
-from audit_workbench.services.operator.reports import load_report
-from audit_workbench.services.operator.requests import (
-    BenchmarkRequest,
-    OperatorRequestError,
-    safe_model_identifier,
-)
+from audit_workbench.services.operator.jobs import append_output, create_job, load_report, run_command
+from audit_workbench.services.operator.requests import BenchmarkRequest
 
 
 def benchmark_command(
@@ -121,7 +117,10 @@ def create_benchmark_job(root: Path, request: BenchmarkRequest) -> OperatorJob:
 
 def create_warmup_job(*, root: Path, model: str) -> OperatorJob:
     _ = root
-    model = safe_model_identifier(model)
+    parsed = parse_model_identifier(model)
+    if not parsed.is_ok:
+        raise ValueError(parsed.error.message if parsed.error else "Invalid model")
+    model = parsed.unwrap()
 
     async def runner(job: OperatorJob) -> None:
         append_output(job, f"Warming up {public_document_model_label(model)}...\n")

@@ -31,22 +31,16 @@ function findLlamaServerExe() {
 }
 
 function inferModelAlias(modelPath, explicitAlias) {
+  // Local default is Q8_0 (deep-bench winner); HF “small local” pack is Q4_K_M.
   if (explicitAlias?.trim()) {
-    const alias = explicitAlias.trim();
-    if (alias !== "nuextract3-q4_k_m") {
-      console.warn(
-        `warn: official local path uses alias nuextract3-q4_k_m; got ${alias}`,
-      );
-    }
-    return alias;
+    return explicitAlias.trim();
   }
   const base = modelPath ? path.basename(modelPath, ".gguf") : "";
-  if (base && !/Q4_K_M/i.test(base)) {
-    console.warn(
-      `warn: expected NuExtract3-Q4_K_M.gguf (official docs); got ${base}`,
-    );
-  }
-  return "nuextract3-q4_k_m";
+  if (/Q8_0/i.test(base)) return "nuextract3-q8_0";
+  if (/Q6_K/i.test(base)) return "nuextract3-q6_k";
+  if (/Q5_K_M/i.test(base)) return "nuextract3-q5_k_m";
+  if (/Q4_K_M/i.test(base)) return "nuextract3-q4_k_m";
+  return "nuextract3-q8_0";
 }
 
 function resolvePaths() {

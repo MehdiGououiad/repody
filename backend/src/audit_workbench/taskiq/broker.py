@@ -1,4 +1,4 @@
-"""Taskiq Redis stream brokers — one queue per worker pool (extract / fast)."""
+"""Taskiq Redis stream brokers — one queue per worker pool."""
 
 from __future__ import annotations
 
@@ -17,6 +17,15 @@ _broker_lock = asyncio.Lock()
 _api_brokers_started = False
 
 
+def _producer_pools(settings) -> tuple[str, ...]:
+    return (
+        settings.worker_pool_extract,
+        settings.worker_pool_fast,
+        settings.worker_pool_fraud,
+        settings.worker_pool_computer_use,
+    )
+
+
 @lru_cache
 def get_broker(pool: str) -> RedisStreamBroker:
     settings = get_settings()
@@ -33,7 +42,7 @@ async def startup_taskiq_brokers() -> None:
         if _api_brokers_started:
             return
         settings = get_settings()
-        for pool in (settings.worker_pool_extract, settings.worker_pool_fast):
+        for pool in _producer_pools(settings):
             broker = get_broker(pool)
             await broker.startup()
             log.info(
@@ -51,7 +60,7 @@ async def shutdown_taskiq_brokers() -> None:
         if not _api_brokers_started:
             return
         settings = get_settings()
-        for pool in (settings.worker_pool_extract, settings.worker_pool_fast):
+        for pool in _producer_pools(settings):
             broker = get_broker(pool)
             await broker.shutdown()
         _api_brokers_started = False

@@ -10,6 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
 from audit_workbench.settings import Settings, get_settings
 
 log = structlog.get_logger(__name__)
@@ -17,14 +18,6 @@ log = structlog.get_logger(__name__)
 _limiter: MovingWindowRateLimiter | None = None
 _storage: MemoryStorage | RedisStorage | None = None
 _GLOBAL_HTTP_LIMIT = parse("300 per minute")
-
-
-class RunRateLimitExceeded(Exception):
-    def __init__(self, *, scope: str, limit: int, window_seconds: int) -> None:
-        self.scope = scope
-        self.limit = limit
-        self.window_seconds = window_seconds
-        super().__init__(f"Rate limit exceeded ({scope}): max {limit} runs per {window_seconds}s.")
 
 
 def clear_rate_limiter_cache() -> None:
@@ -68,7 +61,7 @@ async def check_run_rate_limits(
     workflow_id: str,
     source: str,
     client_key: str | None = None,
-) -> None:
+) -> Result[None]:
     """
     Enforce per-workflow and per-client run creation limits.
 
@@ -76,7 +69,7 @@ async def check_run_rate_limits(
     """
     settings = get_settings()
     if not settings.rate_limit_enabled:
-        return
+        return Result.ok(None)
 
     limiter = await _get_limiter()
     window = max(1, settings.rate_limit_window_seconds)
@@ -93,12 +86,13 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            raise RunRateLimitExceeded(
-                scope="redis",
-                limit=0,
-                window_seconds=window,
-            ) from exc
-        return
+            return Result.fail(
+                AppError(
+                    code=ErrorCode.RATE_LIMIT,
+                    message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
+                )
+            )
+        return Result.ok(None)
 
     if not allowed:
         log.warning(
@@ -108,14 +102,18 @@ async def check_run_rate_limits(
             source=source,
             limit=settings.rate_limit_runs_per_workflow,
         )
-        raise RunRateLimitExceeded(
-            scope=f"workflow:{workflow_id}",
-            limit=settings.rate_limit_runs_per_workflow,
-            window_seconds=window,
+        return Result.fail(
+            AppError(
+                code=ErrorCode.RATE_LIMIT,
+                message=(
+                    f"Rate limit exceeded (workflow:{workflow_id}): "
+                    f"max {settings.rate_limit_runs_per_workflow} runs per {window}s."
+                ),
+            )
         )
 
     if not client_key:
-        return
+        return Result.ok(None)
 
     client_redis_key = f"audit:rl:client:{client_key}"
     client_limit = _window_limit(settings, settings.rate_limit_runs_per_client)
@@ -129,12 +127,13 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            raise RunRateLimitExceeded(
-                scope="redis",
-                limit=0,
-                window_seconds=window,
-            ) from exc
-        return
+            return Result.fail(
+                AppError(
+                    code=ErrorCode.RATE_LIMIT,
+                    message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
+                )
+            )
+        return Result.ok(None)
 
     if not allowed:
         log.warning(
@@ -143,11 +142,16 @@ async def check_run_rate_limits(
             client_key=client_key,
             limit=settings.rate_limit_runs_per_client,
         )
-        raise RunRateLimitExceeded(
-            scope="client",
-            limit=settings.rate_limit_runs_per_client,
-            window_seconds=window,
+        return Result.fail(
+            AppError(
+                code=ErrorCode.RATE_LIMIT,
+                message=(
+                    f"Rate limit exceeded (client): "
+                    f"max {settings.rate_limit_runs_per_client} runs per {window}s."
+                ),
+            )
         )
+    return Result.ok(None)
 
 
 async def check_global_http_rate_limit(client_ip: str) -> bool:

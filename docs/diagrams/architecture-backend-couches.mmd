@@ -11,24 +11,25 @@ flowchart TB
 
   subgraph Application["Couche application / services"]
     WFSvc["services/workflow/<br/>CRUD · deploy · API key"]
-    RunEnq["services/run_enqueue.py<br/>admission · create Run"]
+    RunEnq["services/run/enqueue.py<br/>admission · create Run"]
     Outbox["services/dispatch_outbox.py<br/>outbox Postgres"]
-    Dispatch["services/run_dispatch.py<br/>Taskiq kiq"]
-    RunProc["services/run_processor.py<br/>claim · phases"]
-    RunExt["services/run/extraction.py"]
-    RunVal["services/run/validation.py"]
+    Dispatch["services/run/dispatch.py<br/>Taskiq kiq"]
+    RunProc["services/run/processor.py<br/>claim · recipe"]
+    PlatformOrch["platform/recipe.py<br/>execute_platform_run"]
+    IdpRun["agents/idp/run.py<br/>execute_idp_run"]
+    IdpCompose["agents/idp/compose.py<br/>compose_idp"]
     OpSvc["services/operator/<br/>diagnostics · warmup"]
   end
 
   subgraph Domaine["Domaine audit execution"]
-    Domain["services/run/domain/<br/>entité · cycle de vie"]
+    Domain["services/run/lifecycle.py<br/>entité · cycle de vie"]
     Events["Événements domaine<br/>RunQueued · Started<br/>Completed · Failed"]
   end
 
   subgraph Extraction["Extraction & catalogue"]
-    Pipe["extraction/pipeline.py<br/>PipelineExtractor"]
+    Pipe["extraction/pipeline.py<br/>extract_document"]
     Catalog["catalog/registry.py<br/>repody:vlm"]
-    VLM["extraction/repody_vlm_extract.py<br/>PDF→PNG→NuExtract"]
+    VLM["extraction/vlm.py<br/>PDF→PNG→NuExtract"]
     Rules["rules/runner.py<br/>logic + LLM"]
   end
 
@@ -47,10 +48,11 @@ flowchart TB
   RunEnq --> Outbox --> Dispatch --> Taskiq
   Taskiq --> RunProc
   RunProc --> Domain
-  RunProc --> RunExt --> Pipe --> Catalog --> VLM --> InfClient
-  RunProc --> RunVal --> Rules
+  RunProc --> PlatformOrch --> IdpRun --> IdpCompose
+  IdpRun --> Pipe --> Catalog --> VLM --> InfClient
+  IdpRun --> Rules
   RunProc --> Events
-  RunExt --> Storage
+  IdpRun --> Storage
   RunEnq --> DB
   RunProc --> DB
   WFSvc --> DB
@@ -62,7 +64,7 @@ flowchart TB
   classDef ext fill:#fff4e0,stroke:#8a6d3b
   classDef inf fill:#f0f0f0,stroke:#555
   class Next,Proxy,APIRouters ui
-  class WFSvc,RunEnq,Outbox,Dispatch,RunProc,RunExt,RunVal,OpSvc svc
+  class WFSvc,RunEnq,Outbox,Dispatch,RunProc,PlatformOrch,IdpRun,IdpCompose,OpSvc svc
   class Domain,Events dom
   class Pipe,Catalog,VLM,Rules ext
   class DB,Storage,Taskiq,InfClient,Auth inf

@@ -33,23 +33,29 @@ class OpsSettingsFields:
     rate_limit_runs_per_workflow: int = Field(default=30)
     rate_limit_runs_per_client: int = Field(default=120)
 
-    admission_control_enabled: bool = Field(
+    agent_idp_enabled: bool = Field(
         default=True,
-        description="Reject new runs when queue/inflight limits are exceeded.",
+        description="When false, IDP is omitted from the platform agent recipe.",
     )
-    admission_max_queued: int = Field(
-        default=50,
-        description="Max runs waiting in queued status before HTTP 503.",
+    agent_fraud_enabled: bool = Field(
+        default=False,
+        description="When true, Fraud may run after IDP when included in the recipe.",
     )
-    admission_max_inflight: int = Field(
-        default=64,
-        description="Max queued+running runs before HTTP 503.",
+    agent_fraud_workers_ready: bool = Field(
+        default=False,
+        description=(
+            "When true with agent_fraud_enabled, Fraud is dispatchable. "
+            "Keep false until worker-fraud Deployment has replicas > 0."
+        ),
     )
-    admission_max_extract_inflight: int = Field(
-        default=8,
-        description="Max queued+running document-model runs before HTTP 503.",
+    agent_computer_use_enabled: bool = Field(
+        default=False,
+        description="When true, Computer Use may run after prior agents when included in the recipe.",
     )
-    admission_retry_after_seconds: int = Field(
-        default=60,
-        description="Retry-After header when admission rejects a run.",
+    agent_computer_use_workers_ready: bool = Field(
+        default=False,
+        description=(
+            "When true with agent_computer_use_enabled, Computer Use is dispatchable. "
+            "Keep false until worker-computer-use Deployment has replicas > 0."
+        ),
     )

@@ -31,7 +31,7 @@ for _path in (_BACKEND / "src", _BACKEND):
         sys.path.insert(0, _text)
 
 from scripts.benchmark_dev_stress import (  # noqa: E402
-    RunLifecycle,
+    TrackedRun,
     StressReport,
     _build_summary,
     _jitter,
@@ -212,7 +212,6 @@ async def preflight(
     *,
     t0: float,
     require_workers: bool,
-    min_admission_queued: int,
 ) -> dict[str, Any]:
     body = await _readiness(client, report, t0)
     worker_pools = body.get("workerPools") or {}
@@ -246,50 +245,16 @@ async def preflight(
     else:
         _check("inference", bool(mode), f"inference={body.get('inference')}")
 
-    admission_on = bool(body.get("admissionControlEnabled"))
-    _check("admission_enabled", admission_on, f"admissionControlEnabled={admission_on}")
-
-    max_queued = body.get("admissionMaxQueued")
-    max_extract = body.get("admissionMaxExtractInflight")
-    if admission_on and max_queued is not None:
-        headroom_ok = int(max_queued) >= min_admission_queued
-        _check(
-            "admission_headroom",
-            headroom_ok,
-            f"admissionMaxQueued={max_queued} need>={min_admission_queued}",
-        )
-    else:
-        _check(
-            "admission_headroom",
-            True,
-            f"admission limits not on healthz — merge deploy/client/lab/values.stress-test.crc.yaml",
-        )
-
-    if admission_on and max_extract is not None:
-        _check(
-            "extract_inflight_cap",
-            int(max_extract) >= 1,
-            f"admissionMaxExtractInflight={max_extract} (align with VLM parallel slots)",
-        )
-
     snapshot = {
         "checks": checks,
         "workerPools": worker_pools,
         "queuedRuns": body.get("queuedRuns"),
         "runningRuns": body.get("runningRuns"),
         "rateLimitEnabled": body.get("rateLimitEnabled"),
-        "admissionControlEnabled": admission_on,
-        "admissionMaxQueued": max_queued,
-        "admissionMaxInflight": body.get("admissionMaxInflight"),
-        "admissionMaxExtractInflight": max_extract,
     }
     report.preflight = snapshot
 
-    if any(
-        not c["pass"]
-        for c in checks
-        if c["name"] in ("healthz", "redis", "taskiq", "admission_headroom")
-    ):
+    if any(not c["pass"] for c in checks if c["name"] in ("healthz", "redis", "taskiq")):
         raise RuntimeError("Preflight failed — fix platform health before stress test")
     if require_workers and mode == "llamacpp" and llamacpp_ok is False:
         raise RuntimeError(
@@ -308,7 +273,7 @@ async def _enqueue_with_retry(
     index: int,
     sem: asyncio.Semaphore,
     args: argparse.Namespace,
-) -> RunLifecycle | None:
+) -> TrackedRun | None:
     probe = f"prod_{index}_{uuid.uuid4().hex[:8]}"
     async with sem:
         for attempt in range(_MAX_ENQUEUE_RETRIES):
@@ -320,7 +285,7 @@ async def _enqueue_with_retry(
                     binding=binding,
                     probe=probe,
                 )
-                return RunLifecycle(
+                return TrackedRun(
                     run_id=run_id,
                     enqueued_ms=round((time.perf_counter() - report._t0) * 1000),  # type: ignore[attr-defined]
                     enqueue_latency_ms=enqueue_ms,
@@ -402,7 +367,7 @@ async def _queue_position_sampler(
 
 async def _finalize_pending(
     client: httpx.AsyncClient,
-    lifecycles: list[RunLifecycle],
+    lifecycles: list[TrackedRun],
     *,
     t0: float,
     stop: asyncio.Event,
@@ -416,7 +381,7 @@ async def _finalize_pending(
     sem = asyncio.Semaphore(concurrency)
     finalize_deadline_s = max(120.0, len(pending) * 10.0)
 
-    async def _poll_one(lc: RunLifecycle) -> None:
+    async def _poll_one(lc: TrackedRun) -> None:
         async with sem:
             deadline = time.perf_counter() + finalize_deadline_s
             while lc.terminal_status is None and time.perf_counter() < deadline and not stop.is_set():
@@ -563,7 +528,6 @@ async def run_prod_stress(args: argparse.Namespace) -> int:
             report,
             t0=t0,
             require_workers=args.require_workers,
-            min_admission_queued=args.count,
         )
 
         await _save_workflow(client, workflow_id, doc_id)

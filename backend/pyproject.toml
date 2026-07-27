@@ -48,6 +48,8 @@ dev = [
   "pyright>=1.1.389",
   "pytest>=8.3.0",
   "pytest-asyncio>=0.25.0",
+  "pytest-html>=4.1.0",
+  "pytest-cov>=6.0.0",
   "respx>=0.22.0",
 ]
 otel = [
@@ -94,7 +96,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]
-"tests/test_api/test_api_e2e_suite.py" = ["E402"]
+"tests/integration/api/test_routes.py" = ["E402"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -102,8 +104,25 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 pythonpath = ["."]
 testpaths = ["tests"]
-markers = [
-  "live: requires running API at E2E_API_URL (default http://localhost:8000)",
-  "e2e_facture: Facture.pdf path tests (text / llm / optional vlm)",
-  "slow: full document extraction run (Facture PDF pipeline)",
+addopts = [
+  "--strict-markers",
+  "-ra",
 ]
+markers = [
+  "unit: fast pure tests — no DB, no live stack",
+  "integration: ASGI + Postgres (or real storage boundary), no Taskiq workers",
+  "live: requires running API/stack (E2E_STACK=1 or E2E_API_URL)",
+  "e2e: end-to-end journey (API live and/or Playwright UI)",
+  "e2e_facture: Facture.pdf path tests (text / llm / optional vlm)",
+  "slow: long-running extraction / pipeline cases",
+]
+
+[tool.coverage.run]
+source = ["audit_workbench"]
+branch = true
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 0

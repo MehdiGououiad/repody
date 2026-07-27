@@ -5,7 +5,7 @@ import time
 import structlog
 
 from audit_workbench.inference.availability import inference_available
-from audit_workbench.inference.factory import get_inference_client
+from audit_workbench.inference.factory import get_chat
 from audit_workbench.inference.structured import chat_structured, parse_structured_response
 from audit_workbench.inference.structured_models import LlmRuleBatchOutput, LlmRuleVerdict
 from audit_workbench.inference.validation_model import resolve_llm_validation_model
@@ -94,8 +94,7 @@ async def evaluate_llm_rule(
     if model_error:
         return "error", model_error
 
-    client = get_inference_client()
-    if not await inference_available(client):
+    if not await inference_available():
         return _llm_unavailable_status(), _llm_unavailable_detail()
 
     prompt = single_rule_prompt(rule_name=rule_name, body=text, field_values=selected_fields)
@@ -109,7 +108,7 @@ async def evaluate_llm_rule(
                 max_tokens=settings.validation_max_tokens,
             )
             return _verdict_to_status(verdict)
-        raw = await client.chat(
+        raw = await get_chat()(
             [{"role": "user", "content": prompt}],
             max_tokens=settings.validation_max_tokens,
             temperature=0.0,
@@ -174,8 +173,7 @@ async def evaluate_llm_rules_batch(
             out[rule.get("id") or ""] = ("error", model_error)
         return out
 
-    client = get_inference_client()
-    if not await inference_available(client):
+    if not await inference_available():
         status = _llm_unavailable_status()
         detail = _llm_unavailable_detail()
         for rule in remaining:
@@ -198,7 +196,7 @@ async def evaluate_llm_rules_batch(
                     LlmRuleVerdict(passed=row.passed, detail=row.detail)
                 )
         else:
-            raw = await client.chat(
+            raw = await get_chat()(
                 [{"role": "user", "content": prompt}],
                 max_tokens=min(256, settings.validation_max_tokens * max(1, len(remaining))),
                 temperature=0.0,

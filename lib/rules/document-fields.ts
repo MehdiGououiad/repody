@@ -30,7 +30,7 @@ function fieldOptionsForSchema(
       token: parentToken,
       templateType: field.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
     });
-    if (field.templateType === "object-array") {
+    if (field.templateType === "object-array" || field.templateType === "object") {
       for (const child of field.children ?? []) {
         if (!child.name.trim()) continue;
         fields.push({
@@ -39,7 +39,7 @@ function fieldOptionsForSchema(
             : `${field.name}.${child.name}`,
           token: `${parentToken}.${fieldToken(child.name)}`,
           templateType: child.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-          tableParent: parentToken,
+          tableParent: field.templateType === "object-array" ? parentToken : undefined,
         });
       }
     }

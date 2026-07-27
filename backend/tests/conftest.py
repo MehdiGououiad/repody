@@ -105,7 +105,7 @@ async def app(test_session_factory):
 
     yield application
 
-    from audit_workbench.services.run_dispatch import close_taskiq_brokers
+    from audit_workbench.services.run.dispatch import close_taskiq_brokers
     from audit_workbench.taskiq.broker import clear_broker_cache
     from audit_workbench.taskiq.tasks import clear_task_registry
 
@@ -139,11 +139,14 @@ async def drain_background_tasks():
 async def reset_inference_clients():
     """Drop cached httpx clients between tests (session loop keeps the same event loop)."""
     yield
-    from audit_workbench.inference.factory import get_inference_client
+    from audit_workbench.inference.availability import clear_availability_cache
+    from audit_workbench.inference.factory import get_chat, get_ensure_available
     from audit_workbench.inference.openai_compat import close_openai_clients
 
     await close_openai_clients()
-    get_inference_client.cache_clear()
+    get_chat.cache_clear()
+    get_ensure_available.cache_clear()
+    clear_availability_cache()
 
 
 @pytest.fixture
@@ -164,3 +167,16 @@ def mock_dmr(app):
 @pytest.fixture
 def mock_ollama_llm(mock_dmr):
     return mock_dmr
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-tag by pyramid path (unit / integration / live)."""
+    for item in items:
+        path = str(item.path).replace("\\", "/")
+        if "/tests/unit/" in path:
+            item.add_marker(pytest.mark.unit)
+        elif "/tests/integration/" in path:
+            item.add_marker(pytest.mark.integration)
+        elif "/tests/live/" in path:
+            item.add_marker(pytest.mark.live)
+            item.add_marker(pytest.mark.e2e)

@@ -1,10 +1,13 @@
 # Platform benchmarks
 
-The benchmark suite runs against the live API using the same multipart upload and polling contract as the Test tab. It measures queue, extraction, and validation latency while checking extracted values and rule outcomes.
+Operator benchmarks run from **Settings → Benchmarks** (`/settings?tab=benchmarks`).
+They use the same multipart upload and polling contract as the Test tab, measuring
+queue, extraction, and validation latency while checking extracted values and rule outcomes.
+
+Reports are written under the operator data path (Compose default
+`benchmark-reports/`) as JSON, CSV, and HTML.
 
 ## Prerequisites
-
-For daily local development, start Compose plus the API/UI:
 
 ```powershell
 pnpm dev:setup   # first run only
@@ -12,32 +15,17 @@ pnpm dev:all
 pnpm dev:status
 ```
 
-For OpenShift CRC benchmarks, use `pnpm openshift:client-test` then set
-`REPODY_K8S_NAMESPACE=repody` and `REPODY_API_DEPLOY=deploy/repody-api` if not using defaults.
-
-Configure external inference before cluster benchmarks (`AUDIT_LLAMACPP_BASE_URL` /
-`AUDIT_LLAMACPP_SERVED_MODEL`). For Compose, start host NuExtract first:
+Configure external inference (`AUDIT_LLAMACPP_BASE_URL` / `AUDIT_LLAMACPP_SERVED_MODEL`).
+For Compose, start host NuExtract first:
 
 ```powershell
 pnpm llamacpp:serve
 pnpm llamacpp:verify
 ```
 
-## Run
-
-```powershell
-pnpm benchmark quick           # quick Repody VLM baseline
-pnpm benchmark models            # all registered document models
-pnpm benchmark full              # baseline + full validation cases
-pnpm benchmark document-models   # direct in-pod document-model adapter benchmark
-```
-
-Reports are written to `benchmark-reports/<timestamp>-<suite-id>/` as JSON, CSV, and HTML.
-`latest.json`, `latest.csv`, and `latest.html` point to the newest run.
-
-`pnpm benchmark` executes inside the API pod via `kubectl exec`. For local Compose,
-use the operator benchmark UI at `/settings?tab=benchmarks` or run the backend script
-directly with `pnpm test:platform:integration`/API flags when the local API is up.
+Enable operator actions on the API (`AUDIT_OPERATOR_ACTIONS_ENABLED=true`) and, when
+using Keycloak, set `AUDIT_OPERATOR_BENCHMARK_USER` / `AUDIT_OPERATOR_BENCHMARK_PASSWORD`
+(or a pre-issued bearer) so the suite can authenticate.
 
 ## Phases
 
@@ -45,33 +33,10 @@ directly with `pnpm test:platform:integration`/API flags when the local API is u
 - `warm-N` — warm observation, cache bypassed
 - `cache` — repeated run; `cacheHit` must be true
 
-For a process-cold measurement, restart extract workers first:
-
-```powershell
-kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-extract
-pnpm benchmark models
-```
-
 ## Custom documents
 
-Copy `e2e/fixtures/documents/Facture.benchmark.json`, then pass extra args after `--`:
-
-```powershell
-pnpm benchmark full -- --document /app/e2e/fixtures/documents/MyDoc.pdf --manifest /app/e2e/fixtures/documents/MyDoc.benchmark.json
-```
-
-Useful options:
-
-```text
---warm-runs 3
---minimum-accuracy 0.90
---strict-models
---no-cache-check
---timeout-seconds 1200
---model repody:vlm
-```
-
-Unavailable models are skipped by default. Use `--strict-models` to fail on skip.
+Upload a PDF plus a manifest (see `e2e/fixtures/documents/Facture.benchmark.json`)
+from the Benchmarks tab, or use the built-in Facture fixture when present in the image.
 
 ## Production stress test (1000 documents)
 
@@ -125,10 +90,9 @@ when using `kubectl exec`).
 ### Throughput tuning
 
 1. **VLM slots** — raise `LLAMACPP_PARALLEL` in `deploy/llamacpp/paths.local.env`, then `pnpm llamacpp:restart`.
-2. **Admission** — set `config.admissionMaxExtractInflight` to match parallel slots (see `values.stress-test.crc.yaml` for CRC).
-3. **Workers** — scale `workerExtract.replicas` on hardware with ≥2 GiB RAM per pod (CRC: stay at 1).
-4. **Healthchecks** — keep `healthzProbeInference: false` so `/v1/healthz` stays fast under load.
-5. **OTEL** — disable on CRC lab (`observability.otelEnabled: false`) when no collector is deployed.
+2. **Workers** — scale `workerExtract.replicas` / `maxJobs` so the Taskiq extract queue drains (CRC: stay at 1 replica for local GPU).
+3. **Healthchecks** — keep `healthzProbeInference: false` so `/v1/healthz` stays fast under load.
+4. **OTEL** — disable on CRC lab (`observability.otelEnabled: false`) when no collector is deployed.
 
 ### CPU scaling (when GPU/VLM is fixed)
 
@@ -147,7 +111,7 @@ Use CPU HPA and in-process concurrency before adding VLM hardware:
 
 **What does not scale on CPU HPA**
 
-- **worker-extract replicas** while blocked on VLM — average CPU stays low. Keep extract HPA off; scale VLM slots and `admissionMaxExtractInflight` instead.
+- **worker-extract replicas** while blocked on VLM — average CPU stays low. Keep extract HPA off; scale VLM slots / worker `maxJobs` instead (runs wait in the Taskiq queue).
 
 HPA v2 behavior (scale up in 60s, scale down over 300s) is enabled via `hpaBehavior` in `deploy/helm/repody/values.yaml`. Pods must set `resources.requests.cpu` or HPA cannot compute utilization ([Kubernetes HPA docs](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)).
 
@@ -165,18 +129,21 @@ Use the stress overlay before a 1000-run test.
 Dev-only quick stress (burst 8 + random 20):
 
 ```powershell
-node scripts/backend-run.mjs --dev python scripts/benchmark_dev.py stress --api http://127.0.0.1:8000
+node scripts/backend-run.mjs --dev python scripts/benchmark_dev_stress.py --api http://127.0.0.1:8000
 ```
 
 ## Document-model compare
 
-The **models** profile exercises the registered document-model catalog. Repody VLM is the
-supported document model today; unavailable models are skipped unless `--strict-models`
-is set.
+The operator **models** profile exercises the registered document-model catalog.
+Unavailable models are skipped unless strict mode is set.
 
 | Model | Role | Pass criteria |
 | --- | --- | --- |
-| `repody:vlm` | Structured field extraction | Field + rule accuracy |
+| `repody:vlm` | Structured field extraction (NuExtract / llama-server) | Field + rule accuracy |
+| `repody:vlm:cloud` | Structured extraction via NuExtract Cloud | Field accuracy when cloud key set |
+| `paddleocr:v6` | Markdown OCR (PaddleX `POST /ocr`) | Gououiad / fixture OCR score gates |
+| `glm:ocr` | Markdown OCR (GLM-OCR llama-server) | Gououiad / fixture OCR score gates |
 
-For Kubernetes benchmarks, point `AUDIT_LLAMACPP_BASE_URL` and `AUDIT_LLAMACPP_SERVED_MODEL`
-at the external vLLM or llama-server endpoint before running the suite.
+For Kubernetes runs, point each model's base URL env at the matching external
+service before starting a job (`AUDIT_LLAMACPP_*`, `AUDIT_PADDLEOCR_V6_*`,
+`AUDIT_GLM_OCR_*`).

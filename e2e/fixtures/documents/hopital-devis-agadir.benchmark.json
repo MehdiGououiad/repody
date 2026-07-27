@@ -1,0 +1,87 @@
+{
+  "name": "Hôpital Privé Agadir devis (hard ICE stamp)",
+  "documentType": "MedicalQuote",
+  "mimeType": "image/png",
+  "fields": [
+    {
+      "name": "company_registry_id",
+      "description": "Exact ICE from ink stamp or footer; copy digits without spaces",
+      "expected": "001639657000061",
+      "comparison": "exact",
+      "tolerance": "0"
+    },
+    {
+      "name": "total_amount",
+      "description": "Final quote total (Total devis)",
+      "expected": "497550.00",
+      "comparison": "amount",
+      "tolerance": "1"
+    },
+    {
+      "name": "inpe",
+      "description": "INPE registry number on stamp",
+      "expected": "040063554",
+      "comparison": "exact",
+      "tolerance": "0"
+    },
+    {
+      "name": "subtotal_prestations",
+      "description": "Prestations table sub-total",
+      "expected": "416050.00",
+      "comparison": "amount",
+      "tolerance": "1"
+    },
+    {
+      "name": "subtotal_honoraires",
+      "description": "Honoraires table sub-total",
+      "expected": "58000.00",
+      "comparison": "amount",
+      "tolerance": "1"
+    },
+    {
+      "name": "subtotal_laboratoire",
+      "description": "Laboratoire table sub-total",
+      "expected": "23500.00",
+      "comparison": "amount",
+      "tolerance": "1"
+    }
+  ],
+  "baselineFields": [
+    {
+      "name": "company_registry_id",
+      "description": "ICE — primary hard digit-copy field",
+      "expected": "001639657000061",
+      "comparison": "exact",
+      "tolerance": "0"
+    },
+    {
+      "name": "total_amount",
+      "description": "Total devis",
+      "expected": "497550.00",
+      "comparison": "amount",
+      "tolerance": "1"
+    }
+  ],
+  "logicRules": [
+    {
+      "id": "devis-total-matches-subtotals",
+      "name": "Sub-totals sum to grand total",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "subtotal_prestations + subtotal_honoraires + subtotal_laboratoire == total_amount",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    }
+  ],
+  "logicValidationRules": [
+    {
+      "id": "devis-ice-present",
+      "name": "ICE must be present",
+      "kind": "logic",
+      "scope": "intra",
+      "body": "company_registry_id == '001639657000061'",
+      "severity": "reject",
+      "expectedStatus": "passed"
+    }
+  ]
+}

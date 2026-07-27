@@ -61,12 +61,16 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 | Code quality review checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
 | Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |
 | External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
+| PP-OCRv6 document model | [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) |
+| GLM-OCR document model | [GLM-OCR.md](./GLM-OCR.md) |
+| Test pyramid (unit / integration / live) | [TESTING.md](./TESTING.md) |
 | Observability (logs, traces, Grafana) | [OBSERVABILITY.md](./OBSERVABILITY.md) |
 | Error tracking (Bugsink) | [BUGSINK.md](./BUGSINK.md) |
 | E2E and live tests | [E2E.md](./E2E.md) |
 | Benchmarks | [BENCHMARKING.md](./BENCHMARKING.md) |
 | Pinned runtime versions | [VERSIONS.md](./VERSIONS.md) |
 | Architecture decisions | [adr/README.md](./adr/README.md) |
+| IDP functional design (3 agents) | [architecture/idp-functional-agents.md](./architecture/idp-functional-agents.md) |
 
 ## Deploy directory
 

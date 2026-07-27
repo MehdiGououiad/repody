@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
+from audit_workbench.api.errors import raise_app_error
 from audit_workbench.auth.dependencies import get_current_principal
 from audit_workbench.auth.principal import Principal
 from audit_workbench.schemas.uploads import (
@@ -20,7 +21,6 @@ from audit_workbench.schemas.uploads import (
     UploadResponse,
 )
 from audit_workbench.services.upload_intents import (
-    UploadIntentError,
     confirm_upload_intent,
     record_upload_intent,
 )
@@ -169,16 +169,17 @@ async def confirm_uploads(
         except UploadValidationError as exc:
             raise HTTPException(400, str(exc)) from exc
 
-        try:
-            intent = await confirm_upload_intent(
-                session,
-                storage_key=key,
-                size=size,
-                verified_mime=verified_mime,
-                owner_subject=principal.subject,
-            )
-        except UploadIntentError as exc:
-            raise HTTPException(400, str(exc)) from exc
+        intent_r = await confirm_upload_intent(
+            session,
+            storage_key=key,
+            size=size,
+            verified_mime=verified_mime,
+            owner_subject=principal.subject,
+        )
+        if not intent_r.is_ok:
+            assert intent_r.error is not None
+            raise_app_error(intent_r.error)
+        intent = intent_r.unwrap()
 
         confirmed.append(
             ConfirmUploadItem(
@@ -189,6 +190,9 @@ async def confirm_uploads(
             )
         )
 
+    # Commit before the response so the next request (runs/json) can see confirmed_at.
+    # get_session commits after the response is sent, which races the UI/test client.
+    await session.commit()
     return ConfirmUploadResponse(uploads=confirmed)
 
 

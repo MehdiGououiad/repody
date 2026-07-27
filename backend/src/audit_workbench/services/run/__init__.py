@@ -1,1 +1,1 @@
-"""Audit run pipeline phases (extraction + validation)."""
+"""Run lifecycle application (claim / complete / fail) and adapters."""

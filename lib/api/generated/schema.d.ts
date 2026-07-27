@@ -1094,7 +1094,7 @@ export interface components {
             extractionInstructions: string;
             /**
              * Markdownextraction
-             * @description Run NuExtract document-to-Markdown in parallel with field extraction.
+             * @description When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).
              * @default false
              */
             markdownExtraction: boolean;
@@ -1139,7 +1139,7 @@ export interface components {
             extractionInstructions: string;
             /**
              * Markdownextraction
-             * @description Run NuExtract document-to-Markdown in parallel with field extraction.
+             * @description When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).
              * @default false
              */
             markdownExtraction: boolean;
@@ -1403,14 +1403,6 @@ export interface components {
             structuredLlm: boolean;
             /** Ratelimitenabled */
             rateLimitEnabled: boolean;
-            /** Admissioncontrolenabled */
-            admissionControlEnabled: boolean;
-            /** Admissionmaxqueued */
-            admissionMaxQueued?: number | null;
-            /** Admissionmaxinflight */
-            admissionMaxInflight?: number | null;
-            /** Admissionmaxextractinflight */
-            admissionMaxExtractInflight?: number | null;
             /** Queuedruns */
             queuedRuns: number;
             /** Runningruns */

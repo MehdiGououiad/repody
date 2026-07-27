@@ -26,7 +26,7 @@ def logic_field_gt(
         "kind": "logic",
         "scope": "intra",
         "appliesTo": [doc_id],
-        "conditions": [_condition_gt(field, value, cid=f"{rule_id}-c1")],
+        "conditions": [_condition_gt(field, value, cid="c1")],
         "body": body,
         "severity": severity,
     }
@@ -52,7 +52,7 @@ def logic_sum_equals(
         "appliesTo": applies_to or [],
         "conditions": [
             {
-                "id": f"{rule_id}-c1",
+                "id": "c1",
                 "left": {"kind": "field", "value": left},
                 "arithmeticOp": "+",
                 "leftExtra": {"kind": "field", "value": extra},
@@ -92,7 +92,7 @@ def logic_field_compare(
         "appliesTo": applies_to or [],
         "conditions": [
             {
-                "id": f"{rule_id}-c1",
+                "id": "c1",
                 "left": left_operand,
                 "operator": operator,
                 "right": right_operand,

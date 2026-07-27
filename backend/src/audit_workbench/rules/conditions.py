@@ -198,12 +198,19 @@ def logic_check_entries(rule: dict) -> list[dict]:
         expression = condition_to_string(condition)
         if not expression:
             continue
+        rid = str(rule.get("id") or "rule")
         cid = str(condition.get("id") or index)
+        # Keep expanded ids under DB varchar(64); prefer short condition tokens.
+        if cid.startswith(f"{rid}-") or (cid.startswith(rid) and len(cid) > len(rid)):
+            expanded_id = cid[:64]
+        else:
+            suffix = cid if len(cid) <= 8 else str(index)
+            expanded_id = f"{rid}-c{suffix}"[:64]
         label = _condition_label(condition, index=index)
         entries.append(
             {
                 **rule,
-                "id": f"{rule.get('id') or 'rule'}-c{cid}",
+                "id": expanded_id,
                 "body": expression,
                 "name": f"{base_name}: {label}" if base_name else label,
                 "conditions": [condition],

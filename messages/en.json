@@ -519,7 +519,12 @@
         "directModelLlmValidationHint": "Repody VLM extracts schema fields directly. Optional LLM validation runs only when enabled on the platform.",
         "markdownExtractionLabel": "Document markdown preview",
         "markdownExtractionHint": "Also run NuExtract document-to-Markdown for a readable preview. When off, run results show the raw structured JSON only.",
-        "profileNuextractQ4Hint": "Official NuExtract3-GGUF: PDF → PNG @ 170 DPI → structured vision extraction."
+        "markdownOnlyBadge": "markdown",
+        "defaultBadge": "default",
+        "offlineBadge": "offline",
+        "profileNuextractQ4Hint": "Official NuExtract3-GGUF: PDF → PNG @ 170 DPI → structured vision extraction.",
+        "profilePaddleocrV6Hint": "PP-OCRv6 (official PaddleX OCR): document → text/Markdown only. Started by `pnpm dev:all` (:8868).",
+        "profileGlmOcrHint": "GLM-OCR (llama-server): document → text/Markdown only. Started by `pnpm dev:all` (:8083)."
       },
       "docSource": {
         "title": "Documents & fields to extract",
@@ -538,6 +543,21 @@
         "title": "What to extract",
         "description": "Describe each piece of information you want pulled out of the document and choose how the value should be formatted.",
         "addField": "Add field",
+        "importTemplate": "Import template",
+        "importTemplateTitle": "Import NuExtract template",
+        "importTemplateDescription": "Paste a NuExtract JSON template. Nested objects, lists, enums, and repeating rows are converted into schema fields.",
+        "importTemplateHint": "Uses the official NuExtract template shape (TYPES.md leaf types, nested objects, lists, enums, object arrays).",
+        "importTemplateApply": "Import fields",
+        "importTemplateReplace": "Replace fields",
+        "importTemplateAppend": "Append fields",
+        "importTemplateError": {
+          "invalid_json": "Invalid JSON — check braces and quotes.",
+          "not_object": "Template must be a JSON object at the top level.",
+          "empty": "No fields found in the template."
+        },
+        "objectFieldsLabel": "Nested fields",
+        "addObjectField": "Add nested field",
+        "removeObjectField": "Remove nested field",
         "namePlaceholder": "e.g. invoice_number",
         "descriptionPlaceholder": "What is this? e.g. the unique invoice identifier, usually near the header",
         "name": "Name",
@@ -609,6 +629,10 @@
           "boolean-list": {
             "label": "Yes/No list",
             "description": "Boolean values as a JSON array"
+          },
+          "object": {
+            "label": "Object group",
+            "description": "Named nested fields (e.g. holder_information)"
           },
           "object-array": {
             "label": "Repeating rows",

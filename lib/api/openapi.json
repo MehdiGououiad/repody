@@ -3258,7 +3258,7 @@
           "markdownExtraction": {
             "type": "boolean",
             "title": "Markdownextraction",
-            "description": "Run NuExtract document-to-Markdown in parallel with field extraction.",
+            "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
             "default": false
           },
           "extractionIclExamples": {
@@ -3326,7 +3326,7 @@
           "markdownExtraction": {
             "type": "boolean",
             "title": "Markdownextraction",
-            "description": "Run NuExtract document-to-Markdown in parallel with field extraction.",
+            "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
             "default": false
           },
           "extractionIclExamples": {
@@ -3862,43 +3862,6 @@
             "type": "boolean",
             "title": "Ratelimitenabled"
           },
-          "admissionControlEnabled": {
-            "type": "boolean",
-            "title": "Admissioncontrolenabled"
-          },
-          "admissionMaxQueued": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Admissionmaxqueued"
-          },
-          "admissionMaxInflight": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Admissionmaxinflight"
-          },
-          "admissionMaxExtractInflight": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Admissionmaxextractinflight"
-          },
           "queuedRuns": {
             "type": "integer",
             "title": "Queuedruns"
@@ -3940,7 +3903,6 @@
           "queueBackend",
           "structuredLlm",
           "rateLimitEnabled",
-          "admissionControlEnabled",
           "queuedRuns",
           "runningRuns",
           "inflightRuns",

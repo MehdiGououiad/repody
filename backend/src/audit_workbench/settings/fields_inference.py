@@ -75,6 +75,83 @@ class InferenceSettingsFields:
         ),
     )
 
+    nuextract_cloud_enabled: bool = Field(
+        default=False,
+        description=(
+            "Register NuExtract Cloud (repody:vlm:cloud) in the document model catalog. "
+            "Requires AUDIT_NUEXTRACT_CLOUD_API_KEY."
+        ),
+    )
+    nuextract_cloud_api_key: str | None = Field(
+        default=None,
+        description="Bearer API key for https://nuextract.ai (Authorization: Bearer …).",
+    )
+    nuextract_cloud_base_url: str = Field(
+        default="https://nuextract.ai",
+        description="NuExtract platform API origin (no trailing path).",
+    )
+    nuextract_cloud_project_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional fixed structured-extraction project id (sprj_…). "
+            "When unset, each request creates a temporary project from the workflow template."
+        ),
+    )
+    nuextract_cloud_timeout_seconds: float = Field(
+        default=180.0,
+        ge=30,
+        le=600.0,
+        description="HTTP/SSE timeout for NuExtract cloud jobs.",
+    )
+
+    paddleocr_v6_enabled: bool = Field(
+        default=True,
+        description=(
+            "Register PP-OCRv6 (paddleocr:v6) as a markdown-only document model. "
+            "Requires a running PaddleX OCR service "
+            "(`paddlex --serve --pipeline OCR`, default model PP-OCRv6_medium)."
+        ),
+    )
+    paddleocr_v6_base_url: str = Field(
+        default="http://127.0.0.1:8868",
+        description=(
+            "PP-OCRv6 OCR API origin (no path). Client calls POST /ocr. "
+            "Default :8868 avoids clashing with Keycloak (:8080)."
+        ),
+    )
+    paddleocr_v6_timeout_seconds: float = Field(
+        default=180.0,
+        ge=30,
+        le=600.0,
+        description="HTTP timeout for PP-OCRv6 POST /ocr.",
+    )
+
+    glm_ocr_enabled: bool = Field(
+        default=True,
+        description=(
+            "Register GLM-OCR (glm:ocr) as a markdown-only document model. "
+            "Requires llama-server with ggml-org/GLM-OCR-GGUF on "
+            "AUDIT_GLM_OCR_BASE_URL (default :8083)."
+        ),
+    )
+    glm_ocr_base_url: str = Field(
+        default="http://127.0.0.1:8083/v1",
+        description=(
+            "GLM-OCR OpenAI-compatible API origin (include /v1). "
+            "Default :8083 avoids Keycloak (:8080) and NuExtract (:8081)."
+        ),
+    )
+    glm_ocr_served_model: str = Field(
+        default="GLM-OCR",
+        description="Model id / alias returned by GLM-OCR llama-server /v1/models.",
+    )
+    glm_ocr_timeout_seconds: float = Field(
+        default=180.0,
+        ge=30,
+        le=600.0,
+        description="HTTP timeout for GLM-OCR chat/completions.",
+    )
+
     llm_validation_enabled: bool = Field(
         default=False,
         description="Enable LLM rule validation (requires validation_model on the inference endpoint).",

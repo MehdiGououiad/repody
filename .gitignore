@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/reports/platform-tests/
 /e2e/report/
 /e2e/.auth/
 /playwright-report/
@@ -72,10 +73,15 @@ backend/.agents/
 deploy/llamacpp/paths.local.env
 deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
-deploy/mineru/paths.local.env
-deploy/mineru/.venv/
-deploy/mineru/logs/
-deploy/mineru/output/
+deploy/glmocr/paths.local.env
+deploy/glmocr/models/
+deploy/glmocr/logs/
+deploy/qwen35/paths.local.env
+deploy/qwen35/models/
+deploy/qwen35/logs/
+deploy/nuextract2/paths.local.env
+deploy/nuextract2/models/
+deploy/nuextract2/logs/
 deploy/client/lab/.runtime/
 deploy/client/lab/.runtime-k3s/
 deploy/client/lab/.runtime-enterprise/

@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
-import uuid
-
 from audit_workbench.db.models import RunDocument, Workflow
-from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
-from audit_workbench.extraction.extraction_display import completed_extraction_detail
+from audit_workbench.extraction.branding import normalize_public_catalog_id
+from audit_workbench.extraction.modes import completed_extraction_detail
+from audit_workbench.platform.run.ids import new_id
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.storage.mime import resolve_mime as resolve_storage_mime
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
-
-def new_id(prefix: str) -> str:
-    return f"{prefix}-{uuid.uuid4().hex[:12]}"
+__all__ = [
+    "extract_label",
+    "extraction_step_detail",
+    "meta_to_dict",
+    "new_id",
+    "progress_mode",
+    "resolve_run_doc_mime",
+    "rule_dict_from_row",
+    "rules_payload",
+]
 
 
 def resolve_run_doc_mime(run_doc: RunDocument, document_bytes: bytes | None) -> str:

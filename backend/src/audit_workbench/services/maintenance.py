@@ -6,12 +6,12 @@ import asyncio
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.base import async_session_factory
 from audit_workbench.db.models import Run, RunStatus
-from audit_workbench.services.run_terminal import fail_run_terminal
+from audit_workbench.services.run.terminal import fail_run_terminal
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
@@ -31,6 +31,11 @@ def _stale_queued_message(minutes: int) -> str:
     )
 
 
+def _running_activity_at(run: Run) -> datetime | None:
+    """Prefer last_activity_at so multi-stage handoffs do not look stuck on started_at."""
+    return run.last_activity_at or run.started_at
+
+
 async def _worker_backlog_active(session: AsyncSession) -> bool:
     """True when at least one run is actively executing on a worker."""
     result = await session.execute(
@@ -41,13 +46,15 @@ async def _worker_backlog_active(session: AsyncSession) -> bool:
 
 async def _reap_stale_running_runs(session: AsyncSession, *, minutes: int) -> int:
     cutoff = datetime.now(UTC) - timedelta(minutes=minutes)
+    # Activity clock: COALESCE(last_activity_at, started_at) so handoffs refresh the lease.
+    activity = func.coalesce(Run.last_activity_at, Run.started_at)
     stale_ids = (
         (
             await session.execute(
                 select(Run.id).where(
                     Run.status == RunStatus.running.value,
-                    Run.started_at.is_not(None),
-                    Run.started_at < cutoff,
+                    activity.is_not(None),
+                    activity < cutoff,
                 )
             )
         )
@@ -113,9 +120,10 @@ async def maybe_reap_stale_run(session: AsyncSession, run: Run) -> bool:
     """Fail a single run when it exceeded queued/running stale thresholds."""
     settings = get_settings()
     now = datetime.now(UTC)
-    if run.status == RunStatus.running.value and run.started_at:
+    activity_at = _running_activity_at(run)
+    if run.status == RunStatus.running.value and activity_at:
         cutoff = now - timedelta(minutes=settings.stale_run_timeout_minutes)
-        if run.started_at < cutoff:
+        if activity_at < cutoff:
             return await fail_run_terminal(
                 run.id,
                 _stale_running_message(settings.stale_run_timeout_minutes),
@@ -155,17 +163,14 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
 
 async def run_maintenance_cycle() -> None:
     """One pass: fail stale running and stuck queued jobs; replay dispatch outbox."""
-    settings = get_settings()
     reaped = await reap_stale_runs()
     replayed = 0
     from audit_workbench.services.dispatch_outbox import replay_dispatch_outbox
+    from audit_workbench.services.queue import refresh_queued_positions
 
     async with async_session_factory() as session:
         replayed = await replay_dispatch_outbox(session)
-        if settings.admission_control_enabled:
-            from audit_workbench.services.queue import refresh_queued_positions
-
-            await refresh_queued_positions(session)
+        await refresh_queued_positions(session)
         await session.commit()
     if reaped or replayed:
         log.info("maintenance_cycle_done", stale_runs_reaped=reaped, dispatches_replayed=replayed)

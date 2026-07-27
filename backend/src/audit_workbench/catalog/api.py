@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from audit_workbench.catalog.probes import list_catalog_with_availability
 from audit_workbench.catalog.registry import list_document_models
-from audit_workbench.extraction.document_model_branding import (
+from audit_workbench.extraction.branding import (
     public_runtime_model_name,
     public_runtime_name,
 )
-from audit_workbench.extraction.document_modes import list_read_paths, list_validation_modes
+from audit_workbench.extraction.modes import list_read_paths, list_validation_modes
 from audit_workbench.schemas.models_catalog import (
     CatalogModelEntry,
     ModelsCatalogResponse,

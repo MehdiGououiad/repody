@@ -10,7 +10,7 @@ from audit_workbench.catalog.registry import (
     list_document_models,
     parse_document_model,
 )
-from audit_workbench.extraction.document_model_branding import (
+from audit_workbench.extraction.branding import (
     normalize_public_catalog_id,
     public_runtime_model_name,
     public_runtime_name,
@@ -22,6 +22,9 @@ from audit_workbench.inference.openai_compat import (
     post_chat_completion,
 )
 from audit_workbench.inference.runtime import (
+    GLM_OCR_RUNTIME,
+    NUEXTRACT_CLOUD_RUNTIME,
+    PADDLEOCR_V6_RUNTIME,
     llamacpp_base_url,
     openai_probe_timeout_seconds,
 )
@@ -31,6 +34,15 @@ RUNTIMES = ("llamacpp",)
 
 SERVERLESS_CATALOG_NOTE = (
     "Serverless GPU — billed only on extraction runs (idle GPU probes disabled)."
+)
+NUEXTRACT_CLOUD_CATALOG_NOTE = (
+    "NuExtract Cloud API — billed per extraction job (no local GPU probe)."
+)
+PADDLEOCR_V6_CATALOG_NOTE = (
+    "PP-OCRv6 OCR service — markdown-only (paddlex --serve --pipeline OCR)."
+)
+GLM_OCR_CATALOG_NOTE = (
+    "GLM-OCR (zai-org) — markdown-only; llama-server GGUF; prompt \"Text Recognition:\"."
 )
 
 
@@ -78,8 +90,24 @@ def availability_for_spec(
     installed_by_runtime: dict[str, set[str]],
     live_probe: bool = True,
     active_runtime: str | None = None,
+    settings: Settings | None = None,
 ) -> tuple[bool, str | None]:
     _ = active_runtime
+    settings = settings or get_settings()
+    if spec.runtime == NUEXTRACT_CLOUD_RUNTIME:
+        if not (settings.nuextract_cloud_api_key or "").strip():
+            return False, "Set AUDIT_NUEXTRACT_CLOUD_API_KEY to use NuExtract Cloud."
+        return True, NUEXTRACT_CLOUD_CATALOG_NOTE
+    if spec.runtime == PADDLEOCR_V6_RUNTIME:
+        base = (settings.paddleocr_v6_base_url or "").strip()
+        if not base:
+            return False, "Set AUDIT_PADDLEOCR_V6_BASE_URL to the PP-OCRv6 OCR API origin."
+        return True, PADDLEOCR_V6_CATALOG_NOTE
+    if spec.runtime == GLM_OCR_RUNTIME:
+        base = (settings.glm_ocr_base_url or "").strip()
+        if not base:
+            return False, "Set AUDIT_GLM_OCR_BASE_URL to the GLM-OCR llama-server /v1 origin."
+        return True, GLM_OCR_CATALOG_NOTE
     if not live_probe and spec.runtime in RUNTIMES:
         return True, SERVERLESS_CATALOG_NOTE
     runtime_models = installed_by_runtime.get(spec.runtime) or set()
@@ -106,6 +134,7 @@ async def list_catalog_with_availability(
             spec,
             installed_by_runtime=installed,
             live_probe=live_probe,
+            settings=settings,
         )
         entries.append(AvailableModelEntry(spec=spec, available=available, availability_note=note))
 

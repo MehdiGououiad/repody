@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import Run, RunStatus
 from audit_workbench.services.queue.position import apply_queue_meta, queue_position
-from audit_workbench.services.run_events import publish_run_progress
-from audit_workbench.services.run.progress_persist import init_queued_progress
+from audit_workbench.services.run.sse import publish_run_progress
+from audit_workbench.services.run.progress import init_queued_progress
 
 
 async def init_queued_progress_with_position(session: AsyncSession, run_id: str) -> None:

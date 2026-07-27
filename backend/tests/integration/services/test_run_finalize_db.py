@@ -1,0 +1,74 @@
+"""Integration: finalize_pending_completion completes a real Postgres run."""
+
+from __future__ import annotations
+
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock
+
+import pytest
+
+from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
+from audit_workbench.platform.agent_metadata import PendingCompletion, store_pending_completion
+from audit_workbench.services.run.finalize import finalize_pending_completion
+
+
+@pytest.fixture
+async def finalize_session(postgres_session):
+    wf = Workflow(id="wf-finalize", name="Finalize", status=WorkflowStatus.active.value)
+    run = Run(
+        id="run-finalize-1",
+        workflow_id=wf.id,
+        source="test",
+        status=RunStatus.running.value,
+        worker_pool="fraud",
+        started_at=datetime.now(UTC),
+    )
+    store_pending_completion(
+        run,
+        PendingCompletion(
+            overall_status="passed",
+            summary_total=1,
+            summary_passed=1,
+            summary_failed=0,
+            fields_extracted=2,
+            run_metadata={"durationMs": 12},
+            progress=None,
+        ),
+    )
+    postgres_session.add_all([wf, run])
+    await postgres_session.commit()
+    yield postgres_session
+
+
+@pytest.mark.asyncio
+async def test_finalize_pending_completion_marks_run_done(finalize_session, monkeypatch):
+    publish = AsyncMock()
+    monkeypatch.setattr(
+        "audit_workbench.services.run.finalize.publish_run_domain_events",
+        publish,
+    )
+
+    run = await finalize_session.get(Run, "run-finalize-1")
+    assert run is not None
+    await finalize_pending_completion(finalize_session, run)
+
+    await finalize_session.refresh(run)
+    assert run.status == RunStatus.done.value
+    assert run.overall_status == "passed"
+    assert run.summary_passed == 1
+    assert run.fields_extracted == 2
+    assert run.finished_at is not None
+    meta = run.run_metadata or {}
+    assert "pendingCompletion" not in meta
+    publish.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_finalize_pending_completion_requires_payload(finalize_session):
+    run = await finalize_session.get(Run, "run-finalize-1")
+    assert run is not None
+    run.run_metadata = {}
+    await finalize_session.commit()
+
+    with pytest.raises(RuntimeError, match="missing pendingCompletion"):
+        await finalize_pending_completion(finalize_session, run)

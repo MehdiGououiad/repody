@@ -8,34 +8,91 @@ const failures = [];
 
 const PY_IMPORT_RE = /^\s*(?:from|import)\s+([A-Za-z0-9_.]+)/gm;
 
-const runInnerLayerRules = [
+/** @typedef {{ name: string, dir?: string, files?: string[], forbiddenImports: RegExp[], forbiddenText?: RegExp[] }} ArchRule */
+
+/** @type {ArchRule[]} */
+const architectureRules = [
   {
-    name: "Run domain",
-    dir: "backend/src/audit_workbench/services/run/domain",
+    name: "Platform contracts",
+    dir: "backend/src/audit_workbench/platform/contracts",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,
       /^redis(?:\.|$)/,
       /^structlog(?:\.|$)/,
-      /^audit_workbench\.(api|db|settings|storage|taskiq)(?:\.|$)/,
-      /^audit_workbench\.services\.run\.adapters(?:\.|$)/,
-      /^audit_workbench\.services\.(run_events|run\.progress_persist|run\.progress_plan)(?:\.|$)/,
+      /^audit_workbench\.(api|db|settings|storage|taskiq|extraction|rules|services)(?:\.|$)/,
     ],
     forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
   },
   {
-    name: "Run application",
-    dir: "backend/src/audit_workbench/services/run/application",
+    name: "Platform recipe (no services lifecycle)",
+    files: ["backend/src/audit_workbench/platform/recipe.py"],
+    forbiddenImports: [/^audit_workbench\.services(?:\.|$)/],
+  },
+  {
+    name: "Platform agent_metadata (no services)",
+    files: ["backend/src/audit_workbench/platform/agent_metadata.py"],
+    forbiddenImports: [/^audit_workbench\.services(?:\.|$)/],
+  },
+  {
+    name: "Platform metrics build",
+    dir: "backend/src/audit_workbench/platform/metrics",
+    forbiddenImports: [
+      /^sqlalchemy(?:\.|$)/,
+      /^fastapi(?:\.|$)/,
+      /^redis(?:\.|$)/,
+      /^audit_workbench\.(api|db|storage|taskiq)(?:\.|$)/,
+    ],
+    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
+  },
+  {
+    name: "Platform run pure+contracts",
+    dir: "backend/src/audit_workbench/platform/run",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,
       /^redis(?:\.|$)/,
       /^structlog(?:\.|$)/,
-      /^audit_workbench\.(api|db|settings|storage|taskiq)(?:\.|$)/,
-      /^audit_workbench\.services\.run\.adapters(?:\.|$)/,
-      /^audit_workbench\.services\.(run_events|run\.progress_persist|run\.progress_plan)(?:\.|$)/,
+      /^audit_workbench\.(api|db|settings|storage|taskiq|services)(?:\.|$)/,
     ],
-    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/, /type:\s*ignore/],
+    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
+  },
+  {
+    name: "Platform operator",
+    dir: "backend/src/audit_workbench/platform/operator",
+    forbiddenImports: [
+      /^sqlalchemy(?:\.|$)/,
+      /^fastapi(?:\.|$)/,
+      /^redis(?:\.|$)/,
+      /^structlog(?:\.|$)/,
+      /^audit_workbench\.(api|db|storage|taskiq|services)(?:\.|$)/,
+    ],
+    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
+  },
+  {
+    name: "IDP contracts (flat)",
+    files: ["backend/src/audit_workbench/agents/idp/contracts.py"],
+    forbiddenImports: [
+      /^sqlalchemy(?:\.|$)/,
+      /^fastapi(?:\.|$)/,
+      /^redis(?:\.|$)/,
+      /^structlog(?:\.|$)/,
+      /^audit_workbench\.(api|db|settings|storage|taskiq|services)(?:\.|$)/,
+    ],
+    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
+  },
+  {
+    name: "IDP compose (flat, port-injected)",
+    files: ["backend/src/audit_workbench/agents/idp/compose.py"],
+    forbiddenImports: [
+      /^sqlalchemy(?:\.|$)/,
+      /^fastapi(?:\.|$)/,
+      /^redis(?:\.|$)/,
+      /^structlog(?:\.|$)/,
+      /^audit_workbench\.(api|db|settings|storage|taskiq|services)(?:\.|$)/,
+      /^audit_workbench\.agents\.idp\.adapters(?:\.|$)/,
+    ],
+    forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
   },
 ];
 
@@ -57,21 +114,36 @@ function lineNumber(text, index) {
   return text.slice(0, index).split(/\r?\n/).length;
 }
 
-for (const rule of runInnerLayerRules) {
+function resolveRuleFiles(rule) {
+  if (rule.files?.length) {
+    return rule.files.map((rel) => resolve(root, rel));
+  }
+  if (!rule.dir) {
+    return [];
+  }
   const absDir = resolve(root, rule.dir);
   try {
     if (!statSync(absDir).isDirectory()) {
       failures.push(`${rule.name}: missing directory ${rule.dir}`);
-      continue;
+      return [];
     }
   } catch {
     failures.push(`${rule.name}: missing directory ${rule.dir}`);
-    continue;
+    return [];
   }
+  return walkPython(rule.dir);
+}
 
-  for (const file of walkPython(rule.dir)) {
+for (const rule of architectureRules) {
+  for (const file of resolveRuleFiles(rule)) {
+    let text;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      failures.push(`${rule.name}: missing file ${relative(root, file)}`);
+      continue;
+    }
     const rel = relative(root, file);
-    const text = readFileSync(file, "utf8");
     for (const match of text.matchAll(PY_IMPORT_RE)) {
       const imported = match[1];
       if (rule.forbiddenImports.some((pattern) => pattern.test(imported))) {
@@ -80,7 +152,7 @@ for (const rule of runInnerLayerRules) {
         );
       }
     }
-    for (const pattern of rule.forbiddenText) {
+    for (const pattern of rule.forbiddenText ?? []) {
       const match = pattern.exec(text);
       if (match?.index !== undefined) {
         failures.push(`${rel}:${lineNumber(text, match.index)} ${rule.name} contains ${pattern}`);

@@ -6,7 +6,7 @@ Reference: [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGU
 
 ## What you configure
 
-Only wiring and operational limits — extraction behavior follows the official NuExtract contract in code (`nuextract_contract.py`).
+Only wiring and operational limits — extraction behavior follows the official NuExtract contract in code (`extraction/nuextract.py`, `extraction/render.py`).
 
 ```env
 AUDIT_INFERENCE_MODE=llamacpp
@@ -23,7 +23,9 @@ AUDIT_GPU_LIVE_PROBE=false
 | Fixed in code (not configurable) | Value |
 |----------------------------------|-------|
 | PDF raster | PNG @ **170 DPI** |
-| Thinking mode | `enable_thinking=false`, `temperature=0.2` |
+| Thinking mode | `enable_thinking=false` |
+| Structured temperature | **0.2** (official non-thinking) |
+| Markdown temperature | **0** (official markdown example) |
 | Max pages per request | **6** |
 | Read path | NuExtract vision only |
 
@@ -64,10 +66,11 @@ Structured extraction follows the [NuExtract3-GGUF](https://huggingface.co/numin
 | Input | Behavior |
 |-------|----------|
 | PDF | PNG @ 170 DPI, up to 6 pages per request |
-| Image | Native bytes (PNG, JPEG, WebP) |
+| Image | Native PNG/JPEG; **WebP converted to PNG** (llama.cpp vision is unreliable on native WebP) |
 | Other MIME types | Rejected — upload PDF or image only |
-| Structured call | `chat_template_kwargs.template`, optional `instructions`, `enable_thinking=false`, `temperature=0.2`, no `max_tokens` |
-| Markdown mode | `chat_template_kwargs.mode: "markdown"` when the document has no schema fields |
+| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), optional `instructions`, `enable_thinking=false`, `temperature=0.2`, no `max_tokens` |
+| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` **only when the document has no schema fields** (not parallel with structured extraction) |
+| PDF page cap | Up to **6** pages sent; `pagesRendered` / `pagesDropped` report the full document page count |
 | ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only) |
 
 ## Endpoint check
@@ -81,6 +84,28 @@ curl -s "$AUDIT_LLAMACPP_BASE_URL/chat/completions" \
 
 Or: `pnpm llamacpp:verify`
 
+## Other document models
+
+Markdown-only **PP-OCRv6** (`paddleocr:v6`) is registered by default over the official PaddleX `POST /ocr` API — see [PADDLEOCR-V6.md](./PADDLEOCR-V6.md).
+
+Markdown-only **GLM-OCR** (`glm:ocr`) via llama-server on :8083 (zai-org `"Text Recognition:"` prompt; GGUF serve) — see [GLM-OCR.md](./GLM-OCR.md). Started by `pnpm dev:all` (skip with `--no-glmocr`).
+
+## Extraction accuracy (NuExtract contract)
+
+Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) — do not hardcode document-specific rules in the platform:
+
+| Practice | Why |
+|----------|-----|
+| Use `verbatim-string` for values that must be copied exactly | Official type for no reformulation |
+| Put format/location hints in the field **description** (or document instructions) | NuExtract maps these to `instructions` (e.g. “N digits, bottom-right stamp”) |
+| Prefer native image uploads when possible | Avoids an extra PDF→PNG step |
+| Keep llama.cpp `--image-min-tokens` ≥ 1024 | Qwen-VL accuracy floor; our Arc path caps max at 1024 for VRAM |
+| Import NuExtract JSON templates in the builder | Same constructors as the docs: leaf types, `{…}` nests, `["type"]` lists, enums, `[{…}]` rows |
+| For personal names on ID photos, prefer one **full name** field | Split `nom`/`prenom` often swaps lines on angled/hologram photos; describe full Latin name explicitly |
+| Missing fields are `null` | Official empty result; Repody shows them as not extracted |
+
+Repody only forwards schema types + your descriptions into the official payload shape (`json.dumps(..., indent=4)`, `enable_thinking=false`, structured `temperature=0.2`).
+
 ## Troubleshooting
 
 | Symptom | Check |
@@ -90,3 +115,4 @@ Or: `pnpm llamacpp:verify`
 | Timeout | Increase `AUDIT_REPODY_VLM_TIMEOUT_SECONDS`; check inference cold start |
 | Wrong JSON | llama-server started with `--jinja` |
 | Truncated output | Reduce schema size or page count (max 6 pages per request) |
+| Digits wrong / extra zeros | Prefer **Q8_0** (or Q6) GGUF at vision 1024; vision 1536+ can crash Arc mid-suite. Use `verbatim-string` + length/location in field description |

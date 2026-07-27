@@ -34,7 +34,6 @@ e2e/
 !README.md
 
 # Benchmark, reports, and local artifacts
-backend/benchmark-fixtures
 benchmark-reports
 carte-*.txt
 carte-*.json

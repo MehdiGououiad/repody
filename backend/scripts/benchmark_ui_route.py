@@ -28,7 +28,7 @@ from typing import Any
 import httpx
 
 from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF = REPO_ROOT / "e2e" / "fixtures" / "documents" / "Facture.pdf"

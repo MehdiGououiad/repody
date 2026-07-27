@@ -16,6 +16,7 @@ class Run(Base):
     __table_args__ = (
         Index("ix_runs_workflow_created", "workflow_id", "created_at"),
         Index("ix_runs_status", "status"),
+        Index("ix_runs_status_last_activity", "status", "last_activity_at"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -36,6 +37,7 @@ class Run(Base):
     worker_pool: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     workflow: Mapped[Workflow] = relationship(back_populates="runs")
@@ -114,6 +116,7 @@ class RunDispatchOutbox(Base):
         primary_key=True,
     )
     pool: Mapped[str] = mapped_column(String(16), default="fast")
+    agent_stage: Mapped[str] = mapped_column(String(32), default="idp")
     workflow_id: Mapped[str] = mapped_column(String(64), default="")
     request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="pending")

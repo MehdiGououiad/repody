@@ -14,8 +14,8 @@ from typing import Any
 
 import fitz
 
-from audit_workbench.extraction.base import SchemaFieldSpec
-from audit_workbench.extraction.field_json import parse_numeric_value
+from audit_workbench.extraction.types import SchemaFieldSpec
+from audit_workbench.extraction.parse import parse_numeric_value
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CIH_RELEVE_PDF = REPO_ROOT / "e2e" / "fixtures" / "documents" / "releve cih.pdf"

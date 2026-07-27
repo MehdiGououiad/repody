@@ -204,7 +204,7 @@ pnpm release:attest
 
 Give clients: registry URL, immutable tag, chart path `deploy/helm/repody`, and this guide.
 
-**Lab verification** (vendor only): OpenShift CRC — [OPENSHIFT.md](./OPENSHIFT.md#crc-lab-verification).
+**Lab verification** (vendor only): OpenShift CRC — [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab).
 
 ---
 

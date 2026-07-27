@@ -1,0 +1,107 @@
+{
+  "fixture_id": "hopital-devis-agadir",
+  "aliases": ["E8cbebbXMAIU1Mj.jpg", "hopital-devis-agadir.png"],
+  "description": "Hôpital Privé Agadir medical quote (DEVIS) — hard table OCR with ink stamp ICE",
+  "core_fields": [
+    {
+      "id": "ice",
+      "label": "ICE (Identifiant Commun de l'Entreprise)",
+      "expected": "001639657000061",
+      "compare": "digits",
+      "weight": 3
+    },
+    {
+      "id": "total_devis",
+      "label": "Total devis",
+      "expected": "497550",
+      "compare": "amount",
+      "weight": 2
+    },
+    {
+      "id": "hospital_name",
+      "label": "Hospital header",
+      "expected": "HOPITAL PRIVE AGADIR",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "document_type",
+      "label": "Document title",
+      "expected": "DEVIS",
+      "compare": "contains",
+      "weight": 1
+    }
+  ],
+  "hard_fields": [
+    {
+      "id": "inpe",
+      "label": "INPE on stamp",
+      "expected": "040063554",
+      "compare": "digits",
+      "weight": 2
+    },
+    {
+      "id": "subtotal_prestations",
+      "label": "Prestations sub-total",
+      "expected": "416050",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "subtotal_honoraires",
+      "label": "Honoraires sub-total",
+      "expected": "58000",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "subtotal_laboratoire",
+      "label": "Laboratoire sub-total",
+      "expected": "23500",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "cnss",
+      "label": "Footer CNSS",
+      "expected": "1050899",
+      "compare": "digits",
+      "weight": 1
+    },
+    {
+      "id": "patente",
+      "label": "Footer PATENTE",
+      "expected": "49297765",
+      "compare": "digits",
+      "weight": 1
+    },
+    {
+      "id": "if_tax",
+      "label": "Footer IF",
+      "expected": "18818720",
+      "compare": "digits",
+      "weight": 1
+    },
+    {
+      "id": "line_reanimation",
+      "label": "REANIMATION ADULTE line",
+      "expected": "REANIMATION ADULTE",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "line_oxygene",
+      "label": "OXYGENE line amount",
+      "expected": "188500",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "written_total_fr",
+      "label": "Written total in French",
+      "expected": "QUATRE CENT QUATRE-VINGT-DIX-SEPT",
+      "compare": "contains",
+      "weight": 1
+    }
+  ]
+}

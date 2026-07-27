@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from audit_workbench.db.models import Run, Workflow
-from audit_workbench.extraction.document_model_branding import normalize_public_catalog_id
-from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID
+from audit_workbench.extraction.branding import normalize_public_catalog_id
+from audit_workbench.extraction.modes import DEFAULT_READ_PATH_ID
 from audit_workbench.schemas.audit import AuditListItem
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 from audit_workbench.schemas.run import (

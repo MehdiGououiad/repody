@@ -31,7 +31,7 @@ from audit_workbench.observability.middleware import RequestLoggingMiddleware
 from audit_workbench.observability.tracing import instrument_fastapi
 from audit_workbench.services.rate_limit import GlobalRateLimitMiddleware
 from audit_workbench.services.redis_pool import close_redis_pool
-from audit_workbench.services.run_dispatch import close_taskiq_brokers
+from audit_workbench.services.run.dispatch import close_taskiq_brokers
 from audit_workbench.settings import get_settings
 from audit_workbench.storage.factory import init_storage
 

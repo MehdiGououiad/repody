@@ -14,7 +14,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  GLM_OCR_CATALOG_ID,
+  PADDLEOCR_V6_CATALOG_ID,
   REPODY_VLM_CATALOG_ID,
+  isMarkdownOnlyCatalogId,
   publicDocumentModelLabel,
 } from "@/lib/document-model-branding";
 import type { DocumentDef } from "@/lib/types";
@@ -39,6 +42,13 @@ export function ProcessingSettings({
     doc.documentModelId?.trim() ||
     defaultDocumentModel ||
     REPODY_VLM_CATALOG_ID;
+
+  const modelHint =
+    selected === GLM_OCR_CATALOG_ID
+      ? t("extraction.profileGlmOcrHint")
+      : selected === PADDLEOCR_V6_CATALOG_ID
+        ? t("extraction.profilePaddleocrV6Hint")
+        : t("extraction.profileNuextractQ4Hint");
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
@@ -70,12 +80,18 @@ export function ProcessingSettings({
         <Select
           value={selected}
           disabled={!loaded || documentModelIds.length === 0}
-          onValueChange={(value) =>
+          onValueChange={(value) => {
+            const entry = documentModelIds.find((model) => model.id === value);
+            const nextMarkdownOnly =
+              entry?.markdownOnly === true || isMarkdownOnlyCatalogId(value);
             onChange({
               documentModelId: value,
               extractionMode: "document_model",
-            })
-          }
+              // Markdown-only catalog models (e.g. PP-OCRv6) always run document→markdown.
+              markdownExtraction: nextMarkdownOnly ? true : doc.markdownExtraction,
+              ...(nextMarkdownOnly ? { schema: [] } : {}),
+            });
+          }}
         >
           <SelectTrigger id={`extraction-model-${doc.id}`} className="h-9">
             <SelectValue
@@ -94,8 +110,9 @@ export function ProcessingSettings({
                 disabled={model.available === false}
               >
                 {publicDocumentModelLabel(model.id)}
-                {model.id === defaultDocumentModel ? " · default" : ""}
-                {model.available === false ? " · offline" : ""}
+                {model.markdownOnly ? ` · ${t("extraction.markdownOnlyBadge")}` : ""}
+                {model.id === defaultDocumentModel ? ` · ${t("extraction.defaultBadge")}` : ""}
+                {model.available === false ? ` · ${t("extraction.offlineBadge")}` : ""}
               </SelectItem>
             ))}
             {documentModelIds.length === 0 ? (
@@ -106,7 +123,7 @@ export function ProcessingSettings({
           </SelectContent>
         </Select>
         <p className="text-[11px] leading-relaxed text-on-surface-variant">
-          {t("extraction.profileNuextractQ4Hint")}
+          {modelHint}
         </p>
       </div>
     </div>

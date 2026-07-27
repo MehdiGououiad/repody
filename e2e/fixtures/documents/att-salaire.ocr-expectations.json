@@ -1,0 +1,115 @@
+{
+  "fixture_id": "att-salaire",
+  "file": "Att Salaire.webp",
+  "description": "Moroccan public-sector salary attestation (Attestation de salaire) — hard tables and amounts",
+  "primary_hit": "national_id",
+  "core_fields": [
+    {
+      "id": "national_id",
+      "label": "CIN (NUM. C.I.N.)",
+      "expected": "BE766480",
+      "compare": "contains",
+      "weight": 3
+    },
+    {
+      "id": "net_monthly",
+      "label": "NET MENSUEL",
+      "expected": "10794.22",
+      "compare": "amount",
+      "weight": 2
+    },
+    {
+      "id": "gross_monthly",
+      "label": "BRUT MENSUEL",
+      "expected": "14797.72",
+      "compare": "amount",
+      "weight": 2
+    },
+    {
+      "id": "employee_name",
+      "label": "NOM PRENOM",
+      "expected": "BOUHNIN MOHAMED",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "document_type",
+      "label": "Title",
+      "expected": "ATTESTATION DE SALAIRE",
+      "compare": "contains",
+      "weight": 1
+    }
+  ],
+  "hard_fields": [
+    {
+      "id": "matricule",
+      "label": "MATRICULE",
+      "expected": "1447540",
+      "compare": "digits",
+      "weight": 2
+    },
+    {
+      "id": "total_deductions",
+      "label": "TOTAL RETENUES",
+      "expected": "4003.50",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "taxable_base",
+      "label": "BASE IMPOSABLE MENSUEL",
+      "expected": "2494.37",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "base_salary",
+      "label": "TRAITEMENT DE BASE",
+      "expected": "2818.89",
+      "compare": "amount",
+      "weight": 1
+    },
+    {
+      "id": "dob",
+      "label": "DATE DE NAISSANCE",
+      "expected": "31/10/1981",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "echelon",
+      "label": "ECHELON",
+      "expected": "07",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "indice",
+      "label": "INDICE",
+      "expected": "542",
+      "compare": "digits",
+      "weight": 1
+    },
+    {
+      "id": "ministry",
+      "label": "Ministry header",
+      "expected": "ECONOMIE ET FINANCES",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "issuance_place",
+      "label": "Rabat issuance",
+      "expected": "Rabat",
+      "compare": "contains",
+      "weight": 1
+    },
+    {
+      "id": "signatory",
+      "label": "Signatory name",
+      "expected": "BOUAOUDA",
+      "compare": "contains",
+      "weight": 1
+    }
+  ]
+}
