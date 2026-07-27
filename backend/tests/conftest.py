@@ -26,7 +26,6 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from unittest.mock import AsyncMock
 
 from audit_workbench.main import create_app
 from audit_workbench.settings import clear_settings_cache, get_settings
@@ -49,17 +48,6 @@ def fresh_settings():
     clear_settings_cache()
     yield
     clear_settings_cache()
-
-
-@pytest.fixture(autouse=True)
-def mock_redis_readiness_for_inprocess_tests(monkeypatch, request):
-    """Unit/e2e ASGI tests have no Redis; readiness still validates the probe path."""
-    if request.node.get_closest_marker("live"):
-        return
-    monkeypatch.setattr(
-        "audit_workbench.services.platform_health.ping_redis",
-        AsyncMock(return_value=True),
-    )
 
 
 @pytest.fixture

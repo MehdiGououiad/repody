@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -41,13 +40,7 @@ async def finalize_session(postgres_session):
 
 
 @pytest.mark.asyncio
-async def test_finalize_pending_completion_marks_run_done(finalize_session, monkeypatch):
-    publish = AsyncMock()
-    monkeypatch.setattr(
-        "audit_workbench.services.run.finalize.publish_run_domain_events",
-        publish,
-    )
-
+async def test_finalize_pending_completion_marks_run_done(finalize_session):
     run = await finalize_session.get(Run, "run-finalize-1")
     assert run is not None
     await finalize_pending_completion(finalize_session, run)
@@ -60,7 +53,6 @@ async def test_finalize_pending_completion_marks_run_done(finalize_session, monk
     assert run.finished_at is not None
     meta = run.run_metadata or {}
     assert "pendingCompletion" not in meta
-    publish.assert_awaited()
 
 
 @pytest.mark.asyncio

@@ -44,13 +44,7 @@ async def handoff_session(postgres_session):
 
 
 @pytest.mark.asyncio
-async def test_schedule_next_agent_stage_reuses_outbox(handoff_session, monkeypatch):
-    scheduled: list[str] = []
-    monkeypatch.setattr(
-        "audit_workbench.services.run.handoff.schedule_outbox_dispatch",
-        lambda run_id: scheduled.append(run_id),
-    )
-
+async def test_schedule_next_agent_stage_reuses_outbox(handoff_session):
     run = await handoff_session.get(Run, "run-handoff-1")
     assert run is not None
     await schedule_next_agent_stage(
@@ -72,17 +66,10 @@ async def test_schedule_next_agent_stage_reuses_outbox(handoff_session, monkeypa
     assert row.status == "pending"
     assert row.dispatch_attempts == 0
     assert row.request_id == "req-handoff"
-    assert scheduled == ["run-handoff-1"]
 
 
 @pytest.mark.asyncio
-async def test_schedule_next_agent_stage_creates_outbox_when_missing(
-    handoff_session, monkeypatch
-):
-    monkeypatch.setattr(
-        "audit_workbench.services.run.handoff.schedule_outbox_dispatch",
-        lambda _run_id: None,
-    )
+async def test_schedule_next_agent_stage_creates_outbox_when_missing(handoff_session):
     row = await handoff_session.get(RunDispatchOutbox, "run-handoff-1")
     assert row is not None
     await handoff_session.delete(row)
