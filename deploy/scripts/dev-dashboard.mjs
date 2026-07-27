@@ -7,11 +7,11 @@ const REPODY_LOGIN = "operator@repody.local / repody-dev (use localhost in the b
 /** @typedef {{ name: string; url?: string; probeUrl?: string; endpoint?: string; role: string; creds?: string; skip?: boolean }} DevServiceRow */
 
 /**
- * @param {{ apiPort: number; observability: boolean; llama: boolean; extractOnly: boolean }} ctx
+ * @param {{ apiPort: number; observability: boolean; llama: boolean; paddleocr?: boolean; glmocr?: boolean; extractOnly: boolean }} ctx
  * @returns {{ title: string; rows: DevServiceRow[] }[]}
  */
 export function buildDevDashboardSections(ctx) {
-  const { apiPort, observability, llama, extractOnly } = ctx;
+  const { apiPort, observability, llama, paddleocr = false, glmocr = false, extractOnly } = ctx;
   /** @type {{ title: string; rows: DevServiceRow[] }[]} */
   const sections = [
     {
@@ -105,6 +105,19 @@ export function buildDevDashboardSections(ctx) {
           role: "Multimodal VLM (llama.cpp) — workers call via host.docker.internal",
           skip: !llama,
         },
+        {
+          name: "PP-OCRv6 / PaddleX",
+          url: "http://localhost:8868/ocr",
+          probeUrl: "http://localhost:8868/ocr",
+          role: "Markdown-only OCR (POST /ocr) — catalog id paddleocr:v6",
+          skip: !paddleocr,
+        },
+        {
+          name: "GLM-OCR / llama-server",
+          url: "http://localhost:8083/v1/models",
+          role: "Markdown-only OCR (chat completions) — catalog id glm:ocr",
+          skip: !glmocr,
+        },
       ],
     },
   ];
@@ -154,8 +167,9 @@ export function buildDevDashboardSections(ctx) {
     title: "CLI (this repo)",
     rows: [
       { name: "pnpm dev:status", role: "Probe every URL above and list Compose containers" },
-      { name: "pnpm dev:stop", role: "Stop API, UI, NuExtract, and full Compose stack" },
-      { name: "pnpm dev:restart", role: "Restart NuExtract + worker containers after GPU resets" },
+      { name: "pnpm models:warmup", role: "Warm NuExtract + PP-OCRv6 + GLM-OCR (first inference)" },
+      { name: "pnpm dev:stop", role: "Stop API, UI, NuExtract, PP-OCRv6, GLM-OCR, and full Compose stack" },
+      { name: "pnpm dev:restart", role: "Restart NuExtract + PP-OCRv6 + GLM-OCR + workers after GPU resets" },
       { name: "pnpm dev:observability", role: "Start or refresh Grafana/Loki/Tempo/Bugsink only" },
       { name: "pnpm db:migrate", role: "Apply Alembic migrations" },
       { name: "pnpm test:api", role: "Backend pytest suite" },
@@ -169,20 +183,29 @@ export function buildDevDashboardSections(ctx) {
 }
 
 /**
- * @param {{ apiPort: number; observability: boolean; llama: boolean; extractOnly: boolean; appRunning: boolean; probe?: boolean; fetchProbe?: (url: string, ms: number) => Promise<{ ok: boolean }> }} opts
+ * @param {{ apiPort: number; observability: boolean; llama: boolean; paddleocr?: boolean; glmocr?: boolean; extractOnly: boolean; appRunning: boolean; probe?: boolean; fetchProbe?: (url: string, ms: number) => Promise<{ ok: boolean }> }} opts
  */
 export async function printDevDashboard(opts) {
   const {
     apiPort,
     observability,
     llama,
+    paddleocr = false,
+    glmocr = false,
     extractOnly,
     appRunning,
     probe = false,
     fetchProbe,
   } = opts;
 
-  const sections = buildDevDashboardSections({ apiPort, observability, llama, extractOnly });
+  const sections = buildDevDashboardSections({
+    apiPort,
+    observability,
+    llama,
+    paddleocr,
+    glmocr,
+    extractOnly,
+  });
 
   console.log("\n╔══════════════════════════════════════════════════════════════════╗");
   console.log("║  Repody local dev — ready                                        ║");

@@ -21,7 +21,9 @@ Use the device id in `paths.local.env` (e.g. `Vulkan0`, `CUDA0`).
 
 | File | Purpose |
 |------|---------|
-| `NuExtract3-Q4_K_M.gguf` | Text weights (~2.5 GB) — **only supported local model** |
+| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) — **deep-bench winner on Arc** |
+| `NuExtract3-Q6_K.gguf` | Strong runner-up (~3.5 GB) |
+| `NuExtract3-Q4_K_M.gguf` | Smaller / faster (~2.7 GB) — official HF “local default” |
 | `mmproj-NuExtract3-BF16.gguf` | Vision projector (required for images) |
 
 ## 3. Configure paths
@@ -53,12 +55,12 @@ minimal multimodal command plus accuracy / GPU knobs from upstream docs:
 | Chat template | `--jinja` | Required for `chat_template_kwargs` |
 | Server reasoning | `-rea off` | Official non-thinking (`enable_thinking=false`) |
 | Parallel slots | **1** (`-np 1`) default | Full 16k context per slot |
-| Vision tokens | `--image-min-tokens 1024 --image-max-tokens 1024` | Min = Qwen-VL accuracy floor; max caps vision budget (required on Arc 140V) |
-| Vision batch | `-ub 1024` + `--mtmd-batch-max-tokens 1024` | Match the 1024 vision budget |
+| Vision tokens | `--image-min/max-tokens` (default **1536** in `paths.local.env.example`) | Qwen-VL floor is 1024; Arc accuracy bench: **1536** fixes hard stamp OCR for Q4; keep max capped |
+| Vision batch | `-ub` + `--mtmd-batch-max-tokens` match vision budget | Must track image-max-tokens |
 
-Solo A/B: `node deploy/llamacpp/bench-stability.mjs` · speed: `node deploy/llamacpp/bench-solo.mjs`
+**Recommendation:** `NuExtract3-Q8_0.gguf` + vision **1024**. Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL`.
 
-API: `http://127.0.0.1:8081/v1` (model id `nuextract3-q4_k_m` by default; set `LLAMACPP_MODEL_ALIAS`).
+API: `http://127.0.0.1:8081/v1` (model id from `LLAMACPP_MODEL_ALIAS`).
 
 ## 5. Point Repody at llama-server
 
@@ -76,10 +78,10 @@ llama-server `
   -m C:\path\to\NuExtract3-Q4_K_M.gguf `
   --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
   --host 0.0.0.0 --port 8081 `
-  -c 16384 -np 1 -ub 1024 `
+  -c 16384 -np 1 -ub 1536 `
   -ngl 99 -fa on --device Vulkan0 --mmproj-offload `
-  --image-min-tokens 1024 --image-max-tokens 1024 `
-  --mtmd-batch-max-tokens 1024 `
+  --image-min-tokens 1536 --image-max-tokens 1536 `
+  --mtmd-batch-max-tokens 1536 `
   -a nuextract3-q4_k_m --jinja -rea off
 ```
 
@@ -87,11 +89,11 @@ llama-server `
 
 Each parallel slot reserves a full context window. Throughput scales roughly linearly with `-np` until VRAM or CPU saturates.
 
-| Slots | When | Helm / admission |
-|-------|------|------------------|
-| **1** | CRC lab, Arc 8 GB, daily dev | `admissionMaxExtractInflight: 1` |
-| **2** | Arc 16 GB+, dedicated stress runs | `admissionMaxExtractInflight: 2` + 2 extract workers |
-| **4+** | Multi-GPU / production vLLM | Match `admissionMaxExtractInflight` to GPU concurrency |
+| Slots | When | Worker pool |
+|-------|------|-------------|
+| **1** | CRC lab, Arc 8 GB, daily dev | `workerExtract.maxJobs: 1` |
+| **2** | Arc 16 GB+, dedicated stress runs | 2 extract workers or `maxJobs: 2` |
+| **4+** | Multi-GPU / production vLLM | Match extract worker concurrency to GPU slots; excess runs wait in Taskiq |
 
 In `paths.local.env`:
 
@@ -111,7 +113,7 @@ pnpm dev:restart
 | Symptom | Fix |
 |---------|-----|
 | Slow first request | Run `pnpm llamacpp:warmup` or set `LLAMACPP_WARMUP=on` |
-| `failed to process image` / Vulkan `ErrorDeviceLost` | Ensure `--image-max-tokens 1024` and `-ub 1024` / `--mtmd-batch-max-tokens 1024`. Restart with `pnpm llamacpp:restart`. |
+| `failed to process image` / Vulkan `ErrorDeviceLost` | Cap `--image-max-tokens` (and match `-ub` / `--mtmd-batch-max-tokens`). Try 1536 first; if unstable, fall back to 1024. Restart with `pnpm llamacpp:restart`. |
 | `/v1/models` missing multimodal | Check `LLAMACPP_MMPROJ` path and `--mmproj-offload` |
 | Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |
 

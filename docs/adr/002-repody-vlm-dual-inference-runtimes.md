@@ -25,7 +25,7 @@ Default catalog id: `repody:vlm`.
 | Concern | Runtime selector |
 |---------|------------------|
 | Document extraction | `AUDIT_INFERENCE_MODE` → external llama-server endpoint |
-| LLM rule validation | `get_inference_client()` → separate text model or stub |
+| LLM rule validation | `get_chat()` → validation model or stub |
 
 ## Consequences
 
@@ -47,16 +47,27 @@ models["vendor:MyModel"] = DocumentModelSpec(
     id="vendor:MyModel",
     label="My Model",
     engine="document_model",
-    runtime="llamacpp",
+    runtime="llamacpp",  # or a dedicated runtime string
     runtime_model="org/MyModel",
     description="…",
+    markdown_only=False,  # True for document→Markdown adapters
 )
 ```
 
-If the new model needs a different serve profile, point `AUDIT_LLAMACPP_BASE_URL` at a dedicated endpoint (or add per-model base URLs in the registry).
+Register an adapter with `register_document_model_adapter(id, extract_fn)` and import the module from `extraction/pipeline.py`.
+
+Examples:
+
+- `repody:vlm` / `repody:vlm:cloud` — NuExtract structured (+ optional markdown)
+- `paddleocr:v6` — PP-OCRv6 markdown via official `/ocr` ([docs/PADDLEOCR-V6.md](../PADDLEOCR-V6.md))
+- `glm:ocr` — GLM-OCR markdown via llama-server ([docs/GLM-OCR.md](../GLM-OCR.md))
+
+If the new model needs a different serve profile, point a dedicated base URL setting at that endpoint (do not hard-code inside the pipeline).
 
 ## References
 
 - [docs/REPODY-VLM.md](../REPODY-VLM.md)
+- [docs/PADDLEOCR-V6.md](../PADDLEOCR-V6.md)
+- [docs/GLM-OCR.md](../GLM-OCR.md)
 - [DEPLOY.md](../../DEPLOY.md)
 - `backend/tests/test_inference/test_llamacpp_runtime.py`

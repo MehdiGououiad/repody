@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend" / "src"))
 sys.path.insert(0, str(ROOT / "backend"))
 
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID  # noqa: E402
+from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 from audit_workbench.integration.facture import (  # noqa: E402
     EXPECTED_TOTAL,
     EXPECTED_TVA,

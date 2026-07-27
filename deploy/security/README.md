@@ -6,7 +6,7 @@ Repody uses a **dual-scanner** supply-chain model:
 |------|------|----------|
 | **Trivy** (Aqua) | Primary CI gate | Broadest coverage: OS + language deps, Dockerfiles, Compose/Helm misconfig, secrets, licenses |
 | **Grype** (Anchore) | SBOM validation | Matches vulnerabilities against **Syft** SPDX SBOMs (same stack as `pnpm release:attest`) |
-| **pnpm audit** | Frontend lockfile | npm advisory database |
+| **`pnpm security:scan`** | Frontend + image/config scanners | Trivy / Grype / lockfile audits |
 | **pip-audit** | Backend lockfile | PyPI/OSV advisories |
 
 ## Which is more complete?

@@ -5,6 +5,9 @@ from urllib.parse import urlparse
 from audit_workbench.settings import Settings, get_settings
 
 DOCUMENT_RUNTIME = "llamacpp"
+NUEXTRACT_CLOUD_RUNTIME = "nuextract_cloud"
+PADDLEOCR_V6_RUNTIME = "paddleocr_v6"
+GLM_OCR_RUNTIME = "glm_ocr"
 
 _LOCAL_INFERENCE_HOSTS = frozenset(
     {

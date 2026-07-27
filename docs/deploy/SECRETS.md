@@ -115,4 +115,4 @@ Only **references** (`existingSecret`, `urlKey`, Vault `remoteRef` paths) belong
 | ESO + paths | Same layout as production | Same |
 | Secrets in Git | Never | Never |
 
-Lab Vault overlays: `deploy/client/lab/` — see [OPENSHIFT.md](./OPENSHIFT.md#crc-lab-verification).
+Lab Vault overlays: `deploy/client/lab/` — see [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab).

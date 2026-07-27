@@ -27,6 +27,7 @@ export const NUEXTRACT_TEMPLATE_TYPE_DEFS = [
   { value: "date-time-list", group: "common", hidden: true },
   { value: "time-list", group: "common", hidden: true },
   { value: "boolean-list", group: "common", hidden: true },
+  { value: "object", group: "structure" },
   { value: "object-array", group: "structure" },
   { value: "enum", group: "structure" },
   { value: "multi-enum", group: "structure" },
@@ -71,12 +72,6 @@ export const DEFAULT_NUEXTRACT_TEMPLATE_TYPE: NuExtractTemplateType = "verbatim-
 
 const LIST_SUFFIX = "-list";
 
-const SCALAR_TYPE_VALUES = new Set<string>(
-  NUEXTRACT_TEMPLATE_TYPE_DEFS.filter(
-    (t) => !t.value.endsWith(LIST_SUFFIX) && !isStructureTemplateType(t.value),
-  ).map((t) => t.value),
-);
-
 const ALL_TYPE_VALUES = new Set<string>(NUEXTRACT_TEMPLATE_TYPE_DEFS.map((t) => t.value));
 
 /** Strip `-list` suffix; structure types pass through unchanged. */
@@ -104,25 +99,31 @@ export function isNuExtractTemplateType(value: string): value is NuExtractTempla
 
 export function isStructureTemplateType(value?: string): boolean {
   const current = (value || "").trim();
-  return current === "object-array" || current === "enum" || current === "multi-enum";
+  return (
+    current === "object" ||
+    current === "object-array" ||
+    current === "enum" ||
+    current === "multi-enum"
+  );
 }
 
 export function isListTemplateType(value?: string): boolean {
   const raw = (value || "").trim();
   if (!raw.endsWith(LIST_SUFFIX) || isStructureTemplateType(raw)) return false;
-  return SCALAR_TYPE_VALUES.has(raw.slice(0, -LIST_SUFFIX.length));
+  // Platform encoding of official `["type"]` arrays — allow known and passthrough scalars.
+  return raw.slice(0, -LIST_SUFFIX.length).length > 0;
 }
 
 export function getVisibleTemplateTypes(): NuExtractTemplateType[] {
   return NUEXTRACT_TEMPLATE_TYPE_DEFS.filter((t) => !isHiddenTemplateTypeDef(t)).map((t) => t.value);
 }
 
-/** Types shown in the picker: visible types plus the current value when it is hidden. */
+/** Types shown in the picker: visible types plus the current value when it is hidden/unknown. */
 export function getSelectableTemplateTypes(currentValue?: string): NuExtractTemplateType[] {
   const visible = getVisibleTemplateTypes();
-  const current = (currentValue || "").trim();
-  if (current && isNuExtractTemplateType(current) && !visible.includes(current)) {
-    return [...visible, current];
+  const current = scalarTemplateType(currentValue);
+  if (current && !visible.includes(current as NuExtractTemplateType)) {
+    return [...visible, current as NuExtractTemplateType];
   }
   return visible;
 }

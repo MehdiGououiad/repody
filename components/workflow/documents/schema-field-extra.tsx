@@ -20,12 +20,13 @@ import {
   isListTemplateType,
   isStructureTemplateType,
   scalarTemplateType,
+  supportsListTemplateType,
   withListTemplateType,
   type NuExtractTemplateType,
   type NuExtractTypeGroup,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
-import { cn, shortId } from "@/lib/utils";
+import { shortId } from "@/lib/utils";
 
 const CHILD_TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "advanced"];
 
@@ -93,29 +94,39 @@ function EnumValuesEditor({
   );
 }
 
-function ObjectArrayChildrenEditor({
-  children,
+function NestedChildrenEditor({
+  fields,
   onChange,
   t,
+  mode,
 }: {
-  children: SchemaField[];
-  onChange: (children: SchemaField[]) => void;
+  fields: SchemaField[];
+  onChange: (fields: SchemaField[]) => void;
   t: ReturnType<typeof useTranslations>;
+  mode: "object" | "object-array";
 }) {
   const grouped = groupTemplateTypes(
-    getSelectableTemplateTypes().filter((type) => type !== "object-array" && type !== "enum" && type !== "multi-enum")
+    getSelectableTemplateTypes().filter((type) => {
+      if (mode === "object-array") {
+        return type !== "object-array" && type !== "object" && type !== "enum" && type !== "multi-enum";
+      }
+      // Nested object groups may themselves nest further objects / tables / enums.
+      return true;
+    })
   );
+  const typeGroups: NuExtractTypeGroup[] =
+    mode === "object-array" ? CHILD_TYPE_GROUPS : ["common", "structure", "advanced"];
 
   const updateChild = (id: string, patch: Partial<SchemaField>) => {
-    onChange(children.map((child) => (child.id === id ? { ...child, ...patch } : child)));
+    onChange(fields.map((child) => (child.id === id ? { ...child, ...patch } : child)));
   };
 
   return (
     <div className="space-y-2 rounded-lg border border-dashed border-primary/20 bg-primary/5 p-3">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-        {t("schema.rowColumnsLabel")}
+        {mode === "object" ? t("schema.objectFieldsLabel") : t("schema.rowColumnsLabel")}
       </p>
-      {children.map((child) => {
+      {fields.map((child) => {
         const childType = child.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
         const childListMode = isListTemplateType(childType);
         return (
@@ -141,7 +152,7 @@ function ObjectArrayChildrenEditor({
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="max-h-72">
-              {CHILD_TYPE_GROUPS.map((group) => {
+              {typeGroups.map((group) => {
                 const types = grouped[group];
                 if (types.length === 0) return null;
                 return (
@@ -168,6 +179,7 @@ function ObjectArrayChildrenEditor({
               type="checkbox"
               className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
               checked={childListMode}
+              disabled={!supportsListTemplateType(childType)}
               onChange={(e) =>
                 updateChild(child.id, {
                   templateType: withListTemplateType(childType, e.target.checked),
@@ -182,8 +194,8 @@ function ObjectArrayChildrenEditor({
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-outline hover:text-danger"
-            onClick={() => onChange(children.filter((row) => row.id !== child.id))}
-            aria-label={t("schema.removeRowColumn")}
+            onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
+            aria-label={mode === "object" ? t("schema.removeObjectField") : t("schema.removeRowColumn")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
@@ -197,7 +209,7 @@ function ObjectArrayChildrenEditor({
         className="h-7 text-[11px]"
         onClick={() =>
           onChange([
-            ...children,
+            ...fields,
             {
               id: `f${shortId()}`,
               name: "",
@@ -208,7 +220,7 @@ function ObjectArrayChildrenEditor({
         }
       >
         <Plus className="h-3 w-3" />
-        {t("schema.addRowColumn")}
+        {mode === "object" ? t("schema.addObjectField") : t("schema.addRowColumn")}
       </Button>
     </div>
   );
@@ -235,12 +247,13 @@ export function SchemaFieldExtraConfig({
     );
   }
 
-  if (templateType === "object-array") {
+  if (templateType === "object" || templateType === "object-array") {
     return (
-      <ObjectArrayChildrenEditor
-        children={field.children ?? []}
+      <NestedChildrenEditor
+        fields={field.children ?? []}
         onChange={(children) => onUpdate({ children })}
         t={t}
+        mode={templateType}
       />
     );
   }

@@ -1,4 +1,8 @@
-"""Platform stress test — use via benchmark_dev.py stress."""
+"""Platform stress test (dev burst + random traffic).
+
+Usage:
+  node scripts/backend-run.mjs --dev python scripts/benchmark_dev_stress.py --api http://127.0.0.1:8000
+"""
 
 from __future__ import annotations
 
@@ -23,7 +27,7 @@ for _path in (_BACKEND / "src", _BACKEND):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID  # noqa: E402
+from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 from scripts.benchmark_ui_route import DEFAULT_PDF, _upload_presign  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -74,7 +78,7 @@ class HttpEvent:
 
 
 @dataclass
-class RunLifecycle:
+class TrackedRun:
     run_id: str
     enqueued_ms: int
     enqueue_latency_ms: float
@@ -93,7 +97,7 @@ class StressReport:
     config: dict[str, Any]
     invalid_file_results: list[dict[str, Any]] = field(default_factory=list)
     http_events: list[HttpEvent] = field(default_factory=list)
-    runs: list[RunLifecycle] = field(default_factory=list)
+    runs: list[TrackedRun] = field(default_factory=list)
     health_samples: list[dict[str, Any]] = field(default_factory=list)
     summary: dict[str, Any] = field(default_factory=dict)
 
@@ -396,7 +400,7 @@ async def phase_invalid_files(
 
 async def _track_run(
     client: httpx.AsyncClient,
-    lifecycle: RunLifecycle,
+    lifecycle: TrackedRun,
     *,
     t0: float,
     stop: asyncio.Event,
@@ -449,11 +453,11 @@ async def phase_burst(
     t0: float,
     poll_s: float,
     stop: asyncio.Event,
-) -> list[RunLifecycle]:
-    lifecycles: list[RunLifecycle] = []
+) -> list[TrackedRun]:
+    lifecycles: list[TrackedRun] = []
     trackers: list[asyncio.Task[None]] = []
 
-    async def _one(index: int) -> RunLifecycle:
+    async def _one(index: int) -> TrackedRun:
         probe = f"burst_{index}_{uuid.uuid4().hex[:8]}"
         try:
             run_id, enqueue_ms = await _start_valid_run(
@@ -463,7 +467,7 @@ async def phase_burst(
                 binding=binding,
                 probe=probe,
             )
-            lc = RunLifecycle(
+            lc = TrackedRun(
                 run_id=run_id,
                 enqueued_ms=round((time.perf_counter() - t0) * 1000),
                 enqueue_latency_ms=enqueue_ms,
@@ -471,7 +475,7 @@ async def phase_burst(
             trackers.append(asyncio.create_task(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s)))
             return lc
         except httpx.HTTPStatusError as exc:
-            lc = RunLifecycle(
+            lc = TrackedRun(
                 run_id=f"rejected-{index}",
                 enqueued_ms=round((time.perf_counter() - t0) * 1000),
                 enqueue_latency_ms=0,
@@ -523,7 +527,7 @@ async def phase_random(
                     binding=binding,
                     probe=probe,
                 )
-                lc = RunLifecycle(
+                lc = TrackedRun(
                     run_id=run_id,
                     enqueued_ms=round((time.perf_counter() - t0) * 1000),
                     enqueue_latency_ms=enqueue_ms,
@@ -794,3 +798,14 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         type=Path,
         default=REPO_ROOT / "benchmark-reports" / "stress-test.json",
     )
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_arguments(parser)
+    args = parser.parse_args()
+    return asyncio.run(run_stress(args))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

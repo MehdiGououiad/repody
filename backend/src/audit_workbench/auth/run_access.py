@@ -1,19 +1,15 @@
-"""Run access policy — single module for credential → principal/source resolution."""
+"""Run access policy — credential → principal/source as Result."""
 
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.auth.casbin_authorizer import get_authorizer
+from audit_workbench.auth.casbin_authorizer import authorize
 from audit_workbench.auth.dependencies import extract_bearer
 from audit_workbench.auth.jwt_validator import JwtValidationError, principal_from_bearer
 from audit_workbench.db.models import Workflow
+from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
 from audit_workbench.services.api_keys import verify_api_key
-from audit_workbench.services.run_enqueue_errors import (
-    ForbiddenRunError,
-    UnauthorizedRunError,
-    WorkflowNotFoundError,
-)
 from audit_workbench.services.workflow import load_workflow
 from audit_workbench.settings import Settings, get_settings
 
@@ -45,40 +41,51 @@ async def resolve_run_enqueue_source(
     *,
     has_snapshot: bool = False,
     production_api_shape: bool = False,
-) -> tuple[RunSource, Workflow]:
+) -> Result[tuple[RunSource, Workflow]]:
     """Infer test vs production API run from bearer credential and request shape."""
     settings = get_settings()
     token = extract_bearer(authorization)
 
     wf = await load_workflow(session, workflow_id)
     if not wf:
-        raise WorkflowNotFoundError
+        return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found"))
 
     if token and wf.deployed_at and verify_api_key(token, wf.api_key):
-        return "api", wf
+        return Result.ok(("api", wf))
 
     if token and settings.oidc_enabled:
         try:
             principal = principal_from_bearer(token, settings)
         except JwtValidationError as exc:
-            raise UnauthorizedRunError(f"Unauthorized — {exc}") from exc
+            return Result.fail(
+                AppError(code=ErrorCode.UNAUTHORIZED, message=f"Unauthorized — {exc}")
+            )
 
         if not principal.has_app_role():
-            raise ForbiddenRunError("No application role assigned in Keycloak.")
+            return Result.fail(
+                AppError(
+                    code=ErrorCode.FORBIDDEN,
+                    message="No application role assigned in Keycloak.",
+                )
+            )
 
-        authorizer = get_authorizer()
-        if not authorizer.authorize(principal, "run", "execute"):
-            raise ForbiddenRunError("Forbidden — operator role required for test runs.")
+        if not authorize(principal, "run", "execute"):
+            return Result.fail(
+                AppError(
+                    code=ErrorCode.FORBIDDEN,
+                    message="Forbidden — operator role required for test runs.",
+                )
+            )
 
-        return "test", wf
+        return Result.ok(("test", wf))
 
     if token and not settings.oidc_enabled:
-        raise UnauthorizedRunError("Invalid API key.")
+        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key."))
 
     if settings.oidc_enabled:
-        raise UnauthorizedRunError("Missing bearer token.")
+        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Missing bearer token."))
 
     if production_api_shape or (wf.deployed_at and not has_snapshot):
-        raise UnauthorizedRunError("Invalid API key.")
+        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key."))
 
-    return "test", wf
+    return Result.ok(("test", wf))

@@ -525,7 +525,12 @@
         "directModelLlmValidationHint": "Repody VLM extrait directement les champs du schéma. La validation LLM optionnelle s'active uniquement si elle est activée sur la plateforme.",
         "markdownExtractionLabel": "Aperçu Markdown du document",
         "markdownExtractionHint": "Lance aussi la conversion NuExtract document → Markdown pour un aperçu lisible. Sinon, seul le JSON structuré brut est affiché.",
-        "profileNuextractQ4Hint": "NuExtract3-GGUF officiel : PDF → PNG @ 170 DPI → extraction structurée vision."
+        "markdownOnlyBadge": "markdown",
+        "defaultBadge": "défaut",
+        "offlineBadge": "hors ligne",
+        "profileNuextractQ4Hint": "NuExtract3-GGUF officiel : PDF → PNG @ 170 DPI → extraction structurée vision.",
+        "profilePaddleocrV6Hint": "PP-OCRv6 (OCR PaddleX officiel) : document → texte/Markdown uniquement. Démarré par `pnpm dev:all` (:8868).",
+        "profileGlmOcrHint": "GLM-OCR (llama-server) : document → texte/Markdown uniquement. Démarré par `pnpm dev:all` (:8083)."
       },
       "docSource": {
         "title": "Documents et champs à extraire",
@@ -544,6 +549,21 @@
         "title": "Quoi extraire",
         "description": "Décrivez chaque information à extraire du document et choisissez le format de sortie attendu.",
         "addField": "Ajouter un champ",
+        "importTemplate": "Importer un modèle",
+        "importTemplateTitle": "Importer un modèle NuExtract",
+        "importTemplateDescription": "Collez un modèle JSON NuExtract. Objets imbriqués, listes, enums et lignes répétées deviennent des champs du schéma.",
+        "importTemplateHint": "Suit la forme officielle NuExtract (types TYPES.md, objets imbriqués, listes, enums, tableaux d'objets).",
+        "importTemplateApply": "Importer les champs",
+        "importTemplateReplace": "Remplacer les champs",
+        "importTemplateAppend": "Ajouter les champs",
+        "importTemplateError": {
+          "invalid_json": "JSON invalide — vérifiez les accolades et les guillemets.",
+          "not_object": "Le modèle doit être un objet JSON à la racine.",
+          "empty": "Aucun champ trouvé dans le modèle."
+        },
+        "objectFieldsLabel": "Champs imbriqués",
+        "addObjectField": "Ajouter un champ imbriqué",
+        "removeObjectField": "Retirer le champ imbriqué",
         "namePlaceholder": "ex. numero_facture",
         "descriptionPlaceholder": "De quoi s'agit-il ? Ex. l'identifiant unique de la facture, généralement en haut",
         "name": "Nom",
@@ -615,6 +635,10 @@
           "boolean-list": {
             "label": "Liste Oui/Non",
             "description": "Valeurs booléennes sous forme de tableau JSON"
+          },
+          "object": {
+            "label": "Groupe d'objet",
+            "description": "Champs imbriqués nommés (ex. holder_information)"
           },
           "object-array": {
             "label": "Lignes répétées",

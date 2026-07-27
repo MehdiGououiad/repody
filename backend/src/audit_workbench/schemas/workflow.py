@@ -53,7 +53,10 @@ class DocumentDefSchema(CamelModel):
     markdown_extraction: bool = Field(
         default=False,
         serialization_alias="markdownExtraction",
-        description="Run NuExtract document-to-Markdown in parallel with field extraction.",
+        description=(
+            "When the document has no schema fields, run NuExtract document-to-Markdown "
+            "instead of structured extraction (not in parallel with fields)."
+        ),
     )
     extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
         default_factory=list,

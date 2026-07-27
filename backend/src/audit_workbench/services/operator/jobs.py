@@ -6,14 +6,23 @@ import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 import structlog
 
-from audit_workbench.services.operator.job_model import OperatorJob, utc_now
+from audit_workbench.platform.operator.job import (
+    MAX_OUTPUT_CHARS,
+    OperatorJob,
+    job_from_store,
+    job_to_store,
+    progress_from_chunk,
+    truncate_output,
+    utc_now,
+)
+from audit_workbench.schemas.operator import OperatorJobSchema
 
 log = structlog.get_logger()
 MAX_JOBS = 30
-MAX_OUTPUT_CHARS = 24_000
 _REDIS_JOB_PREFIX = "audit:operator:job:"
 _REDIS_JOB_ORDER = "audit:operator:job_order"
 
@@ -24,13 +33,33 @@ _persist_tasks: set[asyncio.Task[None]] = set()
 JobRunner = Callable[[OperatorJob], Awaitable[None]]
 
 
+def operator_job_schema(job: OperatorJob) -> OperatorJobSchema:
+    return OperatorJobSchema(
+        id=job.id,
+        kind=job.kind,
+        label=job.label,
+        status=job.status,
+        created_at=job.created_at,
+        started_at=job.started_at,
+        completed_at=job.completed_at,
+        progress=job.progress,
+        output=job.output,
+        error=job.error,
+        has_report=bool(job.report_path),
+    )
+
+
+def load_report(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 async def persist_operator_job(job: OperatorJob, *, max_jobs: int) -> None:
     from audit_workbench.services.redis_pool import get_redis
 
     try:
         client = await get_redis()
         key = f"{_REDIS_JOB_PREFIX}{job.id}"
-        await client.set(key, json.dumps(job.to_store()))
+        await client.set(key, json.dumps(job_to_store(job)))
         await client.zadd(_REDIS_JOB_ORDER, {job.id: job.created_at.timestamp()})
         count = await client.zcard(_REDIS_JOB_ORDER)
         if count <= max_jobs:
@@ -74,7 +103,7 @@ async def load_recent_operator_jobs(
             if not raw:
                 continue
             try:
-                jobs.append(OperatorJob.from_store(json.loads(raw)))
+                jobs.append(job_from_store(json.loads(raw)))
             except (json.JSONDecodeError, KeyError, TypeError, ValueError):
                 continue
     except Exception as exc:
@@ -143,11 +172,10 @@ def list_jobs() -> list[OperatorJob]:
 
 
 def append_output(job: OperatorJob, text: str) -> None:
-    combined = f"{job.output}{text}"
-    job.output = combined[-MAX_OUTPUT_CHARS:]
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if lines:
-        job.progress = lines[-1][-300:]
+    job.output = truncate_output(job.output, text)
+    progress = progress_from_chunk(text)
+    if progress is not None:
+        job.progress = progress
     _schedule_persist(job)
 
 

@@ -1,37 +1,13 @@
-"""Queue depth admission control."""
+"""Queue depth counters for dashboard / health (no HTTP admission caps)."""
 
 from __future__ import annotations
 
-import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import Run, RunStatus
-from audit_workbench.services.run_pool_classifier import predict_worker_pool
-from audit_workbench.settings import get_settings
-
-log = structlog.get_logger(__name__)
 
 _INFLIGHT = (RunStatus.queued.value, RunStatus.running.value)
-
-
-class QueueCapacityExceeded(Exception):
-    def __init__(
-        self,
-        *,
-        scope: str,
-        limit: int,
-        current: int,
-        retry_after_seconds: int = 60,
-    ) -> None:
-        self.scope = scope
-        self.limit = limit
-        self.current = current
-        self.retry_after_seconds = retry_after_seconds
-        super().__init__(
-            f"Audit queue at capacity ({scope}): {current} active, limit {limit}. "
-            "Try again in a minute."
-        )
 
 
 async def count_queued(session: AsyncSession) -> int:
@@ -72,67 +48,3 @@ async def count_extract_inflight(session: AsyncSession) -> int:
         )
         or 0
     )
-
-
-async def check_admission(
-    session: AsyncSession,
-    *,
-    workflow_id: str,
-    file_bindings: list | None = None,
-) -> str:
-    """
-    Reject new runs when queue/inflight limits are exceeded.
-    Returns predicted worker pool when admitted.
-    """
-    settings = get_settings()
-    if not settings.admission_control_enabled:
-        return await predict_worker_pool(session, workflow_id, file_bindings=file_bindings)
-
-    pool = await predict_worker_pool(session, workflow_id, file_bindings=file_bindings)
-    queued = await count_queued(session)
-    inflight = await count_inflight(session)
-    extract_inflight = await count_extract_inflight(session)
-
-    if queued >= settings.admission_max_queued:
-        log.warning(
-            "admission_queued_limit",
-            event_domain="admission",
-            queued=queued,
-            limit=settings.admission_max_queued,
-        )
-        raise QueueCapacityExceeded(
-            scope="queued",
-            limit=settings.admission_max_queued,
-            current=queued,
-            retry_after_seconds=settings.admission_retry_after_seconds,
-        )
-
-    if inflight >= settings.admission_max_inflight:
-        log.warning(
-            "admission_inflight_limit",
-            event_domain="admission",
-            inflight=inflight,
-            limit=settings.admission_max_inflight,
-        )
-        raise QueueCapacityExceeded(
-            scope="inflight",
-            limit=settings.admission_max_inflight,
-            current=inflight,
-            retry_after_seconds=settings.admission_retry_after_seconds,
-        )
-
-    if pool == "extract" and extract_inflight >= settings.admission_max_extract_inflight:
-        log.warning(
-            "admission_extract_limit",
-            event_domain="admission",
-            extract_inflight=extract_inflight,
-            limit=settings.admission_max_extract_inflight,
-        )
-        raise QueueCapacityExceeded(
-            scope="extract",
-            limit=settings.admission_max_extract_inflight,
-            current=extract_inflight,
-            retry_after_seconds=settings.admission_retry_after_seconds,
-        )
-
-    return pool

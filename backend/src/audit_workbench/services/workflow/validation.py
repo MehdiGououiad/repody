@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 from audit_workbench.catalog.registry import normalize_model_id
-from audit_workbench.extraction.document_model_branding import UnknownCatalogIdError
+from audit_workbench.extraction.branding import UnknownCatalogIdError
 from audit_workbench.rules.conditions import NO_RIGHT, resolve_rule_body
 from audit_workbench.rules.llm_fields import referenced_fields
 from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body

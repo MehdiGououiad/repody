@@ -179,10 +179,10 @@ backend/src/audit_workbench/
 
 ### CI security scanning
 
-- pnpm audit, pip-audit
+- `pnpm security:scan`, pip-audit
 - Trivy (filesystem, config, secrets, images)
 - Grype + Syft SBOM
-- `pnpm security:scan`, `pnpm enterprise:secrets`
+- `pnpm enterprise:secrets`
 
 ---
 
@@ -210,7 +210,7 @@ backend/src/audit_workbench/
 
 ### Extraction pipeline
 
-- Official NuExtract contract in code (`nuextract_contract.py`) — not env-tunable quality knobs
+- Official NuExtract contract in code (`extraction/nuextract.py`) — not env-tunable quality knobs
 - Repody VLM warmup on worker/API startup (optional)
 - GPU cold-start timing metadata
 - Progress batching: `AUDIT_PROGRESS_COMMIT_INTERVAL_MS` (default 400 ms)
@@ -395,7 +395,7 @@ Radix UI, Tailwind CSS 4, `class-variance-authority`, `lucide-react`, `sonner`, 
 | `pnpm dev:api` / `dev:app` | Foreground API or UI |
 | `pnpm dev:worker:extract` / `:fast` | Compose workers |
 | `pnpm dev:observability` | Grafana, Loki, Tempo, Bugsink, OTEL |
-| `pnpm llamacpp:*` | NuExtract llama-server lifecycle |
+| `pnpm llamacpp:serve` / `llamacpp:restart` / `llamacpp:verify` / `llamacpp:warmup` | NuExtract llama-server lifecycle |
 
 See [COMMANDS.md](./COMMANDS.md) and [deploy/LOCAL.md](./deploy/LOCAL.md).
 

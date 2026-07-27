@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from audit_workbench.auth.casbin_authorizer import get_authorizer
+from audit_workbench.auth.casbin_authorizer import get_enforcer
 from audit_workbench.auth.principal import APP_REALM_ROLES
 
 ROLE_LABELS: dict[str, str] = {
@@ -21,7 +21,7 @@ ROLE_DESCRIPTIONS: dict[str, str] = {
 
 
 def _permissions_for_role(role: str) -> list[tuple[str, str]]:
-    enforcer = get_authorizer()._enforcer
+    enforcer = get_enforcer()
     rows = enforcer.get_filtered_policy(0, role)
     return [(row[1], row[2]) for row in rows if len(row) >= 3]
 

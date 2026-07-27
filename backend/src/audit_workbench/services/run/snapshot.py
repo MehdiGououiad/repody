@@ -5,7 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from audit_workbench.db.models import Document, Run, Workflow
-from audit_workbench.extraction.document_modes import DEFAULT_READ_PATH_ID, normalize_document_modes
+from audit_workbench.extraction.modes import DEFAULT_READ_PATH_ID, normalize_document_modes
+from audit_workbench.extraction.schema import field_config_from_parts
 from audit_workbench.services.run.helpers import rule_dict_from_row, rules_payload
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
@@ -77,14 +78,10 @@ def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
 
 
 def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
-    config: dict = {}
-    enum_values = field_row.get("enum_values")
-    if enum_values:
-        config["enum_values"] = enum_values
-    children = field_row.get("children")
-    if children:
-        config["children"] = children
-    return config or None
+    return field_config_from_parts(
+        enum_values=field_row.get("enum_values") if isinstance(field_row.get("enum_values"), list) else None,
+        children=field_row.get("children") if isinstance(field_row.get("children"), list) else None,
+    )
 
 
 def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:

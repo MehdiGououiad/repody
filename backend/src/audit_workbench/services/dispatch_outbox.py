@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import RunDispatchOutbox
-from audit_workbench.services.run_dispatch import mark_run_dispatch_failed
+from audit_workbench.services.run.dispatch import mark_run_dispatch_failed
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -40,6 +40,11 @@ def _is_transient_dispatch_error(exc: Exception) -> bool:
     return any(marker in msg for marker in transient_markers)
 
 
+def _supports_skip_locked(session: AsyncSession) -> bool:
+    bind = session.get_bind()
+    return bind.dialect.name == "postgresql"
+
+
 async def enqueue_dispatch(
     session: AsyncSession,
     *,
@@ -47,11 +52,13 @@ async def enqueue_dispatch(
     pool: str,
     workflow_id: str,
     request_id: str | None,
+    agent_stage: str = "idp",
 ) -> None:
     session.add(
         RunDispatchOutbox(
             run_id=run_id,
             pool=pool,
+            agent_stage=agent_stage,
             workflow_id=workflow_id,
             request_id=request_id,
             status=_STATUS_PENDING,
@@ -63,7 +70,7 @@ async def enqueue_dispatch(
 
 async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> bool:
     """Attempt Taskiq dispatch for one outbox row. Returns True on success."""
-    from audit_workbench.services.run_dispatch import dispatch_audit_run
+    from audit_workbench.services.run.dispatch import dispatch_audit_run
 
     settings = get_settings()
     row.dispatch_attempts = int(row.dispatch_attempts or 0) + 1
@@ -75,6 +82,7 @@ async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> 
             pool=row.pool,
             workflow_id=row.workflow_id,
             request_id=row.request_id,
+            agent_stage=getattr(row, "agent_stage", None) or "idp",
         )
     except Exception as exc:
         transient = _is_transient_dispatch_error(exc)
@@ -117,9 +125,15 @@ async def dispatch_outbox_run(run_id: str) -> bool:
     from audit_workbench.services.queue import refresh_queued_positions
 
     async with async_session_factory() as session:
-        row = await session.get(RunDispatchOutbox, run_id)
+        stmt = select(RunDispatchOutbox).where(RunDispatchOutbox.run_id == run_id)
+        if _supports_skip_locked(session):
+            stmt = stmt.with_for_update(skip_locked=True)
+        result = await session.execute(stmt)
+        row = result.scalar_one_or_none()
         if row is None:
             return False
+        if row.status == _STATUS_DONE:
+            return True
         ok = await dispatch_outbox_row(session, row)
         await refresh_queued_positions(session)
         await session.commit()
@@ -148,10 +162,14 @@ async def drain_dispatch_tasks() -> None:
 
 
 async def replay_dispatch_outbox(session: AsyncSession, *, limit: int = 50) -> int:
-    """Retry pending rows and transient failures under the attempt budget."""
+    """Retry pending rows and transient failures under the attempt budget.
+
+    On Postgres, rows are claimed with ``FOR UPDATE SKIP LOCKED`` so concurrent
+    API/maintenance workers do not double-``kiq`` the same outbox row.
+    """
     settings = get_settings()
     max_attempts = settings.dispatch_max_attempts
-    result = await session.execute(
+    stmt = (
         select(RunDispatchOutbox)
         .where(
             or_(
@@ -165,6 +183,9 @@ async def replay_dispatch_outbox(session: AsyncSession, *, limit: int = 50) -> i
         .order_by(RunDispatchOutbox.created_at.asc())
         .limit(limit)
     )
+    if _supports_skip_locked(session):
+        stmt = stmt.with_for_update(skip_locked=True)
+    result = await session.execute(stmt)
     rows = list(result.scalars())
     dispatched = 0
     for row in rows:

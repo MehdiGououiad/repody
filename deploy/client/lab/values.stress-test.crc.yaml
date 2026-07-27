@@ -5,11 +5,7 @@
 # or patch live ConfigMap for lab-only experiments (see docs/BENCHMARKING.md).
 
 config:
-  admissionMaxQueued: 1500
-  admissionMaxInflight: 1200
-  # Match single llama-server slot (-np 1); avoid 503 while enqueue bursts overlap inflight extract.
-  admissionMaxExtractInflight: 2
-  admissionRetryAfterSeconds: 15
+  # Extract concurrency is Taskiq worker pool size; excess document runs wait in queue.
   rateLimitEnabled: true
   rateLimitWindowSeconds: 3600
   rateLimitRunsPerWorkflow: 2000

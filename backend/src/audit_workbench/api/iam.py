@@ -1,16 +1,13 @@
-"""Identity and access management — Casbin matrix + Keycloak user admin."""
+﻿"""Identity and access management â€” Casbin matrix + Keycloak user admin."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from audit_workbench.auth.casbin_authorizer import get_authorizer
+from audit_workbench.api.errors import raise_app_error
+from audit_workbench.auth import keycloak_admin as keycloak
+from audit_workbench.auth.casbin_authorizer import authorize
 from audit_workbench.auth.dependencies import get_current_principal, require_permission
-from audit_workbench.auth.keycloak_admin import (
-    KeycloakAdminClient,
-    KeycloakAdminError,
-    keycloak_console_url,
-)
 from audit_workbench.auth.principal import APP_REALM_ROLES, Principal
 from audit_workbench.auth.rbac_catalog import (
     ROLE_DESCRIPTIONS,
@@ -18,6 +15,7 @@ from audit_workbench.auth.rbac_catalog import (
     effective_permissions,
     list_role_permission_map,
 )
+from audit_workbench.platform.contracts.result import AppError, ErrorCode
 from audit_workbench.schemas.iam import (
     CreateIamUserRequest,
     IamCatalogResponse,
@@ -49,19 +47,21 @@ def _map_keycloak_user(raw: dict, roles: list[str]) -> IamUser:
     )
 
 
+def _role_names(roles: list[dict]) -> list[str]:
+    return [str(role["name"]) for role in roles if role.get("name")]
+
+
 @router.get("/me", response_model=IamMeResponse)
 async def iam_me(principal: Principal = Depends(get_current_principal)) -> IamMeResponse:
     settings = get_settings()
-    authorizer = get_authorizer()
-    can_manage = authorizer.authorize(principal, "users", "write")
     return IamMeResponse(
         subject=principal.subject,
         email=principal.email,
         roles=list(principal.roles),
         permissions=_permission_grants(effective_permissions(principal.roles)),
-        can_manage_users=can_manage,
+        can_manage_users=authorize(principal, "users", "write"),
         oidc_enabled=settings.oidc_enabled,
-        keycloak_admin_url=keycloak_console_url(settings),
+        keycloak_admin_url=keycloak.keycloak_console_url(settings),
     )
 
 
@@ -105,34 +105,41 @@ async def list_users(
                 )
             ],
             management_available=False,
-            management_error="OIDC is disabled — dev mode uses a synthetic platform_admin principal.",
+            management_error="OIDC is disabled â€” dev mode uses a synthetic platform_admin principal.",
         )
 
-    client = KeycloakAdminClient(settings)
-    if not client.configured:
+    if not keycloak.keycloak_admin_configured(settings):
         return IamUsersResponse(
             users=[],
             management_available=False,
             management_error="Keycloak admin API is not configured on the API service.",
         )
 
-    try:
-        raw_users = await client.list_users(search=search)
-        users: list[IamUser] = []
-        for raw in raw_users:
-            user_id = str(raw.get("id") or "")
-            if not user_id:
-                continue
-            roles = [role["name"] for role in await client.user_realm_roles(user_id)]
-            users.append(_map_keycloak_user(raw, roles))
-        users.sort(key=lambda user: (user.email or user.username).lower())
-        return IamUsersResponse(users=users, management_available=True)
-    except KeycloakAdminError as exc:
+    raw_users_r = await keycloak.list_users(search=search, settings=settings)
+    if not raw_users_r.is_ok:
+        err = raw_users_r.error
         return IamUsersResponse(
             users=[],
             management_available=False,
-            management_error=str(exc),
+            management_error=err.message if err else "Keycloak list_users failed",
         )
+
+    users: list[IamUser] = []
+    for raw in raw_users_r.unwrap():
+        user_id = str(raw.get("id") or "")
+        if not user_id:
+            continue
+        roles_r = await keycloak.user_realm_roles(user_id, settings=settings)
+        if not roles_r.is_ok:
+            err = roles_r.error
+            return IamUsersResponse(
+                users=[],
+                management_available=False,
+                management_error=err.message if err else "Keycloak user_realm_roles failed",
+            )
+        users.append(_map_keycloak_user(raw, _role_names(roles_r.unwrap())))
+    users.sort(key=lambda user: (user.email or user.username).lower())
+    return IamUsersResponse(users=users, management_available=True)
 
 
 @router.post(
@@ -154,7 +161,6 @@ async def create_user(
     if not body.roles:
         raise HTTPException(400, "At least one application role is required.")
 
-    client = KeycloakAdminClient(settings)
     username = body.email.strip().lower()
     payload = {
         "username": username,
@@ -165,18 +171,30 @@ async def create_user(
         "lastName": body.last_name.strip() or None,
         "requiredActions": [],
     }
-    try:
-        user_id = await client.create_user(payload)
-        await client.reset_password(user_id, body.password, temporary=False)
-        await client.set_user_app_roles(user_id, body.roles)
-        raw_users = await client.list_users(search=username)
-        raw = next((item for item in raw_users if str(item.get("id")) == user_id), None)
-        if not raw:
-            raw = {"id": user_id, "username": username, "email": username, **payload}
-        roles = await client.user_realm_roles(user_id)
-        return _map_keycloak_user(raw, [role["name"] for role in roles])
-    except KeycloakAdminError as exc:
-        raise HTTPException(exc.status_code or 502, str(exc)) from exc
+    user_id_r = await keycloak.create_user(payload, settings=settings)
+    if not user_id_r.is_ok:
+        raise_app_error(user_id_r.error or AppError(code=ErrorCode.INFRA, message="create failed"))
+
+    user_id = user_id_r.unwrap()
+    password_r = await keycloak.reset_password(user_id, body.password, temporary=False, settings=settings)
+    if not password_r.is_ok:
+        raise_app_error(password_r.error or AppError(code=ErrorCode.INFRA, message="password failed"))
+
+    roles_set_r = await keycloak.set_user_app_roles(user_id, body.roles, settings=settings)
+    if not roles_set_r.is_ok:
+        raise_app_error(roles_set_r.error or AppError(code=ErrorCode.INFRA, message="roles failed"))
+
+    raw_users_r = await keycloak.list_users(search=username, settings=settings)
+    if not raw_users_r.is_ok:
+        raise_app_error(raw_users_r.error or AppError(code=ErrorCode.INFRA, message="list failed"))
+    raw = next((item for item in raw_users_r.unwrap() if str(item.get("id")) == user_id), None)
+    if not raw:
+        raw = {"id": user_id, "username": username, "email": username, **payload}
+
+    roles_r = await keycloak.user_realm_roles(user_id, settings=settings)
+    if not roles_r.is_ok:
+        raise_app_error(roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed"))
+    return _map_keycloak_user(raw, _role_names(roles_r.unwrap()))
 
 
 @router.patch(
@@ -198,32 +216,47 @@ async def update_user(
         if "platform_admin" not in body.roles and "platform_admin" in principal.roles:
             raise HTTPException(400, "You cannot remove your own platform_admin role.")
 
-    client = KeycloakAdminClient(settings)
-    try:
-        raw_users = await client.list_users()
-        raw = next((item for item in raw_users if str(item.get("id")) == user_id), None)
-        if not raw:
-            raise HTTPException(404, "User not found.")
+    raw_users_r = await keycloak.list_users(settings=settings)
+    if not raw_users_r.is_ok:
+        raise_app_error(raw_users_r.error or AppError(code=ErrorCode.INFRA, message="list failed"))
+    raw = next((item for item in raw_users_r.unwrap() if str(item.get("id")) == user_id), None)
+    if not raw:
+        raise HTTPException(404, "User not found.")
 
-        update_payload = {
-            "username": raw.get("username"),
-            "email": raw.get("email"),
-            "emailVerified": raw.get("emailVerified", True),
-            "enabled": body.enabled if body.enabled is not None else raw.get("enabled", True),
-            "firstName": body.first_name if body.first_name is not None else raw.get("firstName"),
-            "lastName": body.last_name if body.last_name is not None else raw.get("lastName"),
-        }
-        await client.update_user(user_id, update_payload)
-        if body.password:
-            await client.reset_password(user_id, body.password, temporary=False)
-        if body.roles is not None:
-            if not body.roles:
-                raise HTTPException(400, "At least one application role is required.")
-            await client.set_user_app_roles(user_id, body.roles)
+    update_payload = {
+        "username": raw.get("username"),
+        "email": raw.get("email"),
+        "emailVerified": raw.get("emailVerified", True),
+        "enabled": body.enabled if body.enabled is not None else raw.get("enabled", True),
+        "firstName": body.first_name if body.first_name is not None else raw.get("firstName"),
+        "lastName": body.last_name if body.last_name is not None else raw.get("lastName"),
+    }
+    updated = await keycloak.update_user(user_id, update_payload, settings=settings)
+    if not updated.is_ok:
+        raise_app_error(updated.error or AppError(code=ErrorCode.INFRA, message="update failed"))
 
-        refreshed = await client.list_users(search=str(raw.get("username") or ""))
-        latest = next((item for item in refreshed if str(item.get("id")) == user_id), raw)
-        roles = [role["name"] for role in await client.user_realm_roles(user_id)]
-        return _map_keycloak_user(latest, roles)
-    except KeycloakAdminError as exc:
-        raise HTTPException(exc.status_code or 502, str(exc)) from exc
+    if body.password:
+        password_r = await keycloak.reset_password(
+            user_id, body.password, temporary=False, settings=settings
+        )
+        if not password_r.is_ok:
+            raise_app_error(password_r.error or AppError(code=ErrorCode.INFRA, message="password failed"))
+
+    if body.roles is not None:
+        if not body.roles:
+            raise HTTPException(400, "At least one application role is required.")
+        roles_set_r = await keycloak.set_user_app_roles(user_id, body.roles, settings=settings)
+        if not roles_set_r.is_ok:
+            raise_app_error(roles_set_r.error or AppError(code=ErrorCode.INFRA, message="roles failed"))
+
+    refreshed_r = await keycloak.list_users(
+        search=str(raw.get("username") or ""), settings=settings
+    )
+    if not refreshed_r.is_ok:
+        raise_app_error(refreshed_r.error or AppError(code=ErrorCode.INFRA, message="list failed"))
+    latest = next((item for item in refreshed_r.unwrap() if str(item.get("id")) == user_id), raw)
+    roles_r = await keycloak.user_realm_roles(user_id, settings=settings)
+    if not roles_r.is_ok:
+        raise_app_error(roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed"))
+    return _map_keycloak_user(latest, _role_names(roles_r.unwrap()))
+

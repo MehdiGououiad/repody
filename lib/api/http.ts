@@ -1,6 +1,7 @@
 import { formatApiError } from "@/lib/api/api-error";
 import { resolveAuthCredential, workflowAuthHeaders } from "@/lib/api/auth-policy";
-import { auth, isOidcConfigured } from "@/auth";
+import { auth, isOidcConfigured, signOut } from "@/auth";
+import { redirect } from "next/navigation";
 
 const SERVER_BASE =
   process.env.INTERNAL_API_URL ?? process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
@@ -13,9 +14,9 @@ async function redirectToLoginAfterUnauthorized(): Promise<void> {
 
   sessionSignOutInFlight = true;
   try {
-    const { signOut } = await import("next-auth/react");
+    const { signOut: clientSignOut } = await import("next-auth/react");
     const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-    await signOut({ redirectTo: `/login?callbackUrl=${returnTo}` });
+    await clientSignOut({ redirectTo: `/login?callbackUrl=${returnTo}` });
   } finally {
     sessionSignOutInFlight = false;
   }
@@ -113,12 +114,18 @@ export async function serverFetch(
       : null;
   const sessionHeaders = await sessionAuthHeaders();
   try {
-    return await fetch(`${SERVER_BASE}${apiPath(path)}`, {
+    const res = await fetch(`${SERVER_BASE}${apiPath(path)}`, {
       cache: "no-store",
       ...rest,
       signal: controller?.signal ?? rest.signal,
       headers: { ...sessionHeaders, ...rest.headers },
     });
+    // Stale Keycloak JWT (e.g. realm keys rotated after Compose reset) → clear session.
+    if (res.status === 401 && isOidcConfigured() && Object.keys(sessionHeaders).length > 0) {
+      await signOut({ redirect: false });
+      redirect("/login");
+    }
+    return res;
   } catch (err) {
     if (controller && err instanceof DOMException && err.name === "AbortError") {
       throw new Error(`Request timed out after ${Math.round(timeoutMs! / 1000)}s`);

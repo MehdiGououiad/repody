@@ -143,3 +143,133 @@ spec:
             failureThreshold: 3
           resources:
             {{- toYaml .Values.workerFast.resources | nindent 12 }}
+{{- if gt (int .Values.workerFraud.replicas) 0 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-worker-fraud
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker-fraud
+spec:
+  replicas: {{ .Values.workerFraud.replicas }}
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker-fraud
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker-fraud
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.workerFraud.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: worker
+          image: {{ include "repody.backendImage" . | quote }}
+          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
+          command:
+            - python
+            - -m
+            - audit_workbench.taskiq.worker
+          securityContext:
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "repody.fullname" . }}-config
+          env:
+            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
+              value: "false"
+            - name: AUDIT_WORKER_POOL
+              value: {{ .Values.workerFraud.pool | quote }}
+            - name: AUDIT_WORKER_FRAUD_MAX_JOBS
+              value: {{ .Values.workerFraud.maxJobs | quote }}
+            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
+              value: "false"
+            - name: AUDIT_OTEL_SERVICE_NAME
+              value: repody-worker-fraud
+            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+            {{- include "repody.bugsinkEnv" . | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.workerFraud.resources | nindent 12 }}
+{{- end }}
+{{- if gt (int .Values.workerComputerUse.replicas) 0 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "repody.fullname" . }}-worker-computer-use
+  labels:
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker-computer-use
+spec:
+  replicas: {{ .Values.workerComputerUse.replicas }}
+  selector:
+    matchLabels:
+      {{- include "repody.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker-computer-use
+  template:
+    metadata:
+      labels:
+        {{- include "repody.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: worker-computer-use
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.workerComputerUse.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- include "repody.podSecurityContext" . | nindent 8 }}
+      {{- include "repody.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: worker
+          image: {{ include "repody.backendImage" . | quote }}
+          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
+          command:
+            - python
+            - -m
+            - audit_workbench.taskiq.worker
+          securityContext:
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "repody.fullname" . }}-config
+          env:
+            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
+              value: "false"
+            - name: AUDIT_WORKER_POOL
+              value: {{ .Values.workerComputerUse.pool | quote }}
+            - name: AUDIT_WORKER_COMPUTER_USE_MAX_JOBS
+              value: {{ .Values.workerComputerUse.maxJobs | quote }}
+            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
+              value: "false"
+            - name: AUDIT_OTEL_SERVICE_NAME
+              value: repody-worker-computer-use
+            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+            {{- include "repody.bugsinkEnv" . | nindent 12 }}
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+            initialDelaySeconds: 45
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.workerComputerUse.resources | nindent 12 }}
+{{- end }}

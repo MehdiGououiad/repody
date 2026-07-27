@@ -2,19 +2,16 @@ from __future__ import annotations
 
 import enum
 
+from audit_workbench.platform.run.status import RunStatus
+
+__all__ = ["OverallStatus", "RunStatus", "WorkflowStatus"]
+
 
 class WorkflowStatus(str, enum.Enum):
     active = "active"
     draft = "draft"
     paused = "paused"
     archived = "archived"
-
-
-class RunStatus(str, enum.Enum):
-    queued = "queued"
-    running = "running"
-    done = "done"
-    failed = "failed"
 
 
 class OverallStatus(str, enum.Enum):

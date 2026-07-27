@@ -7,53 +7,86 @@ Deploy follows **official upstream docs** — see [docs/deploy/README.md](./depl
 | Command | When |
 |---------|------|
 | `pnpm dev:setup` | **Once** — copy env files, start Compose, migrate |
-| `pnpm dev:all` | **Daily** — full stack + API + UI (add `-- --obs` for Grafana/Loki/Tempo/Bugsink) |
-| `pnpm dev` | Background only — Compose, workers, NuExtract (then exit) |
-| `pnpm dev:app` | Foreground API + UI (stack already running) |
-| `pnpm dev:status` | Health summary (API, UI, NuExtract, workers, Grafana, Loki, Bugsink) |
-| `pnpm dev:stop` | Stop API, UI, NuExtract, and full Compose stack |
-| `pnpm dev:observability` | Grafana + Loki + Tempo + OTEL + Bugsink (optional profile) |
-| `pnpm dev:restart` | After Vulkan GPU reset — restart NuExtract + workers |
+| `pnpm dev:all` | **Daily** — Compose + **all three models** + observability + API + UI |
+| `pnpm dev:all:no-glmocr` | Same, skip GLM-OCR (`:8083`) — less VRAM |
+| `pnpm dev:all:no-nuextract` | Same, skip NuExtract (`:8081`) — less VRAM |
+| `pnpm dev:all:paddle-only` | Skip NuExtract + GLM — PP-OCRv6 only |
+| `pnpm models:warmup` | After start — force-warm NuExtract + PP-OCRv6 + GLM-OCR |
+| `pnpm dev:status` | Health probes (API, UI, NuExtract, PP-OCRv6, GLM-OCR, obs) |
+| `pnpm dev:stop` | Stop API, UI, all three models, and Compose |
+| `pnpm dev:restart` | Restart all three models + workers (e.g. after GPU reset) |
 | `pnpm db:migrate` | Apply Alembic migrations |
-| `pnpm db:reset` | Drop schema, migrate to head, re-seed demo data |
-| `pnpm dev:reset` | **Nuclear** — wipe Compose volumes, reset DB, rebuild workers |
-| `pnpm test:api` | Backend tests (no cluster) |
-| `pnpm lint` | Frontend lint |
-| `pnpm typecheck` | TypeScript |
 | `pnpm doctor` | Toolchain check |
 
-Granular (optional):
+Split logs (optional):
 
 | Command | When |
 |---------|------|
-| `pnpm dev:api` | FastAPI only (`REPODY_API_PORT`, default :8000; reload opt-in with `REPODY_DEV_API_RELOAD=1`) |
-| `pnpm ui` | Next.js only (:3000) |
-| `pnpm dev:worker` | Both Taskiq worker pools (Docker) |
-| `pnpm dev:worker:extract` | Document-model extraction pool only |
-| `pnpm dev:worker:fast` | Logic-only pool only |
-| `pnpm llamacpp:serve` | NuExtract / llama-server (:8081) |
-| `pnpm llamacpp:verify` | Check inference endpoint |
+| `pnpm dev` | Background stack only (Compose + workers + models), then exit |
+| `pnpm dev:app` | Foreground API + UI (stack already running) |
 
-First run:
+### All three document models
+
+| Catalog id | Process | Port | Serve / warm |
+|---|---|---|---|
+| `repody:vlm` | NuExtract (llama-server) | `:8081` | `pnpm llamacpp:serve` · `pnpm llamacpp:warmup` |
+| `paddleocr:v6` | PP-OCRv6 (PaddleX `/ocr`) | `:8868` | `pnpm paddleocr:v6:serve` · `pnpm paddleocr:v6:warmup` |
+| `glm:ocr` | GLM-OCR (llama-server) | `:8083` | `pnpm glmocr:serve` · `pnpm glmocr:warmup` |
+
+`pnpm dev:all` starts **all three** (plus Grafana/Loki/Tempo/Bugsink). First serve also warms each model; use `pnpm models:warmup` to re-prime.
 
 ```powershell
+# First time
 pnpm install
 pnpm doctor
 pnpm dev:setup
-```
+# NuExtract: copy deploy/llamacpp/paths.local.env.example → paths.local.env
+# GLM (optional local GGUF): copy deploy/glmocr/paths.local.env.example → paths.local.env
+# PP-OCRv6 once: pnpm paddleocr:v6:install
 
-Daily:
-
-```powershell
+# Daily — everything
 pnpm dev:all
+pnpm models:warmup          # optional if first serve already warmed
+pnpm dev:status
+
+# Stop
+pnpm dev:stop
 ```
 
-Two-terminal split (lighter logs):
+Skip one model (VRAM / iGPU) — prefer the named scripts (no `--` needed):
 
 ```powershell
-pnpm dev        # terminal 1 — background
-pnpm dev:app    # terminal 2 — API + UI
+pnpm dev:all:no-glmocr          # skip GLM-OCR :8083
+pnpm dev:all:no-nuextract       # skip NuExtract :8081
+pnpm dev:all:paddle-only        # PP-OCRv6 only
+pnpm dev:all -- --no-paddleocr  # skip PP-OCRv6 :8868
+pnpm dev:all -- --no-obs        # skip observability
 ```
+
+Aliases: `--no-nuextract` = `--no-llama` = `--no-vlm` · `--no-glmocr` = `--no-glm`
+
+> **Auth tip:** After `pnpm dev:reset` / Keycloak recreate, sign out and sign in again (or clear `localhost` cookies). Old JWTs fail with `Unable to find a signing key that matches: "…"`.
+
+Or disable in `backend/.env`: `AUDIT_REPODY_VLM_ENABLED`, `AUDIT_PADDLEOCR_V6_ENABLED`, `AUDIT_GLM_OCR_ENABLED`.
+
+> **Note:** NuExtract and GLM both use llama-server. On shared iGPU / low RAM, Next.js can crash with Windows `0xC0000409` / exit `3221226505`. Prefer `pnpm dev:all:no-glmocr` or `pnpm dev:all:no-nuextract` (or `pnpm dev:all:paddle-only`). If the UI dies, API/models often keep running — use `pnpm ui` or `pnpm dev:app` to bring the UI back.
+
+Model docs: [REPODY-VLM.md](./REPODY-VLM.md) · [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) · [GLM-OCR.md](./GLM-OCR.md)
+
+### Granular (optional)
+
+| Command | When |
+|---------|------|
+| `pnpm dev:api` | FastAPI only |
+| `pnpm ui` | Next.js only (:3000) |
+| `pnpm dev:worker` | Both Taskiq worker pools (Docker) |
+| `pnpm llamacpp:serve` / `:stop` / `:verify` / `:warmup` | NuExtract alone |
+| `pnpm paddleocr:v6:install` / `:serve` / `:stop` / `:verify` / `:warmup` | PP-OCRv6 alone |
+| `pnpm glmocr:serve` / `:stop` / `:verify` / `:warmup` / `:download` | GLM-OCR alone |
+| `pnpm db:reset` | Drop schema, migrate, re-seed |
+| `pnpm dev:reset` | Wipe Compose volumes + DB + rebuild workers |
+| `pnpm test:api` | Backend tests |
+| `pnpm lint` / `pnpm typecheck` | Frontend quality |
 
 ## OpenShift client test
 
@@ -63,7 +96,7 @@ Requires `kubectl` + `helm` + `docker` logged in to an OpenShift cluster (kubeco
 
 | Command | When |
 |---------|------|
-| `pnpm openshift:infra` | **Once** — Harbor, Vault, ESO, OTEL, Argo CD (independent of Repody) |
+| `pnpm openshift:infra` | **Once** — Harbor, Vault, ESO, OTEL, Argo CD |
 | `pnpm openshift:e2e` | **Repeat** — build → push → seed → sync → verify → logs |
 | `pnpm openshift:client-test` | Full run: infra + e2e (GitOps default; add `--clean` to reset) |
 | `pnpm openshift:client-test:external` | External profile |
@@ -73,18 +106,14 @@ Requires `kubectl` + `helm` + `docker` logged in to an OpenShift cluster (kubeco
 
 Flags: `--registry=harbor|openshift` · `--helm` · `--clean` · `--skip-images` · `--skip-build` · `--vlm`
 
-Fast iteration (infra stays up):
-
 ```powershell
 pnpm openshift:infra
-pnpm openshift:e2e --skip-build    # push + sync only
+pnpm openshift:e2e --skip-build
 ```
 
 ## Release (vendor → client)
 
-Step-by-step image push and client deploy: [docs/deploy/VENDOR-TO-CLIENT.md](./deploy/VENDOR-TO-CLIENT.md)
-
-Supply chain (SBOM, cosign): [docs/deploy/RELEASE.md](./deploy/RELEASE.md)
+[docs/deploy/VENDOR-TO-CLIENT.md](./deploy/VENDOR-TO-CLIENT.md) · [docs/deploy/RELEASE.md](./deploy/RELEASE.md)
 
 ```powershell
 $env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
@@ -95,45 +124,31 @@ pnpm release:attest
 pnpm release:promote -- --channel=staging
 ```
 
-GitHub: push tag `v*` → [images-ghcr.yml](../.github/workflows/images-ghcr.yml) builds, signs, and uploads `dist/release/` artifacts.
-
-Client install: [docs/deploy/CLIENT.md](./deploy/CLIENT.md) · YAML kit: [deploy/client/README.md](../deploy/client/README.md)
-
 ## Security scanning
 
-Dual-scanner CI: Trivy (primary gate) + Grype on Syft SBOMs. Full comparison: [deploy/security/README.md](../deploy/security/README.md).
+| Command | When |
+|---------|------|
+| `pnpm security:scan:quick` | Lockfiles + Trivy fs/config/secret |
+| `pnpm security:scan` | Full scan including Docker images + Grype |
+
+## Helm / client
 
 | Command | When |
 |---------|------|
-| `pnpm security:scan:quick` | Local — lockfiles + Trivy fs/config/secret (no image build) |
-| `pnpm security:scan` | Local — full scan including Docker images + Grype |
-| CI | [`.github/workflows/security.yml`](../.github/workflows/security.yml) on PR/push |
-
-Reports land in `dist/security/report.md` (merged) with SARIF uploaded to GitHub Security.
-
-## Helm maintenance
-
-| Command | When |
-|---------|------|
-| `pnpm helm:deps:update` | Refresh chart dependencies |
-| `pnpm helm:deps:check` | CI — verify charts/ archives |
-| `pnpm helm:lint` | Lint all three charts |
-| `pnpm helm:template` | Render app chart |
-
-## Client integration
-
-| Command | When |
-|---------|------|
-| `pnpm client:check` | Helm render + secrets contract |
-| `pnpm deploy:check` | Vendor preflight |
-| `pnpm enterprise:secrets` | Validate secret keys in values |
+| `pnpm helm:deps:update` / `:check` / `pnpm helm:lint` / `pnpm helm:template` | Charts |
+| `pnpm client:check` / `pnpm deploy:check` / `pnpm enterprise:secrets` | Client contracts |
 
 ## Tests
 
 | Command | When |
 |---------|------|
-| `pnpm test:api` | Unit/integration (no cluster) |
-| `pnpm test:e2e` | Playwright |
-| `pnpm test:platform` | Platform E2E harness |
+| `pnpm test:unit` | Fast pure backend tests |
+| `pnpm test:integration` | ASGI + Postgres |
+| `pnpm test:api` | Unit + integration (CI default) |
+| `pnpm test:live` | Live API (stack required) |
+| `pnpm test:e2e` | Playwright UI |
+| `pnpm test:platform:report` | Markdown/HTML under `reports/platform-tests/` |
+
+Details: [docs/TESTING.md](./TESTING.md).
 
 Production namespace: `repody`. Local Compose uses localhost ports.

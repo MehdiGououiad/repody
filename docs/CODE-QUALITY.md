@@ -17,18 +17,20 @@ backend source inventory.
 
 | Area | Expected shape | Review signal |
 |------|----------------|---------------|
-| Run lifecycle | `services/run/domain/` owns status transitions and events | Tests can exercise lifecycle without FastAPI, SQLAlchemy, Redis, or Taskiq |
-| Run use cases | `services/run/application/` orchestrates domain plus ports | Use cases receive lifecycle store ports; SQLAlchemy sessions stay in adapters |
-| Run adapters | `services/run/adapters/` maps domain to SQLAlchemy and progress/SSE side effects | Adapter code imports infrastructure; domain code does not |
+| Run lifecycle | `services/run/lifecycle.py` owns status transitions and events | Tests can exercise lifecycle without FastAPI, SQLAlchemy, Redis, or Taskiq |
+| Run use cases | `services/run/commands.py` orchestrates lifecycle plus injected ports | Use cases receive load/save/commit/publish callables; SQLAlchemy stays in `persistence.py` |
+| Run persistence | `services/run/persistence.py` + `events.py` | Infrastructure mapping; no business transitions |
+| IDP agent | `agents/idp/compose.py` pure; I/O in `adapters/` + `run.py` | Do not put DB/HTTP inside `compose_idp` |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `taskiq/` and `run_processor.py` are delivery adapters | Worker code claims work, calls phases, and records terminal failure |
+| Worker layer | `taskiq/` and `run/processor.py` are delivery adapters | Worker claims work, runs recipe, records terminal failure |
 | Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
 | Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 
 ## Current Strong Modules
 
-- `services/run/domain/lifecycle.py`: deep module for audit Run state changes.
-- `services/run/adapters/persistence.py`: SQLAlchemy gateway that maps ORM rows to `RunEntity` and back.
+- `services/run/lifecycle.py`: deep module for audit Run state changes.
+- `services/run/persistence.py`: SQLAlchemy gateway that maps ORM rows to `RunEntity` and back.
+- `agents/idp/compose.py`: pure extract+validate composition behind injected ports.
 - `services/workflow/`: workflow orchestration and persistence are separated.
 - `catalog/`: model catalog and live probes are centralized instead of scattered across routers.
 - `docs/COMMANDS.md`: single command reference for development, release, and client checks.
@@ -54,8 +56,8 @@ During day-to-day work, run the smallest command that covers the change:
 
 | Change type | Command |
 |-------------|---------|
-| Backend logic | `pnpm test:api` |
-| Run lifecycle or queue behavior | `node scripts/backend-run.mjs --dev pytest tests/test_services -q` |
+| Backend logic | `pnpm test:api` or `pnpm test:platform:report` |
+| Run lifecycle or queue behavior | `pnpm test:unit` then `pnpm test:integration` |
 | Architecture dependency rules | `pnpm architecture:check` |
 | Frontend code | `pnpm lint` and `pnpm typecheck` |
 | API contract changes | `pnpm codegen:api` then `pnpm typecheck` |

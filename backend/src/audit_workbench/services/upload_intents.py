@@ -9,12 +9,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import UploadIntent
-from audit_workbench.services.run_service import FileBinding
-from audit_workbench.storage.mime import normalize_declared_mime
+from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.platform.run.contracts import FileBinding
+from audit_workbench.storage.mime import mimes_match_for_confirm, normalize_declared_mime
 
 
 class UploadIntentError(ValueError):
-    pass
+    """Deprecated — prefer Result failures from upload intent helpers."""
+
+
+def _validation(message: str) -> AppError:
+    return AppError(code=ErrorCode.VALIDATION, message=message)
+
+
+def _forbidden(message: str) -> AppError:
+    return AppError(code=ErrorCode.FORBIDDEN, message=message)
 
 
 async def record_upload_intent(
@@ -48,9 +57,10 @@ async def load_upload_intent(session: AsyncSession, storage_key: str) -> UploadI
     return result.scalar_one_or_none()
 
 
-def _check_owner(row: UploadIntent, owner_subject: str | None) -> None:
+def _check_owner(row: UploadIntent, owner_subject: str | None) -> AppError | None:
     if row.owner_subject and owner_subject and row.owner_subject != owner_subject:
-        raise UploadIntentError("Upload belongs to a different authenticated user.")
+        return _forbidden("Upload belongs to a different authenticated user.")
+    return None
 
 
 async def confirm_upload_intent(
@@ -60,18 +70,24 @@ async def confirm_upload_intent(
     size: int,
     verified_mime: str,
     owner_subject: str | None = None,
-) -> UploadIntent:
+) -> Result[UploadIntent]:
     row = await load_upload_intent(session, storage_key)
     if row is None:
-        raise UploadIntentError("Upload was not prepared by this API.")
-    _check_owner(row, owner_subject)
+        return Result.fail(_validation("Upload was not prepared by this API."))
+    owner_err = _check_owner(row, owner_subject)
+    if owner_err is not None:
+        return Result.fail(owner_err)
     if size != row.size:
-        raise UploadIntentError("Upload size does not match the prepared upload.")
-    if normalize_declared_mime(verified_mime) != normalize_declared_mime(row.mime_type):
-        raise UploadIntentError("Upload MIME type does not match the prepared upload.")
+        return Result.fail(_validation("Upload size does not match the prepared upload."))
+    if not mimes_match_for_confirm(prepared=row.mime_type, verified=verified_mime):
+        return Result.fail(_validation("Upload MIME type does not match the prepared upload."))
+    # Prefer sniffed type when prepare only had a generic browser fallback.
+    verified_norm = normalize_declared_mime(verified_mime)
+    if normalize_declared_mime(row.mime_type) != verified_norm:
+        row.mime_type = verified_norm
     row.confirmed_at = datetime.now(UTC)
     await session.flush()
-    return row
+    return Result.ok(row)
 
 
 async def bindings_from_confirmed_uploads(
@@ -79,15 +95,21 @@ async def bindings_from_confirmed_uploads(
     bindings: list[FileBinding],
     *,
     owner_subject: str | None = None,
-) -> list[FileBinding]:
+) -> Result[list[FileBinding]]:
     out: list[FileBinding] = []
     for binding in bindings:
         row = await load_upload_intent(session, binding.storage_key)
         if row is None or row.confirmed_at is None:
-            raise UploadIntentError("Run file binding was not confirmed through uploads/confirm.")
-        _check_owner(row, owner_subject)
+            return Result.fail(
+                _validation("Run file binding was not confirmed through uploads/confirm.")
+            )
+        owner_err = _check_owner(row, owner_subject)
+        if owner_err is not None:
+            return Result.fail(owner_err)
         if binding.document_id and row.document_id and binding.document_id != row.document_id:
-            raise UploadIntentError("Run file binding document does not match the upload intent.")
+            return Result.fail(
+                _validation("Run file binding document does not match the upload intent.")
+            )
         out.append(
             FileBinding(
                 document_id=binding.document_id or row.document_id,
@@ -96,4 +118,4 @@ async def bindings_from_confirmed_uploads(
                 file_name=row.file_name,
             )
         )
-    return out
+    return Result.ok(out)

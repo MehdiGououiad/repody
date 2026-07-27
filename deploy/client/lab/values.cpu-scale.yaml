@@ -2,7 +2,7 @@
 # Requires cluster metrics (metrics-server or OpenShift monitoring) for HPA.
 #
 # Extract workers spend most time blocked on VLM/GPU — CPU HPA stays low and mis-scales.
-# Scale extract via maxJobs + admissionMaxExtractInflight + VLM slots instead.
+# Scale extract via maxJobs + VLM slots; Taskiq queues backlog.
 # Fast workers and API are CPU-bound and scale well on averageUtilization.
 
 hpaBehavior:

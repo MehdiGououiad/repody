@@ -9,7 +9,7 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
-from audit_workbench.auth.casbin_authorizer import get_authorizer
+from audit_workbench.auth.casbin_authorizer import authorize
 from audit_workbench.auth.jwt_validator import JwtValidationError, principal_from_bearer
 from audit_workbench.auth.principal import Principal
 from audit_workbench.db.models import Run, Workflow
@@ -61,8 +61,7 @@ def require_permission(resource: str, action: str) -> Callable:
     async def _dependency(
         principal: Principal = Depends(get_current_principal),
     ) -> Principal:
-        authorizer = get_authorizer()
-        if not authorizer.authorize(principal, resource, action):
+        if not authorize(principal, resource, action):
             raise HTTPException(
                 403,
                 f"Forbidden — missing permission {resource}:{action}.",
@@ -87,10 +86,8 @@ async def require_admin_or_workflow_run(
 
     try:
         principal = principal_from_bearer(token, settings)
-        if principal.has_app_role():
-            authorizer = get_authorizer()
-            if authorizer.authorize(principal, "run", "read"):
-                return
+        if principal.has_app_role() and authorize(principal, "run", "read"):
+            return
     except JwtValidationError:
         pass
 

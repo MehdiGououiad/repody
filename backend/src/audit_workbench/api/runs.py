@@ -19,24 +19,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
 from audit_workbench.api.deps import get_session
-from audit_workbench.auth.dependencies import (
-    require_admin_or_workflow_run,
-    require_run_create_access,
-)
-from audit_workbench.db.models import Run
-from audit_workbench.schemas.run_requests import CreateRunJsonBody
-from audit_workbench.schemas.workflow import RunCreatedResponse, RunPollResponse
+from audit_workbench.api.errors import raise_app_error
+from audit_workbench.api.runs_enqueue import enqueue_run_http
 from audit_workbench.api.runs_handlers import (
     bindings_from_stored,
     snapshot_from_body,
     snapshot_from_form_payload,
 )
-from audit_workbench.services import run_service
-from audit_workbench.services.run_enqueue import EnqueueRunRequest
-from audit_workbench.api.run_enqueue_http import enqueue_run_http
-from audit_workbench.services.run_events import subscribe_run_progress
-from audit_workbench.services.run_service import FileBinding
-from audit_workbench.services.run_upload_bindings import bindings_from_multipart
+from audit_workbench.auth.dependencies import (
+    require_admin_or_workflow_run,
+    require_run_create_access,
+)
+from audit_workbench.db.models import Run
+from audit_workbench.platform.run.contracts import EnqueueRunRequest, FileBinding
+from audit_workbench.schemas.run_requests import CreateRunJsonBody
+from audit_workbench.schemas.workflow import RunCreatedResponse, RunPollResponse
+from audit_workbench.services.run.intake import poll_run, poll_run_status
+from audit_workbench.services.run.sse import subscribe_run_progress
+from audit_workbench.services.run.upload_bindings import bindings_from_multipart
 
 router = APIRouter(tags=["runs"])
 log = structlog.get_logger(__name__)
@@ -63,7 +63,7 @@ async def get_run_status(
     _: None = Depends(require_admin_or_workflow_run),
 ) -> RunPollResponse:
     """Lightweight poll — status and progress only (no full audit payload)."""
-    body = await run_service.poll_run_status(session, run_id)
+    body = await poll_run_status(session, run_id)
     return RunPollResponse(
         status=body.status,
         progress=body.progress,
@@ -80,20 +80,14 @@ async def get_run(
     _: None = Depends(require_admin_or_workflow_run),
 ) -> RunPollResponse:
     if not full:
-        body = await run_service.poll_run_status(session, run_id)
+        body = await poll_run_status(session, run_id)
         return RunPollResponse(
             status=body.status,
             progress=body.progress,
             result=None,
             error=body.error,
         )
-    poll = await run_service.poll_run(session, run_id)
-    return RunPollResponse(
-        status=poll.status,
-        progress=poll.progress,
-        result=poll.result,
-        error=poll.error,
-    )
+    return await poll_run(session, run_id)
 
 
 @router.get(
@@ -196,13 +190,17 @@ async def create_run(
     bindings: list[FileBinding] | None = None
     snapshot = snapshot_from_form_payload(payload)
     if files:
-        bindings = await bindings_from_multipart(
+        bindings_r = await bindings_from_multipart(
             session,
             workflow_id,
             files,
             document_ids=document_ids,
             document_types=document_types,
         )
+        if not bindings_r.is_ok:
+            assert bindings_r.error is not None
+            raise_app_error(bindings_r.error)
+        bindings = bindings_r.unwrap()
     return await enqueue_run_http(
         session,
         EnqueueRunRequest(

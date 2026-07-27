@@ -58,30 +58,40 @@ All audit runs are dispatched through Taskiq (Redis Streams); worker containers 
 
 ```
 backend/src/audit_workbench/
-├── api/           HTTP routers → mostly delegate to services
-├── services/      Business logic (runs, workflows, audits, maintenance)
-├── extraction/    Document pipeline, model catalog, Repody VLM client
-├── inference/     OpenAI-compat clients (external VLM, validation text model)
-├── rules/         Logic + LLM evaluators
-├── taskiq/        Worker entrypoint + async tasks
-├── db/            SQLAlchemy models + Alembic
-├── schemas/       Pydantic DTOs (CamelModel → JSON camelCase)
-└── storage/       Local filesystem + S3/MinIO
+├── api/                 HTTP routers → mostly delegate to services
+├── services/run/        Flat: lifecycle · commands · finalize · persistence · progress · processor · enqueue
+├── agents/idp/          contracts · compose · run · adapters/
+├── agents/fraud/ · computer_use/   SKIPPED stubs + staged Taskiq pools
+├── platform/            contracts · recipe · pools · agent_metadata · metrics · operator · run helpers
+├── extraction/          pipeline · vlm · render · payloads · warmup · schema · parse · template_types · modes · types
+├── inference/           OpenAI-compat clients
+├── rules/               Logic + LLM evaluators
+├── catalog/             Document-model registry + probes
+├── taskiq/              Worker entrypoint + async tasks
+├── db/ · schemas/ · storage/
+└── services/            workflows, operator jobs, enqueue, queue metrics, …
 ```
 
-**Intentional coupling:** `api/platform.py` exposes diagnostics and catalog endpoints that call extraction/inference directly for operator visibility. Everything else on the hot path goes through services.
+**Hot path (staged):** `process_run` → `execute_platform_run`(one agent) → IDP `compose_idp` → optional outbox handoff to `fraud` / `computer_use` pools (updates `worker_pool` + `last_activity_at`) → `finalize_pending_completion` / `complete_run` on final stage ([ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md)). Stale reap keys off activity; Fraud/CU require `*_WORKERS_READY` in addition to enable flags.
 
-### Bounded contexts (Audit Execution is core)
+**Intentional coupling:** `api/platform.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
+
+### Bounded contexts
 
 | Context | Responsibility | Key modules |
 |---------|----------------|-------------|
-| **Workflow configuration** | Templates, rules, deployment | `services/workflow/`, `db/models/workflow.py` |
-| **Audit execution** | Run lifecycle, queue, worker pipeline | `services/run/domain/`, `run_processor.py`, `run_enqueue.py`, `taskiq/` |
-| **Platform / catalog** | Model registry, probes, operator tools | `catalog/`, `services/operator/` |
+| **Workflow configuration** | Templates, rules, deployment | `services/workflow/` |
+| **Audit execution** | Claim/complete, queue, worker | `services/run/`, `services/run/processor.py`, `services/run/enqueue.py`, `taskiq/` |
+| **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
+| **Platform / catalog** | Recipe, envelopes, registry, operator | `platform/`, `catalog/`, `services/operator/` |
 
-Cross-context integration uses anti-corruption layers (`catalog/adapters.py` for VLM) and domain events (`RunQueued`, `RunStarted`, `RunCompleted`, `RunFailed`) for side effects such as queue refresh and SSE terminal signals.
+### Three-agent platform
 
-**Clean Architecture (Run module):** dependencies point inward — `domain/` (entity, lifecycle) → `application/` (use cases) → `adapters/` (SQLAlchemy gateway, Redis SSE publisher). `composition.py` is the composition root; `run_terminal.py` and `run_processor.py` are outer delivery/worker adapters.
+**IDP** lives under `agents/idp/`. **Fraud** / **Computer Use** are SKIPPED scaffolds under `agents/fraud/` and `agents/computer_use/` with dedicated Taskiq pools (`fraud`, `computer_use`) for independent scaling. IDP capacity pools remain `extract` / `fast`. Envelopes: `platform/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
+
+Domain events (`RunQueued`, `RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `platform/run/status.py`.
+
+**Run lifecycle (flat):** `services/run/lifecycle.py` (entity + pure transitions) · `commands.py` (claim/complete/fail) · `persistence.py` + `events.py`. Worker entry: `services/run/processor.py`.
 
 ## Operator tools
 
@@ -105,18 +115,20 @@ Import `catalog/registry.py` directly for document model catalog operations.
 
 | Module | Selects | Example ids |
 |--------|---------|-------------|
-| `extraction/pipeline.py` (`get_extractor`) | **Extractor implementation** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `catalog/registry.py` | **Document model catalog** | `repody:vlm` |
+| `extraction/pipeline.py` (`get_extract_document`) | **Extractor callable** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
+| `catalog/registry.py` | **Document model catalog** | `repody:vlm`, `repody:vlm:cloud`, `paddleocr:v6`, `glm:ocr` |
 | `catalog/probes.py` + `catalog/api.py` | **Catalog + live runtime probes** | used by `/models/catalog`, diagnostics, healthz |
 
-Flow: `get_extractor()` → `PipelineExtractor` → `parse_document_model()` → `extract_with_repody_vlm()` on the runtime from `AUDIT_INFERENCE_MODE`.
+Flow: `get_extract_document()` → `extract_document(...)` → catalog → model adapter
+(`extraction/vlm.py`, `paddleocr_v6.py`, or `glm_ocr.py`) on the runtime selected by
+the catalog entry / `AUDIT_*` env.
 
 ## Inference
 
 | Concern | Configuration |
 |---------|---------------|
 | Document extraction | `AUDIT_INFERENCE_MODE=llamacpp`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
-| LLM rule validation | `get_inference_client()` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
+| LLM rule validation | `get_chat()` / `chat_validation` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
 
 Document extraction and LLM rule validation use **separate** models and endpoints.
 

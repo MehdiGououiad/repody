@@ -54,6 +54,6 @@ Helm `images.*.repository` = `{registry}/repody-backend` (not `{registry}/repody
 | `build-images.mjs` | Build and push container images |
 | `release-supply-chain.mjs` | SBOM, cosign, promotion |
 | `openshift-client-test.mjs` | OpenShift client test lab (Harbor, Vault, Argo CD, OTEL) |
-| `local-dev.mjs` | Compose local stack (`pnpm dev:*`) |
+| `local-dev.mjs` | Compose local stack (`pnpm dev:all`) |
 
 Shared helpers: `scripts/lib/cli.mjs`, `vault-eso.mjs`, `vault-bootstrap.mjs`, `bundled-values.mjs`, `lab-seed.mjs`, `migrations-job.mjs`.

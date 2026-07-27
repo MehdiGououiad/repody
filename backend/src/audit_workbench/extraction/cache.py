@@ -5,11 +5,11 @@ import json
 
 import structlog
 
-from audit_workbench.extraction.base import (
+from audit_workbench.extraction.types import (
     ExtractedFieldResult,
     ExtractionResult,
     SchemaFieldSpec,
-    truncate_markdown_text,
+    truncate_text,
 )
 from audit_workbench.services.redis_pool import get_redis
 from audit_workbench.settings import get_settings
@@ -109,8 +109,8 @@ def _serialize_result(result: ExtractionResult) -> str:
             rid: [status, detail] for rid, (status, detail) in result.llm_rule_results.items()
         }
     payload = {
-        "rawText": truncate_markdown_text(result.raw_text),
-        "markdownText": truncate_markdown_text(result.markdown_text),
+        "rawText": truncate_text(result.raw_text),
+        "markdownText": truncate_text(result.markdown_text),
         "readPathUsed": result.read_path_used,
         "llmRuleResults": llm_rules,
         "fields": [

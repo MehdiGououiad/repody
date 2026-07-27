@@ -26,6 +26,47 @@ When `secrets.create=false`, create `repody-runtime-secrets` with:
 | `AUDIT_LLAMACPP_API_KEY` | Optional bearer token |
 | `AUDIT_REPODY_VLM_WARMUP_ON_START=false` | Recommended for remote/serverless endpoints |
 
+## NuExtract Cloud (platform API)
+
+Catalog id: `repody:vlm:cloud`. Uses the official NuExtract REST API
+([docs](https://nuextract.ai/doc)) — not local llama-server.
+
+| Variable | Purpose |
+|----------|---------|
+| `AUDIT_NUEXTRACT_CLOUD_ENABLED=true` | Register NuExtract Cloud in the document model catalog |
+| `AUDIT_NUEXTRACT_CLOUD_API_KEY` | Bearer API key (`Authorization: Bearer …`) |
+| `AUDIT_NUEXTRACT_CLOUD_BASE_URL` | Default `https://nuextract.ai` |
+| `AUDIT_NUEXTRACT_CLOUD_PROJECT_ID` | Optional fixed `sprj_…`; omit to create a temp project per request |
+| `AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS` | HTTP/SSE job timeout (default 180) |
+
+Store the API key in secrets only — never commit it.
+
+## Alternate document models (OCR)
+
+| Variable | Purpose |
+|----------|---------|
+| `AUDIT_PADDLEOCR_V6_ENABLED` | Register `paddleocr:v6` in the catalog (markdown-only) |
+| `AUDIT_PADDLEOCR_V6_BASE_URL` | PP-OCRv6 HTTP root, e.g. `http://127.0.0.1:8868` |
+| `AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS` | Request timeout (default 180) |
+| `AUDIT_GLM_OCR_ENABLED` | Register `glm:ocr` in the catalog (markdown-only) |
+| `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
+| `AUDIT_GLM_OCR_SERVED_MODEL` | Model id from `/v1/models` (default `GLM-OCR`) |
+| `AUDIT_GLM_OCR_TIMEOUT_SECONDS` | Request timeout (default 180) |
+
+Local: `pnpm paddleocr:v6:serve` / `pnpm glmocr:serve` (also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md) and [docs/GLM-OCR.md](../docs/GLM-OCR.md).
+
+## Staged platform agents
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run IDP extract+validate stage |
+| `AUDIT_AGENT_FRAUD_ENABLED` | `false` | Include Fraud in recipe (SKIPPED stub until implemented) |
+| `AUDIT_AGENT_COMPUTER_USE_ENABLED` | `false` | Include Computer Use in recipe (SKIPPED stub) |
+| `AUDIT_AGENT_FRAUD_WORKERS_READY` | `false` | Set true only when `worker-fraud` replicas > 0 |
+| `AUDIT_AGENT_COMPUTER_USE_WORKERS_READY` | `false` | Set true only when `worker-computer-use` replicas > 0 |
+
+Helm sets `*_WORKERS_READY` from Deployment replicas. Enable flags come from `config.agentFraudEnabled` / `config.agentComputerUseEnabled`.
+
 Helm values:
 
 ```yaml
@@ -33,6 +74,11 @@ config:
   inferenceMode: llamacpp
   llamacppBaseUrl: https://vlm.example.com/v1
   llamacppServedModel: numind/NuExtract3
+  agentIdpEnabled: true
+  agentFraudEnabled: false
+  agentComputerUseEnabled: false
+  paddleocrV6Enabled: false
+  glmOcrEnabled: false
 
 workerExtract:
   warmupOnStart: false
@@ -55,16 +101,6 @@ workerExtract:
 | `AUDIT_STORAGE_BACKEND` | `s3` | Object storage |
 | `AUDIT_LOG_JSON` | `true` | Structured logs |
 | `AUDIT_CORS_ORIGINS` | JSON array | Browser origins |
-
-## Admission Control
-
-| Variable | Local Compose | Production default | Description |
-|----------|---------------|--------------------|-------------|
-| `AUDIT_ADMISSION_CONTROL_ENABLED` | default from settings | `true` | Enable queue/inflight admission limits |
-| `AUDIT_ADMISSION_MAX_QUEUED` | `50` | `50` | Maximum queued runs before rejecting new work |
-| `AUDIT_ADMISSION_MAX_INFLIGHT` | `32` | `64` | Maximum inflight runs across pools |
-| `AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT` | `2` | `8` | Maximum document-model extraction work in flight |
-| `AUDIT_ADMISSION_RETRY_AFTER_SECONDS` | `60` | `60` | Retry hint returned when admission rejects work |
 
 ## Image Build
 

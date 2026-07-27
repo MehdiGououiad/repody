@@ -14,11 +14,6 @@ api:
       memory: 1Gi
 
 config:
-  # Allow a 1000-run backlog with headroom for inflight extraction.
-  admissionMaxQueued: 1500
-  admissionMaxInflight: 1200
-  admissionMaxExtractInflight: 64
-  admissionRetryAfterSeconds: 15
   rateLimitEnabled: true
   rateLimitWindowSeconds: 3600
   rateLimitRunsPerWorkflow: 2000

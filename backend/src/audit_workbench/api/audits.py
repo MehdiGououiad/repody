@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.api.deps import get_session
 from audit_workbench.schemas.audit import AuditListResponse
 from audit_workbench.schemas.run import RunAuditDetail
-from audit_workbench.services.audit import count_completed_audits, get_audit_detail, list_completed_audits
+from audit_workbench.services.audit import count_completed_audits, list_completed_audits
+from audit_workbench.services.run.intake import get_run_detail
 
 router = APIRouter(prefix="/audits", tags=["audits"])
 
@@ -31,7 +32,7 @@ async def list_audits(
 
 @router.get("/{audit_id}", response_model=RunAuditDetail)
 async def get_audit(audit_id: str, session: AsyncSession = Depends(get_session)):
-    detail = await get_audit_detail(session, audit_id)
+    detail = await get_run_detail(session, audit_id)
     if not detail:
         raise HTTPException(404, "Audit not found")
     return detail

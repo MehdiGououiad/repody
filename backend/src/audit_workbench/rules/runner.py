@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from audit_workbench.extraction.base import ExtractionResult
-from audit_workbench.extraction.document_modes import (
+from audit_workbench.extraction.types import ExtractionResult
+from audit_workbench.extraction.modes import (
     LOGIC_VALIDATION,
     RUN_VALIDATION_LLM,
     ValidationMode,
@@ -15,12 +15,12 @@ from audit_workbench.rules.llm_evaluator import (
     evaluate_llm_rule,
     evaluate_llm_rules_batch,
 )
-from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
-from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields, rule_kind
-from audit_workbench.services.field_namespace import (
+from audit_workbench.rules.field_namespace import (
     field_values_for_rule,
     field_values_from_extractions,
 )
+from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
+from audit_workbench.rules.types import RuleEvalResult, collect_affected_fields, rule_kind
 
 
 def rules_for_validation(

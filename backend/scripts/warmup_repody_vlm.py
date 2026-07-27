@@ -13,7 +13,7 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from audit_workbench.extraction.repody_vlm import warmup_repody_vlm  # noqa: E402
+from audit_workbench.extraction.warmup import warmup_repody_vlm  # noqa: E402
 
 # Written by this script so detached `pnpm llamacpp:serve` can exit while warmup continues.
 _WARMUP_MARKER = (

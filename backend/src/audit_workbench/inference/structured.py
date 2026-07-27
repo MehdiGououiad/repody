@@ -9,6 +9,7 @@ from typing import Any, TypeVar, cast
 import structlog
 from pydantic import BaseModel, ValidationError
 
+from audit_workbench.inference.factory import get_chat
 from audit_workbench.inference.runtime import openai_api_key_for_base_url, llamacpp_base_url
 from audit_workbench.inference.validation_model import resolve_llm_validation_model
 from audit_workbench.settings import get_settings
@@ -96,9 +97,6 @@ async def _request_structured_raw(
     temperature: float,
     use_json_schema: bool,
 ) -> str:
-    from audit_workbench.inference.factory import get_inference_client
-
-    client = get_inference_client()
     chat_opts: dict[str, Any] = {
         "max_tokens": max_tokens,
         "temperature": temperature,
@@ -108,7 +106,7 @@ async def _request_structured_raw(
         chat_opts["response_format"] = openai_json_schema_format(response_model)
     else:
         chat_opts["format_json"] = True
-    return await client.chat(messages, **chat_opts)
+    return await get_chat()(messages, **chat_opts)
 
 
 async def chat_structured(

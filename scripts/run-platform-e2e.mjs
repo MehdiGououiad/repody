@@ -115,7 +115,7 @@ run(
     "python",
     "-m",
     "pytest",
-    "tests/test_platform",
+    "tests/live",
     "-v",
     "-m",
     "live",

@@ -52,7 +52,7 @@ The main `repody` chart keeps conditional subchart slots disabled by default; bu
 
 ## Supply-chain overrides
 
-pnpm workspace overrides (see `pnpm-workspace.yaml`) pin patched transitive deps until upstream bundles them:
+Workspace overrides in `pnpm-workspace.yaml` pin patched transitive deps until upstream bundles them:
 
 | Package | Reason |
 |---------|--------|

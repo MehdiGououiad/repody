@@ -5,15 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from audit_workbench.auth.dependencies import require_permission
-from audit_workbench.extraction.document_model_branding import (
+from audit_workbench.extraction.branding import (
     normalize_public_catalog_id,
     public_runtime_model_name,
 )
-from audit_workbench.extraction.nuextract_contract import (
+from audit_workbench.extraction.nuextract import (
     NUEXTRACT_MAX_PAGES_PER_REQUEST,
     NUEXTRACT_PDF_DPI,
 )
-from audit_workbench.extraction.template_type_inference import suggest_template_type
+from audit_workbench.extraction.template_types import suggest_template_type
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
 from audit_workbench.schemas.platform import (
     DocumentModelSummary,

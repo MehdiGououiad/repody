@@ -35,12 +35,13 @@ Creates `backend/.env`, `.env.local`, starts Compose, runs migrations.
 
 ```powershell
 pnpm dev:all
+pnpm models:warmup   # optional re-prime of NuExtract + PP-OCRv6 + GLM-OCR
 ```
 
 **Two terminals (split logs):**
 
 ```powershell
-pnpm dev        # background: Compose + workers + NuExtract
+pnpm dev        # background: Compose + workers + all three models
 pnpm dev:app    # foreground: API (:8000 by default) + UI (:3000)
 ```
 
@@ -55,7 +56,9 @@ Taskiq workers run as **Linux Compose services** (`--profile workers`) — worke
 | MinIO API | http://localhost:9000 | |
 | MinIO console | http://localhost:9001 | `minioadmin` / `minio-local-dev` |
 | Keycloak | http://localhost:8080 | admin / admin · realm `repody` |
-| NuExtract | http://localhost:8081 | llama-server (host; workers use `host.docker.internal`) |
+| NuExtract | http://localhost:8081 | `repody:vlm` — llama-server (host) |
+| PP-OCRv6 | http://localhost:8868 | `paddleocr:v6` — PaddleX `POST /ocr` |
+| GLM-OCR | http://localhost:8083 | `glm:ocr` — llama-server (host) |
 | Grafana | http://localhost:3030 | `pnpm dev:all` (default) or `pnpm dev:observability` |
 | Bugsink | http://localhost:8090 | admin@repody.local / repody-dev (observability profile) |
 | OTLP | http://localhost:4318 | traces from API/workers |
@@ -81,9 +84,12 @@ On Windows, API reload is disabled by default to avoid stale Uvicorn sockets. Se
 
 ```powershell
 pnpm dev:status     # what's up?
+pnpm models:warmup  # warm all three models
 pnpm dev:restart    # after Vulkan ErrorDeviceLost
-pnpm dev:stop       # stop API, UI, NuExtract, and Compose
+pnpm dev:stop       # stop API, UI, models, and Compose
 pnpm llamacpp:verify
+pnpm paddleocr:v6:verify
+pnpm glmocr:verify
 pnpm test:api
 ```
 
@@ -102,7 +108,7 @@ Tuned defaults in `paths.local.env` when `LLAMACPP_DEVICE=Vulkan0`:
 - **`LLAMACPP_IMAGE_MIN_TOKENS=1024`** / **`LLAMACPP_IMAGE_MAX_TOKENS=1024`** — Qwen-VL accuracy floor + fixed vision budget (unbounded max → Arc `ErrorDeviceLost`)
 - **`LLAMACPP_UBATCH_SIZE=1024`** / **`LLAMACPP_MTMD_BATCH_MAX_TOKENS=1024`** — match the vision token budget
 - **`LLAMACPP_PARALLEL=1`** — one slot, full 16k context
-- PDF rasterization is fixed in code at **170 DPI** PNG (`nuextract_contract.py`)
+- PDF rasterization is fixed in code at **170 DPI** PNG (`extraction/render.py` / `extraction/nuextract.py`)
 
 After changes: `pnpm llamacpp:restart` and `pnpm dev:restart`.
 

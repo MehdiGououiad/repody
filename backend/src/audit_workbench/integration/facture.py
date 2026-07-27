@@ -6,8 +6,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from audit_workbench.extraction.document_modes import LOGIC_VALIDATION, ValidationMode
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.extraction.modes import LOGIC_VALIDATION, ValidationMode
+from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
 from audit_workbench.integration.fixtures import resolve_facture_pdf
 
 FACTURE_PDF = resolve_facture_pdf()
@@ -34,7 +34,7 @@ def _logic_compare_rule(
         "body": f"{field} {operator} {value}",
         "conditions": [
             {
-                "id": f"{rule_id}-c1",
+                "id": "c1",
                 "left": {"kind": "field", "value": field},
                 "operator": operator,
                 "right": {"kind": "literal", "value": value},

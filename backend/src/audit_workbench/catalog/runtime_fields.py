@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from audit_workbench.extraction.document_model_branding import REPODY_VLM_CATALOG_ID
+from audit_workbench.extraction.branding import (
+    GLM_OCR_CATALOG_ID,
+    PADDLEOCR_V6_CATALOG_ID,
+    REPODY_VLM_CATALOG_ID,
+    REPODY_VLM_CLOUD_CATALOG_ID,
+)
 from audit_workbench.catalog.registry import list_document_models
-from audit_workbench.extraction.document_render import RENDER_POLICIES
+from audit_workbench.extraction.render import RENDER_POLICIES
 from audit_workbench.schemas.model_runtime import (
     ConfigScope,
     DeploymentNote,
@@ -170,6 +175,117 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
     return fields
 
 
+def _nuextract_cloud_fields(settings: Settings) -> list[ModelConfigField]:
+    return [
+        _platform_field(
+            key="nuextract_cloud_enabled",
+            env_var="AUDIT_NUEXTRACT_CLOUD_ENABLED",
+            label="Enabled",
+            description="Register NuExtract Cloud in the catalog.",
+            value=settings.nuextract_cloud_enabled,
+            restart="api",
+        ),
+        _platform_field(
+            key="nuextract_cloud_base_url",
+            env_var="AUDIT_NUEXTRACT_CLOUD_BASE_URL",
+            label="API base URL",
+            description="NuExtract platform origin (default https://nuextract.ai).",
+            value=settings.nuextract_cloud_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="nuextract_cloud_project_id",
+            env_var="AUDIT_NUEXTRACT_CLOUD_PROJECT_ID",
+            label="Project id (optional)",
+            description="Fixed sprj_… project; omit to create a temp project per request.",
+            value=settings.nuextract_cloud_project_id,
+            restart="worker",
+        ),
+        _platform_field(
+            key="nuextract_cloud_timeout_seconds",
+            env_var="AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS",
+            label="Request timeout (s)",
+            description="HTTP/SSE timeout for cloud jobs.",
+            value=settings.nuextract_cloud_timeout_seconds,
+            restart="worker",
+        ),
+        _platform_field(
+            key="nuextract_cloud_api_key",
+            env_var="AUDIT_NUEXTRACT_CLOUD_API_KEY",
+            label="API key",
+            description="Bearer token (stored as secret; not shown in full).",
+            value="••••" if settings.nuextract_cloud_api_key else None,
+            restart="worker",
+        ),
+    ]
+
+
+def _paddleocr_v6_fields(settings: Settings) -> list[ModelConfigField]:
+    return [
+        _platform_field(
+            key="paddleocr_v6_enabled",
+            env_var="AUDIT_PADDLEOCR_V6_ENABLED",
+            label="Enabled",
+            description="Register PP-OCRv6 (markdown-only) in the catalog.",
+            value=settings.paddleocr_v6_enabled,
+            restart="api",
+        ),
+        _platform_field(
+            key="paddleocr_v6_base_url",
+            env_var="AUDIT_PADDLEOCR_V6_BASE_URL",
+            label="OCR API base URL",
+            description="PaddleX OCR origin (default http://127.0.0.1:8868).",
+            value=settings.paddleocr_v6_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="paddleocr_v6_timeout_seconds",
+            env_var="AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS",
+            label="Request timeout (s)",
+            description="HTTP timeout for POST /ocr.",
+            value=settings.paddleocr_v6_timeout_seconds,
+            restart="worker",
+        ),
+    ]
+
+
+def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
+    return [
+        _platform_field(
+            key="glm_ocr_enabled",
+            env_var="AUDIT_GLM_OCR_ENABLED",
+            label="Enabled",
+            description="Register GLM-OCR (markdown-only) in the catalog.",
+            value=settings.glm_ocr_enabled,
+            restart="api",
+        ),
+        _platform_field(
+            key="glm_ocr_base_url",
+            env_var="AUDIT_GLM_OCR_BASE_URL",
+            label="OpenAI API base URL",
+            description="llama-server /v1 origin (default http://127.0.0.1:8083/v1).",
+            value=settings.glm_ocr_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_served_model",
+            env_var="AUDIT_GLM_OCR_SERVED_MODEL",
+            label="Served model id",
+            description="Model id / alias from /v1/models (default GLM-OCR).",
+            value=settings.glm_ocr_served_model,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_timeout_seconds",
+            env_var="AUDIT_GLM_OCR_TIMEOUT_SECONDS",
+            label="Request timeout (s)",
+            description="HTTP timeout for chat/completions.",
+            value=settings.glm_ocr_timeout_seconds,
+            restart="worker",
+        ),
+    ]
+
+
 def _deployment_notes() -> list[DeploymentNote]:
     return [
         DeploymentNote(
@@ -192,8 +308,35 @@ def _deployment_notes() -> list[DeploymentNote]:
             change_kind="Host inference (llama-server)",
             action="Edit deploy/llamacpp/*.local.env and restart the host process",
             detail=(
-                "NuExtract runs on host llama-server. "
+                "Local Repody VLM (repody:vlm) runs on host llama-server. "
                 "Start with pnpm llamacpp:serve on the host."
+            ),
+        ),
+        DeploymentNote(
+            change_kind="NuExtract Cloud API",
+            action="Set AUDIT_NUEXTRACT_CLOUD_* secrets, enable catalog, restart workers",
+            detail=(
+                "repody:vlm:cloud calls https://nuextract.ai with a bearer API key. "
+                "No local GPU required."
+            ),
+        ),
+        DeploymentNote(
+            change_kind="PP-OCRv6 service",
+            action="pnpm paddleocr:v6:install && pnpm paddleocr:v6:serve, set AUDIT_PADDLEOCR_V6_*",
+            detail=(
+                "paddleocr:v6 follows official Basic Serving: "
+                "paddlex --serve --pipeline OCR (deploy/paddleocr-v6/OCR.yaml), "
+                "client POST /ocr with Base64 file + fileType. "
+                "See https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html"
+            ),
+        ),
+        DeploymentNote(
+            change_kind="GLM-OCR (llama-server)",
+            action="pnpm glmocr:serve, set AUDIT_GLM_OCR_*",
+            detail=(
+                "glm:ocr calls OpenAI chat/completions on :8083 with "
+                "ggml-org/GLM-OCR-GGUF (quantized zai-org/GLM-OCR; image + "
+                "\"Text Recognition:\")."
             ),
         ),
     ]
@@ -207,6 +350,15 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
         if spec.id == REPODY_VLM_CATALOG_ID:
             fields = _repody_vlm_fields(settings)
             inference_url = settings.llamacpp_base_url
+        elif spec.id == REPODY_VLM_CLOUD_CATALOG_ID:
+            fields = _nuextract_cloud_fields(settings)
+            inference_url = settings.nuextract_cloud_base_url
+        elif spec.id == PADDLEOCR_V6_CATALOG_ID:
+            fields = _paddleocr_v6_fields(settings)
+            inference_url = settings.paddleocr_v6_base_url
+        elif spec.id == GLM_OCR_CATALOG_ID:
+            fields = _glm_ocr_fields(settings)
+            inference_url = settings.glm_ocr_base_url
         else:
             fields = []
             inference_url = None
@@ -227,6 +379,18 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
     if settings.repody_vlm_enabled is False:
         for profile in profiles:
             if profile.model_id == REPODY_VLM_CATALOG_ID:
+                profile.enabled = False
+    if settings.nuextract_cloud_enabled is False:
+        for profile in profiles:
+            if profile.model_id == REPODY_VLM_CLOUD_CATALOG_ID:
+                profile.enabled = False
+    if settings.paddleocr_v6_enabled is False:
+        for profile in profiles:
+            if profile.model_id == PADDLEOCR_V6_CATALOG_ID:
+                profile.enabled = False
+    if settings.glm_ocr_enabled is False:
+        for profile in profiles:
+            if profile.model_id == GLM_OCR_CATALOG_ID:
                 profile.enabled = False
 
     return ModelRuntimeConfigResponse(

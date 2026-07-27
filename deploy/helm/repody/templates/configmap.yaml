@@ -32,6 +32,13 @@ data:
   AUDIT_WORKER_TASK_TIMEOUT_MINUTES: {{ .Values.config.workerTaskTimeoutMinutes | quote }}
   AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}
   AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: {{ .Values.config.queuedStaleTimeoutMinutes | quote }}
+  AUDIT_AGENT_IDP_ENABLED: {{ .Values.config.agentIdpEnabled | quote }}
+  AUDIT_AGENT_FRAUD_ENABLED: {{ .Values.config.agentFraudEnabled | quote }}
+  AUDIT_AGENT_COMPUTER_USE_ENABLED: {{ .Values.config.agentComputerUseEnabled | quote }}
+  {{- /* Gate staged handoff: recipe includes Fraud/CU only when worker Deployments have replicas. */}}
+  AUDIT_AGENT_FRAUD_WORKERS_READY: {{ if gt (int .Values.workerFraud.replicas) 0 }}"true"{{ else }}"false"{{ end }}
+  AUDIT_AGENT_COMPUTER_USE_WORKERS_READY: {{ if gt (int .Values.workerComputerUse.replicas) 0 }}"true"{{ else }}"false"{{ end }}
+
   AUDIT_MAINTENANCE_INTERVAL_SECONDS: {{ .Values.config.maintenanceIntervalSeconds | quote }}
   AUDIT_DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
   AUDIT_DB_MAX_OVERFLOW: {{ .Values.config.dbMaxOverflow | quote }}
@@ -44,11 +51,6 @@ data:
   AUDIT_RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimitWindowSeconds | quote }}
   AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW: {{ .Values.config.rateLimitRunsPerWorkflow | quote }}
   AUDIT_RATE_LIMIT_RUNS_PER_CLIENT: {{ .Values.config.rateLimitRunsPerClient | quote }}
-  AUDIT_ADMISSION_CONTROL_ENABLED: {{ .Values.config.admissionControlEnabled | quote }}
-  AUDIT_ADMISSION_MAX_QUEUED: {{ .Values.config.admissionMaxQueued | quote }}
-  AUDIT_ADMISSION_MAX_INFLIGHT: {{ .Values.config.admissionMaxInflight | quote }}
-  AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT: {{ .Values.config.admissionMaxExtractInflight | quote }}
-  AUDIT_ADMISSION_RETRY_AFTER_SECONDS: {{ .Values.config.admissionRetryAfterSeconds | quote }}
   AUDIT_OPERATOR_ACTIONS_ENABLED: {{ .Values.config.operatorActionsEnabled | quote }}
   {{- if .Values.config.operatorBenchmarkUser }}
   AUDIT_OPERATOR_BENCHMARK_USER: {{ .Values.config.operatorBenchmarkUser | quote }}
@@ -60,6 +62,13 @@ data:
   AUDIT_KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
   {{- end }}
   AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT: {{ .Values.config.repodyVlmMarkdownOnExtract | quote }}
+  AUDIT_PADDLEOCR_V6_ENABLED: {{ .Values.config.paddleocrV6Enabled | quote }}
+  AUDIT_PADDLEOCR_V6_BASE_URL: {{ .Values.config.paddleocrV6BaseUrl | quote }}
+  AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: {{ .Values.config.paddleocrV6TimeoutSeconds | quote }}
+  AUDIT_GLM_OCR_ENABLED: {{ .Values.config.glmOcrEnabled | quote }}
+  AUDIT_GLM_OCR_BASE_URL: {{ .Values.config.glmOcrBaseUrl | quote }}
+  AUDIT_GLM_OCR_SERVED_MODEL: {{ .Values.config.glmOcrServedModel | quote }}
+  AUDIT_GLM_OCR_TIMEOUT_SECONDS: {{ .Values.config.glmOcrTimeoutSeconds | quote }}
   AUDIT_GPU_LIVE_PROBE: {{ .Values.config.gpuLiveProbe | quote }}
   AUDIT_HEALTHZ_PROBE_INFERENCE: {{ .Values.config.healthzProbeInference | quote }}
   {{- if .Values.externalObjectStorage.publicEndpoint }}

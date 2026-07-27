@@ -69,7 +69,7 @@ Configure in Loki/Elastic/Datadog from JSON structlog fields:
 | Run stuck `running` | `kubectl logs deploy/repody-worker-extract`; VLM reachability; stale reap logs |
 | Run stuck `queued` | Redis; outbox maintenance; admission 503; worker replicas |
 | SSE silent | Redis; `redisOk` on healthz; API redis pool |
-| 503 on create | Admission caps; scale extract workers or raise `admissionMaxExtractInflight` |
+| 503 on create | Rate limits or infra errors; scale workers so the Taskiq queue drains |
 
 Platform logs (Kubernetes):
 

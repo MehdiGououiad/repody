@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { GripVertical, Plus, Sparkles, Trash2 } from "lucide-react";
+import { GripVertical, FileJson2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +30,7 @@ import {
 import type { SchemaField } from "@/lib/types";
 import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
 import { SchemaFieldExtraConfig, schemaFieldNeedsExtra } from "@/components/workflow/documents/schema-field-extra";
+import { ImportNuextractTemplateDialog } from "@/components/workflow/documents/import-nuextract-template-dialog";
 import { cn, shortId } from "@/lib/utils";
 
 const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "structure", "advanced"];
@@ -277,6 +278,7 @@ export function SchemaTable({
   t: ReturnType<typeof useTranslations>;
 }) {
   const tCommon = useTranslations("common");
+  const [importOpen, setImportOpen] = useState(false);
   const duplicateNames = useMemo(() => {
     const counts = new Map<string, number>();
     for (const field of schema) {
@@ -305,15 +307,35 @@ export function SchemaTable({
 
   return (
     <div className="space-y-2">
+      <ImportNuextractTemplateDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        hasExistingFields={schema.some((f) => f.name.trim())}
+        onImport={(fields, mode) => {
+          onChange(mode === "append" ? [...schema, ...fields] : fields);
+        }}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <p className="text-[11px] text-on-surface-variant flex items-start gap-1.5 min-w-0">
           <Sparkles className="h-3 w-3 text-accent-blue shrink-0 mt-0.5" />
           <span className="min-w-0">{t("schema.description")}</span>
         </p>
-        <Button variant="ghost" size="sm" className="h-7 text-xs shrink-0 self-end sm:self-auto" onClick={add}>
-          <Plus className="h-3 w-3" />
-          {t("schema.addField")}
-        </Button>
+        <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => setImportOpen(true)}
+          >
+            <FileJson2 className="h-3 w-3" />
+            {t("schema.importTemplate")}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={add}>
+            <Plus className="h-3 w-3" />
+            {t("schema.addField")}
+          </Button>
+        </div>
       </div>
 
       {schema.length === 0 ? (

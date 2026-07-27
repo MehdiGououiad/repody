@@ -1,4 +1,4 @@
-"""Taskiq worker entrypoint — one pool per process (extract or fast)."""
+"""Taskiq worker entrypoint — one pool per process (extract|fast|fraud|computer_use)."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ _process_audit_run_task = get_process_audit_run_task(pool)
 
 
 async def _warmup_document_models(worker_pool: str) -> None:
-    from audit_workbench.extraction.repody_vlm import warmup_repody_vlm
+    from audit_workbench.extraction.warmup import warmup_repody_vlm
 
     if worker_pool != "extract":
         return
@@ -53,6 +53,10 @@ async def _on_worker_startup(_state: object) -> None:
 def _worker_slots() -> int:
     if pool == "extract":
         return settings.worker_extract_max_jobs
+    if pool == "fraud":
+        return settings.worker_fraud_max_jobs
+    if pool == "computer_use":
+        return settings.worker_computer_use_max_jobs
     return settings.worker_fast_max_jobs
 
 

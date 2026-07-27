@@ -9,9 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from audit_workbench.db.models import Document, SchemaField, Workflow, WorkflowRule
-from audit_workbench.extraction.document_modes import normalize_document_modes
+from audit_workbench.extraction.modes import normalize_document_modes
 from audit_workbench.catalog.registry import normalize_model_id
-from audit_workbench.extraction.nuextract_types import normalize_template_type
+from audit_workbench.extraction.nuextract import (
+    is_object_array_template_type,
+    is_object_template_type,
+    normalize_template_type,
+)
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.schemas.workflow import WorkflowSchema
 from audit_workbench.util.json_shape import normalize_keys_to_snake
@@ -47,6 +51,18 @@ async def upsert_workflow_aggregate(
     await _upsert_documents(session, wf, payload)
     await _upsert_rules(session, wf, payload)
     await session.flush()
+
+
+def _resolved_template_type(field) -> str:
+    """Persist structure types explicitly when nested children are present."""
+    resolved = normalize_template_type(getattr(field, "template_type", None))
+    children = getattr(field, "children", None) or []
+    has_children = any((getattr(child, "name", None) or "").strip() for child in children)
+    if has_children and not is_object_array_template_type(resolved) and not is_object_template_type(
+        resolved
+    ):
+        return "object"
+    return resolved
 
 
 def _field_config_payload(field) -> dict | None:
@@ -127,7 +143,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                     document_id=doc_id,
                     name=field.name,
                     description=field.description,
-                    template_type=normalize_template_type(field.template_type),
+                    template_type=_resolved_template_type(field),
                     field_config=_field_config_payload(field),
                     position=fi,
                 )

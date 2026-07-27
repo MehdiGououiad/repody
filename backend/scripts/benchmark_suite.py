@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """API-first extraction and validation benchmark suite.
 
-Dev-only tools (stress, queue, experiments): backend/scripts/benchmark_dev.py
+Dev stress: backend/scripts/benchmark_dev_stress.py · prod: pnpm stress:prod
 """
 
 from __future__ import annotations
