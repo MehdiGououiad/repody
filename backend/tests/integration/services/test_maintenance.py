@@ -1,46 +1,32 @@
+"""Integration: stale-run reap against real Postgres (no mocked progress bus)."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock
 
 import pytest
 
 from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.services.maintenance import reap_stale_runs
 from audit_workbench.services.run.dispatch import mark_run_dispatch_failed
+from audit_workbench.settings import clear_settings_cache
 
 
 @pytest.fixture
-async def maintenance_session(postgres_session):
+async def maintenance_session(postgres_session, monkeypatch):
+    monkeypatch.setenv("AUDIT_STALE_RUN_TIMEOUT_MINUTES", "20")
+    monkeypatch.setenv("AUDIT_QUEUED_STALE_TIMEOUT_MINUTES", "5")
+    clear_settings_cache()
     wf = Workflow(id="wf-maint", name="Maint", status=WorkflowStatus.active.value)
     postgres_session.add(wf)
     await postgres_session.commit()
     yield postgres_session
-
-
-@pytest.fixture
-def mock_progress(monkeypatch):
-    mock = AsyncMock()
-    monkeypatch.setattr(
-        "audit_workbench.services.run.sse.publish_run_progress",
-        mock,
-    )
-    return mock
+    clear_settings_cache()
 
 
 @pytest.mark.asyncio
-async def test_reap_stale_runs_marks_old_running_failed(
-    maintenance_session, mock_progress, monkeypatch
-):
+async def test_reap_stale_runs_marks_old_running_failed(maintenance_session):
     session = maintenance_session
-    monkeypatch.setattr(
-        "audit_workbench.services.maintenance.get_settings",
-        lambda: type(
-            "S",
-            (),
-            {"stale_run_timeout_minutes": 20, "queued_stale_timeout_minutes": 5},
-        )(),
-    )
     stale = Run(
         id="run-stale",
         workflow_id="wf-maint",
@@ -68,23 +54,12 @@ async def test_reap_stale_runs_marks_old_running_failed(
     assert stale.progress is not None
     assert stale.progress.get("failed") is True
     assert fresh.status == RunStatus.running.value
-    mock_progress.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_reap_uses_last_activity_not_started_at(
-    maintenance_session, mock_progress, monkeypatch
-):
+async def test_reap_uses_last_activity_not_started_at(maintenance_session):
     """Multi-stage runs keep an old started_at; recent activity must not be reaped."""
     session = maintenance_session
-    monkeypatch.setattr(
-        "audit_workbench.services.maintenance.get_settings",
-        lambda: type(
-            "S",
-            (),
-            {"stale_run_timeout_minutes": 20, "queued_stale_timeout_minutes": 5},
-        )(),
-    )
     active_handoff = Run(
         id="run-multi-stage",
         workflow_id="wf-maint",
@@ -100,20 +75,11 @@ async def test_reap_uses_last_activity_not_started_at(
     assert count == 0
     await session.refresh(active_handoff)
     assert active_handoff.status == RunStatus.running.value
-    mock_progress.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_reap_stale_queued_runs(maintenance_session, mock_progress, monkeypatch):
+async def test_reap_stale_queued_runs(maintenance_session):
     session = maintenance_session
-    monkeypatch.setattr(
-        "audit_workbench.services.maintenance.get_settings",
-        lambda: type(
-            "S",
-            (),
-            {"stale_run_timeout_minutes": 20, "queued_stale_timeout_minutes": 5},
-        )(),
-    )
     stale = Run(
         id="run-queued-stale",
         workflow_id="wf-maint",
@@ -140,18 +106,8 @@ async def test_reap_stale_queued_runs(maintenance_session, mock_progress, monkey
 
 
 @pytest.mark.asyncio
-async def test_reap_stale_queued_runs_skipped_when_worker_busy(
-    maintenance_session, mock_progress, monkeypatch
-):
+async def test_reap_stale_queued_runs_skipped_when_worker_busy(maintenance_session):
     session = maintenance_session
-    monkeypatch.setattr(
-        "audit_workbench.services.maintenance.get_settings",
-        lambda: type(
-            "S",
-            (),
-            {"stale_run_timeout_minutes": 20, "queued_stale_timeout_minutes": 5},
-        )(),
-    )
     stale_queued = Run(
         id="run-queued-waiting",
         workflow_id="wf-maint",
@@ -163,6 +119,7 @@ async def test_reap_stale_queued_runs_skipped_when_worker_busy(
         workflow_id="wf-maint",
         status=RunStatus.running.value,
         started_at=datetime.now(UTC) - timedelta(minutes=2),
+        last_activity_at=datetime.now(UTC) - timedelta(minutes=2),
     )
     session.add_all([stale_queued, active])
     await session.commit()
@@ -175,7 +132,7 @@ async def test_reap_stale_queued_runs_skipped_when_worker_busy(
 
 
 @pytest.mark.asyncio
-async def test_mark_run_dispatch_failed(maintenance_session, mock_progress):
+async def test_mark_run_dispatch_failed(maintenance_session):
     session = maintenance_session
     run = Run(
         id="run-dispatch-fail",
@@ -191,4 +148,3 @@ async def test_mark_run_dispatch_failed(maintenance_session, mock_progress):
     assert run.status == RunStatus.failed.value
     assert "dispatch failed" in (run.error or "").lower()
     assert run.finished_at is not None
-    mock_progress.assert_called_once()

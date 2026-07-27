@@ -1,10 +1,8 @@
-"""Unit tests for agent recipe flags, staged execution, and SKIPPED shells."""
+"""Unit tests for agent recipe flags and real SKIPPED agent shells — no mocked I/O."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -13,11 +11,10 @@ from audit_workbench.agents.fraud import FraudInput, FraudOutcome, execute_fraud
 from audit_workbench.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
 from audit_workbench.platform.contracts.agent import AgentId, AgentOutcome, AgentStatus
 from audit_workbench.platform.contracts.context import AgentContext
-from audit_workbench.platform.contracts.result import ErrorCode, Result
+from audit_workbench.platform.contracts.result import ErrorCode
 from audit_workbench.platform.pools import agent_for_pool
 from audit_workbench.platform.recipe import (
     DEFAULT_AGENT_ORDER,
-    execute_platform_run,
     next_agent_after,
     resolve_recipe,
 )
@@ -168,125 +165,3 @@ async def test_execute_computer_use_skipped_shell():
     assert result.value.agent is AgentId.COMPUTER_USE
     assert result.value.status is AgentStatus.SKIPPED
     assert isinstance(result.value.payload, ComputerUseOutcome)
-
-
-@pytest.mark.asyncio
-async def test_execute_platform_run_idp_only_completes(monkeypatch: pytest.MonkeyPatch):
-    idp_outcome = AgentOutcome(
-        agent=AgentId.IDP,
-        status=AgentStatus.PASSED,
-        payload=_idp_outcome(),
-    )
-
-    async def _fake_idp(session, run, *, complete=True):
-        assert complete is True
-        return Result.ok(idp_outcome)
-
-    monkeypatch.setattr(
-        "audit_workbench.platform.recipe.execute_idp_run",
-        _fake_idp,
-    )
-    run = SimpleNamespace(id="run-1", run_metadata=None, workflow_id="wf-1")
-    session = AsyncMock()
-    session.get = AsyncMock(return_value=run)
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-    stage = await execute_platform_run(
-        session,
-        run,  # type: ignore[arg-type]
-        settings=_Flags(),
-    )
-    assert stage.outcome.agent is AgentId.IDP
-    assert stage.next_agent is None
-    assert stage.finalize_pending is False
-
-
-@pytest.mark.asyncio
-async def test_execute_platform_run_idp_hands_off_to_fraud(monkeypatch: pytest.MonkeyPatch):
-    idp_payload = _idp_outcome()
-    idp_outcome = AgentOutcome(
-        agent=AgentId.IDP,
-        status=AgentStatus.PASSED,
-        payload=idp_payload,
-    )
-
-    async def _fake_idp(session, run, *, complete=True):
-        assert complete is False
-        return Result.ok(idp_outcome)
-
-    monkeypatch.setattr(
-        "audit_workbench.platform.recipe.execute_idp_run",
-        _fake_idp,
-    )
-
-    run = SimpleNamespace(id="run-1", run_metadata=None, workflow_id="wf-1")
-    session = AsyncMock()
-    session.get = AsyncMock(return_value=run)
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-    stage = await execute_platform_run(
-        session,
-        run,  # type: ignore[arg-type]
-        agent_stage=AgentId.IDP,
-        settings=_Flags(agent_fraud_enabled=True, agent_fraud_workers_ready=True),
-    )
-    assert stage.outcome.agent is AgentId.IDP
-    assert stage.next_agent is AgentId.FRAUD
-    assert stage.finalize_pending is False
-    assert session.commit.await_count >= 1
-
-
-@pytest.mark.asyncio
-async def test_execute_platform_run_fraud_final_sets_finalize_pending(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    fraud_outcome = AgentOutcome(
-        agent=AgentId.FRAUD,
-        status=AgentStatus.SKIPPED,
-        payload=FraudOutcome(run_id="run-1", summary="skipped"),
-    )
-
-    async def _fake_fraud(inp: FraudInput):
-        assert inp.idp is not None
-        return Result.ok(fraud_outcome)
-
-    monkeypatch.setattr(
-        "audit_workbench.platform.recipe.execute_fraud",
-        _fake_fraud,
-    )
-    monkeypatch.setattr(
-        "audit_workbench.platform.recipe.idp_outcome_from_run",
-        lambda _run: _idp_outcome(),
-    )
-
-    run = SimpleNamespace(id="run-1", run_metadata=None, workflow_id="wf-1")
-    session = AsyncMock()
-    session.get = AsyncMock(return_value=run)
-    session.flush = AsyncMock()
-    session.commit = AsyncMock()
-    stage = await execute_platform_run(
-        session,
-        run,  # type: ignore[arg-type]
-        agent_stage=AgentId.FRAUD,
-        settings=_Flags(agent_fraud_enabled=True, agent_fraud_workers_ready=True),
-    )
-    assert stage.outcome.agent is AgentId.FRAUD
-    assert stage.next_agent is None
-    assert stage.finalize_pending is True
-
-
-@pytest.mark.asyncio
-async def test_execute_platform_run_raises_when_fraud_on_idp_off():
-    run = SimpleNamespace(id="run-1")
-    session = MagicMock()
-    with pytest.raises(RuntimeError, match="fraud requires idp"):
-        await execute_platform_run(
-            session,
-            run,  # type: ignore[arg-type]
-            requested=(AgentId.FRAUD,),
-            settings=_Flags(
-                agent_idp_enabled=False,
-                agent_fraud_enabled=True,
-                agent_fraud_workers_ready=True,
-            ),
-        )

@@ -8,8 +8,10 @@ from typing import Any, Protocol
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from audit_workbench.agents.computer_use import ComputerUseInput, execute_computer_use
-from audit_workbench.agents.fraud import FraudInput, execute_fraud
+from audit_workbench.agents.computer_use.contracts import ComputerUseInput
+from audit_workbench.agents.computer_use.run import execute_computer_use
+from audit_workbench.agents.fraud.contracts import FraudInput
+from audit_workbench.agents.fraud.run import execute_fraud
 from audit_workbench.agents.idp.run import execute_idp_run
 from audit_workbench.db.models import Run
 from audit_workbench.platform.agent_metadata import (
