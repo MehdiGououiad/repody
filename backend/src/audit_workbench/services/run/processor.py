@@ -38,13 +38,18 @@ log = structlog.get_logger()
 
 
 async def execute_run_with_timeout(
-    session: AsyncSession,
     run_id: str,
     *,
     agent_stage: str = "idp",
     request_id: str | None = None,
+    session: AsyncSession | None = None,
 ) -> None:
-    """Run one platform agent stage with a hard ceiling from AUDIT_WORKER_TASK_TIMEOUT_MINUTES."""
+    """Run one platform agent stage with a hard ceiling from AUDIT_WORKER_TASK_TIMEOUT_MINUTES.
+
+    When ``session`` is omitted (workers), process_run opens a managed session and
+    commits after claim so IDP extract ports can use separate short-lived connections.
+    Tests may pass a shared ``session``.
+    """
     settings = get_settings()
     timeout_seconds = settings.worker_task_timeout_minutes * 60
     try:
@@ -58,7 +63,8 @@ async def execute_run_with_timeout(
             timeout=timeout_seconds,
         )
     except TimeoutError:
-        await session.rollback()
+        if session is not None:
+            await session.rollback()
         minutes = settings.worker_task_timeout_minutes
         await fail_run_terminal(
             run_id,
@@ -228,13 +234,43 @@ async def _resume_after_recorded_stage(
 
 
 async def process_run(
-    session: AsyncSession,
+    session: AsyncSession | None,
     run_id: str,
     *,
     agent_stage: str = "idp",
     request_id: str | None = None,
 ) -> None:
-    """Platform entry: claim (IDP) or resume (later stages), run one agent, hand off."""
+    """Platform entry: claim (IDP) or resume (later stages), run one agent, hand off.
+
+    Workers pass ``session=None``; a short-lived session is opened and committed after
+    claim so IDP extract ports can use separate connections without row-lock deadlocks.
+    """
+    if session is not None:
+        await _process_run_with_session(
+            session, run_id, agent_stage=agent_stage, request_id=request_id
+        )
+        return
+
+    from audit_workbench.db.base import async_session_factory
+
+    async with async_session_factory() as managed:
+        await _process_run_with_session(
+            managed, run_id, agent_stage=agent_stage, request_id=request_id
+        )
+
+
+async def _process_run_with_session(
+    session: AsyncSession,
+    run_id: str,
+    *,
+    agent_stage: str,
+    request_id: str | None,
+) -> None:
+    """Single-session path for integration tests that share a postgres_session.
+
+    Commits after claim so short-lived IDP extract sessions are not blocked by
+    an open transaction holding the run row.
+    """
     stage = parse_agent_stage(agent_stage)
     log.info(
         "run_processing_started",
@@ -246,7 +282,6 @@ async def process_run(
     if stage is AgentId.IDP:
         run = await _claim_run(session, run_id)
         if not run:
-            # Claim lost because already running — resume handoff if IDP outcome exists.
             run = await _load_running_run(session, run_id)
             if run and await _resume_after_recorded_stage(
                 session, run, stage, request_id=request_id
@@ -262,13 +297,17 @@ async def process_run(
         if await _resume_after_recorded_stage(session, run, stage, request_id=request_id):
             return
         await _touch_run_activity(session, run)
+        await session.commit()
+
+        run = await _load_run_graph(session, run_id)
+        if run is None:
+            return
 
         stage_result = await execute_platform_run(
             session,
             run,
             agent_stage=stage,
         )
-        # Session may have committed inside the stage; reload for handoff/finalize.
         refreshed = await session.get(Run, run_id)
         if refreshed is None:
             raise RuntimeError(f"run vanished after stage: {run_id}")

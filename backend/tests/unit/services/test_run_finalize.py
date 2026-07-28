@@ -44,7 +44,10 @@ def test_pending_completion_round_trip():
 async def test_finalize_pending_completion_maps_to_complete_run(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    run = SimpleNamespace(id="run-1", run_metadata=None)
+    run = SimpleNamespace(
+        id="run-1",
+        run_metadata={"agentOutcomes": {"fraud": {"status": "skipped"}}},
+    )
     store_pending_completion(
         run,  # type: ignore[arg-type]
         PendingCompletion(
@@ -53,7 +56,7 @@ async def test_finalize_pending_completion_maps_to_complete_run(
             summary_passed=1,
             summary_failed=0,
             fields_extracted=1,
-            run_metadata={},
+            run_metadata={"durationMs": 5},
             progress=None,
         ),
     )
@@ -91,6 +94,8 @@ async def test_finalize_pending_completion_maps_to_complete_run(
     outcome = captured["outcome"]
     assert isinstance(outcome, RunCompletionOutcome)
     assert outcome.overall_status == "passed"
+    assert outcome.run_metadata.get("durationMs") == 5
+    assert outcome.run_metadata.get("agentOutcomes", {}).get("fraud", {}).get("status") == "skipped"
     assert pending_completion_from_run(run) is None  # type: ignore[arg-type]
 
 

@@ -22,6 +22,12 @@ async def finalize_pending_completion(session: AsyncSession, run: Run) -> None:
     pending = pending_completion_from_run(run)
     if pending is None:
         raise RuntimeError(f"missing pendingCompletion for run {run.id}")
+    # pending.run_metadata is timing/summary only — keep agentOutcomes written after IDP.
+    merged_meta = dict(pending.run_metadata)
+    current = run.run_metadata if isinstance(run.run_metadata, dict) else {}
+    outcomes = current.get("agentOutcomes")
+    if isinstance(outcomes, dict) and outcomes:
+        merged_meta["agentOutcomes"] = outcomes
     clear_pending_completion(run)
     await session.flush()
     completed = await complete_run(
@@ -33,7 +39,7 @@ async def finalize_pending_completion(session: AsyncSession, run: Run) -> None:
                 summary_passed=pending.summary_passed,
                 summary_failed=pending.summary_failed,
                 fields_extracted=pending.fields_extracted,
-                run_metadata=pending.run_metadata,
+                run_metadata=merged_meta,
                 progress=pending.progress,
             ),
         ),

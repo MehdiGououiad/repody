@@ -74,8 +74,9 @@ config:
   workerTaskTimeoutMinutes: 3
   staleRunTimeoutMinutes: 5
   queuedStaleTimeoutMinutes: 60
-  dbPoolSize: 5
-  redisMaxConnections: 20
+  dbPoolSize: 20
+  dbMaxOverflow: 20
+  redisMaxConnections: 64
 
 observability:
   existingSecret: repody-runtime-secrets

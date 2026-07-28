@@ -59,10 +59,23 @@ async def ensure_run_document(
     existing: dict[str, RunDocument],
 ) -> RunDocument:
     run_doc = existing.get(document_id)
-    if run_doc:
+    if run_doc is not None:
         if not run_doc.document_type:
             run_doc.document_type = document_type
         return run_doc
+    found = (
+        await session.execute(
+            select(RunDocument).where(
+                RunDocument.run_id == run_id,
+                RunDocument.document_id == document_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if found is not None:
+        if not found.document_type:
+            found.document_type = document_type
+        existing[document_id] = found
+        return found
     run_doc = RunDocument(
         id=new_id("rdoc"),
         run_id=run_id,

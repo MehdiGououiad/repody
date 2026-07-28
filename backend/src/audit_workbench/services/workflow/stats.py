@@ -19,33 +19,28 @@ async def batch_workflow_stats(
     session: AsyncSession,
     workflow_ids: list[str],
 ) -> dict[str, tuple[int, float, str | None]]:
+    """One aggregate query: total done runs, passed count, last run time per workflow."""
     if not workflow_ids:
         return {}
-    totals_q = await session.execute(
-        select(Run.workflow_id, func.count(Run.id), func.max(Run.created_at))
+    rows = await session.execute(
+        select(
+            Run.workflow_id,
+            func.count(Run.id),
+            func.count().filter(Run.overall_status == "passed"),
+            func.max(Run.created_at),
+        )
         .where(Run.workflow_id.in_(workflow_ids), Run.status == RunStatus.done.value)
         .group_by(Run.workflow_id)
     )
-    totals = {row[0]: (int(row[1]), row[2]) for row in totals_q.all()}
-
-    passed_q = await session.execute(
-        select(Run.workflow_id, func.count(Run.id))
-        .where(
-            Run.workflow_id.in_(workflow_ids),
-            Run.status == RunStatus.done.value,
-            Run.overall_status == "passed",
-        )
-        .group_by(Run.workflow_id)
-    )
-    passed_map = {row[0]: int(row[1]) for row in passed_q.all()}
-
     out: dict[str, tuple[int, float, str | None]] = {}
-    for wf_id in workflow_ids:
-        total, last_run = totals.get(wf_id, (0, None))
-        passed = passed_map.get(wf_id, 0)
-        rate = (passed / total) if total else 0.0
+    for wf_id, total, passed, last_run in rows.all():
+        total_i = int(total or 0)
+        passed_i = int(passed or 0)
+        rate = (passed_i / total_i) if total_i else 0.0
         last_str = last_run.strftime("%b %d, %H:%M") if last_run else None
-        out[wf_id] = (total, rate, last_str)
+        out[wf_id] = (total_i, rate, last_str)
+    for wf_id in workflow_ids:
+        out.setdefault(wf_id, (0, 0.0, None))
     return out
 
 
@@ -104,18 +99,24 @@ async def batch_workflow_api_stats(
     for wf_id, day, count in series_q.all():
         series_by_wf.setdefault(wf_id, {})[str(day)] = int(count)
 
-    latency_rows = await session.execute(
-        select(Run.workflow_id, Run.run_metadata).where(
+    latency_q = await session.execute(
+        select(
+            Run.workflow_id,
+            func.avg(
+                func.nullif(Run.run_metadata["durationMs"].as_float(), 0.0)
+            ),
+        )
+        .where(
             Run.workflow_id.in_(workflow_ids),
             Run.source == "api",
             Run.status == RunStatus.done.value,
             Run.run_metadata.is_not(None),
         )
+        .group_by(Run.workflow_id)
     )
-    latency_by_wf: dict[str, list[int]] = {}
-    for wf_id, meta in latency_rows.all():
-        if isinstance(meta, dict) and meta.get("durationMs"):
-            latency_by_wf.setdefault(wf_id, []).append(int(meta["durationMs"]))
+    latency_by_wf = {
+        wf_id: int(avg_ms) if avg_ms is not None else 0 for wf_id, avg_ms in latency_q.all()
+    }
 
     failing_q = await session.execute(
         select(
@@ -156,12 +157,10 @@ async def batch_workflow_api_stats(
             )
             for i in range(7)
         ]
-        durations = latency_by_wf.get(wf_id, [])
-        avg_latency = int(sum(durations) / len(durations)) if durations else 0
         out[wf_id] = WorkflowApiStatsSchema(
             api_calls_today=today_map.get(wf_id, 0),
             api_calls_total=total,
-            avg_latency_ms=avg_latency,
+            avg_latency_ms=latency_by_wf.get(wf_id, 0),
             call_series=call_series,
             top_failing_rules=failing_by_wf.get(wf_id, []),
         )

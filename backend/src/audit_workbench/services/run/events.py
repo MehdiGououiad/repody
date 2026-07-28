@@ -20,12 +20,9 @@ log = structlog.get_logger(__name__)
 
 
 async def _on_run_started(event: RunStarted) -> None:
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.queue import refresh_queued_positions
-
-    async with async_session_factory() as session:
-        await refresh_queued_positions(session)
-        await session.commit()
+    # Do not refresh all queued positions here — that is O(N) DB + SSE and
+    # dominated claim latency under deep queues. Pollers recompute position
+    # with O(1) SQL; maintenance periodically reconciles progress rows.
     log.info(
         "run_started",
         event_domain="audit_run",

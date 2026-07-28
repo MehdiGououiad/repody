@@ -16,7 +16,9 @@ class Run(Base):
     __table_args__ = (
         Index("ix_runs_workflow_created", "workflow_id", "created_at"),
         Index("ix_runs_status", "status"),
+        Index("ix_runs_status_created_id", "status", "created_at", "id"),
         Index("ix_runs_status_last_activity", "status", "last_activity_at"),
+        Index("ix_runs_status_worker_pool", "status", "worker_pool"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

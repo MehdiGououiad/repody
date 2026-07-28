@@ -30,6 +30,11 @@ async def staged_session(postgres_session, monkeypatch):
     monkeypatch.setenv("AUDIT_AGENT_COMPUTER_USE_ENABLED", "false")
     monkeypatch.setenv("AUDIT_AGENT_COMPUTER_USE_WORKERS_READY", "false")
     clear_settings_cache()
+    # Avoid real Taskiq/Redis kiq during in-process staged processor tests.
+    monkeypatch.setattr(
+        "audit_workbench.services.run.handoff.schedule_outbox_dispatch",
+        lambda _run_id: None,
+    )
 
     wf = Workflow(id="wf-staged", name="Staged", status=WorkflowStatus.active.value)
     doc = Document(

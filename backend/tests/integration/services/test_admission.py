@@ -1,17 +1,20 @@
-"""Queue depth counters and queue position tests (no HTTP admission caps)."""
+"""Queue depth counters, admission caps, and queue position tests."""
 
 from __future__ import annotations
 
 import pytest
 
 from audit_workbench.db.models import Run, RunStatus, Workflow, WorkflowStatus
+from audit_workbench.platform.contracts.result import ErrorCode
 from audit_workbench.services.admission import (
+    check_admission,
     count_extract_inflight,
     count_queued,
     count_running,
 )
 from audit_workbench.services.queue import apply_queue_meta, queue_position
 from audit_workbench.services.run.intake import create_run
+from audit_workbench.settings import clear_settings_cache
 
 
 @pytest.fixture
@@ -127,3 +130,27 @@ async def test_count_extract_inflight_uses_worker_pool_column(admission_session)
     )
     await session.flush()
     assert await count_extract_inflight(session) == 1
+
+
+@pytest.mark.asyncio
+async def test_check_admission_rejects_when_queued_at_cap(admission_session, monkeypatch):
+    session, workflow_id = admission_session
+    monkeypatch.setenv("AUDIT_ADMISSION_MAX_QUEUED", "2")
+    monkeypatch.setenv("AUDIT_ADMISSION_MAX_INFLIGHT", "0")
+    monkeypatch.setenv("AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT", "0")
+    clear_settings_cache()
+    for i in range(2):
+        session.add(
+            Run(
+                id=f"AUD-CAP-{i}",
+                workflow_id=workflow_id,
+                source="test",
+                status=RunStatus.queued.value,
+            )
+        )
+    await session.flush()
+    result = await check_admission(session, predicted_pool="fast")
+    assert not result.is_ok
+    assert result.error is not None
+    assert result.error.code is ErrorCode.CAPACITY
+    assert result.error.retry_after_seconds is not None

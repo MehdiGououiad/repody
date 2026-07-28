@@ -107,13 +107,6 @@ async def reset_test_database(session_factory: async_sessionmaker) -> None:
     """Truncate all tables and re-seed — one clean slate per test."""
     table_names = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
     async with session_factory() as session:
-        # Release locks from aborted prior runs (local dev / killed pytest).
-        await session.execute(
-            text(
-                "SELECT pg_terminate_backend(pid) FROM pg_stat_activity "
-                "WHERE datname = current_database() AND pid <> pg_backend_pid()"
-            )
-        )
         if table_names:
             await session.execute(text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
         await session.commit()

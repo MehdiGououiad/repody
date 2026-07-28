@@ -13,8 +13,9 @@ from audit_workbench.auth.run_access import resolve_run_enqueue_source
 from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
 from audit_workbench.platform.run.contracts import EnqueueRunRequest
 from audit_workbench.schemas.workflow import RunCreatedResponse
+from audit_workbench.services.admission import check_admission
 from audit_workbench.services.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
-from audit_workbench.services.queue import refresh_queued_positions
+from audit_workbench.services.queue import refresh_single_queued_run
 from audit_workbench.services.rate_limit import check_run_rate_limits
 from audit_workbench.services.run.intake import create_run
 from audit_workbench.services.run.pool import predict_worker_pool
@@ -63,11 +64,19 @@ async def enqueue_run(
     if not rate.is_ok:
         return Result.fail(rate.error or AppError(code=ErrorCode.RATE_LIMIT, message="Rate limited"))
 
+    # Reuse workflow already loaded for access — avoid a second documents query.
     predicted_pool = await predict_worker_pool(
         session,
         req.workflow_id,
         file_bindings=req.file_bindings,
+        workflow=wf,
     )
+
+    admitted = await check_admission(session, predicted_pool=predicted_pool)
+    if not admitted.is_ok:
+        return Result.fail(
+            admitted.error or AppError(code=ErrorCode.CAPACITY, message="At capacity")
+        )
 
     snapshot = req.snapshot if source == "test" else None
     created = await create_run(
@@ -93,7 +102,8 @@ async def enqueue_run(
         workflow_id=req.workflow_id,
         request_id=request_id,
     )
-    await refresh_queued_positions(session)
+    # O(1) position for the new run only — full queue refresh happens on claim.
+    await refresh_single_queued_run(session, run.id)
     await session.commit()
     schedule_outbox_dispatch(run.id)
     return Result.ok(RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status))

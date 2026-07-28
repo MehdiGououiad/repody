@@ -10,6 +10,7 @@ from audit_workbench.services.queue.progress import (
     enrich_progress_for_poll,
     init_queued_progress_with_position,
     refresh_queued_positions,
+    refresh_single_queued_run,
 )
 
 __all__ = [
@@ -20,4 +21,5 @@ __all__ = [
     "queue_label",
     "queue_position",
     "refresh_queued_positions",
+    "refresh_single_queued_run",
 ]

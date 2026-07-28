@@ -14,7 +14,6 @@ from audit_workbench.services.workflow.repository import (
     upsert_workflow_aggregate,
 )
 from audit_workbench.services.workflow.stats import (
-    batch_workflow_api_stats,
     batch_workflow_stats,
     workflow_api_stats,
     workflow_stats,
@@ -23,10 +22,32 @@ from audit_workbench.services.workflow.validation import validate_workflow_rules
 
 
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
+    """List workflows with lightweight run stats only (no per-workflow API analytics).
+
+    Full ``api_stats`` (series / failing rules / latency) stays on GET detail —
+    the UI list never reads those fields and they dominate list latency.
+    """
+    from sqlalchemy.orm import load_only, noload
+
     result = await session.execute(
         select(Workflow)
         .where(Workflow.status != WorkflowStatus.archived.value)
         .order_by(Workflow.updated_at.desc())
+        .options(
+            noload(Workflow.documents),
+            noload(Workflow.rules),
+            noload(Workflow.runs),
+            load_only(
+                Workflow.id,
+                Workflow.name,
+                Workflow.description,
+                Workflow.status,
+                Workflow.owner,
+                Workflow.deployed_at,
+                Workflow.api_key_hint,
+                Workflow.updated_at,
+            ),
+        )
     )
     workflows = result.scalars().all()
     if not workflows:
@@ -34,20 +55,17 @@ async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
 
     workflow_ids = [wf.id for wf in workflows]
     stats = await batch_workflow_stats(session, workflow_ids)
-    deployed_ids = [wf.id for wf in workflows if wf.deployed_at]
-    api_stats_by_id = await batch_workflow_api_stats(session, deployed_ids)
 
     out: list[WorkflowSchema] = []
     for wf in workflows:
         total, rate, last = stats.get(wf.id, (0, 0.0, None))
-        api_stats = api_stats_by_id.get(wf.id) if wf.deployed_at else None
         out.append(
             workflow_to_list_schema(
                 wf,
                 total_runs=total,
                 success_rate=rate,
                 last_run=last,
-                api_stats=api_stats,
+                api_stats=None,
             )
         )
     return out

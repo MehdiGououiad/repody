@@ -95,8 +95,21 @@ workerExtract:
 | `AUDIT_RATE_LIMIT_FAIL_CLOSED` | `true` | Reject when rate limit backend is unavailable |
 | `AUDIT_RATE_LIMIT_ENABLED` | `true` | Enable run enqueue rate limits |
 | `AUDIT_RATE_LIMIT_WINDOW_SECONDS` | `60` | Rate limit window |
-| `AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW` | `30` | Max runs per workflow per window |
-| `AUDIT_RATE_LIMIT_RUNS_PER_CLIENT` | `120` | Max runs per client per window |
+| `AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW` | `300` | Max **run creates** per workflow per window |
+| `AUDIT_RATE_LIMIT_RUNS_PER_CLIENT` | `2000` | Max **run creates** per client per window |
+| `AUDIT_RATE_LIMIT_HTTP_PER_MINUTE` | `6000` | Global per-IP limit for **mutating** methods only (GET browse/poll excluded) |
+| `AUDIT_ADMISSION_MAX_QUEUED` | `200` | Reject enqueue (503) when queued ≥ this (`0` disables) |
+| `AUDIT_ADMISSION_MAX_INFLIGHT` | `100` | Reject when queued+running ≥ this (`0` disables) |
+| `AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT` | `20` | Reject extract-pool enqueue when extract inflight ≥ this |
+| `AUDIT_ADMISSION_RETRY_AFTER_SECONDS` | `15` | `Retry-After` on CAPACITY responses |
+| `AUDIT_DB_POOL_SIZE` | `20` | SQLAlchemy pool size per process |
+| `AUDIT_DB_MAX_OVERFLOW` | `20` | Extra DB connections beyond pool size |
+| `AUDIT_REDIS_MAX_CONNECTIONS` | `64` | Shared Redis pool (cache + SSE) |
+| `AUDIT_DISPATCH_REPLAY_BATCH_SIZE` | `100` | Outbox rows claimed per maintenance drain |
+| `AUDIT_DISPATCH_KIQ_CONCURRENCY` | `16` | Parallel Taskiq kiq after claim batch |
+| `AUDIT_QUEUE_REFRESH_SSE_LIMIT` | `32` | Max SSE publishes on maintenance queue refresh (`0` = DB-only) |
+| `AUDIT_QUEUE_REFRESH_DB_LIMIT` | `128` | Max queued rows loaded/updated per maintenance tick |
+| `AUDIT_OUTBOX_RETAIN_DISPATCHED_DAYS` | `7` | Purge dispatched outbox rows older than this |
 | `AUDIT_DIRECT_UPLOAD_ENABLED` | `true` | Presigned object-storage uploads |
 | `AUDIT_STORAGE_BACKEND` | `s3` | Object storage |
 | `AUDIT_LOG_JSON` | `true` | Structured logs |
