@@ -11,11 +11,15 @@ class CoreSettingsFields:
         default="postgresql+asyncpg://audit:audit@localhost:5432/audit_workbench"
     )
     db_pool_size: int = Field(
-        default=5,
-        description="SQLAlchemy async pool size per process.",
+        default=20,
+        description=(
+            "SQLAlchemy async pool size per process. "
+            "API needs headroom for request + maintenance + outbox; "
+            "workers should be >= max_jobs + 2."
+        ),
     )
     db_max_overflow: int = Field(
-        default=10,
+        default=20,
         description="Extra DB connections beyond pool_size.",
     )
     db_pool_timeout: int = Field(
@@ -24,7 +28,7 @@ class CoreSettingsFields:
     )
     redis_url: str = Field(default="redis://localhost:6379/0")
     redis_max_connections: int = Field(
-        default=20,
+        default=64,
         description="Shared Redis pool size (cache + SSE pub/sub).",
     )
 

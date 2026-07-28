@@ -15,10 +15,10 @@ router = APIRouter(prefix="/audits", tags=["audits"])
 @router.get("", response_model=AuditListResponse)
 async def list_audits(
     session: AsyncSession = Depends(get_session),
-    limit: int = 200,
+    limit: int = 50,
     offset: int = 0,
 ):
-    bounded_limit = max(1, min(limit, 500))
+    bounded_limit = max(1, min(limit, 200))
     bounded_offset = max(0, offset)
     total = await count_completed_audits(session)
     audits = await list_completed_audits(session, limit=bounded_limit, offset=bounded_offset)

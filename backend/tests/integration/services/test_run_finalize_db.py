@@ -34,6 +34,13 @@ async def finalize_session(postgres_session):
             progress=None,
         ),
     )
+    # Outcomes recorded after pending was stored (IDP + later agents).
+    meta = dict(run.run_metadata or {})
+    meta["agentOutcomes"] = {
+        "idp": {"status": "passed", "overallStatus": "passed"},
+        "fraud": {"status": "skipped", "summary": "skipped: not implemented"},
+    }
+    run.run_metadata = meta
     postgres_session.add_all([wf, run])
     await postgres_session.commit()
     yield postgres_session
@@ -53,6 +60,10 @@ async def test_finalize_pending_completion_marks_run_done(finalize_session):
     assert run.finished_at is not None
     meta = run.run_metadata or {}
     assert "pendingCompletion" not in meta
+    assert meta.get("durationMs") == 12
+    outcomes = meta.get("agentOutcomes") or {}
+    assert "idp" in outcomes
+    assert "fraud" in outcomes
 
 
 @pytest.mark.asyncio

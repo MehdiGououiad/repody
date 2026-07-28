@@ -33,7 +33,7 @@ async def test_execute_run_with_timeout_fails_run(monkeypatch):
     monkeypatch.setattr("audit_workbench.services.run.processor.fail_run_terminal", fail)
 
     with pytest.raises(TimeoutError):
-        await execute_run_with_timeout(session, "run-timeout-test")
+        await execute_run_with_timeout("run-timeout-test", session=session)
 
     session.rollback.assert_awaited_once()
     fail.assert_awaited_once()

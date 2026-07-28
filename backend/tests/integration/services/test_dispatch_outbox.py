@@ -45,14 +45,24 @@ async def test_dispatch_outbox_retries_transient_errors(outbox_session, monkeypa
     )
     monkeypatch.setattr(
         "audit_workbench.services.dispatch_outbox.get_settings",
-        lambda: type("S", (), {"dispatch_max_attempts": 8})(),
+        lambda: type(
+            "S",
+            (),
+            {
+                "dispatch_max_attempts": 8,
+                "dispatch_replay_batch_size": 50,
+                "dispatch_kiq_concurrency": 8,
+            },
+        )(),
     )
 
     assert await dispatch_outbox_row(session, row) is False
+    await session.refresh(row)
     assert row.status == "pending"
     assert row.dispatch_attempts == 1
 
     assert await dispatch_outbox_row(session, row) is True
+    await session.refresh(row)
     assert row.status == "dispatched"
     assert row.dispatch_attempts == 2
     assert dispatch.await_count == 2
@@ -77,7 +87,15 @@ async def test_replay_dispatch_outbox_picks_pending_rows(outbox_session, monkeyp
     )
     monkeypatch.setattr(
         "audit_workbench.services.dispatch_outbox.get_settings",
-        lambda: type("S", (), {"dispatch_max_attempts": 8})(),
+        lambda: type(
+            "S",
+            (),
+            {
+                "dispatch_max_attempts": 8,
+                "dispatch_replay_batch_size": 50,
+                "dispatch_kiq_concurrency": 8,
+            },
+        )(),
     )
 
     dispatched = await replay_dispatch_outbox(session, limit=10)

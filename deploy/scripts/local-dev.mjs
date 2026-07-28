@@ -84,7 +84,11 @@ function composeArgs(...parts) {
 }
 
 function apiEnv() {
-  return runtimeEnv(BACKEND_ENV);
+  // Prefer backend/.env over inherited shell env. Otherwise a prior pytest
+  // AUDIT_DATABASE_URL=..._test leaks into the live API and workers (Compose)
+  // keep using audit_workbench — claims no-op and runs stay queued forever.
+  const fileEnv = parseEnvFile(BACKEND_ENV);
+  return { ...process.env, ...fileEnv };
 }
 
 function uiEnv() {

@@ -79,14 +79,12 @@ def wrap_idp_outcome(outcome: IdpOutcome) -> AgentOutcome:
 
 @dataclass
 class IdpRunPorts:
-    """Session-bound ports and counters for compose_idp."""
+    """Ports for compose_idp — short-lived DB sessions around extract HTTP."""
 
-    session: AsyncSession
     run_id: str
     progress_steps: list[dict]
     files: set[str]
     snap_by_id: dict[str, SnapshotDocument]
-    existing_run_docs: dict[str, RunDocument]
     validation_mode: ValidationMode
     rules_payload: list[dict]
     labels: dict[str, str]
@@ -104,6 +102,7 @@ class IdpRunPorts:
         stored: StoredDocument,
         blob: bytes,
     ) -> Result[DocumentExtraction]:
+        # No DB session held during VLM/HTTP extract.
         snap = self.snap_by_id.get(spec.id)
         icl = icl_examples_from_document(snap) if snap is not None else []
         return await extract_one(
@@ -115,19 +114,23 @@ class IdpRunPorts:
         )
 
     async def on_extract_start(self, job: ExtractionJob, index: int, total: int) -> None:
+        from audit_workbench.db.base import async_session_factory
+
         snap = self.snap_by_id.get(job.document_id)
         has_file = job.document_id in self.files
         prog_mode = progress_mode(snap or job.spec, has_file=has_file)
         self.step_index += 1
         step_id = f"extract-{job.document_id}"
 
-        await ensure_run_document(
-            self.session,
-            run_id=self.run_id,
-            document_id=job.document_id,
-            document_type=job.spec.label,
-            existing=self.existing_run_docs,
-        )
+        async with async_session_factory() as session:
+            await ensure_run_document(
+                session,
+                run_id=self.run_id,
+                document_id=job.document_id,
+                document_type=job.spec.label,
+                existing={},
+            )
+            await session.commit()
 
         read_label = read_path_used_label(
             parse_read_path(job.spec.extraction_mode or DEFAULT_READ_PATH_ID).id
@@ -142,7 +145,7 @@ class IdpRunPorts:
                     break
 
         await set_run_progress(
-            self.session,
+            None,
             self.run_id,
             self.progress_steps,
             self.step_index,
@@ -155,17 +158,19 @@ class IdpRunPorts:
     ) -> None:
         if not result.is_ok or result.value is None:
             return
+        from audit_workbench.db.base import async_session_factory
+
         mapped = result.value
-        run_doc = self.existing_run_docs.get(job.document_id)
-        if run_doc is None:
+        async with async_session_factory() as session:
             run_doc = await ensure_run_document(
-                self.session,
+                session,
                 run_id=self.run_id,
                 document_id=job.document_id,
                 document_type=job.spec.label,
-                existing=self.existing_run_docs,
+                existing={},
             )
-        n = await persist_extraction(self.session, run_doc=run_doc, extraction=mapped)
+            n = await persist_extraction(session, run_doc=run_doc, extraction=mapped)
+            await session.commit()
         self.fields_extracted += n
         self.extraction_total_ms += mapped.meta.extraction_ms
         mark_step_done(
@@ -187,7 +192,7 @@ class IdpRunPorts:
                 step["detail"] = "Evaluating LLM rule against extracted fields"
                 break
         await set_run_progress(
-            self.session,
+            None,
             self.run_id,
             self.progress_steps,
             self.step_index,
@@ -199,7 +204,7 @@ class IdpRunPorts:
             self.step_index += 1
             self._validation_started = datetime.now(UTC).timestamp()
             await set_run_progress(
-                self.session,
+                None,
                 self.run_id,
                 self.progress_steps,
                 self.step_index,
@@ -229,7 +234,7 @@ class IdpRunPorts:
     async def mark_saving(self) -> None:
         self.step_index += 1
         await set_run_progress(
-            self.session,
+            None,
             self.run_id,
             self.progress_steps,
             self.step_index,
@@ -303,6 +308,7 @@ async def execute_idp_run(
     multi_document = sum(1 for d in inp.workflow.documents if d.schema_fields) > 1
 
     await set_run_progress(session, run_id, progress_steps, 1, "Starting audit run…", force=True)
+    await session.commit()
 
     storage = get_storage()
 
@@ -310,12 +316,10 @@ async def execute_idp_run(
         return await storage.get_bytes(key)
 
     ports = IdpRunPorts(
-        session=session,
         run_id=run_id,
         progress_steps=progress_steps,
         files=files,
         snap_by_id=snap_by_id,
-        existing_run_docs={rd.document_id: rd for rd in run.documents if rd.document_id},
         validation_mode=validation_mode,
         rules_payload=rules_payload,
         labels=labels,

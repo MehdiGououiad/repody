@@ -76,21 +76,25 @@ async def predict_worker_pool(
     workflow_id: str,
     *,
     file_bindings: list | None = None,
+    workflow: Workflow | None = None,
 ) -> WorkerPool:
     """Predict Taskiq pool before a run row exists (admission / enqueue)."""
     if not file_bindings:
         return "fast"
 
-    wf = (
-        await session.execute(
-            select(Workflow)
-            .where(Workflow.id == workflow_id)
-            .options(selectinload(Workflow.documents))
-        )
-    ).scalar_one_or_none()
+    wf = workflow
+    if wf is None:
+        wf = (
+            await session.execute(
+                select(Workflow)
+                .where(Workflow.id == workflow_id)
+                .options(selectinload(Workflow.documents))
+            )
+        ).scalar_one_or_none()
     if not wf:
         return "extract"
-    return classify_bindings_for_workflow(wf.documents, file_bindings)
+    docs = list(getattr(wf, "documents", None) or [])
+    return classify_bindings_for_workflow(docs, file_bindings)
 
 
 async def resolve_worker_pool(session: AsyncSession, run_id: str) -> WorkerPool:

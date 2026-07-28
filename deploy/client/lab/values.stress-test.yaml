@@ -21,9 +21,9 @@ config:
   workerTaskTimeoutMinutes: 3
   queuedStaleTimeoutMinutes: 180
   staleRunTimeoutMinutes: 15
-  dbPoolSize: 10
-  dbMaxOverflow: 25
-  redisMaxConnections: 50
+  dbPoolSize: 20
+  dbMaxOverflow: 20
+  redisMaxConnections: 64
   healthzProbeInference: false
 
 workerExtract:

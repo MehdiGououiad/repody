@@ -16,7 +16,12 @@ class WorkerSettingsFields:
     )
     worker_extract_max_jobs: int = Field(
         default=1,
-        description="Max concurrent extract pool tasks per worker process.",
+        ge=1,
+        description=(
+            "Max concurrent extract pool tasks per worker process. Keep 1 when sharing "
+            "a single GPU/VLM; raise only with per-replica GPU headroom and matching "
+            "AUDIT_DB_POOL_SIZE (>= max_jobs + 2)."
+        ),
     )
     worker_fast_max_jobs: int = Field(
         default=4,

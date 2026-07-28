@@ -2,28 +2,40 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.db.models import Run, RunStatus
 
 
 async def queue_position(session: AsyncSession, run_id: str) -> tuple[int | None, int | None]:
-    """1-based position among queued runs and total queued depth."""
+    """1-based position among queued runs and total queued depth (SQL, O(1) scans)."""
     run = await session.get(Run, run_id)
     if not run or run.status != RunStatus.queued.value:
         return None, None
 
-    result = await session.execute(
-        select(Run.id)
-        .where(Run.status == RunStatus.queued.value)
-        .order_by(Run.created_at.asc(), Run.id.asc())
+    queued = Run.status == RunStatus.queued.value
+    depth = int(
+        await session.scalar(select(func.count()).select_from(Run).where(queued)) or 0
     )
-    ids = list(result.scalars())
-    depth = len(ids)
-    if depth == 0 or run_id not in ids:
+    if depth == 0:
         return None, None
-    return ids.index(run_id) + 1, depth
+
+    ahead = int(
+        await session.scalar(
+            select(func.count())
+            .select_from(Run)
+            .where(
+                queued,
+                or_(
+                    Run.created_at < run.created_at,
+                    and_(Run.created_at == run.created_at, Run.id < run.id),
+                ),
+            )
+        )
+        or 0
+    )
+    return ahead + 1, depth
 
 
 def queue_label(position: int, depth: int) -> str:

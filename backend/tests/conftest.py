@@ -2,10 +2,17 @@ import os
 
 from tests.helpers.db import DEFAULT_TEST_DATABASE_URL
 
-# Test defaults — production uses Postgres + Alembic; live tests use the docker stack.
+# Test defaults — production uses Postgres + Alembic; live HTTP E2E uses the docker
+# stack API (backend/.env DB). Only force the isolated *_test DB for in-process tests.
 _db_url = os.environ.get("AUDIT_DATABASE_URL", "")
-if not _db_url:
+_live_stack = os.environ.get("E2E_STACK") == "1" or bool(os.environ.get("E2E_API_URL"))
+if not _db_url and not _live_stack:
     os.environ["AUDIT_DATABASE_URL"] = DEFAULT_TEST_DATABASE_URL
+elif _live_stack and (not _db_url or _db_url.rstrip("/").endswith("_test")):
+    # Align host-side scripts with Compose workers when running live E2E.
+    os.environ["AUDIT_DATABASE_URL"] = (
+        "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/audit_workbench"
+    )
 os.environ["AUDIT_RUN_EVENTS_ENABLED"] = os.environ.get("AUDIT_RUN_EVENTS_ENABLED", "false")
 os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
     "AUDIT_EXTRACTION_CACHE_ENABLED", "false"

@@ -14,9 +14,9 @@ config:
   repodyVlmTimeoutSeconds: 180
   staleRunTimeoutMinutes: 5
   queuedStaleTimeoutMinutes: 180
-  dbPoolSize: 10
-  dbMaxOverflow: 25
-  redisMaxConnections: 50
+  dbPoolSize: 20
+  dbMaxOverflow: 20
+  redisMaxConnections: 64
   gpuLiveProbe: false
   # Keep healthchecks cheap — inference reachability is probed at enqueue/worker time.
   healthzProbeInference: false

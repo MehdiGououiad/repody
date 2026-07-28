@@ -381,17 +381,27 @@ config:
   agentFraudEnabled: false
   agentComputerUseEnabled: false
   maintenanceIntervalSeconds: 60
-  dbPoolSize: 5
-  dbMaxOverflow: 10
-  redisMaxConnections: 20
+  dbPoolSize: 20
+  dbMaxOverflow: 20
+  redisMaxConnections: 64
   corsOrigins: '["https://app.example.com"]'
   logJson: true
   directUploadEnabled: true
   rateLimitFailClosed: true
   rateLimitEnabled: true
   rateLimitWindowSeconds: 60
-  rateLimitRunsPerWorkflow: 30
-  rateLimitRunsPerClient: 120
+  rateLimitRunsPerWorkflow: 300
+  rateLimitRunsPerClient: 2000
+  rateLimitHttpPerMinute: 6000
+  admissionMaxQueued: 200
+  admissionMaxInflight: 100
+  admissionMaxExtractInflight: 20
+  admissionRetryAfterSeconds: 15
+  dispatchReplayBatchSize: 100
+  dispatchKiqConcurrency: 16
+  queueRefreshSseLimit: 32
+  queueRefreshDbLimit: 128
+  outboxRetainDispatchedDays: 7
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: true
   # Local/dev catalog includes PP-OCRv6 by default; set base URL to a reachable OCR API in-cluster.

@@ -18,7 +18,11 @@ from audit_workbench.services.run.handoff import schedule_next_agent_stage
 
 
 @pytest.fixture
-async def handoff_session(postgres_session):
+async def handoff_session(postgres_session, monkeypatch):
+    monkeypatch.setattr(
+        "audit_workbench.services.run.handoff.schedule_outbox_dispatch",
+        lambda _run_id: None,
+    )
     wf = Workflow(id="wf-handoff", name="Handoff", status=WorkflowStatus.active.value)
     run = Run(
         id="run-handoff-1",

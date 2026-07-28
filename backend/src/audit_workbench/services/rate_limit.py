@@ -17,19 +17,30 @@ log = structlog.get_logger(__name__)
 
 _limiter: MovingWindowRateLimiter | None = None
 _storage: MemoryStorage | RedisStorage | None = None
-_GLOBAL_HTTP_LIMIT = parse("300 per minute")
+_http_limit_cache: tuple[int, RateLimitItem] | None = None
 
 
 def clear_rate_limiter_cache() -> None:
     """Reset cached limiter (tests)."""
-    global _limiter, _storage
+    global _limiter, _storage, _http_limit_cache
     _limiter = None
     _storage = None
+    _http_limit_cache = None
 
 
 def _window_limit(settings: Settings, max_runs: int) -> RateLimitItem:
     window = max(1, settings.rate_limit_window_seconds)
     return parse(f"{max_runs} per {window} second")
+
+
+def _global_http_limit(settings: Settings) -> RateLimitItem:
+    global _http_limit_cache
+    per_min = max(1, int(settings.rate_limit_http_per_minute))
+    if _http_limit_cache is not None and _http_limit_cache[0] == per_min:
+        return _http_limit_cache[1]
+    item = parse(f"{per_min} per minute")
+    _http_limit_cache = (per_min, item)
+    return item
 
 
 async def _get_limiter() -> MovingWindowRateLimiter:
@@ -159,7 +170,7 @@ async def check_global_http_rate_limit(client_ip: str) -> bool:
     settings = get_settings()
     limiter = await _get_limiter()
     try:
-        return await limiter.hit(_GLOBAL_HTTP_LIMIT, f"audit:rl:http:{client_ip}")
+        return await limiter.hit(_global_http_limit(settings), f"audit:rl:http:{client_ip}")
     except Exception as exc:
         log.warning(
             "rate_limit_redis_unavailable",
@@ -171,10 +182,19 @@ async def check_global_http_rate_limit(client_ip: str) -> bool:
 
 
 class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
-    """Global per-IP HTTP rate limit (300/min) using the same `limits` storage."""
+    """Per-IP rate limit for mutating requests (POST/PUT/PATCH/DELETE).
+
+    Browse and poll GETs are excluded so UI refresh / status polling do not
+    compete with enqueue for the global budget. Run creation still has
+    dedicated per-workflow / per-client limits.
+    """
+
+    _MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
     async def dispatch(self, request: Request, call_next) -> Response:
         if not get_settings().rate_limit_enabled:
+            return await call_next(request)
+        if request.method not in self._MUTATING:
             return await call_next(request)
         if request.url.path == "/v1/healthz":
             return await call_next(request)
