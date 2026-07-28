@@ -32,6 +32,8 @@
 # misc
 .DS_Store
 .docker-cache/
+.uv-cache/
+.runtime-enterprise/
 *.pem
 __pycache__/
 *.py[cod]
@@ -76,6 +78,10 @@ deploy/llamacpp/logs/
 deploy/glmocr/paths.local.env
 deploy/glmocr/models/
 deploy/glmocr/logs/
+deploy/research/**/paths.local.env
+deploy/research/**/models/
+deploy/research/**/logs/
+# legacy research paths (pre-move)
 deploy/qwen35/paths.local.env
 deploy/qwen35/models/
 deploy/qwen35/logs/

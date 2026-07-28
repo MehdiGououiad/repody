@@ -176,9 +176,10 @@ Chart: [deploy/helm/repody](./deploy/helm/repody). Client install: [docs/deploy/
 
 These directories are agent/tooling assets, not runtime dependencies:
 
-- `.agents/skills/` — Cursor agent skills
-- `src/ui-ux-pro-max/` — design reference data for UI skills
-- `benchmark-reports/` — local benchmark output
+- `.agents/skills/` — Cursor agent skills (including `ui-ux-pro-max` design data)
+- `backend/scripts/research/` · `deploy/scripts/research/` — experimental benches
+- `docs/experiments/` — research notes (not onboarding)
+- `benchmark-reports/` — local benchmark output (gitignored)
 
 ## Tests
 
@@ -200,8 +201,8 @@ JWT roles map to permissions in `auth/rbac_policy.csv`. Routers use `require_per
 | Role | Typical access |
 |------|----------------|
 | `viewer` | Read workflows, runs, audits, models, rules |
-| `operator` | Viewer + write workflows, execute runs, operator tools |
-| `admin` | Operator + metrics, settings, diagnostics |
+| `operator` | Viewer + write workflows, execute runs, metrics/dashboard, operator tools |
+| `admin` | Operator + settings, diagnostics, users |
 
 ## Further reading
 

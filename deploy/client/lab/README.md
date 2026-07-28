@@ -35,6 +35,8 @@ Full guide: [docs/deploy/OPENSHIFT.md](../../../docs/deploy/OPENSHIFT.md#argo-cd
 
 **Lab UI URLs** (OpenShift Routes — no port-forward): see the table in OPENSHIFT.md. Infra routes are applied by `pnpm openshift:infra`; Repody routes after GitOps sync.
 
+Helm values matrix (which overlay to merge): [VALUES.md](./VALUES.md).
+
 Teardown:
 
 ```powershell

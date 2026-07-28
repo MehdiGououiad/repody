@@ -43,11 +43,12 @@ Promtail parses JSON and adds `level` / `service_name` labels for filtering.
 
 Config: `deploy/observability/`.
 
-## Kubernetes
+## Kubernetes / production
 
-Use **upstream Helm charts** for Loki, Prometheus/Grafana, and OpenTelemetry Collector.
+Cluster install and SLO notes live in:
 
-Guide: [docs/deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md)
+- [docs/deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md) — OpenShift / client cluster
+- [docs/deploy/PROD-OBSERVABILITY.md](./deploy/PROD-OBSERVABILITY.md) — production SLOs
 
 Enable traces on Repody:
 
@@ -56,8 +57,6 @@ observability:
   otelEnabled: true
   otelEndpoint: http://otel-collector.observability.svc.cluster.local:4318/v1/traces
 ```
-
-## Production
 
 Clients ship pod logs and OTLP to their platform. Repody sets `config.logJson: true` in production values.
 

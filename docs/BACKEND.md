@@ -105,21 +105,15 @@ Consolidated config, catalog, and diagnostics.
 
 ## Scripts (`backend/scripts/`)
 
-| Script | Purpose |
-|--------|---------|
-| `auth_oidc_smoke.py` | Keycloak + JWT smoke test |
-| `benchmark_dev_stress.py` | Dev queue stress (burst + random traffic) |
-| `benchmark_suite.py` | Operator API benchmark (`quick` / `models` / `full` profiles) |
-| `benchmark_ui_route.py` | Presign + `/runs/json` path helper (used by stress) |
-| `prod_stress_test.py` | Production-scale stress (`pnpm stress:prod`) |
-| `bootstrap_migrations.py` | Alembic upgrade to head |
-| `docker-entrypoint.sh` | Container entry (migrations, exec) |
-| `export_openapi.py` | Export OpenAPI to `lib/api/openapi.json` |
-| `generate_facture_fixture.py` | Generate `e2e/fixtures/documents/Facture.pdf` |
-| `platform_integration_suite.py` | Fresh deploy verification (uses `integration.*`) |
-| `warmup_repody_vlm.py` | One-shot Repody VLM warmup |
+Map: [backend/scripts/README.md](../backend/scripts/README.md).
 
-**Repo-root wrappers** (not in `backend/scripts/`): `scripts/prod-stress.mjs`, `scripts/run-platform-e2e.mjs`, `scripts/wait-for-*.mjs`.
+**Ops** (stable `/app/scripts/` paths): `docker-entrypoint.sh`, `bootstrap_migrations.py`, `db_reset.py`, `export_openapi.py`, `auth_oidc_smoke.py`, `platform_integration_suite.py`, `warmup_repody_vlm.py`, `generate_facture_fixture.py`
+
+**Perf / load** (same folder — image + kubectl copy): `load_test_platform.py`, `profile_platform_scale.py`, `locust_api_load.py`, `benchmark_suite.py`, `benchmark_dev_stress.py`, `benchmark_ui_route.py`, `prod_stress_test.py`
+
+**Research** (`research/`): `cnie_structure_llm_bench.py`, `cnie_text_ie_compare.py` — see also `deploy/scripts/research/`
+
+**Repo-root wrappers**: `scripts/prod-stress.mjs`, `scripts/run-platform-e2e.mjs`, `scripts/wait-for-*.mjs`.
 
 ---
 
@@ -131,7 +125,9 @@ Consolidated config, catalog, and diagnostics.
 |------|------|
 | `main.py` | FastAPI app, middleware, router wiring |
 | `settings/` | `AUDIT_*` Pydantic settings (`fields_*.py` + `model.py`) |
-| `benchmarking.py` | Benchmark scoring + report helpers |
+| `benchmarking/` | Benchmark scoring helpers (`ocr`, `suite`, `text`) |
+| `platform/` | Pure contracts, recipe, pools, run status/ids, operator validate/job |
+| `agents/` | Domain agents (`idp` live; `fraud` / `computer_use` SKIPPED stubs) |
 | `integration/` | Shared E2E helpers (`facture`, `fixtures`, `live_stack`, `workflow_flow`) for tests + scripts |
 
 ### `api/` — HTTP layer (thin)
@@ -179,18 +175,16 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | `vlm.py` | Local + cloud Repody VLM extract adapters |
 | `render.py` | PDF/image page prep + render policies |
 | `payloads.py` | VLM prompts + response mapping |
-| `warmup.py` | Repody VLM warmup |
+| `warmup.py` | `warmup_repody_vlm` + warmup helpers |
 | `parse.py` | Parse NuExtract JSON → fields |
 | `template_types.py` | Infer NuExtract leaf types |
-| `render.py` | Page/image/PDF prep + render policies |
-| `payloads.py` | Prompts, ICL messages, response mapping |
-| `warmup.py` | `warmup_repody_vlm` + warmup helpers |
 | `modes.py` | Read paths + validation modes |
 | `schema.py` | Schema field specs |
 | `types.py` | Types + `ExtractionResult` |
 | `nuextract.py` | NuExtract helpers |
 | `branding.py` | Public model labels |
 | `cache.py` | Extraction result cache |
+| `paddleocr_v6.py` / `glm_ocr.py` | OCR document-model adapters |
 | `markdown_normalize.py` | Normalize NuExtract markdown for UI preview |
 
 ### `inference/` — LLM clients
@@ -216,15 +210,15 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 
 | Area | Files |
 |------|-------|
-| **Runs** | `enqueue_run` → outbox → `processor` → one `execute_platform_run` stage → optional `handoff` to next agent pool |
-| **Run (flat)** | `lifecycle.py`, `commands.py`, `persistence.py`, `events.py`, `handoff.py`, `snapshot.py`, `progress.py`, `helpers.py` |
-| **IDP agent** | `agents/idp/` — `contracts.py`, `compose.py`, `run.py`, `adapters/{mapping,extract,validate,persist}.py` |
-| **Fraud / CU** | `agents/fraud/`, `agents/computer_use/` (SKIPPED); pools `fraud` / `computer_use` ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
-| **Platform cores** | `platform/contracts`, `platform/recipe.py` (staged), `platform/pools.py`, `platform/run/*`, `platform/operator/` |
+| **Runs** | `services/run/` — enqueue → outbox → processor → handoff (`lifecycle`, `persistence`, `events`, `progress`, …) |
+| **Agents** | `agents/idp/` (compose + adapters); `agents/fraud/`, `agents/computer_use/` (SKIPPED; [ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
+| **Platform cores** | `platform/contracts`, `platform/recipe.py`, `platform/pools.py`, `platform/run/*`, `platform/operator/` |
 | **Workflows** | `services/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
-| **Platform** | `platform_health.py`, `catalog/`, `metrics_service.py`, `maintenance.py`, `admission.py`, `rate_limit.py` |
-| **Operator** | `services/operator/` (`jobs`, `job_model`, `benchmarks`, `requests`, `reports`, `auth`) |
-| **Support** | `mappers.py`, `api_keys.py`, `upload_validation.py`, `document_slots.py`, `field_namespace.py`, `redis_pool.py` |
+| **Platform services** | `platform_health.py`, `metrics_service.py`, `dashboard_service.py`, `maintenance.py`, `admission.py`, `rate_limit.py`, `dispatch_outbox.py` |
+| **Operator** | `services/operator/` (`jobs`, `benchmarks`, `requests`, `auth`) — I/O; pure types in `platform/operator/` |
+| **Support** | `mappers.py`, `api_keys.py`, `upload_validation.py`, `document_slots.py`, `redis_pool.py` |
+| **Catalog** | `catalog/` (not under services) |
+| **Rules field ns** | `rules/field_namespace.py` |
 
 ### `taskiq/` — Workers
 
