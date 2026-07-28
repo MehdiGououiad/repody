@@ -7,8 +7,8 @@ import {
   User,
   CalendarDays,
 } from "lucide-react";
-import { DocumentsSection } from "./documents-section";
-import { RulesPanel } from "./rules-panel";
+import { DocumentsSection } from "./documents/documents-section";
+import { RulesPanel } from "./rules/rules-panel";
 import { BuilderStepNav, stepComplete, type BuilderStep } from "./builder/step-nav";
 import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { TestDeployStep } from "./builder/test-run-panel";
