@@ -18,7 +18,7 @@ from audit_workbench.extraction.modes import (
     document_has_schema_fields,
     extraction_is_needed,
 )
-from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
 
 
 @dataclass(frozen=True, slots=True)

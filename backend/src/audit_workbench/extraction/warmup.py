@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import mimetypes
 import time
 from pathlib import Path
@@ -10,13 +11,11 @@ from pathlib import Path
 import structlog
 
 from audit_workbench.catalog.registry import parse_document_model
-from audit_workbench.extraction.nuextract import NUEXTRACT_MAX_PAGES_PER_REQUEST
-from audit_workbench.extraction.payloads import _structured_payload
+from audit_workbench.extraction.nuextract import structured_chat_payload
 from audit_workbench.extraction.render import (
-    _encode_pages_for_vlm,
-    _vlm_pages,
-    cap_vlm_pages,
+    encode_pages_as_image_urls,
     pages_dropped,
+    prepare_nuextract_pages,
 )
 from audit_workbench.extraction.types import SchemaFieldSpec, load_document_bundle
 from audit_workbench.inference.openai_compat import post_chat_completion
@@ -25,58 +24,30 @@ from audit_workbench.settings import Settings, get_settings
 
 log = structlog.get_logger()
 
-_INVOICE_WARMUP_SCHEMA = (
-    SchemaFieldSpec(
-        name="invoice_number",
-        description="Unique identifier, usually near the header.",
-    ),
-    SchemaFieldSpec(
-        name="vendor_name",
-        description="Legal name of the vendor issuing the invoice.",
-    ),
-    SchemaFieldSpec(
-        name="subtotal",
-        description="Sum of line items before tax.",
-        template_type="number",
-    ),
-    SchemaFieldSpec(
-        name="tax",
-        description="Total tax amount applied.",
-        template_type="number",
-    ),
-    SchemaFieldSpec(
-        name="total_amount",
-        description="Final amount due, including taxes and fees.",
-        template_type="number",
-    ),
-    SchemaFieldSpec(
-        name="po_number",
-        description="Purchase order number referenced on the invoice.",
-    ),
+_SYNTHETIC_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
 )
-_WARMUP_PROFILES: tuple[tuple[str, str, tuple[SchemaFieldSpec, ...]], ...] = (
-    ("invoice-audit", "Invoice", _INVOICE_WARMUP_SCHEMA),
-    (
-        "total-only",
-        "Facture 1",
-        (
-            SchemaFieldSpec(
-                name="total_amount",
-                description="Total TTC",
-                template_type="number",
-            ),
-        ),
+
+_WARMUP_SCHEMA = (
+    SchemaFieldSpec(
+        name="sample_field",
+        description="",
+        template_type="verbatim-string",
     ),
 )
 
-def _resolve_warmup_document(settings: Settings) -> Path:
-    from audit_workbench.integration.fixtures import repo_root, resolve_facture_pdf
 
+def _resolve_warmup_document(settings: Settings) -> Path | None:
     raw = (settings.repody_vlm_warmup_document or "").strip()
-    if raw:
-        path = Path(raw)
-        return path if path.is_absolute() else repo_root() / path
-    return resolve_facture_pdf()
+    if not raw:
+        return None
+    path = Path(raw)
+    if path.is_absolute():
+        return path
+    from audit_workbench.integration.fixtures import repo_root
+
+    return repo_root() / path
+
 
 def _mime_type_for_path(path: Path) -> str:
     guessed, _ = mimetypes.guess_type(path.name)
@@ -93,11 +64,27 @@ def _mime_type_for_path(path: Path) -> str:
         return "image/webp"
     return "application/octet-stream"
 
+
+def _warmup_bundle(settings: Settings):
+    fixture_path = _resolve_warmup_document(settings)
+    if fixture_path is not None:
+        if not fixture_path.is_file():
+            return None, str(fixture_path)
+        return (
+            load_document_bundle(
+                fixture_path.read_bytes(),
+                _mime_type_for_path(fixture_path),
+            ),
+            str(fixture_path),
+        )
+    return (
+        load_document_bundle(_SYNTHETIC_PNG, "image/png"),
+        "synthetic:1x1.png",
+    )
+
+
 async def warmup_repody_vlm() -> str:
     """Prime Repody VLM with a production-shaped NuExtract request.
-
-    Uses the same PDF render path and structured payload as extraction so
-    llama-server prompt cache is hot before the first user document.
 
     Returns: ``ok`` | ``skipped`` | ``failed`` | ``disabled``
     """
@@ -107,62 +94,57 @@ async def warmup_repody_vlm() -> str:
     if not settings.repody_vlm_enabled:
         return "skipped"
 
-    fixture_path = _resolve_warmup_document(settings)
-    if not fixture_path.is_file():
+    bundle, document_label = _warmup_bundle(settings)
+    if bundle is None:
         log.warning(
             "repody_vlm_warmup_skipped",
             reason="fixture_missing",
-            path=str(fixture_path),
+            path=document_label,
         )
         return "skipped"
 
     spec = parse_document_model(None)
     base_url = llamacpp_base_url(settings)
-    bundle = load_document_bundle(
-        fixture_path.read_bytes(),
-        _mime_type_for_path(fixture_path),
+    pages, pages_rendered = prepare_nuextract_pages(
+        bundle,
+        max_pages=settings.repody_vlm_max_pages_per_request,
     )
-    all_pages, pages_rendered = _vlm_pages(bundle)
-    max_pages = NUEXTRACT_MAX_PAGES_PER_REQUEST
-    pages, _ = cap_vlm_pages(all_pages, max_pages=max_pages)
     dropped = pages_dropped(rendered=pages_rendered, sent=len(pages))
-    content = await asyncio.to_thread(_encode_pages_for_vlm, pages)
+    content = await asyncio.to_thread(encode_pages_as_image_urls, pages)
 
     try:
-        for profile_name, document_type, schema in _WARMUP_PROFILES:
-            payload = _structured_payload(
-                spec=spec,
-                content=content,
-                schema=list(schema),
-                extraction_instructions="",
-            )
-            started = time.perf_counter()
-            data = await post_chat_completion(
-                base_url,
-                payload,
-                timeout=settings.repody_vlm_timeout_seconds,
-            )
-            timings = data.get("timings") or {}
-            log.info(
-                "repody_vlm_warmup_done",
-                profile=profile_name,
-                runtime=spec.runtime,
-                model=spec.runtime_model,
-                document=str(fixture_path),
-                document_type=document_type,
-                pages=len(pages),
-                pages_rendered=pages_rendered,
-                pages_dropped=dropped,
-                ms=int((time.perf_counter() - started) * 1000),
-                prompt_ms=int(timings.get("prompt_ms") or 0),
-                predicted_ms=int(timings.get("predicted_ms") or 0),
-            )
+        payload = structured_chat_payload(
+            model=spec.runtime_model,
+            content=content,
+            schema=list(_WARMUP_SCHEMA),
+            extraction_instructions="",
+        )
+        started = time.perf_counter()
+        data = await post_chat_completion(
+            base_url,
+            payload,
+            timeout=settings.repody_vlm_timeout_seconds,
+        )
+        timings = data.get("timings") or {}
+        log.info(
+            "repody_vlm_warmup_done",
+            profile="generic",
+            runtime=spec.runtime,
+            model=spec.runtime_model,
+            document=document_label,
+            pages=len(pages),
+            pages_rendered=pages_rendered,
+            pages_dropped=dropped,
+            ms=int((time.perf_counter() - started) * 1000),
+            prompt_ms=int(timings.get("prompt_ms") or 0),
+            predicted_ms=int(timings.get("predicted_ms") or 0),
+        )
         return "ok"
     except Exception as exc:
         log.warning(
             "repody_vlm_warmup_failed",
             runtime=spec.runtime,
-            document=str(fixture_path),
+            document=document_label,
             error=repr(exc),
         )
         return "failed"

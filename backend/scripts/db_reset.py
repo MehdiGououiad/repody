@@ -10,8 +10,8 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from audit_workbench.db.base import async_session_factory, engine
-from audit_workbench.db.seed import seed_database
+from audit_workbench.infra.db.base import async_session_factory, engine
+from audit_workbench.infra.db.seed import seed_database
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 

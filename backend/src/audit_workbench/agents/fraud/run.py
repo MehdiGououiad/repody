@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from audit_workbench.agents.fraud.contracts import FraudInput, FraudOutcome
-from audit_workbench.platform.contracts.agent import AgentId, AgentOutcome, AgentStatus
-from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
 
 
 async def execute_fraud(inp: FraudInput) -> Result[AgentOutcome]:

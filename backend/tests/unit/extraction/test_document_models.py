@@ -7,7 +7,7 @@ import pytest
 
 from audit_workbench.extraction.types import ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.extraction.parse import parse_fields_json
+from audit_workbench.extraction.fields import fields_from_nuextract_json
 from audit_workbench.extraction.branding import (
     REPODY_VLM_CATALOG_ID,
     UnknownCatalogIdError,
@@ -16,21 +16,19 @@ from audit_workbench.catalog.registry import (
     normalize_model_id,
     parse_document_model,
 )
-from audit_workbench.extraction.nuextract import build_vlm_template
+from audit_workbench.extraction.nuextract import (
+    build_icl_messages,
+    build_nuextract_instructions,
+    build_nuextract_template,
+    markdown_chat_payload,
+    strip_thinking,
+    structured_chat_payload,
+)
 from audit_workbench.extraction.render import (
-    _encode_pages_for_vlm,
-    _vlm_pages,
-    cap_vlm_pages,
+    encode_pages_as_image_urls,
+    prepare_nuextract_pages,
+    cap_pages,
 )
-from audit_workbench.extraction.payloads import (
-    _fields_payload,
-    _markdown_payload,
-    _structured_payload,
-    build_vlm_instructions,
-    strip_vlm_thinking,
-)
-from audit_workbench.extraction.payloads import build_icl_messages
-
 
 def test_catalog_routes_repody_vlm_to_llamacpp():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -65,30 +63,23 @@ def test_repody_vlm_template_and_flat_json():
         SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
     ]
 
-    assert build_vlm_template(schema) == {
+    assert build_nuextract_template(schema) == {
         "total_amount": "number",
         "invoice_number": "verbatim-string",
     }
 
-    instructions = build_vlm_instructions(schema, document_instructions="Use ISO dates.")
-    assert "Field instructions:" in instructions
-    assert "total_amount" in instructions
-    assert "Total TTC" in instructions
-    assert "`invoice_number`" in instructions
-    assert "Use ISO dates." in instructions
+    instructions = build_nuextract_instructions(schema, document_instructions="Use ISO dates.")
+    assert instructions == "Use ISO dates."
 
-    wrapped = _fields_payload(
+    fields = fields_from_nuextract_json(
         '{"total_amount": 6000.0, "invoice_number": "FAC-42"}',
         schema,
     )
-    fields = parse_fields_json(wrapped, schema)
     assert fields[0].value == "6000.0"
     assert fields[1].value == "FAC-42"
 
 
 def test_repody_vlm_list_template_and_payload():
-    from audit_workbench.extraction.template_types import suggest_template_type
-
     schema = [
         SchemaFieldSpec(
             name="unit_prices",
@@ -97,14 +88,12 @@ def test_repody_vlm_list_template_and_payload():
         )
     ]
 
-    assert build_vlm_template(schema) == {"unit_prices": ["number"]}
-    assert suggest_template_type("amounts", "list of amount per line item") == "number-list"
+    assert build_nuextract_template(schema) == {"unit_prices": ["number"]}
 
-    wrapped = _fields_payload(
+    fields = fields_from_nuextract_json(
         json.dumps({"unit_prices": [12.5, 3.0, 99.99]}),
         schema,
     )
-    fields = parse_fields_json(wrapped, schema)
     assert json.loads(fields[0].value) == [12.5, 3.0, 99.99]
 
 
@@ -128,13 +117,13 @@ def test_repody_vlm_any_scalar_list_template():
     assert is_list_template_type("iban-list")
     assert not is_list_template_type("object-array")
 
-    assert build_vlm_template(schema) == {
+    assert build_nuextract_template(schema) == {
         "beneficiary_ibans": ["iban"],
         "operation_dates": ["date"],
     }
 
 
-def test_repody_vlm_structured_payload_omits_max_tokens_by_default():
+def test_structured_chat_payload_omits_max_tokens_by_default():
     from audit_workbench.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -145,8 +134,8 @@ def test_repody_vlm_structured_payload_omits_max_tokens_by_default():
             template_type="verbatim-string-list",
         )
     ]
-    payload = _structured_payload(
-        spec=spec,
+    payload = structured_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
@@ -167,7 +156,7 @@ def test_repody_vlm_object_array_template():
             ],
         )
     ]
-    assert build_vlm_template(schema) == {
+    assert build_nuextract_template(schema) == {
         "line_items": [
             {
                 "description": "verbatim-string",
@@ -190,7 +179,7 @@ def test_repody_vlm_nested_object_template():
             ],
         )
     ]
-    assert build_vlm_template(schema) == {
+    assert build_nuextract_template(schema) == {
         "holder_information": {
             "full_name": "string",
             "date_of_birth": "date",
@@ -205,18 +194,28 @@ def test_repody_vlm_empty_object_and_enum_follow_official_constructors():
         SchemaFieldSpec(name="meta", template_type="object", children=[]),
         SchemaFieldSpec(name="rows", template_type="object-array", children=[]),
         SchemaFieldSpec(name="status", template_type="enum", enum_values=["open", "closed"]),
-        SchemaFieldSpec(name="bad_enum", template_type="enum", enum_values=["only"]),
         SchemaFieldSpec(name="tags", template_type="multi-enum", enum_values=["a", "b"]),
     ]
-    assert build_vlm_template(empty_object) == {
+    assert build_nuextract_template(empty_object) == {
         "meta": {},
         "rows": [{}],
         "status": ["open", "closed"],
-        "bad_enum": "verbatim-string",
         "tags": [["a", "b"]],
     }
-    assert normalize_template_type("email") == "email-address"
-    assert normalize_template_type("email-list") == "email-address-list"
+    # No platform aliases — TYPES.md full names only.
+    assert normalize_template_type("email") == "email"
+    assert normalize_template_type("email-address") == "email-address"
+    assert normalize_template_type("email-address-list") == "email-address-list"
+
+
+def test_repody_vlm_enum_requires_two_choices():
+    import pytest
+    from audit_workbench.extraction.nuextract import build_field_template_node
+
+    with pytest.raises(ValueError, match="at least 2 choices"):
+        build_field_template_node(
+            SchemaFieldSpec(name="bad_enum", template_type="enum", enum_values=["only"])
+        )
 
 
 def test_build_icl_messages_pairs_developer_role():
@@ -240,22 +239,29 @@ def test_repody_vlm_template_uses_explicit_nuextract_type():
         SchemaFieldSpec(name="invoice_date", description="", template_type="date"),
         SchemaFieldSpec(name="contact", description="", template_type="email-address"),
     ]
-    assert build_vlm_template(schema) == {
+    assert build_nuextract_template(schema) == {
         "invoice_date": "date",
         "contact": "email-address",
     }
 
 
-def test_cap_vlm_pages_truncates_extra_pages():
+def test_cap_pages_truncates_extra_pages():
     pages = [b"page-1", b"page-2", b"page-3"]
-    kept, dropped = cap_vlm_pages(pages, max_pages=2)
+    kept, dropped = cap_pages(pages, max_pages=2)
     assert kept == [b"page-1", b"page-2"]
     assert dropped == 1
 
 
-def test_cap_vlm_pages_keeps_all_when_under_limit():
+def test_cap_pages_none_keeps_all():
+    pages = [b"page-1", b"page-2", b"page-3"]
+    kept, dropped = cap_pages(pages, max_pages=None)
+    assert kept == pages
+    assert dropped == 0
+
+
+def test_cap_pages_keeps_all_when_under_limit():
     pages = [b"page-1"]
-    kept, dropped = cap_vlm_pages(pages, max_pages=4)
+    kept, dropped = cap_pages(pages, max_pages=4)
     assert kept == pages
     assert dropped == 0
 
@@ -271,13 +277,13 @@ def test_repody_vlm_rejects_unsupported_mime_type():
     bundle = DocumentBundle(raw_bytes=b"plain text", mime_type="text/plain")
 
     with pytest.raises(ValueError, match="Unsupported document type"):
-        _vlm_pages(bundle)
+        prepare_nuextract_pages(bundle)
 
 
 def test_repody_vlm_preserves_png_upload_bytes():
     bundle = DocumentBundle(raw_bytes=b"\x89PNG\r\n\x1a\nimage-bytes", mime_type="image/png")
 
-    pages, pages_rendered = _vlm_pages(bundle)
+    pages, pages_rendered = prepare_nuextract_pages(bundle)
 
     assert pages == [(bundle.raw_bytes, "image/png")]
     assert pages_rendered == 1
@@ -285,8 +291,9 @@ def test_repody_vlm_preserves_png_upload_bytes():
 
 
 def test_repody_vlm_renders_pdf_pages_as_png(monkeypatch):
-    def fake_render_nuextract_pdf_pages(document_bytes):
+    def fake_render_nuextract_pdf_pages(document_bytes, *, max_pages=None):
         assert document_bytes == b"%PDF-1.7"
+        _ = max_pages
         return [b"rendered-page"], 1
 
     monkeypatch.setattr(
@@ -295,24 +302,24 @@ def test_repody_vlm_renders_pdf_pages_as_png(monkeypatch):
     )
     bundle = DocumentBundle(raw_bytes=b"%PDF-1.7", mime_type="application/pdf")
 
-    pages, pages_rendered = _vlm_pages(bundle)
+    pages, pages_rendered = prepare_nuextract_pages(bundle)
 
     assert pages == [(b"rendered-page", "image/png")]
     assert pages_rendered == 1
 
 
 def test_repody_vlm_encodes_page_mime_type_in_data_url():
-    content = _encode_pages_for_vlm([(b"page", "image/png")])
+    content = encode_pages_as_image_urls([(b"page", "image/png")])
 
     assert content[0]["image_url"]["url"].startswith("data:image/png;base64,")
 
 
-def test_repody_vlm_markdown_payload_uses_nuextract_mode():
+def test_markdown_chat_payload_uses_nuextract_mode():
     from audit_workbench.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    payload = _markdown_payload(
-        spec=spec,
+    payload = markdown_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 
@@ -322,13 +329,13 @@ def test_repody_vlm_markdown_payload_uses_nuextract_mode():
     assert payload["temperature"] == 0.0
 
 
-def test_repody_vlm_structured_payload_keeps_template():
+def test_structured_chat_payload_keeps_template():
     from audit_workbench.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
-    payload = _structured_payload(
-        spec=spec,
+    payload = structured_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="Use ISO dates.",
@@ -340,7 +347,7 @@ def test_repody_vlm_structured_payload_keeps_template():
     assert payload["chat_template_kwargs"]["enable_thinking"] is False
     assert payload["temperature"] == 0.2
     assert "top_p" not in payload
-    assert payload["chat_template_kwargs"]["instructions"] == "Use ISO dates.\nField instructions:\n- `invoice_number`: Invoice number"
+    assert payload["chat_template_kwargs"]["instructions"] == "Use ISO dates."
 
 
 def test_repody_vlm_payload_uses_official_non_thinking_defaults():
@@ -348,14 +355,14 @@ def test_repody_vlm_payload_uses_official_non_thinking_defaults():
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
-    structured = _structured_payload(
-        spec=spec,
+    structured = structured_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
     )
-    markdown = _markdown_payload(
-        spec=spec,
+    markdown = markdown_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 
@@ -366,10 +373,10 @@ def test_repody_vlm_payload_uses_official_non_thinking_defaults():
     assert markdown["chat_template_kwargs"]["enable_thinking"] is False
 
 
-def test_strip_vlm_thinking_removes_reasoning_wrapper():
+def test_strip_thinking_removes_reasoning_wrapper():
     end_tag = "</" + "think" + ">"
     raw = f"long chain{end_tag}\n\n# Invoice"
-    assert strip_vlm_thinking(raw) == "# Invoice"
+    assert strip_thinking(raw) == "# Invoice"
 
 
 @pytest.mark.asyncio
@@ -415,10 +422,7 @@ async def test_pipeline_calls_document_model_catalog(monkeypatch):
 
 def test_repody_vlm_missing_field_is_not_marked_extracted():
     schema = [SchemaFieldSpec(name="missing_value", description="Absent field")]
-    wrapped = json.loads(_fields_payload("{}", schema))
-    # Official NuExtract missing leaf is null (not an empty string).
-    assert wrapped["fields"][0]["value"] is None
-    fields = parse_fields_json(json.dumps(wrapped), schema)
+    fields = fields_from_nuextract_json("{}", schema)
     assert fields[0].extracted is False
     assert fields[0].value == "—"
 

@@ -121,92 +121,139 @@ function NestedChildrenEditor({
     onChange(fields.map((child) => (child.id === id ? { ...child, ...patch } : child)));
   };
 
+  const title =
+    mode === "object" ? t("schema.objectFieldsLabel") : t("schema.rowColumnsLabel");
+  const hint =
+    mode === "object" ? t("schema.objectFieldsHint") : t("schema.rowColumnsHint");
+  const addLabel = mode === "object" ? t("schema.addObjectField") : t("schema.addRowColumn");
+  const removeLabel =
+    mode === "object" ? t("schema.removeObjectField") : t("schema.removeRowColumn");
+
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-primary/20 bg-primary/5 p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
-        {mode === "object" ? t("schema.objectFieldsLabel") : t("schema.rowColumnsLabel")}
-      </p>
-      {fields.map((child) => {
-        const childType = child.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
-        const childListMode = isListTemplateType(childType);
-        return (
-        <div
-          key={child.id}
-          className="grid gap-2 rounded-md border border-border/70 bg-card/80 p-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.2fr)_auto_2rem]"
-        >
-          <Input
-            value={child.name}
-            onChange={(e) => updateChild(child.id, { name: e.target.value })}
-            placeholder={t("schema.namePlaceholder")}
-            className="h-8 font-mono text-xs"
-          />
-          <Select
-            value={scalarTemplateType(childType)}
-            onValueChange={(templateType) =>
-              updateChild(child.id, {
-                templateType: withListTemplateType(templateType, childListMode) as NuExtractTemplateType,
-              })
-            }
-          >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="max-h-72">
-              {typeGroups.map((group) => {
-                const types = grouped[group];
-                if (types.length === 0) return null;
-                return (
-                  <SelectGroup key={group}>
-                    <SelectLabel className="text-[10px]">{t(`schema.typeGroups.${group}`)}</SelectLabel>
-                    {types.map((typeValue) => (
-                      <SelectItem key={typeValue} value={typeValue}>
-                        {childTypeLabel(t, typeValue)}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                );
-              })}
-            </SelectContent>
-          </Select>
-          <Input
-            value={child.description}
-            onChange={(e) => updateChild(child.id, { description: e.target.value })}
-            placeholder={t("schema.descriptionPlaceholder")}
-            className="h-8 text-xs"
-          />
-          <label className="flex items-center justify-end gap-1.5 px-1 text-[10px] text-on-surface-variant whitespace-nowrap sm:justify-center">
-            <input
-              type="checkbox"
-              className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
-              checked={childListMode}
-              disabled={!supportsListTemplateType(childType)}
-              onChange={(e) =>
-                updateChild(child.id, {
-                  templateType: withListTemplateType(childType, e.target.checked),
-                })
-              }
-              title={t("schema.listModeHint")}
-            />
-            {t("schema.listModeLabel")}
-          </label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-outline hover:text-danger"
-            onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
-            aria-label={mode === "object" ? t("schema.removeObjectField") : t("schema.removeRowColumn")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        );
-      })}
+    <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/[0.03] p-3 sm:p-4">
+      <div className="space-y-1">
+        <p className="text-[11px] font-semibold tracking-wide text-on-surface">{title}</p>
+        <p className="text-[11px] leading-snug text-on-surface-variant">{hint}</p>
+      </div>
+
+      {fields.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border/80 bg-card/50 px-3 py-4 text-center text-[11px] text-on-surface-variant">
+          {mode === "object" ? t("schema.objectFieldsEmpty") : t("schema.rowColumnsEmpty")}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {fields.map((child, index) => {
+            const childType = child.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
+            const childListMode = isListTemplateType(childType);
+            return (
+              <li
+                key={child.id}
+                className="rounded-lg border border-border/70 bg-card p-3 shadow-sm shadow-black/[0.02]"
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                    {mode === "object-array"
+                      ? t("schema.rowColumnIndex", { index: index + 1 })
+                      : t("schema.objectFieldIndex", { index: index + 1 })}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-outline hover:text-danger"
+                    onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
+                    aria-label={removeLabel}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label className="space-y-1 min-w-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                      {t("schema.name")}
+                    </span>
+                    <Input
+                      value={child.name}
+                      onChange={(e) => updateChild(child.id, { name: e.target.value })}
+                      placeholder={t("schema.namePlaceholder")}
+                      className="h-9 font-mono text-xs"
+                    />
+                  </label>
+                  <label className="space-y-1 min-w-0">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                      {t("schema.type")}
+                    </span>
+                    <Select
+                      value={scalarTemplateType(childType)}
+                      onValueChange={(templateType) =>
+                        updateChild(child.id, {
+                          templateType: withListTemplateType(
+                            templateType,
+                            childListMode
+                          ) as NuExtractTemplateType,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-72">
+                        {typeGroups.map((group) => {
+                          const types = grouped[group];
+                          if (types.length === 0) return null;
+                          return (
+                            <SelectGroup key={group}>
+                              <SelectLabel className="text-[10px]">
+                                {t(`schema.typeGroups.${group}`)}
+                              </SelectLabel>
+                              {types.map((typeValue) => (
+                                <SelectItem key={typeValue} value={typeValue}>
+                                  {childTypeLabel(t, typeValue)}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </label>
+                </div>
+                <label className="mt-2 block space-y-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                    {t("schema.intent")}
+                  </span>
+                  <Input
+                    value={child.description}
+                    onChange={(e) => updateChild(child.id, { description: e.target.value })}
+                    placeholder={t("schema.descriptionPlaceholder")}
+                    className="h-9 text-xs"
+                  />
+                </label>
+                <label className="mt-2 flex items-center gap-2 text-[11px] text-on-surface-variant">
+                  <input
+                    type="checkbox"
+                    className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
+                    checked={childListMode}
+                    disabled={!supportsListTemplateType(childType)}
+                    onChange={(e) =>
+                      updateChild(child.id, {
+                        templateType: withListTemplateType(childType, e.target.checked),
+                      })
+                    }
+                  />
+                  <span title={t("schema.listModeHint")}>{t("schema.listModeLabel")}</span>
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
-        className="h-7 text-[11px]"
+        className="h-8 w-full text-[11px] sm:w-auto"
         onClick={() =>
           onChange([
             ...fields,
@@ -219,8 +266,8 @@ function NestedChildrenEditor({
           ])
         }
       >
-        <Plus className="h-3 w-3" />
-        {mode === "object" ? t("schema.addObjectField") : t("schema.addRowColumn")}
+        <Plus className="h-3.5 w-3.5" />
+        {addLabel}
       </Button>
     </div>
   );

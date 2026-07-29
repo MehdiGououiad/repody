@@ -3,8 +3,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
-from audit_workbench.db.models import RuleTemplate
-from audit_workbench.db.seed import RULE_TEMPLATES
+from audit_workbench.infra.db.models import RuleTemplate
+from audit_workbench.infra.db.seed import RULE_TEMPLATES
 from audit_workbench.schemas.rules_library import RuleLibraryResponse
 from audit_workbench.schemas.workflow import RuleTemplateSchema
 from audit_workbench.settings import get_settings

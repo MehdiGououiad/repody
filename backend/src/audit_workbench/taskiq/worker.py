@@ -8,7 +8,7 @@ import sys
 import structlog
 from taskiq import TaskiqEvents
 
-from audit_workbench.observability.bootstrap import init_observability
+from audit_workbench.infra.observability.bootstrap import init_observability
 from audit_workbench.settings import get_settings
 from audit_workbench.taskiq.broker import get_broker
 from audit_workbench.taskiq.tasks import get_process_audit_run_task

@@ -6,6 +6,8 @@ Follows:
 - [Serving](https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html)
 - [OCR pipeline](https://www.paddleocr.ai/latest/en/version3.x/pipeline_usage/OCR.html)
 
+Catalog map (all document models): [EXTRACTION.md](./EXTRACTION.md).
+
 Enabled by default (`AUDIT_PADDLEOCR_V6_ENABLED=true`). Started automatically by `pnpm dev:all` (and `pnpm dev`).
 
 ## Official flow

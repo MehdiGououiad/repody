@@ -31,7 +31,7 @@ Split logs (optional):
 |---|---|---|---|
 | `repody:vlm` | NuExtract (llama-server) | `:8081` | `pnpm llamacpp:serve` · `pnpm llamacpp:warmup` |
 | `paddleocr:v6` | PP-OCRv6 (PaddleX `/ocr`) | `:8868` | `pnpm paddleocr:v6:serve` · `pnpm paddleocr:v6:warmup` |
-| `glm:ocr` | GLM-OCR (llama-server) | `:8083` | `pnpm glmocr:serve` · `pnpm glmocr:warmup` |
+| `glm:ocr` | GLM-OCR (official SDK + llama-server) | `:8083` | `pnpm glmocr:serve` · `pnpm glmocr:warmup` · extract image extras `otel,glmocr` |
 
 `pnpm dev:all` starts **all three** (plus Grafana/Loki/Tempo/Bugsink). First serve also warms each model; use `pnpm models:warmup` to re-prime.
 

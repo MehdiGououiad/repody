@@ -7,9 +7,10 @@ import pytest
 import respx
 
 from audit_workbench.inference.nuextract_cloud import (
-    NuExtractCloudClient,
     NuExtractCloudConfig,
     NuExtractCloudError,
+    create_project,
+    extract_structured,
     parse_sse_string,
 )
 
@@ -36,7 +37,6 @@ def test_parse_sse_string_result_event():
 async def test_extract_structured_creates_temp_project_and_streams():
     base = "https://nuextract.ai"
     config = NuExtractCloudConfig(api_key="token_test", base_url=base, timeout_seconds=30)
-    client = NuExtractCloudClient(config)
 
     create = respx.post(f"{base}/api/structured-extraction").mock(
         return_value=httpx.Response(200, json={"id": "sprj_tmp"})
@@ -69,7 +69,8 @@ async def test_extract_structured_creates_temp_project_and_streams():
         return_value=httpx.Response(200)
     )
 
-    out = await client.extract_structured(
+    out = await extract_structured(
+        config,
         template={"full_name": "string"},
         file_bytes=b"\xff\xd8\xff",
         mime_type="image/jpeg",
@@ -95,7 +96,6 @@ async def test_extract_structured_reuses_configured_project():
         project_id="sprj_fixed",
         timeout_seconds=30,
     )
-    client = NuExtractCloudClient(config)
 
     patch = respx.patch(f"{base}/api/structured-extraction/sprj_fixed").mock(
         return_value=httpx.Response(200, json={"id": "sprj_fixed"})
@@ -128,7 +128,8 @@ async def test_extract_structured_reuses_configured_project():
         return_value=httpx.Response(200)
     )
 
-    out = await client.extract_structured(
+    out = await extract_structured(
+        config,
         template={"x": "number"},
         text="hello",
     )
@@ -141,9 +142,7 @@ async def test_extract_structured_reuses_configured_project():
 @respx.mock
 async def test_quota_error_surfaces():
     base = "https://nuextract.ai"
-    client = NuExtractCloudClient(
-        NuExtractCloudConfig(api_key="token_test", base_url=base)
-    )
+    config = NuExtractCloudConfig(api_key="token_test", base_url=base)
     respx.post(f"{base}/api/structured-extraction").mock(
         return_value=httpx.Response(
             403,
@@ -151,16 +150,14 @@ async def test_quota_error_surfaces():
         )
     )
     with pytest.raises(NuExtractCloudError, match="Quota exceeded"):
-        await client.create_project(template={"a": "string"})
+        await create_project(config, template={"a": "string"})
 
 
 @pytest.mark.asyncio
 @respx.mock
 async def test_failed_job_stream_surfaces_error_message():
     base = "https://nuextract.ai"
-    client = NuExtractCloudClient(
-        NuExtractCloudConfig(api_key="token_test", base_url=base, timeout_seconds=30)
-    )
+    config = NuExtractCloudConfig(api_key="token_test", base_url=base, timeout_seconds=30)
     respx.post(f"{base}/api/structured-extraction").mock(
         return_value=httpx.Response(200, json={"id": "sprj_tmp"})
     )
@@ -186,7 +183,8 @@ async def test_failed_job_stream_surfaces_error_message():
         return_value=httpx.Response(200)
     )
     with pytest.raises(NuExtractCloudError, match="QuotaExceeded"):
-        await client.extract_structured(
+        await extract_structured(
+            config,
             template={"a": "string"},
             text="hello",
         )

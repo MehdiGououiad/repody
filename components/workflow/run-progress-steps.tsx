@@ -206,12 +206,17 @@ export function RunProgressSteps({
                   >
                     {step.label}
                   </p>
-                  {step.durationMs != null && step.durationMs > 0 && (
+                  {step.durationMs != null && step.durationMs > 0 ? (
                     <span className="inline-flex items-center gap-0.5 shrink-0 text-[10px] tabular-nums text-on-surface-variant">
                       <Clock className="h-3 w-3" />
                       {formatDurationMs(step.durationMs)}
                     </span>
-                  )}
+                  ) : step.status === "active" && activeStep?.id === step.id ? (
+                    <span className="inline-flex items-center gap-0.5 shrink-0 text-[10px] tabular-nums text-accent-blue">
+                      <Clock className="h-3 w-3" />
+                      {formatDurationMs(elapsedMs)}
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-1">
                   {modeBadge(step)}

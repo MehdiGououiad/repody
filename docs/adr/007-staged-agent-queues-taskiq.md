@@ -58,8 +58,8 @@ remains optional later if mid-run resume / HITL / complex retries become product
 
 ## References
 
-- `platform/recipe.py` — stage execution (returns `finalize_pending`; does not call `complete_run`)
-- `services/run/finalize.py` — complete from `pendingCompletion` after final non-IDP stage
-- `services/run/processor.py` — claim (IDP) vs resume (later stages) + handoff/finalize
+- `runtime/recipe.py` — stage execution (returns `finalize_pending`; does not call `complete_run`)
+- `app/run/finalize.py` — complete from `pendingCompletion` after final non-IDP stage
+- `app/run/processor.py` — claim (IDP) vs resume (later stages) + handoff/finalize
 - `taskiq/broker.py` — producers for all pools
 - [docs/architecture/idp-functional-agents.md](../architecture/idp-functional-agents.md)

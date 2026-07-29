@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
-from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.infra.auth.dependencies import require_permission
 from audit_workbench.schemas.dashboard import DashboardResponse
-from audit_workbench.services.dashboard_service import get_dashboard
+from audit_workbench.app.dashboard_service import get_dashboard
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 

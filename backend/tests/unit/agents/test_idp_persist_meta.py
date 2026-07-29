@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.agents.idp.adapters.mapping import document_extraction_from_legacy
+from audit_workbench.agents.idp.adapters.mapping import document_extraction_from_result
 from audit_workbench.agents.idp.adapters.persist import extraction_meta_to_dict
 from audit_workbench.agents.idp.contracts import DocumentExtraction, ExtractedField
 from audit_workbench.extraction.types import (
@@ -54,17 +54,17 @@ def test_extraction_meta_to_dict_matches_api_schema() -> None:
     assert meta.fields_extracted == 1
 
 
-def test_document_extraction_from_legacy_requires_meta() -> None:
+def test_document_extraction_from_result_requires_meta() -> None:
     with pytest.raises(ValueError, match="meta is required"):
-        document_extraction_from_legacy(
+        document_extraction_from_result(
             document_id="d1",
             result=ExtractionResult(fields=[]),
         )
 
 
-def test_document_extraction_from_legacy_passes_pipeline_meta() -> None:
+def test_document_extraction_from_result_passes_pipeline_meta() -> None:
     pipeline_meta = _full_meta(document_model_id="repody:vlm:cloud")
-    mapped = document_extraction_from_legacy(
+    mapped = document_extraction_from_result(
         document_id="d1",
         result=ExtractionResult(
             fields=[

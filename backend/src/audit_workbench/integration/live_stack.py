@@ -6,7 +6,7 @@ import os
 
 import httpx
 
-from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync
+from audit_workbench.infra.auth.keycloak_token import fetch_password_grant_token_sync
 
 DEFAULT_API_URL = "http://localhost:8000"
 DEFAULT_AUTH_URL = "http://localhost:8080"

@@ -13,9 +13,9 @@ from audit_workbench.agents.idp.compose import build_extraction_plan, needs_extr
 from audit_workbench.agents.idp.adapters.validate import summarize_validation
 from audit_workbench.agents.idp.contracts import RuleResult
 from audit_workbench.agents.idp.run import agent_status_from_idp
-from audit_workbench.platform.contracts.agent import AgentId, AgentOutcome, AgentStatus
-from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
-from audit_workbench.services.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from audit_workbench.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def test_result_ok_and_fail():

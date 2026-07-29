@@ -1,18 +1,17 @@
-from audit_workbench.extraction.template_types import suggest_template_type
+from audit_workbench.extraction.nuextract import (
+    DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
+    resolve_template_type,
+    suggest_template_type,
+)
 
 
-def test_suggest_template_type_date_not_datetime():
-    assert suggest_template_type("invoice_date", "Date on the invoice") == "date"
+def test_suggest_template_type_is_document_agnostic_default():
+    assert suggest_template_type("invoice_date", "Date on the invoice") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+    assert suggest_template_type("contact_email", "") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+    assert suggest_template_type("total_amount", "Total TTC") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+    assert suggest_template_type("custom_label", "") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
 
 
-def test_suggest_template_type_email():
-    assert suggest_template_type("contact_email", "") == "email-address"
-
-
-def test_suggest_template_type_amount_is_number():
-    assert suggest_template_type("total_amount", "Total TTC") == "number"
-
-
-def test_suggest_template_type_unknown_defaults_to_verbatim():
-    assert suggest_template_type("custom_label", "") == "verbatim-string"
-    assert suggest_template_type("registry_code", "") == "verbatim-string"
+def test_resolve_template_type_uses_explicit_only():
+    assert resolve_template_type("total", "amount", "number") == "number"
+    assert resolve_template_type("total", "amount", None) == DEFAULT_NUEXTRACT_TEMPLATE_TYPE

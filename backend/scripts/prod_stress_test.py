@@ -70,7 +70,7 @@ _IN_CLUSTER_PASSWORD = os.environ.get("STRESS_OIDC_PASSWORD", "repody-dev")
 
 
 def _fetch_in_cluster_token() -> str:
-    from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync
+    from audit_workbench.infra.auth.keycloak_token import fetch_password_grant_token_sync
 
     return fetch_password_grant_token_sync(
         token_url=_IN_CLUSTER_TOKEN_URL,

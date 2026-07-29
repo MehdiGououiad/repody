@@ -11,7 +11,7 @@ from audit_workbench.extraction.types import (
     SchemaFieldSpec,
     truncate_text,
 )
-from audit_workbench.services.redis_pool import get_redis
+from audit_workbench.app.redis_pool import get_redis
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()

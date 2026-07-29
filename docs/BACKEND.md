@@ -126,7 +126,7 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 | `main.py` | FastAPI app, middleware, router wiring |
 | `settings/` | `AUDIT_*` Pydantic settings (`fields_*.py` + `model.py`) |
 | `benchmarking/` | Benchmark scoring helpers (`ocr`, `suite`, `text`) |
-| `platform/` | Pure contracts, recipe, pools, run status/ids, operator validate/job |
+| `runtime/` | Pure contracts, recipe, pools, run status/ids, operator validate/job |
 | `agents/` | Domain agents (`idp` live; `fraud` / `computer_use` SKIPPED stubs) |
 | `integration/` | Shared E2E helpers (`facture`, `fixtures`, `live_stack`, `workflow_flow`) for tests + scripts |
 
@@ -159,11 +159,11 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 
 Import `catalog/registry.py` directly from extraction and API call sites.
 
-### `db/` — SQLAlchemy
+### `infra/db/` — SQLAlchemy
 
 `base.py` (engine/session), `models/` package (ORM), `seed.py` (demo data)
 
-### `auth/` — OIDC + Casbin RBAC
+### `infra/auth/` — OIDC + Casbin RBAC
 
 `dependencies.py`, `jwt_validator.py`, `keycloak_token.py` (password grant), `keycloak_admin.py`, `principal.py`, `casbin_authorizer.py`, `rbac_model.conf`, `rbac_policy.csv`
 
@@ -172,20 +172,18 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | File | Role |
 |------|------|
 | `pipeline.py` | `extract_document()` + `get_extract_document()` |
-| `vlm.py` | Local + cloud Repody VLM extract adapters |
+| `register.py` | Side-effect import of catalog adapters |
+| `vlm.py` | Local + cloud Repody VLM / NuExtract adapters |
 | `render.py` | PDF/image page prep + render policies |
-| `payloads.py` | VLM prompts + response mapping |
-| `warmup.py` | `warmup_repody_vlm` + warmup helpers |
-| `parse.py` | Parse NuExtract JSON → fields |
-| `template_types.py` | Infer NuExtract leaf types |
+| `nuextract.py` | Template types + official chat payloads |
+| `fields.py` | NuExtract JSON → schema leaf fields |
+| `warmup.py` | `warmup_repody_vlm` |
 | `modes.py` | Read paths + validation modes |
 | `schema.py` | Schema field specs |
 | `types.py` | Types + `ExtractionResult` |
-| `nuextract.py` | NuExtract helpers |
 | `branding.py` | Public model labels |
 | `cache.py` | Extraction result cache |
-| `paddleocr_v6.py` / `glm_ocr.py` | OCR document-model adapters |
-| `markdown_normalize.py` | Normalize NuExtract markdown for UI preview |
+| `paddleocr_v6.py` / `glm_ocr.py` / `glm_ocr_sdk.py` | OCR adapters |
 
 ### `inference/` — LLM clients
 
@@ -200,24 +198,25 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | `structured_models.py` | Pydantic LLM output models |
 | `availability.py` | Cached LLM availability probes |
 | `stub.py` | Stub chat callable |
+| `nuextract_cloud.py` | NuExtract cloud REST (module functions) |
 | `base.py` | `ChatFn` / `EnsureAvailableFn` type aliases |
 
 ### `rules/` — Validation engine
 
 `runner.py`, `logic_evaluator.py`, `llm_evaluator.py`, `llm_fields.py`, `llm_prompts.py`, `conditions.py`, `rule_syntax.py`, `types.py`
 
-### `services/` — Business logic
+### `app/` — Application use cases
 
 | Area | Files |
 |------|-------|
-| **Runs** | `services/run/` — enqueue → outbox → processor → handoff (`lifecycle`, `persistence`, `events`, `progress`, …) |
+| **Runs** | `app/run/` — enqueue → outbox → processor → handoff (`lifecycle`, `persistence`, `progress`, …) |
 | **Agents** | `agents/idp/` (compose + adapters); `agents/fraud/`, `agents/computer_use/` (SKIPPED; [ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
-| **Platform cores** | `platform/contracts`, `platform/recipe.py`, `platform/pools.py`, `platform/run/*`, `platform/operator/` |
-| **Workflows** | `services/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
+| **Runtime cores** | `runtime/contracts`, `runtime/recipe.py`, `runtime/pools.py`, `runtime/run/*`, `runtime/operator/` |
+| **Workflows** | `app/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
 | **Platform services** | `platform_health.py`, `metrics_service.py`, `dashboard_service.py`, `maintenance.py`, `admission.py`, `rate_limit.py`, `dispatch_outbox.py` |
-| **Operator** | `services/operator/` (`jobs`, `benchmarks`, `requests`, `auth`) — I/O; pure types in `platform/operator/` |
+| **Operator** | `app/operator/` (`jobs`, `benchmarks`, `requests`, `auth`) — I/O; pure types in `runtime/operator/` |
 | **Support** | `mappers.py`, `api_keys.py`, `upload_validation.py`, `document_slots.py`, `redis_pool.py` |
-| **Catalog** | `catalog/` (not under services) |
+| **Catalog** | `catalog/` (not under app) |
 | **Rules field ns** | `rules/field_namespace.py` |
 
 ### `taskiq/` — Workers
@@ -228,11 +227,11 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 
 `workflow.py`, `run.py`, `run_requests.py`, `audit.py`, `health.py`, `metrics.py`, `models_catalog.py`, `platform.py`, `rules_library.py`, `uploads.py`, `model_runtime.py`, `operator_requests.py`, `common.py`
 
-### `storage/` — Object storage
+### `infra/storage/` — Object storage
 
 `factory.py`, `local.py` (`build_local_store`), `s3.py` (`build_s3_store`), `mime.py`, `base.py` (`ObjectStore` + `PresignedPut`)
 
-### `observability/`
+### `infra/observability/`
 
 `bootstrap.py`, `logging.py`, `tracing.py`, `middleware.py`, `bugsink.py`, `context.py`
 
@@ -244,7 +243,7 @@ Pyramid layout — details in [TESTING.md](./TESTING.md).
 
 | Layer | Focus |
 |-------|-------|
-| `unit/` | Pure modules: agents, lifecycle, extraction, rules, platform recipe |
+| `unit/` | Pure modules: agents, lifecycle, extraction, rules, runtime recipe |
 | `integration/` | ASGI + Postgres / storage (no Taskiq workers) |
 | `live/` | Running API (+ workers for run completion); marker `live` |
 | `helpers/` · `fixtures/` | Shared fixtures |
@@ -265,4 +264,4 @@ Pyramid layout — details in [TESTING.md](./TESTING.md).
 | `GET /runs/{id}/status` vs `GET /runs/{id}?full=false` | Frontend poll uses `/status`; alias documented |
 | `GET /audits/{id}` vs `GET /runs/{id}` when done | Admin audit namespace vs run poll |
 | `platform/config` vs `models/catalog` | Static config vs live catalog + paths |
-| `services/workflow/service.py` vs `services/workflow/repository.py` | Orchestration vs persistence |
+| `app/workflow/service.py` vs `app/workflow/repository.py` | Orchestration vs persistence |

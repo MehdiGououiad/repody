@@ -6,7 +6,7 @@ from typing import NoReturn
 
 from fastapi import HTTPException
 
-from audit_workbench.platform.contracts.result import AppError, http_status_for
+from audit_workbench.runtime.contracts.result import AppError, http_status_for
 
 
 def http_exception_for(error: AppError) -> HTTPException:

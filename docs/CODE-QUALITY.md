@@ -17,9 +17,9 @@ backend source inventory.
 
 | Area | Expected shape | Review signal |
 |------|----------------|---------------|
-| Run lifecycle | `services/run/lifecycle.py` owns status transitions and events | Tests can exercise lifecycle without FastAPI, SQLAlchemy, Redis, or Taskiq |
-| Run use cases | `services/run/commands.py` orchestrates lifecycle plus injected ports | Use cases receive load/save/commit/publish callables; SQLAlchemy stays in `persistence.py` |
-| Run persistence | `services/run/persistence.py` + `events.py` | Infrastructure mapping; no business transitions |
+| Run lifecycle | `app/run/lifecycle.py` owns status transitions and events | Tests can exercise lifecycle without FastAPI, SQLAlchemy, Redis, or Taskiq |
+| Run use cases | `app/run/commands.py` orchestrates lifecycle plus injected ports | Use cases receive load/save/commit/publish callables; SQLAlchemy stays in `persistence.py` |
+| Run persistence | `app/run/persistence.py` + `events.py` | Infrastructure mapping; no business transitions |
 | IDP agent | `agents/idp/compose.py` pure; I/O in `adapters/` + `run.py` | Do not put DB/HTTP inside `compose_idp` |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
 | Worker layer | `taskiq/` and `run/processor.py` are delivery adapters | Worker claims work, runs recipe, records terminal failure |
@@ -28,10 +28,10 @@ backend source inventory.
 
 ## Current Strong Modules
 
-- `services/run/lifecycle.py`: deep module for audit Run state changes.
-- `services/run/persistence.py`: SQLAlchemy gateway that maps ORM rows to `RunEntity` and back.
+- `app/run/lifecycle.py`: deep module for audit Run state changes.
+- `app/run/persistence.py`: SQLAlchemy gateway that maps ORM rows to `RunEntity` and back.
 - `agents/idp/compose.py`: pure extract+validate composition behind injected ports.
-- `services/workflow/`: workflow orchestration and persistence are separated.
+- `app/workflow/`: workflow orchestration and persistence are separated.
 - `catalog/`: model catalog and live probes are centralized instead of scattered across routers.
 - `docs/COMMANDS.md`: single command reference for development, release, and client checks.
 

@@ -33,6 +33,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 WORKDIR /app
 
 ARG BACKEND_EXTRAS=otel
+# Compose / images:build pass otel,glmocr by default (official GLM-OCR SDK).
+# torch/torchvision resolve from the PyTorch CPU index (pyproject tool.uv.sources)
+# so extract images stay lean with AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu.
 ARG INCLUDE_BENCHMARK_FIXTURES=false
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \

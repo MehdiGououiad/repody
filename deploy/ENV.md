@@ -52,8 +52,15 @@ Store the API key in secrets only — never commit it.
 | `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
 | `AUDIT_GLM_OCR_SERVED_MODEL` | Model id from `/v1/models` (default `GLM-OCR`) |
 | `AUDIT_GLM_OCR_TIMEOUT_SECONDS` | Request timeout (default 180) |
+| `AUDIT_GLM_OCR_LAYOUT_DEVICE` | PP-DocLayoutV3 device (`cpu` recommended with host llama) |
+| `AUDIT_GLM_OCR_LAYOUT_MODEL_DIR` | Layout model id/path (default `PaddlePaddle/PP-DocLayoutV3_safetensors`) |
+| `AUDIT_GLM_OCR_SDK_MAX_WORKERS` | Region OCR parallelism (default 4; official SDK 32 — lower when llama `-np` is 1) |
+| `AUDIT_GLM_OCR_PDF_MAX_PAGES` | Optional PDF page cap; unset = official unlimited |
 
-Local: `pnpm paddleocr:v6:serve` / `pnpm glmocr:serve` (also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md) and [docs/GLM-OCR.md](../docs/GLM-OCR.md).
+Model HTTP timeouts must stay ≤ `AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60` (ceiling 15 min).
+Compose extract defaults: worker **10** min, model timeouts **600** s, stale **12** min.
+
+Local: `pnpm paddleocr:v6:serve` / `pnpm glmocr:serve` (also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md), [docs/GLM-OCR.md](../docs/GLM-OCR.md), and [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
 ## Staged platform agents
 
@@ -124,7 +131,7 @@ workerExtract:
 | `REPODY_BACKEND_IMAGE_TAG` | Backend image tag override |
 | `REPODY_WEB_IMAGE_TAG` | Web image tag override |
 | `REPODY_WEB_BACKEND_URL` | Backend URL baked into web image rewrites |
-| `REPODY_BACKEND_EXTRAS` | Backend Python extras (`otel` default) |
+| `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel,glmocr`). `glmocr` pulls torch/torchvision from the **PyTorch CPU index** (see `backend/pyproject.toml` `tool.uv.sources`) so images match `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`. Use `otel` only to slim. |
 | `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
 | `REPODY_BUILDKIT_BACKEND_CACHE_FROM` / `REPODY_BUILDKIT_BACKEND_CACHE_TO` | Backend BuildKit cache refs |
 | `REPODY_BUILDKIT_WEB_CACHE_FROM` / `REPODY_BUILDKIT_WEB_CACHE_TO` | Web BuildKit cache refs |

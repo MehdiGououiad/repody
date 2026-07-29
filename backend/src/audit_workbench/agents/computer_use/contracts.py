@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from audit_workbench.agents.fraud.contracts import FraudOutcome
 from audit_workbench.agents.idp.contracts import IdpOutcome
-from audit_workbench.platform.contracts.result import AppError
+from audit_workbench.runtime.contracts.result import AppError
 
 
 @dataclass(frozen=True, slots=True)

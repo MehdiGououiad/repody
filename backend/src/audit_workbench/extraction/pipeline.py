@@ -12,20 +12,16 @@ import structlog
 
 from audit_workbench.catalog.registry import (
     extract_with_document_model,
-    is_markdown_only_model,
     normalize_model_id,
     parse_document_model,
 )
-import audit_workbench.extraction.vlm  # noqa: F401 — register catalog adapters
-import audit_workbench.extraction.paddleocr_v6  # noqa: F401 — register paddleocr:v6
-import audit_workbench.extraction.glm_ocr  # noqa: F401 — register glm:ocr
+import audit_workbench.extraction.register  # noqa: F401 — catalog adapters
 from audit_workbench.extraction.types import (
     ExtractionIclExample,
     ExtractionMetadata,
     ExtractionResult,
     SchemaFieldSpec,
     load_document_bundle,
-    truncate_markdown_text,
     truncate_text,
 )
 from audit_workbench.extraction.cache import (
@@ -39,14 +35,14 @@ from audit_workbench.extraction.cache import (
 from audit_workbench.extraction.modes import (
     LOGIC_VALIDATION,
     parse_read_path,
-    read_path_used_label,
+    read_path_label,
     resolve_read_path_for_document,
     validation_mode_label,
     gpu_cold_start_likely,
 )
 from audit_workbench.extraction.nuextract import extraction_inference_profile_key
 from audit_workbench.extraction.schema import empty_fields_from_schema, fields_from_sample_values
-from audit_workbench.observability.tracing import start_span
+from audit_workbench.infra.observability.tracing import start_span
 from audit_workbench.settings import get_settings
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
@@ -118,23 +114,11 @@ def _icl_fingerprint(examples: list[ExtractionIclExample] | None) -> str:
     return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:8]
 
 
-def _store_markdown_text(
-    text: str | None,
-    *,
-    model_id: str,
-    markdown_extraction: bool,
-) -> str | None:
-    """Persist markdown for UI/cache.
-
-    NuExtract markdown may include HTML tables/figures → normalize for preview.
-    Pure OCR adapters (Paddle / GLM) stay verbatim so post-process
-    cannot alter recognition accuracy.
-    """
+def _store_markdown_text(text: str | None, *, markdown_extraction: bool) -> str | None:
+    """Persist markdown for UI/cache — truncate only."""
     if not markdown_extraction:
         return None
-    if is_markdown_only_model(model_id):
-        return truncate_text(text)
-    return truncate_markdown_text(text)
+    return truncate_text(text)
 
 
 def _cached_result(
@@ -157,7 +141,7 @@ def _cached_result(
     cached.meta = ExtractionMetadata(
         read_path_config=read_path_id,
         read_path_used=used,
-        read_path_label=read_path_used_label(used),
+        read_path_label=read_path_label(used),
         validation_mode=val_mode,
         validation_label=validation_mode_label(val_mode),
         document_model_id=model_id,
@@ -167,7 +151,6 @@ def _cached_result(
         markdown_extraction=markdown_extraction,
         markdown_text=_store_markdown_text(
             cached.markdown_text,
-            model_id=model_id,
             markdown_extraction=markdown_extraction,
         ),
         raw_text=truncate_text(cached.raw_text),
@@ -314,7 +297,7 @@ async def extract_document(
     result.meta = ExtractionMetadata(
         read_path_config=read_path_config.id,
         read_path_used=used,
-        read_path_label=read_path_used_label(used),
+        read_path_label=read_path_label(used),
         validation_mode=val_mode,
         validation_label=validation_mode_label(val_mode),
         document_model_id=model_id,
@@ -325,7 +308,6 @@ async def extract_document(
         markdown_extraction=markdown_extraction,
         markdown_text=_store_markdown_text(
             result.markdown_text,
-            model_id=model_id,
             markdown_extraction=markdown_extraction,
         ),
         raw_text=truncate_text(result.raw_text),

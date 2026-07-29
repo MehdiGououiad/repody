@@ -109,30 +109,59 @@ export async function pollRunUntilDone(
   });
 }
 
-/** SSE-first wait with polling fallback. */
+/** SSE wait with a parallel status poll so queue position keeps updating
+ * while the SSE stream is quiet (queued runs no longer fan out position SSE). */
 export async function waitForRunUntilDone(
   runId: string,
   onProgress?: (progress: RunProgress) => void,
   options?: { maxMs?: number; headers?: HeadersInit }
 ): Promise<RunAuditDetail> {
   const maxMs = options?.maxMs ?? DEFAULT_RUN_TIMEOUT_MS;
-  const outcome = await watchRunEvents(runId, onProgress, { maxMs, headers: options?.headers });
+  let stopCompanion = false;
 
-  if (outcome === "failed") {
-    const { data, error, response } = await browserApi.GET("/v1/runs/{run_id}/status", {
-      params: { path: { run_id: runId } },
+  void (async () => {
+    let intervalMs = 1000;
+    while (!stopCompanion) {
+      try {
+        const { data, response } = await browserApi.GET("/v1/runs/{run_id}/status", {
+          params: { path: { run_id: runId } },
+        });
+        if (response.ok && data) {
+          const body = data as RunPollResponse;
+          if (body.progress) onProgress?.(body.progress);
+        }
+      } catch {
+        /* transient — SSE remains primary completion signal */
+      }
+      await sleep(withJitter(intervalMs));
+      intervalMs = Math.min(RATE_LIMIT_POLL_INTERVAL_MS, intervalMs + 250);
+    }
+  })();
+
+  try {
+    const outcome = await watchRunEvents(runId, onProgress, {
+      maxMs,
+      headers: options?.headers,
     });
-    if (error || !response.ok || !data) throwOnApiError(error, response);
-    const body = data as RunPollResponse;
-    raiseRunError(body.error || "Run failed", {
-      step: "Audit worker",
-      runId,
-    });
-  }
 
-  if (outcome === "done") {
-    return fetchRunDetail(runId);
-  }
+    if (outcome === "failed") {
+      const { data, error, response } = await browserApi.GET("/v1/runs/{run_id}/status", {
+        params: { path: { run_id: runId } },
+      });
+      if (error || !response.ok || !data) throwOnApiError(error, response);
+      const body = data as RunPollResponse;
+      raiseRunError(body.error || "Run failed", {
+        step: "Audit worker",
+        runId,
+      });
+    }
 
-  return pollRunUntilDone(runId, onProgress, maxMs);
+    if (outcome === "done") {
+      return fetchRunDetail(runId);
+    }
+
+    return pollRunUntilDone(runId, onProgress, maxMs);
+  } finally {
+    stopCompanion = true;
+  }
 }

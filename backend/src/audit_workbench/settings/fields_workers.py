@@ -7,8 +7,11 @@ class WorkerSettingsFields:
     worker_task_timeout_minutes: int = Field(
         default=3,
         ge=1,
-        le=3,
-        description="Max minutes for a Taskiq audit-run task before cancellation (hard cap: 3).",
+        le=15,
+        description=(
+            "Max minutes for a Taskiq audit-run task before cancellation "
+            "(hard ceiling 15; raise for long OCR PDFs alongside model timeouts)."
+        ),
     )
     worker_pool: str = Field(
         default="extract",

@@ -94,6 +94,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: worker
+      args:
+        # Same extras as prod release images: otel + official HF glmocr SDK.
+        # First rebuild pulls torch/layout deps (large). Override only if needed:
+        #   $env:REPODY_BACKEND_EXTRAS="otel"; pnpm dev:worker:rebuild
+        BACKEND_EXTRAS: ${REPODY_BACKEND_EXTRAS:-otel,glmocr}
     depends_on:
       postgres:
         condition: service_healthy
@@ -120,28 +125,32 @@ services:
       AUDIT_OTEL_SERVICE_NAME: repody-worker-extract
       BUGSINK_DSN: ${BUGSINK_DSN:-}
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
-      AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
+      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q8_0}
       AUDIT_INFERENCE_MODE: llamacpp
       AUDIT_PADDLEOCR_V6_ENABLED: ${AUDIT_PADDLEOCR_V6_ENABLED:-true}
       AUDIT_PADDLEOCR_V6_BASE_URL: http://host.docker.internal:8868
-      AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: ${AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS:-180}
+      AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: ${AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS:-600}
       AUDIT_GLM_OCR_ENABLED: ${AUDIT_GLM_OCR_ENABLED:-true}
       AUDIT_GLM_OCR_BASE_URL: http://host.docker.internal:8083/v1
       AUDIT_GLM_OCR_SERVED_MODEL: ${AUDIT_GLM_OCR_SERVED_MODEL:-GLM-OCR}
-      AUDIT_GLM_OCR_TIMEOUT_SECONDS: ${AUDIT_GLM_OCR_TIMEOUT_SECONDS:-180}
+      AUDIT_GLM_OCR_TIMEOUT_SECONDS: ${AUDIT_GLM_OCR_TIMEOUT_SECONDS:-600}
+      AUDIT_GLM_OCR_LAYOUT_DEVICE: ${AUDIT_GLM_OCR_LAYOUT_DEVICE:-cpu}
+      AUDIT_GLM_OCR_LAYOUT_MODEL_DIR: ${AUDIT_GLM_OCR_LAYOUT_MODEL_DIR:-PaddlePaddle/PP-DocLayoutV3_safetensors}
+      AUDIT_GLM_OCR_SDK_MAX_WORKERS: ${AUDIT_GLM_OCR_SDK_MAX_WORKERS:-4}
       AUDIT_EXTRACTION_CACHE_ENABLED: "false"
       # Host `pnpm llamacpp:serve` already warms NuExtract; keep worker boot fast.
       AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
-      AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "180"
+      AUDIT_REPODY_VLM_TIMEOUT_SECONDS: ${AUDIT_REPODY_VLM_TIMEOUT_SECONDS:-600}
       # NuExtract Cloud (optional) — values from `docker compose --env-file backend/.env`
       AUDIT_NUEXTRACT_CLOUD_ENABLED: ${AUDIT_NUEXTRACT_CLOUD_ENABLED:-false}
       AUDIT_NUEXTRACT_CLOUD_API_KEY: ${AUDIT_NUEXTRACT_CLOUD_API_KEY:-}
       AUDIT_NUEXTRACT_CLOUD_BASE_URL: ${AUDIT_NUEXTRACT_CLOUD_BASE_URL:-https://nuextract.ai}
       AUDIT_NUEXTRACT_CLOUD_PROJECT_ID: ${AUDIT_NUEXTRACT_CLOUD_PROJECT_ID:-}
-      AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS: ${AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS:-180}
-      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "3"
-      AUDIT_STALE_RUN_TIMEOUT_MINUTES: "5"
+      AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS: ${AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS:-600}
+      # OCR headroom: model timeouts must stay <= worker minutes * 60
+      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: ${AUDIT_WORKER_TASK_TIMEOUT_MINUTES:-10}
+      AUDIT_STALE_RUN_TIMEOUT_MINUTES: ${AUDIT_STALE_RUN_TIMEOUT_MINUTES:-12}
       AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
       AUDIT_WORKER_POOL: extract
       AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"

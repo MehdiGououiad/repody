@@ -21,8 +21,8 @@ from audit_workbench.agents.idp.contracts import (
 )
 from audit_workbench.agents.idp.run import wrap_idp_outcome
 from audit_workbench.extraction.types import ExtractionMetadata
-from audit_workbench.platform.contracts.agent import AgentStatus
-from audit_workbench.platform.contracts.result import ErrorCode, Result
+from audit_workbench.runtime.contracts.agent import AgentStatus
+from audit_workbench.runtime.contracts.result import ErrorCode, Result
 
 
 def _stored(doc_id: str = "d1") -> StoredDocument:

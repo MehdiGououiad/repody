@@ -11,7 +11,7 @@ from tests.helpers.api_errors import assert_error_response
 async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()
@@ -28,7 +28,7 @@ async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
 async def test_confirm_upload_rejects_empty_object(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()

@@ -4,7 +4,7 @@ Each catalog id maps to a runtime and extraction adapter module:
 - ``repody:vlm`` — local llama.cpp NuExtract structured extraction + markdown
 - ``repody:vlm:cloud`` — official NuExtract platform REST API
 - ``paddleocr:v6`` — PP-OCRv6 markdown via official PaddleX POST /ocr service
-- ``glm:ocr`` — GLM-OCR markdown via llama-server (zai-org prompt; GGUF serve)
+- ``glm:ocr`` — GLM-OCR markdown via official GlmOcr SDK (PP-DocLayoutV3) + GGUF llama-server
 
 Render policies: ``extraction/render.py``
 """
@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from audit_workbench.extraction.modes import DEFAULT_READ_PATH_ID
 from audit_workbench.extraction.types import ExtractionIclExample, ExtractionResult, SchemaFieldSpec
 from audit_workbench.extraction.types import DocumentBundle
 from audit_workbench.extraction.branding import (
@@ -44,8 +45,6 @@ DocumentEngine = Literal["document_model"]
 DocumentRuntime = Literal[
     "llamacpp", "nuextract_cloud", "paddleocr_v6", "glm_ocr"
 ]
-
-DEFAULT_READ_PATH_ID = "document_model"
 
 
 @dataclass(frozen=True)

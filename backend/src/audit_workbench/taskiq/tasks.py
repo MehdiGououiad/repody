@@ -35,9 +35,9 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
         timeout_minutes=settings.worker_task_timeout_minutes,
     )
     try:
-        from audit_workbench.observability.context import bind_log_context, log_context
-        from audit_workbench.observability.tracing import start_span
-        from audit_workbench.services.run.processor import execute_run_with_timeout
+        from audit_workbench.infra.observability.context import bind_log_context, log_context
+        from audit_workbench.infra.observability.tracing import start_span
+        from audit_workbench.app.run.processor import execute_run_with_timeout
 
         async with start_span(
             "process_audit_run",
@@ -57,8 +57,8 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
                 worker_pool=input.extract_pool,
             ):
                 if workflow_id is None:
-                    from audit_workbench.db.base import async_session_factory
-                    from audit_workbench.db.models import Run
+                    from audit_workbench.infra.db.base import async_session_factory
+                    from audit_workbench.infra.db.models import Run
 
                     async with async_session_factory() as session:
                         run = await session.get(Run, run_id)
@@ -72,7 +72,7 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
                     request_id=request_id,
                 )
     except Exception as exc:
-        from audit_workbench.services.run.terminal import (
+        from audit_workbench.app.run.commands import (
             PUBLIC_RUN_FAILURE_MESSAGE,
             fail_run_terminal,
         )

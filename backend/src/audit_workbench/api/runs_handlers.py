@@ -6,12 +6,12 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.errors import raise_app_error
-from audit_workbench.auth.run_access import resolve_owner_subject
-from audit_workbench.platform.run.contracts import FileBinding, RunSnapshot
+from audit_workbench.infra.auth.run_access import resolve_owner_subject
+from audit_workbench.runtime.run.contracts import FileBinding, RunSnapshot
 from audit_workbench.schemas.run_requests import RunSnapshotBody, StoredFileBinding
 from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
-from audit_workbench.services.run.upload_bindings import parse_json_form
-from audit_workbench.services.upload_intents import bindings_from_confirmed_uploads
+from audit_workbench.app.run.upload_bindings import parse_json_form
+from audit_workbench.app.upload_intents import bindings_from_confirmed_uploads
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 

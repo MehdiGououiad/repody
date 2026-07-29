@@ -42,7 +42,7 @@ PADDLEOCR_V6_CATALOG_NOTE = (
     "PP-OCRv6 OCR service — markdown-only (paddlex --serve --pipeline OCR)."
 )
 GLM_OCR_CATALOG_NOTE = (
-    "GLM-OCR (zai-org) — markdown-only; llama-server GGUF; prompt \"Text Recognition:\"."
+    "GLM-OCR (zai-org) — markdown-only; official SDK (PP-DocLayoutV3) + llama-server GGUF."
 )
 
 

@@ -20,7 +20,7 @@ for _path in (_BACKEND / "src", _BACKEND):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-from audit_workbench.auth.keycloak_token import fetch_password_grant_token_sync  # noqa: E402
+from audit_workbench.infra.auth.keycloak_token import fetch_password_grant_token_sync  # noqa: E402
 
 
 def _get(url: str, token: str) -> tuple[int, str]:

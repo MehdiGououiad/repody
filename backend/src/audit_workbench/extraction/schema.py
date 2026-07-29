@@ -10,7 +10,7 @@ from audit_workbench.extraction.nuextract import (
     is_object_template_type,
     normalize_template_type,
 )
-from audit_workbench.extraction.template_types import resolve_template_type
+from audit_workbench.extraction.nuextract import resolve_template_type
 from audit_workbench.extraction.types import ExtractedFieldResult, ExtractionIclExample, SchemaFieldSpec
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
@@ -184,22 +184,16 @@ def field_config_from_spec(field: SchemaFieldSpec) -> dict[str, Any] | None:
     return field_config_from_parts(enum_values=field.enum_values, children=children)
 
 
-def _normalize_key(name: str) -> str:
-    return name.strip().lower().replace(" ", "_")
-
-
 def _schema_type(field: SchemaFieldSpec) -> str:
     return resolve_template_type(field.name, field.description, field.template_type)
 
 
 def is_nested_object_group(field: SchemaFieldSpec) -> bool:
-    """True for nested object groups (explicit ``object`` or children without object-array)."""
+    """True only for explicit ``object`` groups with children."""
     resolved = resolve_template_type(field.name, field.description, field.template_type)
     if is_object_array_template_type(resolved):
         return False
-    if is_object_template_type(resolved):
-        return bool(field.children)
-    return bool(field.children)
+    return is_object_template_type(resolved) and bool(field.children)
 
 
 def iter_extraction_leaves(
@@ -211,8 +205,6 @@ def iter_extraction_leaves(
 
     Nested ``object`` groups expand to dotted keys (``parent.child``) so UI and
     rules see each leaf. ``object-array`` stays one leaf (JSON table blob).
-    Fields that carry children without an explicit object-array type are treated
-    as nested object groups (general structure, not document-specific).
     """
     leaves: list[tuple[str, SchemaFieldSpec]] = []
     for field in schema:
@@ -251,15 +243,7 @@ def fields_from_sample_values(
     """Dry-run / preview: use caller-provided sample values keyed by field name."""
     results: list[ExtractedFieldResult] = []
     for key, field in iter_extraction_leaves(schema):
-        norm = _normalize_key(key)
-        leaf_norm = _normalize_key(field.name)
-        raw = (
-            samples.get(key)
-            or samples.get(norm)
-            or samples.get(field.name)
-            or samples.get(leaf_norm)
-            or ""
-        )
+        raw = samples.get(key) or samples.get(field.name) or ""
         value = raw.strip() or "—"
         results.append(
             ExtractedFieldResult(

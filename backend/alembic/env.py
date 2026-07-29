@@ -8,8 +8,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from audit_workbench.db import models  # noqa: F401
-from audit_workbench.db.base import Base
+from audit_workbench.infra.db import models  # noqa: F401
+from audit_workbench.infra.db.base import Base
 from audit_workbench.settings import get_settings
 
 config = context.config

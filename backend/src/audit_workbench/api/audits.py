@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.api.deps import get_session
 from audit_workbench.schemas.audit import AuditListResponse
 from audit_workbench.schemas.run import RunAuditDetail
-from audit_workbench.services.audit import count_completed_audits, list_completed_audits
-from audit_workbench.services.run.intake import get_run_detail
+from audit_workbench.app.audit import count_completed_audits, list_completed_audits
+from audit_workbench.app.run.intake import get_run_detail
 
 router = APIRouter(prefix="/audits", tags=["audits"])
 

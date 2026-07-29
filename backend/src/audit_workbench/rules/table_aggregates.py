@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from audit_workbench.extraction.parse import parse_numeric_value
+from audit_workbench.rules.amounts import parse_numeric_value
 
 LOGIC_TABLE_FUNCTIONS = frozenset({"sum_rows", "sum_rows_where", "count_rows_where"})
 

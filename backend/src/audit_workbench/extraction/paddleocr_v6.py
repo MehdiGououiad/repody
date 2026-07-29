@@ -24,10 +24,6 @@ import structlog
 from audit_workbench.catalog.adapters import register_document_model_adapter
 from audit_workbench.catalog.registry import DocumentModelSpec
 from audit_workbench.extraction.branding import PADDLEOCR_V6_CATALOG_ID
-from audit_workbench.extraction.paddleocr_common import (
-    file_type_for_mime,
-    paddle_error_message,
-)
 from audit_workbench.extraction.schema import empty_fields_from_schema
 from audit_workbench.extraction.types import (
     DocumentBundle,
@@ -40,33 +36,56 @@ from audit_workbench.settings import get_settings
 
 log = structlog.get_logger()
 
+# Official fileType: 0 = PDF, 1 = image (incl. TIFF).
+FILE_TYPE_PDF = 0
+FILE_TYPE_IMAGE = 1
+
+
+def file_type_for_mime(mime_type: str | None) -> int:
+    mime = (mime_type or "").split(";", 1)[0].strip().lower()
+    if mime == "application/pdf":
+        return FILE_TYPE_PDF
+    return FILE_TYPE_IMAGE
+
+
+def paddle_error_message(body: dict[str, Any], *, label: str) -> str | None:
+    """Return an error string when official serving errorCode is non-zero."""
+    code = body.get("errorCode")
+    if code is None:
+        return None
+    try:
+        if int(code) == 0:
+            return None
+    except (TypeError, ValueError):
+        return f"{label} invalid errorCode: {code!r}"
+    return f"{label} error {code}: {body.get('errorMsg') or body}"
+
 
 def _texts_from_pruned(pruned: dict[str, Any]) -> list[str]:
-    """Read ``rec_texts`` from official ``prunedResult`` (snake or camel)."""
+    """Official prunedResult.rec_texts (snake_case inside prunedResult)."""
     raw = pruned.get("rec_texts")
-    if raw is None:
-        raw = pruned.get("recTexts")
     if not isinstance(raw, list):
         return []
-    return [t.strip() for t in raw if isinstance(t, str) and t.strip()]
+    return [t if isinstance(t, str) else str(t) for t in raw]
 
 
 def markdown_from_ocr_result(payload: dict[str, Any]) -> str:
-    """Join ``result.ocrResults[].prunedResult.rec_texts`` as markdown text.
+    """Join official ``result.ocrResults[].prunedResult.rec_texts`` lines.
 
-    Matches the official serving response shape from the OCR pipeline docs.
+    Pages separated by blank lines; lines joined with ``\\n`` (including empty
+    strings as returned by serving).
     """
     result = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(result, dict):
-        result = payload if isinstance(payload, dict) else {}
-    pages = result.get("ocrResults") or result.get("ocr_results") or []
+        return ""
+    pages = result.get("ocrResults")
     if not isinstance(pages, list):
         return ""
     chunks: list[str] = []
     for page in pages:
         if not isinstance(page, dict):
             continue
-        pruned = page.get("prunedResult") or page.get("pruned_result") or {}
+        pruned = page.get("prunedResult")
         if not isinstance(pruned, dict):
             continue
         lines = _texts_from_pruned(pruned)
@@ -137,24 +156,18 @@ async def extract_with_paddleocr_v6(
             "and that the document is a supported PDF/image."
         )
     elapsed_ms = int((time.perf_counter() - started) * 1000)
-    page_count = len(
-        (body.get("result") or {}).get("ocrResults")
-        or (body.get("result") or {}).get("ocr_results")
-        or []
-    )
+    page_count = len((body.get("result") or {}).get("ocrResults") or [])
     log.info(
         "paddleocr_v6_done",
         catalog_id=(spec.id if spec else PADDLEOCR_V6_CATALOG_ID),
         runtime="paddleocr_v6",
-        pages=page_count or (markdown.count("\n\n") + 1),
+        pages=page_count or 1,
         markdown_chars=len(markdown),
         elapsed_ms=elapsed_ms,
         base_url=base,
     )
     return ExtractionResult(
         fields=empty_fields_from_schema(schema),
-        raw_text=None,
-        # Verbatim OCR lines — skip UI markdown_normalize (bold/heuristics).
         markdown_text=truncate_text(markdown),
         pages_rendered=page_count,
         pages_sent=page_count,

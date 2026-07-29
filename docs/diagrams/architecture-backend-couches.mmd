@@ -10,19 +10,19 @@ flowchart TB
   end
 
   subgraph Application["Couche application / services"]
-    WFSvc["services/workflow/<br/>CRUD · deploy · API key"]
-    RunEnq["services/run/enqueue.py<br/>admission · create Run"]
-    Outbox["services/dispatch_outbox.py<br/>outbox Postgres"]
-    Dispatch["services/run/dispatch.py<br/>Taskiq kiq"]
-    RunProc["services/run/processor.py<br/>claim · recipe"]
-    PlatformOrch["platform/recipe.py<br/>execute_platform_run"]
+    WFSvc["app/workflow/<br/>CRUD · deploy · API key"]
+    RunEnq["app/run/enqueue.py<br/>admission · create Run"]
+    Outbox["app/dispatch_outbox.py<br/>outbox Postgres"]
+    Dispatch["app/run/dispatch.py<br/>Taskiq kiq"]
+    RunProc["app/run/processor.py<br/>claim · recipe"]
+    PlatformOrch["runtime/recipe.py<br/>execute_platform_run"]
     IdpRun["agents/idp/run.py<br/>execute_idp_run"]
     IdpCompose["agents/idp/compose.py<br/>compose_idp"]
-    OpSvc["services/operator/<br/>diagnostics · warmup"]
+    OpSvc["app/operator/<br/>diagnostics · warmup"]
   end
 
   subgraph Domaine["Domaine audit execution"]
-    Domain["services/run/lifecycle.py<br/>entité · cycle de vie"]
+    Domain["app/run/lifecycle.py<br/>entité · cycle de vie"]
     Events["Événements domaine<br/>RunQueued · Started<br/>Completed · Failed"]
   end
 
@@ -34,11 +34,11 @@ flowchart TB
   end
 
   subgraph Infra["Infrastructure"]
-    DB["db/ SQLAlchemy + Alembic"]
-    Storage["storage/ MinIO ou local"]
+    DB["infra/db/ SQLAlchemy + Alembic"]
+    Storage["infra/storage/ MinIO ou local"]
     Taskiq["taskiq/ broker Redis Streams<br/>queues extract | fast"]
     InfClient["inference/ clients OpenAI-compat"]
-    Auth["auth/ JWT · Casbin RBAC"]
+    Auth["infra/auth/ JWT · Casbin RBAC"]
   end
 
   Next --> Proxy --> APIRouters

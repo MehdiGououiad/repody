@@ -8,8 +8,8 @@ const API_NAMESPACE = process.env.E2E_K8S_NAMESPACE ?? "repody";
 function seedViaKubectl(): void {
   const code = `
 import asyncio
-from audit_workbench.db.base import async_session_factory
-from audit_workbench.db.seed import seed_database
+from audit_workbench.infra.db.base import async_session_factory
+from audit_workbench.infra.db.seed import seed_database
 
 async def main() -> None:
     async with async_session_factory() as session:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
-from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.infra.auth.dependencies import require_permission
 from audit_workbench.extraction.pipeline import extract_document_fields
 from audit_workbench.rules.conditions import resolve_rule_body
 from audit_workbench.rules.runner import evaluate_dry_run_rules
@@ -21,8 +21,8 @@ from audit_workbench.schemas.workflow import (
     WorkflowResponse,
     WorkflowSchema,
 )
-from audit_workbench.services.workflow import workflow_service
-from audit_workbench.services.workflow.validation import validate_rules_preview
+from audit_workbench.app.workflow import workflow_service
+from audit_workbench.app.workflow.validation import validate_rules_preview
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 

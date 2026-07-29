@@ -7,6 +7,7 @@ Serve [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) wi
 
 ```powershell
 winget install llama.cpp
+# later: winget upgrade ggml.llamacpp   # pulls latest GitHub Vulkan release
 ```
 
 Confirm your GPU backend:
@@ -55,7 +56,7 @@ minimal multimodal command plus accuracy / GPU knobs from upstream docs:
 | Chat template | `--jinja` | Required for `chat_template_kwargs` |
 | Server reasoning | `-rea off` | Official non-thinking (`enable_thinking=false`) |
 | Parallel slots | **1** (`-np 1`) default | Full 16k context per slot |
-| Vision tokens | `--image-min/max-tokens` (default **1536** in `paths.local.env.example`) | Qwen-VL floor is 1024; Arc accuracy bench: **1536** fixes hard stamp OCR for Q4; keep max capped |
+| Vision tokens | `--image-min/max-tokens` (default **1024** in `paths.local.env.example` / serve script) | Qwen-VL floor is 1024; Arc: keep max capped. Raise toward 1536 only with GPU headroom |
 | Vision batch | `-ub` + `--mtmd-batch-max-tokens` match vision budget | Must track image-max-tokens |
 
 **Recommendation:** `NuExtract3-Q8_0.gguf` + vision **1024**. Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL`.

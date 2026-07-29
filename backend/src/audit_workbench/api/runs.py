@@ -26,17 +26,17 @@ from audit_workbench.api.runs_handlers import (
     snapshot_from_body,
     snapshot_from_form_payload,
 )
-from audit_workbench.auth.dependencies import (
+from audit_workbench.infra.auth.dependencies import (
     require_admin_or_workflow_run,
     require_run_create_access,
 )
-from audit_workbench.db.models import Run
-from audit_workbench.platform.run.contracts import EnqueueRunRequest, FileBinding
+from audit_workbench.infra.db.models import Run
+from audit_workbench.runtime.run.contracts import EnqueueRunRequest, FileBinding
 from audit_workbench.schemas.run_requests import CreateRunJsonBody
 from audit_workbench.schemas.workflow import RunCreatedResponse, RunPollResponse
-from audit_workbench.services.run.intake import poll_run, poll_run_status
-from audit_workbench.services.run.sse import subscribe_run_progress
-from audit_workbench.services.run.upload_bindings import bindings_from_multipart
+from audit_workbench.app.run.intake import poll_run, poll_run_status
+from audit_workbench.app.run.sse import subscribe_run_progress
+from audit_workbench.app.run.upload_bindings import bindings_from_multipart
 
 router = APIRouter(tags=["runs"])
 log = structlog.get_logger(__name__)
@@ -99,7 +99,7 @@ async def stream_run_events(
     _: None = Depends(require_admin_or_workflow_run),
 ):
     """Server-Sent Events stream for live run progress (Redis pub/sub)."""
-    from audit_workbench.db import base as db_base
+    from audit_workbench.infra.db import base as db_base
 
     async with db_base.async_session_factory() as session:
         run = await session.get(Run, run_id)
