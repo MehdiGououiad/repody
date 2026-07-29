@@ -54,7 +54,7 @@ def load_report(path: Path) -> dict[str, Any]:
 
 
 async def persist_operator_job(job: OperatorJob, *, max_jobs: int) -> None:
-    from audit_workbench.app.redis_pool import get_redis
+    from audit_workbench.infra.redis.pool import get_redis
 
     try:
         client = await get_redis()
@@ -75,7 +75,7 @@ async def persist_operator_job(job: OperatorJob, *, max_jobs: int) -> None:
 
 
 async def delete_operator_job(job_id: str) -> None:
-    from audit_workbench.app.redis_pool import get_redis
+    from audit_workbench.infra.redis.pool import get_redis
 
     try:
         client = await get_redis()
@@ -90,7 +90,7 @@ async def load_recent_operator_jobs(
     max_jobs: int,
     existing_ids: set[str],
 ) -> list[OperatorJob]:
-    from audit_workbench.app.redis_pool import get_redis
+    from audit_workbench.infra.redis.pool import get_redis
 
     jobs: list[OperatorJob] = []
     try:

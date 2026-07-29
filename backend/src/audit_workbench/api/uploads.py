@@ -20,11 +20,11 @@ from audit_workbench.schemas.uploads import (
     UploadItem,
     UploadResponse,
 )
-from audit_workbench.app.upload_intents import (
+from audit_workbench.app.uploads.intents import (
     confirm_upload_intent,
     record_upload_intent,
 )
-from audit_workbench.app.upload_validation import (
+from audit_workbench.app.uploads.validation import (
     UploadValidationError,
     validate_upload_batch,
     validate_upload_file,

@@ -9,7 +9,7 @@ import pytest
 
 from audit_workbench.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
 from audit_workbench.runtime.contracts.agent import AgentId
-from audit_workbench.app.dispatch_outbox import _supports_skip_locked
+from audit_workbench.app.run.dispatch_outbox import _supports_skip_locked
 from audit_workbench.app.run.handoff import schedule_next_agent_stage
 
 

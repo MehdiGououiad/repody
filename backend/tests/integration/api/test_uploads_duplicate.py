@@ -18,7 +18,7 @@ async def test_confirm_upload_accepts_real_gououiad_cnie_png_named_jpeg(
 
     clear_settings_cache()
     from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.app.uploads.intents import record_upload_intent
     from audit_workbench.infra.storage.factory import get_storage
 
     fixture = (
@@ -56,7 +56,7 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
 
     clear_settings_cache()
     from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.app.uploads.intents import record_upload_intent
     from audit_workbench.infra.storage.factory import get_storage
 
     storage = get_storage()
@@ -129,7 +129,7 @@ async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_p
 
     clear_settings_cache()
     from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.app.uploads.intents import record_upload_intent
     from audit_workbench.infra.storage.factory import get_storage
 
     storage = get_storage()

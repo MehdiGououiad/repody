@@ -59,8 +59,8 @@ All audit runs are dispatched through Taskiq (Redis Streams); worker containers 
 ```
 backend/src/audit_workbench/
 ├── api/                 HTTP routers → app use cases
-├── app/                 Application use cases (run, workflow, operator, queue, …)
-│   └── run/             lifecycle · commands · processor · enqueue · progress · …
+├── app/                 Application use cases (run, workflow, operator, uploads, queue, …)
+│   └── run/             lifecycle · commands · processor · enqueue · outbox · progress · …
 ├── agents/idp/          contracts · compose · run · adapters/
 ├── agents/fraud/ · computer_use/   SKIPPED stubs + staged Taskiq pools
 ├── runtime/             Pure shared: contracts · recipe · pools · agent_metadata · metrics
@@ -69,14 +69,14 @@ backend/src/audit_workbench/
 ├── rules/               Logic + LLM evaluators (+ amounts)
 ├── catalog/             Document-model registry + probes
 ├── taskiq/              Worker entrypoint + async tasks
-├── infra/               db · storage · auth · observability
+├── infra/               db · storage · auth · observability · redis · rate_limit
 ├── schemas/             HTTP Pydantic DTOs
 └── settings/            AUDIT_* settings
 ```
 
 **Hot path (staged):** `process_run` → `execute_platform_run`(one agent) → IDP `compose_idp` → optional outbox handoff to `fraud` / `computer_use` pools (updates `worker_pool` + `last_activity_at`) → `finalize_pending_completion` / `complete_run` on final stage ([ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md)). Stale reap keys off activity; Fraud/CU require `*_WORKERS_READY` in addition to enable flags.
 
-**Intentional coupling:** `api/platform.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
+**Intentional coupling:** `api/config.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
 
 ### Bounded contexts
 

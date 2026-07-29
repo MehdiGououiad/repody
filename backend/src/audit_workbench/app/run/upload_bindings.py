@@ -12,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
 from audit_workbench.runtime.run.contracts import FileBinding
-from audit_workbench.app.document_slots import resolve_document_slot_keys
-from audit_workbench.app.upload_validation import (
+from audit_workbench.app.uploads.document_slots import resolve_document_slot_keys
+from audit_workbench.app.uploads.validation import (
     UploadValidationError,
     validate_upload_batch,
     validate_upload_file,

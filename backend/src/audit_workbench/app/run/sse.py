@@ -7,7 +7,7 @@ from typing import Any
 
 import structlog
 
-from audit_workbench.app.redis_pool import get_redis
+from audit_workbench.infra.redis.pool import get_redis
 from audit_workbench.settings import get_settings
 
 log = structlog.get_logger(__name__)
