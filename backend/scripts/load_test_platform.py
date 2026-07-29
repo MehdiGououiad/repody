@@ -98,7 +98,7 @@ async def _phase_control_plane(client: httpx.AsyncClient, n: int) -> list[str]:
     return lines
 
 async def _pick_workflow(client: httpx.AsyncClient) -> str:
-    from audit_workbench.db.seed import SEED_WORKFLOW_ID
+    from audit_workbench.infra.db.seed import SEED_WORKFLOW_ID
 
     res = await client.get("/v1/workflows")
     res.raise_for_status()

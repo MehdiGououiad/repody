@@ -18,7 +18,7 @@ Repody VLM local development uses NuExtract through the OpenAI-compatible llama-
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | Vision-language model that maps document images → structured JSON fields (Repody VLM today) |
+| **Document model** | Catalog adapter that maps document images → fields or markdown (`repody:vlm`, `paddleocr:v6`, `glm:ocr` — see [docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
 | **Processing path** | How a document is read (`document_model` = direct image-to-schema) |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
 | **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
@@ -58,18 +58,20 @@ All audit runs are dispatched through Taskiq (Redis Streams); worker containers 
 
 ```
 backend/src/audit_workbench/
-├── api/                 HTTP routers → mostly delegate to services
-├── services/run/        Flat: lifecycle · commands · finalize · persistence · progress · processor · enqueue
+├── api/                 HTTP routers → app use cases
+├── app/                 Application use cases (run, workflow, operator, queue, …)
+│   └── run/             lifecycle · commands · processor · enqueue · progress · …
 ├── agents/idp/          contracts · compose · run · adapters/
 ├── agents/fraud/ · computer_use/   SKIPPED stubs + staged Taskiq pools
-├── platform/            contracts · recipe · pools · agent_metadata · metrics · operator · run helpers
-├── extraction/          pipeline · vlm · render · payloads · warmup · schema · parse · template_types · modes · types
-├── inference/           OpenAI-compat clients
-├── rules/               Logic + LLM evaluators
+├── runtime/             Pure shared: contracts · recipe · pools · agent_metadata · metrics
+├── extraction/          pipeline · vlm · nuextract · fields · render · paddleocr_v6 · glm_ocr[+sdk]
+├── inference/           OpenAI-compat + NuExtract cloud (functions)
+├── rules/               Logic + LLM evaluators (+ amounts)
 ├── catalog/             Document-model registry + probes
 ├── taskiq/              Worker entrypoint + async tasks
-├── db/ · schemas/ · storage/
-└── services/            workflows, operator jobs, enqueue, queue metrics, …
+├── infra/               db · storage · auth · observability
+├── schemas/             HTTP Pydantic DTOs
+└── settings/            AUDIT_* settings
 ```
 
 **Hot path (staged):** `process_run` → `execute_platform_run`(one agent) → IDP `compose_idp` → optional outbox handoff to `fraud` / `computer_use` pools (updates `worker_pool` + `last_activity_at`) → `finalize_pending_completion` / `complete_run` on final stage ([ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md)). Stale reap keys off activity; Fraud/CU require `*_WORKERS_READY` in addition to enable flags.
@@ -80,25 +82,25 @@ backend/src/audit_workbench/
 
 | Context | Responsibility | Key modules |
 |---------|----------------|-------------|
-| **Workflow configuration** | Templates, rules, deployment | `services/workflow/` |
-| **Audit execution** | Claim/complete, queue, worker | `services/run/`, `services/run/processor.py`, `services/run/enqueue.py`, `taskiq/` |
+| **Workflow configuration** | Templates, rules, deployment | `app/workflow/` |
+| **Audit execution** | Claim/complete, queue, worker | `app/run/`, `app/run/processor.py`, `app/run/enqueue.py`, `taskiq/` |
 | **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
-| **Platform / catalog** | Recipe, envelopes, registry, operator | `platform/`, `catalog/`, `services/operator/` |
+| **Platform / catalog** | Recipe, envelopes, registry, operator | `runtime/`, `catalog/`, `app/operator/` |
 
 ### Three-agent platform
 
-**IDP** lives under `agents/idp/`. **Fraud** / **Computer Use** are SKIPPED scaffolds under `agents/fraud/` and `agents/computer_use/` with dedicated Taskiq pools (`fraud`, `computer_use`) for independent scaling. IDP capacity pools remain `extract` / `fast`. Envelopes: `platform/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
+**IDP** lives under `agents/idp/`. **Fraud** / **Computer Use** are SKIPPED scaffolds under `agents/fraud/` and `agents/computer_use/` with dedicated Taskiq pools (`fraud`, `computer_use`) for independent scaling. IDP capacity pools remain `extract` / `fast`. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
 
-Domain events (`RunQueued`, `RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `platform/run/status.py`.
+Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `runtime/run/status.py`.
 
-**Run lifecycle (flat):** `services/run/lifecycle.py` (entity + pure transitions) · `commands.py` (claim/complete/fail) · `persistence.py` + `events.py`. Worker entry: `services/run/processor.py`.
+**Run lifecycle (flat):** `app/run/lifecycle.py` (entity + pure transitions) · `commands.py` (claim/complete/fail/finalize + event publish) · `persistence.py`. Worker entry: `app/run/processor.py`.
 
 ## Operator tools
 
 Operator endpoints are diagnostic/admin workflows, not the audit run hot path:
 
 - `api/operator.py` keeps HTTP concerns: routes, permissions, status codes, and typed response models.
-- `services/operator/` — job lifecycle (`jobs.py` + Redis persistence), benchmarks (`benchmarks.py` subprocess), direct VLM warmup (`warmup_repody_vlm`), form validation (`requests.py`), reports, and Keycloak token via `auth/keycloak_token.py`.
+- `app/operator/` — job lifecycle (`jobs.py` + Redis persistence), benchmarks (`benchmarks.py` subprocess), direct VLM warmup (`warmup_repody_vlm`), form validation (`requests.py`), reports, and Keycloak token via `infra/auth/keycloak_token.py`.
 
 ## Catalog package (unified)
 

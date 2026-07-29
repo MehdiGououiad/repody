@@ -9,7 +9,7 @@ from audit_workbench.extraction.modes import (
     resolve_read_path_for_document,
 )
 from audit_workbench.extraction.render import REPODY_VLM_RENDER
-from audit_workbench.extraction.payloads import _structured_payload
+from audit_workbench.extraction.nuextract import structured_chat_payload
 from audit_workbench.catalog.registry import parse_document_model
 from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
 from audit_workbench.extraction.types import SchemaFieldSpec
@@ -37,8 +37,8 @@ def test_nuextract_official_render_policy():
 def test_nuextract_payload_official_generation_defaults():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", template_type="verbatim-string")]
-    payload = _structured_payload(
-        spec=spec,
+    payload = structured_chat_payload(
+            model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",

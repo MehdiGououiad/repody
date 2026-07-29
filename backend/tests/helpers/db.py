@@ -12,9 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async
 from sqlalchemy.pool import NullPool
 
 # Register ORM tables on Base.metadata before truncate helpers run.
-import audit_workbench.db.models  # noqa: F401
-from audit_workbench.db.base import Base
-from audit_workbench.db.seed import seed_database
+import audit_workbench.infra.db.models  # noqa: F401
+from audit_workbench.infra.db.base import Base
+from audit_workbench.infra.db.seed import seed_database
 from audit_workbench.settings import clear_settings_cache
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -150,7 +150,7 @@ def bind_test_database(
     session_factory: async_sessionmaker,
 ) -> None:
     import audit_workbench.api.deps as deps
-    import audit_workbench.db.base as db_base
+    import audit_workbench.infra.db.base as db_base
     import audit_workbench.main as main_mod
 
     db_base.engine = engine
@@ -164,7 +164,7 @@ def patch_session_factory(
     session_factory: async_sessionmaker,
 ) -> None:
     import audit_workbench.api.deps as deps
-    import audit_workbench.db.base as db_base
+    import audit_workbench.infra.db.base as db_base
 
     monkeypatch.setattr(db_base, "async_session_factory", session_factory)
     monkeypatch.setattr(deps, "async_session_factory", session_factory)

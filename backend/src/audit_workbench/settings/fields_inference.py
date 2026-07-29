@@ -36,8 +36,11 @@ class InferenceSettingsFields:
     repody_vlm_timeout_seconds: float = Field(
         default=180.0,
         ge=30,
-        le=180.0,
-        description="VLM HTTP client ceiling; must not exceed worker task timeout.",
+        le=900.0,
+        description=(
+            "VLM HTTP client ceiling in seconds. Must stay <= "
+            "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
+        ),
     )
     repody_vlm_warmup_on_start: bool = Field(
         default=False,
@@ -49,8 +52,8 @@ class InferenceSettingsFields:
     repody_vlm_warmup_document: str | None = Field(
         default=None,
         description=(
-            "Optional path to a fixture document for VLM warmup. "
-            "Defaults to e2e/fixtures/documents/Facture.pdf at repo root."
+            "Optional path to a document for VLM warmup. "
+            "When unset, a synthetic 1×1 PNG is used (no product fixture)."
         ),
     )
     healthz_probe_inference: bool = Field(
@@ -71,7 +74,23 @@ class InferenceSettingsFields:
         default=True,
         description=(
             "Platform switch: allow NuExtract document-to-Markdown when a workflow "
-            "document enables markdown extraction."
+            "document enables markdown extraction (can run alongside structured fields)."
+        ),
+    )
+    repody_vlm_max_pages_per_request: int | None = Field(
+        default=None,
+        ge=1,
+        le=64,
+        description=(
+            "Optional client-side NuExtract page cap. None = send all PDF pages "
+            "(official examples). Set e.g. 6 when llama.cpp uses --limit-mm-per-prompt image:6."
+        ),
+    )
+    repody_vlm_enable_thinking: bool = Field(
+        default=False,
+        description=(
+            "NuExtract enable_thinking. When true, structured temperature uses 0.6 "
+            "(official thinking examples)."
         ),
     )
 
@@ -122,23 +141,26 @@ class InferenceSettingsFields:
     paddleocr_v6_timeout_seconds: float = Field(
         default=180.0,
         ge=30,
-        le=600.0,
-        description="HTTP timeout for PP-OCRv6 POST /ocr.",
+        le=900.0,
+        description=(
+            "HTTP timeout for PP-OCRv6 POST /ocr. Must stay <= "
+            "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
+        ),
     )
 
     glm_ocr_enabled: bool = Field(
         default=True,
         description=(
             "Register GLM-OCR (glm:ocr) as a markdown-only document model. "
-            "Requires llama-server with ggml-org/GLM-OCR-GGUF on "
-            "AUDIT_GLM_OCR_BASE_URL (default :8083)."
+            "Official path: zai-org GlmOcr SDK (PP-DocLayoutV3) + llama-server "
+            "ggml-org/GLM-OCR-GGUF on AUDIT_GLM_OCR_BASE_URL (default :8083)."
         ),
     )
     glm_ocr_base_url: str = Field(
         default="http://127.0.0.1:8083/v1",
         description=(
-            "GLM-OCR OpenAI-compatible API origin (include /v1). "
-            "Default :8083 avoids Keycloak (:8080) and NuExtract (:8081)."
+            "OpenAI-compatible OCR API origin for the official GlmOcr SDK "
+            "(include /v1). Default :8083 avoids Keycloak (:8080) and NuExtract (:8081)."
         ),
     )
     glm_ocr_served_model: str = Field(
@@ -148,8 +170,42 @@ class InferenceSettingsFields:
     glm_ocr_timeout_seconds: float = Field(
         default=180.0,
         ge=30,
-        le=600.0,
-        description="HTTP timeout for GLM-OCR chat/completions.",
+        le=900.0,
+        description=(
+            "HTTP timeout for GLM-OCR region OCR via the official SDK. Must stay <= "
+            "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
+        ),
+    )
+    glm_ocr_layout_device: str = Field(
+        default="cpu",
+        description=(
+            "Device for PP-DocLayoutV3 in the official SDK "
+            "(cpu | cuda | cuda:N). Prefer cpu when the GPU hosts llama-server."
+        ),
+    )
+    glm_ocr_layout_model_dir: str = Field(
+        default="PaddlePaddle/PP-DocLayoutV3_safetensors",
+        description=(
+            "PP-DocLayoutV3 model id/path for the official GLM-OCR SDK "
+            "(Hugging Face safetensors export)."
+        ),
+    )
+    glm_ocr_sdk_max_workers: int = Field(
+        default=4,
+        ge=1,
+        le=32,
+        description=(
+            "Official SDK region-OCR parallelism (pipeline.max_workers). "
+            "SDK default is 32; keep lower when llama-server -np is 1."
+        ),
+    )
+    glm_ocr_pdf_max_pages: int | None = Field(
+        default=None,
+        ge=1,
+        description=(
+            "Optional PDF page cap for official SDK page_loader.pdf_max_pages. "
+            "Unset (default) matches glmocr config.yaml null — no silent truncation."
+        ),
     )
 
     llm_validation_enabled: bool = Field(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from audit_workbench.agents.idp.adapters.mapping import document_extraction_from_legacy
+from audit_workbench.agents.idp.adapters.mapping import document_extraction_from_result
 from audit_workbench.agents.idp.contracts import (
     DocumentExtraction,
     DocumentSpec,
@@ -15,8 +15,8 @@ from audit_workbench.extraction.types import ExtractionIclExample, SchemaFieldSp
 from audit_workbench.extraction.modes import DEFAULT_READ_PATH_ID
 from audit_workbench.extraction.nuextract import normalize_template_type
 from audit_workbench.extraction.pipeline import get_extract_document
-from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
-from audit_workbench.services.run.helpers import resolve_run_doc_mime
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.app.run.helpers import resolve_run_doc_mime
 from audit_workbench.settings import get_settings
 
 
@@ -51,7 +51,7 @@ async def extract_one(
             raw_bytes if raw_bytes else None,
         )
         extract_document = get_extract_document()
-        legacy = await extract_document(
+        extracted = await extract_document(
             raw_bytes or None,
             mime,
             spec.label,
@@ -66,9 +66,9 @@ async def extract_one(
             extraction_icl_examples=icl_examples or None,
         )
         return Result.ok(
-            document_extraction_from_legacy(
+            document_extraction_from_result(
                 document_id=spec.id,
-                result=legacy,
+                result=extracted,
                 model_id=spec.document_model_id or "repody:vlm",
             )
         )

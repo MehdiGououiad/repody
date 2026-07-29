@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from audit_workbench.extraction.types import ExtractedFieldResult
-from audit_workbench.extraction.parse import normalize_amount, parse_numeric_value
+from audit_workbench.rules.amounts import normalize_amount, parse_numeric_value
 from audit_workbench.rules.value_coercion import is_iso_date_like
 
 from tests.fixtures.cih_releve_ground_truth import CihReleveGroundTruth

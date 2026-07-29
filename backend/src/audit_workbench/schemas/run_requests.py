@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from audit_workbench.platform.run.contracts import FileBinding, RunSnapshot
+from audit_workbench.runtime.run.contracts import FileBinding, RunSnapshot
 from audit_workbench.schemas.common import CamelModel
 from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
 

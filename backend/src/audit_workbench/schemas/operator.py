@@ -16,8 +16,8 @@ class OperatorWarmupConfig(CamelModel):
 
 class OperatorLimitsSchema(CamelModel):
     max_upload_bytes: int = Field(serialization_alias="maxUploadBytes")
-    nuextract_max_pages_per_request: int = Field(
-        default=6,
+    nuextract_max_pages_per_request: int | None = Field(
+        default=None,
         serialization_alias="nuextractMaxPagesPerRequest",
     )
     task_timeout_minutes: int = Field(serialization_alias="taskTimeoutMinutes")

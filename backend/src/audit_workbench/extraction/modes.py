@@ -105,10 +105,6 @@ def resolve_read_path_for_document(
     return spec, spec.id
 
 
-def read_path_used_label(path_id: str) -> str:
-    return read_path_label(path_id)
-
-
 def read_path_label(path_id: str) -> str:
     try:
         normalized = normalize_read_path_id(path_id)
@@ -235,10 +231,9 @@ def plan_extraction_detail(
         return "Schema placeholders (no file uploaded)"
     read_spec = parse_read_path(_read_doc_value(doc, "extraction_mode", DEFAULT_READ_PATH_ID))
     document_model_id = _read_doc_value(doc, "document_model_id")
-    parts = [
-        f"Read: {read_spec.label}",
-        f"Validation: {validation_mode_label(run_validation_mode)}",
-    ]
+    # Extraction step only — do not mention validation here (separate progress steps).
+    _ = run_validation_mode
+    parts = [f"Read: {read_spec.label}"]
     if document_model_id and read_spec.show_document_model:
         parts.append(f"Model: {public_document_model_label(document_model_id)}")
     return " · ".join(parts)

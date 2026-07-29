@@ -9,12 +9,12 @@ backend/tests/
   conftest.py              # shared fixtures (Postgres, ASGI client, live_client)
   helpers/ fixtures/
   unit/                    # pure — no live stack; prefer no DB
-    agents/ auth/ extraction/ inference/ observability/
-    platform/ rules/ services/ taskiq/
+    agents/ app/ extraction/ inference/ infra/{auth,observability}/
+    runtime/ rules/ taskiq/
   integration/             # ASGI + Postgres (or storage boundary); no workers
-    api/ auth/ services/ storage/
+    api/ app/ infra/{auth,storage}/
   live/                    # requires running API (+ workers for run completion)
-    api/ platform/ journeys/
+    api/ runtime/ journeys/
 
 e2e/tests/                 # Playwright UI journeys (real browser)
 reports/platform-tests/    # generated REPORT.md + HTML + JUnit

@@ -12,17 +12,17 @@ import pytest
 from audit_workbench.catalog.registry import parse_document_model
 from audit_workbench.extraction.types import ExtractedFieldResult, SchemaFieldSpec
 from audit_workbench.extraction.types import load_document_bundle
-from audit_workbench.extraction.parse import normalize_amount, parse_fields_json, parse_numeric_value
+from audit_workbench.extraction.fields import fields_from_nuextract_json
+from audit_workbench.rules.amounts import normalize_amount, parse_numeric_value
 from audit_workbench.extraction.nuextract import (
     NUEXTRACT_ENABLE_THINKING,
-    NUEXTRACT_MAX_PAGES_PER_REQUEST,
+    build_nuextract_template,
 )
-from audit_workbench.extraction.nuextract import build_vlm_template
 from audit_workbench.extraction.pipeline import extract_document
 from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
 from audit_workbench.extraction.vlm import extract_with_repody_vlm
-from audit_workbench.extraction.render import _encode_pages_for_vlm, _vlm_pages
-from audit_workbench.extraction.payloads import _fields_payload, _structured_payload
+from audit_workbench.extraction.render import encode_pages_as_image_urls, prepare_nuextract_pages
+from audit_workbench.extraction.nuextract import structured_chat_payload
 from audit_workbench.inference.factory import get_chat
 from audit_workbench.settings import get_settings
 from tests.fixtures.cih_releve_assertions import (
@@ -125,16 +125,15 @@ def test_cih_pdf_renders_two_png_pages_without_cap(ground_truth):
         "application/pdf",
         settings=get_settings(),
     )
-    pages, rendered = _vlm_pages(bundle)
+    pages, rendered = prepare_nuextract_pages(bundle)
     assert rendered == ground_truth.page_count == 2
     assert len(pages) == 2
     assert all(mime == "image/png" for _, mime in pages)
     assert all(len(raw) > 500 for raw, _ in pages)
-    assert rendered <= NUEXTRACT_MAX_PAGES_PER_REQUEST
 
 
 def test_cih_full_template_covers_scalar_list_and_object_array():
-    template = build_vlm_template(cih_full_schema())
+    template = build_nuextract_template(cih_full_schema())
     assert template["opening_balance"] == "number"
     assert template["debit_transaction_count"] == "integer"
     assert template["opening_balance_date"] == "date"
@@ -163,13 +162,13 @@ def test_cih_full_template_covers_scalar_list_and_object_array():
     ],
 )
 def test_cih_schema_template_types(schema_factory, field_name, expected_template):
-    template = build_vlm_template(schema_factory())
+    template = build_nuextract_template(schema_factory())
     assert template[field_name] == expected_template
 
 
 def _parse_golden_fields(schema: list[SchemaFieldSpec]) -> list[ExtractedFieldResult]:
     raw = json.dumps(build_cih_model_payload(schema))
-    return parse_fields_json(_fields_payload(raw, schema), schema)
+    return fields_from_nuextract_json(raw, schema)
 
 
 def assert_summary_fields(fields: list[ExtractedFieldResult], ground_truth) -> None:
@@ -251,8 +250,7 @@ def test_golden_object_array_nested_types(ground_truth):
 )
 def test_rejects_wrong_json_shapes_for_list_and_object_fields(bad_json, field_name):
     schema = cih_full_schema()
-    wrapped = _fields_payload(bad_json, schema)
-    field = field_map(parse_fields_json(wrapped, schema))[field_name]
+    field = field_map(fields_from_nuextract_json(bad_json, schema))[field_name]
     if field_name.endswith("_amounts") or field_name == "operation_dates":
         with pytest.raises((json.JSONDecodeError, AssertionError)):
             parsed = assert_is_json_list(field.value, field_name=field_name)

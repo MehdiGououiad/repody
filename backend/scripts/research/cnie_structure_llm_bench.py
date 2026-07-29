@@ -38,17 +38,17 @@ from audit_workbench.benchmarking.ocr import (
     score_gououiad_cnie_fields,
     score_gououiad_cnie_markdown,
 )
-from audit_workbench.extraction.paddleocr_common import (
+from audit_workbench.extraction.paddleocr_v6 import (
     file_type_for_mime,
+    markdown_from_ocr_result,
     paddle_error_message,
 )
-from audit_workbench.extraction.paddleocr_v6 import markdown_from_ocr_result
 from audit_workbench.extraction.types import SchemaFieldSpec, load_document_bundle
 from audit_workbench.extraction.vlm import (
     extract_with_repody_vlm,
     extract_with_repody_vlm_cloud,
 )
-from audit_workbench.storage.mime import sniff_mime
+from audit_workbench.infra.storage.mime import sniff_mime
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "e2e" / "fixtures" / "documents"
@@ -384,7 +384,7 @@ async def _qwen_text_to_json(
     raw_clean = re.sub(r"<think>[\s\S]*?</think>", "", raw, flags=re.IGNORECASE).strip()
     parsed = _parse_json_object(raw_clean)
     flat = _flatten_fields(parsed)
-    # Flat object — do NOT use NuExtract parse_fields_json (expects fields[]).
+    # Flat object projection (NuExtract fields_from_nuextract_json).
     fields = {f.name: str(flat.get(f.name, "") or "").strip() for f in schema}
     return fields, raw
 

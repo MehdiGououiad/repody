@@ -27,8 +27,8 @@ class PlatformConfigResponse(CamelModel):
     default_document_model_id: str = Field(serialization_alias="defaultDocumentModelId")
     default_read_path: str = Field(serialization_alias="defaultReadPath")
     document_models: list[DocumentModelSummary] = Field(serialization_alias="documentModels")
-    nuextract_max_pages_per_request: int = Field(
-        default=6,
+    nuextract_max_pages_per_request: int | None = Field(
+        default=None,
         serialization_alias="nuextractMaxPagesPerRequest",
     )
     llamacpp_base_url: str = Field(serialization_alias="llamacppBaseUrl")

@@ -92,7 +92,7 @@ See [CONTEXT.md](../CONTEXT.md) for the full sequence diagram and bounded contex
 ```
 backend/src/audit_workbench/
 ├── api/           HTTP routers → delegate to services
-├── services/      Business logic (runs, workflows, admission, dispatch)
+├── app/      Business logic (runs, workflows, admission, dispatch)
 ├── extraction/    Document pipeline, NuExtract contract, Repody VLM client
 ├── inference/     OpenAI-compat clients (VLM, validation LLM)
 ├── rules/         Logic + LLM evaluators

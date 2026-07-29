@@ -16,8 +16,8 @@ validate → review. Product direction is a **three-agent platform**:
 | **Computer use** | UI/system automation (later) |
 
 Without an explicit boundary, Fraud and Computer Use tend to get stuffed into
-`extraction/` or `services/run/validation.py`. Run lifecycle DDD
-(`services/run/lifecycle.py`, formerly under `domain/`) is already a good platform seam; IDP business logic was not
+`extraction/` or `app/run/validation.py`. Run lifecycle DDD
+(`app/run/lifecycle.py`, formerly under `domain/`) is already a good platform seam; IDP business logic was not
 yet a clean agent slice (mixed orchestration + I/O in phase functions).
 
 ## Decision
@@ -30,7 +30,7 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
    per-document soft failures on `IdpOutcome.errors`.
 4. **Handoff type** — `IdpOutcome` wrapped in `AgentOutcome` is the extension point
    for Fraud and Computer Use.
-5. **Strangler migration** — Introduce `audit_workbench.platform.contracts` and
+5. **Strangler migration** — Introduce `audit_workbench.runtime.contracts` and
    `audit_workbench.agents.idp` alongside existing modules; switch `process_run`
    only after compose + adapters are tested. No big-bang rewrite.
 
@@ -66,4 +66,4 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 - [Taskiq ADR](./001-taskiq-async-runs.md) — async runs stay platform/queue
 - [Clean Architecture skill](../../.agents/skills/clean-architecture/SKILL.md) — dependency rule
 - PEP 544 Protocols / callables for ports (not inheritance trees)
-- As-built layout: [idp-functional-agents.md](../architecture/idp-functional-agents.md) · Run lifecycle: `services/run/lifecycle.py` · Recipe: `platform/recipe.py` · Staged queues: [ADR 007](./007-staged-agent-queues-taskiq.md)
+- As-built layout: [idp-functional-agents.md](../architecture/idp-functional-agents.md) · Run lifecycle: `app/run/lifecycle.py` · Recipe: `runtime/recipe.py` · Staged queues: [ADR 007](./007-staged-agent-queues-taskiq.md)

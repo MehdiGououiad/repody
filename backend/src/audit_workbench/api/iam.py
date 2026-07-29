@@ -5,17 +5,17 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from audit_workbench.api.errors import raise_app_error
-from audit_workbench.auth import keycloak_admin as keycloak
-from audit_workbench.auth.casbin_authorizer import authorize
-from audit_workbench.auth.dependencies import get_current_principal, require_permission
-from audit_workbench.auth.principal import APP_REALM_ROLES, Principal
-from audit_workbench.auth.rbac_catalog import (
+from audit_workbench.infra.auth import keycloak_admin as keycloak
+from audit_workbench.infra.auth.casbin_authorizer import authorize
+from audit_workbench.infra.auth.dependencies import get_current_principal, require_permission
+from audit_workbench.infra.auth.principal import APP_REALM_ROLES, Principal
+from audit_workbench.infra.auth.rbac_catalog import (
     ROLE_DESCRIPTIONS,
     ROLE_LABELS,
     effective_permissions,
     list_role_permission_map,
 )
-from audit_workbench.platform.contracts.result import AppError, ErrorCode
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode
 from audit_workbench.schemas.iam import (
     CreateIamUserRequest,
     IamCatalogResponse,

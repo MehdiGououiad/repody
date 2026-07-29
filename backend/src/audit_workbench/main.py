@@ -22,18 +22,18 @@ from audit_workbench.api import (
     workflows,
 )
 from audit_workbench.api.openapi_config import install_openapi
-from audit_workbench.auth.dependencies import require_permission
-from audit_workbench.db.base import async_session_factory, engine
-from audit_workbench.db.seed import seed_database
+from audit_workbench.infra.auth.dependencies import require_permission
+from audit_workbench.infra.db.base import async_session_factory, engine
+from audit_workbench.infra.db.seed import seed_database
 from audit_workbench.inference.openai_compat import close_openai_clients
-from audit_workbench.observability.bootstrap import init_observability
-from audit_workbench.observability.middleware import RequestLoggingMiddleware
-from audit_workbench.observability.tracing import instrument_fastapi
-from audit_workbench.services.rate_limit import GlobalRateLimitMiddleware
-from audit_workbench.services.redis_pool import close_redis_pool
-from audit_workbench.services.run.dispatch import close_taskiq_brokers
+from audit_workbench.infra.observability.bootstrap import init_observability
+from audit_workbench.infra.observability.middleware import RequestLoggingMiddleware
+from audit_workbench.infra.observability.tracing import instrument_fastapi
+from audit_workbench.app.rate_limit import GlobalRateLimitMiddleware
+from audit_workbench.app.redis_pool import close_redis_pool
+from audit_workbench.app.run.dispatch import close_taskiq_brokers
 from audit_workbench.settings import get_settings
-from audit_workbench.storage.factory import init_storage
+from audit_workbench.infra.storage.factory import init_storage
 
 log = structlog.get_logger(__name__)
 
@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    from audit_workbench.services.operator import hydrate_operator_jobs_from_redis
+    from audit_workbench.app.operator import hydrate_operator_jobs_from_redis
     from audit_workbench.taskiq.broker import startup_taskiq_brokers
 
     # Independent startup work — FastAPI lifespan guidance: keep critical path short.
@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI):
         startup_taskiq_brokers(),
     )
     if settings.oidc_enabled:
-        from audit_workbench.auth.jwt_validator import warm_jwks_cache
+        from audit_workbench.infra.auth.jwt_validator import warm_jwks_cache
 
         try:
             await warm_jwks_cache(settings)
@@ -69,7 +69,7 @@ async def lifespan(app: FastAPI):
                 error=str(exc),
             )
     maintenance_stop = asyncio.Event()
-    from audit_workbench.services.maintenance import maintenance_loop, run_maintenance_cycle
+    from audit_workbench.app.maintenance import maintenance_loop, run_maintenance_cycle
 
     await run_maintenance_cycle()
     maintenance_task = asyncio.create_task(maintenance_loop(maintenance_stop))
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
     log.info("application_shutting_down", event_domain="platform")
     maintenance_stop.set()
     await maintenance_task
-    from audit_workbench.services.dispatch_outbox import drain_dispatch_tasks
+    from audit_workbench.app.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
     await close_taskiq_brokers()

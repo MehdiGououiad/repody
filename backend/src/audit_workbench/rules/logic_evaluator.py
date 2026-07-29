@@ -5,7 +5,7 @@ from typing import Any
 
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
-from audit_workbench.extraction.parse import parse_numeric_value
+from audit_workbench.rules.amounts import parse_numeric_value
 from audit_workbench.rules.table_aggregates import (
     LOGIC_TABLE_FUNCTIONS,
     count_rows_where,

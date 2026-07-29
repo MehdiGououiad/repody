@@ -37,29 +37,27 @@ agents/idp/
 agents/fraud/      SKIPPED execute_fraud
 agents/computer_use/  SKIPPED execute_computer_use
 
-platform/
+runtime/
   contracts/       Result, AgentOutcome, AgentContext
   recipe.py        resolve_recipe + one-stage execute_platform_run
   pools.py         pool ↔ agent map
   agent_metadata.py  handoff metadata + PendingCompletion
   run/             RunStatus, enqueue DTOs, id helpers
 
-services/run/
+app/run/
   lifecycle.py     entity + events + pure transitions
-  commands.py      claim / complete / fail
-  finalize.py      complete from pendingCompletion (final non-IDP stage)
+  commands.py      claim / complete / fail / finalize
   processor.py     claim (idp) / resume (later) + handoff / finalize
   handoff.py       reuse outbox row for next pool
-  persistence.py · events.py · snapshot.py · progress.py · intake.py
+  persistence.py · snapshot.py · progress.py · intake.py
 ```
 
 ## Ownership
 
 | Concern | Module |
 |---------|--------|
-| Claim / complete / fail | `services/run/` |
-| Finalize deferred completion | `services/run/finalize.py` |
-| Recipe + stage dispatch | `platform/recipe.py` |
+| Claim / complete / fail | `app/run/` |
+| Recipe + stage dispatch | `runtime/recipe.py` |
 | Extract + validate | `agents/idp/` |
 | VLM bytes → fields | `extraction/` (behind `adapters/extract.py`) |
 | Rule evaluation | `rules/` (behind `adapters/validate.py`) |

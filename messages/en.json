@@ -524,7 +524,7 @@
         "offlineBadge": "offline",
         "profileNuextractQ4Hint": "Official NuExtract3-GGUF: PDF → PNG @ 170 DPI → structured vision extraction.",
         "profilePaddleocrV6Hint": "PP-OCRv6 (official PaddleX OCR): document → text/Markdown only. Started by `pnpm dev:all` (:8868).",
-        "profileGlmOcrHint": "GLM-OCR (llama-server): document → text/Markdown only. Started by `pnpm dev:all` (:8083)."
+        "profileGlmOcrHint": "GLM-OCR (official SDK + llama-server): document → text/Markdown only. Started by `pnpm dev:all` (:8083)."
       },
       "docSource": {
         "title": "Documents & fields to extract",
@@ -556,6 +556,9 @@
           "empty": "No fields found in the template."
         },
         "objectFieldsLabel": "Nested fields",
+        "objectFieldsHint": "Fields inside this nested object.",
+        "objectFieldsEmpty": "No nested fields yet. Add one for each property to extract.",
+        "objectFieldIndex": "Field {index}",
         "addObjectField": "Add nested field",
         "removeObjectField": "Remove nested field",
         "namePlaceholder": "e.g. invoice_number",
@@ -573,6 +576,9 @@
         "addEnumValue": "Add value",
         "removeEnumValue": "Remove value",
         "rowColumnsLabel": "Columns per row",
+        "rowColumnsHint": "Each column is a cell in the repeating table row (name, type, and what to look for).",
+        "rowColumnsEmpty": "No columns yet. Add one for each cell in the table row (e.g. description, quantity, amount).",
+        "rowColumnIndex": "Column {index}",
         "addRowColumn": "Add column",
         "removeRowColumn": "Remove column",
         "suggestedType": "Suggested: {label}",

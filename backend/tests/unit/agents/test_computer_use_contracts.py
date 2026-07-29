@@ -11,8 +11,8 @@ from audit_workbench.agents.computer_use import (
 )
 from audit_workbench.agents.fraud.contracts import FraudOutcome
 from audit_workbench.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
-from audit_workbench.platform.contracts.agent import AgentId, AgentStatus
-from audit_workbench.platform.contracts.result import ErrorCode
+from audit_workbench.runtime.contracts.agent import AgentId, AgentStatus
+from audit_workbench.runtime.contracts.result import ErrorCode
 
 
 def _idp(run_id: str = "run-1") -> IdpOutcome:

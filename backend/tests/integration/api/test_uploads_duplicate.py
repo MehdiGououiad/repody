@@ -17,9 +17,9 @@ async def test_confirm_upload_accepts_real_gououiad_cnie_png_named_jpeg(
     from audit_workbench.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.upload_intents import record_upload_intent
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.db.base import async_session_factory
+    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.infra.storage.factory import get_storage
 
     fixture = (
         Path(__file__).resolve().parents[4]
@@ -55,9 +55,9 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
     from audit_workbench.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.upload_intents import record_upload_intent
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.db.base import async_session_factory
+    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.infra.storage.factory import get_storage
 
     storage = get_storage()
     await storage.ensure_bucket()
@@ -88,7 +88,7 @@ async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch
     """VALIDATION AppError → 422 (not legacy bare 400)."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()
@@ -128,9 +128,9 @@ async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_p
     from audit_workbench.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.upload_intents import record_upload_intent
-    from audit_workbench.storage.factory import get_storage
+    from audit_workbench.infra.db.base import async_session_factory
+    from audit_workbench.app.upload_intents import record_upload_intent
+    from audit_workbench.infra.storage.factory import get_storage
 
     storage = get_storage()
     await storage.ensure_bucket()

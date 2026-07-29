@@ -141,212 +141,225 @@ def _parse_stream_result(raw: str) -> dict[str, Any]:
     )
 
 
-class NuExtractCloudClient:
-    """Thin async client for NuExtract structured-extraction REST endpoints."""
-
-    def __init__(self, config: NuExtractCloudConfig) -> None:
-        if not (config.api_key or "").strip():
-            raise NuExtractCloudError(
-                "NuExtract cloud API key is missing. "
-                "Set AUDIT_NUEXTRACT_CLOUD_API_KEY."
-            )
-        self._config = config
-        self._base = config.base_url.rstrip("/")
-
-    def _headers(self) -> dict[str, str]:
-        return {"Authorization": f"Bearer {self._config.api_key.strip()}"}
-
-    def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            base_url=self._base,
-            headers=self._headers(),
-            timeout=httpx.Timeout(self._config.timeout_seconds),
+def _require_api_key(config: NuExtractCloudConfig) -> None:
+    if not (config.api_key or "").strip():
+        raise NuExtractCloudError(
+            "NuExtract cloud API key is missing. "
+            "Set AUDIT_NUEXTRACT_CLOUD_API_KEY."
         )
 
-    async def list_projects(self) -> list[dict[str, Any]]:
-        async with self._client() as client:
-            response = await client.get("/api/structured-extraction")
-            _raise_for_api_error(response, action="list projects")
-            data = response.json()
-            return data if isinstance(data, list) else []
 
-    async def create_project(
-        self,
-        *,
-        template: dict[str, Any],
-        instructions: str = "",
-        name: str = TMP_PROJECT_NAME,
-        description: str = "",
-    ) -> str:
-        body = {
-            "name": name,
-            "description": description,
-            "template": template,
-            "instructions": instructions or "",
-        }
-        async with self._client() as client:
-            response = await client.post("/api/structured-extraction", json=body)
-            _raise_for_api_error(response, action="create project")
-            project_id = response.json().get("id")
-            if not project_id:
-                raise NuExtractCloudError("NuExtract cloud create project returned no id.")
-            return str(project_id)
+def _http_client(config: NuExtractCloudConfig) -> httpx.AsyncClient:
+    _require_api_key(config)
+    return httpx.AsyncClient(
+        base_url=config.base_url.rstrip("/"),
+        headers={"Authorization": f"Bearer {config.api_key.strip()}"},
+        timeout=httpx.Timeout(config.timeout_seconds),
+    )
 
-    async def update_project(
-        self,
-        project_id: str,
-        *,
-        template: dict[str, Any],
-        instructions: str = "",
-        name: str | None = None,
-        description: str | None = None,
-    ) -> None:
-        body: dict[str, Any] = {
-            "template": template,
-            "instructions": instructions or "",
-        }
-        if name is not None:
-            body["name"] = name
-        if description is not None:
-            body["description"] = description
-        async with self._client() as client:
-            response = await client.patch(
-                f"/api/structured-extraction/{project_id}",
-                json=body,
-            )
-            _raise_for_api_error(response, action="update project")
 
-    async def delete_project(self, project_id: str) -> None:
-        async with self._client() as client:
-            response = await client.delete(f"/api/structured-extraction/{project_id}")
-            if response.status_code == 404:
-                return
-            _raise_for_api_error(response, action="delete project")
+async def list_projects(config: NuExtractCloudConfig) -> list[dict[str, Any]]:
+    async with _http_client(config) as client:
+        response = await client.get("/api/structured-extraction")
+        _raise_for_api_error(response, action="list projects")
+        data = response.json()
+        return data if isinstance(data, list) else []
 
-    async def submit_file_job(
-        self,
-        project_id: str,
-        *,
-        file_bytes: bytes,
-        filename: str,
-        mime_type: str,
-    ) -> str:
-        files = {"file": (filename, file_bytes, mime_type or "application/octet-stream")}
-        async with self._client() as client:
-            response = await client.post(
-                f"/api/structured-extraction/{project_id}/jobs",
-                files=files,
-            )
-            _raise_for_api_error(response, action="submit file job")
-            job_id = response.json().get("jobId") or response.json().get("job_id")
-            if not job_id:
-                raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
-            return str(job_id)
 
-    async def submit_text_job(self, project_id: str, text: str) -> str:
-        async with self._client() as client:
-            response = await client.post(
-                f"/api/structured-extraction/{project_id}/jobs",
-                content=text.encode("utf-8"),
-                headers={"Content-Type": "text/plain"},
-            )
-            _raise_for_api_error(response, action="submit text job")
-            job_id = response.json().get("jobId") or response.json().get("job_id")
-            if not job_id:
-                raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
-            return str(job_id)
+async def create_project(
+    config: NuExtractCloudConfig,
+    *,
+    template: dict[str, Any],
+    instructions: str = "",
+    name: str = TMP_PROJECT_NAME,
+    description: str = "",
+) -> str:
+    body = {
+        "name": name,
+        "description": description,
+        "template": template,
+        "instructions": instructions or "",
+    }
+    async with _http_client(config) as client:
+        response = await client.post("/api/structured-extraction", json=body)
+        _raise_for_api_error(response, action="create project")
+        project_id = response.json().get("id")
+        if not project_id:
+            raise NuExtractCloudError("NuExtract cloud create project returned no id.")
+        return str(project_id)
 
-    async def stream_job_result(self, job_id: str) -> dict[str, Any]:
-        async with self._client() as client:
-            async with client.stream(
-                "GET",
-                f"/api/jobs/{job_id}/stream",
-                headers={"Accept": "text/event-stream"},
-            ) as response:
-                if not response.is_success:
-                    body = (await response.aread()).decode("utf-8", errors="replace")
-                    detail = body
-                    try:
-                        parsed = json.loads(body)
-                        detail = parsed.get("message") or parsed.get("code") or body
-                    except Exception:
-                        pass
-                    raise NuExtractCloudError(
-                        f"NuExtract cloud stream failed ({response.status_code}): {detail}"
-                    )
-                chunks: list[str] = []
-                async for part in response.aiter_text():
-                    chunks.append(part)
-                return _parse_stream_result("".join(chunks))
 
-    async def extract_structured(
-        self,
-        *,
-        template: dict[str, Any],
-        file_bytes: bytes | None = None,
-        mime_type: str = "application/octet-stream",
-        filename: str | None = None,
-        text: str | None = None,
-        instructions: str = "",
-        project_id: str | None = None,
-    ) -> StructuredExtractionOutput:
-        """Run structured extraction via temp project (or a configured project id)."""
-        if bool(file_bytes is None) == bool(text is None):
-            raise NuExtractCloudError(
-                "Provide exactly one of file_bytes or text for NuExtract cloud extraction."
-            )
+async def update_project(
+    config: NuExtractCloudConfig,
+    project_id: str,
+    *,
+    template: dict[str, Any],
+    instructions: str = "",
+    name: str | None = None,
+    description: str | None = None,
+) -> None:
+    body: dict[str, Any] = {
+        "template": template,
+        "instructions": instructions or "",
+    }
+    if name is not None:
+        body["name"] = name
+    if description is not None:
+        body["description"] = description
+    async with _http_client(config) as client:
+        response = await client.patch(
+            f"/api/structured-extraction/{project_id}",
+            json=body,
+        )
+        _raise_for_api_error(response, action="update project")
 
-        configured = (project_id or self._config.project_id or "").strip() or None
-        ephemeral = configured is None
-        active_project = configured
 
-        if ephemeral:
-            active_project = await self.create_project(
-                template=template,
-                instructions=instructions,
+async def delete_project(config: NuExtractCloudConfig, project_id: str) -> None:
+    async with _http_client(config) as client:
+        response = await client.delete(f"/api/structured-extraction/{project_id}")
+        if response.status_code == 404:
+            return
+        _raise_for_api_error(response, action="delete project")
+
+
+async def submit_file_job(
+    config: NuExtractCloudConfig,
+    project_id: str,
+    *,
+    file_bytes: bytes,
+    filename: str,
+    mime_type: str,
+) -> str:
+    files = {"file": (filename, file_bytes, mime_type or "application/octet-stream")}
+    async with _http_client(config) as client:
+        response = await client.post(
+            f"/api/structured-extraction/{project_id}/jobs",
+            files=files,
+        )
+        _raise_for_api_error(response, action="submit file job")
+        job_id = response.json().get("jobId") or response.json().get("job_id")
+        if not job_id:
+            raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
+        return str(job_id)
+
+
+async def submit_text_job(
+    config: NuExtractCloudConfig, project_id: str, text: str
+) -> str:
+    async with _http_client(config) as client:
+        response = await client.post(
+            f"/api/structured-extraction/{project_id}/jobs",
+            content=text.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+        )
+        _raise_for_api_error(response, action="submit text job")
+        job_id = response.json().get("jobId") or response.json().get("job_id")
+        if not job_id:
+            raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
+        return str(job_id)
+
+
+async def stream_job_result(
+    config: NuExtractCloudConfig, job_id: str
+) -> dict[str, Any]:
+    async with _http_client(config) as client:
+        async with client.stream(
+            "GET",
+            f"/api/jobs/{job_id}/stream",
+            headers={"Accept": "text/event-stream"},
+        ) as response:
+            if not response.is_success:
+                body = (await response.aread()).decode("utf-8", errors="replace")
+                detail = body
+                try:
+                    parsed = json.loads(body)
+                    detail = parsed.get("message") or parsed.get("code") or body
+                except Exception:
+                    pass
+                raise NuExtractCloudError(
+                    f"NuExtract cloud stream failed ({response.status_code}): {detail}"
+                )
+            chunks: list[str] = []
+            async for part in response.aiter_text():
+                chunks.append(part)
+            return _parse_stream_result("".join(chunks))
+
+
+async def extract_structured(
+    config: NuExtractCloudConfig,
+    *,
+    template: dict[str, Any],
+    file_bytes: bytes | None = None,
+    mime_type: str = "application/octet-stream",
+    filename: str | None = None,
+    text: str | None = None,
+    instructions: str = "",
+    project_id: str | None = None,
+) -> StructuredExtractionOutput:
+    """Run structured extraction via temp project (or a configured project id)."""
+    if bool(file_bytes is None) == bool(text is None):
+        raise NuExtractCloudError(
+            "Provide exactly one of file_bytes or text for NuExtract cloud extraction."
+        )
+
+    configured = (project_id or config.project_id or "").strip() or None
+    ephemeral = configured is None
+    active_project = configured
+
+    if ephemeral:
+        active_project = await create_project(
+            config,
+            template=template,
+            instructions=instructions,
+        )
+    else:
+        await update_project(
+            config,
+            active_project,
+            template=template,
+            instructions=instructions,
+        )
+
+    assert active_project is not None
+    try:
+        if file_bytes is not None:
+            job_id = await submit_file_job(
+                config,
+                active_project,
+                file_bytes=file_bytes,
+                filename=filename or _filename_for_mime(mime_type),
+                mime_type=mime_type,
             )
         else:
-            await self.update_project(
-                active_project,
-                template=template,
-                instructions=instructions,
-            )
-
-        assert active_project is not None
-        try:
-            if file_bytes is not None:
-                job_id = await self.submit_file_job(
-                    active_project,
-                    file_bytes=file_bytes,
-                    filename=filename or _filename_for_mime(mime_type),
-                    mime_type=mime_type,
+            job_id = await submit_text_job(config, active_project, text or "")
+        payload = await stream_job_result(config, job_id)
+    finally:
+        if ephemeral:
+            try:
+                await delete_project(config, active_project)
+            except Exception as exc:
+                log.warning(
+                    "nuextract_cloud_tmp_project_delete_failed",
+                    project_id=active_project,
+                    error=repr(exc),
                 )
-            else:
-                job_id = await self.submit_text_job(active_project, text or "")
-            payload = await self.stream_job_result(job_id)
-        finally:
-            if ephemeral:
-                try:
-                    await self.delete_project(active_project)
-                except Exception as exc:
-                    log.warning(
-                        "nuextract_cloud_tmp_project_delete_failed",
-                        project_id=active_project,
-                        error=repr(exc),
-                    )
 
-        result = payload.get("result")
-        if not isinstance(result, dict):
-            raise NuExtractCloudError(
-                f"NuExtract cloud result missing or invalid: {payload!r}"
-            )
-        return StructuredExtractionOutput(
-            result=result,
-            raw_model_output=str(payload.get("rawModelOutput") or payload.get("raw_model_output") or ""),
-            thinking_trace=payload.get("thinkingTrace") or payload.get("thinking_trace"),
-            input_tokens=int(payload.get("inputTokens") or payload.get("input_tokens") or 0),
-            output_tokens=int(payload.get("outputTokens") or payload.get("output_tokens") or 0),
-            total_tokens=int(payload.get("totalTokens") or payload.get("total_tokens") or 0),
-            project_id=active_project,
-            job_id=job_id,
+    result = payload.get("result")
+    if not isinstance(result, dict):
+        raise NuExtractCloudError(
+            f"NuExtract cloud result missing or invalid: {payload!r}"
         )
+    return StructuredExtractionOutput(
+        result=result,
+        raw_model_output=str(
+            payload.get("rawModelOutput") or payload.get("raw_model_output") or ""
+        ),
+        thinking_trace=payload.get("thinkingTrace") or payload.get("thinking_trace"),
+        input_tokens=int(payload.get("inputTokens") or payload.get("input_tokens") or 0),
+        output_tokens=int(
+            payload.get("outputTokens") or payload.get("output_tokens") or 0
+        ),
+        total_tokens=int(payload.get("totalTokens") or payload.get("total_tokens") or 0),
+        project_id=active_project,
+        job_id=job_id,
+    )

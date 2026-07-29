@@ -5,9 +5,9 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.errors import raise_app_error
-from audit_workbench.platform.run.contracts import EnqueueRunRequest
+from audit_workbench.runtime.run.contracts import EnqueueRunRequest
 from audit_workbench.schemas.workflow import RunCreatedResponse
-from audit_workbench.services.run.enqueue import enqueue_run
+from audit_workbench.app.run.enqueue import enqueue_run
 
 
 async def enqueue_run_http(

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from audit_workbench.agents.idp.contracts import IdpOutcome
-from audit_workbench.platform.contracts.result import AppError
+from audit_workbench.runtime.contracts.result import AppError
 
 
 @dataclass(frozen=True, slots=True)

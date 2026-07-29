@@ -530,7 +530,7 @@
         "offlineBadge": "hors ligne",
         "profileNuextractQ4Hint": "NuExtract3-GGUF officiel : PDF → PNG @ 170 DPI → extraction structurée vision.",
         "profilePaddleocrV6Hint": "PP-OCRv6 (OCR PaddleX officiel) : document → texte/Markdown uniquement. Démarré par `pnpm dev:all` (:8868).",
-        "profileGlmOcrHint": "GLM-OCR (llama-server) : document → texte/Markdown uniquement. Démarré par `pnpm dev:all` (:8083)."
+        "profileGlmOcrHint": "GLM-OCR (SDK officiel + llama-server) : document → texte/Markdown uniquement. Démarré par `pnpm dev:all` (:8083)."
       },
       "docSource": {
         "title": "Documents et champs à extraire",
@@ -562,6 +562,9 @@
           "empty": "Aucun champ trouvé dans le modèle."
         },
         "objectFieldsLabel": "Champs imbriqués",
+        "objectFieldsHint": "Champs à l'intérieur de cet objet imbriqué.",
+        "objectFieldsEmpty": "Aucun champ imbriqué. Ajoutez-en un pour chaque propriété à extraire.",
+        "objectFieldIndex": "Champ {index}",
         "addObjectField": "Ajouter un champ imbriqué",
         "removeObjectField": "Retirer le champ imbriqué",
         "namePlaceholder": "ex. numero_facture",
@@ -579,6 +582,9 @@
         "addEnumValue": "Ajouter une valeur",
         "removeEnumValue": "Retirer la valeur",
         "rowColumnsLabel": "Colonnes par ligne",
+        "rowColumnsHint": "Chaque colonne est une cellule de la ligne répétée (nom, type et ce qu'il faut trouver).",
+        "rowColumnsEmpty": "Aucune colonne. Ajoutez-en une pour chaque cellule (ex. prestation, quantité, montant).",
+        "rowColumnIndex": "Colonne {index}",
         "addRowColumn": "Ajouter une colonne",
         "removeRowColumn": "Retirer la colonne",
         "suggestedType": "Suggestion : {label}",

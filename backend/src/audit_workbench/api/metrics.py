@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
 from audit_workbench.schemas.metrics import MetricsResponse
-from audit_workbench.services import metrics_service
+from audit_workbench.app import metrics_service
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 

@@ -271,7 +271,7 @@ async def test_workflow_put_create_and_post_put_upsert(client):
     assert upsert.json()["workflow"]["name"] == "PUT updated"
 
 
-from audit_workbench.db.seed import SEED_API_KEY
+from audit_workbench.infra.db.seed import SEED_API_KEY
 
 
 @pytest.mark.asyncio

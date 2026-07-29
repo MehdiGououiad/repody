@@ -1,19 +1,28 @@
-"""NuExtract3 types, constants, and JSON template builders."""
+"""NuExtract3 types, templates, and chat.completions payloads.
+
+Docs:
+  https://huggingface.co/numind/NuExtract3-GGUF
+  https://github.com/numindai/nuextract
+"""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
-from audit_workbench.extraction.types import SchemaFieldSpec
-from audit_workbench.settings import Settings
+from audit_workbench.extraction.types import ExtractionIclExample, SchemaFieldSpec
+from audit_workbench.settings import Settings, get_settings
 
 # https://huggingface.co/numind/NuExtract3-GGUF
 # https://github.com/numindai/nuextract — non-thinking / markdown examples
 NUEXTRACT_PDF_DPI = 170
 NUEXTRACT_ENABLE_THINKING = False
-NUEXTRACT_MAX_PAGES_PER_REQUEST = 6
+# Official PDF examples send every page. None = no client-side cap (match docs).
+# Set AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST to cap for low-memory llama.cpp.
+NUEXTRACT_MAX_PAGES_PER_REQUEST: int | None = None
 NUEXTRACT_STRUCTURED_TEMPERATURE = 0.2
 NUEXTRACT_MARKDOWN_TEMPERATURE = 0.0
+NUEXTRACT_THINKING_TEMPERATURE = 0.6
 
 
 def extraction_inference_profile_key(*, settings: Settings) -> str:
@@ -79,20 +88,13 @@ NUEXTRACT_TEMPLATE_TYPES = (
 
 DEFAULT_NUEXTRACT_TEMPLATE_TYPE = "verbatim-string"
 
-# HF prose sometimes uses short aliases; TYPES.md is the source of truth.
-NUEXTRACT_TYPE_ALIASES = {
-    "email": "email-address",
-    "phone": "phone-number",
-    "tel": "phone-number",
-}
-
 
 def canonical_nuextract_leaf_type(value: str | None) -> str:
-    """Map a leaf type string to the TYPES.md form (pass through unknowns)."""
+    """Pass through official TYPES.md leaf names (no platform aliases)."""
     raw = (value or "").strip()
     if not raw:
         return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
-    return NUEXTRACT_TYPE_ALIASES.get(raw, raw)
+    return raw
 
 
 def is_list_template_type(value: str | None) -> bool:
@@ -156,19 +158,29 @@ def normalize_template_type(value: str | None) -> str:
     return raw
 
 
+def suggest_template_type(name: str, description: str = "") -> str:
+    """Official default leaf type (no name/description heuristics)."""
+    del name, description
+    return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+
+
+def resolve_template_type(
+    field_name: str, description: str = "", template_type: str | None = None
+) -> str:
+    """Use explicit template type when set, otherwise the NuExtract default."""
+    del field_name, description
+    explicit = (template_type or "").strip()
+    if explicit:
+        return normalize_template_type(explicit)
+    return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+
+
 def build_field_template_node(field: SchemaFieldSpec) -> Any:
     """Recursive NuExtract template node for one schema field."""
-    # Deferred: template_types imports normalize_template_type from this module.
-    from audit_workbench.extraction.template_types import resolve_template_type
-
     resolved = resolve_template_type(field.name, field.description, field.template_type)
     children = [c for c in (field.children or []) if c.name.strip()]
-    # Nested children without object-array → official object group `{}`.
-    as_object = is_object_template_type(resolved) or (
-        bool(children) and not is_object_array_template_type(resolved)
-    )
 
-    if as_object or is_object_array_template_type(resolved):
+    if is_object_template_type(resolved) or is_object_array_template_type(resolved):
         row: dict[str, Any] = {}
         for child in children:
             row[child.name.strip()] = build_field_template_node(child)
@@ -179,17 +191,23 @@ def build_field_template_node(field: SchemaFieldSpec) -> Any:
 
     if is_multi_enum_template_type(resolved):
         values = _clean_enum_values(field.enum_values)
-        # Official multi-enum: [["A", "B", ...]] with ≥2 choices — never invent placeholders.
-        if len(values) >= 2:
-            return [values]
-        return ["verbatim-string"]
+        # Official multi-enum: [["A", "B", ...]] with ≥2 choices.
+        if len(values) < 2:
+            raise ValueError(
+                f"multi-enum field {field.name!r} requires at least 2 choices "
+                f"(got {len(values)})"
+            )
+        return [values]
 
     if is_enum_template_type(resolved):
         values = _clean_enum_values(field.enum_values)
-        # Official enum: ["a", "b", ...] with ≥2 choices — never invent "other".
-        if len(values) >= 2:
-            return values
-        return "verbatim-string"
+        # Official enum: ["a", "b", ...] with ≥2 choices.
+        if len(values) < 2:
+            raise ValueError(
+                f"enum field {field.name!r} requires at least 2 choices "
+                f"(got {len(values)})"
+            )
+        return values
 
     if is_list_template_type(resolved):
         return [list_template_scalar_type(resolved)]
@@ -197,7 +215,8 @@ def build_field_template_node(field: SchemaFieldSpec) -> Any:
     return template_type_to_nuextract_leaf(resolved)
 
 
-def build_vlm_template(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
+def build_nuextract_template(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
+    """Official NuExtract JSON template object from schema fields."""
     template: dict[str, Any] = {}
     for field in schema:
         name = field.name.strip()
@@ -219,3 +238,109 @@ def _clean_enum_values(values: list[str] | None) -> list[str]:
         seen.add(token)
         cleaned.append(token)
     return cleaned
+
+
+# --- Chat completions (official NuExtract multimodal / markdown) ---
+
+def build_nuextract_instructions(
+    schema: list[SchemaFieldSpec],
+    *,
+    document_instructions: str = "",
+) -> str:
+    """Official ``instructions`` — workflow document notes only."""
+    _ = schema
+    return (document_instructions or "").strip()
+
+
+def build_icl_messages(examples: list[ExtractionIclExample]) -> list[dict[str, Any]]:
+    """In-context examples as developer-role message pairs."""
+    messages: list[dict[str, Any]] = []
+    for example in examples:
+        input_text = example.input.strip()
+        output_text = example.output.strip()
+        if not input_text or not output_text:
+            continue
+        messages.append(
+            {
+                "role": "developer",
+                "content": [
+                    {"type": "text", "text": input_text},
+                    {"type": "text", "text": output_text},
+                ],
+            }
+        )
+    return messages
+
+
+def dump_nuextract_template(template: Any) -> str:
+    """Serialize template like NuExtract3 multimodal examples (indent=4)."""
+    return json.dumps(template, ensure_ascii=False, indent=4)
+
+
+_THINKING_END_TAGS = ("</think>", "</" + "think" + ">")
+
+
+def strip_thinking(raw: str) -> str:
+    """Drop NuExtract reasoning wrapper when thinking mode is enabled."""
+    for tag in _THINKING_END_TAGS:
+        if tag in raw:
+            return raw.split(tag, 1)[1].strip()
+    return raw.strip()
+
+
+def structured_chat_payload(
+    *,
+    model: str,
+    content: list[dict[str, Any]],
+    schema: list[SchemaFieldSpec],
+    extraction_instructions: str,
+    extraction_icl_examples: list[ExtractionIclExample] | None = None,
+) -> dict[str, Any]:
+    """Official structured extraction chat.completions body."""
+    settings = get_settings()
+    enable_thinking = bool(settings.repody_vlm_enable_thinking)
+    temperature = (
+        NUEXTRACT_THINKING_TEMPERATURE
+        if enable_thinking
+        else NUEXTRACT_STRUCTURED_TEMPERATURE
+    )
+    # Official ICL demos use temperature 0 when examples are present.
+    if extraction_icl_examples and not enable_thinking:
+        temperature = 0.0
+
+    payload: dict[str, Any] = {
+        "model": model,
+        "temperature": temperature,
+        "messages": [
+            *build_icl_messages(extraction_icl_examples or []),
+            {"role": "user", "content": content},
+        ],
+        "chat_template_kwargs": {
+            "template": dump_nuextract_template(build_nuextract_template(schema)),
+            "enable_thinking": enable_thinking,
+        },
+    }
+    instructions = build_nuextract_instructions(
+        schema, document_instructions=extraction_instructions
+    )
+    if instructions:
+        payload["chat_template_kwargs"]["instructions"] = instructions
+    return payload
+
+
+def markdown_chat_payload(
+    *,
+    model: str,
+    content: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Official markdown-mode chat.completions body."""
+    settings = get_settings()
+    return {
+        "model": model,
+        "temperature": NUEXTRACT_MARKDOWN_TEMPERATURE,
+        "messages": [{"role": "user", "content": content}],
+        "chat_template_kwargs": {
+            "mode": "markdown",
+            "enable_thinking": bool(settings.repody_vlm_enable_thinking),
+        },
+    }

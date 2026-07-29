@@ -6,7 +6,7 @@ import asyncio
 import subprocess
 import sys
 
-from audit_workbench.db.base import engine
+from audit_workbench.infra.db.base import engine
 
 
 async def _bootstrap() -> None:

@@ -236,6 +236,14 @@ class RunPollResponse(CamelModel):
     error: str | None = None
 
 
+class RunPollStatus(CamelModel):
+    """Lightweight status-only poll (no audit detail payload)."""
+
+    status: str
+    progress: RunProgressSchema | None = None
+    error: str | None = None
+
+
 class RuleTemplateSchema(CamelModel):
     id: str
     name: str

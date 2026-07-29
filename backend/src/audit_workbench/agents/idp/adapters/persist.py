@@ -10,27 +10,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from audit_workbench.agents.idp.contracts import DocumentExtraction, ValidationOutput
-from audit_workbench.db.models import (
+from audit_workbench.infra.db.models import (
     ExtractedField,
     RuleResult,
     Run,
     RunDocument,
 )
-from audit_workbench.extraction.modes import validation_mode_label
-from audit_workbench.platform.agent_metadata import PendingCompletion, store_pending_completion
-from audit_workbench.platform.contracts.result import AppError, ErrorCode, Result
-from audit_workbench.services.mappers import duration_ms_between
-from audit_workbench.services.run.commands import CompleteRunRequest, complete_run
-from audit_workbench.services.run.events import publish_run_domain_events
-from audit_workbench.services.run.helpers import extraction_step_detail as meta_step_detail
-from audit_workbench.services.run.helpers import meta_to_dict, new_id
-from audit_workbench.services.run.lifecycle import RunCompletionOutcome
-from audit_workbench.services.run.persistence import (
+from audit_workbench.extraction.modes import completed_extraction_detail, validation_mode_label
+from audit_workbench.runtime.agent_metadata import PendingCompletion, store_pending_completion
+from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
+from audit_workbench.runtime.run.ids import new_id
+from audit_workbench.app.mappers import duration_ms_between
+from audit_workbench.app.run.commands import (
+    CompleteRunRequest,
+    complete_run,
+    publish_run_domain_events,
+)
+from audit_workbench.app.run.helpers import meta_to_dict
+from audit_workbench.app.run.lifecycle import RunCompletionOutcome
+from audit_workbench.app.run.persistence import (
     bind_commit,
     bind_load,
     bind_save,
 )
-from audit_workbench.services.run.progress import progress_snapshot
+from audit_workbench.app.run.progress import progress_snapshot
 from audit_workbench.settings import get_settings
 
 
@@ -47,7 +50,7 @@ def extraction_meta_to_dict(doc: DocumentExtraction) -> dict:
 
 
 def extraction_step_detail(doc: DocumentExtraction) -> str:
-    return meta_step_detail(doc.meta)
+    return completed_extraction_detail(doc.meta)
 
 
 async def ensure_run_document(

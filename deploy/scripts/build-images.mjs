@@ -20,7 +20,7 @@ const webTag =
   backendTag;
 const { push, pushOnly, only } = parseArgs(process.argv);
 const backendExtras = normalizeBackendExtras(
-  process.env.REPODY_BACKEND_EXTRAS ?? "otel",
+  process.env.REPODY_BACKEND_EXTRAS ?? "otel,glmocr",
 );
 const includeBenchmarkFixtures = /^(1|true|yes)$/i.test(
   process.env.REPODY_INCLUDE_BENCHMARK_FIXTURES ?? "",

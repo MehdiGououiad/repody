@@ -1,4 +1,4 @@
-"""Map legacy snapshot / rule dicts / extraction types → IDP contracts.
+"""Map run snapshot / rule dicts / extraction types → IDP contracts.
 
 Adapters may import snapshot helpers and extraction base types. Pure slices must not.
 """
@@ -25,7 +25,7 @@ from audit_workbench.extraction.schema import (
     merge_field_row,
 )
 from audit_workbench.rules.types import RuleEvalResult
-from audit_workbench.services.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def _schema_field_from_row(row: dict) -> SchemaField | None:
@@ -149,7 +149,7 @@ def build_idp_input(
     )
 
 
-def extracted_field_from_legacy(row: ExtractedFieldResult) -> ExtractedField:
+def extracted_field_from_result(row: ExtractedFieldResult) -> ExtractedField:
     return ExtractedField(
         key=row.key,
         value=row.value,
@@ -160,7 +160,7 @@ def extracted_field_from_legacy(row: ExtractedFieldResult) -> ExtractedField:
     )
 
 
-def document_extraction_from_legacy(
+def document_extraction_from_result(
     *,
     document_id: str,
     result: ExtractionResult,
@@ -173,7 +173,7 @@ def document_extraction_from_legacy(
         meta = replace(meta, document_model_id=model_id)
     return DocumentExtraction(
         document_id=document_id,
-        fields=tuple(extracted_field_from_legacy(f) for f in result.fields),
+        fields=tuple(extracted_field_from_result(f) for f in result.fields),
         markdown_text=result.markdown_text if result.markdown_text is not None else meta.markdown_text,
         raw_text=result.raw_text if result.raw_text is not None else meta.raw_text,
         meta=meta,

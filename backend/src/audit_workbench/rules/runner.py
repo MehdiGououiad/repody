@@ -120,7 +120,7 @@ async def evaluate_rules(
     results: list[RuleEvalResult] = []
     for rule in expanded:
         kind = rule_kind(rule)
-        if on_rule_start is not None and kind == "llm":
+        if on_rule_start is not None:
             await on_rule_start(rule)
         rule_id = rule.get("id") or ""
 

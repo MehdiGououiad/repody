@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from audit_workbench.api.deps import get_session
 from audit_workbench.api.errors import raise_app_error
-from audit_workbench.auth.dependencies import get_current_principal
-from audit_workbench.auth.principal import Principal
+from audit_workbench.infra.auth.dependencies import get_current_principal
+from audit_workbench.infra.auth.principal import Principal
 from audit_workbench.schemas.uploads import (
     ConfirmUploadItem,
     ConfirmUploadRequest,
@@ -20,19 +20,19 @@ from audit_workbench.schemas.uploads import (
     UploadItem,
     UploadResponse,
 )
-from audit_workbench.services.upload_intents import (
+from audit_workbench.app.upload_intents import (
     confirm_upload_intent,
     record_upload_intent,
 )
-from audit_workbench.services.upload_validation import (
+from audit_workbench.app.upload_validation import (
     UploadValidationError,
     validate_upload_batch,
     validate_upload_file,
 )
 from audit_workbench.settings import get_settings
-from audit_workbench.storage.base import PresignedPut
-from audit_workbench.storage.factory import get_storage
-from audit_workbench.storage.mime import is_allowed_mime, sanitize_filename
+from audit_workbench.infra.storage.base import PresignedPut
+from audit_workbench.infra.storage.factory import get_storage
+from audit_workbench.infra.storage.mime import is_allowed_mime, sanitize_filename
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])
 

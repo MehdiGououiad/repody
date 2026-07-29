@@ -59,7 +59,20 @@ function resolvePaths() {
   const imageMinTokens = Number(env.LLAMACPP_IMAGE_MIN_TOKENS || 1024);
   const imageMaxTokens = Number(env.LLAMACPP_IMAGE_MAX_TOKENS || 1024);
   const ubatchSize = Number(env.LLAMACPP_UBATCH_SIZE || 1024);
-  const mtmdBatchMaxTokens = Number(env.LLAMACPP_MTMD_BATCH_MAX_TOKENS || 1024);
+  // Newer LM Studio / llama.cpp builds dropped --mtmd-batch-max-tokens.
+  // Set LLAMACPP_MTMD_BATCH_MAX_TOKENS=0 (or empty) to force-disable; otherwise probe --help.
+  const mtmdRaw = env.LLAMACPP_MTMD_BATCH_MAX_TOKENS;
+  let mtmdBatchMaxTokens = null;
+  if (mtmdRaw !== undefined && String(mtmdRaw).trim() !== "") {
+    const n = Number(mtmdRaw);
+    mtmdBatchMaxTokens = Number.isFinite(n) && n > 0 ? n : null;
+  } else if (exe && fs.existsSync(exe)) {
+    const help = spawnSync(exe, ["--help"], { encoding: "utf8", windowsHide: true });
+    const helpText = `${help.stdout || ""}\n${help.stderr || ""}`;
+    if (helpText.includes("--mtmd-batch-max-tokens")) {
+      mtmdBatchMaxTokens = 1024;
+    }
+  }
   const flashAttn = (env.LLAMACPP_FLASH_ATTN || "on").trim().toLowerCase();
   if (env.LLAMACPP_WARMUP?.trim()) {
     process.env.LLAMACPP_WARMUP = env.LLAMACPP_WARMUP.trim();
@@ -105,11 +118,11 @@ function logLaunchFlags(paths) {
     `-ub ${paths.ubatchSize}`,
     `--image-min-tokens ${paths.imageMinTokens}`,
     `--image-max-tokens ${paths.imageMaxTokens}`,
-    `--mtmd-batch-max-tokens ${paths.mtmdBatchMaxTokens}`,
-    "--mmproj-offload",
-    "--jinja",
-    "-rea off",
   ];
+  if (paths.mtmdBatchMaxTokens != null) {
+    parts.push(`--mtmd-batch-max-tokens ${paths.mtmdBatchMaxTokens}`);
+  }
+  parts.push("--mmproj-offload", "--jinja", "-rea off");
   if (paths.device) parts.push(`--device ${paths.device}`);
   console.log(`  ${parts.join(", ")}`);
 }
@@ -165,15 +178,18 @@ function buildArgs(paths) {
     String(paths.imageMinTokens),
     "--image-max-tokens",
     String(paths.imageMaxTokens),
-    "--mtmd-batch-max-tokens",
-    String(paths.mtmdBatchMaxTokens),
+  ];
+  if (paths.mtmdBatchMaxTokens != null) {
+    args.push("--mtmd-batch-max-tokens", String(paths.mtmdBatchMaxTokens));
+  }
+  args.push(
     "--mmproj-offload",
     "-a",
     paths.modelAlias,
     "--jinja",
     "-rea",
     "off",
-  ];
+  );
   if (paths.device) {
     args.push("--device", paths.device);
   }

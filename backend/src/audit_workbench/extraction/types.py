@@ -16,7 +16,6 @@ __all__ = [
     "MARKDOWN_TEXT_MAX_CHARS",
     "SchemaFieldSpec",
     "load_document_bundle",
-    "truncate_markdown_text",
     "truncate_text",
 ]
 
@@ -98,20 +97,6 @@ def truncate_text(text: str | None, *, max_chars: int = MARKDOWN_TEXT_MAX_CHARS)
     stripped = text.strip()
     if not stripped:
         return None
-    if len(stripped) <= max_chars:
-        return stripped
-    return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"
-
-
-def truncate_markdown_text(text: str | None, *, max_chars: int = MARKDOWN_TEXT_MAX_CHARS) -> str | None:
-    if not text:
-        return None
-    stripped = text.strip()
-    if not stripped:
-        return None
-    from audit_workbench.extraction.markdown_normalize import normalize_document_markdown
-
-    stripped = normalize_document_markdown(stripped) or stripped
     if len(stripped) <= max_chars:
         return stripped
     return f"{stripped[:max_chars]}\n\n… ({len(stripped) - max_chars:,} characters truncated)"

@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
+from audit_workbench.catalog.registry import list_document_models
 from audit_workbench.extraction.branding import (
     GLM_OCR_CATALOG_ID,
     PADDLEOCR_V6_CATALOG_ID,
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_CLOUD_CATALOG_ID,
 )
-from audit_workbench.catalog.registry import list_document_models
 from audit_workbench.extraction.render import RENDER_POLICIES
 from audit_workbench.schemas.model_runtime import (
     ConfigScope,
@@ -263,7 +263,7 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             key="glm_ocr_base_url",
             env_var="AUDIT_GLM_OCR_BASE_URL",
             label="OpenAI API base URL",
-            description="llama-server /v1 origin (default http://127.0.0.1:8083/v1).",
+            description="llama-server /v1 origin for official SDK region OCR (default :8083/v1).",
             value=settings.glm_ocr_base_url,
             restart="worker",
         ),
@@ -279,8 +279,45 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             key="glm_ocr_timeout_seconds",
             env_var="AUDIT_GLM_OCR_TIMEOUT_SECONDS",
             label="Request timeout (s)",
-            description="HTTP timeout for chat/completions.",
+            description="HTTP timeout for official SDK region OCR.",
             value=settings.glm_ocr_timeout_seconds,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_layout_device",
+            env_var="AUDIT_GLM_OCR_LAYOUT_DEVICE",
+            label="Layout device",
+            description="PP-DocLayoutV3 device (cpu recommended when GPU runs llama).",
+            value=settings.glm_ocr_layout_device,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_layout_model_dir",
+            env_var="AUDIT_GLM_OCR_LAYOUT_MODEL_DIR",
+            label="Layout model",
+            description="PP-DocLayoutV3 HF id or local path (safetensors).",
+            value=settings.glm_ocr_layout_model_dir,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_sdk_max_workers",
+            env_var="AUDIT_GLM_OCR_SDK_MAX_WORKERS",
+            label="SDK region workers",
+            description=(
+                "Official SDK pipeline.max_workers (SDK default 32; keep low when "
+                "llama-server -np is 1)."
+            ),
+            value=settings.glm_ocr_sdk_max_workers,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_pdf_max_pages",
+            env_var="AUDIT_GLM_OCR_PDF_MAX_PAGES",
+            label="PDF max pages",
+            description=(
+                "Optional SDK pdf_max_pages cap. Empty = official unlimited (null)."
+            ),
+            value=settings.glm_ocr_pdf_max_pages,
             restart="worker",
         ),
     ]
@@ -331,12 +368,12 @@ def _deployment_notes() -> list[DeploymentNote]:
             ),
         ),
         DeploymentNote(
-            change_kind="GLM-OCR (llama-server)",
-            action="pnpm glmocr:serve, set AUDIT_GLM_OCR_*",
+            change_kind="GLM-OCR (official SDK + llama-server)",
+            action="uv sync --extra glmocr; pnpm glmocr:serve; set AUDIT_GLM_OCR_*",
             detail=(
-                "glm:ocr calls OpenAI chat/completions on :8083 with "
-                "ggml-org/GLM-OCR-GGUF (quantized zai-org/GLM-OCR; image + "
-                "\"Text Recognition:\")."
+                "glm:ocr uses GlmOcr(mode=selfhosted) + PP-DocLayoutV3; region OCR "
+                "hits llama-server :8083 (ggml-org/GLM-OCR-GGUF). "
+                "See https://huggingface.co/zai-org/GLM-OCR"
             ),
         ),
     ]

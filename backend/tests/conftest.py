@@ -100,7 +100,7 @@ async def app(test_session_factory):
 
     yield application
 
-    from audit_workbench.services.run.dispatch import close_taskiq_brokers
+    from audit_workbench.app.run.dispatch import close_taskiq_brokers
     from audit_workbench.taskiq.broker import clear_broker_cache
     from audit_workbench.taskiq.tasks import clear_task_registry
 
@@ -125,7 +125,7 @@ async def postgres_session(monkeypatch, test_session_factory):
 async def drain_background_tasks():
     """Let fire-and-forget Taskiq dispatch tasks finish before the next test."""
     yield
-    from audit_workbench.services.dispatch_outbox import drain_dispatch_tasks
+    from audit_workbench.app.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
 

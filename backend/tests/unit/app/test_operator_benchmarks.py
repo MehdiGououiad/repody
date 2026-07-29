@@ -1,0 +1,112 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from audit_workbench.runtime.contracts.result import ErrorCode
+from audit_workbench.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
+from audit_workbench.app.operator import benchmark_command
+from audit_workbench.app.operator.requests import resolve_benchmark_inputs
+
+
+class FakeUpload:
+    def __init__(self, filename: str, data: bytes) -> None:
+        self.filename = filename
+        self._data = data
+
+    async def read(self) -> bytes:
+        return self._data
+
+
+def test_parse_model_identifier_rejects_shell_like_values() -> None:
+    result = parse_model_identifier("model; rm -rf /")
+    assert not result.is_ok
+    assert result.error is not None
+    assert result.error.code == ErrorCode.VALIDATION
+    assert result.error.message == "Invalid model identifier."
+
+
+def test_parse_benchmark_options_validates_model_array() -> None:
+    result = parse_benchmark_options(
+        profile="models",
+        models=json.dumps(["repody:vlm"] * 13),
+        validation_mode="logic_only",
+        warm_runs=1,
+        minimum_accuracy=1.0,
+        cache_check=True,
+    )
+    assert not result.is_ok
+    assert result.error is not None
+    assert result.error.message == "Select at most 12 models."
+
+
+def test_benchmark_command_uses_cache_flag_and_models(tmp_path) -> None:
+    command = benchmark_command(
+        document=tmp_path / "doc.pdf",
+        manifest=tmp_path / "manifest.json",
+        output_dir=tmp_path / "out",
+        profile="models",
+        models=["repody:vlm", "vendor/model"],
+        validation_mode="logic_only",
+        warm_runs=1,
+        minimum_accuracy=0.95,
+        cache_check=False,
+        judge_quality=False,
+    )
+
+    assert "--no-cache-check" in command
+    assert "--cache-check" not in command
+    assert command.count("--model") == 2
+    assert command[-2:] == ["--model", "vendor/model"]
+
+
+@pytest.mark.asyncio
+async def test_resolve_benchmark_inputs_document_only_writes_auto_manifest(tmp_path) -> None:
+    result = await resolve_benchmark_inputs(
+        document=FakeUpload("scan.png", b"\x89PNG\r\n"),
+        manifest=None,
+        root=tmp_path,
+        max_upload_bytes=1024,
+    )
+    assert result.is_ok
+    inputs = result.unwrap()
+
+    assert inputs.document_path.is_file()
+    assert inputs.manifest_path.is_file()
+    manifest = json.loads(inputs.manifest_path.read_text(encoding="utf-8"))
+    assert manifest["documentType"] == "Document"
+    assert manifest["mimeType"] == "image/png"
+    assert manifest["fields"] == []
+
+
+@pytest.mark.asyncio
+async def test_resolve_benchmark_inputs_rejects_invalid_manifest(tmp_path) -> None:
+    result = await resolve_benchmark_inputs(
+        document=FakeUpload("invoice.pdf", b"%PDF-1.4\n%%EOF"),
+        manifest=FakeUpload("manifest.json", b"{bad-json"),
+        root=tmp_path,
+        max_upload_bytes=1024,
+    )
+    assert not result.is_ok
+    assert result.error is not None
+    assert result.error.code == ErrorCode.VALIDATION
+    assert result.error.message == "Benchmark manifest must be valid JSON."
+
+
+@pytest.mark.asyncio
+async def test_resolve_benchmark_inputs_writes_sanitized_uploads(tmp_path) -> None:
+    result = await resolve_benchmark_inputs(
+        document=FakeUpload("invoice weird!.pdf", b"%PDF-1.4\n%%EOF"),
+        manifest=FakeUpload("manifest.json", b'{"fields": []}'),
+        root=tmp_path,
+        max_upload_bytes=1024,
+    )
+    assert result.is_ok
+    inputs = result.unwrap()
+
+    assert inputs.document_path.is_file()
+    assert inputs.manifest_path.is_file()
+    assert inputs.document_path.parent == tmp_path / "inputs"
+    assert inputs.document_path.name.startswith("invoice-weird")
+    assert json.loads(inputs.manifest_path.read_text(encoding="utf-8")) == {"fields": []}

@@ -60,9 +60,28 @@ otel = [
   "opentelemetry-instrumentation-sqlalchemy>=0.52b0",
   "opentelemetry-instrumentation-logging>=0.52b0",
 ]
+# Official zai-org GLM-OCR document-parsing SDK (PP-DocLayoutV3 + region OCR).
+# https://huggingface.co/zai-org/GLM-OCR
+# Layout defaults to CPU (AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu). Declare torch/
+# torchvision so tool.uv.sources can pin the PyTorch CPU index (avoids CUDA
+# nvidia/triton wheels on Linux Docker images).
+glmocr = [
+  "glmocr[selfhosted]>=0.1.5",
+  "torch",
+  "torchvision",
+]
 
 [tool.uv]
 package = true
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+torchvision = [{ index = "pytorch-cpu" }]
 
 [build-system]
 requires = ["hatchling"]

@@ -4,16 +4,13 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
-from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.infra.auth.dependencies import require_permission
 from audit_workbench.extraction.branding import (
     normalize_public_catalog_id,
     public_runtime_model_name,
 )
-from audit_workbench.extraction.nuextract import (
-    NUEXTRACT_MAX_PAGES_PER_REQUEST,
-    NUEXTRACT_PDF_DPI,
-)
-from audit_workbench.extraction.template_types import suggest_template_type
+from audit_workbench.extraction.nuextract import NUEXTRACT_PDF_DPI
+from audit_workbench.extraction.nuextract import suggest_template_type
 from audit_workbench.schemas.models_catalog import ModelsCatalogResponse
 from audit_workbench.schemas.platform import (
     DocumentModelSummary,
@@ -74,7 +71,7 @@ async def get_platform_config() -> PlatformConfigResponse:
         default_document_model_id=normalize_public_catalog_id(settings.default_document_model_id),
         default_read_path="document_model",
         document_models=models,
-        nuextract_max_pages_per_request=NUEXTRACT_MAX_PAGES_PER_REQUEST,
+        nuextract_max_pages_per_request=settings.repody_vlm_max_pages_per_request,
         llamacpp_base_url=settings.llamacpp_base_url,
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,

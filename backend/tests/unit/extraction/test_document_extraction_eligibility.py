@@ -4,7 +4,7 @@ from audit_workbench.extraction.modes import (
     document_has_schema_fields,
     document_needs_extraction,
 )
-from audit_workbench.services.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def test_document_has_schema_fields_false_when_empty() -> None:

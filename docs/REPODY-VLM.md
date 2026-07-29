@@ -4,6 +4,8 @@ Repody does not run inference inside the Kubernetes chart. Document extraction c
 
 Reference: [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF)
 
+Catalog map (all document models): [EXTRACTION.md](./EXTRACTION.md).
+
 ## What you configure
 
 Only wiring and operational limits — extraction behavior follows the official NuExtract contract in code (`extraction/nuextract.py`, `extraction/render.py`).
@@ -65,13 +67,13 @@ Structured extraction follows the [NuExtract3-GGUF](https://huggingface.co/numin
 
 | Input | Behavior |
 |-------|----------|
-| PDF | PNG @ 170 DPI, up to 6 pages per request |
-| Image | Native PNG/JPEG; **WebP converted to PNG** (llama.cpp vision is unreliable on native WebP) |
+| PDF | PNG @ 170 DPI; **all pages** by default (official). Optional cap: `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` |
+| Image | Native PNG/JPEG/WebP bytes (no format conversion) |
 | Other MIME types | Rejected — upload PDF or image only |
-| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), optional `instructions`, `enable_thinking=false`, `temperature=0.2`, no `max_tokens` |
-| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` **only when the document has no schema fields** (not parallel with structured extraction) |
-| PDF page cap | Up to **6** pages sent; `pagesRendered` / `pagesDropped` report the full document page count |
-| ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only) |
+| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), optional `instructions` (workflow notes only), `enable_thinking` from settings, `temperature=0.2` (or `0.6` when thinking; `0` with ICL), no `max_tokens` |
+| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` — independent of structured; can run after structured when both enabled |
+| Source of truth | Model JSON stored as `extraction.rawText`; leaf `extracted_fields` are a UI/rules projection only |
+| ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only; local only) |
 
 ## Endpoint check
 
@@ -88,7 +90,7 @@ Or: `pnpm llamacpp:verify`
 
 Markdown-only **PP-OCRv6** (`paddleocr:v6`) is registered by default over the official PaddleX `POST /ocr` API — see [PADDLEOCR-V6.md](./PADDLEOCR-V6.md).
 
-Markdown-only **GLM-OCR** (`glm:ocr`) via llama-server on :8083 (zai-org `"Text Recognition:"` prompt; GGUF serve) — see [GLM-OCR.md](./GLM-OCR.md). Started by `pnpm dev:all` (skip with `--no-glmocr`).
+Markdown-only **GLM-OCR** (`glm:ocr`) via the official SDK (PP-DocLayoutV3) + llama-server on :8083 — see [GLM-OCR.md](./GLM-OCR.md). Started by `pnpm dev:all` (skip with `--no-glmocr`).
 
 ## Extraction accuracy (NuExtract contract)
 
@@ -112,7 +114,7 @@ Repody only forwards schema types + your descriptions into the official payload 
 |---------|-------|
 | `Repody VLM is unavailable` | Workers reach `$AUDIT_LLAMACPP_BASE_URL/models` |
 | 401/403 | `AUDIT_LLAMACPP_API_KEY` in runtime secret |
-| Timeout | Increase `AUDIT_REPODY_VLM_TIMEOUT_SECONDS`; check inference cold start |
+| Timeout | Raise `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` (max 15) **and** matching `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` (≤ worker×60). Compose extract defaults to 10 min / 600s. |
 | Wrong JSON | llama-server started with `--jinja` |
-| Truncated output | Reduce schema size or page count (max 6 pages per request) |
+| Truncated output | Reduce schema size or set `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` if the server limits multimodal images |
 | Digits wrong / extra zeros | Prefer **Q8_0** (or Q6) GGUF at vision 1024; vision 1536+ can crash Arc mid-suite. Use `verbatim-string` + length/location in field description |

@@ -27,10 +27,11 @@ PADDLEOCR_V6_DESCRIPTION = (
 GLM_OCR_CATALOG_ID = "glm:ocr"
 GLM_OCR_LABEL = "GLM-OCR"
 GLM_OCR_DESCRIPTION = (
-    "GLM-OCR (zai-org/GLM-OCR) via llama-server OpenAI chat API "
-    "(ggml-org/GLM-OCR-GGUF). Markdown-only document OCR using the official "
-    "image + \"Text Recognition:\" prompt. "
-    "Requires AUDIT_GLM_OCR_BASE_URL (default http://127.0.0.1:8083/v1)."
+    "GLM-OCR (zai-org/GLM-OCR) via the official SDK: PP-DocLayoutV3 layout + "
+    "region OCR against llama-server (ggml-org/GLM-OCR-GGUF) with Text/Table/"
+    "Formula Recognition prompts. Markdown-only. "
+    "Requires extract worker image extras otel,glmocr and AUDIT_GLM_OCR_BASE_URL "
+    "(default http://127.0.0.1:8083/v1)."
 )
 
 PUBLIC_CATALOG_IDS = frozenset(

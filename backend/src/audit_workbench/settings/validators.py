@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from audit_workbench.settings.model import Settings
 
-MAX_WORKER_TASK_TIMEOUT_MINUTES = 3
+# Hard ceiling for Taskiq audit-run cancellation. Keep high enough for long OCR
+# PDFs; defaults stay lower (see WorkerSettingsFields).
+MAX_WORKER_TASK_TIMEOUT_MINUTES = 15
 
 
 def apply_inference_probe_defaults(settings: Settings) -> None:
@@ -50,32 +52,35 @@ def validate_production_guardrails(settings: Settings) -> None:
 
 
 def validate_timeout_alignment(settings: Settings) -> None:
-    """Keep VLM HTTP and stale reap aligned with the 3-minute worker task ceiling."""
+    """Keep model HTTP timeouts and stale reap aligned with the worker task ceiling."""
     worker = settings.worker_task_timeout_minutes
     worker_seconds = worker * 60
-    vlm = settings.repody_vlm_timeout_seconds
     stale = settings.stale_run_timeout_minutes
     env = (settings.deployment_environment or "").strip().lower()
     is_prod = env == "production"
 
-    if vlm > worker_seconds:
-        msg = (
-            f"AUDIT_REPODY_VLM_TIMEOUT_SECONDS ({vlm}) must be <= "
-            f"worker task timeout ({worker_seconds}s)."
+    checks: list[tuple[str, float]] = [
+        ("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", settings.repody_vlm_timeout_seconds),
+        ("AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS", settings.paddleocr_v6_timeout_seconds),
+        ("AUDIT_GLM_OCR_TIMEOUT_SECONDS", settings.glm_ocr_timeout_seconds),
+    ]
+    if settings.nuextract_cloud_enabled:
+        checks.append(
+            (
+                "AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS",
+                settings.nuextract_cloud_timeout_seconds,
+            )
         )
-        if is_prod:
-            raise ValueError(msg)
-        warnings.warn(msg, stacklevel=1)
 
-    cloud = settings.nuextract_cloud_timeout_seconds
-    if settings.nuextract_cloud_enabled and cloud > worker_seconds:
-        msg = (
-            f"AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS ({cloud}) must be <= "
-            f"worker task timeout ({worker_seconds}s)."
-        )
-        if is_prod:
-            raise ValueError(msg)
-        warnings.warn(msg, stacklevel=1)
+    for label, seconds in checks:
+        if seconds > worker_seconds:
+            msg = (
+                f"{label} ({seconds}) must be <= "
+                f"worker task timeout ({worker_seconds}s)."
+            )
+            if is_prod:
+                raise ValueError(msg)
+            warnings.warn(msg, stacklevel=1)
 
     if stale < worker + 1:
         msg = (

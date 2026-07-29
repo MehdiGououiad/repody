@@ -7,7 +7,9 @@
  *   https://huggingface.co/ggml-org/GLM-OCR-GGUF
  *   https://huggingface.co/blog/ggml-org/using-ocr-models-with-llama-cpp
  *
- * Chat contract (zai-org/GLM-OCR): image first, then "Text Recognition:".
+ * Warmup uses the official Text Recognition: prompt against llama-server.
+ * Platform extraction uses GlmOcr selfhosted SDK (PP-DocLayoutV3 + region OCR).
+ * Docs: https://huggingface.co/zai-org/GLM-OCR
  * GGUF pack: ggml-org/GLM-OCR-GGUF (converted from zai-org/GLM-OCR).
  *
  * Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download

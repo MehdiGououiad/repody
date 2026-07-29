@@ -5,10 +5,9 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from audit_workbench.auth.dependencies import require_permission
+from audit_workbench.infra.auth.dependencies import require_permission
 from audit_workbench.api.errors import raise_app_error
-from audit_workbench.extraction.nuextract import NUEXTRACT_MAX_PAGES_PER_REQUEST
-from audit_workbench.platform.operator.validate import (
+from audit_workbench.runtime.operator.validate import (
     parse_model_identifier,
     require_operator_actions,
 )
@@ -22,7 +21,7 @@ from audit_workbench.schemas.operator import (
     OperatorWarmupConfig,
 )
 from audit_workbench.schemas.operator_requests import ModelActionRequest
-from audit_workbench.services.operator import (
+from audit_workbench.app.operator import (
     create_benchmark_job,
     create_warmup_job,
     get_job,
@@ -30,7 +29,7 @@ from audit_workbench.services.operator import (
     load_report,
     operator_job_schema,
 )
-from audit_workbench.services.operator.requests import (
+from audit_workbench.app.operator.requests import (
     build_benchmark_request,
     operator_root,
 )
@@ -80,7 +79,7 @@ async def operator_status() -> OperatorStatusResponse:
         ),
         limits=OperatorLimitsSchema(
             max_upload_bytes=settings.max_upload_bytes,
-            nuextract_max_pages_per_request=NUEXTRACT_MAX_PAGES_PER_REQUEST,
+            nuextract_max_pages_per_request=get_settings().repody_vlm_max_pages_per_request,
             task_timeout_minutes=settings.worker_task_timeout_minutes,
         ),
     )

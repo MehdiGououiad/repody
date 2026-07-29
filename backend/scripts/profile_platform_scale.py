@@ -42,7 +42,7 @@ class Sample:
 
 async def _db_banner() -> list[str]:
     from sqlalchemy import text
-    from audit_workbench.db.base import async_session_factory
+    from audit_workbench.infra.db.base import async_session_factory
     from audit_workbench.settings import get_settings
 
     settings = get_settings()
@@ -73,7 +73,7 @@ async def _db_banner() -> list[str]:
 async def seed_queued_runs(n: int) -> list[str]:
     """Insert synthetic queued rows for EXPLAIN / position / admission load tests."""
     from sqlalchemy import text
-    from audit_workbench.db.base import async_session_factory
+    from audit_workbench.infra.db.base import async_session_factory
 
     if n <= 0:
         return ["seed_queue: skipped"]
@@ -116,7 +116,7 @@ async def seed_queued_runs(n: int) -> list[str]:
 
 async def cleanup_seeded_runs() -> list[str]:
     from sqlalchemy import text
-    from audit_workbench.db.base import async_session_factory
+    from audit_workbench.infra.db.base import async_session_factory
 
     async with async_session_factory() as session:
         result = await session.execute(
@@ -128,14 +128,14 @@ async def cleanup_seeded_runs() -> list[str]:
 
 async def profile_queue_sql(n: int = 50) -> list[str]:
     from sqlalchemy import text
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.admission import (
+    from audit_workbench.infra.db.base import async_session_factory
+    from audit_workbench.app.admission import (
         check_admission,
         count_extract_inflight,
         count_inflight,
         count_queued,
     )
-    from audit_workbench.services.queue.position import queue_position
+    from audit_workbench.app.queue.position import queue_position
 
     lines: list[str] = []
     q_count = Sample("count_queued")
@@ -210,8 +210,8 @@ async def profile_queue_sql(n: int = 50) -> list[str]:
 
 async def profile_admission_reject() -> list[str]:
     """Temporarily lower caps and verify CAPACITY path latency."""
-    from audit_workbench.db.base import async_session_factory
-    from audit_workbench.services.admission import check_admission
+    from audit_workbench.infra.db.base import async_session_factory
+    from audit_workbench.app.admission import check_admission
     from audit_workbench.settings import get_settings
 
     settings = get_settings()
@@ -251,7 +251,7 @@ async def profile_admission_reject() -> list[str]:
 
 async def profile_outbox_claim(n: int = 30) -> list[str]:
     from sqlalchemy import text
-    from audit_workbench.db.base import async_session_factory
+    from audit_workbench.infra.db.base import async_session_factory
 
     sample = Sample("outbox_pending_count")
     lines: list[str] = []

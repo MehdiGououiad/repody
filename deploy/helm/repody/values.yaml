@@ -375,6 +375,8 @@ config:
   # Hard cap: audit tasks must finish within 3 minutes (see docs/deploy/PROD-OBSERVABILITY.md)
   workerTaskTimeoutMinutes: 3
   staleRunTimeoutMinutes: 5
+  # For long OCR PDFs raise together, e.g. workerTaskTimeoutMinutes: 10,
+  # staleRunTimeoutMinutes: 12, and matching *TimeoutSeconds <= worker*60.
   queuedStaleTimeoutMinutes: 60
   # Staged agents (ADR 007). Fraud/CU stay off until real logic + worker replicas > 0.
   agentIdpEnabled: true
@@ -413,6 +415,11 @@ config:
   glmOcrBaseUrl: http://glmocr:8083/v1
   glmOcrServedModel: GLM-OCR
   glmOcrTimeoutSeconds: 180
+  # Official SDK layout (PP-DocLayoutV3) — requires backend image built with
+  # REPODY_BACKEND_EXTRAS=otel,glmocr (default for pnpm images:build).
+  glmOcrLayoutDevice: cpu
+  glmOcrLayoutModelDir: PaddlePaddle/PP-DocLayoutV3_safetensors
+  glmOcrSdkMaxWorkers: 4
   gpuLiveProbe: false
   healthzProbeInference: false
 
