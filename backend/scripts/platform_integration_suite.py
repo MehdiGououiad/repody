@@ -26,8 +26,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "backend" / "src"))
 sys.path.insert(0, str(ROOT / "backend"))
 
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
-from audit_workbench.integration.facture import (  # noqa: E402
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
+from repody.integration.facture import (  # noqa: E402
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -41,7 +41,7 @@ from audit_workbench.integration.facture import (  # noqa: E402
     total_from_result,
     tva_from_result,
 )
-from audit_workbench.integration.workflow_flow import poll_run_until_done, save_workflow  # noqa: E402
+from repody.integration.workflow_flow import poll_run_until_done, save_workflow  # noqa: E402
 
 DEFAULT_DOCUMENT_MODEL = REPODY_VLM_CATALOG_ID
 MAX_WAIT_MS = 900_000
@@ -62,7 +62,7 @@ def _resolve_bearer_token(cli_token: str | None) -> str | None:
         health = httpx.get(f"{api_base}/v1/healthz", timeout=10.0)
         health.raise_for_status()
         if health.json().get("oidcEnabled"):
-            from audit_workbench.integration.live_stack import fetch_keycloak_token
+            from repody.integration.live_stack import fetch_keycloak_token
 
             return fetch_keycloak_token()
     except Exception:
@@ -239,7 +239,7 @@ async def main() -> int:
         await _timed("Diagnostics (registry)", report, _check_diagnostics(client))
 
         if not args.skip_extraction and health:
-            from audit_workbench.integration.facture import FACTURE_UI_PATHS
+            from repody.integration.facture import FACTURE_UI_PATHS
 
             case = FACTURE_UI_PATHS[0]
             doc_id = f"doc-{uuid.uuid4().hex[:8]}"

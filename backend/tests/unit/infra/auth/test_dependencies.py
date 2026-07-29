@@ -2,12 +2,12 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from audit_workbench.infra.auth.dependencies import (
+from repody.infra.auth.dependencies import (
     extract_bearer,
     get_current_principal,
     require_permission,
 )
-from audit_workbench.settings import clear_settings_cache
+from repody.settings import clear_settings_cache
 from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 

@@ -5,18 +5,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.extraction.types import ExtractionResult, SchemaFieldSpec
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.extraction.fields import fields_from_nuextract_json
-from audit_workbench.extraction.branding import (
+from repody.extraction.types import ExtractionResult, SchemaFieldSpec
+from repody.extraction.types import DocumentBundle
+from repody.extraction.fields import fields_from_nuextract_json
+from repody.extraction.branding import (
     REPODY_VLM_CATALOG_ID,
     UnknownCatalogIdError,
 )
-from audit_workbench.catalog.registry import (
+from repody.catalog.registry import (
     normalize_model_id,
     parse_document_model,
 )
-from audit_workbench.extraction.nuextract import (
+from repody.extraction.nuextract import (
     build_icl_messages,
     build_nuextract_instructions,
     build_nuextract_template,
@@ -24,7 +24,7 @@ from audit_workbench.extraction.nuextract import (
     strip_thinking,
     structured_chat_payload,
 )
-from audit_workbench.extraction.render import (
+from repody.extraction.render import (
     encode_pages_as_image_urls,
     prepare_nuextract_pages,
     cap_pages,
@@ -37,13 +37,13 @@ def test_catalog_routes_repody_vlm_to_llamacpp():
 
 
 def test_catalog_routes_repody_vlm_cloud_when_enabled(monkeypatch):
-    from audit_workbench.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from audit_workbench.settings import get_settings
+    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
     get_settings.cache_clear()
     try:
-        import audit_workbench.extraction.vlm  # noqa: F401
+        import repody.extraction.vlm  # noqa: F401
 
         spec = parse_document_model(REPODY_VLM_CLOUD_CATALOG_ID)
         assert spec.runtime == "nuextract_cloud"
@@ -98,7 +98,7 @@ def test_repody_vlm_list_template_and_payload():
 
 
 def test_repody_vlm_any_scalar_list_template():
-    from audit_workbench.extraction.nuextract import is_list_template_type, normalize_template_type
+    from repody.extraction.nuextract import is_list_template_type, normalize_template_type
 
     schema = [
         SchemaFieldSpec(
@@ -124,7 +124,7 @@ def test_repody_vlm_any_scalar_list_template():
 
 
 def test_structured_chat_payload_omits_max_tokens_by_default():
-    from audit_workbench.catalog.registry import parse_document_model
+    from repody.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [
@@ -188,7 +188,7 @@ def test_repody_vlm_nested_object_template():
 
 
 def test_repody_vlm_empty_object_and_enum_follow_official_constructors():
-    from audit_workbench.extraction.nuextract import normalize_template_type
+    from repody.extraction.nuextract import normalize_template_type
 
     empty_object = [
         SchemaFieldSpec(name="meta", template_type="object", children=[]),
@@ -210,7 +210,7 @@ def test_repody_vlm_empty_object_and_enum_follow_official_constructors():
 
 def test_repody_vlm_enum_requires_two_choices():
     import pytest
-    from audit_workbench.extraction.nuextract import build_field_template_node
+    from repody.extraction.nuextract import build_field_template_node
 
     with pytest.raises(ValueError, match="at least 2 choices"):
         build_field_template_node(
@@ -219,7 +219,7 @@ def test_repody_vlm_enum_requires_two_choices():
 
 
 def test_build_icl_messages_pairs_developer_role():
-    from audit_workbench.extraction.types import ExtractionIclExample
+    from repody.extraction.types import ExtractionIclExample
 
     messages = build_icl_messages(
         [
@@ -267,7 +267,7 @@ def test_cap_pages_keeps_all_when_under_limit():
 
 
 def test_pages_dropped_uses_document_page_count():
-    from audit_workbench.extraction.render import pages_dropped
+    from repody.extraction.render import pages_dropped
 
     assert pages_dropped(rendered=20, sent=6) == 14
     assert pages_dropped(rendered=3, sent=3) == 0
@@ -297,7 +297,7 @@ def test_repody_vlm_renders_pdf_pages_as_png(monkeypatch):
         return [b"rendered-page"], 1
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.render.render_nuextract_pdf_pages",
+        "repody.extraction.render.render_nuextract_pdf_pages",
         fake_render_nuextract_pdf_pages,
     )
     bundle = DocumentBundle(raw_bytes=b"%PDF-1.7", mime_type="application/pdf")
@@ -315,7 +315,7 @@ def test_repody_vlm_encodes_page_mime_type_in_data_url():
 
 
 def test_markdown_chat_payload_uses_nuextract_mode():
-    from audit_workbench.catalog.registry import parse_document_model
+    from repody.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     payload = markdown_chat_payload(
@@ -330,7 +330,7 @@ def test_markdown_chat_payload_uses_nuextract_mode():
 
 
 def test_structured_chat_payload_keeps_template():
-    from audit_workbench.catalog.registry import parse_document_model
+    from repody.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
@@ -351,7 +351,7 @@ def test_structured_chat_payload_keeps_template():
 
 
 def test_repody_vlm_payload_uses_official_non_thinking_defaults():
-    from audit_workbench.catalog.registry import parse_document_model
+    from repody.catalog.registry import parse_document_model
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
@@ -384,25 +384,25 @@ async def test_pipeline_calls_document_model_catalog(monkeypatch):
     direct_result = ExtractionResult(fields=[])
     extract_mock = AsyncMock(return_value=direct_result)
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_document_model",
         extract_mock,
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.get_cached",
+        "repody.extraction.pipeline.get_cached",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.set_cached",
+        "repody.extraction.pipeline.set_cached",
         AsyncMock(),
     )
-    from audit_workbench.extraction.pipeline import extract_document
+    from repody.extraction.pipeline import extract_document
 
     bundle = DocumentBundle(
         raw_bytes=b"image",
         mime_type="image/jpeg",
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.load_document_bundle",
+        "repody.extraction.pipeline.load_document_bundle",
         lambda *a, **k: bundle,
     )
 

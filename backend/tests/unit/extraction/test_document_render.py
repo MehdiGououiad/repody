@@ -4,8 +4,8 @@ import io
 
 from PIL import Image
 
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.extraction.render import (
+from repody.extraction.types import DocumentBundle
+from repody.extraction.render import (
     REPODY_VLM_RENDER,
     prepare_nuextract_pages,
 )

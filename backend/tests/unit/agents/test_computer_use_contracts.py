@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.agents.computer_use import (
+from repody.agents.computer_use import (
     ComputerUseInput,
     ComputerUseOutcome,
     execute_computer_use,
 )
-from audit_workbench.agents.fraud.contracts import FraudOutcome
-from audit_workbench.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
-from audit_workbench.runtime.contracts.agent import AgentId, AgentStatus
-from audit_workbench.runtime.contracts.result import ErrorCode
+from repody.agents.fraud.contracts import FraudOutcome
+from repody.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
+from repody.runtime.contracts.agent import AgentId, AgentStatus
+from repody.runtime.contracts.result import ErrorCode
 
 
 def _idp(run_id: str = "run-1") -> IdpOutcome:

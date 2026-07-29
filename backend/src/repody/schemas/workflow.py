@@ -1,0 +1,262 @@
+from pydantic import Field
+
+from repody.schemas.common import CamelModel
+from repody.schemas.run import RunAuditDetail, RunAuditField, RunAuditRule
+
+
+class ExtractionIclExampleSchema(CamelModel):
+    input: str = ""
+    output: str = ""
+
+
+class SchemaFieldSchema(CamelModel):
+    id: str
+    name: str
+    description: str = ""
+    template_type: str = Field(
+        default="verbatim-string",
+        serialization_alias="templateType",
+    )
+    enum_values: list[str] = Field(default_factory=list, serialization_alias="enumValues")
+    children: list["SchemaFieldSchema"] = Field(default_factory=list)
+
+
+SchemaFieldSchema.model_rebuild()
+
+
+class DocumentDefSchema(CamelModel):
+    id: str
+    document_type: str = ""
+    extraction_mode: str = Field(
+        default="document_model",
+        serialization_alias="extractionMode",
+        description="Read path id from GET /processing-paths (document_model).",
+    )
+    validation_mode: str = Field(
+        default="logic_only",
+        serialization_alias="validationMode",
+        description="logic_only",
+    )
+    document_model_id: str | None = Field(
+        default="repody:vlm",
+        serialization_alias="documentModelId",
+    )
+    schema_fields: list[SchemaFieldSchema] = Field(
+        default_factory=list,
+        validation_alias="schema",
+        serialization_alias="schema",
+    )
+    extraction_instructions: str = Field(
+        default="",
+        serialization_alias="extractionInstructions",
+    )
+    markdown_extraction: bool = Field(
+        default=False,
+        serialization_alias="markdownExtraction",
+        description=(
+            "When the document has no schema fields, run NuExtract document-to-Markdown "
+            "instead of structured extraction (not in parallel with fields)."
+        ),
+    )
+    extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
+        default_factory=list,
+        serialization_alias="extractionIclExamples",
+        description="NuExtract in-context extraction examples (developer message pairs).",
+    )
+
+
+class WorkflowRuleSchema(CamelModel):
+    id: str
+    name: str
+    kind: str = "logic"
+    scope: str = "intra"
+    applies_to: list[str] = []
+    conditions: list[dict] | None = None
+    condition_junction: str | None = None
+    body: str = ""
+    severity: str = "reject"
+
+
+class TopFailingRuleSchema(CamelModel):
+    name: str
+    count: int
+    severity: str
+
+
+class CallSeriesPointSchema(CamelModel):
+    day: str
+    calls: int
+
+
+class WorkflowApiStatsSchema(CamelModel):
+    api_calls_today: int
+    api_calls_total: int
+    avg_latency_ms: int
+    call_series: list[CallSeriesPointSchema]
+    top_failing_rules: list[TopFailingRuleSchema]
+
+
+class WorkflowSchema(CamelModel):
+    id: str
+    name: str
+    description: str = ""
+    status: str = "draft"
+    owner: str = "Me"
+    last_run: str | None = None
+    success_rate: float = 0.0
+    total_runs: int = 0
+    documents: list[DocumentDefSchema] = []
+    rules: list[WorkflowRuleSchema] = []
+    deployed_at: str | None = None
+    api_key: str | None = Field(
+        default=None,
+        description="Plaintext key — returned only once on deploy.",
+    )
+    api_key_hint: str | None = Field(
+        default=None,
+        serialization_alias="apiKeyHint",
+        description="Masked hint for deployed workflows.",
+    )
+    api_stats: WorkflowApiStatsSchema | None = None
+
+
+class WorkflowListResponse(CamelModel):
+    workflows: list[WorkflowSchema]
+
+
+class WorkflowResponse(CamelModel):
+    workflow: WorkflowSchema
+
+
+class CreateWorkflowBody(CamelModel):
+    name: str = "Untitled workflow"
+    description: str = ""
+    owner: str = "Me"
+
+
+class BulkDeleteWorkflowsBody(CamelModel):
+    ids: list[str] = Field(min_length=1)
+
+
+class DeployWorkflowBody(CamelModel):
+    api_key: str | None = None
+
+
+class DryRunFieldInput(CamelModel):
+    id: str
+    name: str
+    description: str = ""
+    template_type: str = Field(default="verbatim-string", serialization_alias="templateType")
+    sample_value: str | None = Field(default=None, serialization_alias="sampleValue")
+
+
+class DryRunRuleInput(CamelModel):
+    id: str
+    name: str
+    kind: str
+    body: str = ""
+    severity: str = "reject"
+    conditions: list[dict] | None = None
+    condition_junction: str | None = None
+
+
+class DryRunBody(CamelModel):
+    fields: list[DryRunFieldInput] = []
+    rules: list[DryRunRuleInput] = []
+    documents: list[DocumentDefSchema] | None = None
+    rules_full: list[WorkflowRuleSchema] | None = None
+
+
+class DryRunExtracted(CamelModel):
+    field: str
+    value: str
+    matched: bool
+
+
+class DryRunRuleResult(CamelModel):
+    id: str
+    name: str
+    kind: str
+    status: str
+    detail: str
+
+
+class DryRunResponse(CamelModel):
+    extracted: list[DryRunExtracted]
+    rule_results: list[DryRunRuleResult] = Field(serialization_alias="ruleResults")
+
+
+class ValidateRulesBody(CamelModel):
+    documents: list[DocumentDefSchema]
+    rules: list[WorkflowRuleSchema]
+
+
+class RuleValidationItem(CamelModel):
+    rule_id: str = Field(serialization_alias="ruleId")
+    issues: list[str]
+
+
+class ValidateRulesResponse(CamelModel):
+    rules: list[RuleValidationItem]
+
+
+class RunCreatedResponse(CamelModel):
+    run_id: str = Field(serialization_alias="runId")
+    job_id: str | None = Field(default=None, serialization_alias="jobId")
+    status: str = "queued"
+
+
+class RunProgressStepSchema(CamelModel):
+    id: str
+    label: str
+    status: str
+    mode: str | None = None
+    kind: str | None = None
+    detail: str | None = None
+    read_path: str | None = Field(default=None, serialization_alias="readPath")
+    validation_mode: str | None = Field(default=None, serialization_alias="validationMode")
+    document_model_id: str | None = Field(default=None, serialization_alias="documentModelId")
+    duration_ms: int | None = Field(default=None, serialization_alias="durationMs")
+    cache_hit: bool = Field(default=False, serialization_alias="cacheHit")
+    gpu_cold_start_hint: bool = Field(default=False, serialization_alias="gpuColdStartHint")
+
+
+class RunProgressSchema(CamelModel):
+    current_index: int = Field(serialization_alias="currentIndex")
+    steps: list[RunProgressStepSchema]
+    label: str
+    queue_position: int | None = Field(default=None, serialization_alias="queuePosition")
+    queue_depth: int | None = Field(default=None, serialization_alias="queueDepth")
+
+
+class RunPollResponse(CamelModel):
+    status: str
+    progress: RunProgressSchema | None = None
+    result: RunAuditDetail | None = None
+    error: str | None = None
+
+
+class RunPollStatus(CamelModel):
+    """Lightweight status-only poll (no audit detail payload)."""
+
+    status: str
+    progress: RunProgressSchema | None = None
+    error: str | None = None
+
+
+class RuleTemplateSchema(CamelModel):
+    id: str
+    name: str
+    kind: str
+    scope: str
+    description: str
+    body: str
+    severity: str
+
+
+# Re-export run schemas for OpenAPI
+__all__ = [
+    "RunAuditDetail",
+    "RunAuditField",
+    "RunAuditRule",
+]

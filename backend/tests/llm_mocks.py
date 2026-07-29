@@ -9,8 +9,8 @@ from typing import Any
 import httpx
 import respx
 
-from audit_workbench.inference.factory import get_chat, get_ensure_available
-from audit_workbench.settings import get_settings
+from repody.inference.factory import get_chat, get_ensure_available
+from repody.settings import get_settings
 
 DEFAULT_BASE = "http://model-runner-mock.test/v1"
 

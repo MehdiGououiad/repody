@@ -1,4 +1,4 @@
-from audit_workbench.taskiq.models import AuditRunInput
+from repody.taskiq.models import AuditRunInput
 
 
 def test_audit_run_input_defaults():

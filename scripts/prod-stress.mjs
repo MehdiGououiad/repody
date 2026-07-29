@@ -93,7 +93,7 @@ function syncStressScripts(pod) {
 
 function fetchClusterToken() {
   const inline = `
-from audit_workbench.infra.auth.keycloak_token import fetch_password_grant_token_sync
+from repody.infra.auth.keycloak_token import fetch_password_grant_token_sync
 print(fetch_password_grant_token_sync(
     token_url='http://keycloak:8080/realms/repody/protocol/openid-connect/token',
     client_id='repody-web',

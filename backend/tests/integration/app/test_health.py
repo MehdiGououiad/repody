@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.app.health import is_readiness_ok, probe_readiness
-from audit_workbench.infra.redis.health import ping_redis
-from audit_workbench.infra.redis.pool import close_redis_pool
-from audit_workbench.settings import clear_settings_cache
+from repody.app.health import is_readiness_ok, probe_readiness
+from repody.infra.redis.health import ping_redis
+from repody.infra.redis.pool import close_redis_pool
+from repody.settings import clear_settings_cache
 
 
 @pytest.mark.asyncio

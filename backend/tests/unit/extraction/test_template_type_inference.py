@@ -1,4 +1,4 @@
-from audit_workbench.extraction.nuextract import (
+from repody.extraction.nuextract import (
     DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
     resolve_template_type,
     suggest_template_type,

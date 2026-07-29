@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.agents.idp.adapters.mapping import document_extraction_from_result
-from audit_workbench.agents.idp.adapters.persist import extraction_meta_to_dict
-from audit_workbench.agents.idp.contracts import DocumentExtraction, ExtractedField
-from audit_workbench.extraction.types import (
+from repody.agents.idp.adapters.mapping import document_extraction_from_result
+from repody.agents.idp.adapters.persist import extraction_meta_to_dict
+from repody.agents.idp.contracts import DocumentExtraction, ExtractedField
+from repody.extraction.types import (
     ExtractedFieldResult,
     ExtractionMetadata,
     ExtractionResult,
 )
-from audit_workbench.schemas.run import RunDocumentExtractionMeta
+from repody.schemas.run import RunDocumentExtractionMeta
 
 
 def _full_meta(**overrides) -> ExtractionMetadata:

@@ -1,5 +1,5 @@
-from audit_workbench.infra.auth.casbin_authorizer import authorize
-from audit_workbench.infra.auth.principal import Principal
+from repody.infra.auth.casbin_authorizer import authorize
+from repody.infra.auth.principal import Principal
 
 
 def test_platform_admin_has_full_access() -> None:

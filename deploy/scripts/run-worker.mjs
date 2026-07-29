@@ -12,7 +12,7 @@ if (!["extract", "fast"].includes(pool)) {
 
 const child = spawn(
   process.execPath,
-  ["scripts/backend-run.mjs", "python", "-m", "audit_workbench.taskiq.worker"],
+  ["scripts/backend-run.mjs", "python", "-m", "repody.taskiq.worker"],
   {
   cwd: ROOT,
   env: { ...process.env, AUDIT_WORKER_POOL: pool },

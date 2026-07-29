@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from audit_workbench.infra.db.models import Run
-from audit_workbench.infra.db.models.enums import RunStatus
-from audit_workbench.app.run.persistence import (
+from repody.infra.db.models import Run
+from repody.infra.db.models.enums import RunStatus
+from repody.app.run.persistence import (
     apply_entity_to_orm,
     entity_from_orm,
 )
-from audit_workbench.app.run.lifecycle import RunStatus
-from audit_workbench.app.run.lifecycle import start_field_updates
+from repody.app.run.lifecycle import RunStatus
+from repody.app.run.lifecycle import start_field_updates
 
 
 def test_entity_from_orm_round_trip() -> None:

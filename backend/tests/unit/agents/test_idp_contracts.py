@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-from audit_workbench.agents.idp.adapters.mapping import (
+from repody.agents.idp.adapters.mapping import (
     build_idp_input,
     document_spec_from_snapshot,
     rule_spec_from_dict,
     stored_document,
 )
-from audit_workbench.agents.idp.contracts import DocumentSpec, SchemaField
-from audit_workbench.agents.idp.compose import build_extraction_plan, needs_extraction
-from audit_workbench.agents.idp.adapters.validate import summarize_validation
-from audit_workbench.agents.idp.contracts import RuleResult
-from audit_workbench.agents.idp.run import agent_status_from_idp
-from audit_workbench.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
-from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
-from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from repody.agents.idp.contracts import DocumentSpec, SchemaField
+from repody.agents.idp.compose import build_extraction_plan, needs_extraction
+from repody.agents.idp.adapters.validate import summarize_validation
+from repody.agents.idp.contracts import RuleResult
+from repody.agents.idp.run import agent_status_from_idp
+from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def test_result_ok_and_fail():
@@ -86,9 +86,9 @@ def test_summarize_validation_partial():
 
 
 def test_agent_status_from_idp_outcome():
-    from audit_workbench.agents.idp.contracts import ExtractionOutput
-    from audit_workbench.agents.idp.contracts import IdpOutcome
-    from audit_workbench.agents.idp.contracts import RuleResult
+    from repody.agents.idp.contracts import ExtractionOutput
+    from repody.agents.idp.contracts import IdpOutcome
+    from repody.agents.idp.contracts import RuleResult
 
     results = (
         RuleResult(

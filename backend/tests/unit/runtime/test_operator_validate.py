@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
+from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
 
 
 def test_parse_model_identifier_ok() -> None:

@@ -12,7 +12,7 @@ OUTPUT = ROOT / "lib" / "api" / "openapi.json"
 
 
 def main() -> int:
-    from audit_workbench.main import create_app
+    from repody.main import create_app
 
     schema = create_app().openapi()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)

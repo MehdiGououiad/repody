@@ -7,15 +7,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.runtime.agent_metadata import (
+from repody.runtime.agent_metadata import (
     PendingCompletion,
     clear_pending_completion,
     pending_completion_from_run,
     store_pending_completion,
 )
-from audit_workbench.runtime.contracts.result import Result
-from audit_workbench.app.run.commands import finalize_pending_completion
-from audit_workbench.app.run.lifecycle import RunCompletionOutcome
+from repody.runtime.contracts.result import Result
+from repody.app.run.commands import finalize_pending_completion
+from repody.app.run.lifecycle import RunCompletionOutcome
 
 
 def test_pending_completion_round_trip():
@@ -70,23 +70,23 @@ async def test_finalize_pending_completion_maps_to_complete_run(
         return Result.ok(None)
 
     monkeypatch.setattr(
-        "audit_workbench.app.run.commands.complete_run",
+        "repody.app.run.commands.complete_run",
         _fake_complete,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.commands.bind_load",
+        "repody.app.run.commands.bind_load",
         lambda _s: AsyncMock(),
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.commands.bind_save",
+        "repody.app.run.commands.bind_save",
         lambda _s: AsyncMock(),
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.commands.bind_commit",
+        "repody.app.run.commands.bind_commit",
         lambda _s: AsyncMock(),
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.commands.publish_run_domain_events",
+        "repody.app.run.commands.publish_run_domain_events",
         AsyncMock(),
     )
 

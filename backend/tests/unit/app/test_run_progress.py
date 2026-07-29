@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.app.run.progress import (
+from repody.app.run.progress import (
     _last_progress_commit,
     set_run_progress,
 )
-from audit_workbench.app.run.progress import _step, build_run_progress_plan
-from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from repody.app.run.progress import _step, build_run_progress_plan
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 @pytest.fixture(autouse=True)
@@ -53,7 +53,7 @@ def test_progress_plan_supports_snapshot_documents():
 
 
 def test_step_index_for_resolves_by_id():
-    from audit_workbench.app.run.progress import step_index_for
+    from repody.app.run.progress import step_index_for
 
     steps = [
         {"id": "queue"},
@@ -67,7 +67,7 @@ def test_step_index_for_resolves_by_id():
 
 
 def test_progress_snapshot_marks_only_current_active():
-    from audit_workbench.app.run.progress import progress_snapshot
+    from repody.app.run.progress import progress_snapshot
 
     steps = [
         {"id": "queue", "label": "Q"},
@@ -132,10 +132,10 @@ async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
     def _session_factory():
         return _Session()
 
-    monkeypatch.setattr("audit_workbench.app.run.sse.publish_run_progress", _publish)
-    monkeypatch.setattr("audit_workbench.infra.db.base.async_session_factory", _session_factory)
+    monkeypatch.setattr("repody.app.run.sse.publish_run_progress", _publish)
+    monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
     monkeypatch.setattr(
-        "audit_workbench.app.run.progress.get_settings",
+        "repody.app.run.progress.get_settings",
         lambda: _ThrottleSettings(),
     )
 
@@ -179,10 +179,10 @@ async def test_progress_db_written_when_forced(monkeypatch):
     def _session_factory():
         return _Session()
 
-    monkeypatch.setattr("audit_workbench.app.run.sse.publish_run_progress", _publish)
-    monkeypatch.setattr("audit_workbench.infra.db.base.async_session_factory", _session_factory)
+    monkeypatch.setattr("repody.app.run.sse.publish_run_progress", _publish)
+    monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
     monkeypatch.setattr(
-        "audit_workbench.app.run.progress.get_settings",
+        "repody.app.run.progress.get_settings",
         lambda: _ThrottleSettings(),
     )
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.settings import clear_settings_cache
+from repody.settings import clear_settings_cache
 from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 

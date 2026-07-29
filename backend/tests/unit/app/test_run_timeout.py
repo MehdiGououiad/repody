@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.app.run.processor import execute_run_with_timeout
+from repody.app.run.processor import execute_run_with_timeout
 
 
 @pytest.mark.asyncio
@@ -18,11 +18,11 @@ async def test_execute_run_with_timeout_fails_run(monkeypatch):
         await asyncio.sleep(10)
 
     monkeypatch.setattr(
-        "audit_workbench.app.run.processor.process_run",
+        "repody.app.run.processor.process_run",
         slow_run,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.processor.get_settings",
+        "repody.app.run.processor.get_settings",
         lambda: type(
             "S",
             (),
@@ -30,7 +30,7 @@ async def test_execute_run_with_timeout_fails_run(monkeypatch):
         )(),
     )
     fail = AsyncMock(return_value=True)
-    monkeypatch.setattr("audit_workbench.app.run.processor.fail_run_terminal", fail)
+    monkeypatch.setattr("repody.app.run.processor.fail_run_terminal", fail)
 
     with pytest.raises(TimeoutError):
         await execute_run_with_timeout("run-timeout-test", session=session)

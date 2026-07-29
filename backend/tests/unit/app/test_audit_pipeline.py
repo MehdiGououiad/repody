@@ -1,4 +1,4 @@
-from audit_workbench.rules.field_namespace import (
+from repody.rules.field_namespace import (
     field_values_for_rule,
     field_values_from_extractions,
 )
@@ -46,7 +46,7 @@ def test_intra_rule_scoped_to_one_doc_in_multi_doc_workflow():
 
 
 async def test_intra_rule_evaluates_with_scoped_fields():
-    from audit_workbench.rules.runner import evaluate_rules
+    from repody.rules.runner import evaluate_rules
 
     rows = [
         ("TOTAL", "789.00", "FACTURE"),
@@ -79,7 +79,7 @@ async def test_intra_rule_evaluates_with_scoped_fields():
 
 async def test_intra_rule_with_ui_prefixed_token_on_single_doc():
     """UI emits facture1__total for multi-doc workflows even on intra rules."""
-    from audit_workbench.rules.runner import evaluate_rules
+    from repody.rules.runner import evaluate_rules
 
     rows = [
         ("total", "789.00", "facture1"),

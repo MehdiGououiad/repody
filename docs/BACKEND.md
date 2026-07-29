@@ -2,7 +2,7 @@
 
 Single reference for `backend/` — APIs, scripts, and source layout. For architecture flow see [CONTEXT.md](../CONTEXT.md).
 
-**Package:** `audit_workbench` (`backend/src/audit_workbench/`)  
+**Package:** `repody` (`backend/src/repody/`)  
 **Entry:** `main.py` → FastAPI app on `/v1/*`
 
 ---
@@ -117,7 +117,7 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 
 ---
 
-## Source layout (`backend/src/audit_workbench/`)
+## Source layout (`backend/src/repody/`)
 
 ### Core
 
@@ -213,11 +213,11 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | **Agents** | `agents/idp/` (compose + adapters); `agents/fraud/`, `agents/computer_use/` (SKIPPED; [ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
 | **Runtime cores** | `runtime/contracts`, `runtime/recipe.py`, `runtime/pools.py`, `runtime/run/*`, `runtime/operator/` |
 | **Workflows** | `app/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
-| **App services** | `health.py`, `metrics_service.py`, `dashboard_service.py`, `maintenance.py`, `admission.py` |
+| **App services** | `health.py`, `metrics.py`, `dashboard.py`, `ops/maintenance.py` |
+| **Runs extras** | `run/admission.py`, `run/dispatch_outbox.py` |
 | **Operator** | `app/operator/` (`jobs`, `benchmarks`, `requests`, `auth`) — I/O; pure types in `runtime/operator/` |
 | **Support** | `mappers.py`, `api_keys.py`, `uploads/` (intents · validation · document_slots) |
 | **Infra (I/O)** | `infra/redis/`, `infra/rate_limit.py`, `infra/db/`, `infra/storage/`, `infra/auth/`, `infra/observability/` |
-| **Outbox** | `app/run/dispatch_outbox.py` |
 | **Catalog** | `catalog/` (not under app) |
 | **Rules field ns** | `rules/field_namespace.py` |
 

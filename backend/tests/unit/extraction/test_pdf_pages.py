@@ -1,4 +1,4 @@
-from audit_workbench.extraction.render import pages_to_process
+from repody.extraction.render import pages_to_process
 
 
 def test_pages_to_process_clamps_to_max():

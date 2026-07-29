@@ -22,8 +22,8 @@ from typing import Any
 
 import httpx
 
-from audit_workbench.benchmarking import csv_report, html_report, score_fields, score_rules
-from audit_workbench.catalog.registry import normalize_model_id
+from repody.benchmarking import csv_report, html_report, score_fields, score_rules
+from repody.catalog.registry import normalize_model_id
 
 DEFAULT_MODELS = (
     "repody:vlm",

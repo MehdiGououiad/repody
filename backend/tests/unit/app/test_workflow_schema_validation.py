@@ -1,7 +1,7 @@
 import pytest
 
-from audit_workbench.schemas.workflow import DocumentDefSchema, SchemaFieldSchema, WorkflowSchema
-from audit_workbench.app.workflow import (
+from repody.schemas.workflow import DocumentDefSchema, SchemaFieldSchema, WorkflowSchema
+from repody.app.workflow import (
     duplicate_field_names,
     validate_workflow_schema,
 )

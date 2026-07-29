@@ -88,10 +88,10 @@ ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 FROM backend AS worker
 
 ENV AUDIT_OTEL_SERVICE_NAME=repody-worker
-CMD ["python", "-m", "audit_workbench.taskiq.worker"]
+CMD ["python", "-m", "repody.taskiq.worker"]
 
 FROM backend AS api
 
 ENV AUDIT_OTEL_SERVICE_NAME=repody-api
 EXPOSE 8000
-CMD ["uvicorn", "audit_workbench.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]

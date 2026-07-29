@@ -7,16 +7,16 @@ from types import SimpleNamespace
 
 import pytest
 
-from audit_workbench.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
-from audit_workbench.runtime.contracts.agent import AgentId
-from audit_workbench.app.run.dispatch_outbox import _supports_skip_locked
-from audit_workbench.app.run.handoff import schedule_next_agent_stage
+from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
+from repody.runtime.contracts.agent import AgentId
+from repody.app.run.dispatch_outbox import _supports_skip_locked
+from repody.app.run.handoff import schedule_next_agent_stage
 
 
 @pytest.fixture
 async def handoff_session(postgres_session, monkeypatch):
     monkeypatch.setattr(
-        "audit_workbench.app.run.handoff.schedule_outbox_dispatch",
+        "repody.app.run.handoff.schedule_outbox_dispatch",
         lambda _run_id: None,
     )
     wf = Workflow(id="wf-p0", name="P0", status=WorkflowStatus.active.value)

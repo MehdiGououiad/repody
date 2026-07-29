@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from audit_workbench.app.run.pool import resolve_worker_pool
-from audit_workbench.settings import Settings, clear_settings_cache
+from repody.app.run.pool import resolve_worker_pool
+from repody.settings import Settings, clear_settings_cache
 
 
 @pytest.fixture

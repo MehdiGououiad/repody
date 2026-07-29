@@ -13,8 +13,8 @@ import pytest
 
 from tests.helpers.workflow_rules import logic_field_gt
 
-from audit_workbench.infra.db.seed import SEED_WORKFLOW_ID
-from audit_workbench.integration.live_stack import (
+from repody.infra.db.seed import SEED_WORKFLOW_ID
+from repody.integration.live_stack import (
     assert_metrics_access,
     create_anonymous_live_client,
     create_live_client,

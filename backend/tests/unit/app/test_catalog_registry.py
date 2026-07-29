@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
-from audit_workbench.catalog.registry import parse_document_model
-from audit_workbench.catalog import probes as catalog_probes
-from audit_workbench.catalog.probes import (
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.catalog.registry import parse_document_model
+from repody.catalog import probes as catalog_probes
+from repody.catalog.probes import (
     availability_for_spec,
     list_catalog_with_availability,
 )
@@ -17,7 +17,7 @@ from audit_workbench.catalog.probes import (
 async def test_list_catalog_marks_model_available_when_installed(monkeypatch):
     async def fake_installed(*args, **kwargs):
         settings = kwargs.get("settings") or args[0] if args else None
-        from audit_workbench.settings import get_settings
+        from repody.settings import get_settings
 
         settings = settings or get_settings()
         model = settings.llamacpp_served_model.lower()
@@ -43,7 +43,7 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
         "https://gpu.example.com/v1",
     )
     monkeypatch.setenv("AUDIT_GPU_LIVE_PROBE", "false")
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     get_settings.cache_clear()
 
@@ -52,7 +52,7 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
             "installed_runtime_models should not call remote inference when probe disabled"
         )
 
-    from audit_workbench.catalog import probes as catalog_probes
+    from repody.catalog import probes as catalog_probes
 
     monkeypatch.setattr(
         catalog_probes,
@@ -70,7 +70,7 @@ async def test_list_catalog_skips_remote_probe(monkeypatch):
 
 def test_availability_note_for_missing_llamacpp_model(monkeypatch):
     monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     get_settings.cache_clear()
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -81,8 +81,8 @@ def test_availability_note_for_missing_llamacpp_model(monkeypatch):
 
 
 def test_nuextract_cloud_available_when_api_key_set(monkeypatch):
-    from audit_workbench.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from audit_workbench.settings import get_settings
+    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
     monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_API_KEY", "token_test")
@@ -102,8 +102,8 @@ def test_nuextract_cloud_available_when_api_key_set(monkeypatch):
 
 
 def test_nuextract_cloud_unavailable_without_api_key(monkeypatch):
-    from audit_workbench.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from audit_workbench.settings import get_settings
+    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
     monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_API_KEY", "")

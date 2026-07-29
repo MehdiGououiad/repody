@@ -39,7 +39,7 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.taskiq.worker
+            - repody.taskiq.worker
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
@@ -64,7 +64,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3
@@ -112,7 +112,7 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.taskiq.worker
+            - repody.taskiq.worker
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
@@ -137,7 +137,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3
@@ -176,7 +176,7 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.taskiq.worker
+            - repody.taskiq.worker
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
@@ -201,7 +201,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3
@@ -241,7 +241,7 @@ spec:
           command:
             - python
             - -m
-            - audit_workbench.taskiq.worker
+            - repody.taskiq.worker
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           envFrom:
@@ -266,7 +266,7 @@ spec:
               command:
                 - sh
                 - -c
-                - python -c "import pathlib,sys; needle='audit_workbench.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
+                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
             failureThreshold: 3

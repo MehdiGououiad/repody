@@ -30,8 +30,8 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
    per-document soft failures on `IdpOutcome.errors`.
 4. **Handoff type** — `IdpOutcome` wrapped in `AgentOutcome` is the extension point
    for Fraud and Computer Use.
-5. **Strangler migration** — Introduce `audit_workbench.runtime.contracts` and
-   `audit_workbench.agents.idp` alongside existing modules; switch `process_run`
+5. **Strangler migration** — Introduce `repody.runtime.contracts` and
+   `repody.agents.idp` alongside existing modules; switch `process_run`
    only after compose + adapters are tested. No big-bang rewrite.
 
 ## Consequences

@@ -6,21 +6,21 @@ from datetime import UTC, datetime
 
 import pytest
 
-from audit_workbench.infra.db.models import (
+from repody.infra.db.models import (
     Run,
     RunDispatchOutbox,
     RunStatus,
     Workflow,
     WorkflowStatus,
 )
-from audit_workbench.runtime.contracts.agent import AgentId
-from audit_workbench.app.run.handoff import schedule_next_agent_stage
+from repody.runtime.contracts.agent import AgentId
+from repody.app.run.handoff import schedule_next_agent_stage
 
 
 @pytest.fixture
 async def handoff_session(postgres_session, monkeypatch):
     monkeypatch.setattr(
-        "audit_workbench.app.run.handoff.schedule_outbox_dispatch",
+        "repody.app.run.handoff.schedule_outbox_dispatch",
         lambda _run_id: None,
     )
     wf = Workflow(id="wf-handoff", name="Handoff", status=WorkflowStatus.active.value)

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
-from audit_workbench.app.run.dispatch_outbox import (
+from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
+from repody.app.run.dispatch_outbox import (
     dispatch_outbox_row,
     enqueue_dispatch,
     replay_dispatch_outbox,
@@ -40,11 +40,11 @@ async def test_dispatch_outbox_retries_transient_errors(outbox_session, monkeypa
 
     dispatch = AsyncMock(side_effect=[ConnectionError("connection refused"), None])
     monkeypatch.setattr(
-        "audit_workbench.app.run.dispatch.dispatch_audit_run",
+        "repody.app.run.dispatch.dispatch_audit_run",
         dispatch,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.dispatch_outbox.get_settings",
+        "repody.app.run.dispatch_outbox.get_settings",
         lambda: type(
             "S",
             (),
@@ -82,11 +82,11 @@ async def test_replay_dispatch_outbox_picks_pending_rows(outbox_session, monkeyp
 
     dispatch = AsyncMock()
     monkeypatch.setattr(
-        "audit_workbench.app.run.dispatch.dispatch_audit_run",
+        "repody.app.run.dispatch.dispatch_audit_run",
         dispatch,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.run.dispatch_outbox.get_settings",
+        "repody.app.run.dispatch_outbox.get_settings",
         lambda: type(
             "S",
             (),

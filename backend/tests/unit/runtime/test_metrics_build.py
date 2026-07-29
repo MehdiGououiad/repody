@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from audit_workbench.runtime.metrics.build import (
+from repody.runtime.metrics.build import (
     MetricsSummary,
     DailyCounts,
     build_kpis,

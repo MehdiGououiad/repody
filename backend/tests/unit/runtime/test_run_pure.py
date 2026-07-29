@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from audit_workbench.runtime.run.ids import document_row_id, new_id, new_run_id
+from repody.runtime.run.ids import document_row_id, new_id, new_run_id
 
 
 def test_new_run_id_prefixes() -> None:

@@ -1,5 +1,5 @@
-from audit_workbench.extraction.nuextract import extraction_inference_profile_key
-from audit_workbench.settings import Settings
+from repody.extraction.nuextract import extraction_inference_profile_key
+from repody.settings import Settings
 
 
 def test_extraction_inference_profile_key():

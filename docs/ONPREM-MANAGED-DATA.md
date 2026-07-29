@@ -89,7 +89,7 @@ repody-runtime-secrets
 For CloudNativePG through PgBouncer, `AUDIT_DATABASE_URL` should target the pooler:
 
 ```text
-postgresql+asyncpg://audit:<password>@repody-postgres-pooler-rw.repody-data.svc.cluster.local:5432/audit_workbench
+postgresql+asyncpg://audit:<password>@repody-postgres-pooler-rw.repody-data.svc.cluster.local:5432/repody
 ```
 
 Use the examples in `deploy/managed/external-secrets/` when Vault and External

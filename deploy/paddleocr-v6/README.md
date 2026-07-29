@@ -41,5 +41,5 @@ Serving:
 
 ## Client
 
-Platform adapter: `backend/src/audit_workbench/extraction/paddleocr_v6.py`  
+Platform adapter: `backend/src/repody/extraction/paddleocr_v6.py`  
 Mirrors the official Python example: Base64 `file` + `fileType` (`0` PDF / `1` image), plus `visualize: false`.

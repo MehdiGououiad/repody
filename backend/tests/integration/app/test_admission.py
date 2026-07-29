@@ -4,17 +4,17 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.app.admission import (
+from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
+from repody.runtime.contracts.result import ErrorCode
+from repody.app.run.admission import (
     check_admission,
     count_extract_inflight,
     count_queued,
     count_running,
 )
-from audit_workbench.app.queue import apply_queue_meta, queue_position
-from audit_workbench.app.run.intake import create_run
-from audit_workbench.settings import clear_settings_cache
+from repody.app.queue import apply_queue_meta, queue_position
+from repody.app.run.intake import create_run
+from repody.settings import clear_settings_cache
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ async def test_count_running_excludes_queued(admission_session):
 
 @pytest.mark.asyncio
 async def test_count_extract_inflight_uses_worker_pool_column(admission_session):
-    from audit_workbench.infra.db.models import RunDocument
+    from repody.infra.db.models import RunDocument
 
     session, workflow_id = admission_session
     session.add(

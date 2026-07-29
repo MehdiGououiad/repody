@@ -8,9 +8,9 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from audit_workbench.infra.db import models  # noqa: F401
-from audit_workbench.infra.db.base import Base
-from audit_workbench.settings import get_settings
+from repody.infra.db import models  # noqa: F401
+from repody.infra.db.base import Base
+from repody.settings import get_settings
 
 config = context.config
 if config.config_file_name is not None:
