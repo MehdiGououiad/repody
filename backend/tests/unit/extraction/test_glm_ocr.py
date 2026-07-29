@@ -8,16 +8,16 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from audit_workbench.catalog.registry import is_markdown_only_model, parse_document_model
-from audit_workbench.extraction.branding import GLM_OCR_CATALOG_ID
-from audit_workbench.extraction.glm_ocr import extract_with_glm_ocr
-from audit_workbench.extraction.glm_ocr_sdk import (
+from repody.catalog.registry import is_markdown_only_model, parse_document_model
+from repody.extraction.branding import GLM_OCR_CATALOG_ID
+from repody.extraction.glm_ocr import extract_with_glm_ocr
+from repody.extraction.glm_ocr_sdk import (
     GlmOcrSdkSettings,
     openai_host_port,
     reset_glm_ocr_sdk_client,
 )
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.settings import get_settings
+from repody.extraction.types import DocumentBundle
+from repody.settings import get_settings
 
 
 def test_openai_host_port_from_v1_base():
@@ -45,7 +45,7 @@ async def test_extract_requires_sdk_package(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
     get_settings.cache_clear()
     monkeypatch.setattr(
-        "audit_workbench.extraction.glm_ocr.sdk_importable",
+        "repody.extraction.glm_ocr.sdk_importable",
         lambda: False,
     )
     png = base64.b64decode(
@@ -72,7 +72,7 @@ async def test_extract_with_glm_ocr_sdk(monkeypatch: pytest.MonkeyPatch):
     reset_glm_ocr_sdk_client()
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.glm_ocr.sdk_importable",
+        "repody.extraction.glm_ocr.sdk_importable",
         lambda: True,
     )
 
@@ -84,7 +84,7 @@ async def test_extract_with_glm_ocr_sdk(monkeypatch: pytest.MonkeyPatch):
         return "# Devis\n\n| Libelle | Montant |\n|---|---|\n| Total | 497550 |"
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.glm_ocr.parse_markdown",
+        "repody.extraction.glm_ocr.parse_markdown",
         _fake_parse_markdown,
     )
     try:
@@ -104,7 +104,7 @@ async def test_extract_with_glm_ocr_sdk(monkeypatch: pytest.MonkeyPatch):
 def test_sdk_parse_markdown(monkeypatch: pytest.MonkeyPatch):
     """SDK parse_markdown returns markdown_result from official GlmOcr.parse."""
     reset_glm_ocr_sdk_client()
-    import audit_workbench.extraction.glm_ocr_sdk as sdk_mod
+    import repody.extraction.glm_ocr_sdk as sdk_mod
 
     class _FakeParser:
         def parse(self, data: bytes, *, save_layout_visualization: bool = True):
@@ -149,7 +149,7 @@ def test_build_parser_uses_official_selfhosted_api(monkeypatch: pytest.MonkeyPat
     fake_mod.GlmOcr = _FakeGlmOcr
     monkeypatch.setitem(__import__("sys").modules, "glmocr", fake_mod)
 
-    import audit_workbench.extraction.glm_ocr_sdk as sdk_mod
+    import repody.extraction.glm_ocr_sdk as sdk_mod
 
     parser = sdk_mod._build_parser(
         GlmOcrSdkSettings(
@@ -187,7 +187,7 @@ def test_build_parser_honors_optional_pdf_max_pages(monkeypatch: pytest.MonkeyPa
     fake_mod.GlmOcr = _FakeGlmOcr
     monkeypatch.setitem(__import__("sys").modules, "glmocr", fake_mod)
 
-    import audit_workbench.extraction.glm_ocr_sdk as sdk_mod
+    import repody.extraction.glm_ocr_sdk as sdk_mod
 
     sdk_mod._build_parser(
         GlmOcrSdkSettings(

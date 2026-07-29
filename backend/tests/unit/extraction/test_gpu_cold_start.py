@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from audit_workbench.extraction.modes import (
+from repody.extraction.modes import (
     GPU_COLD_START_THRESHOLD_MS,
     gpu_cold_start_likely,
     is_serverless_inference,

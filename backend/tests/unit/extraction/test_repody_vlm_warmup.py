@@ -1,11 +1,11 @@
 from pathlib import Path
 
-from audit_workbench.extraction.warmup import (
+from repody.extraction.warmup import (
     _mime_type_for_path,
     _resolve_warmup_document,
     _warmup_bundle,
 )
-from audit_workbench.settings import Settings
+from repody.settings import Settings
 
 
 def test_repody_vlm_warmup_defaults_to_disabled(monkeypatch):

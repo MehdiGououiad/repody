@@ -12,14 +12,14 @@ import uuid
 import httpx
 import pytest
 
-from audit_workbench.integration.live_stack import (
+from repody.integration.live_stack import (
     assert_metrics_access,
     create_live_client,
     live_api_base,
     live_inference_ready,
     live_oidc_enabled,
 )
-from audit_workbench.integration.facture import (
+from repody.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_UI_PATHS,
     WORKFLOW_NAME,

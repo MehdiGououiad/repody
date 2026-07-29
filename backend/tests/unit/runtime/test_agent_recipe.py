@@ -6,13 +6,13 @@ from dataclasses import dataclass
 
 import pytest
 
-from audit_workbench.agents.computer_use import ComputerUseInput, ComputerUseOutcome, execute_computer_use
-from audit_workbench.agents.fraud import FraudInput, FraudOutcome, execute_fraud
-from audit_workbench.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
-from audit_workbench.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.runtime.pools import agent_for_pool
-from audit_workbench.runtime.recipe import (
+from repody.agents.computer_use import ComputerUseInput, ComputerUseOutcome, execute_computer_use
+from repody.agents.fraud import FraudInput, FraudOutcome, execute_fraud
+from repody.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
+from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.pools import agent_for_pool
+from repody.runtime.recipe import (
     DEFAULT_AGENT_ORDER,
     next_agent_after,
     resolve_recipe,

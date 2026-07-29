@@ -11,7 +11,7 @@ postgresql:
     tag: "17.10-alpine"
   auth:
     username: audit
-    database: audit_workbench
+    database: repody
     existingSecret: ""
     secretKeys:
       passwordKey: password

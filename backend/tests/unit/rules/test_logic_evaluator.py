@@ -1,4 +1,4 @@
-from audit_workbench.rules.logic_evaluator import evaluate_logic_expression
+from repody.rules.logic_evaluator import evaluate_logic_expression
 
 
 def test_math_integrity_fails():

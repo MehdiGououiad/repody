@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from audit_workbench.settings import Settings, clear_settings_cache, get_settings
+from repody.settings import Settings, clear_settings_cache, get_settings
 
 
 def test_settings_package_imports():

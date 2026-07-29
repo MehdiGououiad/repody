@@ -6,7 +6,7 @@ from typing import Any
 
 from httpx import Response
 
-from audit_workbench.runtime.contracts.result import AppError, ErrorCode, http_status_for
+from repody.runtime.contracts.result import AppError, ErrorCode, http_status_for
 
 
 def assert_app_error_status(code: ErrorCode, expected_status: int) -> None:

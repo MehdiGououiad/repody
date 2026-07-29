@@ -1,4 +1,4 @@
-from audit_workbench.infra.observability.bugsink import bugsink_enabled, init_bugsink
+from repody.infra.observability.bugsink import bugsink_enabled, init_bugsink
 
 
 def test_bugsink_disabled_without_dsn(monkeypatch):

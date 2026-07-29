@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from audit_workbench.settings import get_settings
+from repody.settings import get_settings
 
 
 @pytest.mark.asyncio

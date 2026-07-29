@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from audit_workbench.infra.observability.logging import _redact_sensitive_fields
-from audit_workbench.settings import Settings
+from repody.infra.observability.logging import _redact_sensitive_fields
+from repody.settings import Settings
 
 
 def _process_event(event_dict: dict) -> dict:
@@ -24,7 +24,7 @@ def test_redact_sensitive_fields_masks_tokens() -> None:
 def test_configure_logging_json_smoke() -> None:
     from structlog import get_logger
 
-    from audit_workbench.infra.observability.logging import configure_logging
+    from repody.infra.observability.logging import configure_logging
 
     settings = Settings(log_json=True, otel_service_name="test-service")
     configure_logging(settings)
@@ -32,7 +32,7 @@ def test_configure_logging_json_smoke() -> None:
 
 
 def test_configure_logging_writes_log_file(tmp_path) -> None:
-    from audit_workbench.infra.observability.logging import configure_logging
+    from repody.infra.observability.logging import configure_logging
 
     log_path = tmp_path / "repody-api.log"
     settings = Settings(log_json=True, log_file=str(log_path), otel_service_name="test-service")

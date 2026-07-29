@@ -5,10 +5,10 @@ from __future__ import annotations
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from audit_workbench.infra.auth import keycloak_admin as keycloak
-from audit_workbench.main import app
-from audit_workbench.runtime.contracts.result import Result
-from audit_workbench.settings import clear_settings_cache
+from repody.infra.auth import keycloak_admin as keycloak
+from repody.main import app
+from repody.runtime.contracts.result import Result
+from repody.settings import clear_settings_cache
 
 
 @pytest.mark.asyncio

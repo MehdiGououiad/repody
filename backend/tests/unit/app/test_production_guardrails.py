@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.settings import Settings, clear_settings_cache
+from repody.settings import Settings, clear_settings_cache
 
 
 @pytest.fixture(autouse=True)

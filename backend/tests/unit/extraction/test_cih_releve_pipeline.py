@@ -9,22 +9,22 @@ from unittest.mock import AsyncMock
 import httpx
 import pytest
 
-from audit_workbench.catalog.registry import parse_document_model
-from audit_workbench.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from audit_workbench.extraction.types import load_document_bundle
-from audit_workbench.extraction.fields import fields_from_nuextract_json
-from audit_workbench.rules.amounts import normalize_amount, parse_numeric_value
-from audit_workbench.extraction.nuextract import (
+from repody.catalog.registry import parse_document_model
+from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
+from repody.extraction.types import load_document_bundle
+from repody.extraction.fields import fields_from_nuextract_json
+from repody.rules.amounts import normalize_amount, parse_numeric_value
+from repody.extraction.nuextract import (
     NUEXTRACT_ENABLE_THINKING,
     build_nuextract_template,
 )
-from audit_workbench.extraction.pipeline import extract_document
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
-from audit_workbench.extraction.vlm import extract_with_repody_vlm
-from audit_workbench.extraction.render import encode_pages_as_image_urls, prepare_nuextract_pages
-from audit_workbench.extraction.nuextract import structured_chat_payload
-from audit_workbench.inference.factory import get_chat
-from audit_workbench.settings import get_settings
+from repody.extraction.pipeline import extract_document
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.vlm import extract_with_repody_vlm
+from repody.extraction.render import encode_pages_as_image_urls, prepare_nuextract_pages
+from repody.extraction.nuextract import structured_chat_payload
+from repody.inference.factory import get_chat
+from repody.settings import get_settings
 from tests.fixtures.cih_releve_assertions import (
     assert_balance_identity,
     assert_currency_scalar,
@@ -78,8 +78,8 @@ def ground_truth():
 def disable_extraction_cache(monkeypatch):
     monkeypatch.setenv("AUDIT_EXTRACTION_CACHE_ENABLED", "false")
     get_settings.cache_clear()
-    monkeypatch.setattr("audit_workbench.extraction.pipeline.get_cached", AsyncMock(return_value=None))
-    monkeypatch.setattr("audit_workbench.extraction.pipeline.set_cached", AsyncMock())
+    monkeypatch.setattr("repody.extraction.pipeline.get_cached", AsyncMock(return_value=None))
+    monkeypatch.setattr("repody.extraction.pipeline.set_cached", AsyncMock())
 
 
 @pytest.fixture

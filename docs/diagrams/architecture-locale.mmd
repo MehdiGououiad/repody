@@ -15,7 +15,7 @@ flowchart TB
 
   subgraph Compose["Docker Compose"]
     subgraph Data["Plan de données"]
-      PG[("PostgreSQL<br/>:5432<br/>audit_workbench")]
+      PG[("PostgreSQL<br/>:5432<br/>repody")]
       Redis[("Redis<br/>:6379<br/>Taskiq + SSE + cache")]
       MinIO[("MinIO S3<br/>:9000<br/>bucket audit-documents")]
     end

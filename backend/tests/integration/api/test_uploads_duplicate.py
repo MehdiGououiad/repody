@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from audit_workbench.integration.facture import facture_bytes
+from repody.integration.facture import facture_bytes
 from tests.helpers.api_errors import assert_error_response
 
 
@@ -14,12 +14,12 @@ async def test_confirm_upload_accepts_real_gououiad_cnie_png_named_jpeg(
     from pathlib import Path
 
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.uploads.intents import record_upload_intent
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.infra.db.base import async_session_factory
+    from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.storage.factory import get_storage
 
     fixture = (
         Path(__file__).resolve().parents[4]
@@ -52,12 +52,12 @@ async def test_confirm_upload_accepts_real_gououiad_cnie_png_named_jpeg(
 @pytest.mark.asyncio
 async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.uploads.intents import record_upload_intent
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.infra.db.base import async_session_factory
+    from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.storage.factory import get_storage
 
     storage = get_storage()
     await storage.ensure_bucket()
@@ -87,8 +87,8 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
 async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch, tmp_path):
     """VALIDATION AppError → 422 (not legacy bare 400)."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
+    from repody.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()
@@ -125,12 +125,12 @@ async def test_run_json_rejects_unconfirmed_file_binding(client):
 async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_path):
     """FORBIDDEN AppError → 403 when intent owner ≠ principal."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from audit_workbench.infra.db.base import async_session_factory
-    from audit_workbench.app.uploads.intents import record_upload_intent
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.infra.db.base import async_session_factory
+    from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.storage.factory import get_storage
 
     storage = get_storage()
     await storage.ensure_bucket()
@@ -197,7 +197,7 @@ async def test_duplicate_file_upload_run_completes(live_client):
         assert res.status_code == 202, res.text
         return res.json()["runId"]
 
-    from audit_workbench.integration.workflow_flow import poll_run_until_done
+    from repody.integration.workflow_flow import poll_run_until_done
 
     run_id_1 = await start_run()
     run_id_2 = await start_run()

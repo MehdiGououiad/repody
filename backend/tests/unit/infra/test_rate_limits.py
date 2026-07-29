@@ -6,11 +6,11 @@ import pytest
 from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
-from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.infra import rate_limit as rate_limit_module
-from audit_workbench.infra.rate_limit import check_run_rate_limits
-from audit_workbench.settings import Settings, clear_settings_cache
+from repody.rules.logic_evaluator import evaluate_logic_rule
+from repody.runtime.contracts.result import ErrorCode
+from repody.infra import rate_limit as rate_limit_module
+from repody.infra.rate_limit import check_run_rate_limits
+from repody.settings import Settings, clear_settings_cache
 
 
 def test_evaluate_logic_rule_skips_missing_field():

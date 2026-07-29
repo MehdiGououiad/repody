@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.runtime.contracts.result import ErrorCode
+from repody.runtime.contracts.result import ErrorCode
 from tests.helpers.api_errors import assert_app_error_status
 
 

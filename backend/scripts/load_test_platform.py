@@ -8,7 +8,7 @@ Does **not** stress VLM extraction (use ``prod_stress_test.py`` for that).
 Usage (stack up: API + Postgres + Redis + workers + Keycloak):
 
   $env:E2E_STACK='1'
-  $env:AUDIT_DATABASE_URL='postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/audit_workbench'
+  $env:AUDIT_DATABASE_URL='postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody'
   node scripts/backend-run.mjs --dev python scripts/load_test_platform.py
   node scripts/backend-run.mjs --dev python scripts/load_test_platform.py --concurrency 40 --enqueue 200
 """
@@ -54,7 +54,7 @@ class Sample:
 
 
 def _auth_headers() -> dict[str, str]:
-    from audit_workbench.integration.live_stack import live_auth_headers, live_oidc_enabled
+    from repody.integration.live_stack import live_auth_headers, live_oidc_enabled
 
     if not live_oidc_enabled():
         return {}
@@ -98,7 +98,7 @@ async def _phase_control_plane(client: httpx.AsyncClient, n: int) -> list[str]:
     return lines
 
 async def _pick_workflow(client: httpx.AsyncClient) -> str:
-    from audit_workbench.infra.db.seed import SEED_WORKFLOW_ID
+    from repody.infra.db.seed import SEED_WORKFLOW_ID
 
     res = await client.get("/v1/workflows")
     res.raise_for_status()

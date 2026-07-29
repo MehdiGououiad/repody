@@ -1,6 +1,6 @@
 import pytest
 
-from audit_workbench.infra.storage.local import build_local_store
+from repody.infra.storage.local import build_local_store
 
 
 @pytest.mark.asyncio

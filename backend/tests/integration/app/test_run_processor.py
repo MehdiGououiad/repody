@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from audit_workbench.infra.db.models import (
+from repody.infra.db.models import (
     Document,
     ExtractedField,
     RuleResult,
@@ -16,7 +16,7 @@ from audit_workbench.infra.db.models import (
     WorkflowRule,
     WorkflowStatus,
 )
-from audit_workbench.app.run.processor import process_run
+from repody.app.run.processor import process_run
 
 
 @pytest.fixture

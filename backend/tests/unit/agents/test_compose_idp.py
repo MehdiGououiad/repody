@@ -4,25 +4,25 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.agents.idp.compose import compose_idp
-from audit_workbench.agents.idp.contracts import StoredDocument
-from audit_workbench.agents.idp.contracts import (
+from repody.agents.idp.compose import compose_idp
+from repody.agents.idp.contracts import StoredDocument
+from repody.agents.idp.contracts import (
     DocumentExtraction,
     ExtractedField,
     ExtractionOutput,
 )
-from audit_workbench.agents.idp.contracts import IdpInput
-from audit_workbench.agents.idp.contracts import RuleResult, ValidationOutput
-from audit_workbench.agents.idp.contracts import (
+from repody.agents.idp.contracts import IdpInput
+from repody.agents.idp.contracts import RuleResult, ValidationOutput
+from repody.agents.idp.contracts import (
     DocumentSpec,
     IdpWorkflowConfig,
     RuleSpec,
     SchemaField,
 )
-from audit_workbench.agents.idp.run import wrap_idp_outcome
-from audit_workbench.extraction.types import ExtractionMetadata
-from audit_workbench.runtime.contracts.agent import AgentStatus
-from audit_workbench.runtime.contracts.result import ErrorCode, Result
+from repody.agents.idp.run import wrap_idp_outcome
+from repody.extraction.types import ExtractionMetadata
+from repody.runtime.contracts.agent import AgentStatus
+from repody.runtime.contracts.result import ErrorCode, Result
 
 
 def _stored(doc_id: str = "d1") -> StoredDocument:

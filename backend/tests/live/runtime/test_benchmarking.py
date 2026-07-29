@@ -1,4 +1,4 @@
-from audit_workbench.benchmarking import compare_value, html_report, score_fields, score_rules
+from repody.benchmarking import compare_value, html_report, score_fields, score_rules
 
 
 def test_compare_value_handles_locale_amounts():

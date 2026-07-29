@@ -10,8 +10,8 @@ from tests.helpers.api_errors import assert_error_response
 @pytest.mark.asyncio
 async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
+    from repody.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()
@@ -27,8 +27,8 @@ async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_confirm_upload_rejects_empty_object(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
-    from audit_workbench.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
+    from repody.infra.storage.factory import get_storage
 
     clear_settings_cache()
     storage = get_storage()
@@ -43,7 +43,7 @@ async def test_confirm_upload_rejects_empty_object(client, monkeypatch, tmp_path
 @pytest.mark.asyncio
 async def test_multipart_upload_returns_201(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from audit_workbench.settings import clear_settings_cache
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
     files = {"files": ("doc.pdf", b"%PDF-1.4\nsample", "application/pdf")}

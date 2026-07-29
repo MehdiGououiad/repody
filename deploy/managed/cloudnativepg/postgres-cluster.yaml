@@ -14,7 +14,7 @@ spec:
 
   bootstrap:
     initdb:
-      database: audit_workbench
+      database: repody
       owner: audit
       secret:
         name: repody-postgres-app

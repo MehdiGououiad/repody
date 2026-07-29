@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from audit_workbench.benchmarking import (
+from repody.benchmarking import (
     score_gououiad_cnie_fields,
     score_gououiad_cnie_markdown,
 )

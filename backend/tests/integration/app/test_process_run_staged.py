@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from audit_workbench.infra.db.models import (
+from repody.infra.db.models import (
     Document,
     Run,
     RunDispatchOutbox,
@@ -16,9 +16,9 @@ from audit_workbench.infra.db.models import (
     Workflow,
     WorkflowStatus,
 )
-from audit_workbench.runtime.contracts.agent import AgentId
-from audit_workbench.app.run.processor import process_run
-from audit_workbench.settings import clear_settings_cache
+from repody.runtime.contracts.agent import AgentId
+from repody.app.run.processor import process_run
+from repody.settings import clear_settings_cache
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ async def staged_session(postgres_session, monkeypatch):
     clear_settings_cache()
     # Avoid real Taskiq/Redis kiq during in-process staged processor tests.
     monkeypatch.setattr(
-        "audit_workbench.app.run.handoff.schedule_outbox_dispatch",
+        "repody.app.run.handoff.schedule_outbox_dispatch",
         lambda _run_id: None,
     )
 

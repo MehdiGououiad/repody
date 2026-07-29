@@ -1,6 +1,6 @@
 import pytest
 
-from audit_workbench.app.uploads.document_slots import resolve_document_slot_keys
+from repody.app.uploads.document_slots import resolve_document_slot_keys
 
 
 class _Doc:

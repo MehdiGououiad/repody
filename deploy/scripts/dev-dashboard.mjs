@@ -60,7 +60,7 @@ export function buildDevDashboardSections(ctx) {
         {
           name: "PostgreSQL",
           endpoint: "localhost:5432",
-          role: "Repody app database (audit_workbench)",
+          role: "Repody app database (repody)",
           creds: "audit / audit-local-dev",
         },
         {

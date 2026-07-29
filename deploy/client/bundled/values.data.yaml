@@ -12,7 +12,7 @@ postgresql:
   enabled: true
   auth:
     username: audit
-    database: audit_workbench
+    database: repody
     existingSecret: repody-data-postgresql
     secretKeys:
       passwordKey: password

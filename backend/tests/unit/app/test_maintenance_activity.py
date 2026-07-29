@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.app.maintenance import _running_activity_at, maybe_reap_stale_run
+from repody.app.ops.maintenance import _running_activity_at, maybe_reap_stale_run
 
 
 def test_running_activity_prefers_last_activity_at():
@@ -27,9 +27,9 @@ def test_running_activity_falls_back_to_started_at():
 @pytest.mark.asyncio
 async def test_maybe_reap_stale_run_uses_activity_clock(monkeypatch: pytest.MonkeyPatch):
     fail = AsyncMock(return_value=True)
-    monkeypatch.setattr("audit_workbench.app.maintenance.fail_run_terminal", fail)
+    monkeypatch.setattr("repody.app.ops.maintenance.fail_run_terminal", fail)
     monkeypatch.setattr(
-        "audit_workbench.app.maintenance.get_settings",
+        "repody.app.ops.maintenance.get_settings",
         lambda: SimpleNamespace(stale_run_timeout_minutes=20, queued_stale_timeout_minutes=5),
     )
     # Old start, fresh activity → do not reap

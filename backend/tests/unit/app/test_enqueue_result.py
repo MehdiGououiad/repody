@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from audit_workbench.runtime.contracts.result import AppError, ErrorCode, Result
-from audit_workbench.app.run.enqueue import client_key_from_request
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.app.run.enqueue import client_key_from_request
 
 
 def test_client_key_from_api_bearer_hashes_token() -> None:

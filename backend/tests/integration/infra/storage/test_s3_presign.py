@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from audit_workbench.settings import Settings
-from audit_workbench.infra.storage.s3 import build_s3_clients
+from repody.settings import Settings
+from repody.infra.storage.s3 import build_s3_clients
 
 
 def test_presign_uses_public_endpoint_client_when_configured() -> None:
@@ -11,7 +11,7 @@ def test_presign_uses_public_endpoint_client_when_configured() -> None:
         storage_backend="s3",
     )
 
-    with patch("audit_workbench.infra.storage.s3.boto3.client") as mock_client:
+    with patch("repody.infra.storage.s3.boto3.client") as mock_client:
         internal = MagicMock(name="internal")
         public = MagicMock(name="public")
         mock_client.side_effect = [internal, public]
@@ -30,7 +30,7 @@ def test_presign_reuses_internal_client_when_endpoints_match() -> None:
         storage_backend="s3",
     )
 
-    with patch("audit_workbench.infra.storage.s3.boto3.client") as mock_client:
+    with patch("repody.infra.storage.s3.boto3.client") as mock_client:
         internal = MagicMock(name="internal")
         mock_client.return_value = internal
 

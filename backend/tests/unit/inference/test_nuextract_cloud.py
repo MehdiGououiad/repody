@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from audit_workbench.inference.nuextract_cloud import (
+from repody.inference.nuextract_cloud import (
     NuExtractCloudConfig,
     NuExtractCloudError,
     create_project,

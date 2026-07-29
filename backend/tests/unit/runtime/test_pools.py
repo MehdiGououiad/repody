@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.runtime.contracts.agent import AgentId
-from audit_workbench.runtime.pools import (
+from repody.runtime.contracts.agent import AgentId
+from repody.runtime.pools import (
     agent_for_pool,
     parse_agent_stage,
     pool_for_agent,

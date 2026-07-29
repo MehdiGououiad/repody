@@ -22,12 +22,12 @@ from typing import Any
 import httpx
 import pytest
 
-from audit_workbench.benchmarking import score_gououiad_cnie_markdown
-from audit_workbench.extraction.branding import PADDLEOCR_V6_CATALOG_ID
-from audit_workbench.extraction.paddleocr_v6 import extract_with_paddleocr_v6
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.settings import get_settings
-from audit_workbench.infra.storage.mime import resolve_mime
+from repody.benchmarking import score_gououiad_cnie_markdown
+from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
+from repody.extraction.paddleocr_v6 import extract_with_paddleocr_v6
+from repody.extraction.types import DocumentBundle
+from repody.settings import get_settings
+from repody.infra.storage.mime import resolve_mime
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

@@ -7,9 +7,9 @@ import uuid
 
 import pytest
 
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from tests.helpers.workflow_rules import logic_field_gt
-from audit_workbench.integration.facture import (
+from repody.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_PDF,
     FACTURE_UI_PATHS,
@@ -79,7 +79,7 @@ async def test_models_catalog_includes_processing_paths(client):
 
 @pytest.mark.asyncio
 async def test_document_model_id_catalog_reports_runtime_availability(client, monkeypatch):
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     settings = get_settings()
 
@@ -89,7 +89,7 @@ async def test_document_model_id_catalog_reports_runtime_availability(client, mo
         }
 
     monkeypatch.setattr(
-        "audit_workbench.catalog.probes.installed_runtime_models",
+        "repody.catalog.probes.installed_runtime_models",
         fake_installed_runtime_models,
     )
 
@@ -271,7 +271,7 @@ async def test_workflow_put_create_and_post_put_upsert(client):
     assert upsert.json()["workflow"]["name"] == "PUT updated"
 
 
-from audit_workbench.infra.db.seed import SEED_API_KEY
+from repody.infra.db.seed import SEED_API_KEY
 
 
 @pytest.mark.asyncio
@@ -422,7 +422,7 @@ async def test_multipart_test_run_with_facture(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from audit_workbench.integration.workflow_flow import poll_run_until_done
+    from repody.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id, max_ms=120_000)
     assert total_from_result(result) == EXPECTED_TOTAL
@@ -444,7 +444,7 @@ async def test_test_run_produces_audit_detail(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from audit_workbench.integration.workflow_flow import poll_run_until_done
+    from repody.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     audit_id = result["id"]
@@ -464,7 +464,7 @@ async def test_api_run_with_seed_key_completes(live_client):
     assert ok.status_code == 202
     run_id = ok.json()["runId"]
 
-    from audit_workbench.integration.workflow_flow import poll_run_until_done
+    from repody.integration.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     assert result is not None

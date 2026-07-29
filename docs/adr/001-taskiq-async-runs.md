@@ -16,7 +16,7 @@ Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the 
 
 - One Redis stream queue per worker pool: `repody:audit:extract` and `repody:audit:fast`
 - API enqueues via `app/run/dispatch.py` after the Postgres dispatch outbox commits
-- Workers run `python -m audit_workbench.taskiq.worker` (Taskiq CLI, async tasks)
+- Workers run `python -m repody.taskiq.worker` (Taskiq CLI, async tasks)
 - Durable dispatch replay remains in Postgres (`run_dispatch_outbox`)
 - Redis (`AUDIT_REDIS_URL`) is already required for rate limits, SSE, and extraction cache
 
@@ -46,6 +46,6 @@ Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the 
 
 ## References
 
-- `backend/src/audit_workbench/taskiq/` — broker, tasks, worker
+- `backend/src/repody/taskiq/` — broker, tasks, worker
 - `deploy/helm/repody/templates/workers.yaml` — worker Deployments
 - [Taskiq guide](https://taskiq-python.github.io/guide/)

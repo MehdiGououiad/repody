@@ -86,7 +86,7 @@ function composeArgs(...parts) {
 function apiEnv() {
   // Prefer backend/.env over inherited shell env. Otherwise a prior pytest
   // AUDIT_DATABASE_URL=..._test leaks into the live API and workers (Compose)
-  // keep using audit_workbench — claims no-op and runs stay queued forever.
+  // keep using repody — claims no-op and runs stay queued forever.
   const fileEnv = parseEnvFile(BACKEND_ENV);
   return { ...process.env, ...fileEnv };
 }
@@ -572,16 +572,16 @@ function killDevApi() {
         "-NoProfile",
         "-Command",
         "Get-CimInstance Win32_Process -Filter \"name='python.exe'\" " +
-          "| Where-Object { $_.CommandLine -match 'uvicorn.*audit_workbench|audit_workbench\\.main' } " +
+          "| Where-Object { $_.CommandLine -match 'uvicorn.*repody|repody\\.main' } " +
           "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; " +
           "Get-CimInstance Win32_Process -Filter \"name='uv.exe'\" " +
-          "| Where-Object { $_.CommandLine -match 'uvicorn.*audit_workbench' } " +
+          "| Where-Object { $_.CommandLine -match 'uvicorn.*repody' } " +
           "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
       ],
       { encoding: "utf8", shell: false },
     );
   } else {
-    spawnSync("sh", ["-c", "pkill -f 'uvicorn.*audit_workbench' 2>/dev/null || true"], { shell: false });
+    spawnSync("sh", ["-c", "pkill -f 'uvicorn.*repody' 2>/dev/null || true"], { shell: false });
   }
   killListenerPort(API_PORT);
   if (!waitForPortRelease(API_PORT)) {
@@ -639,7 +639,7 @@ async function reset() {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const probe = run(
       "docker",
-      composeArgs("exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "audit_workbench"),
+      composeArgs("exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "repody"),
       { allowFail: true },
     );
     if (probe.status === 0) break;
@@ -824,7 +824,7 @@ async function app(options = {}) {
     console.log(`API already running on :${API_PORT} — skipping`);
   } else {
     killDevApi();
-    const apiArgs = ["run", "--extra", "otel", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
+    const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", String(API_PORT)];
     if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
       apiArgs.push("--reload");
     }
@@ -878,7 +878,7 @@ async function api() {
   const backendDir = path.join(ROOT, "backend");
   const uv = resolveExecutable("uv");
   killDevApi();
-  const apiArgs = ["run", "--extra", "otel", "uvicorn", "audit_workbench.main:app", "--port", String(API_PORT)];
+  const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", String(API_PORT)];
   if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
     apiArgs.push("--reload");
   }

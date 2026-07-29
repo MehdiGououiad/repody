@@ -15,7 +15,7 @@ export const LAB = {
 };
 
 export function auditDatabaseUrl() {
-  return `postgresql+asyncpg://${LAB.pgUser}:${LAB.pgUserPassword}@repody-data-postgresql:5432/audit_workbench`;
+  return `postgresql+asyncpg://${LAB.pgUser}:${LAB.pgUserPassword}@repody-data-postgresql:5432/repody`;
 }
 
 export function auditRedisUrl() {

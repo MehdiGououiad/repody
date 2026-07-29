@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 import structlog.testing
 
-from audit_workbench.taskiq import worker
+from repody.taskiq import worker
 
 
 @pytest.mark.asyncio
@@ -20,7 +20,7 @@ async def test_extract_worker_warms_repody_vlm(monkeypatch):
         type("S", (), {"repody_vlm_warmup_on_start": True})(),
     )
 
-    import audit_workbench.extraction.warmup as warmup_mod
+    import repody.extraction.warmup as warmup_mod
 
     monkeypatch.setattr(warmup_mod, "warmup_repody_vlm", record_vlm)
 
@@ -35,7 +35,7 @@ async def test_extract_worker_warms_repody_vlm(monkeypatch):
 @pytest.mark.asyncio
 async def test_fast_pool_skips_extract_warmup(monkeypatch):
     monkeypatch.setattr(
-        "audit_workbench.taskiq.worker.get_settings",
+        "repody.taskiq.worker.get_settings",
         lambda: type("S", (), {"repody_vlm_warmup_on_start": True})(),
     )
 

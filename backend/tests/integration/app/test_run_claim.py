@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from audit_workbench.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
-from audit_workbench.app.run.persistence import try_claim_queued_run
+from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
+from repody.app.run.persistence import try_claim_queued_run
 
 
 @pytest.fixture

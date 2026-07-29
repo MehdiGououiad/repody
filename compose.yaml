@@ -21,13 +21,13 @@ services:
     environment:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
-      POSTGRES_DB: audit_workbench
+      POSTGRES_DB: repody
     ports:
       - "5432:5432"
     volumes:
       - repody-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U audit -d audit_workbench"]
+      test: ["CMD-SHELL", "pg_isready -U audit -d repody"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -110,7 +110,7 @@ services:
       - path: deploy/env/observability.enabled.env
         required: false
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
       AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
@@ -176,7 +176,7 @@ services:
       - path: deploy/env/observability.enabled.env
         required: false
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
       AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
@@ -209,7 +209,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
       AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
@@ -238,7 +238,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/audit_workbench
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
       AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000

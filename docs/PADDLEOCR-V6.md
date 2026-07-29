@@ -90,7 +90,7 @@ Skip OCR: `pnpm dev:all -- --no-paddleocr`
 
 - Config: `deploy/paddleocr-v6/OCR.yaml`
 - Serve: `deploy/scripts/paddleocr-v6-serve.mjs`
-- Client: `backend/src/audit_workbench/extraction/paddleocr_v6.py`
+- Client: `backend/src/repody/extraction/paddleocr_v6.py`
 - Unit tests: `backend/tests/unit/extraction/test_paddleocr_v6.py`
 - Live Gououiad: `backend/tests/live/platform/test_paddleocr_gououiad_markdown.py` (`PADDLEOCR_GOUOUIAD_LIVE=1`)
 

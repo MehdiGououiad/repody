@@ -11,7 +11,7 @@ if not _db_url and not _live_stack:
 elif _live_stack and (not _db_url or _db_url.rstrip("/").endswith("_test")):
     # Align host-side scripts with Compose workers when running live E2E.
     os.environ["AUDIT_DATABASE_URL"] = (
-        "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/audit_workbench"
+        "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody"
     )
 os.environ["AUDIT_RUN_EVENTS_ENABLED"] = os.environ.get("AUDIT_RUN_EVENTS_ENABLED", "false")
 os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
@@ -34,8 +34,8 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from audit_workbench.main import create_app
-from audit_workbench.settings import clear_settings_cache, get_settings
+from repody.main import create_app
+from repody.settings import clear_settings_cache, get_settings
 from tests.helpers.db import (
     bind_test_database,
     configure_test_database_url,
@@ -64,7 +64,7 @@ async def live_client(request):
         pytest.skip("live_client fixture requires @pytest.mark.live")
     if os.environ.get("E2E_STACK") != "1" and not os.environ.get("E2E_API_URL"):
         pytest.skip("Set E2E_STACK=1 or E2E_API_URL for live API tests")
-    from audit_workbench.integration.live_stack import create_live_async_client
+    from repody.integration.live_stack import create_live_async_client
 
     async with create_live_async_client() as ac:
         yield ac
@@ -100,9 +100,9 @@ async def app(test_session_factory):
 
     yield application
 
-    from audit_workbench.app.run.dispatch import close_taskiq_brokers
-    from audit_workbench.taskiq.broker import clear_broker_cache
-    from audit_workbench.taskiq.tasks import clear_task_registry
+    from repody.app.run.dispatch import close_taskiq_brokers
+    from repody.taskiq.broker import clear_broker_cache
+    from repody.taskiq.tasks import clear_task_registry
 
     await close_taskiq_brokers()
     clear_broker_cache()
@@ -125,7 +125,7 @@ async def postgres_session(monkeypatch, test_session_factory):
 async def drain_background_tasks():
     """Let fire-and-forget Taskiq dispatch tasks finish before the next test."""
     yield
-    from audit_workbench.app.run.dispatch_outbox import drain_dispatch_tasks
+    from repody.app.run.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
 
@@ -134,9 +134,9 @@ async def drain_background_tasks():
 async def reset_inference_clients():
     """Drop cached httpx clients between tests (session loop keeps the same event loop)."""
     yield
-    from audit_workbench.inference.availability import clear_availability_cache
-    from audit_workbench.inference.factory import get_chat, get_ensure_available
-    from audit_workbench.inference.openai_compat import close_openai_clients
+    from repody.inference.availability import clear_availability_cache
+    from repody.inference.factory import get_chat, get_ensure_available
+    from repody.inference.openai_compat import close_openai_clients
 
     await close_openai_clients()
     get_chat.cache_clear()

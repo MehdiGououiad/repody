@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from audit_workbench.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
-from audit_workbench.extraction.pipeline import extract_document
+from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
+from repody.extraction.pipeline import extract_document
 
 
 @pytest.fixture
@@ -25,15 +25,15 @@ def mock_document_model(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_document_model",
         AsyncMock(side_effect=fake_extract),
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.get_cached",
+        "repody.extraction.pipeline.get_cached",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.set_cached",
+        "repody.extraction.pipeline.set_cached",
         AsyncMock(),
     )
 
@@ -68,15 +68,15 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_document_model",
         AsyncMock(side_effect=fake_extract),
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.get_cached",
+        "repody.extraction.pipeline.get_cached",
         AsyncMock(return_value=None),
     )
     monkeypatch.setattr(
-        "audit_workbench.extraction.pipeline.set_cached",
+        "repody.extraction.pipeline.set_cached",
         AsyncMock(),
     )
 

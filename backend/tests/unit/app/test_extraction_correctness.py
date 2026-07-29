@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
-from audit_workbench.extraction.cache import (
+from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
+from repody.extraction.cache import (
     CACHE_VERSION,
     cache_key_from_storage,
     schema_fingerprint,
     should_cache_result,
 )
-from audit_workbench.extraction.modes import resolve_run_validation_mode
-from audit_workbench.extraction.fields import fields_from_nuextract_json
-from audit_workbench.extraction.schema import empty_fields_from_schema
-from audit_workbench.rules.runner import skipped_llm_results
+from repody.extraction.modes import resolve_run_validation_mode
+from repody.extraction.fields import fields_from_nuextract_json
+from repody.extraction.schema import empty_fields_from_schema
+from repody.rules.runner import skipped_llm_results
 
 
 def test_empty_schema_fields_have_no_fake_values():
@@ -128,9 +128,9 @@ def test_skipped_llm_rules_use_skipped_status():
 
 @pytest.mark.asyncio
 async def test_llm_unavailable_is_skipped_in_stub_mode(monkeypatch):
-    from audit_workbench.inference.factory import get_chat
-    from audit_workbench.rules.llm_evaluator import evaluate_llm_rule
-    from audit_workbench.settings import get_settings
+    from repody.inference.factory import get_chat
+    from repody.rules.llm_evaluator import evaluate_llm_rule
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_INFERENCE_MODE", "stub")
     get_settings.cache_clear()
@@ -146,9 +146,9 @@ async def test_llm_unavailable_is_error_when_inference_down(monkeypatch):
     import httpx
     import respx
 
-    from audit_workbench.inference.factory import get_chat
-    from audit_workbench.rules.llm_evaluator import evaluate_llm_rule
-    from audit_workbench.settings import get_settings
+    from repody.inference.factory import get_chat
+    from repody.rules.llm_evaluator import evaluate_llm_rule
+    from repody.settings import get_settings
 
     base = "http://model-runner-down.test/v1"
     monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
@@ -171,7 +171,7 @@ async def test_llm_unavailable_is_error_when_inference_down(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_llm_rule_rejects_unknown_field_reference_before_inference():
-    from audit_workbench.rules.llm_evaluator import evaluate_llm_rule
+    from repody.rules.llm_evaluator import evaluate_llm_rule
 
     status, detail = await evaluate_llm_rule(
         "Verify that @missing_total is positive.",
@@ -183,8 +183,8 @@ async def test_llm_rule_rejects_unknown_field_reference_before_inference():
 
 
 def test_llm_field_references_are_unique_and_affected():
-    from audit_workbench.rules.llm_evaluator import referenced_fields
-    from audit_workbench.rules.types import collect_affected_fields
+    from repody.rules.llm_evaluator import referenced_fields
+    from repody.rules.types import collect_affected_fields
 
     body = "Compare @invoice.total_amount with @invoice.tax and @invoice.total_amount."
     assert referenced_fields(body) == ["invoice.total_amount", "invoice.tax"]
@@ -195,7 +195,7 @@ def test_llm_field_references_are_unique_and_affected():
 
 
 def test_llm_rule_forces_logic_and_llm_validation_mode(monkeypatch):
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
     get_settings.cache_clear()
@@ -205,7 +205,7 @@ def test_llm_rule_forces_logic_and_llm_validation_mode(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_single_llm_rule_uses_single_rule_evaluator(monkeypatch):
-    from audit_workbench.rules import llm_evaluator
+    from repody.rules import llm_evaluator
 
     calls = []
 
@@ -237,7 +237,7 @@ async def test_single_llm_rule_uses_single_rule_evaluator(monkeypatch):
 
 
 def test_structured_llm_auto_enabled_when_llm_validation_on(monkeypatch):
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
     monkeypatch.setenv("AUDIT_STRUCTURED_LLM_ENABLED", "false")
@@ -249,8 +249,8 @@ def test_structured_llm_auto_enabled_when_llm_validation_on(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_llm_validation_requires_dedicated_model(monkeypatch):
-    from audit_workbench.rules.llm_evaluator import evaluate_llm_rule
-    from audit_workbench.settings import get_settings
+    from repody.rules.llm_evaluator import evaluate_llm_rule
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
     monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)
@@ -266,8 +266,8 @@ async def test_llm_validation_requires_dedicated_model(monkeypatch):
 
 
 def test_resolve_llm_validation_model_never_falls_back_to_repody_vlm(monkeypatch):
-    from audit_workbench.inference.validation_model import resolve_llm_validation_model
-    from audit_workbench.settings import get_settings
+    from repody.inference.validation_model import resolve_llm_validation_model
+    from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "numind/NuExtract3")
     monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)

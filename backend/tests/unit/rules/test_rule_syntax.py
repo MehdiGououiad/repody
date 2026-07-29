@@ -1,4 +1,4 @@
-from audit_workbench.rules.rule_syntax import validate_logic_rule_body
+from repody.rules.rule_syntax import validate_logic_rule_body
 
 
 def test_validate_date_comparison_expression():

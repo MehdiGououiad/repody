@@ -6,8 +6,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from audit_workbench.extraction.modes import parse_read_path
-from audit_workbench.app.run.pool import (
+from repody.extraction.modes import parse_read_path
+from repody.app.run.pool import (
     classify_bindings_for_workflow,
     classify_run_documents,
     needs_extract_pool,

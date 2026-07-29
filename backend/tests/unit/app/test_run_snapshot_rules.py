@@ -1,4 +1,4 @@
-from audit_workbench.app.run.snapshot import resolve_run_rules
+from repody.app.run.snapshot import resolve_run_rules
 
 
 def test_resolve_run_rules_preserves_applies_to_from_snapshot():

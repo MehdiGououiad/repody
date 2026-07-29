@@ -10,7 +10,7 @@ Complete reference for product features, architecture, security, performance, pr
 |------|--------|---------|
 | **Repody** | Product, npm, Helm | Public name |
 | **repody** | `backend/pyproject.toml` | Python distribution |
-| **audit_workbench** | `backend/src/audit_workbench/` | Python import path |
+| **repody** | `backend/src/repody/` | Python import path |
 
 ---
 
@@ -90,7 +90,7 @@ See [CONTEXT.md](../CONTEXT.md) for the full sequence diagram and bounded contex
 ### Backend layers
 
 ```
-backend/src/audit_workbench/
+backend/src/repody/
 ├── api/           HTTP routers → delegate to services
 ├── app/      Business logic (runs, workflows, admission, dispatch)
 ├── extraction/    Document pipeline, NuExtract contract, Repody VLM client

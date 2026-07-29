@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.app.run.lifecycle import RunStatus, RunEntity
-from audit_workbench.app.run.lifecycle import RunCompleted, RunFailed, RunStarted
-from audit_workbench.app.run.lifecycle import (
+from repody.runtime.contracts.result import ErrorCode
+from repody.app.run.lifecycle import RunStatus, RunEntity
+from repody.app.run.lifecycle import RunCompleted, RunFailed, RunStarted
+from repody.app.run.lifecycle import (
     RunCompletionOutcome,
     complete_run_entity,
     fail_run_entity,

@@ -87,8 +87,8 @@ Aligned with [zai-org/GLM-OCR](https://huggingface.co/zai-org/GLM-OCR) + package
 
 ## Adapter
 
-- Official SDK: `backend/src/audit_workbench/extraction/glm_ocr_sdk.py`
-- Catalog adapter: `backend/src/audit_workbench/extraction/glm_ocr.py`
+- Official SDK: `backend/src/repody/extraction/glm_ocr_sdk.py`
+- Catalog adapter: `backend/src/repody/extraction/glm_ocr.py`
 - Unit tests: `backend/tests/unit/extraction/test_glm_ocr.py`
 - Live Gououiad: `backend/tests/live/platform/test_glm_gououiad_markdown.py`
   (`GLM_GOUOUIAD_LIVE=1`)

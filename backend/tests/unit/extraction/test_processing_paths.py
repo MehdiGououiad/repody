@@ -1,6 +1,6 @@
 import pytest
 
-from audit_workbench.extraction.modes import (
+from repody.extraction.modes import (
     DOCUMENT_MODEL_READ_PATH_ID,
     LOGIC_VALIDATION,
     RUN_VALIDATION_LLM,
@@ -10,7 +10,7 @@ from audit_workbench.extraction.modes import (
     normalize_read_path_id,
     parse_read_path,
 )
-from audit_workbench.rules.runner import rules_for_validation
+from repody.rules.runner import rules_for_validation
 
 
 def test_read_path_catalog():
@@ -37,7 +37,7 @@ def test_unknown_read_path_raises():
 
 def test_normalize_document_modes_honors_validation_mode(monkeypatch):
     monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    from audit_workbench.settings import get_settings
+    from repody.settings import get_settings
 
     get_settings.cache_clear()
     read, val = normalize_document_modes("document_model", "logic_and_llm")

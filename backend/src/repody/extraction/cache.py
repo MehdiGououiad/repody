@@ -1,0 +1,184 @@
+from __future__ import annotations
+
+import hashlib
+import json
+
+import structlog
+
+from repody.extraction.types import (
+    ExtractedFieldResult,
+    ExtractionResult,
+    SchemaFieldSpec,
+    truncate_text,
+)
+from repody.infra.redis.pool import get_redis
+from repody.settings import get_settings
+
+log = structlog.get_logger()
+
+CACHE_VERSION = "v22"
+
+
+async def _redis_client():
+    settings = get_settings()
+    if not settings.extraction_cache_enabled:
+        return None
+    return await get_redis()
+
+
+def schema_fingerprint(schema: list[SchemaFieldSpec]) -> str:
+    """Fingerprint field names and extraction prompts (descriptions) in schema order."""
+    parts: list[str] = []
+    for field in schema:
+        name = field.name.strip().lower().replace(" ", "_")
+        if not name:
+            continue
+        description = (field.description or "").strip()
+        template_type = (field.template_type or "").strip()
+        parts.append(
+            f"{name}\x1f{description}\x1f{template_type}\x1f{_field_config_fingerprint(field)}"
+        )
+    return hashlib.sha256("\n".join(parts).encode()).hexdigest()[:16]
+
+
+def _field_config_fingerprint(field: SchemaFieldSpec) -> str:
+    chunks: list[str] = []
+    if field.enum_values:
+        chunks.append("enum:" + ",".join(field.enum_values))
+    if field.children:
+        for child in field.children:
+            child_name = child.name.strip().lower()
+            if not child_name:
+                continue
+            chunks.append(
+                f"{child_name}:{child.template_type or ''}:{child.description.strip()}"
+            )
+    return "|".join(chunks)
+
+
+def cache_key(
+    *,
+    content_hash: str,
+    schema_fp: str,
+    extraction_mode: str,
+    document_model_id: str | None,
+    extractor: str,
+) -> str:
+    model_part = document_model_id or "default"
+    return (
+        f"extract:{CACHE_VERSION}:{extractor}:{extraction_mode}:"
+        f"{model_part}:{schema_fp}:{content_hash}"
+    )
+
+
+def cache_key_from_storage(
+    *,
+    storage_key: str,
+    file_size: int,
+    content_hash: str,
+    schema_fp: str,
+    extraction_mode: str,
+    document_model_id: str | None,
+    extractor: str,
+) -> str:
+    """Cache lookup keyed by storage path, size, and content hash."""
+    model_part = document_model_id or "default"
+    safe_key = storage_key.replace(":", "_")
+    return (
+        f"extract:{CACHE_VERSION}s:{extractor}:{extraction_mode}:{model_part}:"
+        f"{schema_fp}:{content_hash}:{safe_key}:{file_size}"
+    )
+
+
+def hash_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def should_cache_result(result: ExtractionResult) -> bool:
+    """Cache field or text-only extractions."""
+    if sum(1 for f in result.fields if f.extracted) > 0:
+        return True
+    text = (result.markdown_text or result.raw_text or "").strip()
+    return len(text) > 0
+
+
+def _serialize_result(result: ExtractionResult) -> str:
+    llm_rules: dict[str, list] = {}
+    if result.llm_rule_results:
+        llm_rules = {
+            rid: [status, detail] for rid, (status, detail) in result.llm_rule_results.items()
+        }
+    payload = {
+        "rawText": truncate_text(result.raw_text),
+        "markdownText": truncate_text(result.markdown_text),
+        "readPathUsed": result.read_path_used,
+        "llmRuleResults": llm_rules,
+        "fields": [
+            {
+                "key": f.key,
+                "description": f.description,
+                "value": f.value,
+                "type": f.type,
+                "confidence": f.confidence,
+                "extracted": f.extracted,
+            }
+            for f in result.fields
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def _deserialize_result(raw: str) -> ExtractionResult:
+    data = json.loads(raw)
+    fields = [
+        ExtractedFieldResult(
+            key=row["key"],
+            description=row.get("description") or "",
+            value=row.get("value") or "—",
+            type=row.get("type") or "string",
+            confidence=row.get("confidence"),
+            extracted=bool(row.get("extracted")),
+        )
+        for row in data.get("fields", [])
+    ]
+    llm_raw = data.get("llmRuleResults") or {}
+    llm_rule_results: dict[str, tuple[str, str]] = {}
+    if isinstance(llm_raw, dict):
+        for rid, pair in llm_raw.items():
+            if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+                llm_rule_results[str(rid)] = (str(pair[0]), str(pair[1]))
+    return ExtractionResult(
+        fields=fields,
+        raw_text=data.get("rawText"),
+        markdown_text=data.get("markdownText"),
+        read_path_used=data.get("readPathUsed"),
+        llm_rule_results=llm_rule_results or None,
+    )
+
+
+async def get_cached(key: str) -> ExtractionResult | None:
+    client = await _redis_client()
+    if client is None:
+        return None
+    try:
+        raw = await client.get(key)
+        if not raw:
+            return None
+        log.info("extraction_cache_hit", key=key[:48])
+        return _deserialize_result(raw)
+    except Exception as exc:
+        log.warning("extraction_cache_get_failed", error=repr(exc))
+        return None
+
+
+async def set_cached(key: str, result: ExtractionResult) -> None:
+    if not should_cache_result(result):
+        return
+    client = await _redis_client()
+    if client is None:
+        return
+    settings = get_settings()
+    try:
+        await client.setex(key, settings.extraction_cache_ttl_seconds, _serialize_result(result))
+    except Exception as exc:
+        log.warning("extraction_cache_set_failed", error=repr(exc))

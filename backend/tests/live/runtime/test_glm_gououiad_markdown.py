@@ -23,12 +23,12 @@ from typing import Any
 import httpx
 import pytest
 
-from audit_workbench.benchmarking import score_gououiad_cnie_markdown
-from audit_workbench.extraction.branding import GLM_OCR_CATALOG_ID
-from audit_workbench.extraction.glm_ocr import extract_with_glm_ocr
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.settings import get_settings
-from audit_workbench.infra.storage.mime import resolve_mime
+from repody.benchmarking import score_gououiad_cnie_markdown
+from repody.extraction.branding import GLM_OCR_CATALOG_ID
+from repody.extraction.glm_ocr import extract_with_glm_ocr
+from repody.extraction.types import DocumentBundle
+from repody.settings import get_settings
+from repody.infra.storage.mime import resolve_mime
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

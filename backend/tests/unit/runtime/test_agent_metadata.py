@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from audit_workbench.agents.idp.contracts import (
+from repody.agents.idp.contracts import (
     DocumentExtraction,
     ExtractedField,
     ExtractionOutput,
@@ -12,9 +12,9 @@ from audit_workbench.agents.idp.contracts import (
     RuleResult,
     ValidationOutput,
 )
-from audit_workbench.extraction.types import ExtractionMetadata
-from audit_workbench.runtime.agent_metadata import idp_outcome_from_run, record_agent_outcome
-from audit_workbench.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from repody.extraction.types import ExtractionMetadata
+from repody.runtime.agent_metadata import idp_outcome_from_run, record_agent_outcome
+from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 
 
 def test_idp_outcome_round_trip_preserves_extraction_fields() -> None:

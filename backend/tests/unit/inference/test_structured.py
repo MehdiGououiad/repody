@@ -1,9 +1,9 @@
-from audit_workbench.inference.structured import (
+from repody.inference.structured import (
     extract_json_object,
     openai_json_schema_format,
     parse_structured_response,
 )
-from audit_workbench.inference.structured_models import LlmRuleVerdict
+from repody.inference.structured_models import LlmRuleVerdict
 
 
 def test_parse_structured_response_from_json_block():

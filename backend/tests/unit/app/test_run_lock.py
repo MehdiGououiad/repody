@@ -1,4 +1,4 @@
-from audit_workbench.app.run.processor import advisory_lock_key
+from repody.app.run.processor import advisory_lock_key
 
 
 def test_advisory_lock_key_is_stable() -> None:

@@ -22,14 +22,14 @@ from typing import Any
 import httpx
 import pytest
 
-from audit_workbench.benchmarking import score_gououiad_cnie_fields
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
-from audit_workbench.integration.live_stack import (
+from repody.benchmarking import score_gououiad_cnie_fields
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.integration.live_stack import (
     create_live_async_client,
     live_api_base,
 )
-from audit_workbench.integration.workflow_flow import run_test_with_files, save_workflow
-from audit_workbench.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
+from repody.integration.workflow_flow import run_test_with_files, save_workflow
+from repody.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

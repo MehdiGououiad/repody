@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.agents.fraud import FraudInput, FraudOutcome, execute_fraud
-from audit_workbench.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
-from audit_workbench.runtime.contracts.agent import AgentId, AgentStatus
-from audit_workbench.runtime.contracts.result import ErrorCode
+from repody.agents.fraud import FraudInput, FraudOutcome, execute_fraud
+from repody.agents.idp.contracts import ExtractionOutput, IdpOutcome, ValidationOutput
+from repody.runtime.contracts.agent import AgentId, AgentStatus
+from repody.runtime.contracts.result import ErrorCode
 
 
 def _idp(run_id: str = "run-1") -> IdpOutcome:

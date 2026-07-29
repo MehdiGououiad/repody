@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from audit_workbench.extraction.modes import parse_read_path
-from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
-from audit_workbench.app.uploads.validation import UploadValidationError, validate_upload_file
-from audit_workbench.settings import Settings
-from audit_workbench.infra.storage.mime import resolve_mime, sanitize_filename, sniff_mime
+from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
+from repody.extraction.modes import parse_read_path
+from repody.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from repody.app.uploads.validation import UploadValidationError, validate_upload_file
+from repody.settings import Settings
+from repody.infra.storage.mime import resolve_mime, sanitize_filename, sniff_mime
 
 
 def test_default_read_path_is_document_model():
@@ -71,7 +71,7 @@ def test_upload_accepts_pdf_bytes_with_generic_declared_mime():
 
 
 def test_confirm_accepts_octet_stream_when_sniffed_png():
-    from audit_workbench.infra.storage.mime import mimes_match_for_confirm
+    from repody.infra.storage.mime import mimes_match_for_confirm
 
     assert mimes_match_for_confirm(
         prepared="application/octet-stream",
@@ -98,7 +98,7 @@ def test_confirm_accepts_octet_stream_when_sniffed_png():
 def test_gououiad_cnie_fixtures_are_jpeg_despite_png_extension():
     from pathlib import Path
 
-    from audit_workbench.infra.storage.mime import JPEG, sniff_mime
+    from repody.infra.storage.mime import JPEG, sniff_mime
 
     root = Path(__file__).resolve().parents[4] / "e2e" / "fixtures" / "documents"
     for name in ("gououiad-cnie-front.png", "gououiad-cnie-back.png"):

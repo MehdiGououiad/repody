@@ -9,15 +9,15 @@ import httpx
 import pytest
 import respx
 
-from audit_workbench.catalog.registry import is_markdown_only_model, parse_document_model
-from audit_workbench.extraction.branding import PADDLEOCR_V6_CATALOG_ID
-from audit_workbench.extraction.paddleocr_v6 import (
+from repody.catalog.registry import is_markdown_only_model, parse_document_model
+from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
+from repody.extraction.paddleocr_v6 import (
     build_ocr_request_payload,
     extract_with_paddleocr_v6,
     markdown_from_ocr_result,
 )
-from audit_workbench.extraction.types import DocumentBundle
-from audit_workbench.settings import get_settings
+from repody.extraction.types import DocumentBundle
+from repody.settings import get_settings
 
 
 def test_markdown_from_ocr_result_joins_lines():

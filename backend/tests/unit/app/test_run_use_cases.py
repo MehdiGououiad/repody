@@ -5,15 +5,15 @@ from datetime import UTC, datetime
 
 import pytest
 
-from audit_workbench.app.run.commands import (
+from repody.app.run.commands import (
     CompleteRunRequest,
     FailRunRequest,
     complete_run,
     fail_run,
 )
-from audit_workbench.app.run.lifecycle import RunStatus, RunEntity
-from audit_workbench.app.run.lifecycle import RunCompleted, RunDomainEvent, RunFailed
-from audit_workbench.app.run.lifecycle import RunCompletionOutcome
+from repody.app.run.lifecycle import RunStatus, RunEntity
+from repody.app.run.lifecycle import RunCompleted, RunDomainEvent, RunFailed
+from repody.app.run.lifecycle import RunCompletionOutcome
 
 
 def _store(entity: RunEntity | None):

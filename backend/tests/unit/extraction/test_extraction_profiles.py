@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.modes import (
+from repody.extraction.modes import (
     DOCUMENT_MODEL_READ_PATH_ID,
     resolve_read_path_for_document,
 )
-from audit_workbench.extraction.render import REPODY_VLM_RENDER
-from audit_workbench.extraction.nuextract import structured_chat_payload
-from audit_workbench.catalog.registry import parse_document_model
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
-from audit_workbench.extraction.types import SchemaFieldSpec
+from repody.extraction.render import REPODY_VLM_RENDER
+from repody.extraction.nuextract import structured_chat_payload
+from repody.catalog.registry import parse_document_model
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.types import SchemaFieldSpec
 
 
 def test_read_paths_resolve_to_nuextract_vision():

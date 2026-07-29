@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from audit_workbench.extraction.modes import (
+from repody.extraction.modes import (
     document_has_schema_fields,
     document_needs_extraction,
 )
-from audit_workbench.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def test_document_has_schema_fields_false_when_empty() -> None:

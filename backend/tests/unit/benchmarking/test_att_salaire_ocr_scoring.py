@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.benchmarking import hit_field, score_att_salaire_markdown
+from repody.benchmarking import hit_field, score_att_salaire_markdown
 
 GOLDEN = """
 ROYAUME DU MAROC

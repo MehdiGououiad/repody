@@ -12,10 +12,10 @@ import uuid
 import httpx
 import pytest
 
-from audit_workbench.infra.db.seed import SEED_WORKFLOW_ID
-from audit_workbench.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.infra.db.seed import SEED_WORKFLOW_ID
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from tests.helpers.workflow_rules import logic_field_gt
-from audit_workbench.integration.live_stack import (
+from repody.integration.live_stack import (
     assert_metrics_access,
     assert_settings_config_access,
     create_anonymous_live_client,
@@ -25,7 +25,7 @@ from audit_workbench.integration.live_stack import (
     live_inference_ready,
     live_oidc_enabled,
 )
-from audit_workbench.integration.facture import (
+from repody.integration.facture import (
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -44,7 +44,7 @@ from audit_workbench.integration.facture import (
     total_from_result,
     tva_from_result,
 )
-from audit_workbench.integration.workflow_flow import run_test_with_files, save_workflow
+from repody.integration.workflow_flow import run_test_with_files, save_workflow
 
 BASE = live_api_base()
 pytestmark = pytest.mark.live

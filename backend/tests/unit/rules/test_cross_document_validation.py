@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.extraction.types import ExtractedFieldResult, ExtractionResult
-from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.rules.field_namespace import field_values_for_rule, field_values_from_extractions
-from audit_workbench.rules.runner import evaluate_rules, validate_extractions
+from repody.extraction.types import ExtractedFieldResult, ExtractionResult
+from repody.rules.conditions import resolve_rule_body
+from repody.rules.field_namespace import field_values_for_rule, field_values_from_extractions
+from repody.rules.runner import evaluate_rules, validate_extractions
 
 
 def _field(key: str, value: str, *, extracted: bool = True) -> ExtractedFieldResult:

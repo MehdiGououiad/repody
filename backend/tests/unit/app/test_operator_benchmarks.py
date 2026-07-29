@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
-from audit_workbench.app.operator import benchmark_command
-from audit_workbench.app.operator.requests import resolve_benchmark_inputs
+from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
+from repody.app.operator import benchmark_command
+from repody.app.operator.requests import resolve_benchmark_inputs
 
 
 class FakeUpload:

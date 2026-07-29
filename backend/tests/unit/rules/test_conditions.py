@@ -1,4 +1,4 @@
-from audit_workbench.rules.conditions import resolve_rule_body
+from repody.rules.conditions import resolve_rule_body
 
 
 def test_resolve_rule_body_from_conditions():
@@ -100,7 +100,7 @@ def test_resolve_rule_body_multiple_conditions_uses_python_and():
 
 
 def test_logic_check_entries_one_per_condition():
-    from audit_workbench.rules.conditions import logic_check_entries
+    from repody.rules.conditions import logic_check_entries
 
     rule = {
         "id": "r1",
@@ -129,7 +129,7 @@ def test_logic_check_entries_one_per_condition():
 
 
 def test_conditions_to_expression_or_junction():
-    from audit_workbench.rules.conditions import conditions_to_expression
+    from repody.rules.conditions import conditions_to_expression
 
     expr = conditions_to_expression(
         [

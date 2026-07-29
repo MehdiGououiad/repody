@@ -7,8 +7,8 @@ Single-page map for tech leads and new contributors. Operational how-tos live in
 | Name | Where | Meaning |
 |------|--------|---------|
 | **Repody** | Product, repo, npm package, Helm release | Public name everywhere |
-| **repody** | Python distribution (`backend/pyproject.toml`) | `pip install -e backend` |
-| **audit_workbench** | `backend/src/audit_workbench/` | Python import path |
+| **repody** | Python package (`backend/src/repody/`, dist name) | Import path + `pip install -e backend` |
+| **`AUDIT_*`** | Env vars | Settings prefix (kept for stable ops config) |
 
 Repody VLM local development uses NuExtract through the OpenAI-compatible llama-server/vLLM interface.
 
@@ -57,7 +57,7 @@ All audit runs are dispatched through Taskiq (Redis Streams); worker containers 
 ## Backend layers
 
 ```
-backend/src/audit_workbench/
+backend/src/repody/
 ├── api/                 HTTP routers → app use cases
 ├── app/                 Application use cases (run, workflow, operator, uploads, queue, …)
 │   └── run/             lifecycle · commands · processor · enqueue · outbox · progress · …

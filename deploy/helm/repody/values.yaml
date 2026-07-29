@@ -47,7 +47,7 @@ postgresql:
   enabled: false
   auth:
     username: audit
-    database: audit_workbench
+    database: repody
     existingSecret: ""
     password: ""
   primary:

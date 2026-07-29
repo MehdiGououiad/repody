@@ -33,22 +33,22 @@ from typing import Any
 
 import httpx
 
-from audit_workbench.benchmarking.ocr import (
+from repody.benchmarking.ocr import (
     load_expectations,
     score_gououiad_cnie_fields,
     score_gououiad_cnie_markdown,
 )
-from audit_workbench.extraction.paddleocr_v6 import (
+from repody.extraction.paddleocr_v6 import (
     file_type_for_mime,
     markdown_from_ocr_result,
     paddle_error_message,
 )
-from audit_workbench.extraction.types import SchemaFieldSpec, load_document_bundle
-from audit_workbench.extraction.vlm import (
+from repody.extraction.types import SchemaFieldSpec, load_document_bundle
+from repody.extraction.vlm import (
     extract_with_repody_vlm,
     extract_with_repody_vlm_cloud,
 )
-from audit_workbench.infra.storage.mime import sniff_mime
+from repody.infra.storage.mime import sniff_mime
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "e2e" / "fixtures" / "documents"

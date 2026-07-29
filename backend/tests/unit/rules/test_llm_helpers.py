@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from audit_workbench.rules.llm_fields import (
+from repody.rules.llm_fields import (
     evaluate_fee_keyword_rule,
     referenced_fields,
     rule_field_values,
     unknown_reference_detail,
 )
-from audit_workbench.rules.llm_prompts import batch_rules_prompt, fields_block, single_rule_prompt
+from repody.rules.llm_prompts import batch_rules_prompt, fields_block, single_rule_prompt
 
 
 def test_rule_field_values_selects_referenced_fields_case_insensitively() -> None:

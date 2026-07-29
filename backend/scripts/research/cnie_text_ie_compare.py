@@ -21,7 +21,7 @@ from typing import Any
 
 import httpx
 
-from audit_workbench.benchmarking.ocr import score_gououiad_cnie_fields
+from repody.benchmarking.ocr import score_gououiad_cnie_fields
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTATIONS = (

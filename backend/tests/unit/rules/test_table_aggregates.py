@@ -1,6 +1,6 @@
-from audit_workbench.rules.conditions import resolve_rule_body
-from audit_workbench.rules.logic_evaluator import evaluate_logic_expression
-from audit_workbench.rules.table_aggregates import count_rows_where, sum_rows, sum_rows_where
+from repody.rules.conditions import resolve_rule_body
+from repody.rules.logic_evaluator import evaluate_logic_expression
+from repody.rules.table_aggregates import count_rows_where, sum_rows, sum_rows_where
 
 ROWS = '[{"category": "type-a", "amount": "10.00"}, {"category": "type-b", "amount": "20.00"}, {"category": "type-a", "amount": "5.50"}]'
 

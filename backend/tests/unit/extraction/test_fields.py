@@ -1,6 +1,6 @@
-from audit_workbench.extraction.types import SchemaFieldSpec
-from audit_workbench.extraction.fields import fields_from_nuextract_json
-from audit_workbench.rules.amounts import normalize_amount, parse_numeric_value
+from repody.extraction.types import SchemaFieldSpec
+from repody.extraction.fields import fields_from_nuextract_json
+from repody.rules.amounts import normalize_amount, parse_numeric_value
 
 
 def test_fields_from_nuextract_json():

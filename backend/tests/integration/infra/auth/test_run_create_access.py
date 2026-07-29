@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.infra.db.seed import SEED_API_KEY
-from audit_workbench.settings import clear_settings_cache
+from repody.infra.db.seed import SEED_API_KEY
+from repody.settings import clear_settings_cache
 from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 
@@ -75,7 +75,7 @@ async def test_test_run_accepts_operator_jwt(live_client):
     health = await live_client.get("/v1/healthz")
     if not health.json().get("oidcEnabled"):
         pytest.skip("OIDC not enabled on target stack")
-    from audit_workbench.integration.live_stack import fetch_keycloak_token
+    from repody.integration.live_stack import fetch_keycloak_token
 
     ok = await live_client.post(
         "/v1/workflows/wf-invoice-audit/runs/json",
