@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from audit_workbench.app.platform_health import is_readiness_ok, probe_readiness
-from audit_workbench.app.redis_health import ping_redis
-from audit_workbench.app.redis_pool import close_redis_pool
+from audit_workbench.app.health import is_readiness_ok, probe_readiness
+from audit_workbench.infra.redis.health import ping_redis
+from audit_workbench.infra.redis.pool import close_redis_pool
 from audit_workbench.settings import clear_settings_cache
 
 

@@ -12,7 +12,7 @@ from audit_workbench.schemas.health import (
 )
 from audit_workbench.app.admission import count_inflight, count_queued, count_running
 from audit_workbench.catalog.probes import probe_active_runtime
-from audit_workbench.app.redis_health import ping_redis
+from audit_workbench.infra.redis.health import ping_redis
 from audit_workbench.settings import get_settings
 
 

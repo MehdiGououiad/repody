@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from audit_workbench.infra.db.models import Run, RunDispatchOutbox
 from audit_workbench.runtime.contracts.agent import AgentId
 from audit_workbench.runtime.pools import pool_for_agent
-from audit_workbench.app.dispatch_outbox import schedule_outbox_dispatch
+from audit_workbench.app.run.dispatch_outbox import schedule_outbox_dispatch
 
 log = structlog.get_logger()
 

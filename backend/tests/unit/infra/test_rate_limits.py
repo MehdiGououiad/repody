@@ -8,8 +8,8 @@ from limits.aio.strategies import MovingWindowRateLimiter
 
 from audit_workbench.rules.logic_evaluator import evaluate_logic_rule
 from audit_workbench.runtime.contracts.result import ErrorCode
-from audit_workbench.app import rate_limit as rate_limit_module
-from audit_workbench.app.rate_limit import check_run_rate_limits
+from audit_workbench.infra import rate_limit as rate_limit_module
+from audit_workbench.infra.rate_limit import check_run_rate_limits
 from audit_workbench.settings import Settings, clear_settings_cache
 
 

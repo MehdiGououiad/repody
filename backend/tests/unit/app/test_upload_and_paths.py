@@ -5,7 +5,7 @@ import pytest
 from audit_workbench.extraction.types import ExtractedFieldResult, SchemaFieldSpec
 from audit_workbench.extraction.modes import parse_read_path
 from audit_workbench.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
-from audit_workbench.app.upload_validation import UploadValidationError, validate_upload_file
+from audit_workbench.app.uploads.validation import UploadValidationError, validate_upload_file
 from audit_workbench.settings import Settings
 from audit_workbench.infra.storage.mime import resolve_mime, sanitize_filename, sniff_mime
 

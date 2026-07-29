@@ -12,7 +12,7 @@ flowchart TB
   subgraph Application["Couche application / services"]
     WFSvc["app/workflow/<br/>CRUD · deploy · API key"]
     RunEnq["app/run/enqueue.py<br/>admission · create Run"]
-    Outbox["app/dispatch_outbox.py<br/>outbox Postgres"]
+    Outbox["app/run/dispatch_outbox.py<br/>outbox Postgres"]
     Dispatch["app/run/dispatch.py<br/>Taskiq kiq"]
     RunProc["app/run/processor.py<br/>claim · recipe"]
     PlatformOrch["runtime/recipe.py<br/>execute_platform_run"]

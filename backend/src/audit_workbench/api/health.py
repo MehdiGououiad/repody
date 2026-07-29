@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Response
 
 from audit_workbench.schemas.health import HealthLiveResponse, HealthReadinessResponse
-from audit_workbench.app.platform_health import (
+from audit_workbench.app.health import (
     is_readiness_ok,
     probe_liveness,
     probe_readiness,

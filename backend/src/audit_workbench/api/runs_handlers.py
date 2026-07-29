@@ -11,7 +11,7 @@ from audit_workbench.runtime.run.contracts import FileBinding, RunSnapshot
 from audit_workbench.schemas.run_requests import RunSnapshotBody, StoredFileBinding
 from audit_workbench.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
 from audit_workbench.app.run.upload_bindings import parse_json_form
-from audit_workbench.app.upload_intents import bindings_from_confirmed_uploads
+from audit_workbench.app.uploads.intents import bindings_from_confirmed_uploads
 from audit_workbench.util.json_shape import normalize_keys_to_snake
 
 

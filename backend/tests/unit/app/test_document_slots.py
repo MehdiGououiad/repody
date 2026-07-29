@@ -1,6 +1,6 @@
 import pytest
 
-from audit_workbench.app.document_slots import resolve_document_slot_keys
+from audit_workbench.app.uploads.document_slots import resolve_document_slot_keys
 
 
 class _Doc:

@@ -166,7 +166,7 @@ async def run_maintenance_cycle() -> None:
     reaped = await reap_stale_runs()
     replayed = 0
     purged = 0
-    from audit_workbench.app.dispatch_outbox import (
+    from audit_workbench.app.run.dispatch_outbox import (
         purge_dispatched_outbox,
         replay_dispatch_outbox,
     )

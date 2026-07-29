@@ -77,7 +77,7 @@ The web UI loads the dashboard from `/dashboard` (SSR + live refresh). `/metrics
 | `POST` | `/uploads/confirm` | Confirm presigned uploads |
 | `POST` | `/uploads` | Direct multipart upload |
 
-### Platform (`api/platform.py`) — admin
+### Platform (`api/config.py`) — admin
 
 Consolidated config, catalog, and diagnostics.
 
@@ -144,7 +144,7 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 | `metrics.py` | Metrics endpoint |
 | `rules_library.py` | Rule templates |
 | `uploads.py` | Upload + presign |
-| `platform.py` | Config, catalog, diagnostics |
+| `config.py` | Config, catalog, diagnostics (`/platform/config`, `/models/catalog`, …) |
 | `operator.py` | Model warmup, benchmarks, job status |
 
 ### `catalog/` — Document model catalog
@@ -213,9 +213,11 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | **Agents** | `agents/idp/` (compose + adapters); `agents/fraud/`, `agents/computer_use/` (SKIPPED; [ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
 | **Runtime cores** | `runtime/contracts`, `runtime/recipe.py`, `runtime/pools.py`, `runtime/run/*`, `runtime/operator/` |
 | **Workflows** | `app/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
-| **Platform services** | `platform_health.py`, `metrics_service.py`, `dashboard_service.py`, `maintenance.py`, `admission.py`, `rate_limit.py`, `dispatch_outbox.py` |
+| **App services** | `health.py`, `metrics_service.py`, `dashboard_service.py`, `maintenance.py`, `admission.py` |
 | **Operator** | `app/operator/` (`jobs`, `benchmarks`, `requests`, `auth`) — I/O; pure types in `runtime/operator/` |
-| **Support** | `mappers.py`, `api_keys.py`, `upload_validation.py`, `document_slots.py`, `redis_pool.py` |
+| **Support** | `mappers.py`, `api_keys.py`, `uploads/` (intents · validation · document_slots) |
+| **Infra (I/O)** | `infra/redis/`, `infra/rate_limit.py`, `infra/db/`, `infra/storage/`, `infra/auth/`, `infra/observability/` |
+| **Outbox** | `app/run/dispatch_outbox.py` |
 | **Catalog** | `catalog/` (not under app) |
 | **Rules field ns** | `rules/field_namespace.py` |
 

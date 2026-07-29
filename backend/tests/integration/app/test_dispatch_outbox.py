@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from audit_workbench.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
-from audit_workbench.app.dispatch_outbox import (
+from audit_workbench.app.run.dispatch_outbox import (
     dispatch_outbox_row,
     enqueue_dispatch,
     replay_dispatch_outbox,
@@ -44,7 +44,7 @@ async def test_dispatch_outbox_retries_transient_errors(outbox_session, monkeypa
         dispatch,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.dispatch_outbox.get_settings",
+        "audit_workbench.app.run.dispatch_outbox.get_settings",
         lambda: type(
             "S",
             (),
@@ -86,7 +86,7 @@ async def test_replay_dispatch_outbox_picks_pending_rows(outbox_session, monkeyp
         dispatch,
     )
     monkeypatch.setattr(
-        "audit_workbench.app.dispatch_outbox.get_settings",
+        "audit_workbench.app.run.dispatch_outbox.get_settings",
         lambda: type(
             "S",
             (),

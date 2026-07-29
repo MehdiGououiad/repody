@@ -10,12 +10,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from audit_workbench.api import (
     audits,
+    config,
     dashboard,
     health,
     iam,
     metrics,
     operator,
-    platform,
     rules_library,
     runs,
     uploads,
@@ -29,8 +29,8 @@ from audit_workbench.inference.openai_compat import close_openai_clients
 from audit_workbench.infra.observability.bootstrap import init_observability
 from audit_workbench.infra.observability.middleware import RequestLoggingMiddleware
 from audit_workbench.infra.observability.tracing import instrument_fastapi
-from audit_workbench.app.rate_limit import GlobalRateLimitMiddleware
-from audit_workbench.app.redis_pool import close_redis_pool
+from audit_workbench.infra.rate_limit import GlobalRateLimitMiddleware
+from audit_workbench.infra.redis.pool import close_redis_pool
 from audit_workbench.app.run.dispatch import close_taskiq_brokers
 from audit_workbench.settings import get_settings
 from audit_workbench.infra.storage.factory import init_storage
@@ -82,7 +82,7 @@ async def lifespan(app: FastAPI):
     log.info("application_shutting_down", event_domain="platform")
     maintenance_stop.set()
     await maintenance_task
-    from audit_workbench.app.dispatch_outbox import drain_dispatch_tasks
+    from audit_workbench.app.run.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
     await close_taskiq_brokers()
@@ -133,7 +133,7 @@ def create_app() -> FastAPI:
         prefix="/v1",
         dependencies=[Depends(require_permission("upload", "write"))],
     )
-    app.include_router(platform.router, prefix="/v1")
+    app.include_router(config.router, prefix="/v1")
     app.include_router(operator.router, prefix="/v1")
     app.include_router(iam.router, prefix="/v1")
 
