@@ -19,6 +19,11 @@ services:
     <<: *portable-backend
     # Hub image is target `backend` (entrypoint only) — role set by command.
     command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    # Hub web image rewrites to http://repody-api:8000 (K8s service name).
+    networks:
+      default:
+        aliases:
+          - repody-api
     depends_on:
       postgres:
         condition: service_healthy
@@ -59,7 +64,10 @@ services:
       AUDIT_LOG_JSON: "true"
       # Host backend/.env often sets ../.logs — not writable in-container.
       AUDIT_LOG_FILE: /tmp/repody/api.log
-      AUDIT_OTEL_ENABLED: "false"
+      AUDIT_OTEL_ENABLED: ${AUDIT_OTEL_ENABLED:-false}
+      AUDIT_OTEL_EXPORTER_ENDPOINT: ${AUDIT_OTEL_EXPORTER_ENDPOINT:-http://otel-collector:4318/v1/traces}
+      AUDIT_OTEL_SERVICE_NAME: repody-api
+      BUGSINK_DSN: ${BUGSINK_DSN:-}
       # Host inference (Docker Desktop Mac/Windows/Linux)
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
@@ -109,8 +117,9 @@ services:
       # Browser redirects use public issuer; Auth.js server calls use Docker DNS.
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
-      BACKEND_URL: http://api:8000
-      INTERNAL_API_URL: http://api:8000
+      # Must match Hub image rewrite target (see networks.aliases on api).
+      BACKEND_URL: http://repody-api:8000
+      INTERNAL_API_URL: http://repody-api:8000
     restart: unless-stopped
 
   worker-extract:

@@ -42,6 +42,16 @@ Hub auth wiring: browser issuer is `http://localhost:8080/realms/repody`; the we
 container uses `AUTH_KEYCLOAK_INTERNAL_ISSUER=http://keycloak:8080/realms/repody`
 for server-side token calls. API fetches JWKS from `http://keycloak:8080/...`.
 
+Observability is **on by default** (`--no-obs` to skip):
+
+| UI | URL |
+|----|-----|
+| Grafana (Loki logs / Tempo traces) | http://localhost:3030 |
+| Bugsink (exceptions) | http://localhost:8090 · `admin@repody.local` / `repody-dev` |
+
+Tail containers: `pnpm platform logs`.  
+Bugsink needs a project DSN in `backend/.env` (`BUGSINK_DSN=…`) then recreate `api`.
+
 ## Daily
 
 ```bash
