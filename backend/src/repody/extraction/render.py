@@ -158,19 +158,6 @@ def prepare_nuextract_pages(
     )
 
 
-def cap_pages(
-    pages: list[PageBytes], *, max_pages: int | None
-) -> tuple[list[PageBytes], int]:
-    """Limit pages in one request; return ``(kept, dropped_count)``."""
-    if max_pages is None:
-        return pages, 0
-    if max_pages < 1:
-        raise ValueError("max_pages must be at least 1")
-    if len(pages) <= max_pages:
-        return pages, 0
-    return pages[:max_pages], len(pages) - max_pages
-
-
 def pages_dropped(*, rendered: int, sent: int) -> int:
     return max(0, int(rendered) - int(sent))
 

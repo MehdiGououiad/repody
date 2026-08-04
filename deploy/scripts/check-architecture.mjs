@@ -13,8 +13,8 @@ const PY_IMPORT_RE = /^\s*(?:from|import)\s+([A-Za-z0-9_.]+)/gm;
 /** @type {ArchRule[]} */
 const architectureRules = [
   {
-    name: "Platform contracts",
-    dir: "backend/src/repody/platform/contracts",
+    name: "Runtime contracts",
+    dir: "backend/src/repody/runtime/contracts",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,
@@ -25,18 +25,18 @@ const architectureRules = [
     forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
   },
   {
-    name: "Platform recipe (no services lifecycle)",
-    files: ["backend/src/repody/platform/recipe.py"],
+    name: "Runtime recipe (no app lifecycle)",
+    files: ["backend/src/repody/runtime/recipe.py"],
     forbiddenImports: [/^repody\.services(?:\.|$)/],
   },
   {
-    name: "Platform agent_metadata (no services)",
-    files: ["backend/src/repody/platform/agent_metadata.py"],
+    name: "Runtime agent_metadata (no app)",
+    files: ["backend/src/repody/runtime/agent_metadata.py"],
     forbiddenImports: [/^repody\.services(?:\.|$)/],
   },
   {
-    name: "Platform metrics build",
-    dir: "backend/src/repody/platform/metrics",
+    name: "Runtime metrics build",
+    dir: "backend/src/repody/runtime/metrics",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,
@@ -46,8 +46,8 @@ const architectureRules = [
     forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
   },
   {
-    name: "Platform run pure+contracts",
-    dir: "backend/src/repody/platform/run",
+    name: "Runtime run pure+contracts",
+    dir: "backend/src/repody/runtime/run",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,
@@ -58,8 +58,8 @@ const architectureRules = [
     forbiddenText: [/\bAsyncSession\b/, /\bsession\s*:/],
   },
   {
-    name: "Platform operator",
-    dir: "backend/src/repody/platform/operator",
+    name: "Runtime operator",
+    dir: "backend/src/repody/runtime/operator",
     forbiddenImports: [
       /^sqlalchemy(?:\.|$)/,
       /^fastapi(?:\.|$)/,

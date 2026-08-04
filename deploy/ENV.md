@@ -48,19 +48,29 @@ Store the API key in secrets only — never commit it.
 | `AUDIT_PADDLEOCR_V6_ENABLED` | Register `paddleocr:v6` in the catalog (markdown-only) |
 | `AUDIT_PADDLEOCR_V6_BASE_URL` | PP-OCRv6 HTTP root, e.g. `http://127.0.0.1:8868` |
 | `AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS` | Request timeout (default 180) |
+| `AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY` | Official `/ocr` override (default `true`; set `false` for already-oriented inputs) |
+| `AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING` | Official `/ocr` override (default `true`; set `false` for clean documents) |
+| `AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION` | Official `/ocr` override (default `true`; set `false` for the documented fast path) |
+| `AUDIT_PADDLEOCR_QWEN_ENABLED` | Register `paddleocr:qwen` (PP-OCRv6 + Qwen structured extraction) |
+| `AUDIT_QWEN35_BASE_URL` | Qwen OpenAI API root, e.g. `http://127.0.0.1:8084/v1` |
+| `AUDIT_QWEN35_SERVED_MODEL` | Qwen model alias (default `Qwen3.5-4B`) |
+| `AUDIT_QWEN35_TIMEOUT_SECONDS` | Qwen text→JSON timeout (default 180) |
 | `AUDIT_GLM_OCR_ENABLED` | Register `glm:ocr` in the catalog (markdown-only) |
 | `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
-| `AUDIT_GLM_OCR_SERVED_MODEL` | Model id from `/v1/models` (default `GLM-OCR`) |
+| `AUDIT_GLM_OCR_SERVED_MODEL` | Model id / alias (default `GLM-OCR`) |
 | `AUDIT_GLM_OCR_TIMEOUT_SECONDS` | Request timeout (default 180) |
 | `AUDIT_GLM_OCR_LAYOUT_DEVICE` | PP-DocLayoutV3 device (`cpu` recommended with host llama) |
 | `AUDIT_GLM_OCR_LAYOUT_MODEL_DIR` | Layout model id/path (default `PaddlePaddle/PP-DocLayoutV3_safetensors`) |
-| `AUDIT_GLM_OCR_SDK_MAX_WORKERS` | Region OCR parallelism (default 4; official SDK 32 — lower when llama `-np` is 1) |
+| `AUDIT_GLM_OCR_SDK_MAX_WORKERS` | Region OCR parallelism (default 1; keep ≤ llama-server `-np`) |
 | `AUDIT_GLM_OCR_PDF_MAX_PAGES` | Optional PDF page cap; unset = official unlimited |
+| `AUDIT_GLM_OCR_ID_CARD_PROFILE` | Optional ID-card profile (`config.idcard.yaml`); default `false` |
+| `AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT` | Dual structured+markdown pass; default `false` (markdown-only still works per document) |
+| `AUDIT_EXTRACTION_CACHE_ENABLED` | Redis extraction cache; default `false` |
 
 Model HTTP timeouts must stay ≤ `AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60` (ceiling 15 min).
 Compose extract defaults: worker **10** min, model timeouts **600** s, stale **12** min.
 
-Local: `pnpm paddleocr:v6:serve` / `pnpm glmocr:serve` (also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md), [docs/GLM-OCR.md](../docs/GLM-OCR.md), and [docs/EXTRACTION.md](../docs/EXTRACTION.md).
+Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md), [docs/GLM-OCR.md](../docs/GLM-OCR.md), and [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
 ## Staged platform agents
 

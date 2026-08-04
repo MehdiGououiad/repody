@@ -4,6 +4,7 @@ Each catalog id maps to a runtime and extraction adapter module:
 - ``repody:vlm`` — local llama.cpp NuExtract structured extraction + markdown
 - ``repody:vlm:cloud`` — official NuExtract platform REST API
 - ``paddleocr:v6`` — PP-OCRv6 markdown via official PaddleX POST /ocr service
+- ``paddleocr:qwen`` — PP-OCRv6 OCR + Qwen3.5 text→JSON structured extraction
 - ``glm:ocr`` — GLM-OCR markdown via official GlmOcr SDK (PP-DocLayoutV3) + GGUF llama-server
 
 Render policies: ``extraction/render.py``
@@ -24,6 +25,9 @@ from repody.extraction.branding import (
     PADDLEOCR_V6_CATALOG_ID,
     PADDLEOCR_V6_DESCRIPTION,
     PADDLEOCR_V6_LABEL,
+    PADDLEOCR_QWEN_CATALOG_ID,
+    PADDLEOCR_QWEN_DESCRIPTION,
+    PADDLEOCR_QWEN_LABEL,
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_CLOUD_CATALOG_ID,
     REPODY_VLM_CLOUD_DESCRIPTION,
@@ -38,12 +42,13 @@ from repody.inference.runtime import (
     GLM_OCR_RUNTIME,
     NUEXTRACT_CLOUD_RUNTIME,
     PADDLEOCR_V6_RUNTIME,
+    PADDLEOCR_QWEN_RUNTIME,
 )
 from repody.settings import Settings, get_settings
 
 DocumentEngine = Literal["document_model"]
 DocumentRuntime = Literal[
-    "llamacpp", "nuextract_cloud", "paddleocr_v6", "glm_ocr"
+    "llamacpp", "nuextract_cloud", "paddleocr_v6", "paddleocr_qwen", "glm_ocr"
 ]
 
 
@@ -98,6 +103,17 @@ def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
             description=PADDLEOCR_V6_DESCRIPTION,
             workflow_selectable=True,
             markdown_only=True,
+        )
+    if settings.paddleocr_qwen_enabled:
+        models[PADDLEOCR_QWEN_CATALOG_ID] = DocumentModelSpec(
+            id=PADDLEOCR_QWEN_CATALOG_ID,
+            label=PADDLEOCR_QWEN_LABEL,
+            engine="document_model",
+            runtime=PADDLEOCR_QWEN_RUNTIME,
+            runtime_model=settings.qwen35_served_model,
+            description=PADDLEOCR_QWEN_DESCRIPTION,
+            workflow_selectable=True,
+            markdown_only=False,
         )
     if settings.glm_ocr_enabled:
         models[GLM_OCR_CATALOG_ID] = DocumentModelSpec(

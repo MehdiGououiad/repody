@@ -8,6 +8,7 @@ from repody.catalog.registry import list_document_models
 from repody.extraction.branding import (
     GLM_OCR_CATALOG_ID,
     PADDLEOCR_V6_CATALOG_ID,
+    PADDLEOCR_QWEN_CATALOG_ID,
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_CLOUD_CATALOG_ID,
 )
@@ -138,7 +139,11 @@ def _repody_vlm_fields(settings: Settings) -> list[ModelConfigField]:
             key="repody_vlm_markdown_on_extract",
             env_var="AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT",
             label="Markdown extraction",
-            description="Allow document-to-markdown when enabled on a workflow document.",
+            description=(
+                "When true, run markdown alongside structured NuExtract extraction "
+                "(second model call). Markdown-only documents always use markdown when "
+                "enabled on the workflow document."
+            ),
             value=settings.repody_vlm_markdown_on_extract,
             restart="worker",
         ),
@@ -246,6 +251,67 @@ def _paddleocr_v6_fields(settings: Settings) -> list[ModelConfigField]:
             value=settings.paddleocr_v6_timeout_seconds,
             restart="worker",
         ),
+        _platform_field(
+            key="paddleocr_v6_use_doc_orientation_classify",
+            env_var="AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY",
+            label="Document orientation classification",
+            description="Official /ocr override; disable for already-oriented inputs.",
+            value=settings.paddleocr_v6_use_doc_orientation_classify,
+            restart="worker",
+        ),
+        _platform_field(
+            key="paddleocr_v6_use_doc_unwarping",
+            env_var="AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING",
+            label="Document unwarping",
+            description="Official /ocr override; disable for clean documents.",
+            value=settings.paddleocr_v6_use_doc_unwarping,
+            restart="worker",
+        ),
+        _platform_field(
+            key="paddleocr_v6_use_textline_orientation",
+            env_var="AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION",
+            label="Text-line orientation",
+            description="Official /ocr override; disable for the fast path.",
+            value=settings.paddleocr_v6_use_textline_orientation,
+            restart="worker",
+        ),
+    ]
+
+
+def _paddleocr_qwen_fields(settings: Settings) -> list[ModelConfigField]:
+    return [
+        _platform_field(
+            key="paddleocr_qwen_enabled",
+            env_var="AUDIT_PADDLEOCR_QWEN_ENABLED",
+            label="Enabled",
+            description="Register PP-OCRv6 + Qwen structured extraction in the catalog.",
+            value=settings.paddleocr_qwen_enabled,
+            restart="api",
+        ),
+        _platform_field(
+            key="qwen35_base_url",
+            env_var="AUDIT_QWEN35_BASE_URL",
+            label="Qwen API base URL",
+            description="OpenAI-compatible origin for text→JSON (default http://127.0.0.1:8084/v1).",
+            value=settings.qwen35_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="qwen35_served_model",
+            env_var="AUDIT_QWEN35_SERVED_MODEL",
+            label="Qwen model id",
+            description="llama-server model alias (default Qwen3.5-4B).",
+            value=settings.qwen35_served_model,
+            restart="worker",
+        ),
+        _platform_field(
+            key="qwen35_timeout_seconds",
+            env_var="AUDIT_QWEN35_TIMEOUT_SECONDS",
+            label="Qwen request timeout (s)",
+            description="HTTP timeout for text→JSON chat/completions.",
+            value=settings.qwen35_timeout_seconds,
+            restart="worker",
+        ),
     ]
 
 
@@ -320,6 +386,17 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             value=settings.glm_ocr_pdf_max_pages,
             restart="worker",
         ),
+        _platform_field(
+            key="glm_ocr_id_card_profile",
+            env_var="AUDIT_GLM_OCR_ID_CARD_PROFILE",
+            label="ID-card profile",
+            description=(
+                "Optional GLM-OCR profile for photo-heavy ID cards (config.idcard.yaml + "
+                "region-text fallback). Default off — official SDK layout mapping."
+            ),
+            value=settings.glm_ocr_id_card_profile,
+            restart="worker",
+        ),
     ]
 
 
@@ -368,6 +445,14 @@ def _deployment_notes() -> list[DeploymentNote]:
             ),
         ),
         DeploymentNote(
+            change_kind="PP-OCRv6 + Qwen structured extraction",
+            action="pnpm paddleocr:v6:serve && pnpm qwen35:serve; set AUDIT_PADDLEOCR_QWEN_* and AUDIT_QWEN35_*",
+            detail=(
+                "paddleocr:qwen runs official POST /ocr then Qwen3.5 text→JSON. "
+                "See deploy/research/qwen35/paths.local.env.example"
+            ),
+        ),
+        DeploymentNote(
             change_kind="GLM-OCR (official SDK + llama-server)",
             action="uv sync --extra glmocr; pnpm glmocr:serve; set AUDIT_GLM_OCR_*",
             detail=(
@@ -393,6 +478,9 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
         elif spec.id == PADDLEOCR_V6_CATALOG_ID:
             fields = _paddleocr_v6_fields(settings)
             inference_url = settings.paddleocr_v6_base_url
+        elif spec.id == PADDLEOCR_QWEN_CATALOG_ID:
+            fields = _paddleocr_qwen_fields(settings)
+            inference_url = settings.qwen35_base_url
         elif spec.id == GLM_OCR_CATALOG_ID:
             fields = _glm_ocr_fields(settings)
             inference_url = settings.glm_ocr_base_url
@@ -424,6 +512,10 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
     if settings.paddleocr_v6_enabled is False:
         for profile in profiles:
             if profile.model_id == PADDLEOCR_V6_CATALOG_ID:
+                profile.enabled = False
+    if settings.paddleocr_qwen_enabled is False:
+        for profile in profiles:
+            if profile.model_id == PADDLEOCR_QWEN_CATALOG_ID:
                 profile.enabled = False
     if settings.glm_ocr_enabled is False:
         for profile in profiles:

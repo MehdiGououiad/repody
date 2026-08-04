@@ -256,8 +256,8 @@ async function serve() {
 }
 
 function warmupRepodyVlm(port, { force = false, background = false } = {}) {
-  if ((process.env.LLAMACPP_WARMUP || "on").trim().toLowerCase() === "off") {
-    console.log("\nSkipping NuExtract warmup (LLAMACPP_WARMUP=off).");
+  if (!force && (process.env.LLAMACPP_WARMUP || "off").trim().toLowerCase() !== "on") {
+    console.log("\nSkipping NuExtract warmup (set LLAMACPP_WARMUP=on or pnpm llamacpp:warmup).");
     return;
   }
   if (!force && fs.existsSync(WARMUP_MARKER)) {

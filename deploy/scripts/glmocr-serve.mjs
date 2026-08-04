@@ -1,16 +1,14 @@
 #!/usr/bin/env node
 /**
- * llama-server for GLM-OCR (ggml-org official GGUF pack).
+ * llama-server for GLM-OCR (ggml-org GGUF pack — default local backend).
  *
- * Official usage:
- *   llama-server -hf ggml-org/GLM-OCR-GGUF
+ *   llama-server -hf ggml-org/GLM-OCR-GGUF:F16
  *   https://huggingface.co/ggml-org/GLM-OCR-GGUF
- *   https://huggingface.co/blog/ggml-org/using-ocr-models-with-llama-cpp
  *
- * Warmup uses the official Text Recognition: prompt against llama-server.
- * Platform extraction uses GlmOcr selfhosted SDK (PP-DocLayoutV3 + region OCR).
- * Docs: https://huggingface.co/zai-org/GLM-OCR
- * GGUF pack: ggml-org/GLM-OCR-GGUF (converted from zai-org/GLM-OCR).
+ * Platform extraction uses GlmOcr selfhosted SDK (PP-DocLayoutV3 + region OCR)
+ * against this OpenAI-compatible endpoint (:8083/v1).
+ *
+ * Optional official zai-org CPU path (Ollama): pnpm glmocr:ollama:serve
  *
  * Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download
  */
@@ -25,6 +23,8 @@ const GLM_DIR = path.join(ROOT, "deploy/glmocr");
 const PATHS_FILE = path.join(GLM_DIR, "paths.local.env");
 const LOG_DIR = path.join(GLM_DIR, "logs");
 const HF_REPO = "ggml-org/GLM-OCR-GGUF";
+/** Official llama.cpp tip: F16 > Q8_0 for OCR quality (https://huggingface.co/blog/ggml-org/using-ocr-models-with-llama-cpp). */
+const DEFAULT_HF_QUANT = "F16";
 const DEFAULT_ALIAS = "GLM-OCR";
 
 function findLlamaServerExe() {
@@ -45,11 +45,28 @@ function resolvePaths() {
   const mmproj = env.GLMOCR_MMPROJ?.trim();
   let exe = env.GLMOCR_EXE?.trim() || env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
   const port = Number(env.GLMOCR_PORT || 8083);
-  const context = Number(env.GLMOCR_CONTEXT || 8192);
+  // Region crops rarely need 8192; 4096 saves VRAM when sharing iGPU with NuExtract.
+  const context = Number(env.GLMOCR_CONTEXT || 4096);
   const gpuLayers = Number(env.GLMOCR_GPU_LAYERS || 99);
   const device = env.GLMOCR_DEVICE?.trim() || "";
   const parallel = Number(env.GLMOCR_PARALLEL || 1);
   const modelAlias = (env.GLMOCR_MODEL_ALIAS || DEFAULT_ALIAS).trim();
+  const hfQuant = (env.GLMOCR_HF_QUANT || DEFAULT_HF_QUANT).trim() || DEFAULT_HF_QUANT;
+  const ubatchSize = Number(env.GLMOCR_UBATCH_SIZE || 512);
+  const imageMaxTokens = Number(env.GLMOCR_IMAGE_MAX_TOKENS || 1024);
+  const flashAttn = (env.GLMOCR_FLASH_ATTN || "on").trim().toLowerCase() || "on";
+  const mtmdRaw = env.GLMOCR_MTMD_BATCH_MAX_TOKENS;
+  let mtmdBatchMaxTokens = null;
+  if (mtmdRaw !== undefined && String(mtmdRaw).trim() !== "") {
+    const n = Number(mtmdRaw);
+    mtmdBatchMaxTokens = Number.isFinite(n) && n > 0 ? n : null;
+  } else if (exe && fs.existsSync(exe)) {
+    const help = spawnSync(exe, ["--help"], { encoding: "utf8", windowsHide: true });
+    const helpText = `${help.stdout || ""}\n${help.stderr || ""}`;
+    if (helpText.includes("--mtmd-batch-max-tokens")) {
+      mtmdBatchMaxTokens = 1024;
+    }
+  }
   const useHf =
     (env.GLMOCR_USE_HF || "").trim().toLowerCase() === "true" ||
     (env.GLMOCR_USE_HF || "").trim() === "1" ||
@@ -70,6 +87,11 @@ function resolvePaths() {
     device,
     parallel,
     modelAlias,
+    hfQuant,
+    ubatchSize,
+    imageMaxTokens,
+    flashAttn,
+    mtmdBatchMaxTokens,
     useHf,
     missing,
   };
@@ -104,7 +126,8 @@ async function waitForServer(port, { timeoutMs = 600_000 } = {}) {
 function buildArgs(paths) {
   const args = [];
   if (paths.useHf) {
-    args.push("-hf", HF_REPO);
+    // Official ggml blog: llama-server -hf ggml-org/GLM-OCR-GGUF:F16
+    args.push("-hf", `${HF_REPO}:${paths.hfQuant}`);
   } else {
     args.push("-m", paths.model);
     if (paths.mmproj) args.push("--mmproj", paths.mmproj);
@@ -118,8 +141,14 @@ function buildArgs(paths) {
     String(paths.context),
     "-np",
     String(paths.parallel),
+    "-ub",
+    String(paths.ubatchSize),
     "-ngl",
     String(paths.gpuLayers),
+    "-fa",
+    paths.flashAttn,
+    "--image-max-tokens",
+    String(paths.imageMaxTokens),
     "-a",
     paths.modelAlias,
     // Official zai-org SDK page_loader: temperature 0.0, top_k 1 (greedy OCR).
@@ -133,6 +162,9 @@ function buildArgs(paths) {
     "1.1",
     "--jinja",
   );
+  if (paths.mtmdBatchMaxTokens != null) {
+    args.push("--mtmd-batch-max-tokens", String(paths.mtmdBatchMaxTokens));
+  }
   if (paths.device) {
     args.push("--device", paths.device);
   }
@@ -233,13 +265,14 @@ async function serve() {
 
   console.log(`Starting GLM-OCR on :${paths.port}...`);
   if (paths.useHf) {
-    console.log(`  source: -hf ${HF_REPO}`);
+    console.log(`  source: -hf ${HF_REPO}:${paths.hfQuant}`);
   } else {
     console.log(`  model:  ${paths.model}`);
     if (paths.mmproj) console.log(`  mmproj: ${paths.mmproj}`);
   }
   console.log(`  alias:  ${paths.modelAlias}`);
   console.log(`  logs:   ${LOG_DIR}`);
+  console.log(`  docs:   https://huggingface.co/zai-org/GLM-OCR (SDK) · https://huggingface.co/ggml-org/GLM-OCR-GGUF`);
 
   const child = spawn(paths.exe, args, {
     cwd: GLM_DIR,
@@ -256,7 +289,7 @@ async function serve() {
   }
   console.log("GLM-OCR llama-server is up.");
   await verify(paths.port);
-  if ((process.env.GLMOCR_WARMUP || "on").trim().toLowerCase() !== "off") {
+  if ((process.env.GLMOCR_WARMUP || "off").trim().toLowerCase() === "on") {
     await warmup(paths.port);
   }
   console.log(`  AUDIT_GLM_OCR_BASE_URL=http://127.0.0.1:${paths.port}/v1`);

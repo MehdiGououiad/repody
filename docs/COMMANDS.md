@@ -2,153 +2,94 @@
 
 Deploy follows **official upstream docs** — see [docs/deploy/README.md](./deploy/README.md).
 
-## Develop (daily)
+## Develop (daily) — same on Windows · macOS · Linux
+
+Pull Hub images, start the platform, and (by default) host PP-OCR + Qwen.
 
 | Command | When |
 |---------|------|
-| `pnpm dev:setup` | **Once** — copy env files, start Compose, migrate |
-| `pnpm dev:all` | **Daily** — Compose + **all three models** + observability + API + UI |
-| `pnpm dev:all:no-glmocr` | Same, skip GLM-OCR (`:8083`) — less VRAM |
-| `pnpm dev:all:no-nuextract` | Same, skip NuExtract (`:8081`) — less VRAM |
-| `pnpm dev:all:paddle-only` | Skip NuExtract + GLM — PP-OCRv6 only |
-| `pnpm models:warmup` | After start — force-warm NuExtract + PP-OCRv6 + GLM-OCR |
-| `pnpm dev:status` | Health probes (API, UI, NuExtract, PP-OCRv6, GLM-OCR, obs) |
-| `pnpm dev:stop` | Stop API, UI, all three models, and Compose |
-| `pnpm dev:restart` | Restart all three models + workers (e.g. after GPU reset) |
-| `pnpm db:migrate` | Apply Alembic migrations |
+| `pnpm platform setup` | **Once** — env files + pull Hub images |
+| `pnpm platform` | **Daily** — start stack + PP-OCR + Qwen |
+| `pnpm platform -- --with-nuextract` | Also start NuExtract (`:8081`) |
+| `pnpm platform -- --platform-only` | Containers only (no host models) |
+| `pnpm platform -- --with-glm` | Opt in GLM-OCR (`:8083`) |
+| `pnpm platform -- --no-paddle` / `--no-qwen` | Skip a host model |
+| `pnpm platform -- --no-pull` | Skip `docker pull` |
+| `pnpm platform status` | Health probes |
+| `pnpm platform stop` | Tear down |
+| `pnpm platform doctor` | Prereqs |
+| `pnpm platform help` | Flags |
+| `pnpm models:warmup` | Re-warm PP-OCR + Qwen (+ NuExtract if configured) |
 | `pnpm doctor` | Toolchain check |
+| `pnpm db:migrate` | Apply Alembic migrations |
 
-Split logs (optional):
+Aliases: `pnpm dev:all` → `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` → same CLI.
 
-| Command | When |
-|---------|------|
-| `pnpm dev` | Background stack only (Compose + workers + models), then exit |
-| `pnpm dev:app` | Foreground API + UI (stack already running) |
+Full guide: [deploy/LOCAL.md](./deploy/LOCAL.md).
 
-### All three document models
+### Document models
 
-| Catalog id | Process | Port | Serve / warm |
+| Catalog id | Process | Port | Notes |
 |---|---|---|---|
-| `repody:vlm` | NuExtract (llama-server) | `:8081` | `pnpm llamacpp:serve` · `pnpm llamacpp:warmup` |
-| `paddleocr:v6` | PP-OCRv6 (PaddleX `/ocr`) | `:8868` | `pnpm paddleocr:v6:serve` · `pnpm paddleocr:v6:warmup` |
-| `glm:ocr` | GLM-OCR (official SDK + llama-server) | `:8083` | `pnpm glmocr:serve` · `pnpm glmocr:warmup` · extract image extras `otel,glmocr` |
+| `paddleocr:qwen` | PP-OCRv6 → Qwen | `:8868` + `:8084` | **Default** with `pnpm platform` |
+| `paddleocr:v6` | PP-OCRv6 only | `:8868` | Markdown / OCR without Qwen |
+| `repody:vlm` | NuExtract | `:8081` | `--with-nuextract` |
+| `glm:ocr` | GLM-OCR | `:8083` | `--with-glm` (experimental) |
 
-`pnpm dev:all` starts **all three** (plus Grafana/Loki/Tempo/Bugsink). First serve also warms each model; use `pnpm models:warmup` to re-prime.
-
-```powershell
-# First time
+```bash
 pnpm install
 pnpm doctor
-pnpm dev:setup
-# NuExtract: copy deploy/llamacpp/paths.local.env.example → paths.local.env
-# GLM (optional local GGUF): copy deploy/glmocr/paths.local.env.example → paths.local.env
-# PP-OCRv6 once: pnpm paddleocr:v6:install
-
-# Daily — everything
-pnpm dev:all
-pnpm models:warmup          # optional if first serve already warmed
-pnpm dev:status
-
-# Stop
-pnpm dev:stop
+pnpm platform setup
+pnpm platform
+pnpm platform status
+pnpm platform stop
 ```
 
-Skip one model (VRAM / iGPU) — prefer the named scripts (no `--` needed):
+> **Auth tip:** After Keycloak recreate, sign out and sign in again (or clear `localhost` cookies). Use **localhost**, not `127.0.0.1`.
 
-```powershell
-pnpm dev:all:no-glmocr          # skip GLM-OCR :8083
-pnpm dev:all:no-nuextract       # skip NuExtract :8081
-pnpm dev:all:paddle-only        # PP-OCRv6 only
-pnpm dev:all -- --no-paddleocr  # skip PP-OCRv6 :8868
-pnpm dev:all -- --no-obs        # skip observability
-```
+### Contribute from source
 
-Aliases: `--no-nuextract` = `--no-llama` = `--no-vlm` · `--no-glmocr` = `--no-glm`
-
-> **Auth tip:** After `pnpm dev:reset` / Keycloak recreate, sign out and sign in again (or clear `localhost` cookies). Old JWTs fail with `Unable to find a signing key that matches: "…"`.
-
-Or disable in `backend/.env`: `AUDIT_REPODY_VLM_ENABLED`, `AUDIT_PADDLEOCR_V6_ENABLED`, `AUDIT_GLM_OCR_ENABLED`.
-
-> **Note:** NuExtract and GLM both use llama-server. On shared iGPU / low RAM, Next.js can crash with Windows `0xC0000409` / exit `3221226505`. Prefer `pnpm dev:all:no-glmocr` or `pnpm dev:all:no-nuextract` (or `pnpm dev:all:paddle-only`). If the UI dies, API/models often keep running — use `pnpm ui` or `pnpm dev:app` to bring the UI back.
-
-Model docs: [REPODY-VLM.md](./REPODY-VLM.md) · [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) · [GLM-OCR.md](./GLM-OCR.md)
-
-### Granular (optional)
+Hub path above is the product runtime. For hacking API/UI from source:
 
 | Command | When |
 |---------|------|
-| `pnpm dev:api` | FastAPI only |
-| `pnpm ui` | Next.js only (:3000) |
-| `pnpm dev:worker` | Both Taskiq worker pools (Docker) |
-| `pnpm llamacpp:serve` / `:stop` / `:verify` / `:warmup` | NuExtract alone |
-| `pnpm paddleocr:v6:install` / `:serve` / `:stop` / `:verify` / `:warmup` | PP-OCRv6 alone |
-| `pnpm glmocr:serve` / `:stop` / `:verify` / `:warmup` / `:download` | GLM-OCR alone |
-| `pnpm db:reset` | Drop schema, migrate, re-seed |
-| `pnpm dev:reset` | Wipe Compose volumes + DB + rebuild workers |
-| `pnpm test:api` | Backend tests |
-| `pnpm lint` / `pnpm typecheck` | Frontend quality |
+| `pnpm dev:src:all` | Source-dev stack (local-dev) |
+| `pnpm dev:app` | Foreground API + UI |
+| `pnpm dev:api` | API only |
+| `pnpm ui` | Next.js only |
 
-## OpenShift client test
+---
 
-[docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) · Production client: [docs/deploy/CLIENT.md](./deploy/CLIENT.md)
+## OpenShift / client
 
-Requires `kubectl` + `helm` + `docker` logged in to an OpenShift cluster (kubeconfig).
+See [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
 
 | Command | When |
 |---------|------|
-| `pnpm openshift:infra` | **Once** — Harbor, Vault, ESO, OTEL, Argo CD |
-| `pnpm openshift:e2e` | **Repeat** — build → push → seed → sync → verify → logs |
-| `pnpm openshift:client-test` | Full run: infra + e2e (GitOps default; add `--clean` to reset) |
-| `pnpm openshift:client-test:external` | External profile |
-| `pnpm openshift:client-test:helm` | Direct Helm instead of Argo CD |
-| `pnpm openshift:preflight` | Check kubectl, helm, docker |
-| `pnpm openshift:client-ready` | Production-shaped validation on running lab |
+| `pnpm openshift:client-test` | Full client-test profile |
+| `pnpm openshift:client-ready` | Readiness gate |
+| `pnpm prod:readiness` | Prod health check |
+| `pnpm helm:lint` / `helm:template` | Chart checks |
 
-Flags: `--registry=harbor|openshift` · `--helm` · `--clean` · `--skip-images` · `--skip-build` · `--vlm`
-
-```powershell
-pnpm openshift:infra
-pnpm openshift:e2e --skip-build
-```
-
-## Release (vendor → client)
-
-[docs/deploy/VENDOR-TO-CLIENT.md](./deploy/VENDOR-TO-CLIENT.md) · [docs/deploy/RELEASE.md](./deploy/RELEASE.md)
-
-```powershell
-$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
-$env:REPODY_IMAGE_TAG="1.2.3"
-docker login ghcr.io
-pnpm images:release
-pnpm release:attest
-pnpm release:promote -- --channel=staging
-```
-
-## Security scanning
+## Release / images
 
 | Command | When |
 |---------|------|
-| `pnpm security:scan:quick` | Lockfiles + Trivy fs/config/secret |
-| `pnpm security:scan` | Full scan including Docker images + Grype |
+| `pnpm images:build` | Build locally |
+| `pnpm images:release` | Build + push (multi-arch via `REPODY_IMAGE_PLATFORMS`) |
+| `pnpm release:all` | Push + attest + promote staging |
 
-## Helm / client
+Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 
-| Command | When |
+## Model serve (advanced / standalone)
+
+Usually started by `pnpm platform`. Manual:
+
+| Command | Port |
 |---------|------|
-| `pnpm helm:deps:update` / `:check` / `pnpm helm:lint` / `pnpm helm:template` | Charts |
-| `pnpm client:check` / `pnpm deploy:check` / `pnpm enterprise:secrets` | Client contracts |
+| `pnpm paddleocr:v6:serve` | `:8868` (auto-installs deps; starts Qwen companion by default) |
+| `pnpm qwen35:serve` | `:8084` |
+| `pnpm llamacpp:serve` | `:8081` |
+| `pnpm glmocr:serve` | `:8083` |
 
-## Tests
-
-| Command | When |
-|---------|------|
-| `pnpm test:unit` | Fast pure backend tests |
-| `pnpm test:integration` | ASGI + Postgres |
-| `pnpm test:api` | Unit + integration (CI default) |
-| `pnpm test:live` | Live API (stack required) |
-| `pnpm test:e2e` | Playwright UI |
-| `pnpm test:platform:report` | Markdown/HTML under `reports/platform-tests/` |
-
-Details: [docs/TESTING.md](./TESTING.md).
-
-Production namespace: `repody`. Local Compose uses localhost ports.
+Stop: `pnpm paddleocr:v6:stop` · `qwen35:stop` · `llamacpp:stop` · `glmocr:stop`.

@@ -113,7 +113,7 @@ pnpm dev:restart
 
 | Symptom | Fix |
 |---------|-----|
-| Slow first request | Run `pnpm llamacpp:warmup` or set `LLAMACPP_WARMUP=on` |
+| Slow first request | Run `pnpm llamacpp:warmup` or set `LLAMACPP_WARMUP=on` in `paths.local.env` |
 | `failed to process image` / Vulkan `ErrorDeviceLost` | Cap `--image-max-tokens` (and match `-ub` / `--mtmd-batch-max-tokens`). Try 1536 first; if unstable, fall back to 1024. Restart with `pnpm llamacpp:restart`. |
 | `/v1/models` missing multimodal | Check `LLAMACPP_MMPROJ` path and `--mmproj-offload` |
 | Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |

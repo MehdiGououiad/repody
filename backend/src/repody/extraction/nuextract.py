@@ -8,6 +8,7 @@ Docs:
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
@@ -17,12 +18,13 @@ from repody.settings import Settings, get_settings
 # https://github.com/numindai/nuextract — non-thinking / markdown examples
 NUEXTRACT_PDF_DPI = 170
 NUEXTRACT_ENABLE_THINKING = False
-# Official PDF examples send every page. None = no client-side cap (match docs).
-# Set AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST to cap for low-memory llama.cpp.
-NUEXTRACT_MAX_PAGES_PER_REQUEST: int | None = None
 NUEXTRACT_STRUCTURED_TEMPERATURE = 0.2
 NUEXTRACT_MARKDOWN_TEMPERATURE = 0.0
 NUEXTRACT_THINKING_TEMPERATURE = 0.6
+# Official reasoning (markdown + thinking) example uses 0.7.
+NUEXTRACT_MARKDOWN_THINKING_TEMPERATURE = 0.7
+# Heading for per-field notes inside the official free-text `instructions`.
+NUEXTRACT_FIELD_NOTES_HEADING = "Field guidance:"
 
 
 def extraction_inference_profile_key(*, settings: Settings) -> str:
@@ -242,14 +244,41 @@ def _clean_enum_values(values: list[str] | None) -> list[str]:
 
 # --- Chat completions (official NuExtract multimodal / markdown) ---
 
+def _iter_field_notes(
+    fields: list[SchemaFieldSpec], prefix: str = ""
+) -> Iterator[tuple[str, str]]:
+    """Yield ``(dotted_path, description)`` for every described field, depth-first."""
+    for field in fields:
+        name = field.name.strip()
+        if not name:
+            continue
+        path = f"{prefix}{name}"
+        description = (field.description or "").strip()
+        if description:
+            yield path, description
+        children = field.children or []
+        if children:
+            yield from _iter_field_notes(children, f"{path}.")
+
+
 def build_nuextract_instructions(
     schema: list[SchemaFieldSpec],
     *,
     document_instructions: str = "",
 ) -> str:
-    """Official ``instructions`` — workflow document notes only."""
-    _ = schema
-    return (document_instructions or "").strip()
+    """Official free-text ``instructions``: document notes plus per-field guidance.
+
+    NuExtract3 keeps hints out of the template and in ``instructions``, so schema
+    field descriptions are rendered here rather than encoded into field names.
+    """
+    blocks: list[str] = []
+    document_notes = (document_instructions or "").strip()
+    if document_notes:
+        blocks.append(document_notes)
+    field_notes = [f"- {path}: {text}" for path, text in _iter_field_notes(schema)]
+    if field_notes:
+        blocks.append("\n".join([NUEXTRACT_FIELD_NOTES_HEADING, *field_notes]))
+    return "\n\n".join(blocks)
 
 
 def build_icl_messages(examples: list[ExtractionIclExample]) -> list[dict[str, Any]]:
@@ -335,12 +364,18 @@ def markdown_chat_payload(
 ) -> dict[str, Any]:
     """Official markdown-mode chat.completions body."""
     settings = get_settings()
+    enable_thinking = bool(settings.repody_vlm_enable_thinking)
+    temperature = (
+        NUEXTRACT_MARKDOWN_THINKING_TEMPERATURE
+        if enable_thinking
+        else NUEXTRACT_MARKDOWN_TEMPERATURE
+    )
     return {
         "model": model,
-        "temperature": NUEXTRACT_MARKDOWN_TEMPERATURE,
+        "temperature": temperature,
         "messages": [{"role": "user", "content": content}],
         "chat_template_kwargs": {
             "mode": "markdown",
-            "enable_thinking": bool(settings.repody_vlm_enable_thinking),
+            "enable_thinking": enable_thinking,
         },
     }

@@ -50,6 +50,8 @@ function uvBin() {
 function buildServeArgs() {
   const args = [
     "run",
+    "python",
+    "-m",
     "paddlex",
     "--serve",
     "--pipeline",
@@ -65,7 +67,7 @@ function buildServeArgs() {
   return args;
 }
 
-async function waitForLayout({ timeoutMs = 900_000 } = {}) {
+async function waitForLayout({ timeoutMs = 1_800_000 } = {}) {
   const started = Date.now();
   const url = `${BASE}/layout-parsing`;
   while (Date.now() - started < timeoutMs) {
@@ -81,23 +83,27 @@ async function waitForLayout({ timeoutMs = 900_000 } = {}) {
 }
 
 function install() {
-  console.log("Ensuring PaddleX serving deps (fastapi/uvicorn) via uv…");
-  // paddlex --install serving calls `python -m pip`, which fails in uv venvs.
-  // Install the same serving stack with uv instead.
-  const result = spawnSync(
-    uvBin(),
+  console.log("Ensuring PaddleX StructureV3 deps via uv…");
+  const steps = [
+    ["pip", "install", "paddleocr"],
+    ["pip", "install", "paddlex[serving]"],
+    // Official PP-StructureV3 pipeline requires the OCR extra:
+    // paddlex.utils.deps.DependencyError → paddlex[ocr]
+    ["pip", "install", 'paddlex[ocr]'],
     ["pip", "install", "fastapi>=0.110", "uvicorn>=0.30", "uvicorn[standard]>=0.30"],
-    {
+  ];
+  for (const args of steps) {
+    const result = spawnSync(uvBin(), args, {
       cwd: BACKEND,
       stdio: "inherit",
       shell: false,
       env: { ...process.env },
-    },
-  );
-  if (result.status !== 0) {
-    process.exit(result.status || 1);
+    });
+    if (result.status !== 0) {
+      process.exit(result.status || 1);
+    }
   }
-  console.log("Serving deps ready.");
+  console.log("PP-StructureV3 install finished (paddlex[serving,ocr] + serving stack).");
 }
 
 async function serve() {

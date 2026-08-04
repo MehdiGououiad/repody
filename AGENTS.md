@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 [docs/COMMANDS.md](./docs/COMMANDS.md) — **develop** (Compose), **OpenShift client**, **release** (GHCR push).
 
-Daily: `pnpm dev:all` · or `pnpm dev` + `pnpm dev:app` · `pnpm dev:stop`
+Daily: `pnpm platform` (same on Windows/Mac) · once: `pnpm platform setup` · `pnpm platform stop` · contributors: `pnpm dev:src:all`
 
 Deploy guides: [docs/deploy/README.md](./docs/deploy/README.md)
 

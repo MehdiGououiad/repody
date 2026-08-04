@@ -24,20 +24,27 @@ flowchart LR
 Production inference is not bundled in the chart. Run vLLM, llama-server, or a
 managed OpenAI-compatible endpoint separately and point Repody at it.
 
-## Quick start (local development)
+## Quick start (new machine)
 
-Prerequisites: Docker Desktop, Node 24.x, Corepack-managed pnpm 11.7.0.
+Prerequisites: Docker Desktop, Node 24.x, Corepack pnpm 11.7.0, `llama-server` on PATH
+(`winget install ggml.llamacpp` / `brew install llama.cpp`).
 
-```powershell
+```bash
+git clone https://github.com/MehdiGououiad/repody.git
+cd repody
 corepack enable
 pnpm install
 pnpm doctor
-pnpm dev:setup   # first run only
-pnpm dev:all     # daily: stack + API + UI
+pnpm platform setup    # once: env files + docker pull Hub images
+pnpm platform          # start API/UI/workers + PP-OCR + Qwen
+pnpm platform status
 ```
 
-Sign in at http://localhost:3000 with Keycloak from Compose. For split terminals,
-NuExtract tuning, and troubleshooting, see [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md).
+Images come from Docker Hub (`mehdigououiad/repody-*`), not a local build.
+Sign in at http://localhost:3000 · `operator@repody.local` / `repody-dev`.
+
+Daily: `pnpm platform` · stop: `pnpm platform stop`  
+Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · [docs/COMMANDS.md](./docs/COMMANDS.md)
 
 **Client OpenShift:** [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) · **CRC lab:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md)
 

@@ -110,6 +110,7 @@ async def extract_with_glm_ocr(
         or DEFAULT_LAYOUT_MODEL,
         max_workers=int(settings.glm_ocr_sdk_max_workers),
         pdf_max_pages=pdf_max,
+        id_card_profile=bool(settings.glm_ocr_id_card_profile),
     )
     started = time.perf_counter()
     markdown = await asyncio.to_thread(
@@ -132,6 +133,7 @@ async def extract_with_glm_ocr(
         pages_sent=pages_sent,
         pages_dropped=pages_dropped,
         pdf_max_pages=pdf_max,
+        id_card_profile=settings.glm_ocr_id_card_profile,
     )
     return ExtractionResult(
         fields=empty_fields_from_schema(schema),

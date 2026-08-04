@@ -17,7 +17,9 @@ AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q4_k_m
 AUDIT_LLAMACPP_API_KEY=
 
 AUDIT_REPODY_VLM_TIMEOUT_SECONDS=180
-AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=true
+# Dual structured+markdown pass (second model call). Markdown-only documents
+# still run markdown when enabled on the workflow document.
+AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=false
 AUDIT_HEALTHZ_PROBE_INFERENCE=false
 AUDIT_GPU_LIVE_PROBE=false
 ```
@@ -25,11 +27,13 @@ AUDIT_GPU_LIVE_PROBE=false
 | Fixed in code (not configurable) | Value |
 |----------------------------------|-------|
 | PDF raster | PNG @ **170 DPI** |
-| Thinking mode | `enable_thinking=false` |
-| Structured temperature | **0.2** (official non-thinking) |
-| Markdown temperature | **0** (official markdown example) |
-| Max pages per request | **6** |
+| Structured temperature | **0.2** non-thinking · **0.6** thinking · **0** with ICL |
+| Markdown temperature | **0** non-thinking · **0.7** thinking (official reasoning example) |
 | Read path | NuExtract vision only |
+
+Thinking mode (`AUDIT_REPODY_VLM_ENABLE_THINKING`, default `false`) and the page cap
+(`AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST`, default: send all pages, as in the official
+PDF example) are configurable.
 
 ## Local development
 
@@ -70,8 +74,9 @@ Structured extraction follows the [NuExtract3-GGUF](https://huggingface.co/numin
 | PDF | PNG @ 170 DPI; **all pages** by default (official). Optional cap: `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` |
 | Image | Native PNG/JPEG/WebP bytes (no format conversion) |
 | Other MIME types | Rejected — upload PDF or image only |
-| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), optional `instructions` (workflow notes only), `enable_thinking` from settings, `temperature=0.2` (or `0.6` when thinking; `0` with ICL), no `max_tokens` |
-| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` — independent of structured; can run after structured when both enabled |
+| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking` from settings, `temperature=0.2` (or `0.6` when thinking; `0` with ICL), no `max_tokens` |
+| `instructions` | Workflow document notes, then a `Field guidance:` list of `dotted.path: description` for every described schema field — official NuExtract keeps hints here, not in the template |
+| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` (`0.7` when thinking) — one call for markdown-only documents; optional second call after structured when `AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=true` |
 | Source of truth | Model JSON stored as `extraction.rawText`; leaf `extracted_fields` are a UI/rules projection only |
 | ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only; local only) |
 

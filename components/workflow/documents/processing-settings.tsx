@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import {
   GLM_OCR_CATALOG_ID,
+  PADDLEOCR_QWEN_CATALOG_ID,
   PADDLEOCR_V6_CATALOG_ID,
   REPODY_VLM_CATALOG_ID,
   isMarkdownOnlyCatalogId,
@@ -48,7 +49,9 @@ export function ProcessingSettings({
       ? t("extraction.profileGlmOcrHint")
       : selected === PADDLEOCR_V6_CATALOG_ID
         ? t("extraction.profilePaddleocrV6Hint")
-        : t("extraction.profileNuextractQ4Hint");
+        : selected === PADDLEOCR_QWEN_CATALOG_ID
+          ? t("extraction.profilePaddleocrQwenHint")
+          : t("extraction.profileNuextractQ4Hint");
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
