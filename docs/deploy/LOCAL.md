@@ -38,6 +38,10 @@ PP-OCR Python deps **auto-install** on first OCR start.
 Sign-in: http://localhost:3000 · `operator@repody.local` / `repody-dev`  
 Use **localhost**, not `127.0.0.1`.
 
+Hub auth wiring: browser issuer is `http://localhost:8080/realms/repody`; the web
+container uses `AUTH_KEYCLOAK_INTERNAL_ISSUER=http://keycloak:8080/realms/repody`
+for server-side token calls. API fetches JWKS from `http://keycloak:8080/...`.
+
 ## Daily
 
 ```bash

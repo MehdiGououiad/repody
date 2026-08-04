@@ -42,7 +42,17 @@ services:
       AUDIT_MINIO_ACCESS_KEY: minioadmin
       AUDIT_MINIO_SECRET_KEY: minio-local-dev
       AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
+      # Browser tokens use localhost issuer; containers fetch JWKS via Docker DNS.
+      AUDIT_OIDC_ENABLED: "true"
+      AUDIT_OIDC_ISSUER: http://localhost:8080/realms/repody
+      AUDIT_OIDC_ISSUER_ALIASES: http://127.0.0.1:8080/realms/repody
+      AUDIT_OIDC_JWKS_URL: http://keycloak:8080/realms/repody/protocol/openid-connect/certs
+      AUDIT_OIDC_AUDIENCE: repody-api
+      AUDIT_KEYCLOAK_ADMIN_URL: http://keycloak:8080
+      AUDIT_KEYCLOAK_ADMIN_USER: admin
+      AUDIT_KEYCLOAK_ADMIN_PASSWORD: admin
+      AUDIT_KEYCLOAK_CLIENT_ID: repody-web
+      AUDIT_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
       AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
       AUDIT_SEED_ON_STARTUP: ${AUDIT_SEED_ON_STARTUP:-true}
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
@@ -96,8 +106,10 @@ services:
       AUTH_KEYCLOAK_ID: repody-web
       AUTH_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
       AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
+      # Browser redirects use public issuer; Auth.js server calls use Docker DNS.
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
-      BACKEND_URL: http://localhost:8000
+      AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
+      BACKEND_URL: http://api:8000
       INTERNAL_API_URL: http://api:8000
     restart: unless-stopped
 
