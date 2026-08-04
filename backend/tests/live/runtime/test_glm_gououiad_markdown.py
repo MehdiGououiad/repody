@@ -1,15 +1,16 @@
 """Live Gououiad CNIE hard test for GLM-OCR markdown adapter.
 
-Calls llama-server on AUDIT_GLM_OCR_BASE_URL directly (no full workflow stack).
+Calls the official SDK against AUDIT_GLM_OCR_BASE_URL (Ollama by default).
 Scores OCR text against e2e/fixtures/documents/gououiad-cnie.ocr-expectations.json.
 
 Enable the service first, then:
 
   $env:AUDIT_GLM_OCR_ENABLED = "true"
-  $env:AUDIT_GLM_OCR_BASE_URL = "http://127.0.0.1:8083/v1"
+  $env:AUDIT_GLM_OCR_BASE_URL = "http://127.0.0.1:11434"
+  $env:AUDIT_GLM_OCR_SERVED_MODEL = "glm-ocr:latest"
   $env:GLM_GOUOUIAD_LIVE = "1"
   pnpm glmocr:serve
-  pnpm test:api:live -- tests/live/platform/test_glm_gououiad_markdown.py -v -s
+  pnpm test:api:live -- tests/live/runtime/test_glm_gououiad_markdown.py -v -s
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 import pytest
@@ -56,8 +58,17 @@ def _bundle(path: Path) -> DocumentBundle:
     return DocumentBundle(raw_bytes=data, mime_type=mime)
 
 
+def _health_url(base_url: str) -> str:
+    """Ollama uses /api/tags; OpenAI-compat roots use /models under /v1."""
+    raw = base_url.rstrip("/")
+    path = (urlparse(raw if "://" in raw else f"http://{raw}").path or "").rstrip("/")
+    if path.endswith("/v1"):
+        return f"{raw}/models"
+    return f"{raw}/api/tags"
+
+
 async def _service_reachable(base_url: str) -> bool:
-    url = f"{base_url.rstrip('/')}/models"
+    url = _health_url(base_url)
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             response = await client.get(url)
@@ -70,6 +81,7 @@ async def _run(
     *,
     front: DocumentBundle,
     back: DocumentBundle,
+    model: str,
 ) -> dict[str, Any]:
     t0 = time.perf_counter()
     front_result = await extract_with_glm_ocr(front, [], "CNIE front")
@@ -82,7 +94,8 @@ async def _run(
     scored = score_gououiad_cnie_markdown(front_md, back_md, include_hard=True)
     return {
         "catalog_id": GLM_OCR_CATALOG_ID,
-        "pack": "ggml-org/GLM-OCR-GGUF",
+        "pack": "zai-org/GLM-OCR via Ollama",
+        "model": model,
         "front_ms": front_ms,
         "back_ms": back_ms,
         "wall_ms": front_ms + back_ms,
@@ -105,14 +118,19 @@ async def test_gououiad_glm_ocr_markdown():
         pytest.skip("Set AUDIT_GLM_OCR_ENABLED=true")
 
     base = settings.glm_ocr_base_url
+    health = _health_url(base)
     if not await _service_reachable(base):
-        pytest.fail(f"GLM-OCR service not reachable at {base}/models")
+        pytest.fail(f"GLM-OCR service not reachable at {health}")
 
     front = _bundle(FRONT_PATH)
     back = _bundle(BACK_PATH)
 
     try:
-        report = await _run(front=front, back=back)
+        report = await _run(
+            front=front,
+            back=back,
+            model=settings.glm_ocr_served_model,
+        )
         REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
         payload = {"models": [report]}
         REPORT_PATH.write_text(

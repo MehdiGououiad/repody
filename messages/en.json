@@ -524,6 +524,7 @@
         "offlineBadge": "offline",
         "profileNuextractQ4Hint": "Official NuExtract3-GGUF: PDF → PNG @ 170 DPI → structured vision extraction.",
         "profilePaddleocrV6Hint": "PP-OCRv6 (official PaddleX OCR): document → text/Markdown only. Started by `pnpm dev:all` (:8868).",
+        "profilePaddleocrQwenHint": "PP-OCRv6 + Qwen: official OCR (:8868) then Qwen3.5 text→JSON (:8084). Start with `pnpm paddleocr:v6:serve` and `pnpm qwen35:serve`.",
         "profileGlmOcrHint": "GLM-OCR (official SDK + llama-server): document → text/Markdown only. Started by `pnpm dev:all` (:8083)."
       },
       "docSource": {

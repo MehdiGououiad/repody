@@ -38,7 +38,25 @@ def test_build_ocr_request_payload_matches_official_serving():
     payload = build_ocr_request_payload(bundle)
     assert payload["fileType"] == 0
     assert payload["visualize"] is False
+    assert payload["useDocOrientationClassify"] is True
+    assert payload["useDocUnwarping"] is True
+    assert payload["useTextlineOrientation"] is True
     assert base64.b64decode(payload["file"]) == bundle.raw_bytes
+
+
+def test_build_ocr_request_payload_supports_official_fast_path(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY", "false")
+    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING", "false")
+    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION", "false")
+    get_settings.cache_clear()
+    try:
+        bundle = DocumentBundle(raw_bytes=b"jpeg", mime_type="image/jpeg")
+        payload = build_ocr_request_payload(bundle)
+        assert payload["useDocOrientationClassify"] is False
+        assert payload["useDocUnwarping"] is False
+        assert payload["useTextlineOrientation"] is False
+    finally:
+        get_settings.cache_clear()
 
 
 def test_paddleocr_v6_registered_when_enabled(monkeypatch: pytest.MonkeyPatch):

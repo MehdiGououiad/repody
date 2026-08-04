@@ -1,5 +1,5 @@
 from repody.extraction.types import SchemaFieldSpec
-from repody.extraction.fields import fields_from_nuextract_json
+from repody.extraction.fields import fields_from_leaf_json, fields_from_nuextract_json
 from repody.rules.amounts import normalize_amount, parse_numeric_value
 
 
@@ -158,3 +158,26 @@ def test_fields_expands_nested_objects():
     assert by_key["holder_information.full_name"].value == "Jane Doe"
     assert by_key["holder_information.last_name"].extracted is False
     assert by_key["document_details.is_valid"].value == "true"
+
+
+def test_fields_from_leaf_json_flat_and_nested_equivalent():
+    nested = """{
+      "address": {"city": "Casablanca", "street": "BD ZIRAOUI"}
+    }"""
+    flat = """{
+      "address.city": "Casablanca",
+      "address.street": "BD ZIRAOUI"
+    }"""
+    schema = [
+        SchemaFieldSpec(
+            name="address",
+            template_type="object",
+            children=[
+                SchemaFieldSpec(name="city", description=""),
+                SchemaFieldSpec(name="street", description=""),
+            ],
+        )
+    ]
+    nested_fields = fields_from_leaf_json(nested, schema)
+    flat_fields = fields_from_leaf_json(flat, schema)
+    assert {f.key: f.value for f in nested_fields} == {f.key: f.value for f in flat_fields}

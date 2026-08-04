@@ -23,7 +23,7 @@ Both JSON objects are scored with `score_gououiad_cnie_fields` and written side-
 Experimental tooling (not first-class `package.json` scripts). From repo root:
 
 ```powershell
-pnpm paddleocr:v6:install
+pnpm paddleocr:v6:serve   # auto-installs deps if needed, then leave running
 node deploy/scripts/research/paddleocr-structure-v3-serve.mjs install
 copy deploy\research\qwen35\paths.local.env.example deploy\research\qwen35\paths.local.env
 

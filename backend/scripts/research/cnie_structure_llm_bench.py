@@ -49,8 +49,9 @@ from repody.extraction.vlm import (
     extract_with_repody_vlm_cloud,
 )
 from repody.infra.storage.mime import sniff_mime
+from repody.integration.fixtures import repo_root
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = repo_root()
 FIXTURES = ROOT / "e2e" / "fixtures" / "documents"
 EXPECTATIONS_PATH = FIXTURES / "gououiad-cnie.ocr-expectations.json"
 FRONT_PATH = FIXTURES / "gououiad-cnie-front.png"
@@ -280,7 +281,8 @@ async def _post_structure_http(
         "file": base64.b64encode(data).decode("ascii"),
         "fileType": file_type_for_mime(mime),
         "visualize": False,
-        # CNIE is not a formula/table doc — keep layout OCR text cleaner.
+        "returnMarkdownImages": False,
+        # Official per-request overrides for ID-card style docs (not table/formula heavy).
         "useFormulaRecognition": False,
         "useTableRecognition": False,
         "useChartRecognition": False,

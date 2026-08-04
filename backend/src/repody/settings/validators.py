@@ -62,6 +62,7 @@ def validate_timeout_alignment(settings: Settings) -> None:
     checks: list[tuple[str, float]] = [
         ("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", settings.repody_vlm_timeout_seconds),
         ("AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS", settings.paddleocr_v6_timeout_seconds),
+        ("AUDIT_QWEN35_TIMEOUT_SECONDS", settings.qwen35_timeout_seconds),
         ("AUDIT_GLM_OCR_TIMEOUT_SECONDS", settings.glm_ocr_timeout_seconds),
     ]
     if settings.nuextract_cloud_enabled:

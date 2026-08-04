@@ -4,13 +4,18 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
 const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
-const allowedDevOrigins = process.env.NEXT_ALLOWED_DEV_ORIGINS
-  ?.split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedDevOrigins = [
+  "127.0.0.1",
+  "localhost",
+  ...(process.env.NEXT_ALLOWED_DEV_ORIGINS
+    ?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) ?? []),
+];
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Next 16 blocks cross-origin HMR when UI is opened as 127.0.0.1 vs localhost.
   allowedDevOrigins,
   experimental: {
     optimizePackageImports: [

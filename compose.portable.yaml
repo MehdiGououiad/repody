@@ -1,0 +1,172 @@
+# Portable overlay — pull Hub images (no local Docker build). Windows + macOS + Linux.
+#
+#   pnpm platform
+#   docker compose -f compose.yaml -f compose.portable.yaml --profile workers up -d --no-build
+#
+# Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64).
+# Inference stays on the host (llama-server for Qwen; PP-OCRv6 via uv).
+# See docs/deploy/LOCAL.md
+
+name: repody
+
+x-portable-backend: &portable-backend
+  image: ${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}
+  pull_policy: ${REPODY_PULL_POLICY:-missing}
+  # Prefer Hub image; platform-dev passes `docker compose up --no-build`.
+
+services:
+  api:
+    <<: *portable-backend
+    # Hub image is target `backend` (entrypoint only) — role set by command.
+    command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: backend/.env
+        required: false
+    environment:
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_STORAGE_BACKEND: s3
+      AUDIT_MINIO_ENDPOINT: minio:9000
+      AUDIT_MINIO_BUCKET: audit-documents
+      AUDIT_MINIO_ACCESS_KEY: minioadmin
+      AUDIT_MINIO_SECRET_KEY: minio-local-dev
+      AUDIT_MINIO_SECURE: "false"
+      AUDIT_OIDC_ENABLED: "false"
+      AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
+      AUDIT_SEED_ON_STARTUP: ${AUDIT_SEED_ON_STARTUP:-true}
+      AUDIT_DEPLOYMENT_ENVIRONMENT: development
+      AUDIT_LOG_JSON: "true"
+      # Host backend/.env often sets ../.logs — not writable in-container.
+      AUDIT_LOG_FILE: /tmp/repody/api.log
+      AUDIT_OTEL_ENABLED: "false"
+      # Host inference (Docker Desktop Mac/Windows/Linux)
+      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
+      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
+      AUDIT_INFERENCE_MODE: llamacpp
+      AUDIT_REPODY_VLM_ENABLED: ${AUDIT_REPODY_VLM_ENABLED:-false}
+      AUDIT_PADDLEOCR_V6_ENABLED: "true"
+      AUDIT_PADDLEOCR_V6_BASE_URL: http://host.docker.internal:8868
+      AUDIT_PADDLEOCR_QWEN_ENABLED: "true"
+      AUDIT_QWEN35_BASE_URL: http://host.docker.internal:8084/v1
+      AUDIT_QWEN35_SERVED_MODEL: ${AUDIT_QWEN35_SERVED_MODEL:-Qwen3.5-4B}
+      AUDIT_QWEN35_TIMEOUT_SECONDS: ${AUDIT_QWEN35_TIMEOUT_SECONDS:-600}
+      AUDIT_GLM_OCR_ENABLED: "false"
+      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
+      AUDIT_LLM_VALIDATION_ENABLED: "false"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/healthz/live', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+
+  web:
+    image: ${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}
+    pull_policy: ${REPODY_PULL_POLICY:-missing}
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    ports:
+      - "3000:3000"
+    environment:
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-auth-secret-32chars-min!}
+      AUTH_URL: http://localhost:3000
+      AUTH_KEYCLOAK_ID: repody-web
+      AUTH_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
+      AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
+      AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
+      BACKEND_URL: http://localhost:8000
+      INTERNAL_API_URL: http://api:8000
+    restart: unless-stopped
+
+  worker-extract:
+    <<: *portable-backend
+    profiles: [workers]
+    command: ["python", "-m", "repody.taskiq.worker"]
+    environment:
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_STORAGE_BACKEND: s3
+      AUDIT_MINIO_ENDPOINT: minio:9000
+      AUDIT_MINIO_BUCKET: audit-documents
+      AUDIT_MINIO_ACCESS_KEY: minioadmin
+      AUDIT_MINIO_SECRET_KEY: minio-local-dev
+      AUDIT_MINIO_SECURE: "false"
+      AUDIT_OIDC_ENABLED: "false"
+      AUDIT_LOG_JSON: "true"
+      AUDIT_DEPLOYMENT_ENVIRONMENT: development
+      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
+      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
+      AUDIT_INFERENCE_MODE: llamacpp
+      AUDIT_REPODY_VLM_ENABLED: ${AUDIT_REPODY_VLM_ENABLED:-false}
+      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
+      AUDIT_PADDLEOCR_V6_ENABLED: "true"
+      AUDIT_PADDLEOCR_V6_BASE_URL: http://host.docker.internal:8868
+      AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: ${AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS:-600}
+      AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY: ${AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY:-true}
+      AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING: ${AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING:-true}
+      AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION: ${AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION:-true}
+      AUDIT_PADDLEOCR_QWEN_ENABLED: "true"
+      AUDIT_QWEN35_BASE_URL: http://host.docker.internal:8084/v1
+      AUDIT_QWEN35_SERVED_MODEL: ${AUDIT_QWEN35_SERVED_MODEL:-Qwen3.5-4B}
+      AUDIT_QWEN35_TIMEOUT_SECONDS: ${AUDIT_QWEN35_TIMEOUT_SECONDS:-600}
+      AUDIT_GLM_OCR_ENABLED: "false"
+      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
+      AUDIT_LLM_VALIDATION_ENABLED: "false"
+      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: ${AUDIT_WORKER_TASK_TIMEOUT_MINUTES:-10}
+      AUDIT_STALE_RUN_TIMEOUT_MINUTES: ${AUDIT_STALE_RUN_TIMEOUT_MINUTES:-12}
+      AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
+      AUDIT_WORKER_POOL: extract
+      AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  worker-fast:
+    <<: *portable-backend
+    profiles: [workers]
+    command: ["python", "-m", "repody.taskiq.worker"]
+    environment:
+      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_STORAGE_BACKEND: s3
+      AUDIT_MINIO_ENDPOINT: minio:9000
+      AUDIT_MINIO_BUCKET: audit-documents
+      AUDIT_MINIO_ACCESS_KEY: minioadmin
+      AUDIT_MINIO_SECRET_KEY: minio-local-dev
+      AUDIT_MINIO_SECURE: "false"
+      AUDIT_OIDC_ENABLED: "false"
+      AUDIT_LOG_JSON: "true"
+      AUDIT_DEPLOYMENT_ENVIRONMENT: development
+      AUDIT_WORKER_POOL: fast
+      AUDIT_GLM_OCR_ENABLED: "false"
+    restart: unless-stopped
+
+  # Base compose attaches these to profile `workers` too; keep them agents-only
+  # so portable `--profile workers --no-build` does not require local builds.
+  worker-fraud:
+    profiles: [agents]
+  worker-computer-use:
+    profiles: [agents]

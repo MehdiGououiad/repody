@@ -1,0 +1,26 @@
+# Portable Docker Hub images (linux/amd64 + linux/arm64).
+# Replace mehdigououiad if you publish under a different Hub namespace.
+#
+# Platform only: API / web / workers. Document-model inference
+# (NuExtract, PP-OCRv6, Qwen) stays external — see docs/REPODY-VLM.md
+# and docs/PADDLEOCR-V6.md. That is required for Mac/Windows/Linux
+# portability; GPU/Metal stacks are host-specific.
+
+images:
+  api:
+    repository: mehdigououiad/repody-backend
+    tag: "0.1.0"
+  web:
+    repository: mehdigououiad/repody-web
+    tag: "0.1.0"
+  workerExtract:
+    repository: mehdigououiad/repody-backend
+    tag: "0.1.0"
+  workerFast:
+    repository: mehdigououiad/repody-backend
+    tag: "0.1.0"
+
+# Public Hub images need no pull secret. Private Hub:
+# global:
+#   imagePullSecrets:
+#     - name: dockerhub-pull-secret

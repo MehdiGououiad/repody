@@ -24,6 +24,7 @@ from repody.inference.openai_compat import (
 from repody.inference.runtime import (
     GLM_OCR_RUNTIME,
     NUEXTRACT_CLOUD_RUNTIME,
+    PADDLEOCR_QWEN_RUNTIME,
     PADDLEOCR_V6_RUNTIME,
     llamacpp_base_url,
     openai_probe_timeout_seconds,
@@ -40,6 +41,9 @@ NUEXTRACT_CLOUD_CATALOG_NOTE = (
 )
 PADDLEOCR_V6_CATALOG_NOTE = (
     "PP-OCRv6 OCR service — markdown-only (paddlex --serve --pipeline OCR)."
+)
+PADDLEOCR_QWEN_CATALOG_NOTE = (
+    "PP-OCRv6 + Qwen — structured extraction (OCR :8868 + Qwen :8084)."
 )
 GLM_OCR_CATALOG_NOTE = (
     "GLM-OCR (zai-org) — markdown-only; official SDK (PP-DocLayoutV3) + llama-server GGUF."
@@ -103,6 +107,14 @@ def availability_for_spec(
         if not base:
             return False, "Set AUDIT_PADDLEOCR_V6_BASE_URL to the PP-OCRv6 OCR API origin."
         return True, PADDLEOCR_V6_CATALOG_NOTE
+    if spec.runtime == PADDLEOCR_QWEN_RUNTIME:
+        ocr_base = (settings.paddleocr_v6_base_url or "").strip()
+        qwen_base = (settings.qwen35_base_url or "").strip()
+        if not ocr_base:
+            return False, "Set AUDIT_PADDLEOCR_V6_BASE_URL for the OCR stage."
+        if not qwen_base:
+            return False, "Set AUDIT_QWEN35_BASE_URL for the Qwen text→JSON stage."
+        return True, PADDLEOCR_QWEN_CATALOG_NOTE
     if spec.runtime == GLM_OCR_RUNTIME:
         base = (settings.glm_ocr_base_url or "").strip()
         if not base:

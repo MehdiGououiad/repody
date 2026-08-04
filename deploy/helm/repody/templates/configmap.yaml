@@ -75,6 +75,9 @@ data:
   AUDIT_PADDLEOCR_V6_ENABLED: {{ .Values.config.paddleocrV6Enabled | quote }}
   AUDIT_PADDLEOCR_V6_BASE_URL: {{ .Values.config.paddleocrV6BaseUrl | quote }}
   AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: {{ .Values.config.paddleocrV6TimeoutSeconds | quote }}
+  AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY: {{ .Values.config.paddleocrV6UseDocOrientationClassify | quote }}
+  AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING: {{ .Values.config.paddleocrV6UseDocUnwarping | quote }}
+  AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION: {{ .Values.config.paddleocrV6UseTextlineOrientation | quote }}
   AUDIT_GLM_OCR_ENABLED: {{ .Values.config.glmOcrEnabled | quote }}
   AUDIT_GLM_OCR_BASE_URL: {{ .Values.config.glmOcrBaseUrl | quote }}
   AUDIT_GLM_OCR_SERVED_MODEL: {{ .Values.config.glmOcrServedModel | quote }}
@@ -82,6 +85,7 @@ data:
   AUDIT_GLM_OCR_LAYOUT_DEVICE: {{ .Values.config.glmOcrLayoutDevice | quote }}
   AUDIT_GLM_OCR_LAYOUT_MODEL_DIR: {{ .Values.config.glmOcrLayoutModelDir | quote }}
   AUDIT_GLM_OCR_SDK_MAX_WORKERS: {{ .Values.config.glmOcrSdkMaxWorkers | quote }}
+  AUDIT_GLM_OCR_ID_CARD_PROFILE: {{ .Values.config.glmOcrIdCardProfile | quote }}
   AUDIT_GPU_LIVE_PROBE: {{ .Values.config.gpuLiveProbe | quote }}
   AUDIT_HEALTHZ_PROBE_INFERENCE: {{ .Values.config.healthzProbeInference | quote }}
   {{- if .Values.externalObjectStorage.publicEndpoint }}

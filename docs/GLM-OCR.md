@@ -2,12 +2,8 @@
 
 Catalog id: `glm:ocr`. Document → text/Markdown via the **official zai-org SDK**
 ([GlmOcr](https://huggingface.co/zai-org/GLM-OCR) + PP-DocLayoutV3). Region OCR
-runs against llama-server (`ggml-org/GLM-OCR-GGUF`). Structured field extraction
-stays on **Repody VLM** (`repody:vlm` / NuExtract).
-
-The model card **strongly recommends the official SDK** for document parsing
-(layout + parallel recognition) over model-only inference. This platform uses
-that SDK path only — local and prod share the same Docker/K8s worker image.
+runs against the configured OCR API. Structured field extraction stays on
+**Repody VLM** (`repody:vlm` / NuExtract).
 
 ## Official sources
 
@@ -15,12 +11,20 @@ that SDK path only — local and prod share the same Docker/K8s worker image.
 |---|---|
 | Model card (SDK recommended) | [zai-org/GLM-OCR](https://huggingface.co/zai-org/GLM-OCR) |
 | SDK source / config | [github.com/zai-org/GLM-OCR](https://github.com/zai-org/GLM-OCR) |
-| GGUF for llama.cpp | [ggml-org/GLM-OCR-GGUF](https://huggingface.co/ggml-org/GLM-OCR-GGUF) |
+| Official self-host (NVIDIA) | **vLLM / SGLang** with `zai-org/GLM-OCR` BF16 |
+| Official local / CPU (zai-org) | **[Ollama](https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md)** — optional here via `pnpm glmocr:ollama:serve` |
+| **This repo default** | [ggml-org/GLM-OCR-GGUF](https://huggingface.co/ggml-org/GLM-OCR-GGUF) via `llama-server` (**F16**) |
 | Layout model | [PP-DocLayoutV3_safetensors](https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_safetensors) |
 
-## Install (local == prod)
+> Local default is **llama-server** on `:8083` (Vulkan/CPU/CUDA). This is the
+> user's selected community GGUF runtime, not zai-org's documented vLLM/SGLang
+> NVIDIA or Ollama CPU runtime. The SDK/API contract remains official; the
+> runtime choice is intentionally documented as a deviation.
+> Profile: `deploy/glmocr/config.selfhosted.yaml` (official layout mapping).
+> Optional ID-card profile: `AUDIT_GLM_OCR_ID_CARD_PROFILE=true` loads
+> `deploy/glmocr/config.idcard.yaml` (OCR on `image`/`chart` regions + region-text fallback).
 
-Bake the official SDK into the extract worker image (default):
+## Install
 
 ```powershell
 pnpm dev:all
@@ -28,21 +32,12 @@ pnpm dev:all
 pnpm dev:worker:rebuild
 ```
 
-Compose and `pnpm images:build` default to `REPODY_BACKEND_EXTRAS=otel,glmocr`.
-`torch` / `torchvision` resolve from the **PyTorch CPU index** (`tool.uv.sources`
-in `backend/pyproject.toml`) so Linux images do not ship unused CUDA/nvidia
-wheels — matches `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`.
-
-Host Python only needs the extra for unit tests / scripts:
+Host Python (tests / scripts):
 
 ```powershell
 cd backend
 uv sync --extra glmocr
 ```
-
-OCR weights still come from llama-server (`pnpm glmocr:serve` on **:8083**).
-Layout runs **inside** the extract worker (`AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`
-recommended when the GPU is busy with llama).
 
 ## Env
 
@@ -50,12 +45,15 @@ recommended when the GPU is busy with llama).
 AUDIT_GLM_OCR_ENABLED=true
 AUDIT_GLM_OCR_BASE_URL=http://127.0.0.1:8083/v1
 AUDIT_GLM_OCR_SERVED_MODEL=GLM-OCR
-AUDIT_GLM_OCR_TIMEOUT_SECONDS=180
+AUDIT_GLM_OCR_TIMEOUT_SECONDS=600
 AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu
 AUDIT_GLM_OCR_LAYOUT_MODEL_DIR=PaddlePaddle/PP-DocLayoutV3_safetensors
-AUDIT_GLM_OCR_SDK_MAX_WORKERS=4
-# AUDIT_GLM_OCR_PDF_MAX_PAGES=  # unset = official unlimited
+AUDIT_GLM_OCR_SDK_MAX_WORKERS=1
+# Optional — photo-heavy ID cards (CNIE, etc.)
+AUDIT_GLM_OCR_ID_CARD_PROFILE=false
 ```
+
+Warmup is opt-in: `GLMOCR_WARMUP=on` when running `pnpm glmocr:serve`.
 
 Extract workers use `http://host.docker.internal:8083/v1`.
 
@@ -68,35 +66,24 @@ pnpm glmocr:warmup
 pnpm glmocr:stop
 ```
 
-Or with the full platform: `pnpm dev:all` then `pnpm models:warmup`.
+Optional Ollama instead:
+
+```powershell
+pnpm glmocr:ollama:serve
+# then set AUDIT_GLM_OCR_BASE_URL=http://127.0.0.1:11434
+# and AUDIT_GLM_OCR_SERVED_MODEL=glm-ocr:latest
+```
 
 ## Contract (official SDK)
 
-Aligned with [zai-org/GLM-OCR](https://huggingface.co/zai-org/GLM-OCR) + package
-[`glmocr/config.yaml`](https://github.com/zai-org/GLM-OCR/blob/main/glmocr/config.yaml):
-
-- `GlmOcr(mode="selfhosted")` → PP-DocLayoutV3 regions → OCR with
+- `GlmOcr(mode="selfhosted")` → PP-DocLayoutV3 → OCR with
   `Text Recognition:` / `Table Recognition:` / `Formula Recognition:`
-- Sampling: `temperature=0.0`, `top_p=0.00001`, `top_k=1`, `repetition_penalty=1.1`,
-  `max_tokens=8192`
-- PDF raster: **200 DPI** (SDK `page_loader.pdf_dpi`)
-- PDF page cap: official `pdf_max_pages: null` (no silent drop). Optional override:
-  `AUDIT_GLM_OCR_PDF_MAX_PAGES`
-- Region parallelism: SDK default 32; platform default **4** when llama `-np 1`
-  (`AUDIT_GLM_OCR_SDK_MAX_WORKERS`)
-
-## Adapter
-
-- Official SDK: `backend/src/repody/extraction/glm_ocr_sdk.py`
-- Catalog adapter: `backend/src/repody/extraction/glm_ocr.py`
-- Unit tests: `backend/tests/unit/extraction/test_glm_ocr.py`
-- Live Gououiad: `backend/tests/live/platform/test_glm_gououiad_markdown.py`
-  (`GLM_GOUOUIAD_LIVE=1`)
+- llama-server: `api_mode=openai`, `/v1/chat/completions`, model alias `GLM-OCR`
+- Sampling: `temperature=0.0`, `top_p=0.00001`, `top_k=1`, `repetition_penalty=1.1`
+- PDF raster: **200 DPI**
 
 ## Related
 
-- [EXTRACTION.md](./EXTRACTION.md) — modular catalog map (NuExtract / Paddle / GLM)
 - [deploy/glmocr/README.md](../deploy/glmocr/README.md)
-- [REPODY-VLM.md](./REPODY-VLM.md) — structured NuExtract / llama.cpp
-- [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) — PP-OCRv6 markdown OCR
+- [EXTRACTION.md](./EXTRACTION.md)
 - [COMMANDS.md](./COMMANDS.md)

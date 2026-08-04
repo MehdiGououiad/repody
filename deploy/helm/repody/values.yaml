@@ -405,21 +405,25 @@ config:
   queueRefreshDbLimit: 128
   outboxRetainDispatchedDays: 7
   operatorActionsEnabled: false
-  repodyVlmMarkdownOnExtract: true
+  repodyVlmMarkdownOnExtract: false
   # Local/dev catalog includes PP-OCRv6 by default; set base URL to a reachable OCR API in-cluster.
   paddleocrV6Enabled: false
   paddleocrV6BaseUrl: http://paddleocr-v6:8868
   paddleocrV6TimeoutSeconds: 180
-  # GLM-OCR via host/cluster llama-server (ggml-org/GLM-OCR-GGUF).
+  paddleocrV6UseDocOrientationClassify: true
+  paddleocrV6UseDocUnwarping: true
+  paddleocrV6UseTextlineOrientation: true
+  # GLM-OCR — local Compose uses Ollama :11434; cluster may point at a dedicated service.
   glmOcrEnabled: false
   glmOcrBaseUrl: http://glmocr:8083/v1
-  glmOcrServedModel: GLM-OCR
+  glmOcrServedModel: glm-ocr:latest
   glmOcrTimeoutSeconds: 180
   # Official SDK layout (PP-DocLayoutV3) — requires backend image built with
   # REPODY_BACKEND_EXTRAS=otel,glmocr (default for pnpm images:build).
   glmOcrLayoutDevice: cpu
   glmOcrLayoutModelDir: PaddlePaddle/PP-DocLayoutV3_safetensors
-  glmOcrSdkMaxWorkers: 4
+  glmOcrSdkMaxWorkers: 1
+  glmOcrIdCardProfile: false
   gpuLiveProbe: false
   healthzProbeInference: false
 

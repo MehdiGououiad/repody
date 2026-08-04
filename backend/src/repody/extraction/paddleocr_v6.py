@@ -5,7 +5,10 @@ Serve (host):
   paddlex --serve --pipeline deploy/paddleocr-v6/OCR.yaml --host 0.0.0.0 --port 8868
 
 Client (official OCR pipeline serving contract):
-  POST /ocr  JSON { "file": "<base64>", "fileType": 0|1, "visualize": false }
+  POST /ocr  JSON { "file": "<base64>", "fileType": 0|1, "visualize": false,
+                    "useDocOrientationClassify": true,
+                    "useDocUnwarping": true,
+                    "useTextlineOrientation": true }
 
 Docs:
   https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html
@@ -100,29 +103,23 @@ def build_ocr_request_payload(bundle: DocumentBundle) -> dict[str, Any]:
     Same fields as the multi-language examples on the OCR pipeline page:
     ``file`` (Base64) + ``fileType`` (0=PDF, 1=image). ``visualize: false``
     avoids returning large Base64 images (also settable in pipeline Serving).
+    The three document-preparation flags are the documented per-request
+    overrides. They default to the official pipeline defaults and can be
+    disabled for clean, already-oriented documents.
     """
+    settings = get_settings()
     return {
         "file": base64.b64encode(bundle.raw_bytes).decode("ascii"),
         "fileType": file_type_for_mime(bundle.mime_type),
         "visualize": False,
+        "useDocOrientationClassify": bool(settings.paddleocr_v6_use_doc_orientation_classify),
+        "useDocUnwarping": bool(settings.paddleocr_v6_use_doc_unwarping),
+        "useTextlineOrientation": bool(settings.paddleocr_v6_use_textline_orientation),
     }
 
 
-async def extract_with_paddleocr_v6(
-    bundle: DocumentBundle,
-    schema: list[SchemaFieldSpec],
-    document_type: str,
-    *,
-    spec: DocumentModelSpec | None = None,
-    extraction_instructions: str = "",
-    markdown_extraction: bool = False,
-    extraction_icl_examples: list[ExtractionIclExample] | None = None,
-) -> ExtractionResult:
-    """Markdown-only extraction via official ``POST /ocr`` Basic Serving."""
-    _ = document_type
-    _ = extraction_instructions
-    _ = extraction_icl_examples
-    _ = markdown_extraction
+async def fetch_paddleocr_markdown(bundle: DocumentBundle) -> tuple[str, int]:
+    """Official ``POST /ocr`` → ``(markdown, page_count)``."""
     settings = get_settings()
     base = (settings.paddleocr_v6_base_url or "").rstrip("/")
     if not base:
@@ -134,7 +131,6 @@ async def extract_with_paddleocr_v6(
     payload = build_ocr_request_payload(bundle)
     url = f"{base}/ocr"
     timeout = float(settings.paddleocr_v6_timeout_seconds)
-    started = time.perf_counter()
     async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(url, json=payload)
     if response.status_code != 200:
@@ -155,8 +151,29 @@ async def extract_with_paddleocr_v6(
             "(`pnpm paddleocr:v6:serve` / paddlex --serve --pipeline OCR) "
             "and that the document is a supported PDF/image."
         )
-    elapsed_ms = int((time.perf_counter() - started) * 1000)
     page_count = len((body.get("result") or {}).get("ocrResults") or [])
+    return markdown, page_count
+
+
+async def extract_with_paddleocr_v6(
+    bundle: DocumentBundle,
+    schema: list[SchemaFieldSpec],
+    document_type: str,
+    *,
+    spec: DocumentModelSpec | None = None,
+    extraction_instructions: str = "",
+    markdown_extraction: bool = False,
+    extraction_icl_examples: list[ExtractionIclExample] | None = None,
+) -> ExtractionResult:
+    """Markdown-only extraction via official ``POST /ocr`` Basic Serving."""
+    _ = document_type
+    _ = extraction_instructions
+    _ = extraction_icl_examples
+    _ = markdown_extraction
+    started = time.perf_counter()
+    markdown, page_count = await fetch_paddleocr_markdown(bundle)
+    elapsed_ms = int((time.perf_counter() - started) * 1000)
+    base = (get_settings().paddleocr_v6_base_url or "").rstrip("/")
     log.info(
         "paddleocr_v6_done",
         catalog_id=(spec.id if spec else PADDLEOCR_V6_CATALOG_ID),

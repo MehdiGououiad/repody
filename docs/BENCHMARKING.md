@@ -147,3 +147,27 @@ Unavailable models are skipped unless strict mode is set.
 For Kubernetes runs, point each model's base URL env at the matching external
 service before starting a job (`AUDIT_LLAMACPP_*`, `AUDIT_PADDLEOCR_V6_*`,
 `AUDIT_GLM_OCR_*`).
+
+## Gououiad CNIE (all extraction paths)
+
+Host benchmark for the Moroccan CNIE recto+verso fixture — scores every registered
+document-model path against `e2e/fixtures/documents/gououiad-cnie.ocr-expectations.json`.
+
+```powershell
+pnpm dev:all
+pnpm benchmark:gououiad
+```
+
+Report: `benchmark-reports/gououiad-cnie-full.json`
+
+Paths exercised:
+
+| Path | Mode | Pass gate |
+| --- | --- | --- |
+| `repody:vlm:markdown` | NuExtract document-to-markdown | core ≥ 40% |
+| `repody:vlm:structured` | NuExtract JSON fields (full CNIE schema) | core ≥ 55%, CIN hit |
+| `paddleocr:v6` | PP-OCRv6 markdown | core ≥ 40% |
+| `glm:ocr` | Official GLM-OCR SDK profile | **LIMIT** on ID cards (image regions skipped) |
+| `glm:ocr:id-card` | GLM-OCR + `AUDIT_GLM_OCR_ID_CARD_PROFILE` | core ≥ 40% |
+
+Options: `--only repody:vlm,paddleocr:v6` · `--skip-glm-id-card`

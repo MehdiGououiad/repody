@@ -25,6 +25,8 @@ const backendExtras = normalizeBackendExtras(
 const includeBenchmarkFixtures = /^(1|true|yes)$/i.test(
   process.env.REPODY_INCLUDE_BENCHMARK_FIXTURES ?? "",
 );
+const platforms = normalizePlatforms(process.env.REPODY_IMAGE_PLATFORMS ?? "");
+const multiPlatform = platforms.length > 0;
 const localCacheRoot =
   process.env.REPODY_BUILDKIT_LOCAL_CACHE_DIR ??
   (process.platform === "win32" && root.toLowerCase().includes(`${path.sep}onedrive${path.sep}`)
@@ -92,9 +94,28 @@ function normalizeBackendExtras(raw) {
   return extras.length ? extras.join(",") : "otel";
 }
 
+function normalizePlatforms(raw) {
+  return raw
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
 if ((push || pushOnly) && !registry) {
   failConfig(
-    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your GHCR or client registry path, for example ghcr.io/yourorg/repody.",
+    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your Docker Hub namespace, GHCR path, or client registry, for example mehdigououiad or ghcr.io/yourorg/repody.",
+  );
+}
+
+if (multiPlatform && pushOnly) {
+  failConfig(
+    "REPODY_IMAGE_PLATFORMS cannot be used with --push-only. Multi-arch images must be built with buildx --push in one step.",
+  );
+}
+
+if (multiPlatform && !push) {
+  failConfig(
+    "REPODY_IMAGE_PLATFORMS requires --push (or pnpm images:release). Multi-arch manifests cannot be loaded into a single local Docker daemon.",
   );
 }
 
@@ -119,7 +140,8 @@ const buildEnv = {
   DOCKER_BUILDKIT: "1",
 };
 
-const builds = [];
+/** @type {Array<() => Promise<void>>} */
+const buildJobs = [];
 const cleanupDirs = [];
 
 function want(target) {
@@ -166,13 +188,39 @@ function appendBuildKitCacheFlags(args, cacheName) {
   }
 }
 
+async function ensureBuildxBuilder() {
+  if (!multiPlatform) return;
+  const name = process.env.REPODY_BUILDX_BUILDER || "repody-multiarch";
+  const listed = await new Promise((resolve) => {
+    const child = spawn("docker", ["buildx", "inspect", name], {
+      stdio: "ignore",
+      cwd: root,
+      shell: false,
+    });
+    child.on("close", (code) => resolve(code === 0));
+  });
+  if (!listed) {
+    await runAsync(
+      "docker",
+      ["buildx", "create", "--name", name, "--driver", "docker-container", "--use"],
+      buildEnv,
+    );
+  } else {
+    await runAsync("docker", ["buildx", "use", name], buildEnv);
+  }
+  await runAsync("docker", ["buildx", "inspect", "--bootstrap"], buildEnv);
+}
+
 if (!pushOnly && want("backend")) {
-  builds.push(
-    (async () => {
-      const backendImage = image("repody-backend", backendTag);
-      const fixturesContext = benchmarkFixturesContext();
+  buildJobs.push(async () => {
+    const backendImage = image("repody-backend", backendTag);
+    const fixturesContext = benchmarkFixturesContext();
+    if (multiPlatform) {
       const dockerArgs = [
+        "buildx",
         "build",
+        "--platform",
+        platforms.join(","),
         "--target",
         "backend",
         "--build-context",
@@ -183,49 +231,100 @@ if (!pushOnly && want("backend")) {
         `INCLUDE_BENCHMARK_FIXTURES=${includeBenchmarkFixtures ? "true" : "false"}`,
         "-t",
         backendImage,
+        "--push",
         "backend",
       ];
       appendBuildKitCacheFlags(dockerArgs, "backend");
       await runAsync("docker", dockerArgs, buildEnv);
-    })(),
-  );
+      return;
+    }
+    const dockerArgs = [
+      "build",
+      "--target",
+      "backend",
+      "--build-context",
+      `benchmark-fixtures=${fixturesContext}`,
+      "--build-arg",
+      `BACKEND_EXTRAS=${backendExtras}`,
+      "--build-arg",
+      `INCLUDE_BENCHMARK_FIXTURES=${includeBenchmarkFixtures ? "true" : "false"}`,
+      "-t",
+      backendImage,
+      "backend",
+    ];
+    appendBuildKitCacheFlags(dockerArgs, "backend");
+    await runAsync("docker", dockerArgs, buildEnv);
+  });
 }
 
 if (!pushOnly && (want("web") || only === "all")) {
-  const webArgs = [
-    "build",
-    "-f",
-    "Dockerfile.web",
-    "--build-arg",
-    `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://repody-api:8000"}`,
-    "--build-arg",
-    `NEXT_PUBLIC_BUGSINK_DSN=${process.env.NEXT_PUBLIC_BUGSINK_DSN ?? ""}`,
-    "--build-arg",
-    `BUGSINK_DSN=${process.env.BUGSINK_DSN ?? ""}`,
-    "-t",
-    image("repody-web", webTag),
-    ".",
-  ];
-  appendBuildKitCacheFlags(webArgs, "web");
-  builds.push(
-    runAsync("docker", webArgs, {
+  buildJobs.push(async () => {
+    const webImage = image("repody-web", webTag);
+    const webEnv = {
       ...buildEnv,
       AUTH_SECRET: process.env.AUTH_SECRET ?? "build-placeholder-secret-32chars-min",
       AUTH_KEYCLOAK_CLIENT_SECRET:
         process.env.AUTH_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
       AUTH_KEYCLOAK_ISSUER:
         process.env.AUTH_KEYCLOAK_ISSUER ?? "https://auth.example.com/realms/repody",
-    }),
-  );
+    };
+    if (multiPlatform) {
+      const webArgs = [
+        "buildx",
+        "build",
+        "--platform",
+        platforms.join(","),
+        "-f",
+        "Dockerfile.web",
+        "--build-arg",
+        `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://repody-api:8000"}`,
+        "--build-arg",
+        `NEXT_PUBLIC_BUGSINK_DSN=${process.env.NEXT_PUBLIC_BUGSINK_DSN ?? ""}`,
+        "--build-arg",
+        `BUGSINK_DSN=${process.env.BUGSINK_DSN ?? ""}`,
+        "-t",
+        webImage,
+        "--push",
+        ".",
+      ];
+      appendBuildKitCacheFlags(webArgs, "web");
+      await runAsync("docker", webArgs, webEnv);
+      return;
+    }
+    const webArgs = [
+      "build",
+      "-f",
+      "Dockerfile.web",
+      "--build-arg",
+      `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://repody-api:8000"}`,
+      "--build-arg",
+      `NEXT_PUBLIC_BUGSINK_DSN=${process.env.NEXT_PUBLIC_BUGSINK_DSN ?? ""}`,
+      "--build-arg",
+      `BUGSINK_DSN=${process.env.BUGSINK_DSN ?? ""}`,
+      "-t",
+      webImage,
+      ".",
+    ];
+    appendBuildKitCacheFlags(webArgs, "web");
+    await runAsync("docker", webArgs, webEnv);
+  });
 }
 
 console.log(
-  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"})`,
+  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, platforms=${platforms.join(",") || "host"}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"})`,
 );
 
 let buildFailed = false;
 try {
-  await Promise.all(builds);
+  await ensureBuildxBuilder();
+  // Multi-arch QEMU builds are heavy; run sequentially to avoid builder contention.
+  if (multiPlatform) {
+    for (const job of buildJobs) {
+      await job();
+    }
+  } else {
+    await Promise.all(buildJobs.map((job) => job()));
+  }
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);
   buildFailed = true;
@@ -238,7 +337,7 @@ if (buildFailed) {
   process.exit(1);
 }
 
-if (push || pushOnly) {
+if ((push || pushOnly) && !multiPlatform) {
   const toPush = [];
   if (want("backend") || only === "all") {
     toPush.push(image("repody-backend", backendTag));

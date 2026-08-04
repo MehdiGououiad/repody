@@ -27,7 +27,6 @@ from repody.extraction.nuextract import (
 from repody.extraction.render import (
     encode_pages_as_image_urls,
     prepare_nuextract_pages,
-    cap_pages,
 )
 
 def test_catalog_routes_repody_vlm_to_llamacpp():
@@ -68,8 +67,15 @@ def test_repody_vlm_template_and_flat_json():
         "invoice_number": "verbatim-string",
     }
 
+    # Official NuExtract3 keeps hints in free-text `instructions`, not the template.
     instructions = build_nuextract_instructions(schema, document_instructions="Use ISO dates.")
-    assert instructions == "Use ISO dates."
+    assert instructions == (
+        "Use ISO dates.\n"
+        "\n"
+        "Field guidance:\n"
+        "- total_amount: Total TTC\n"
+        "- invoice_number: Invoice reference"
+    )
 
     fields = fields_from_nuextract_json(
         '{"total_amount": 6000.0, "invoice_number": "FAC-42"}',
@@ -245,27 +251,6 @@ def test_repody_vlm_template_uses_explicit_nuextract_type():
     }
 
 
-def test_cap_pages_truncates_extra_pages():
-    pages = [b"page-1", b"page-2", b"page-3"]
-    kept, dropped = cap_pages(pages, max_pages=2)
-    assert kept == [b"page-1", b"page-2"]
-    assert dropped == 1
-
-
-def test_cap_pages_none_keeps_all():
-    pages = [b"page-1", b"page-2", b"page-3"]
-    kept, dropped = cap_pages(pages, max_pages=None)
-    assert kept == pages
-    assert dropped == 0
-
-
-def test_cap_pages_keeps_all_when_under_limit():
-    pages = [b"page-1"]
-    kept, dropped = cap_pages(pages, max_pages=4)
-    assert kept == pages
-    assert dropped == 0
-
-
 def test_pages_dropped_uses_document_page_count():
     from repody.extraction.render import pages_dropped
 
@@ -347,7 +332,9 @@ def test_structured_chat_payload_keeps_template():
     assert payload["chat_template_kwargs"]["enable_thinking"] is False
     assert payload["temperature"] == 0.2
     assert "top_p" not in payload
-    assert payload["chat_template_kwargs"]["instructions"] == "Use ISO dates."
+    assert payload["chat_template_kwargs"]["instructions"] == (
+        "Use ISO dates.\n\nField guidance:\n- invoice_number: Invoice number"
+    )
 
 
 def test_repody_vlm_payload_uses_official_non_thinking_defaults():
@@ -371,6 +358,44 @@ def test_repody_vlm_payload_uses_official_non_thinking_defaults():
     assert "max_tokens" not in structured
     assert markdown["temperature"] == 0.0
     assert markdown["chat_template_kwargs"]["enable_thinking"] is False
+
+
+def test_instructions_carry_nested_field_descriptions():
+    """Nested descriptions reach `instructions` as dotted paths, not field names."""
+    schema = [
+        SchemaFieldSpec(
+            name="supplier",
+            description="Issuing company",
+            template_type="object",
+            children=[
+                SchemaFieldSpec(name="name", description="Legal name"),
+                SchemaFieldSpec(name="ice", description=""),
+            ],
+        ),
+    ]
+
+    assert build_nuextract_instructions(schema) == (
+        "Field guidance:\n- supplier: Issuing company\n- supplier.name: Legal name"
+    )
+
+
+def test_markdown_payload_uses_official_thinking_temperature(monkeypatch):
+    """Official reasoning example pairs markdown + thinking with temperature 0.7."""
+    from repody.catalog.registry import parse_document_model
+    from repody.settings import get_settings
+
+    monkeypatch.setenv("AUDIT_REPODY_VLM_ENABLE_THINKING", "true")
+    get_settings.cache_clear()
+    try:
+        spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+        payload = markdown_chat_payload(
+            model=spec.runtime_model,
+            content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+        )
+        assert payload["temperature"] == 0.7
+        assert payload["chat_template_kwargs"]["enable_thinking"] is True
+    finally:
+        get_settings.cache_clear()
 
 
 def test_strip_thinking_removes_reasoning_wrapper():
@@ -431,3 +456,35 @@ def test_parse_document_model_returns_registered_spec():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     assert spec.id == REPODY_VLM_CATALOG_ID
     assert spec.runtime == "llamacpp"
+
+
+@pytest.mark.asyncio
+async def test_repody_vlm_markdown_only_without_platform_gate(monkeypatch: pytest.MonkeyPatch):
+    from repody.extraction.vlm import extract_with_repody_vlm
+    from repody.settings import get_settings
+
+    monkeypatch.setenv("AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT", "false")
+    get_settings.cache_clear()
+    monkeypatch.setattr(
+        "repody.extraction.vlm.prepare_nuextract_pages",
+        lambda bundle, max_pages=None: ([(bundle.raw_bytes, "image/png")], 1),
+    )
+    monkeypatch.setattr(
+        "repody.extraction.vlm.encode_pages_as_image_urls",
+        lambda pages: [{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
+    )
+    markdown_mock = AsyncMock(return_value="# Document\n\nHello")
+    monkeypatch.setattr("repody.extraction.vlm._markdown", markdown_mock)
+
+    try:
+        bundle = DocumentBundle(raw_bytes=b"\x89PNG", mime_type="image/png")
+        result = await extract_with_repody_vlm(
+            bundle,
+            [],
+            "DOC",
+            markdown_extraction=True,
+        )
+        assert result.markdown_text == "# Document\n\nHello"
+        markdown_mock.assert_awaited_once()
+    finally:
+        get_settings.cache_clear()

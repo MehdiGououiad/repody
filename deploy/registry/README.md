@@ -11,6 +11,52 @@ Git stores desired Kubernetes state; the **registry** stores built images.
 
 Repody does not ship Argo CD for client production.
 
+## Docker Hub (portable multi-arch)
+
+Publish `linux/amd64` + `linux/arm64` (Apple Silicon Mac) platform images:
+
+```powershell
+docker login
+$env:REPODY_IMAGE_REGISTRY="mehdigououiad"
+$env:REPODY_IMAGE_TAG="0.1.0"
+$env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
+# Lean portable image — no GLM-OCR torch stack (opt-in later if needed)
+$env:REPODY_BACKEND_EXTRAS="otel"
+pnpm images:release
+```
+
+Images:
+
+- `mehdigououiad/repody-backend:0.1.0` (also `:latest`)
+- `mehdigououiad/repody-web:0.1.0` (also `:latest`)
+
+### Pull (any machine)
+
+Public Hub images — no login required to pull:
+
+```bash
+docker pull mehdigououiad/repody-backend:0.1.0
+docker pull mehdigououiad/repody-web:0.1.0
+```
+
+Docker picks `linux/arm64` on Apple Silicon and `linux/amd64` on Intel automatically.
+
+Verify arches:
+
+```bash
+docker buildx imagetools inspect mehdigououiad/repody-backend:0.1.0
+```
+
+**Daily path** (pulls these for you): `pnpm platform` — see [docs/deploy/LOCAL.md](../../docs/deploy/LOCAL.md).
+
+**Helm:** [deploy/client/values-dockerhub.example.yaml](../client/values-dockerhub.example.yaml).
+
+**Portability boundary:** these images cover API, UI, and workers. Document-model
+inference (NuExtract / PP-OCRv6 / Qwen / GLM-OCR) is **external** by design
+([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)). On a Mac
+you still run or point at an inference endpoint separately — that is what makes
+the platform portable across Windows, Linux, and macOS.
+
 ## GHCR
 
 The `Publish images to GHCR` GitHub Actions workflow publishes:

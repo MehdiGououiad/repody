@@ -160,6 +160,7 @@ function dashboardContext() {
     observability: wantsObservability() || isObservabilityRunning(),
     llama: wantsNuextract() && llamaConfigured(),
     paddleocr: wantsPaddleocr(),
+    qwen35: wantsQwen35(),
     glmocr: wantsGlmocr() && glmocrEnabledInEnv(),
     extractOnly: flags.has("--extract-only"),
   };
@@ -222,14 +223,27 @@ function paddleocrEnabledInEnv() {
 function wantsGlmocr() {
   if (flags.has("--no-glmocr") || flags.has("--no-glm")) return false;
   if (flags.has("--glmocr") || flags.has("--glm")) return true;
-  return true;
+  return false;
 }
 
 function glmocrEnabledInEnv() {
+  if (!fs.existsSync(BACKEND_ENV)) return false;
+  const env = parseEnvFile(BACKEND_ENV);
+  const raw = (env.AUDIT_GLM_OCR_ENABLED || "false").trim().toLowerCase();
+  return raw !== "false" && raw !== "0" && raw !== "no";
+}
+
+function paddleocrQwenEnabledInEnv() {
   if (!fs.existsSync(BACKEND_ENV)) return true;
   const env = parseEnvFile(BACKEND_ENV);
-  const raw = (env.AUDIT_GLM_OCR_ENABLED || "true").trim().toLowerCase();
+  const raw = (env.AUDIT_PADDLEOCR_QWEN_ENABLED || "true").trim().toLowerCase();
   return raw !== "false" && raw !== "0" && raw !== "no";
+}
+
+function wantsQwen35() {
+  if (flags.has("--no-qwen") || flags.has("--no-qwen35")) return false;
+  if (!wantsPaddleocr() || !paddleocrEnabledInEnv()) return false;
+  return paddleocrQwenEnabledInEnv();
 }
 
 function logModelPlan() {
@@ -243,12 +257,15 @@ function logModelPlan() {
       ? "on"
       : "skip (AUDIT_PADDLEOCR_V6_ENABLED=false)"
     : "off (--no-paddleocr)";
+  const qwen = wantsQwen35()
+    ? "on (with PP-OCR serve)"
+    : "off";
   const glm = wantsGlmocr()
     ? glmocrEnabledInEnv()
       ? "on"
       : "skip (AUDIT_GLM_OCR_ENABLED=false)"
-    : "off (--no-glmocr)";
-  console.log(`Models: NuExtract=${nue}  PP-OCRv6=${pad}  GLM-OCR=${glm}`);
+    : "off (opt-in: --glmocr)";
+  console.log(`Models: NuExtract=${nue}  PP-OCRv6=${pad}  Qwen=${qwen}  GLM-OCR=${glm}`);
 }
 
 /** Windows 0xC0000409 — Node/Next native abort; often RAM pressure with local VLMs. */
@@ -494,6 +511,7 @@ async function status() {
     ["Keycloak", "http://127.0.0.1:8080"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
     ["PP-OCRv6", "http://127.0.0.1:8868/ocr"],
+    ["Qwen3.5", "http://127.0.0.1:8084/v1/models"],
     ["GLM-OCR", "http://127.0.0.1:8083/v1/models"],
     ["Grafana", `${GRAFANA_ORIGIN}/api/health`],
     ["Loki", "http://127.0.0.1:3100/ready"],
@@ -689,6 +707,7 @@ function stop() {
   killDevApi();
   run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], { allowFail: true, inherit: true });
   run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], { allowFail: true, inherit: true });
+  run("node", ["deploy/scripts/research/qwen35-serve.mjs", "stop"], { allowFail: true, inherit: true });
   run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], { allowFail: true, inherit: true });
 
   const downArgs = composeDownArgs();

@@ -19,6 +19,7 @@
 /test-results/
 /blob-report/
 /benchmark-reports/
+/backend/benchmark-reports/
 
 # next.js
 /.next/

@@ -71,10 +71,12 @@ class InferenceSettingsFields:
         ),
     )
     repody_vlm_markdown_on_extract: bool = Field(
-        default=True,
+        default=False,
         description=(
-            "Platform switch: allow NuExtract document-to-Markdown when a workflow "
-            "document enables markdown extraction (can run alongside structured fields)."
+            "When true, run NuExtract markdown mode alongside structured extraction "
+            "(second model call). Markdown-only workflows still use markdown when "
+            "the document has no schema fields. Default false — official NuExtract "
+            "treats structured and markdown as separate calls."
         ),
     )
     repody_vlm_max_pages_per_request: int | None = Field(
@@ -90,7 +92,7 @@ class InferenceSettingsFields:
         default=False,
         description=(
             "NuExtract enable_thinking. When true, structured temperature uses 0.6 "
-            "(official thinking examples)."
+            "and markdown uses 0.7 (official thinking / reasoning examples)."
         ),
     )
 
@@ -147,25 +149,76 @@ class InferenceSettingsFields:
             "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
         ),
     )
+    paddleocr_v6_use_doc_orientation_classify: bool = Field(
+        default=True,
+        description=(
+            "Official POST /ocr override for document orientation classification. "
+            "Default true matches the exported OCR pipeline; set false for the "
+            "documented fast path when inputs are already oriented."
+        ),
+    )
+    paddleocr_v6_use_doc_unwarping: bool = Field(
+        default=True,
+        description=(
+            "Official POST /ocr override for document unwarping. Default true "
+            "matches the exported OCR pipeline; set false for clean documents."
+        ),
+    )
+    paddleocr_v6_use_textline_orientation: bool = Field(
+        default=True,
+        description=(
+            "Official POST /ocr override for text-line orientation. Default true "
+            "matches the exported OCR pipeline; set false for the documented fast path."
+        ),
+    )
+
+    paddleocr_qwen_enabled: bool = Field(
+        default=True,
+        description=(
+            "Register PP-OCRv6 + Qwen (paddleocr:qwen) for structured extraction: "
+            "official POST /ocr then Qwen text→JSON. Requires PP-OCRv6 (:8868) and "
+            "Qwen llama-server (:8084)."
+        ),
+    )
+    qwen35_base_url: str = Field(
+        default="http://127.0.0.1:8084/v1",
+        description=(
+            "Qwen3.5 OpenAI-compatible API origin for paddleocr:qwen text→JSON. "
+            "Default llama-server :8084/v1 (`pnpm qwen35:serve`)."
+        ),
+    )
+    qwen35_served_model: str = Field(
+        default="Qwen3.5-4B",
+        description="Model id for Qwen chat/completions (llama-server -a alias).",
+    )
+    qwen35_timeout_seconds: float = Field(
+        default=180.0,
+        ge=30,
+        le=900.0,
+        description=(
+            "HTTP timeout for Qwen text→JSON in paddleocr:qwen. Must stay <= "
+            "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
+        ),
+    )
 
     glm_ocr_enabled: bool = Field(
         default=True,
         description=(
             "Register GLM-OCR (glm:ocr) as a markdown-only document model. "
-            "Official path: zai-org GlmOcr SDK (PP-DocLayoutV3) + llama-server "
+            "Local default: zai-org GlmOcr SDK (PP-DocLayoutV3) + llama-server "
             "ggml-org/GLM-OCR-GGUF on AUDIT_GLM_OCR_BASE_URL (default :8083)."
         ),
     )
     glm_ocr_base_url: str = Field(
         default="http://127.0.0.1:8083/v1",
         description=(
-            "OpenAI-compatible OCR API origin for the official GlmOcr SDK "
-            "(include /v1). Default :8083 avoids Keycloak (:8080) and NuExtract (:8081)."
+            "OCR API origin for the official GlmOcr SDK. Default llama-server "
+            ":8083/v1. Ollama uses http://127.0.0.1:11434 (no /v1)."
         ),
     )
     glm_ocr_served_model: str = Field(
         default="GLM-OCR",
-        description="Model id / alias returned by GLM-OCR llama-server /v1/models.",
+        description="Model id for OCR requests (llama-server -a alias; Ollama: glm-ocr:latest).",
     )
     glm_ocr_timeout_seconds: float = Field(
         default=180.0,
@@ -191,12 +244,12 @@ class InferenceSettingsFields:
         ),
     )
     glm_ocr_sdk_max_workers: int = Field(
-        default=4,
+        default=1,
         ge=1,
         le=32,
         description=(
             "Official SDK region-OCR parallelism (pipeline.max_workers). "
-            "SDK default is 32; keep lower when llama-server -np is 1."
+            "Must stay <= llama-server -np (default 1) to avoid queue pile-up."
         ),
     )
     glm_ocr_pdf_max_pages: int | None = Field(
@@ -205,6 +258,14 @@ class InferenceSettingsFields:
         description=(
             "Optional PDF page cap for official SDK page_loader.pdf_max_pages. "
             "Unset (default) matches glmocr config.yaml null — no silent truncation."
+        ),
+    )
+    glm_ocr_id_card_profile: bool = Field(
+        default=False,
+        description=(
+            "Optional GLM-OCR profile for photo-heavy ID cards: loads "
+            "deploy/glmocr/config.idcard.yaml (OCR on image/chart regions) and "
+            "enables region-text fallback when the official formatter is image-only."
         ),
     )
 
@@ -222,8 +283,14 @@ class InferenceSettingsFields:
     validation_max_tokens: int = Field(default=128, ge=32)
     validation_timeout_seconds: float = Field(default=60.0, ge=5.0)
 
-    extraction_cache_enabled: bool = True
-    extraction_cache_ttl_seconds: int = 86400
+    extraction_cache_enabled: bool = Field(
+        default=False,
+        description=(
+            "Redis cache for extraction results. Default false so dev/benchmark runs "
+            "always hit the model unless explicitly enabled."
+        ),
+    )
+    extraction_cache_ttl_seconds: int = Field(default=86400, ge=60)
 
     structured_llm_enabled: bool = Field(
         default=False,

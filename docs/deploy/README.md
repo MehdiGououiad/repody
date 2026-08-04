@@ -2,18 +2,18 @@
 
 **Canonical index.** Manifests and Helm charts live under [`deploy/`](../../deploy/).
 
-## Two deployment paths
+## Deployment paths
 
 | Path | Audience | Guide | Entry command |
 |------|----------|-------|---------------|
-| **Local** | Developers | [LOCAL.md](./LOCAL.md) | `pnpm dev:all` |
+| **Local** | Windows · macOS · Linux | [LOCAL.md](./LOCAL.md) | `pnpm platform` |
 | **OpenShift** | Client production + vendor CRC lab | [OPENSHIFT.md](./OPENSHIFT.md) · [CLIENT.md](./CLIENT.md) | Helm / Argo CD · `pnpm openshift:client-test` |
 
 OpenShift production uses **external** or **bundled** data profiles ([CLIENT.md](./CLIENT.md)). Ship images with `pnpm images:release` ([RELEASE.md](./RELEASE.md) · [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md)).
 
 Command cheat sheet: [docs/COMMANDS.md](../COMMANDS.md).
 
-Document extraction is **NuExtract3-Q4_K_M only** via host/external llama-server — [REPODY-VLM.md](../REPODY-VLM.md).
+Local default extraction is **`paddleocr:qwen`** (host PP-OCR + Qwen). NuExtract is opt-in — [PADDLEOCR-V6.md](../PADDLEOCR-V6.md) · [REPODY-VLM.md](../REPODY-VLM.md).
 
 ---
 

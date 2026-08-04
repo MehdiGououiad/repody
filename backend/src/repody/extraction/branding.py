@@ -24,6 +24,16 @@ PADDLEOCR_V6_DESCRIPTION = (
     "Requires AUDIT_PADDLEOCR_V6_BASE_URL (default http://127.0.0.1:8868)."
 )
 
+PADDLEOCR_QWEN_CATALOG_ID = "paddleocr:qwen"
+PADDLEOCR_QWEN_LABEL = "PP-OCRv6 + Qwen"
+PADDLEOCR_QWEN_DESCRIPTION = (
+    "Two-stage structured extraction: official PaddleX POST /ocr for text, "
+    "then Qwen3.5-4B (OpenAI-compatible llama-server) text→JSON against your "
+    "workflow schema. Requires AUDIT_PADDLEOCR_V6_BASE_URL (:8868) and "
+    "AUDIT_QWEN35_BASE_URL (:8084). Start with "
+    "`pnpm paddleocr:v6:serve` and `pnpm qwen35:serve`."
+)
+
 GLM_OCR_CATALOG_ID = "glm:ocr"
 GLM_OCR_LABEL = "GLM-OCR"
 GLM_OCR_DESCRIPTION = (
@@ -39,6 +49,7 @@ PUBLIC_CATALOG_IDS = frozenset(
         REPODY_VLM_CATALOG_ID,
         REPODY_VLM_CLOUD_CATALOG_ID,
         PADDLEOCR_V6_CATALOG_ID,
+        PADDLEOCR_QWEN_CATALOG_ID,
         GLM_OCR_CATALOG_ID,
     }
 )
@@ -70,6 +81,8 @@ def public_runtime_name(runtime: str) -> str:
         return REPODY_VLM_CLOUD_LABEL
     if runtime == "paddleocr_v6":
         return PADDLEOCR_V6_LABEL
+    if runtime == "paddleocr_qwen":
+        return PADDLEOCR_QWEN_LABEL
     if runtime == "glm_ocr":
         return GLM_OCR_LABEL
     return runtime
@@ -86,6 +99,8 @@ def public_document_model_label(model_id: str | None) -> str:
         return REPODY_VLM_CLOUD_LABEL
     if stripped == PADDLEOCR_V6_CATALOG_ID:
         return PADDLEOCR_V6_LABEL
+    if stripped == PADDLEOCR_QWEN_CATALOG_ID:
+        return PADDLEOCR_QWEN_LABEL
     if stripped == GLM_OCR_CATALOG_ID:
         return GLM_OCR_LABEL
     return stripped

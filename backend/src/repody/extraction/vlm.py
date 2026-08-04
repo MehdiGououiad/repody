@@ -110,11 +110,14 @@ async def extract_with_repody_vlm(
 
     content = await asyncio.to_thread(encode_pages_as_image_urls, pages)
     has_schema = any(field.name.strip() for field in schema)
-    want_markdown = bool(markdown_extraction and settings.repody_vlm_markdown_on_extract)
+    markdown_only = bool(markdown_extraction and not has_schema)
+    want_dual_markdown = bool(
+        markdown_extraction and has_schema and settings.repody_vlm_markdown_on_extract
+    )
     thinking = bool(settings.repody_vlm_enable_thinking)
 
-    # Markdown-only (no schema fields).
-    if want_markdown and not has_schema:
+    # Markdown-only (no schema fields) — one official NuExtract call.
+    if markdown_only:
         started = time.perf_counter()
         markdown_text = await _markdown(
             base_url,
@@ -173,7 +176,7 @@ async def extract_with_repody_vlm(
     fields = fields_from_nuextract_json(raw, schema)
 
     markdown_text = None
-    if want_markdown:
+    if want_dual_markdown:
         markdown_text = await _markdown(
             base_url,
             markdown_chat_payload(model=spec.runtime_model, content=content),

@@ -112,13 +112,10 @@ async def test_gououiad_nuextract_markdown(monkeypatch: pytest.MonkeyPatch):
     # conftest pins a mock LLAMACPP URL; live hard tests need the real host server.
     monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", "http://127.0.0.1:8081/v1")
     monkeypatch.setenv("AUDIT_REPODY_VLM_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT", "true")
     get_settings.cache_clear()
     settings = get_settings()
     if not settings.repody_vlm_enabled:
         pytest.skip("Set AUDIT_REPODY_VLM_ENABLED=true")
-    if not settings.repody_vlm_markdown_on_extract:
-        pytest.skip("Set AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=true")
 
     base = settings.llamacpp_base_url
     if not await _service_reachable(base):
