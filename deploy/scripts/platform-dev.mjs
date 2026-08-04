@@ -40,6 +40,8 @@ const opts = {
   withGlm: flags.has("--with-glm") || flags.has("--glmocr") || flags.has("--glm"),
   noPaddle: flags.has("--no-paddle") || flags.has("--no-ocr"),
   noQwen: flags.has("--no-qwen") || flags.has("--no-qwen35"),
+  // Observability (Grafana/Loki/Tempo/Bugsink) on by default for Hub platform.
+  withObs: !(flags.has("--no-obs") || flags.has("--no-observability")),
   platformOnly: flags.has("--platform-only"),
   skipPull: flags.has("--no-pull"),
   help: flags.has("--help") || flags.has("-h"),
@@ -68,7 +70,8 @@ Commands:
   setup      Once: env / paths + pull Hub images
   bootstrap  setup + up (new machine after git clone / pnpm install)
   doctor     Check Docker, llama-server, uv, env
-  status     Probe services
+  status     Probe services + observability URLs
+  logs       Tail API/web/worker Docker logs (admin)
   stop       Stop host models + Compose
   help       This help
 
@@ -77,6 +80,7 @@ Options (pnpm platform -- … / pnpm platform setup -- …):
   --with-glm         Also start GLM-OCR (:8083, experimental)
   --no-paddle        Skip PP-OCRv6
   --no-qwen          Skip Qwen
+  --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
   --platform-only    Containers only (no host models)
   --no-pull          Do not docker pull (setup + up)
 
@@ -229,7 +233,35 @@ function logPlan() {
   const qwen = opts.noQwen || opts.noPaddle ? "off" : "on (host)";
   const nue = opts.withNuextract ? "on (host)" : "off";
   const glm = opts.withGlm ? "on (experimental)" : "off";
-  console.log(`Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}`);
+  const obs = opts.withObs ? "on" : "off";
+  console.log(
+    `Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}  Observability=${obs}`,
+  );
+}
+
+function enableObservabilityEnv() {
+  setEnvKeys(BACKEND_ENV, {
+    AUDIT_OTEL_ENABLED: "true",
+    AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
+    AUDIT_OTEL_SERVICE_NAME: "repody-api",
+    AUDIT_LOG_JSON: "true",
+  });
+}
+
+function disableObservabilityEnv() {
+  setEnvKeys(BACKEND_ENV, {
+    AUDIT_OTEL_ENABLED: "false",
+  });
+}
+
+function startObservabilityStack(composeEnv) {
+  console.log("\n── Observability (Grafana · Loki · Tempo · Bugsink) ─────────");
+  enableObservabilityEnv();
+  run(
+    "docker",
+    composeArgs("--profile", "observability", "up", "-d", "--no-build"),
+    { inherit: true, allowFail: true, env: composeEnv },
+  );
 }
 
 async function waitHttp(url, { timeoutMs = 180_000, label = url } = {}) {
@@ -342,6 +374,20 @@ async function up() {
     );
   }
 
+  const composeEnv = {
+    REPODY_PULL_POLICY: opts.skipPull
+      ? "never"
+      : process.env.REPODY_PULL_POLICY || "missing",
+    AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
+    AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
+  };
+
+  if (opts.withObs) {
+    startObservabilityStack(composeEnv);
+  } else {
+    disableObservabilityEnv();
+  }
+
   console.log("\n── Start Hub platform ───────────────────────────────────────");
   const upArgs = [
     "up",
@@ -360,9 +406,6 @@ async function up() {
   // Images are pulled by `pnpm platform setup`. `--no-pull` forces never; otherwise refresh if missing.
   if (opts.skipPull) upArgs.splice(2, 0, "--pull", "never");
   else upArgs.splice(2, 0, "--pull", "missing");
-  const composeEnv = opts.skipPull
-    ? { REPODY_PULL_POLICY: "never" }
-    : { REPODY_PULL_POLICY: process.env.REPODY_PULL_POLICY || "missing" };
   run("docker", composeArgs(...upArgs), { inherit: true, env: composeEnv });
 
   console.log("\n── Waiting for API ──────────────────────────────────────────");
@@ -412,6 +455,7 @@ async function up() {
       opts.skipPull ? "never" : "missing",
       "--force-recreate",
       "api",
+      "web",
       "worker-extract",
       "worker-fast",
     ),
@@ -439,10 +483,19 @@ async function up() {
   Keycloak    http://localhost:8080   (admin / admin)
   Sign-in     operator@repody.local / repody-dev
   Extraction  ${extraction.length ? extraction.join(" · ") : "(platform only)"}
-
+${
+  opts.withObs
+    ? `
+  Grafana     http://localhost:3030   (anon Admin — Loki/Tempo)
+  Bugsink     http://localhost:8090   (admin@repody.local / repody-dev)
+              Create a project → set BUGSINK_DSN in backend/.env → recreate api
+`
+    : ""
+}
   Use localhost (not 127.0.0.1) in the browser for auth.
 
   pnpm platform status
+  pnpm platform logs      # tail API / web / workers
   pnpm platform stop
   pnpm platform help
 `);
@@ -457,6 +510,8 @@ async function status() {
     ["Qwen3.5", "http://127.0.0.1:8084/v1/models"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
     ["GLM-OCR", "http://127.0.0.1:8083/v1/models"],
+    ["Grafana", "http://127.0.0.1:3030"],
+    ["Bugsink", "http://127.0.0.1:8090"],
   ];
   console.log("\n=== Repody platform status ===\n");
   for (const [name, url] of checks) {
@@ -475,6 +530,36 @@ async function status() {
     console.log(`  [${ok ? "ok" : "--"}] ${name.padEnd(10)} ${url}`);
   }
   console.log("");
+  console.log("  Logs:  pnpm platform logs");
+  console.log("  Grafana Explore → Loki {container=~\"repody-.*\"}");
+  console.log("");
+}
+
+function logs() {
+  console.log("Tailing API + web + workers (Ctrl+C to stop)…\n");
+  run(
+    "docker",
+    [
+      "compose",
+      "-f",
+      "compose.yaml",
+      "-f",
+      "compose.portable.yaml",
+      "--env-file",
+      "backend/.env",
+      "--profile",
+      "workers",
+      "logs",
+      "-f",
+      "--tail",
+      "200",
+      "api",
+      "web",
+      "worker-extract",
+      "worker-fast",
+    ],
+    { inherit: true, allowFail: true },
+  );
 }
 
 function stop() {
@@ -495,7 +580,18 @@ function stop() {
     allowFail: true,
     inherit: true,
   });
-  run("docker", composeArgs("down", "--remove-orphans"), { inherit: true, allowFail: true });
+  run(
+    "docker",
+    composeArgs(
+      "--profile",
+      "workers",
+      "--profile",
+      "observability",
+      "down",
+      "--remove-orphans",
+    ),
+    { inherit: true, allowFail: true },
+  );
   console.log("Stopped. Start again with: pnpm platform");
 }
 
@@ -510,6 +606,7 @@ else if (command === "bootstrap") void bootstrap();
 else if (command === "doctor") void doctor();
 else if (command === "up") void up();
 else if (command === "status") void status();
+else if (command === "logs") logs();
 else if (command === "stop") stop();
 else {
   console.error(`Unknown command: ${command}\n`);

@@ -19,6 +19,7 @@
     "platform:bootstrap": "node deploy/scripts/platform-dev.mjs bootstrap",
     "platform:doctor": "node deploy/scripts/platform-dev.mjs doctor",
     "platform:status": "node deploy/scripts/platform-dev.mjs status",
+    "platform:logs": "node deploy/scripts/platform-dev.mjs logs",
     "platform:stop": "node deploy/scripts/platform-dev.mjs stop",
     "platform:help": "node deploy/scripts/platform-dev.mjs help",
     "dev:all": "node deploy/scripts/platform-dev.mjs up",
