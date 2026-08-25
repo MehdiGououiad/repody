@@ -57,6 +57,21 @@ Hub path above is the product runtime. For hacking API/UI from source:
 | `pnpm dev:api` | API only |
 | `pnpm ui` | Next.js only |
 
+### Code quality
+
+One gate covers both languages. See [CODE-QUALITY.md](./CODE-QUALITY.md) for
+which tool owns which concern.
+
+| Command | When |
+|---------|------|
+| `pnpm verify` | **Before pushing** — lint, format, types and dead code, both languages |
+| `pnpm format` | Reformat everything in place (Biome + ruff) |
+| `pnpm lint:fix` / `pnpm lint:py:fix` | Apply the safe lint fixes |
+| `pnpm lint` / `pnpm lint:py` | Lint and format check only |
+| `pnpm typecheck` / `pnpm typecheck:py` | `tsc --noEmit` / pyright |
+| `pnpm deadcode` | Unused files, exports and dependencies (knip) |
+| `pnpm review:check` | `verify` + backend tests + deploy checks |
+
 ---
 
 ## OpenShift / client production
