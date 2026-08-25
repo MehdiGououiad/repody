@@ -4,9 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Generic, TypeVar
-
-T = TypeVar("T")
 
 
 class ErrorCode(StrEnum):
@@ -34,7 +31,9 @@ class AppError:
 
 
 @dataclass(frozen=True, slots=True)
-class Result(Generic[T]):
+class Result[T]:
+    """Success value or AppError as data — an immutable record, not a hierarchy."""
+
     value: T | None = None
     error: AppError | None = None
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -16,7 +15,15 @@ from repody.agents.idp.adapters.persist import (
     persist_idp_outcome,
 )
 from repody.agents.idp.adapters.validate import validate_extraction
-from repody.agents.idp.compose import ExtractionJob, compose_idp
+from repody.agents.idp.compose import (
+    ExtractionJob,
+    ExtractOne,
+    FetchBytes,
+    OnExtractDone,
+    OnExtractStart,
+    ValidatePort,
+    compose_idp,
+)
 from repody.agents.idp.contracts import (
     DocumentExtraction,
     DocumentSpec,
@@ -27,7 +34,16 @@ from repody.agents.idp.contracts import (
     StoredDocument,
     ValidationOutput,
 )
-from repody.agents.idp.progress import IdpProgressPresenter
+from repody.agents.idp.progress import (
+    IdpProgress,
+    mark_rules_done,
+    report_extract_done,
+    report_extract_start,
+    report_rule_start,
+    report_saving,
+    report_validation_start,
+    validation_elapsed_ms,
+)
 from repody.app.run.progress import (
     build_run_progress_plan,
     mark_step_done,
@@ -69,81 +85,102 @@ def wrap_idp_outcome(outcome: IdpOutcome) -> AgentOutcome:
 
 
 @dataclass
-class IdpRunPorts:
-    """Thin extract/validate/persist adapters; progress lives on the presenter."""
+class IdpRunTotals:
+    """Counters accumulated as documents stream through the pipeline."""
 
-    session_factory: async_sessionmaker[AsyncSession]
-    progress: IdpProgressPresenter
-    validation_mode: ValidationMode
-    rules: tuple[RuleSpec, ...]
-    labels: dict[str, str]
-    multi_document: bool
-    fetch_bytes: Any
     fields_extracted: int = 0
-    extraction_total_ms: int = 0
+    extraction_ms: int = 0
     validation_ms: int = 0
 
-    async def extract_one(
-        self,
-        spec: DocumentSpec,
-        stored: StoredDocument,
-        blob: bytes,
+
+@dataclass(frozen=True, slots=True)
+class IdpRunPorts:
+    """The callables compose_idp needs, already bound to one run."""
+
+    fetch_bytes: FetchBytes
+    extract_one: ExtractOne
+    validate: ValidatePort
+    on_extract_start: OnExtractStart
+    on_extract_done: OnExtractDone
+
+
+def build_idp_run_ports(
+    *,
+    progress: IdpProgress,
+    totals: IdpRunTotals,
+    session_factory: async_sessionmaker[AsyncSession],
+    validation_mode: ValidationMode,
+    rules: tuple[RuleSpec, ...],
+    labels: dict[str, str],
+    multi_document: bool,
+    fetch_bytes: FetchBytes,
+) -> IdpRunPorts:
+    """Close the run's adapters over its progress and counters."""
+
+    async def extract_document(
+        spec: DocumentSpec, stored: StoredDocument, blob: bytes
     ) -> Result[DocumentExtraction]:
-        snap = self.progress.snap_by_id.get(spec.id)
+        snap = progress.snap_by_id.get(spec.id)
         icl = icl_examples_from_document(snap) if snap is not None else []
         return await extract_one(
             spec,
             stored,
             blob,
-            validation_mode=self.validation_mode,
+            validation_mode=validation_mode,
             icl_examples=icl or None,
         )
 
-    async def on_extract_start(self, job: ExtractionJob, index: int, total: int) -> None:
-        async with self.session_factory() as session:
+    async def announce_extract_start(job: ExtractionJob, index: int, total: int) -> None:
+        async with session_factory() as session:
             await ensure_run_document(
                 session,
-                run_id=self.progress.run_id,
+                run_id=progress.run_id,
                 document_id=job.document_id,
                 document_type=job.spec.label,
                 existing={},
             )
             await session.commit()
-        await self.progress.on_extract_start(job, index, total)
+        await report_extract_start(progress, job, index, total)
 
-    async def on_extract_done(self, job: ExtractionJob, result: Result[DocumentExtraction]) -> None:
+    async def record_extract_done(job: ExtractionJob, result: Result[DocumentExtraction]) -> None:
         if not result.is_ok or result.value is None:
             return
         mapped = result.value
-        async with self.session_factory() as session:
+        async with session_factory() as session:
             run_doc = await ensure_run_document(
                 session,
-                run_id=self.progress.run_id,
+                run_id=progress.run_id,
                 document_id=job.document_id,
                 document_type=job.spec.label,
                 existing={},
             )
-            n = await persist_extraction(session, run_doc=run_doc, extraction=mapped)
+            saved_fields = await persist_extraction(session, run_doc=run_doc, extraction=mapped)
             await session.commit()
-        self.fields_extracted += n
-        self.extraction_total_ms += mapped.meta.extraction_ms
-        await self.progress.on_extract_done(job, mapped.meta)
+        totals.fields_extracted += saved_fields
+        totals.extraction_ms += mapped.meta.extraction_ms
+        await report_extract_done(progress, job, mapped.meta)
 
-    async def validate(self, extraction: ExtractionOutput) -> ValidationOutput:
-        await self.progress.on_validation_start(
-            has_rules=bool(extraction.by_document and self.rules)
-        )
+    async def validate_all(extraction: ExtractionOutput) -> ValidationOutput:
+        await report_validation_start(progress, has_rules=bool(extraction.by_document and rules))
         out = await validate_extraction(
             extraction,
-            rules=self.rules,
-            labels=self.labels,
-            multi_document=self.multi_document,
-            validation_mode=self.validation_mode,
-            on_rule_start=self.progress.on_rule_start,
+            rules=rules,
+            labels=labels,
+            multi_document=multi_document,
+            validation_mode=validation_mode,
+            on_rule_start=lambda rule: report_rule_start(progress, rule),
         )
-        self.validation_ms = self.progress.validation_elapsed_ms()
-        self.progress.mark_rules_done(out.rule_results)
+        totals.validation_ms = validation_elapsed_ms(progress)
+        mark_rules_done(progress, out.rule_results)
         return out
+
+    return IdpRunPorts(
+        fetch_bytes=fetch_bytes,
+        extract_one=extract_document,
+        validate=validate_all,
+        on_extract_start=announce_extract_start,
+        on_extract_done=record_extract_done,
+    )
 
 
 def _docs_with_files(run: Run) -> set[str]:
@@ -215,16 +252,18 @@ async def execute_idp_run(
     async def fetch_bytes(key: str) -> bytes:
         return await storage.get_bytes(key)
 
-    progress = IdpProgressPresenter(
+    progress = IdpProgress(
         run_id=run_id,
-        progress_steps=progress_steps,
+        steps=progress_steps,
         files=files,
         snap_by_id=snap_by_id,
         validation_mode=validation_mode,
     )
-    ports = IdpRunPorts(
-        session_factory=async_session_factory,
+    totals = IdpRunTotals()
+    ports = build_idp_run_ports(
         progress=progress,
+        totals=totals,
+        session_factory=async_session_factory,
         validation_mode=validation_mode,
         rules=inp.workflow.rules,
         labels=labels,
@@ -246,16 +285,16 @@ async def execute_idp_run(
 
     idp_outcome = outcome_r.value
     await session.flush()
-    await progress.mark_saving()
+    await report_saving(progress)
 
     overall_r = await persist_idp_outcome(
         session,
         run_id=run_id,
         validation=idp_outcome.validation,
         progress_steps=progress_steps,
-        fields_extracted=ports.fields_extracted,
-        extraction_total_ms=ports.extraction_total_ms,
-        validation_ms=ports.validation_ms,
+        fields_extracted=totals.fields_extracted,
+        extraction_total_ms=totals.extraction_ms,
+        validation_ms=totals.validation_ms,
         validation_mode=validation_mode,
         started_at=run.started_at,
     )
