@@ -20,9 +20,9 @@ async def test_extract_worker_warms_repody_vlm(monkeypatch):
         type("S", (), {"repody_vlm_warmup_on_start": True})(),
     )
 
-    import repody.extraction.warmup as warmup_mod
-
-    monkeypatch.setattr(warmup_mod, "warmup_repody_vlm", record_vlm)
+    # worker imports the symbol directly, so the patch has to land on the name
+    # the worker module holds, not on the module that defines it.
+    monkeypatch.setattr(worker, "warmup_repody_vlm", record_vlm)
 
     with structlog.testing.capture_logs() as captured:
         await worker._warmup_document_models("extract")
