@@ -78,7 +78,7 @@ function checkBackendRunner(scriptName, tokens) {
 function checkPythonEntrypoint(scriptName, cwd, tokens) {
   if (tokens.includes("-m")) return;
   const entry = tokens.slice(1).find((token) => !token.startsWith("-"));
-  if (entry && entry.endsWith(".py")) {
+  if (entry?.endsWith(".py")) {
     checkPath(scriptName, cwd, entry);
   }
 }

@@ -28,9 +28,9 @@ from urllib.parse import urlparse
 
 import structlog
 
-log = structlog.get_logger()
-
 from repody.extraction.render import GLM_OCR_PDF_DPI
+
+log = structlog.get_logger()
 
 # Official safetensors export referenced by glmocr/config.yaml
 DEFAULT_LAYOUT_MODEL = "PaddlePaddle/PP-DocLayoutV3_safetensors"
@@ -143,7 +143,7 @@ class WholePageLayoutDetector:
                         "index": 0,
                         "label": "text",
                         "score": 1.0,
-                        # Normalized 0–1000 coords (SDK / crop_image_region).
+                        # Normalized 0-1000 coords (SDK / crop_image_region).
                         "bbox_2d": [0, 0, 1000, 1000],
                         "polygon": [
                             [0, 0],

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import os
 import shutil
@@ -525,10 +526,8 @@ async def _execute_benchmark_case(
             if not row.get("passed") and not args.continue_on_failure:
                 break
     finally:
-        try:
+        with contextlib.suppress(Exception):
             await client.delete(f"/v1/workflows/{workflow_id}")
-        except Exception:
-            pass
     return case_rows
 
 

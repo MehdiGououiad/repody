@@ -28,7 +28,7 @@ function fieldRef(token: string): string | null {
   if (t.includes(".")) {
     const parts = t.split(".").map((part) => fieldToken(part));
     if (parts.every((part) => /^[a-z_][a-z0-9_]*$/.test(part))) {
-      return parts.length > 1 ? parts.join("__") : parts[0]!;
+      return parts.join("__");
     }
   }
   const normalized = fieldToken(t);
@@ -124,7 +124,7 @@ export function conditionsToExpression(
 ): string {
   const parts = conditions.map(conditionToString).filter(Boolean);
   if (!parts.length) return "";
-  if (parts.length === 1) return parts[0]!;
+  if (parts.length === 1) return parts[0] ?? "";
   const pyJunction = junction === "OR" ? "or" : "and";
   return `(${parts.join(`) ${pyJunction} (`)})`;
 }

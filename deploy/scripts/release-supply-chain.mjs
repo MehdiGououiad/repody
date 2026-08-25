@@ -306,7 +306,8 @@ function writeManifest(images, dir, meta = {}) {
   return manifest;
 }
 
-function manifest(images, flags, channel) {
+// Signature matches the other subcommands so the dispatch below stays uniform.
+function manifest(images, _flags, channel) {
   const dir = releaseDir(resolveTag());
   writeManifest(images, dir, { channel, phase: "manifest" });
 }

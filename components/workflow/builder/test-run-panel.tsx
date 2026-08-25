@@ -211,7 +211,7 @@ export function TestDeployStep({
         t={t}
       />
 
-      <div className="border-t border-border/80" role="separator" />
+      <hr className="border-border/80" />
 
       <section className="space-y-5 min-w-0">
         <SectionHeading

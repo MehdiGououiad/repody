@@ -42,7 +42,7 @@ def queue_label(position: int, depth: int) -> str:
     return f"Queued — position {position} of {depth}"
 
 
-def queue_detail(position: int, depth: int) -> str:
+def queue_detail(position: int) -> str:
     ahead = max(0, position - 1)
     if ahead == 0:
         return "Next in line for a worker slot."
@@ -60,7 +60,7 @@ def apply_queue_meta(progress: dict, *, position: int, depth: int) -> dict:
     steps = list(updated.get("steps") or [])
     if steps and steps[0].get("id") == "queue":
         step0 = dict(steps[0])
-        step0["detail"] = queue_detail(position, depth)
+        step0["detail"] = queue_detail(position)
         step0["status"] = "active" if position == 1 else "pending"
         steps[0] = step0
     updated["steps"] = steps

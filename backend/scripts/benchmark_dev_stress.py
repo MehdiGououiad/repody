@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import random
 import sys
@@ -32,6 +33,17 @@ from scripts.benchmark_ui_route import DEFAULT_PDF, _upload_presign  # noqa: E40
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+# asyncio only holds weak references to running tasks, so a fire-and-forget
+# tracker can be collected mid-flight. Keep a strong reference until it settles.
+_background_tasks: set[asyncio.Task[None]] = set()
+
+
+def _spawn_tracked(coro) -> None:
+    task = asyncio.create_task(coro)
+    _background_tasks.add(task)
+    task.add_done_callback(_background_tasks.discard)
+
 
 # Minimal valid PDF (one empty page) for synthetic uploads when needed.
 _MINIMAL_PDF = (
@@ -495,9 +507,7 @@ async def phase_burst(
                 enqueued_ms=round((time.perf_counter() - t0) * 1000),
                 enqueue_latency_ms=enqueue_ms,
             )
-            trackers.append(
-                asyncio.create_task(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s))
-            )
+            trackers.append(_spawn_tracked(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s)))
             return lc
         except httpx.HTTPStatusError as exc:
             lc = TrackedRun(
@@ -533,7 +543,6 @@ async def phase_random(
     workflow_id: str,
     doc_id: str,
     binding: dict[str, str],
-    pdf_bytes: bytes,
     rounds: int,
     t0: float,
     poll_s: float,
@@ -560,7 +569,7 @@ async def phase_random(
                     enqueue_latency_ms=enqueue_ms,
                 )
                 report.runs.append(lc)
-                asyncio.create_task(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s))
+                _spawn_tracked(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s))
             except httpx.HTTPStatusError as exc:
                 await _record(
                     report,
@@ -742,7 +751,6 @@ async def run_stress(args: argparse.Namespace) -> int:
             workflow_id=workflow_id,
             doc_id=doc_id,
             binding=binding,
-            pdf_bytes=pdf_bytes,
             rounds=args.random_rounds,
             t0=t0,
             poll_s=args.poll_interval_s,
@@ -764,10 +772,8 @@ async def run_stress(args: argparse.Namespace) -> int:
             stop.set()
             await asyncio.sleep(1.0)
 
-        try:
+        with contextlib.suppress(httpx.HTTPError):
             await client.delete(f"/v1/workflows/{workflow_id}")
-        except httpx.HTTPError:
-            pass
 
     wall_ms = (time.perf_counter() - wall_start) * 1000
     report.summary = _build_summary(report, wall_ms=wall_ms)

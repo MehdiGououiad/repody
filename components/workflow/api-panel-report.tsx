@@ -62,6 +62,7 @@ export function ApiRunReportScreen({
   return (
     <div className="flex flex-col gap-5">
       <button
+        type="button"
         onClick={onBack}
         className="flex items-center gap-1.5 text-xs text-on-surface-variant hover:text-on-surface transition-colors self-start"
       >

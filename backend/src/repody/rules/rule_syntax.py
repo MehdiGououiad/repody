@@ -104,8 +104,5 @@ def validate_rule_dict(rule: dict) -> list[str]:
     kind = rule_kind(rule)
     label = (rule.get("name") or "").strip() or rule.get("id") or "Rule"
     body = rule.get("body") or ""
-    if kind == "llm":
-        err = validate_llm_rule_body(body)
-    else:
-        err = validate_logic_rule_body(body)
+    err = validate_llm_rule_body(body) if kind == "llm" else validate_logic_rule_body(body)
     return [f"{label}: {err}"] if err else []

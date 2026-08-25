@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import statistics
 import sys
@@ -496,7 +497,7 @@ async def run(args: argparse.Namespace) -> int:
                 doc_b,
                 probe=f"_bench_probe_{suite_id}_{scenario_id}" if args.cold else None,
             )
-            rules = [s for s in _scenarios(doc_a, doc_b) if s.id == scenario_id][0].rules
+            rules = next(s for s in _scenarios(doc_a, doc_b) if s.id == scenario_id).rules
             workflow_id = f"wf-bench-{suite_id}-{scenario_id}"
             print(f"\n[{scenario_id}] {scenario_label} …", flush=True)
             try:
@@ -526,10 +527,8 @@ async def run(args: argparse.Namespace) -> int:
             )
             if row.get("error"):
                 print(f"  error: {row['error']}", flush=True)
-            try:
+            with contextlib.suppress(httpx.HTTPError):
                 await client.delete(f"/v1/workflows/{workflow_id}")
-            except httpx.HTTPError:
-                pass
 
     _print_table(rows)
     wall_times = [int(r["wallMs"]) for r in rows if isinstance(r.get("wallMs"), int)]

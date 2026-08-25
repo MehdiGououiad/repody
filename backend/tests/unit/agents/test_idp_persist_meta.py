@@ -16,31 +16,31 @@ from repody.schemas.run import RunDocumentExtractionMeta
 
 
 def _pipeline_meta(**overrides) -> ExtractionMetadata:
-    base = dict(
-        read_path_config="document_model",
-        read_path_used="document_model",
-        read_path_label="Document model",
-        validation_mode="logic_only",
-        validation_label="Logic rules",
-        document_model_id="repody:vlm:cloud",
-        extraction_ms=7000,
-        cache_hit=False,
-        fields_extracted=1,
-    )
+    base = {
+        "read_path_config": "document_model",
+        "read_path_used": "document_model",
+        "read_path_label": "Document model",
+        "validation_mode": "logic_only",
+        "validation_label": "Logic rules",
+        "document_model_id": "repody:vlm:cloud",
+        "extraction_ms": 7000,
+        "cache_hit": False,
+        "fields_extracted": 1,
+    }
     base.update(overrides)
     return ExtractionMetadata(**base)
 
 
 def _idp_meta(**overrides) -> IdpExtractionMeta:
-    base = dict(
-        read_path_config="document_model",
-        read_path_used="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm:cloud",
-        extraction_ms=7000,
-        cache_hit=False,
-        fields_extracted=1,
-    )
+    base = {
+        "read_path_config": "document_model",
+        "read_path_used": "document_model",
+        "validation_mode": "logic_only",
+        "document_model_id": "repody:vlm:cloud",
+        "extraction_ms": 7000,
+        "cache_hit": False,
+        "fields_extracted": 1,
+    }
     base.update(overrides)
     return IdpExtractionMeta(**base)
 

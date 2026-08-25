@@ -17,7 +17,6 @@ const clientExternalValues = "deploy/client/values-external.example.yaml";
 const clientBundledValues = "deploy/client/values-bundled.example.yaml";
 const clientImagesValues = "deploy/client/values-images.example.yaml";
 const clientEnterpriseValues = "deploy/client/values-enterprise.example.yaml";
-const clientValues = clientExternalValues;
 const chartCommonValues = "deploy/helm/repody/values-common.yaml";
 const clientRuntimeEs = "deploy/client/secrets/runtime.externalsecret.example.yaml";
 

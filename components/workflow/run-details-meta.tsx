@@ -130,16 +130,14 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
       {result.metadata && <RunMetadataPanel metadata={result.metadata} />}
       {hasOutput && (
         <div className="space-y-3">
-          {result.documents
-            .filter(
-              (d) =>
-                d.extraction &&
-                ((d.extraction.markdownExtraction && d.extraction.markdownText) ||
-                  d.extraction.rawText)
-            )
-            .map((doc) => (
-              <DocumentExtractionOutput key={doc.id} extraction={doc.extraction!} />
-            ))}
+          {result.documents.flatMap((doc) => {
+            const extraction = doc.extraction;
+            if (!extraction) return [];
+            const hasOutput =
+              (extraction.markdownExtraction && extraction.markdownText) || extraction.rawText;
+            if (!hasOutput) return [];
+            return [<DocumentExtractionOutput key={doc.id} extraction={extraction} />];
+          })}
         </div>
       )}
       {result.documents.some((d) => d.fields.length > 0) && (

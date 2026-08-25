@@ -3,6 +3,7 @@
 import { createContext, use, useCallback, useState } from "react";
 import type { Theme } from "@/i18n/config";
 import { THEME_COOKIE } from "@/i18n/config";
+import { setPreferenceCookie } from "@/lib/browser-cookie";
 
 const ThemeContext = createContext<{
   theme: Theme;
@@ -26,7 +27,7 @@ export function ThemeProvider({
     } else {
       document.documentElement.classList.remove("dark");
     }
-    document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    setPreferenceCookie(THEME_COOKIE, next);
   }, [theme]);
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;

@@ -1,5 +1,5 @@
+import path from "node:path";
 import { expect, test } from "@playwright/test";
-import path from "path";
 import { hasSampleDocument, resolveSampleDocument } from "../helpers/document";
 import {
   clickExtractValidate,
@@ -11,7 +11,8 @@ test.describe("Document upload (sample fixture)", () => {
   test.skip(!hasSampleDocument(), "Add a file to e2e/fixtures/documents/ (see README)");
 
   test("upload sample document in test-run step", async ({ page }) => {
-    const samplePath = resolveSampleDocument()!;
+    const samplePath = resolveSampleDocument();
+    if (!samplePath) throw new Error("No sample document found in e2e/fixtures/documents/");
     const fileName = path.basename(samplePath);
 
     await page.goto("/workflows/wf-invoice-audit/edit");

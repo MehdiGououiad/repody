@@ -23,7 +23,7 @@ const ERROR_KEYS: Record<string, string> = {
 };
 
 function safeCallbackUrl(raw: string | null): string {
-  if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+  if (raw?.startsWith("/") && !raw.startsWith("//")) {
     return raw;
   }
   return "/dashboard";

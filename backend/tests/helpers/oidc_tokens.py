@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import time
 from functools import lru_cache
@@ -24,10 +25,9 @@ def _rsa_keypair() -> tuple[rsa.RSAPrivateKey, str]:
 
 
 def jwks_json_for_tests() -> str:
-    private_key, public_pem = _rsa_keypair()
+    _, public_pem = _rsa_keypair()
     public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
     public_numbers = public_key.public_numbers()
-    import base64
 
     def _b64_uint(val: int) -> str:
         length = (val.bit_length() + 7) // 8

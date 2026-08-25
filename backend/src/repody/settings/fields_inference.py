@@ -53,7 +53,7 @@ class InferenceSettingsFields:
         default=None,
         description=(
             "Optional path to a document for VLM warmup. "
-            "When unset, a synthetic 1×1 PNG is used (no product fixture)."
+            "When unset, a synthetic 1x1 PNG is used (no product fixture)."
         ),
     )
     healthz_probe_inference: bool = Field(

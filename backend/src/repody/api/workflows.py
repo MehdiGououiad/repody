@@ -154,7 +154,9 @@ def _normalize_dry_run_rules(rules: list) -> list[dict]:
     response_model=DryRunResponse,
     dependencies=[Depends(require_permission("workflow", "write"))],
 )
-async def dry_run(workflow_id: str, body: DryRunBody, session: AsyncSession = Depends(get_session)):
+async def dry_run(workflow_id: str, body: DryRunBody):
+    # workflow_id is declared for routing only: a dry run evaluates the posted
+    # draft, never the persisted workflow.
     _ = workflow_id
     fields = body.fields
     rules = _normalize_dry_run_rules(body.rules_full or body.rules)

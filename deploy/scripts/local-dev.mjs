@@ -535,7 +535,7 @@ async function status() {
     allowFail: true,
   });
   if (compose.stdout?.trim()) {
-    console.log("\nCompose:\n" + compose.stdout.trim());
+    console.log(`\nCompose:\n${compose.stdout.trim()}`);
   } else if (compose.status !== 0) {
     console.log(
       "\nCompose: unavailable — " +
@@ -549,7 +549,7 @@ async function status() {
     { allowFail: true }
   );
   if (workers.stdout?.trim()) {
-    console.log("\nWorkers:\n" + workers.stdout.trim());
+    console.log(`\nWorkers:\n${workers.stdout.trim()}`);
   } else if (workers.status !== 0) {
     console.log(
       "\nWorkers: unavailable — " +
@@ -563,7 +563,7 @@ async function status() {
     { allowFail: true }
   );
   if (obs.stdout?.trim()) {
-    console.log("\nObservability:\n" + obs.stdout.trim());
+    console.log(`\nObservability:\n${obs.stdout.trim()}`);
   }
 
   if (!llamaConfigured()) {

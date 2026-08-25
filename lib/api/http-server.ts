@@ -40,8 +40,8 @@ export async function serverFetch(
     }
     return res;
   } catch (err) {
-    if (controller && err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${Math.round(timeoutMs! / 1000)}s`);
+    if (timeoutMs && err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
     }
     throw err;
   } finally {

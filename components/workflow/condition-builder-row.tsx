@@ -365,6 +365,7 @@ export function ConditionRow({
                 placeholder={t("pickField")}
               />
               <button
+                type="button"
                 onClick={toggleArith}
                 className={cn(
                   "h-8 w-8 rounded border flex items-center justify-center text-[11px] font-bold transition-colors shrink-0",

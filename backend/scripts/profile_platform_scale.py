@@ -332,10 +332,10 @@ async def profile_live_enqueue(base: str, n: int = 20, *, auth: bool) -> list[st
         )
         wfs = await client.get("/v1/workflows")
         if wfs.status_code != 200:
-            return lines + [f"workflows failed: {wfs.status_code} {wfs.text[:160]}"]
+            return [*lines, f"workflows failed: {wfs.status_code} {wfs.text[:160]}"]
         workflows = wfs.json().get("workflows") or []
         if not workflows:
-            return lines + ["no workflows for live enqueue profile"]
+            return [*lines, "no workflows for live enqueue profile"]
         wf_id = workflows[0]["id"]
 
         statuses: dict[int, int] = {}

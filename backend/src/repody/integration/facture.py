@@ -117,7 +117,7 @@ def validation_mode_for_path(_extraction_mode: str) -> ValidationMode:
     return LOGIC_VALIDATION
 
 
-def rules_for_case(case: FacturePathCase) -> list[dict]:
+def rules_for_case(_case: FacturePathCase) -> list[dict]:
     return [
         {
             **LOGIC_RULE_TOTAL_OK,

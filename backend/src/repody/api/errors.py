@@ -11,10 +11,7 @@ from repody.runtime.contracts.result import AppError, http_status_for
 
 def http_exception_for(error: AppError) -> HTTPException:
     """Build HTTPException from AppError (Retry-After + optional numeric cause)."""
-    if error.cause and error.cause.isdigit():
-        status = int(error.cause)
-    else:
-        status = http_status_for(error)
+    status = int(error.cause) if error.cause and error.cause.isdigit() else http_status_for(error)
     headers = None
     if error.retry_after_seconds is not None:
         headers = {"Retry-After": str(error.retry_after_seconds)}

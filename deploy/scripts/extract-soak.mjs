@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Document-model extract soak — enqueue concurrent runs and report success rate + duration percentiles.
- *
- *   pnpm extract:soak -- --api-url http://localhost:8000 --workflow-id wf-invoice-audit --token $JWT
- *   pnpm extract:soak -- --api-url $URL --concurrency 8 --duration-minutes 30 --poll-seconds 5
- *
- * Requires a deployed workflow with document bindings or uses test-run shape when --test-run is set.
- */
-import { spawnSync } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
 
 function parseArg(name, fallback = null) {
