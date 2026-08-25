@@ -95,9 +95,36 @@ packages = ["src/repody"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "lf"
+docstring-code-format = true
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP", "N", "ASYNC"]
+select = [
+  "E",     # pycodestyle errors
+  "F",     # pyflakes
+  "I",     # isort
+  "B",     # bugbear
+  "UP",    # pyupgrade
+  "N",     # pep8-naming
+  "ASYNC", # async correctness
+  "C4",    # comprehensions
+  "SIM",   # simplify
+  "RET",   # early returns
+  "PIE",   # misc lints
+  "ARG",   # unused arguments
+  "DTZ",   # timezone-aware datetimes
+  "LOG",   # logging correctness
+  "G",     # logging format
+  "T20",   # no stray print()
+  "TID",   # tidy imports
+  "RUF",   # ruff-specific
+]
 ignore = [
   # Handled by formatting/readability review; long SQL/HTML/messages are common here.
   "E501",
@@ -115,9 +142,27 @@ ignore = [
   "ASYNC240",
 ]
 
+[tool.ruff.lint.flake8-tidy-imports]
+# Absolute imports only: a reader should know where a symbol lives without
+# resolving the current module's position in the tree.
+ban-relative-imports = "all"
+
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]
 "tests/integration/api/test_routes.py" = ["E402"]
+# CLI entry points report progress on stdout by design.
+"scripts/**" = ["T20"]
+# Tests assert on fixture arguments that linters read as unused.
+"tests/**" = ["ARG001", "ARG002", "ARG005"]
+
+[tool.pyright]
+include = ["src", "tests", "scripts"]
+exclude = ["**/__pycache__", "**/.venv", "alembic/versions"]
+pythonVersion = "3.13"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+venvPath = "."
+venv = ".venv"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

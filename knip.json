@@ -1,0 +1,30 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/**/{page,layout,error,global-error,not-found,route,default,template,loading}.tsx",
+    "app/**/route.ts",
+    "app/actions/*.ts",
+    "auth.ts",
+    "proxy.ts",
+    "instrumentation.ts",
+    "instrumentation-client.ts",
+    "scripts/*.mjs",
+    "deploy/scripts/**/*.mjs",
+    "e2e/**/*.mjs"
+  ],
+  "project": ["**/*.{ts,tsx,mjs}"],
+  "ignore": [
+    "lib/api/generated/**",
+    "next-env.d.ts",
+    ".agents/**",
+    "deploy/helm/**"
+  ],
+  "ignoreDependencies": ["tw-animate-css"],
+  "ignoreExportsUsedInFile": true,
+  "ignoreBinaries": ["helm", "kubectl", "trivy", "where.exe"],
+  "workspaces": {
+    ".": {
+      "entry": ["e2e/**/*.spec.ts"]
+    }
+  }
+}
