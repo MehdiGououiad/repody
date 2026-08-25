@@ -43,5 +43,3 @@ export function createServerOpenApiClient() {
 }
 
 export const serverApi = createServerOpenApiClient();
-
-export { serverFetch, serverJson } from "@/lib/api/http-server";

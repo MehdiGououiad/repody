@@ -17,14 +17,6 @@ export function ruleStatusColor(status: RuleEvalStatus): string {
   return "text-warning";
 }
 
-export function ruleStatusBorder(status: RuleEvalStatus): string {
-  if (status === "passed") return "border-success/40";
-  if (status === "failed") return "border-danger/40";
-  if (status === "skipped") return "border-border";
-  if (status === "error") return "border-warning/40";
-  return "border-warning/30";
-}
-
 export function ruleStatusLabel(status: RuleEvalStatus): string {
   if (status === "passed") return "Passed";
   if (status === "failed") return "Failed";

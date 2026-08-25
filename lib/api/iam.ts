@@ -1,8 +1,6 @@
 import type { components } from "@/lib/api/generated/schema";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export type PermissionGrant = components["schemas"]["PermissionGrant"];
-export type RoleDefinition = components["schemas"]["RoleDefinition"];
 export type IamMe = components["schemas"]["IamMeResponse"];
 export type IamCatalog = components["schemas"]["IamCatalogResponse"];
 

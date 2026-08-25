@@ -66,13 +66,9 @@ function isHiddenTemplateTypeDef(
 
 export type NuExtractTemplateType = NuExtractTypeDefEntry["value"];
 
-export const NUEXTRACT_TEMPLATE_TYPES = NUEXTRACT_TEMPLATE_TYPE_DEFS;
-
 export const DEFAULT_NUEXTRACT_TEMPLATE_TYPE: NuExtractTemplateType = "verbatim-string";
 
 const LIST_SUFFIX = "-list";
-
-const ALL_TYPE_VALUES = new Set<string>(NUEXTRACT_TEMPLATE_TYPE_DEFS.map((t) => t.value));
 
 /** Strip `-list` suffix; structure types pass through unchanged. */
 export function scalarTemplateType(value?: string): string {
@@ -91,10 +87,6 @@ export function withListTemplateType(value: string | undefined, asList: boolean)
 
 export function supportsListTemplateType(value?: string): boolean {
   return !isStructureTemplateType(value);
-}
-
-export function isNuExtractTemplateType(value: string): value is NuExtractTemplateType {
-  return ALL_TYPE_VALUES.has(value);
 }
 
 export function isStructureTemplateType(value?: string): boolean {

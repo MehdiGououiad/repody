@@ -2,7 +2,6 @@
 
 export type RuleKind = "logic" | "llm";
 export type RuleSeverity = "reject" | "flag" | "info";
-export type RuleEvalStatus = "passed" | "failed" | "skipped" | "error" | "warning";
 export type RuleScope = "intra" | "cross";
 
 export interface SchemaField {

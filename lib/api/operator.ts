@@ -1,4 +1,5 @@
-import { browserApi, browserFetch, throwOnApiError } from "@/lib/api/openapi-client";
+import { browserFetch } from "@/lib/api/http";
+import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 
 export type OperatorJob = {
   id: string;

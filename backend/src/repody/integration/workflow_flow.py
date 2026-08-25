@@ -129,7 +129,7 @@ async def run_test_with_files(
     max_wait_ms: float = 300_000,
 ) -> dict[str, Any]:
     """
-    Same contract as UI runTestWithFiles():
+    Same contract as UI runBuilderTest() with files:
       POST /v1/uploads/presign
       PUT direct-to-storage for each file
       POST /v1/uploads/confirm

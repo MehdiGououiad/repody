@@ -151,18 +151,6 @@ export async function runExtractValidateAndWait(page: Page) {
   await expect(page.getByText("Rule-by-rule results")).toBeVisible({ timeout: 10_000 });
 }
 
-export async function expectRuleResult(page: Page, ruleName: string, detailPattern: RegExp) {
-  const ruleRow = page
-    .locator("div")
-    .filter({ hasText: ruleName })
-    .filter({
-      has: page.locator("text=/passed|failed|skipped|error/i"),
-    })
-    .first();
-  await expect(ruleRow).toBeVisible();
-  await expect(page.getByText(detailPattern).first()).toBeVisible();
-}
-
 export async function deleteWorkflow(
   request: {
     delete: (url: string, options?: object) => Promise<{ ok: () => boolean; status: () => number }>;

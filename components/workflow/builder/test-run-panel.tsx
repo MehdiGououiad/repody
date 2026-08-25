@@ -14,12 +14,7 @@ import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
 import { buildClientProgress } from "@/lib/api/client-run-progress";
-import {
-  type ClientStepLabels,
-  type RunProgress,
-  runTestInline,
-  runTestWithFiles,
-} from "@/lib/api/workflow-run";
+import { type ClientStepLabels, type RunProgress, runBuilderTest } from "@/lib/api/workflow-run";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
@@ -101,9 +96,11 @@ function TestRunPanel({
         clientLabels: stepLabels,
         onProgress: (progress: RunProgress) => onSessionChange({ progress }),
       };
-      const data = hasFiles
-        ? await runTestWithFiles(id, { ...payload, filesByDocId }, reporter)
-        : await runTestInline(id, payload, reporter);
+      const data = await runBuilderTest(
+        id,
+        hasFiles ? { ...payload, filesByDocId } : payload,
+        reporter
+      );
 
       onSessionChange({ result: data, phase: "done", progress: null });
     } catch (error) {

@@ -12,13 +12,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
+import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
 import {
   ConfidenceBar,
   formatFieldValue,
-  RunDetailedRuleCard,
   type RunReportLabels,
-  RunStatusBanner,
-} from "@/components/audit/run-report/run-report-core";
+} from "@/components/audit/run-report/report-shared";
 import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";

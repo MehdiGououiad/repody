@@ -3,11 +3,9 @@
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import {
-  RunDetailedReportSections,
-  type RunReportLabels,
-  RunStatusBanner,
-} from "@/components/audit/run-report/run-report-core";
+import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
+import { RunDetailedReportSections } from "@/components/audit/run-report/report-sections";
+import type { RunReportLabels } from "@/components/audit/run-report/report-shared";
 import type { RunAuditDetail } from "@/lib/types/audit";
 
 export type ApiRunReport = RunAuditDetail & { processedAt: string };

@@ -149,7 +149,7 @@ Next.js 16 App Router at repo root (not under `frontend/`):
 
 - `app/` — routes (thin pages)
 - `components/` — domain UI (`workflow/`, `audit/`, `dashboard/`)
-- `lib/api/` — typed clients; RSC uses `serverFetch`/`serverJson`, client islands use `/api/*` rewrite to backend `/v1/*`
+- `lib/api/` — typed clients; RSC uses `serverFetch`, client islands use `/api/*` rewrite to backend `/v1/*`
 
 ## Platform modules (deploy)
 

@@ -8,18 +8,25 @@
     "proxy.ts",
     "instrumentation.ts",
     "instrumentation-client.ts",
+    "e2e/**/*.spec.ts",
+    "e2e/helpers/*.mjs",
     "scripts/*.mjs",
-    "deploy/scripts/**/*.mjs",
-    "e2e/**/*.mjs"
+    "deploy/scripts/**/*.mjs"
   ],
   "project": ["**/*.{ts,tsx,mjs}"],
-  "ignore": ["lib/api/generated/**", "next-env.d.ts", ".agents/**", "deploy/helm/**"],
-  "ignoreDependencies": ["tw-animate-css"],
+  "ignore": [
+    "lib/api/generated/**",
+    "next-env.d.ts",
+    ".agents/**",
+    "deploy/helm/**",
+    "components/ui/**"
+  ],
+  "ignoreDependencies": [
+    "tw-animate-css",
+    "tailwindcss",
+    "@fontsource-variable/source-sans-3",
+    "@fontsource-variable/jetbrains-mono"
+  ],
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["helm", "kubectl", "trivy", "where.exe"],
-  "workspaces": {
-    ".": {
-      "entry": ["e2e/**/*.spec.ts"]
-    }
-  }
+  "ignoreBinaries": ["helm", "kubectl", "trivy", "where.exe"]
 }

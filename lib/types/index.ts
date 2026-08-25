@@ -1,12 +1,6 @@
-export type {
-  RunAuditDetail,
-  RunAuditDocument,
-  RunAuditField,
-  RunAuditMetadata,
-  RunAuditRule,
-  RunDocumentExtractionMeta,
-} from "@/lib/types/audit";
-export { formatDurationMs } from "@/lib/types/audit";
+// Convenience barrel for the domain types consumed across the app. Audit and
+// run-report types are imported straight from `@/lib/types/audit`, so they are
+// deliberately absent here.
 export type {
   Audit,
   AuditStatus,
@@ -21,20 +15,13 @@ export type {
   ConditionJunction,
   ConditionOperand,
   DocumentDef,
-  ExtractionIclExample,
-  ProcessingPathId,
-  ReadPathId,
   RuleCondition,
-  RuleEvalStatus,
   RuleKind,
   RuleScope,
   RuleSeverity,
   RuleTemplate,
   SchemaField,
-  TableAggregateFn,
   TableAggregateLeft,
-  ValidationModeId,
   Workflow,
-  WorkflowApiStats,
   WorkflowRule,
 } from "@/lib/types/workflow";

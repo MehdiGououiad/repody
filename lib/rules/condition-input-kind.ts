@@ -1,6 +1,4 @@
 import { COMPARISON_OP_DEFS } from "@/components/workflow/condition-builder-model";
-import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
-import type { ComparisonOp } from "@/lib/types";
 
 export type LiteralInputKind = "text" | "date" | "datetime-local" | "time" | "number" | "boolean";
 
@@ -45,12 +43,4 @@ export function comparisonOpsForTemplateType(templateType?: string) {
     return COMPARISON_OP_DEFS.filter((op) => op.value !== "IN" && op.value !== "NOT_IN");
   }
   return COMPARISON_OP_DEFS;
-}
-
-export function defaultTemplateTypeForField(fields: ConditionFieldMeta[]): string {
-  return fields[0]?.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
-}
-
-export function isDateComparisonOperator(operator: ComparisonOp): boolean {
-  return operator === "<" || operator === "<=" || operator === ">" || operator === ">=";
 }
