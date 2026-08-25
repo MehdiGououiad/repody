@@ -448,7 +448,7 @@ observability:
 
 # Off by default — cluster / platform team owns NetworkPolicy and egress.
 # Opt in only when the chart must emit policies (generic K8s without platform NP).
-# OpenShift: deploy/values/openshift.yaml keeps this disabled.
+# OpenShift installs rely on this default staying disabled.
 networkPolicy:
   enabled: false
   dnsNamespaces:

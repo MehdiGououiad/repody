@@ -1,6 +1,6 @@
 """Live-stack API E2E suite — requires running Docker stack (Taskiq workers + llama-server).
 
-Run: pnpm test:api:live
+Run: pnpm test:live
 """
 
 from __future__ import annotations

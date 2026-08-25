@@ -76,7 +76,7 @@ This enforces:
 - JSON logs + OpenTelemetry hooks (point `observability.otelEndpoint` at your collector)
 
 Networking / NetworkPolicy / egress allowlists are owned by the cluster platform team.
-On OpenShift, merge `deploy/values/openshift.yaml` (chart NetworkPolicy off).
+On OpenShift no extra overlay is needed: `networkPolicy.enabled` is already false by default.
 
 ## Preflight commands
 

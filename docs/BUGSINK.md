@@ -4,7 +4,7 @@
 
 ## Local Compose dev
 
-Bugsink runs in the **observability** profile (`pnpm dev:all` or `pnpm dev:observability`):
+Bugsink runs in the **observability** profile (`pnpm dev:all` or `pnpm dev:src:observability`):
 
 | | |
 |--|--|
@@ -13,7 +13,7 @@ Bugsink runs in the **observability** profile (`pnpm dev:all` or `pnpm dev:obser
 
 **First-time setup**
 
-1. Start observability: `pnpm dev:observability`
+1. Start observability: `pnpm dev:src:observability`
 2. Open http://localhost:8090 and sign in
 3. Create a project (e.g. `repody-local`) and copy the DSN
 4. Set DSN in `backend/.env` and `.env.local`:
@@ -29,7 +29,7 @@ NEXT_PUBLIC_BUGSINK_DSN=http://<key>@127.0.0.1:8090/<project-id>
 BUGSINK_DSN=http://<key>@host.docker.internal:8090/<project-id>
 ```
 
-6. Restart API and recreate workers: `pnpm dev:restart` (workers) + restart API
+6. Restart API and recreate workers: `pnpm dev:src:restart` (workers) + restart API
 
 ## Kubernetes
 

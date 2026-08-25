@@ -7,7 +7,7 @@ Uses:
   GET  /v1/runs/{id}/status       — poll (then GET /v1/runs/{id} for result)
 
 Requires a running docker stack with Taskiq workers:
-  E2E_STACK=1 E2E_API_URL=http://localhost:8000 pnpm test:api:live
+  E2E_STACK=1 E2E_API_URL=http://localhost:8000 pnpm test:live
 """
 
 from __future__ import annotations

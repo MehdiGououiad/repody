@@ -7,7 +7,7 @@ Enable the service first, then:
 
   $env:NUEXTRACT_GOUOUIAD_LIVE = "1"
   pnpm llamacpp:serve
-  pnpm test:api:live -- tests/live/platform/test_nuextract_gououiad_markdown.py -v -s
+  pnpm test:live -- tests/live/runtime/test_nuextract_gououiad_markdown.py -v -s
 """
 
 from __future__ import annotations

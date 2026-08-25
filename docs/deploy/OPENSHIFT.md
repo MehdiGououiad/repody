@@ -96,7 +96,7 @@ curl -k https://<api-host>/v1/healthz/live   # or http:// if your ingress is pla
 pnpm client:check
 ```
 
-## Harbor
+## Harbor registry
 
 Same as any cluster: pull secret + immutable tags in values. See Harbor section history in
 [registry/README.md](../../deploy/registry/README.md) and `deploy/client/values-harbor.example.yaml`.

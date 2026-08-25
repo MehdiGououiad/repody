@@ -13,7 +13,7 @@ Vendor → client images: [docs/deploy/VENDOR-TO-CLIENT.md](../../docs/deploy/VE
 | **Bundled** | In-cluster Postgres, Redis, MinIO | `values-bundled.example.yaml` + `bundled/values.data.yaml` |
 
 Both profiles merge `values-enterprise.example.yaml` for production hardening.
-On OpenShift, also merge `deploy/values/openshift.yaml` (chart NetworkPolicy off — cluster owns networking).
+On OpenShift no extra overlay is needed: the chart leaves `networkPolicy.enabled` false by default, so the cluster keeps ownership of networking.
 
 **Harbor images:** merge `values-harbor.example.yaml` (or copy its `images` / `imagePullSecrets` into GitOps values).
 See [OPENSHIFT.md — Harbor registry](../../docs/deploy/OPENSHIFT.md#harbor-registry).

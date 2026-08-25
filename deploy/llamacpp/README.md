@@ -67,7 +67,7 @@ API: `http://127.0.0.1:8081/v1` (model id from `LLAMACPP_MODEL_ALIAS`).
 
 ```powershell
 # backend/.env already sets AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
-pnpm dev:restart
+pnpm dev:src:restart
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
@@ -106,7 +106,7 @@ Then align cluster admission in client values and restart:
 
 ```powershell
 pnpm llamacpp:restart
-pnpm dev:restart
+pnpm dev:src:restart
 ```
 
 ## Troubleshooting

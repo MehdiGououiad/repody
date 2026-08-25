@@ -8,7 +8,7 @@ Enable the service first, then:
   $env:AUDIT_PADDLEOCR_V6_ENABLED = "true"
   $env:AUDIT_PADDLEOCR_V6_BASE_URL = "http://127.0.0.1:8868"
   $env:PADDLEOCR_GOUOUIAD_LIVE = "1"
-  pnpm test:api:live -- tests/live/platform/test_paddleocr_gououiad_markdown.py -v -s
+  pnpm test:live -- tests/live/runtime/test_paddleocr_gououiad_markdown.py -v -s
 """
 
 from __future__ import annotations

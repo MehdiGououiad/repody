@@ -10,7 +10,7 @@ Enable the service first, then:
   $env:AUDIT_GLM_OCR_SERVED_MODEL = "glm-ocr:latest"
   $env:GLM_GOUOUIAD_LIVE = "1"
   pnpm glmocr:serve
-  pnpm test:api:live -- tests/live/runtime/test_glm_gououiad_markdown.py -v -s
+  pnpm test:live -- tests/live/runtime/test_glm_gououiad_markdown.py -v -s
 """
 
 from __future__ import annotations

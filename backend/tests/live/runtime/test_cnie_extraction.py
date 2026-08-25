@@ -8,7 +8,7 @@ Requires running stack (API + extract worker + llamacpp) and auth:
   $env:E2E_API_URL = "http://127.0.0.1:8000"
   $env:E2E_AUTH_URL = "http://127.0.0.1:8080"
   $env:E2E_STACK = "1"
-  pnpm test:api:live -- tests/live/platform/test_cnie_extraction.py -v -s
+  pnpm test:live -- tests/live/runtime/test_cnie_extraction.py -v -s
 """
 
 from __future__ import annotations
