@@ -253,6 +253,7 @@ def test_build_parser_id_card_profile_uses_idcard_config(monkeypatch: pytest.Mon
             max_workers=4,
             pdf_max_pages=None,
             id_card_profile=True,
+            layout_enabled=True,
         )
     )
     assert captured["config_path"].endswith("config.idcard.yaml")
@@ -301,6 +302,7 @@ def test_build_parser_honors_optional_pdf_max_pages(monkeypatch: pytest.MonkeyPa
             layout_model_dir="PaddlePaddle/PP-DocLayoutV3_safetensors",
             max_workers=4,
             pdf_max_pages=32,
+            layout_enabled=True,
         )
     )
     assert captured["_dotted"]["pipeline.page_loader.pdf_max_pages"] == 32
