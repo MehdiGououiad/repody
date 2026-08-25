@@ -210,41 +210,6 @@ workerFast:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
 
-# Reserved agent pools (ADR 007). replicas 0 until real Fraud / Computer Use agents ship.
-workerFraud:
-  replicas: 0
-  pool: fraud
-  maxJobs: 4
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 1Gi
-  autoscaling:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 8
-    targetCPUUtilizationPercentage: 70
-  terminationGracePeriodSeconds: 60
-
-workerComputerUse:
-  replicas: 0
-  pool: computer_use
-  maxJobs: 2
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 1Gi
-  autoscaling:
-    enabled: false
-    minReplicas: 1
-    maxReplicas: 4
-    targetCPUUtilizationPercentage: 70
-  terminationGracePeriodSeconds: 120
-
 # ── Edge (web) ────────────────────────────────────────────────────────────────
 web:
   replicas: 2
@@ -383,10 +348,8 @@ config:
   # For long OCR PDFs raise together, e.g. workerTaskTimeoutMinutes: 10,
   # staleRunTimeoutMinutes: 12, and matching *TimeoutSeconds <= worker*60.
   queuedStaleTimeoutMinutes: 60
-  # Staged agents (ADR 007). Fraud/CU stay off until real logic + worker replicas > 0.
+  # Platform agent recipe (ADR 007).
   agentIdpEnabled: true
-  agentFraudEnabled: false
-  agentComputerUseEnabled: false
   maintenanceIntervalSeconds: 60
   dbPoolSize: 20
   dbMaxOverflow: 20

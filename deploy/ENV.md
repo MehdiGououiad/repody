@@ -72,17 +72,13 @@ Compose extract defaults: worker **10** min, model timeouts **600** s, stale **1
 
 Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md), [docs/GLM-OCR.md](../docs/GLM-OCR.md), and [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
-## Staged platform agents
+## Platform agents
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run IDP extract+validate stage (recipe is IDP-only) |
-| `AUDIT_AGENT_FRAUD_ENABLED` | `false` | Reserved/inert — not consulted until a Fraud agent ships |
-| `AUDIT_AGENT_COMPUTER_USE_ENABLED` | `false` | Reserved/inert — not consulted until a Computer Use agent ships |
-| `AUDIT_AGENT_FRAUD_WORKERS_READY` | `false` | Reserved; Helm may set from `worker-fraud` replicas (currently 0) |
-| `AUDIT_AGENT_COMPUTER_USE_WORKERS_READY` | `false` | Reserved; Helm may set from `worker-computer-use` replicas (currently 0) |
+| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run the IDP extract+validate stage; the recipe is empty without it |
 
-Recipe ignores Fraud/CU flags today. Helm keeps worker Deployments at replicas 0 as reserved capacity ([ADR 007](../docs/adr/007-staged-agent-queues-taskiq.md)).
+IDP is the only agent ([ADR 007](../docs/adr/007-staged-agent-queues-taskiq.md)).
 
 Helm values:
 
@@ -92,8 +88,6 @@ config:
   llamacppBaseUrl: https://vlm.example.com/v1
   llamacppServedModel: numind/NuExtract3
   agentIdpEnabled: true
-  agentFraudEnabled: false
-  agentComputerUseEnabled: false
   paddleocrV6Enabled: false
   glmOcrEnabled: false
 

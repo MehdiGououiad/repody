@@ -36,6 +36,31 @@ remains optional later if mid-run resume / HITL / complex retries become product
    activity (not only `started_at`); outbox replay claims with `FOR UPDATE SKIP LOCKED`;
    later stages skip re-exec when `agentOutcomes` already recorded.
 
+## Amendment (2026-08): reserved agents removed
+
+Points 2–5 above described capacity reserved for Fraud and Computer Use agents
+that were never built. Holding a queue map, an `AgentId` member, four env flags,
+two Helm Deployments at `replicas: 0`, two Compose services and an unreachable
+handoff path cost roughly 150 references across 28 files and made every reader
+ask which parts were live.
+
+The reservation is withdrawn. Removed: `AgentId.FRAUD` / `AgentId.COMPUTER_USE`,
+`POOL_FRAUD` / `POOL_COMPUTER_USE`, `AUDIT_AGENT_FRAUD_*` and
+`AUDIT_AGENT_COMPUTER_USE_*`, the `workerFraud` / `workerComputerUse` chart
+values and templates, the matching Compose services, `app/run/handoff.py`, and
+`next_agent_after` with the `next_agent` / `finalize_pending` fields on
+`PlatformStageResult`.
+
+`schedule_next_agent_stage` was already dead: its `_LIVE_HANDOFF_TARGETS` set
+was empty, so every call raised.
+
+What is kept, because it costs nothing and is still the extension point:
+`AgentId`, `resolve_recipe` with `DEFAULT_AGENT_ORDER`, the `agent_stage` column
+on `run_dispatch_outbox`, and the outbox dispatch machinery IDP itself uses.
+
+Points 1 and 6 stand. A future second agent re-adds its own enum member, pool,
+worker and handoff step at that time, against real requirements.
+
 ## Consequences
 
 **Positive**
@@ -60,8 +85,7 @@ remains optional later if mid-run resume / HITL / complex retries become product
 
 ## References
 
-- `runtime/recipe.py` — stage execution (returns `finalize_pending`; does not call `complete_run`)
-- `app/run/commands.py` — `finalize_pending_completion` after a final non-IDP stage (future)
-- `app/run/processor.py` — claim (IDP) vs resume (later stages) + handoff/finalize
-- `taskiq/broker.py` — producers for live IDP pools (`extract` / `fast`)
+- `runtime/recipe.py` — stage execution
+- `app/run/processor.py` — claim, execute, and resume an already-recorded stage
+- `taskiq/broker.py` — producers for the IDP pools (`extract` / `fast`)
 - [docs/architecture/idp-functional-agents.md](../architecture/idp-functional-agents.md)

@@ -18,7 +18,7 @@ _api_brokers_started = False
 
 
 def _producer_pools(settings) -> tuple[str, ...]:
-    """Live IDP queues only; fraud/computer_use names stay reserved in pools/Helm."""
+    """Queues the API produces to — the two IDP capacity classes."""
     return (
         settings.worker_pool_extract,
         settings.worker_pool_fast,

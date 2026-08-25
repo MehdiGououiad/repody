@@ -16,7 +16,7 @@ Command reference: [COMMANDS.md](./COMMANDS.md)
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | control | `repody-api` Deployment | Workflows, runs, uploads, dispatch |
-| workers | `repody-worker-extract`, `repody-worker-fast` (+ reserved `worker-fraud` / `worker-computer-use` at replicas 0) | IDP capacity pools; fraud/CU Deployments reserved for future agents ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
+| workers | `repody-worker-extract`, `repody-worker-fast` | IDP capacity pools ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
 | edge | `repody-web` Deployment | Next.js UI |
 | data plane | Postgres, Redis, object storage | Durable platform state and Taskiq broker |
 | auth | External OIDC provider | Authentication |

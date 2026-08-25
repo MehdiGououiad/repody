@@ -1,7 +1,4 @@
-"""Agent identity and outcome envelope.
-
-IDP is live. FRAUD / COMPUTER_USE enum values remain for reserved pool maps.
-"""
+"""Agent identity and outcome envelope."""
 
 from __future__ import annotations
 
@@ -14,8 +11,6 @@ from repody.runtime.contracts.result import AppError
 
 class AgentId(StrEnum):
     IDP = "idp"
-    FRAUD = "fraud"
-    COMPUTER_USE = "computer_use"
 
 
 class AgentStatus(StrEnum):
