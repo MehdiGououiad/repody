@@ -1,8 +1,13 @@
-"""IDP progress / UI presentation — kept out of extract/validate ports."""
+"""IDP progress / UI presentation — kept out of extract/validate ports.
+
+State is a plain record; every operation is a module-level function that takes
+it explicitly, so there is no hidden receiver and each step can be called or
+tested on its own.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from repody.agents.idp.compose import ExtractionJob
@@ -29,135 +34,150 @@ _GPU_COLD_START_DETAIL = "Serverless GPU may need 1-2 min to start on the first 
 
 
 @dataclass
-class IdpProgressPresenter:
-    """Progress step labels, GPU cold-start hints, and run progress writes."""
+class IdpProgress:
+    """Mutable progress for one run: the step plan, which step is live, and timing."""
 
     run_id: str
-    progress_steps: list[dict]
+    steps: list[dict]
     files: set[str]
     snap_by_id: dict[str, SnapshotDocument]
     validation_mode: ValidationMode
     step_index: int = 1
-    _validation_started: float | None = field(default=None, repr=False)
+    validation_started_at: float | None = None
 
-    def activate(self, step_id: str) -> int:
-        found = step_index_for(self.progress_steps, step_id)
-        if found is not None:
-            self.step_index = found
-        return self.step_index
 
-    def first_rule_step_id(self) -> str | None:
-        for step in self.progress_steps:
-            sid = str(step.get("id") or "")
-            if sid.startswith("rule-"):
-                return sid
-        return None
+def activate_step(progress: IdpProgress, step_id: str) -> int:
+    """Point the run at `step_id`, leaving the index untouched if it is unknown."""
+    found = step_index_for(progress.steps, step_id)
+    if found is not None:
+        progress.step_index = found
+    return progress.step_index
 
-    async def on_extract_start(self, job: ExtractionJob, index: int, total: int) -> None:
-        has_file = job.document_id in self.files
-        prog_mode = progress_mode(has_file=has_file)
-        step_id = f"extract-{job.document_id}"
-        self.activate(step_id)
 
-        read_label = read_path_label(
-            parse_read_path(job.spec.extraction_mode or DEFAULT_READ_PATH_ID).id
-        )
-        detail = read_label
-        if is_serverless_inference() and prog_mode == "document_model":
-            detail = f"{detail} · {_GPU_COLD_START_DETAIL}"
-            for step in self.progress_steps:
-                if step.get("id") == step_id:
-                    step["gpuColdStartHint"] = True
-                    break
+def first_rule_step_id(progress: IdpProgress) -> str | None:
+    for step in progress.steps:
+        step_id = str(step.get("id") or "")
+        if step_id.startswith("rule-"):
+            return step_id
+    return None
 
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            extract_label(job.spec.label, mode=prog_mode, detail=detail),
-            force=(index == 0 or index == total - 1),
-        )
 
-    async def on_extract_done(self, job: ExtractionJob, meta: IdpExtractionMeta) -> None:
-        step_id = f"extract-{job.document_id}"
-        mark_step_done(
-            self.progress_steps,
-            step_id,
-            duration_ms=meta.extraction_ms,
-            detail=completed_extraction_detail(meta),
-            cache_hit=meta.cache_hit,
-        )
-        self.activate(step_id)
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            extract_label(job.spec.label, mode="document_model"),
-            force=True,
-        )
-
-    async def on_rule_start(self, rule: dict) -> None:
-        name = rule.get("name") or "Rule"
-        rule_id = rule.get("id") or "rule"
-        step_id = f"rule-{rule_id}"
-        kind = rule_kind(rule)
-        for step in self.progress_steps:
-            if step.get("id") == step_id:
-                step["detail"] = (
-                    "Evaluating LLM rule against extracted fields"
-                    if kind == "llm"
-                    else "Logic expression on extracted fields"
-                )
-                break
-        self.activate(step_id)
-        label = f"LLM rule · {name}…" if kind == "llm" else f"Validate · {name}…"
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            label,
-            force=True,
-        )
-
-    async def on_validation_start(self, *, has_rules: bool) -> None:
-        if not has_rules:
+def _annotate_gpu_cold_start(progress: IdpProgress, step_id: str) -> None:
+    for step in progress.steps:
+        if step.get("id") == step_id:
+            step["gpuColdStartHint"] = True
             return
-        self._validation_started = datetime.now(UTC).timestamp()
-        first_rule = self.first_rule_step_id()
-        if first_rule:
-            self.activate(first_rule)
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            f"Validating rules ({validation_mode_label(self.validation_mode)})…",
-            force=True,
-        )
 
-    def validation_elapsed_ms(self) -> int:
-        if self._validation_started is None:
-            return 0
-        return int((datetime.now(UTC).timestamp() - self._validation_started) * 1000)
 
-    def mark_rules_done(self, rule_results) -> None:
-        for row in rule_results:
-            mark_step_done(
-                self.progress_steps,
-                f"rule-{row.rule_id}",
-                detail=f"Status: {row.status} — {row.detail or 'OK'}",
+async def report_extract_start(
+    progress: IdpProgress, job: ExtractionJob, index: int, total: int
+) -> None:
+    has_file = job.document_id in progress.files
+    mode = progress_mode(has_file=has_file)
+    step_id = f"extract-{job.document_id}"
+    activate_step(progress, step_id)
+
+    detail = read_path_label(parse_read_path(job.spec.extraction_mode or DEFAULT_READ_PATH_ID).id)
+    if is_serverless_inference() and mode == "document_model":
+        detail = f"{detail} · {_GPU_COLD_START_DETAIL}"
+        _annotate_gpu_cold_start(progress, step_id)
+
+    await set_run_progress(
+        None,
+        progress.run_id,
+        progress.steps,
+        progress.step_index,
+        extract_label(job.spec.label, mode=mode, detail=detail),
+        # Push the first and last document eagerly; the rest ride the throttle.
+        force=(index == 0 or index == total - 1),
+    )
+
+
+async def report_extract_done(
+    progress: IdpProgress, job: ExtractionJob, meta: IdpExtractionMeta
+) -> None:
+    step_id = f"extract-{job.document_id}"
+    mark_step_done(
+        progress.steps,
+        step_id,
+        duration_ms=meta.extraction_ms,
+        detail=completed_extraction_detail(meta),
+        cache_hit=meta.cache_hit,
+    )
+    activate_step(progress, step_id)
+    await set_run_progress(
+        None,
+        progress.run_id,
+        progress.steps,
+        progress.step_index,
+        extract_label(job.spec.label, mode="document_model"),
+        force=True,
+    )
+
+
+async def report_rule_start(progress: IdpProgress, rule: dict) -> None:
+    name = rule.get("name") or "Rule"
+    step_id = f"rule-{rule.get('id') or 'rule'}"
+    kind = rule_kind(rule)
+    for step in progress.steps:
+        if step.get("id") == step_id:
+            step["detail"] = (
+                "Evaluating LLM rule against extracted fields"
+                if kind == "llm"
+                else "Logic expression on extracted fields"
             )
+            break
+    activate_step(progress, step_id)
+    await set_run_progress(
+        None,
+        progress.run_id,
+        progress.steps,
+        progress.step_index,
+        f"LLM rule · {name}…" if kind == "llm" else f"Validate · {name}…",
+        force=True,
+    )
 
-    async def mark_saving(self) -> None:
-        self.activate("finalize")
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            "Saving audit report…",
-            force=True,
+
+async def report_validation_start(progress: IdpProgress, *, has_rules: bool) -> None:
+    if not has_rules:
+        return
+    progress.validation_started_at = datetime.now(UTC).timestamp()
+    first_rule = first_rule_step_id(progress)
+    if first_rule:
+        activate_step(progress, first_rule)
+    await set_run_progress(
+        None,
+        progress.run_id,
+        progress.steps,
+        progress.step_index,
+        f"Validating rules ({validation_mode_label(progress.validation_mode)})…",
+        force=True,
+    )
+
+
+def validation_elapsed_ms(progress: IdpProgress) -> int:
+    """Milliseconds since validation began, or 0 when there were no rules to run."""
+    if progress.validation_started_at is None:
+        return 0
+    return int((datetime.now(UTC).timestamp() - progress.validation_started_at) * 1000)
+
+
+def mark_rules_done(progress: IdpProgress, rule_results) -> None:
+    for row in rule_results:
+        mark_step_done(
+            progress.steps,
+            f"rule-{row.rule_id}",
+            detail=f"Status: {row.status} — {row.detail or 'OK'}",
         )
+
+
+async def report_saving(progress: IdpProgress) -> None:
+    activate_step(progress, "finalize")
+    await set_run_progress(
+        None,
+        progress.run_id,
+        progress.steps,
+        progress.step_index,
+        "Saving audit report…",
+        force=True,
+    )
