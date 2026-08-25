@@ -13,6 +13,44 @@ backend source inventory.
 - Prefer deletion of shallow modules over adding new pass-through layers.
 - Verify changes with the narrowest useful automated checks before merging.
 
+## House Style And Who Enforces It
+
+One tool owns each concern, so a given problem is reported exactly once and no
+rule is a matter of opinion in review.
+
+| Concern | TypeScript / JavaScript | Python |
+|---------|-------------------------|--------|
+| Formatting | Biome (`biome.json`) | ruff format (`[tool.ruff.format]`) |
+| Linting | Biome | ruff (`[tool.ruff.lint]`) |
+| Framework rules | ESLint, narrowed to Next.js-specific rules and React Hooks | — |
+| Types | `tsc --noEmit` | pyright |
+| Dead code | knip | ruff `F401`/`ARG`, plus review |
+
+Shared conventions: 100-column lines, LF endings, two-space indentation in
+TS/JS and four in Python, double quotes, sorted imports, absolute imports only
+(`ban-relative-imports = "all"` on the backend, `@/` aliases on the frontend).
+`.editorconfig` and `.gitattributes` keep editors and Git in agreement.
+
+`eslint.config.mjs` programmatically disables every rule belonging to a plugin
+Biome already covers, so the two linters never disagree about the same line.
+
+### Style Rules Worth Knowing
+
+- **Functions and records over classes.** Classes are for data
+  (frozen dataclasses, Pydantic models, SQLAlchemy models) or for interfaces a
+  third-party framework demands (Starlette middleware, SDK adapters). Behaviour
+  lives in module-level functions that take their state explicitly, or in
+  closures bundled into a frozen record of callables — see
+  `infra/storage/base.py` and `agents/idp/run.py`.
+- **No pass-through re-exports.** Import from the module that defines a symbol.
+  A barrel is acceptable only for a types-only module that is erased at compile
+  time, such as `lib/types/index.ts`.
+- **Errors as data at boundaries.** Domain paths return `Result[T]` with an
+  `AppError`; `api/errors.py` maps those to HTTP. Raise exceptions only at the
+  outer adapters.
+- **Suppressions must explain themselves.** Every `biome-ignore`,
+  `# noqa` and `# pyright:` comment states why the rule does not apply.
+
 ## Architecture Checklist
 
 | Area | Expected shape | Review signal |
@@ -52,14 +90,23 @@ Before an external review, run the full gate:
 pnpm review:check
 ```
 
+That is `pnpm verify` (lint, format, types and dead code for both languages)
+followed by the backend test suite and the deployment checks. CI runs the same
+commands, so a green local `verify` predicts a green pipeline.
+
+Reformat everything in place with `pnpm format`; apply the safe lint fixes with
+`pnpm lint:fix` and `pnpm lint:py:fix`.
+
 During day-to-day work, run the smallest command that covers the change:
 
 | Change type | Command |
 |-------------|---------|
+| Anything, before pushing | `pnpm verify` |
 | Backend logic | `pnpm test:api` or `pnpm test:platform:report` |
 | Run lifecycle or queue behavior | `pnpm test:unit` then `pnpm test:integration` |
 | Architecture dependency rules | `pnpm architecture:check` |
 | Frontend code | `pnpm lint` and `pnpm typecheck` |
+| Unused files, exports or dependencies | `pnpm deadcode` |
 | API contract changes | `pnpm codegen:api` then `pnpm typecheck` |
 | Helm or client packaging | `pnpm helm:lint`, `pnpm helm:template`, `pnpm client:check` |
 | Production readiness | `pnpm prod:readiness` |
