@@ -15,6 +15,7 @@ const live = process.argv.includes("--live");
 
 const clientExternalValues = "deploy/client/values-external.example.yaml";
 const clientBundledValues = "deploy/client/values-bundled.example.yaml";
+const clientImagesValues = "deploy/client/values-images.example.yaml";
 const clientEnterpriseValues = "deploy/client/values-enterprise.example.yaml";
 const clientValues = clientExternalValues;
 const chartCommonValues = "deploy/helm/repody/values-common.yaml";
@@ -64,6 +65,8 @@ const steps = [
       "-f",
       clientExternalValues,
       "-f",
+      clientImagesValues,
+      "-f",
       clientEnterpriseValues,
     ],
     { quiet: true },
@@ -82,33 +85,9 @@ const steps = [
       "-f",
       clientBundledValues,
       "-f",
-      clientEnterpriseValues,
-    ],
-    { quiet: true },
-  ],
-  [
-    "Helm OpenShift render (bundled + enterprise)",
-    "helm",
-    [
-      "template",
-      "repody",
-      "deploy/helm/repody",
-      "-f",
-      "deploy/helm/repody/values.yaml",
-      "-f",
-      chartCommonValues,
-      "-f",
-      clientBundledValues,
+      clientImagesValues,
       "-f",
       clientEnterpriseValues,
-      "-f",
-      "deploy/values/openshift.yaml",
-      "--set",
-      "ingress.host=app.example.com",
-      "--set",
-      "ingress.apiHost=api.example.com",
-      "--set",
-      "ingress.filesHost=files.example.com",
     ],
     { quiet: true },
   ],

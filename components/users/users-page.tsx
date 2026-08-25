@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LoaderCircle,
   ShieldCheck,
@@ -15,14 +16,14 @@ import {
   fetchIamMe,
   fetchIamUsers,
   updateIamUser,
-  type IamCatalog,
-  type IamMe,
   type IamUser,
+  type UpdateIamUserInput,
 } from "@/lib/api/iam";
-import { fetchPlatformConfig, type PlatformConfig } from "@/lib/api/platform-config";
+import { fetchPlatformConfig } from "@/lib/api/platform-config";
+import { queryKeys } from "@/lib/hooks/query-keys";
 import { AccessPanel } from "./access-panel";
 import { SettingsPanel } from "./settings-panel";
-import { TeamPanel, type UsersState } from "./team-panel";
+import { TeamPanel } from "./team-panel";
 import {
   DEFAULT_INVITE_FORM,
   InviteUserDialog,
@@ -35,18 +36,11 @@ import { displayName } from "./user-access-shared";
 const DEFAULT_APP_ROLES = ["platform_admin", "admin", "operator", "viewer"];
 
 export function UsersPage() {
-  const [me, setMe] = useState<IamMe | null>(null);
-  const [catalog, setCatalog] = useState<IamCatalog | null>(null);
-  const [platform, setPlatform] = useState<PlatformConfig | null>(null);
-  const [platformError, setPlatformError] = useState<string | null>(null);
-  const [usersState, setUsersState] = useState<UsersState | null>(null);
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [settingsRefreshing, setSettingsRefreshing] = useState(false);
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editUser, setEditUser] = useState<IamUser | null>(null);
-  const [saving, setSaving] = useState(false);
   const [inviteForm, setInviteForm] = useState<InviteUserForm>(DEFAULT_INVITE_FORM);
   const [editForm, setEditForm] = useState<ManageUserForm>({
     firstName: "",
@@ -56,66 +50,110 @@ export function UsersPage() {
     password: "",
   });
 
-  const load = useCallback(async (query?: string) => {
-    const [nextMe, nextCatalog, nextUsers, nextPlatform] = await Promise.all([
-      fetchIamMe(),
-      fetchIamCatalog().catch(() => null),
-      fetchIamUsers(query).catch((error) => ({
-        users: [],
+  const meQuery = useQuery({
+    queryKey: queryKeys.iam.me(),
+    queryFn: fetchIamMe,
+  });
+
+  const catalogQuery = useQuery({
+    queryKey: queryKeys.iam.catalog(),
+    queryFn: fetchIamCatalog,
+    retry: false,
+  });
+
+  const usersQuery = useQuery({
+    queryKey: queryKeys.iam.users(appliedSearch),
+    queryFn: () =>
+      fetchIamUsers(appliedSearch).catch((error) => ({
+        users: [] as IamUser[],
         managementAvailable: false,
         managementError: error instanceof Error ? error.message : "Could not list users.",
       })),
-      fetchPlatformConfig()
-        .then((data) => ({ data, error: null }))
-        .catch((error) => ({
-          data: null,
-          error: error instanceof Error ? error.message : "Could not load platform settings.",
-        })),
-    ]);
-    setMe(nextMe);
-    setCatalog(nextCatalog);
-    setUsersState(nextUsers);
-    setPlatform(nextPlatform.data);
-    setPlatformError(nextPlatform.error);
-  }, []);
+  });
+
+  const platformQuery = useQuery({
+    queryKey: queryKeys.catalog.platformConfig,
+    queryFn: fetchPlatformConfig,
+    retry: false,
+  });
 
   useEffect(() => {
-    let active = true;
+    if (!meQuery.isError) return;
+    toast.error(
+      meQuery.error instanceof Error ? meQuery.error.message : "IAM API unavailable",
+    );
+  }, [meQuery.isError, meQuery.error]);
 
-    void Promise.resolve()
-      .then(() => load())
-      .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "IAM API unavailable");
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
+  const createMutation = useMutation({
+    mutationFn: createIamUser,
+    onSuccess: async (created) => {
+      toast.success(`Invited ${created.email ?? created.username}`);
+      setInviteOpen(false);
+      setInviteForm(DEFAULT_INVITE_FORM);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.iam.all });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not create user");
+    },
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [load]);
+  const updateMutation = useMutation({
+    mutationFn: ({ userId, body }: { userId: string; body: UpdateIamUserInput }) =>
+      updateIamUser(userId, body),
+    onSuccess: async (updated) => {
+      toast.success(`Updated ${displayName(updated)}`);
+      setEditUser(null);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.iam.all });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not update user");
+    },
+  });
 
-  const refresh = async () => {
-    setRefreshing(true);
+  const me = meQuery.data ?? null;
+  const catalog = catalogQuery.data ?? null;
+  const usersState = usersQuery.data ?? null;
+  const platform = platformQuery.data ?? null;
+  const platformError =
+    platformQuery.error instanceof Error
+      ? platformQuery.error.message
+      : platformQuery.isError
+        ? "Could not load platform settings."
+        : null;
+
+  const loading =
+    meQuery.isPending ||
+    catalogQuery.isPending ||
+    usersQuery.isPending ||
+    platformQuery.isPending;
+
+  const refreshing =
+    (meQuery.isFetching ||
+      catalogQuery.isFetching ||
+      usersQuery.isFetching ||
+      platformQuery.isFetching) &&
+    !loading;
+
+  const saving = createMutation.isPending || updateMutation.isPending;
+  const appRoles = catalog?.appRoles ?? DEFAULT_APP_ROLES;
+
+  const refreshAll = async () => {
     try {
-      await load(search);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.iam.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.catalog.platformConfig }),
+      ]);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Refresh failed");
-    } finally {
-      setRefreshing(false);
     }
   };
 
-  const refreshSettings = async () => {
-    setSettingsRefreshing(true);
-    try {
-      await load(search);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Settings refresh failed");
-    } finally {
-      setSettingsRefreshing(false);
+  const submitSearch = () => {
+    if (search === appliedSearch) {
+      void usersQuery.refetch();
+      return;
     }
+    setAppliedSearch(search);
   };
 
   const openEdit = (user: IamUser) => {
@@ -129,49 +167,29 @@ export function UsersPage() {
     });
   };
 
-  const submitInvite = async () => {
-    setSaving(true);
-    try {
-      const created = await createIamUser({
-        email: inviteForm.email.trim(),
-        firstName: inviteForm.firstName.trim(),
-        lastName: inviteForm.lastName.trim(),
-        password: inviteForm.password,
-        roles: inviteForm.roles,
-      });
-      toast.success(`Invited ${created.email ?? created.username}`);
-      setInviteOpen(false);
-      setInviteForm(DEFAULT_INVITE_FORM);
-      await load(search);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not create user");
-    } finally {
-      setSaving(false);
-    }
+  const submitInvite = () => {
+    createMutation.mutate({
+      email: inviteForm.email.trim(),
+      firstName: inviteForm.firstName.trim(),
+      lastName: inviteForm.lastName.trim(),
+      password: inviteForm.password,
+      roles: inviteForm.roles,
+    });
   };
 
-  const submitEdit = async () => {
+  const submitEdit = () => {
     if (!editUser) return;
-    setSaving(true);
-    try {
-      await updateIamUser(editUser.id, {
+    updateMutation.mutate({
+      userId: editUser.id,
+      body: {
         firstName: editForm.firstName.trim(),
         lastName: editForm.lastName.trim(),
         enabled: editForm.enabled,
         roles: editForm.roles,
         password: editForm.password.trim() || undefined,
-      });
-      toast.success(`Updated ${displayName(editUser)}`);
-      setEditUser(null);
-      await load(search);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not update user");
-    } finally {
-      setSaving(false);
-    }
+      },
+    });
   };
-
-  const appRoles = catalog?.appRoles ?? DEFAULT_APP_ROLES;
 
   if (loading) {
     return (
@@ -206,8 +224,8 @@ export function UsersPage() {
             search={search}
             refreshing={refreshing}
             onSearchChange={setSearch}
-            onSearchSubmit={() => void load(search)}
-            onRefresh={() => void refresh()}
+            onSearchSubmit={submitSearch}
+            onRefresh={() => void refreshAll()}
             onInvite={() => setInviteOpen(true)}
             onEdit={openEdit}
           />
@@ -223,8 +241,8 @@ export function UsersPage() {
             catalog={catalog}
             platform={platform}
             platformError={platformError}
-            onRefresh={() => void refreshSettings()}
-            refreshing={settingsRefreshing}
+            onRefresh={() => void refreshAll()}
+            refreshing={refreshing}
           />
         </TabsContent>
       </Tabs>
@@ -237,7 +255,7 @@ export function UsersPage() {
         saving={saving}
         onOpenChange={setInviteOpen}
         onFormChange={setInviteForm}
-        onSubmit={() => void submitInvite()}
+        onSubmit={submitInvite}
       />
 
       <ManageUserDialog
@@ -248,7 +266,7 @@ export function UsersPage() {
         saving={saving}
         onUserChange={setEditUser}
         onFormChange={setEditForm}
-        onSubmit={() => void submitEdit()}
+        onSubmit={submitEdit}
       />
     </div>
   );

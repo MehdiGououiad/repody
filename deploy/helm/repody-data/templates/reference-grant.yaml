@@ -1,4 +1,5 @@
-{{- if .Values.minio.enabled }}
+{{- /* Only when Gateway API is used; Ingress-only clusters (k3d/EKS) need no CRDs. */ -}}
+{{- if and .Values.minio.enabled .Values.gatewayApi.referenceGrantsEnabled }}
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:

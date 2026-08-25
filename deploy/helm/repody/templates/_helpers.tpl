@@ -39,10 +39,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{- define "repody.podSecurityContext" -}}
 {{- if eq (include "repody.restrictedCompatibility" . | trim) "true" -}}
+{{- /*
+  Portable restricted profile (K8s PSA + OpenShift restricted-v2):
+  omit runAsUser/fsGroup so the platform assigns a non-root UID.
+*/ -}}
 runAsNonRoot: true
-runAsUser: 10001
-runAsGroup: 10001
-fsGroup: 10001
 seccompProfile:
   type: RuntimeDefault
 {{- else -}}
@@ -57,8 +58,6 @@ capabilities:
   drop:
     - ALL
 runAsNonRoot: true
-runAsUser: 10001
-runAsGroup: 10001
 seccompProfile:
   type: RuntimeDefault
 {{- else -}}
@@ -73,8 +72,6 @@ capabilities:
   drop:
     - ALL
 runAsNonRoot: true
-runAsUser: 10001
-runAsGroup: 10001
 seccompProfile:
   type: RuntimeDefault
 {{- else -}}
@@ -110,8 +107,29 @@ seccompProfile:
 {{- coalesce .Values.images.backend.pullPolicy .Values.images.api.pullPolicy .Values.images.worker.pullPolicy "IfNotPresent" -}}
 {{- end }}
 
+{{- define "repody.imageRef" -}}
+{{- $repo := .repo -}}
+{{- $tag := .tag -}}
+{{- $digest := .digest | default "" -}}
+{{- if $digest -}}
+{{- printf "%s@%s" $repo $digest -}}
+{{- else -}}
+{{- printf "%s:%s" $repo $tag -}}
+{{- end -}}
+{{- end }}
+
 {{- define "repody.backendImage" -}}
-{{- printf "%s:%s" (include "repody.backendImageRepository" .) (include "repody.backendImageTag" .) -}}
+{{- $repo := include "repody.backendImageRepository" . -}}
+{{- $tag := include "repody.backendImageTag" . -}}
+{{- $digest := coalesce .Values.images.backend.digest .Values.images.api.digest .Values.images.worker.digest "" -}}
+{{- include "repody.imageRef" (dict "repo" $repo "tag" $tag "digest" $digest) -}}
+{{- end }}
+
+{{- define "repody.webImage" -}}
+{{- $repo := include "repody.webImageRepository" . -}}
+{{- $tag := .Values.images.web.tag | default .Chart.AppVersion -}}
+{{- $digest := .Values.images.web.digest | default "" -}}
+{{- include "repody.imageRef" (dict "repo" $repo "tag" $tag "digest" $digest) -}}
 {{- end }}
 
 {{- define "repody.secretName" -}}
@@ -243,6 +261,15 @@ seccompProfile:
       optional: true
 {{- end }}
 
+{{- define "repody.operatorBenchmarkSecretEnv" -}}
+- name: AUDIT_OPERATOR_BENCHMARK_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "repody.secretName" . }}
+      key: AUDIT_OPERATOR_BENCHMARK_PASSWORD
+      optional: true
+{{- end }}
+
 {{- define "repody.imagePullSecrets" -}}
 {{- with .Values.global.imagePullSecrets }}
 imagePullSecrets:
@@ -310,6 +337,24 @@ http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080/realms/{{ .Value
 http://{{ .Values.gatewayApi.authServiceName | default "keycloak" }}.{{ .Values.gatewayApi.authServiceNamespace }}.svc.cluster.local:{{ .Values.gatewayApi.authServicePort | default 8080 }}
 {{- else -}}
 http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080
+{{- end -}}
+{{- end }}
+
+{{/*
+  In-cluster OIDC issuer for Auth.js server-side token / well-known calls.
+  Prefer explicit config.oidcInternalIssuer; else derive from gatewayApi auth
+  Service DNS or by stripping the JWKS path from config.oidcJwksUrl.
+  Browser redirects keep using config.oidcIssuer (public ingress hostname).
+*/ -}}
+{{- define "repody.keycloakInternalIssuer" -}}
+{{- if .Values.config.oidcInternalIssuer -}}
+{{- .Values.config.oidcInternalIssuer -}}
+{{- else if .Values.gatewayApi.authServiceNamespace -}}
+http://{{ .Values.gatewayApi.authServiceName | default "keycloak" }}.{{ .Values.gatewayApi.authServiceNamespace }}.svc.cluster.local:{{ .Values.gatewayApi.authServicePort | default 8080 }}/realms/{{ .Values.keycloak.realm }}
+{{- else if .Values.config.oidcJwksUrl -}}
+{{- trimSuffix "/protocol/openid-connect/certs" .Values.config.oidcJwksUrl -}}
+{{- else if .Values.keycloak.enabled -}}
+http://keycloak.{{ .Release.Namespace }}.svc.cluster.local:8080/realms/{{ .Values.keycloak.realm }}
 {{- end -}}
 {{- end }}
 

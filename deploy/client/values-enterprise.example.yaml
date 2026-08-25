@@ -1,5 +1,8 @@
 # Enterprise security overlay — merge on top of external or bundled profile.
 # Secrets always from Vault / External Secrets; never in Git.
+#
+# Networking is owned by the cluster (NetworkPolicy / EgressFirewall / cloud SG).
+# Chart NetworkPolicy stays off by default — same on OpenShift and generic Kubernetes.
 
 platform:
   compatibility:
@@ -8,11 +11,6 @@ platform:
 secrets:
   create: false
   existingSecret: repody-runtime-secrets
-
-networkPolicy:
-  enabled: true
-  externalEgress:
-    enabled: true
 
 api:
   podDisruptionBudget:

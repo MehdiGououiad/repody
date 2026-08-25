@@ -33,6 +33,7 @@ class SnapshotDocument:
     document_model_id: str | None
     extraction_instructions: str = ""
     markdown_extraction: bool = False
+    native_pdf_auto: bool = False
     extraction_icl_examples: list[dict] | None = None
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
 
@@ -99,6 +100,7 @@ def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
         document_model_id=doc.get("document_model_id"),
         extraction_instructions=str(doc.get("extraction_instructions") or ""),
         markdown_extraction=bool(doc.get("markdown_extraction") or False),
+        native_pdf_auto=bool(doc.get("native_pdf_auto") or False),
         extraction_icl_examples=list(doc.get("extraction_icl_examples") or []),
         schema_fields=_schema_fields_from_snapshot(doc),
     )
@@ -114,6 +116,7 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         document_model_id=doc.document_model_id,
         extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
         markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
+        native_pdf_auto=bool(getattr(doc, "native_pdf_auto", False)),
         extraction_icl_examples=list(getattr(doc, "extraction_icl_examples", None) or []),
         schema_fields=[
             SnapshotSchemaField(

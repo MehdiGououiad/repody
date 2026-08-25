@@ -41,15 +41,17 @@ flowchart LR
 
 | Option | When | Example base |
 |--------|------|--------------|
+| **Harbor** | On-prem / OpenShift clients (recommended) | `harbor.example.com/repody` |
 | **GHCR** | GitHub-hosted releases | `ghcr.io/yourorg/repody` |
-| **Client registry** | On-prem or cloud registry the client operates | `registry.example.com/repody` |
+| **Other OCI** | ACR, ECR, GCR, Distribution | `registry.example.com/repody` |
 
-See [deploy/registry/README.md](../../deploy/registry/README.md) for GHCR setup and pull-secret examples.
+See [deploy/registry/README.md](../../deploy/registry/README.md) (Harbor + GHCR) and [OPENSHIFT.md](./OPENSHIFT.md#harbor-registry).
 
 ### Step 2: Create credentials (recommended)
 
+- **Harbor:** project robot accounts — push for vendor, pull for the cluster
 - **GHCR:** GitHub PAT with `write:packages` (vendor CI) and `read:packages` (share with client)
-- **On-prem:** Robot account or service principal with push (vendor) and pull (client) scopes
+- **Other OCI:** service principal / robot with push (vendor) and pull (client) scopes
 
 ### Step 3: Log in and push from the vendor workstation
 
@@ -215,14 +217,15 @@ helm upgrade --install repody deploy/helm/repody -n repody --create-namespace \
   --wait --timeout 25m
 ```
 
-**OpenShift:** add `-f deploy/values/openshift.yaml` to the `repody` install. See [OPENSHIFT.md](./OPENSHIFT.md).
+**OpenShift:** same Helm valueFiles as generic Kubernetes. See [OPENSHIFT.md](./OPENSHIFT.md).
 
 ### Step 8: Verify
 
 ```bash
 curl -fsS https://<api-host>/v1/healthz/live
 kubectl -n repody get pods
-pnpm openshift:client-ready   # OpenShift only
+pnpm client:check
+pnpm prod:readiness -- --api-url https://<api-host>
 ```
 
 ---
@@ -233,18 +236,9 @@ Use multi-source Applications: vendor chart + client values repo.
 
 Example: [`deploy/client/argocd.application.yaml`](../../deploy/client/argocd.application.yaml)
 
-**Bundled:** sync `repody-data` (wave 0) before `repody` (wave 2). Lab reference: [OPENSHIFT.md](./OPENSHIFT.md).
+**Bundled:** sync `repody-data` (wave 0) before `repody` (wave 2). Full OpenShift order: [OPENSHIFT.md](./OPENSHIFT.md).
 
 Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/user-guide/private-repositories/)
-
----
-
-## Part 4 — Vendor QA labs (not client install)
-
-| Lab | Command | Proves |
-|-----|---------|--------|
-| Local Compose | `pnpm dev:all` | Daily dev — [LOCAL.md](./LOCAL.md) |
-| OpenShift client test | `pnpm openshift:client-test` | Harbor + Vault + Argo CD + OTEL — [OPENSHIFT.md](./OPENSHIFT.md) |
 
 ---
 
@@ -266,13 +260,6 @@ Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/us
 |------|---------|
 | `deploy/scripts/build-images.mjs` | Vendor image build/push |
 | `deploy/scripts/release-supply-chain.mjs` | SBOM, cosign, promotion |
-| `deploy/scripts/lib/cli.mjs` | CLI helpers (`parseArgs`, `log`, `fail`, `sleep`) |
-| `deploy/scripts/lib/vault-eso.mjs` | Vault KV + ExternalSecret apply/wait |
-| `deploy/scripts/lib/vault-bootstrap.mjs` | Vault K8s auth bootstrap |
-| `deploy/scripts/lib/bundled-values.mjs` | Bundled Helm values generator |
-| `deploy/scripts/lib/lab-seed.mjs` | Lab Vault KV payloads |
-| `deploy/scripts/lib/migrations-job.mjs` | Manual migrations Job (lab fallback) |
-| `deploy/scripts/lib/lab-security.mjs` | Restricted PodSecurity fragments |
-| `deploy/client/` | Client YAML kit only |
-
-Lab script: `deploy/scripts/openshift-client-test.mjs` (shared lib modules under `deploy/scripts/lib/`).
+| `deploy/scripts/lib/cli.mjs` | CLI helpers |
+| `deploy/client/` | Client YAML kit (values + ExternalSecrets) |
+| `deploy/helm/` | Production Helm charts |

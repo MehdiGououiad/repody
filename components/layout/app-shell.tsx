@@ -6,16 +6,15 @@ import { AuthSessionGuard } from "@/components/auth/auth-session-guard";
 import { AppSidebar } from "./app-sidebar";
 import { TopBar } from "./topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isPublicPage } from "@/lib/auth/public-paths";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
-
-const MINIMAL_LAYOUT_PATHS = new Set(["/login", "/unauthorized"]);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");
   const pathname = useClientPathname();
   // Empty pathname = pre-hydration; keep shell minimal so /login is not wrapped
-  // in AuthSessionGuard (which would flash "Checking sign-in…" forever-looking).
-  const minimal = !pathname || MINIMAL_LAYOUT_PATHS.has(pathname);
+  // in AuthSessionGuard (public pages skip the authenticated chrome).
+  const minimal = !pathname || isPublicPage(pathname);
 
   if (minimal) {
     return <>{children}</>;

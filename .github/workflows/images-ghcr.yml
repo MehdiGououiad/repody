@@ -26,7 +26,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Resolve image coordinates
         id: images
@@ -40,11 +40,15 @@ jobs:
           else
             tag="${GITHUB_SHA::12}"
           fi
+          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
+            echo "Refusing mutable/empty image tag: '${tag}'" >&2
+            exit 1
+          fi
           echo "registry=ghcr.io/${owner}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
       - name: Login to GHCR
         run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -62,15 +66,14 @@ jobs:
           AUTH_KEYCLOAK_CLIENT_SECRET: repody-web-ci-secret
           AUTH_KEYCLOAK_ISSUER: https://auth.example.com/realms/repody
           AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
-          REPODY_WEB_BACKEND_URL: http://repody-api:8000
+          REPODY_WEB_BACKEND_URL: http://127.0.0.1:8000
         run: node deploy/scripts/build-images.mjs --push
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3.7.0
+        uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
       - name: Install syft
-        uses: anchore/sbom-action/download-syft@v0.17.9
-
+        uses: anchore/sbom-action/download-syft@df80a981bc6edbc4e220a492d3cbe9f5547a6e75 # v0.17.9
       - name: SBOM, sign, and attest (cosign keyless)
         env:
           REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
@@ -113,7 +116,7 @@ jobs:
           fi
 
       - name: Upload release bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: repody-release-${{ steps.images.outputs.tag }}
           path: |

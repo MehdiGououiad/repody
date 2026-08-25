@@ -1,11 +1,13 @@
 """Pluggable document model registry.
 
 Each catalog id maps to a runtime and extraction adapter module:
-- ``repody:vlm`` — local llama.cpp NuExtract structured extraction + markdown
+- ``repody:vlm`` — local llama.cpp NuExtract structured extraction
 - ``repody:vlm:cloud`` — official NuExtract platform REST API
-- ``paddleocr:v6`` — PP-OCRv6 markdown via official PaddleX POST /ocr service
 - ``paddleocr:qwen`` — PP-OCRv6 OCR + Qwen3.5 text→JSON structured extraction
-- ``glm:ocr`` — GLM-OCR markdown via official GlmOcr SDK (PP-DocLayoutV3) + GGUF llama-server
+- ``glm:qwen`` — GLM-OCR SDK markdown + Qwen3.5 text→JSON structured extraction
+
+Markdown-only engines (``paddleocr:v6``, ``glm:ocr``) are adapter internals for the
+Qwen stages — they are not workflow-selectable catalog entries.
 
 Render policies: ``extraction/render.py``
 """
@@ -19,12 +21,9 @@ from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.extraction.types import ExtractionIclExample, ExtractionResult, SchemaFieldSpec
 from repody.extraction.types import DocumentBundle
 from repody.extraction.branding import (
-    GLM_OCR_CATALOG_ID,
-    GLM_OCR_DESCRIPTION,
-    GLM_OCR_LABEL,
-    PADDLEOCR_V6_CATALOG_ID,
-    PADDLEOCR_V6_DESCRIPTION,
-    PADDLEOCR_V6_LABEL,
+    GLM_OCR_QWEN_CATALOG_ID,
+    GLM_OCR_QWEN_DESCRIPTION,
+    GLM_OCR_QWEN_LABEL,
     PADDLEOCR_QWEN_CATALOG_ID,
     PADDLEOCR_QWEN_DESCRIPTION,
     PADDLEOCR_QWEN_LABEL,
@@ -39,16 +38,18 @@ from repody.extraction.branding import (
 )
 from repody.inference.runtime import (
     DOCUMENT_RUNTIME,
-    GLM_OCR_RUNTIME,
+    GLM_OCR_QWEN_RUNTIME,
     NUEXTRACT_CLOUD_RUNTIME,
-    PADDLEOCR_V6_RUNTIME,
     PADDLEOCR_QWEN_RUNTIME,
 )
 from repody.settings import Settings, get_settings
 
 DocumentEngine = Literal["document_model"]
 DocumentRuntime = Literal[
-    "llamacpp", "nuextract_cloud", "paddleocr_v6", "paddleocr_qwen", "glm_ocr"
+    "llamacpp",
+    "nuextract_cloud",
+    "paddleocr_qwen",
+    "glm_ocr_qwen",
 ]
 
 
@@ -93,17 +94,6 @@ def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
             description=REPODY_VLM_CLOUD_DESCRIPTION,
             workflow_selectable=True,
         )
-    if settings.paddleocr_v6_enabled:
-        models[PADDLEOCR_V6_CATALOG_ID] = DocumentModelSpec(
-            id=PADDLEOCR_V6_CATALOG_ID,
-            label=PADDLEOCR_V6_LABEL,
-            engine="document_model",
-            runtime=PADDLEOCR_V6_RUNTIME,
-            runtime_model="PP-OCRv6_medium",
-            description=PADDLEOCR_V6_DESCRIPTION,
-            workflow_selectable=True,
-            markdown_only=True,
-        )
     if settings.paddleocr_qwen_enabled:
         models[PADDLEOCR_QWEN_CATALOG_ID] = DocumentModelSpec(
             id=PADDLEOCR_QWEN_CATALOG_ID,
@@ -115,16 +105,16 @@ def _registered_models(settings: Settings) -> dict[str, DocumentModelSpec]:
             workflow_selectable=True,
             markdown_only=False,
         )
-    if settings.glm_ocr_enabled:
-        models[GLM_OCR_CATALOG_ID] = DocumentModelSpec(
-            id=GLM_OCR_CATALOG_ID,
-            label=GLM_OCR_LABEL,
+    if settings.glm_ocr_qwen_enabled:
+        models[GLM_OCR_QWEN_CATALOG_ID] = DocumentModelSpec(
+            id=GLM_OCR_QWEN_CATALOG_ID,
+            label=GLM_OCR_QWEN_LABEL,
             engine="document_model",
-            runtime=GLM_OCR_RUNTIME,
-            runtime_model=settings.glm_ocr_served_model,
-            description=GLM_OCR_DESCRIPTION,
+            runtime=GLM_OCR_QWEN_RUNTIME,
+            runtime_model=settings.qwen35_served_model,
+            description=GLM_OCR_QWEN_DESCRIPTION,
             workflow_selectable=True,
-            markdown_only=True,
+            markdown_only=False,
         )
     return models
 

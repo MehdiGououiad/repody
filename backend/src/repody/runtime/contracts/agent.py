@@ -1,4 +1,7 @@
-"""Agent identity and outcome envelope for IDP / Fraud / Computer Use."""
+"""Agent identity and outcome envelope.
+
+IDP is live. FRAUD / COMPUTER_USE enum values remain for reserved pool maps.
+"""
 
 from __future__ import annotations
 

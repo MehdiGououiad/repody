@@ -2,69 +2,41 @@
 
 **Canonical index.** Manifests and Helm charts live under [`deploy/`](../../deploy/).
 
-## Deployment paths
+## Supported paths
 
-| Path | Audience | Guide | Entry command |
-|------|----------|-------|---------------|
-| **Local** | Windows · macOS · Linux | [LOCAL.md](./LOCAL.md) | `pnpm platform` |
-| **OpenShift** | Client production + vendor CRC lab | [OPENSHIFT.md](./OPENSHIFT.md) · [CLIENT.md](./CLIENT.md) | Helm / Argo CD · `pnpm openshift:client-test` |
+| Path | Audience | Guide | How |
+|------|----------|-------|-----|
+| **Local** | Daily development | [LOCAL.md](./LOCAL.md) | `pnpm platform` |
+| **OpenShift / Kubernetes** | Client production | [OPENSHIFT.md](./OPENSHIFT.md) | Helm (+ optional Argo CD) |
 
-OpenShift production uses **external** or **bundled** data profiles ([CLIENT.md](./CLIENT.md)). Ship images with `pnpm images:release` ([RELEASE.md](./RELEASE.md) · [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md)).
+OpenShift and generic Kubernetes share the same charts, values merge order, and Ingress path.
 
-Command cheat sheet: [docs/COMMANDS.md](../COMMANDS.md).
-
-Local default extraction is **`paddleocr:qwen`** (host PP-OCR + Qwen). NuExtract is opt-in — [PADDLEOCR-V6.md](../PADDLEOCR-V6.md) · [REPODY-VLM.md](../REPODY-VLM.md).
-
----
-
-## Vendor → client in 7 steps
-
-1. **Vendor:** `docker login` + `pnpm images:release` with `REPODY_IMAGE_REGISTRY=ghcr.io/yourorg/repody` (or client registry)
-2. **Vendor:** Hand off tag, charts, and [deploy/client/](../../deploy/client/) templates
-3. **Client:** Namespace + Vault + ESO ([SECRETS.md](./SECRETS.md))
-4. **Client:** Store `REGISTRY_DOCKERCONFIGJSON` in Vault → `registry-pull-secret`
-5. **Client:** Copy `values-{external,bundled}.example.yaml` to private GitOps repo
-6. **Client:** `helm upgrade --install` (data chart first if bundled)
-7. **Client:** `pnpm prod:readiness -- --api-url https://<api>` (see [PROD-OBSERVABILITY.md](./PROD-OBSERVABILITY.md))
-
-Full detail: [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md).
-
----
-
-## Client profiles
-
-| Profile | When | Values template |
-|---------|------|-----------------|
-| **External** | Managed Postgres, Redis, S3 | `deploy/client/values-external.example.yaml` |
-| **Bundled** | In-cluster Postgres, Redis, MinIO | `deploy/client/values-bundled.example.yaml` + `bundled/values.data.yaml` |
-
-Both merge `values-enterprise.example.yaml`. OpenShift adds `deploy/values/openshift.yaml`.
-
-Client kit index: [deploy/client/README.md](../../deploy/client/README.md).
-
----
-
-## Vendor QA (OpenShift client test)
-
-| Lab | Guide | Command |
-|-----|-------|---------|
-| OpenShift client test | [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab) | `pnpm openshift:client-test` |
-
-Local daily development uses **Compose only** — see [LOCAL.md](./LOCAL.md).
-
----
-
-## All guides
+Profiles, secrets, and vendor handoff:
 
 | Guide | Purpose |
 |-------|---------|
-| [LOCAL.md](./LOCAL.md) | Compose dev — API, UI, workers, inference |
-| [CLIENT.md](./CLIENT.md) | Client production — Helm, Argo CD, profiles |
-| [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Registry push → client pull → deploy |
-| [SECRETS.md](./SECRETS.md) | Vault, ESO, hardening |
-| [OPENSHIFT.md](./OPENSHIFT.md) | OpenShift production + client test lab |
+| [OPENSHIFT.md](./OPENSHIFT.md) | **Start here for cluster deploy** — namespace → secrets → Helm → verify |
+| [CLIENT.md](./CLIENT.md) | Profiles (external / bundled), Ingress, Argo skeleton |
+| [SECRETS.md](./SECRETS.md) | Vault, External Secrets, hardening |
+| [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) | Registry push → client pull (Harbor / GHCR) |
+| [registry/README.md](../../deploy/registry/README.md) | Harbor, GHCR, pull secrets |
 | [RELEASE.md](./RELEASE.md) | SBOM, cosign, promotion |
-| [OBSERVABILITY.md](./OBSERVABILITY.md) | OTEL in cluster |
+| [OBSERVABILITY.md](./OBSERVABILITY.md) | JSON logs + OTEL |
+
+Command cheat sheet: [docs/COMMANDS.md](../COMMANDS.md).
+
+---
+
+## Client install (summary)
+
+1. Namespace — `deploy/client/namespace.example.yaml` (restricted PSA)
+2. Vault + External Secrets — [SECRETS.md](./SECRETS.md)
+3. Private GitOps values from `deploy/client/values-*.example.yaml` + `values-enterprise.example.yaml`
+4. Same Helm valueFiles on every cluster (no OpenShift-only overlay)
+5. Helm: bundled → `repody-data` then `repody`; external → `repody` only
+6. Verify: `curl …/v1/healthz/live` · `pnpm client:check` · `pnpm prod:readiness`
+
+Full steps: [OPENSHIFT.md](./OPENSHIFT.md).
 
 ---
 
@@ -72,11 +44,9 @@ Local daily development uses **Compose only** — see [LOCAL.md](./LOCAL.md).
 
 | Chart | Purpose |
 |-------|---------|
-| `deploy/helm/repody` | API, web, Taskiq workers, Ingress |
+| `deploy/helm/repody` | API, web, workers, Ingress |
 | `deploy/helm/repody-data` | Postgres, Redis, MinIO (bundled) |
-| `deploy/helm/repody-auth` | Keycloak (optional) |
-
-**Bundled install order:** namespace + secrets → `repody-data` → optional `repody-auth` → `repody`.
+| `deploy/helm/repody-auth` | Optional Keycloak |
 
 ## Values merge order
 
@@ -85,37 +55,27 @@ deploy/helm/repody/values.yaml
   → values-common.yaml
   → client GitOps values.yaml
   → values-enterprise.example.yaml
-  → deploy/values/openshift.yaml          (OpenShift only)
 ```
 
-## Image registry convention
+## Image registry
 
 ```powershell
-$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"   # host + project path
+$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="1.0.0"
 ```
-
-Helm values:
 
 ```yaml
 images:
   api:
     repository: ghcr.io/yourorg/repody/repody-backend
-    tag: "1.0.0"
+    tag: "1.0.0"   # immutable — never latest in production
 ```
 
 ## Principles
 
-1. **Compose for local dev** — daily work does not require Kubernetes.
-2. **Standard Ingress** — `networking.k8s.io/v1` on every cluster.
-3. **Secrets outside Git** — Vault → ESO → Kubernetes Secrets.
-4. **Inference outside the chart** — client VLM in Vault, not in Helm values secrets.
-5. **Client kit = YAML only** — install steps live in this doc tree, not in `deploy/client/`.
-
-## Related
-
-| Topic | Doc |
-|-------|-----|
-| Managed Postgres / CNPG | [ONPREM-MANAGED-DATA.md](../ONPREM-MANAGED-DATA.md) |
-| External VLM | [REPODY-VLM.md](../REPODY-VLM.md) |
-| Runtime env keys | [deploy/ENV.md](../../deploy/ENV.md) |
+1. Compose for local dev — cluster is not required daily.
+2. Standard Ingress (`networking.k8s.io/v1`) on every platform.
+3. Secrets outside Git — Vault → ESO → Kubernetes Secrets.
+4. Inference outside the app chart.
+5. Cluster platform owns NetworkPolicy and egress.
+6. Client kit is YAML templates + these docs — not a lab orchestrator.

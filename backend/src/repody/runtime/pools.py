@@ -1,7 +1,7 @@
 """Map Taskiq worker pools ↔ agent stages.
 
 extract/fast are IDP capacity classes (document vs logic-only).
-fraud / computer_use are dedicated agent pools for independent scaling.
+fraud / computer_use names are reserved for future agents (Helm replicas 0).
 """
 
 from __future__ import annotations

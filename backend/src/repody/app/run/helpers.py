@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from repody.infra.db.models import RunDocument, Workflow
 from repody.extraction.branding import normalize_public_catalog_id
+from repody.extraction.modes import (
+    parse_read_path,
+    read_path_label,
+    validation_mode_label,
+)
 from repody.rules.conditions import resolve_rule_body
 from repody.infra.storage.mime import resolve_mime as resolve_storage_mime
 from repody.util.json_shape import normalize_keys_to_snake
@@ -44,12 +49,23 @@ def extract_label(doc_type: str, *, mode: str, detail: str | None = None) -> str
 
 
 def meta_to_dict(meta) -> dict:
+    """Canonical HTTP/wire shape (camelCase) for extraction meta.
+
+    Used by run_documents.extraction_meta and agentOutcomes handoff payloads.
+    Display labels are derived at the edge when absent from the meta object.
+    """
+    stored_read_label = getattr(meta, "read_path_label", None)
+    stored_validation_label = getattr(meta, "validation_label", None)
+    read_label = stored_read_label or read_path_label(
+        parse_read_path(meta.read_path_used or meta.read_path_config).id
+    )
+    val_label = stored_validation_label or validation_mode_label(meta.validation_mode)
     return {
         "readPathConfig": meta.read_path_config,
         "readPathUsed": meta.read_path_used,
-        "readPathLabel": meta.read_path_label,
+        "readPathLabel": read_label,
         "validationMode": meta.validation_mode,
-        "validationLabel": meta.validation_label,
+        "validationLabel": val_label,
         "documentModelId": normalize_public_catalog_id(meta.document_model_id),
         "extractionMs": meta.extraction_ms,
         "cacheHit": meta.cache_hit,
@@ -61,6 +77,7 @@ def meta_to_dict(meta) -> dict:
         "pagesRendered": meta.pages_rendered,
         "pagesSent": meta.pages_sent,
         "pagesDropped": meta.pages_dropped,
+        "nativePdf": getattr(meta, "native_pdf", None),
     }
 
 

@@ -1,18 +1,27 @@
-# Portable Docker Hub images (linux/amd64 + linux/arm64).
+# Example: public Docker Hub repositories (linux/amd64 + linux/arm64).
 # Replace mehdigououiad if you publish under a different Hub namespace.
 #
-# Platform only: API / web / workers. Document-model inference
-# (NuExtract, PP-OCRv6, Qwen) stays external — see docs/REPODY-VLM.md
-# and docs/PADDLEOCR-V6.md. That is required for Mac/Windows/Linux
-# portability; GPU/Metal stacks are host-specific.
+# Production: use an immutable tag from the vendor release — never latest.
+# Platform only: API / web / workers. Inference stays external
+# (docs/REPODY-VLM.md, docs/PADDLEOCR-V6.md).
 
 images:
+  backend:
+    repository: mehdigououiad/repody-backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
   api:
     repository: mehdigououiad/repody-backend
     tag: "0.1.0"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: mehdigououiad/repody-backend
+    tag: "0.1.0"
+    pullPolicy: IfNotPresent
   web:
     repository: mehdigououiad/repody-web
     tag: "0.1.0"
+    pullPolicy: IfNotPresent
   workerExtract:
     repository: mehdigououiad/repody-backend
     tag: "0.1.0"

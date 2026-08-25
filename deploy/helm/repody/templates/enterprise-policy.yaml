@@ -1,8 +1,15 @@
 {{- /*
 Enterprise guardrails — profile-aware. Fails fast when production values drift unsafe.
 */ -}}
+{{- $env := .Values.global.deploymentEnvironment | default "production" -}}
+{{- if eq $env "openshift" -}}
+  {{- fail "global.deploymentEnvironment must be production or development (not openshift)" -}}
+{{- end -}}
+{{- if index .Values.config "operatorBenchmarkPassword" -}}
+  {{- fail "config.operatorBenchmarkPassword must not be set; put AUDIT_OPERATOR_BENCHMARK_PASSWORD in secrets.existingSecret (ESO/Vault)" -}}
+{{- end -}}
 {{- $profile := .Values.global.deploymentProfile | default "external" -}}
-{{- if eq .Values.global.deploymentEnvironment "production" -}}
+{{- if eq $env "production" -}}
 
   {{- /* ── Both profiles: no inline app secrets, immutable tags ── */ -}}
   {{- if .Values.secrets.create -}}

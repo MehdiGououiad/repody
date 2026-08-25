@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from repody.catalog.registry import is_markdown_only_model, parse_document_model
-from repody.extraction.branding import GLM_OCR_CATALOG_ID
+from repody.extraction.branding import GLM_OCR_CATALOG_ID, UnknownCatalogIdError
 from repody.extraction.glm_ocr import extract_with_glm_ocr
 from repody.extraction.glm_ocr_sdk import (
     GlmOcrSdkSettings,
@@ -29,15 +29,15 @@ def test_openai_host_port_from_v1_base():
     assert openai_host_port("http://127.0.0.1:11434") == ("127.0.0.1", 11434)
 
 
-def test_glm_ocr_registered_when_enabled(monkeypatch: pytest.MonkeyPatch):
+def test_glm_ocr_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
+    """Markdown-only GLM-OCR is an internal stage — not a selectable catalog model."""
     monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
     monkeypatch.setenv("AUDIT_GLM_OCR_SERVED_MODEL", "GLM-OCR")
     get_settings.cache_clear()
     try:
-        spec = parse_document_model(GLM_OCR_CATALOG_ID)
-        assert spec.markdown_only is True
-        assert spec.runtime_model == "GLM-OCR"
-        assert is_markdown_only_model(GLM_OCR_CATALOG_ID) is True
+        with pytest.raises(UnknownCatalogIdError):
+            parse_document_model(GLM_OCR_CATALOG_ID)
+        assert is_markdown_only_model(GLM_OCR_CATALOG_ID) is False
     finally:
         get_settings.cache_clear()
 
@@ -162,6 +162,7 @@ def test_build_parser_uses_official_selfhosted_api(monkeypatch: pytest.MonkeyPat
             layout_model_dir="PaddlePaddle/PP-DocLayoutV3_safetensors",
             max_workers=4,
             pdf_max_pages=None,
+            layout_enabled=True,
         )
     )
     assert isinstance(parser, _FakeGlmOcr)
@@ -177,6 +178,53 @@ def test_build_parser_uses_official_selfhosted_api(monkeypatch: pytest.MonkeyPat
     assert dotted["pipeline.ocr_api.api_port"] == 8083
     assert dotted["pipeline.ocr_api.api_mode"] == "openai"
     assert dotted["pipeline.ocr_api.api_path"] == "/v1/chat/completions"
+
+
+def test_whole_page_layout_detector_emits_text_region():
+    from repody.extraction.glm_ocr_sdk import WholePageLayoutDetector
+
+    detector = WholePageLayoutDetector()
+    regions, vis = detector.process([object(), object()])
+    assert vis == {}
+    assert len(regions) == 2
+    assert regions[0][0]["task_type"] == "text"
+    assert regions[0][0]["bbox_2d"] == [0, 0, 1000, 1000]
+
+
+def test_build_parser_without_layout_uses_whole_page(monkeypatch: pytest.MonkeyPatch):
+    """layout_enabled=false → model-only path (no GlmOcr / PP-DocLayoutV3)."""
+    import repody.extraction.glm_ocr_sdk as sdk_mod
+
+    fake_parser = object()
+    monkeypatch.setattr(
+        sdk_mod,
+        "_build_whole_page_parser",
+        lambda cfg: fake_parser,
+    )
+    called_glm = {"n": 0}
+
+    class _ShouldNotBuild:
+        def __init__(self, **kwargs: Any):
+            called_glm["n"] += 1
+
+    fake_mod = MagicMock()
+    fake_mod.GlmOcr = _ShouldNotBuild
+    monkeypatch.setitem(__import__("sys").modules, "glmocr", fake_mod)
+
+    parser = sdk_mod._build_parser(
+        GlmOcrSdkSettings(
+            base_url="http://127.0.0.1:8083/v1",
+            model="GLM-OCR",
+            timeout_seconds=180,
+            layout_device="cpu",
+            layout_model_dir="PaddlePaddle/PP-DocLayoutV3_safetensors",
+            max_workers=1,
+            pdf_max_pages=None,
+            layout_enabled=False,
+        )
+    )
+    assert parser is fake_parser
+    assert called_glm["n"] == 0
 
 
 def test_build_parser_id_card_profile_uses_idcard_config(monkeypatch: pytest.MonkeyPatch):

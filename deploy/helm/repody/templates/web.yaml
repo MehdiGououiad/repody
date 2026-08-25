@@ -47,8 +47,7 @@ spec:
         - name: auth-host-alias
           image: {{ .Values.gatewayApi.authHostAliasInitImage | default .Values.init.waitImage | quote }}
           securityContext:
-            runAsUser: 0
-            runAsNonRoot: false
+            {{- include "repody.initContainerSecurityContext" . | nindent 12 }}
           command:
             - sh
             - -ec
@@ -77,7 +76,7 @@ spec:
       {{- end }}
       containers:
         - name: web
-          image: "{{ include "repody.webImageRepository" . }}:{{ .Values.images.web.tag }}"
+          image: {{ include "repody.webImage" . | quote }}
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
@@ -113,9 +112,10 @@ spec:
                   key: AUTH_KEYCLOAK_CLIENT_SECRET
             - name: AUTH_KEYCLOAK_ISSUER
               value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}
-            {{- if .Values.config.oidcInternalIssuer }}
+            {{- $internalIssuer := include "repody.keycloakInternalIssuer" . }}
+            {{- if $internalIssuer }}
             - name: AUTH_KEYCLOAK_INTERNAL_ISSUER
-              value: {{ .Values.config.oidcInternalIssuer | quote }}
+              value: {{ $internalIssuer | quote }}
             {{- end }}
             {{- if .Values.config.authUrl }}
             - name: AUTH_URL

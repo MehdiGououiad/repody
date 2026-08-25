@@ -29,6 +29,7 @@ function normalizeDocument(doc: DocumentDef): DocumentDef {
     documentModelId: doc.documentModelId ?? null,
     extractionInstructions: doc.extractionInstructions ?? "",
     markdownExtraction: doc.markdownExtraction ?? false,
+    nativePdfAuto: doc.nativePdfAuto ?? false,
     extractionIclExamples: [...(doc.extractionIclExamples ?? [])],
   };
 }

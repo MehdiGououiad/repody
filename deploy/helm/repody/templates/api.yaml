@@ -58,6 +58,7 @@ spec:
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-api
             {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             - name: AUDIT_OIDC_ISSUER
               value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}

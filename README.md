@@ -46,7 +46,7 @@ Sign in at http://localhost:3000 · `operator@repody.local` / `repody-dev`.
 Daily: `pnpm platform` · stop: `pnpm platform stop`  
 Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · [docs/COMMANDS.md](./docs/COMMANDS.md)
 
-**Client OpenShift:** [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) · **CRC lab:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md)
+**Client OpenShift:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) · [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md)
 
 **Release to a client:** `pnpm images:release` to GHCR or client registry; they deploy with Helm or Argo CD. See [docs/COMMANDS.md](./docs/COMMANDS.md).
 

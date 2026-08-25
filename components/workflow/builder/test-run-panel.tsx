@@ -23,9 +23,6 @@ import { runErrorFromUnknown } from "@/lib/api/api-error";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 
-export { emptyTestSession } from "@/components/workflow/builder/test-run-session";
-export type { TestPhase, TestSessionState } from "@/components/workflow/builder/test-run-session";
-
 function clientStepLabels(t: ReturnType<typeof useTranslations>): ClientStepLabels {
   return {
     "save-workflow": {

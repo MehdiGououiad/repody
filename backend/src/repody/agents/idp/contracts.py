@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from repody.extraction.types import ExtractionMetadata
 from repody.runtime.contracts.result import AppError
 
 
@@ -24,6 +23,7 @@ class DocumentSpec:
     schema_fields: tuple[SchemaField, ...]
     extraction_instructions: str = ""
     markdown_extraction: bool = False
+    native_pdf_auto: bool = False
     document_model_id: str = "repody:vlm"
     extraction_mode: str = "document_model"
     position: int = 0
@@ -39,6 +39,7 @@ class RuleSpec:
     applies_to: tuple[str, ...]
     conditions: tuple[dict, ...] = ()
     body: str = ""
+    condition_junction: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,11 +69,32 @@ class ExtractedField:
 
 
 @dataclass(frozen=True, slots=True)
+class IdpExtractionMeta:
+    """IDP-owned extraction meta — no display labels (those are HTTP/progress edge)."""
+
+    read_path_config: str
+    read_path_used: str
+    validation_mode: str
+    document_model_id: str | None = None
+    extraction_ms: int = 0
+    cache_hit: bool = False
+    gpu_cold_start_likely: bool = False
+    fields_extracted: int = 0
+    markdown_extraction: bool = False
+    markdown_text: str | None = None
+    raw_text: str | None = None
+    pages_rendered: int | None = None
+    pages_sent: int | None = None
+    pages_dropped: int | None = None
+    native_pdf: dict | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class DocumentExtraction:
     document_id: str
     fields: tuple[ExtractedField, ...]
     markdown_text: str | None
-    meta: ExtractionMetadata
+    meta: IdpExtractionMeta
     raw_text: str | None = None
 
 

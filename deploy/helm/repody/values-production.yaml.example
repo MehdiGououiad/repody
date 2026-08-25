@@ -14,18 +14,23 @@ images:
   backend:
     repository: ghcr.io/YOUR_ORG/repody-backend
     tag: "0.1.0"
+    # Optional: pin digest from dist/release/<tag>/helm-images.yaml
+    digest: ""
     pullPolicy: IfNotPresent
   api:
     repository: ghcr.io/YOUR_ORG/repody-backend
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
   worker:
     repository: ghcr.io/YOUR_ORG/repody-backend
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
   web:
     repository: ghcr.io/YOUR_ORG/repody-web
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
 
 postgresql:
@@ -128,6 +133,3 @@ workerFast:
   autoscaling:
     enabled: true
     maxReplicas: 10
-
-networkPolicy:
-  enabled: true

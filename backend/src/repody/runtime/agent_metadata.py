@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Any
 
-from repody.agents.fraud.contracts import FraudOutcome
 from repody.agents.idp.contracts import (
     DocumentExtraction,
     ExtractedField,
     ExtractionOutput,
+    IdpExtractionMeta,
     IdpOutcome,
     RuleResult,
     ValidationOutput,
 )
+from repody.app.run.helpers import meta_to_dict
 from repody.infra.db.models import Run
-from repody.extraction.types import ExtractionMetadata
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 
 
@@ -41,28 +41,66 @@ def _meta(run: Run) -> dict[str, Any]:
     return dict(raw) if isinstance(raw, dict) else {}
 
 
-def _extraction_meta_to_dict(meta: ExtractionMetadata) -> dict[str, Any]:
-    return asdict(meta)
+def _str_field(raw: dict[str, Any], camel: str, snake: str, default: str = "") -> str:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return str(value) if value is not None else default
 
 
-def _extraction_meta_from_dict(raw: dict[str, Any]) -> ExtractionMetadata:
-    return ExtractionMetadata(
-        read_path_config=str(raw.get("read_path_config") or ""),
-        read_path_used=str(raw.get("read_path_used") or ""),
-        read_path_label=str(raw.get("read_path_label") or ""),
-        validation_mode=str(raw.get("validation_mode") or ""),
-        validation_label=str(raw.get("validation_label") or ""),
-        document_model_id=raw.get("document_model_id"),
-        extraction_ms=int(raw.get("extraction_ms") or 0),
-        cache_hit=bool(raw.get("cache_hit") or False),
-        gpu_cold_start_likely=bool(raw.get("gpu_cold_start_likely") or False),
-        fields_extracted=int(raw.get("fields_extracted") or 0),
-        markdown_extraction=bool(raw.get("markdown_extraction") or False),
-        markdown_text=raw.get("markdown_text") if isinstance(raw.get("markdown_text"), str) else None,
-        raw_text=raw.get("raw_text") if isinstance(raw.get("raw_text"), str) else None,
-        pages_rendered=raw.get("pages_rendered") if isinstance(raw.get("pages_rendered"), int) else None,
-        pages_sent=raw.get("pages_sent") if isinstance(raw.get("pages_sent"), int) else None,
-        pages_dropped=raw.get("pages_dropped") if isinstance(raw.get("pages_dropped"), int) else None,
+def _opt_str(raw: dict[str, Any], camel: str, snake: str) -> str | None:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return value if isinstance(value, str) else None
+
+
+def _opt_int(raw: dict[str, Any], camel: str, snake: str) -> int | None:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return value if isinstance(value, int) else None
+
+
+def _opt_dict(raw: dict[str, Any], camel: str, snake: str) -> dict[str, Any] | None:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return value if isinstance(value, dict) else None
+
+
+def _bool_field(raw: dict[str, Any], camel: str, snake: str) -> bool:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return bool(value or False)
+
+
+def _int_field(raw: dict[str, Any], camel: str, snake: str, default: int = 0) -> int:
+    value = raw.get(camel)
+    if value is None:
+        value = raw.get(snake)
+    return int(value or default)
+
+
+def _extraction_meta_from_dict(raw: dict[str, Any]) -> IdpExtractionMeta:
+    """Accept camelCase (canonical) or legacy snake_case keys."""
+    return IdpExtractionMeta(
+        read_path_config=_str_field(raw, "readPathConfig", "read_path_config"),
+        read_path_used=_str_field(raw, "readPathUsed", "read_path_used"),
+        validation_mode=_str_field(raw, "validationMode", "validation_mode"),
+        document_model_id=_opt_str(raw, "documentModelId", "document_model_id"),
+        extraction_ms=_int_field(raw, "extractionMs", "extraction_ms"),
+        cache_hit=_bool_field(raw, "cacheHit", "cache_hit"),
+        gpu_cold_start_likely=_bool_field(raw, "gpuColdStartLikely", "gpu_cold_start_likely"),
+        fields_extracted=_int_field(raw, "fieldsExtracted", "fields_extracted"),
+        markdown_extraction=_bool_field(raw, "markdownExtraction", "markdown_extraction"),
+        markdown_text=_opt_str(raw, "markdownText", "markdown_text"),
+        raw_text=_opt_str(raw, "rawText", "raw_text"),
+        pages_rendered=_opt_int(raw, "pagesRendered", "pages_rendered"),
+        pages_sent=_opt_int(raw, "pagesSent", "pages_sent"),
+        pages_dropped=_opt_int(raw, "pagesDropped", "pages_dropped"),
+        native_pdf=_opt_dict(raw, "nativePdf", "native_pdf"),
     )
 
 
@@ -74,7 +112,7 @@ def _extraction_to_dict(extraction: ExtractionOutput) -> dict[str, Any]:
                 "documentId": doc.document_id,
                 "markdownText": doc.markdown_text,
                 "rawText": doc.raw_text,
-                "meta": _extraction_meta_to_dict(doc.meta),
+                "meta": meta_to_dict(doc.meta),
                 "fields": [
                     {
                         "key": field.key,
@@ -210,9 +248,6 @@ def record_agent_outcome(run: Run, outcome: AgentOutcome) -> None:
         payload["overallStatus"] = outcome.payload.validation.overall_status
         payload["summaryPassed"] = outcome.payload.validation.summary_passed
         payload["summaryFailed"] = outcome.payload.validation.summary_failed
-    elif outcome.agent is AgentId.FRAUD and isinstance(outcome.payload, FraudOutcome):
-        payload["summary"] = outcome.payload.summary
-        payload["signals"] = list(outcome.payload.signals)
     else:
         payload["summary"] = getattr(outcome.payload, "summary", "") or ""
     outcomes[outcome.agent.value] = payload
@@ -273,21 +308,6 @@ def idp_outcome_from_run(run: Run) -> IdpOutcome | None:
         workflow_id=str(row.get("workflowId") or run.workflow_id),
         extraction=_extraction_from_dict(extraction_raw),
         validation=_validation_from_dict(validation_raw),
-    )
-
-
-def fraud_outcome_from_run(run: Run) -> FraudOutcome | None:
-    meta = _meta(run)
-    outcomes = meta.get(_AGENT_OUTCOMES_KEY) or {}
-    row = outcomes.get(AgentId.FRAUD.value)
-    if not isinstance(row, dict):
-        return None
-    signals_raw = row.get("signals")
-    signals = tuple(str(s) for s in signals_raw) if isinstance(signals_raw, list) else ()
-    return FraudOutcome(
-        run_id=run.id,
-        summary=str(row.get("summary") or ""),
-        signals=signals,
     )
 
 

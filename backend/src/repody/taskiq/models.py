@@ -7,11 +7,11 @@ class AuditRunInput(BaseModel):
     run_id: str = Field(description="Primary key of the audit run row.")
     extract_pool: str = Field(
         default="extract",
-        description="Taskiq queue suffix (extract|fast|fraud|computer_use).",
+        description="Taskiq queue suffix (extract|fast; fraud|computer_use reserved).",
     )
     agent_stage: str = Field(
         default="idp",
-        description="Agent stage for this task (idp|fraud|computer_use).",
+        description="Agent stage for this task (idp live; fraud|computer_use reserved).",
     )
     workflow_id: str | None = Field(default=None, description="Workflow that owns the run.")
     request_id: str | None = Field(

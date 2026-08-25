@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
-import { fetchDashboardBundle } from "@/lib/api/dashboard";
+import { fetchDashboardBundle } from "@/lib/api/dashboard-server";
 
 const BusinessDashboard = dynamic(
   () =>

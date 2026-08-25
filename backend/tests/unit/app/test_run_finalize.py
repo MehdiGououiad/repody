@@ -46,7 +46,7 @@ async def test_finalize_pending_completion_maps_to_complete_run(
 ):
     run = SimpleNamespace(
         id="run-1",
-        run_metadata={"agentOutcomes": {"fraud": {"status": "skipped"}}},
+        run_metadata={"agentOutcomes": {"idp": {"status": "passed"}}},
     )
     store_pending_completion(
         run,  # type: ignore[arg-type]
@@ -74,16 +74,8 @@ async def test_finalize_pending_completion_maps_to_complete_run(
         _fake_complete,
     )
     monkeypatch.setattr(
-        "repody.app.run.commands.bind_load",
-        lambda _s: AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "repody.app.run.commands.bind_save",
-        lambda _s: AsyncMock(),
-    )
-    monkeypatch.setattr(
-        "repody.app.run.commands.bind_commit",
-        lambda _s: AsyncMock(),
+        "repody.app.run.commands.session_run_ports",
+        lambda _s: (AsyncMock(), AsyncMock(), AsyncMock()),
     )
     monkeypatch.setattr(
         "repody.app.run.commands.publish_run_domain_events",
@@ -95,7 +87,7 @@ async def test_finalize_pending_completion_maps_to_complete_run(
     assert isinstance(outcome, RunCompletionOutcome)
     assert outcome.overall_status == "passed"
     assert outcome.run_metadata.get("durationMs") == 5
-    assert outcome.run_metadata.get("agentOutcomes", {}).get("fraud", {}).get("status") == "skipped"
+    assert outcome.run_metadata.get("agentOutcomes", {}).get("idp", {}).get("status") == "passed"
     assert pending_completion_from_run(run) is None  # type: ignore[arg-type]
 
 

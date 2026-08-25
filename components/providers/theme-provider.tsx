@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useState } from "react";
+import { createContext, use, useCallback, useState } from "react";
 import type { Theme } from "@/i18n/config";
 import { THEME_COOKIE } from "@/i18n/config";
 
@@ -37,5 +37,5 @@ export function ThemeProvider({
 }
 
 export function useTheme() {
-  return useContext(ThemeContext);
+  return use(ThemeContext);
 }

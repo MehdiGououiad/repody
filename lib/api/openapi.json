@@ -3261,6 +3261,12 @@
             "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
             "default": false
           },
+          "nativePdfAuto": {
+            "type": "boolean",
+            "title": "Nativepdfauto",
+            "description": "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
+            "default": false
+          },
           "extractionIclExamples": {
             "items": {
               "$ref": "#/components/schemas/ExtractionIclExampleSchema"
@@ -3327,6 +3333,12 @@
             "type": "boolean",
             "title": "Markdownextraction",
             "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
+            "default": false
+          },
+          "nativePdfAuto": {
+            "type": "boolean",
+            "title": "Nativepdfauto",
+            "description": "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
             "default": false
           },
           "extractionIclExamples": {

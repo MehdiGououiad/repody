@@ -1,13 +1,37 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
 from repody.extraction.modes import parse_read_path
 from repody.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from repody.app.uploads.intents import _check_owner
 from repody.app.uploads.validation import UploadValidationError, validate_upload_file
+from repody.runtime.contracts.result import ErrorCode
 from repody.settings import Settings
 from repody.infra.storage.mime import resolve_mime, sanitize_filename, sniff_mime
+
+
+def test_check_owner_fail_closed_without_caller_subject():
+    err = _check_owner(SimpleNamespace(owner_subject="user-a"), None)
+    assert err is not None
+    assert err.code == ErrorCode.FORBIDDEN
+    assert "owning authenticated user" in err.message
+
+
+def test_check_owner_rejects_subject_mismatch():
+    err = _check_owner(SimpleNamespace(owner_subject="user-a"), "user-b")
+    assert err is not None
+    assert err.code == ErrorCode.FORBIDDEN
+    assert "different authenticated user" in err.message
+
+
+def test_check_owner_allows_matching_and_unowned():
+    assert _check_owner(SimpleNamespace(owner_subject="user-a"), "user-a") is None
+    assert _check_owner(SimpleNamespace(owner_subject=None), None) is None
+    assert _check_owner(SimpleNamespace(owner_subject=None), "user-a") is None
 
 
 def test_default_read_path_is_document_model():

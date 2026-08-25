@@ -8,11 +8,11 @@ from repody.agents.idp.contracts import (
     DocumentExtraction,
     ExtractedField,
     ExtractionOutput,
+    IdpExtractionMeta,
     IdpOutcome,
     RuleResult,
     ValidationOutput,
 )
-from repody.extraction.types import ExtractionMetadata
 from repody.runtime.agent_metadata import idp_outcome_from_run, record_agent_outcome
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 
@@ -36,12 +36,10 @@ def test_idp_outcome_round_trip_preserves_extraction_fields() -> None:
                         ),
                     ),
                     markdown_text="# Invoice",
-                    meta=ExtractionMetadata(
+                    meta=IdpExtractionMeta(
                         read_path_config="document_model",
                         read_path_used="document_model",
-                        read_path_label="Document model",
                         validation_mode="logic",
-                        validation_label="Logic",
                         document_model_id="repody:vlm",
                         fields_extracted=1,
                     ),

@@ -17,6 +17,10 @@ log = structlog.get_logger()
 _STATUS_PENDING = "pending"
 
 
+# Empty until peer agents ship; recipe is IDP-only so this path is unused today.
+_LIVE_HANDOFF_TARGETS: frozenset[AgentId] = frozenset()
+
+
 async def schedule_next_agent_stage(
     session: AsyncSession,
     run: Run,
@@ -26,9 +30,12 @@ async def schedule_next_agent_stage(
 ) -> None:
     """Reuse the outbox row for the next pool/stage and schedule Taskiq dispatch.
 
-    Updates ``worker_pool`` after IDP→fraud/CU handoff, and refreshes
-    ``last_activity_at`` so stale reap does not kill mid-pipeline runs.
+    Reserved for future multi-agent recipes. Fraud / Computer Use are not
+    implemented — scheduling them hard-fails. Refreshes ``last_activity_at``
+    so stale reap does not kill mid-pipeline runs when handoff is live again.
     """
+    if next_agent not in _LIVE_HANDOFF_TARGETS:
+        raise RuntimeError(f"agent not implemented: {next_agent.value}")
     idp_pool = (run.worker_pool or "extract").strip().lower()
     # Preserve IDP capacity class when leaving extract/fast for a later agent pool.
     if idp_pool not in {"extract", "fast"}:

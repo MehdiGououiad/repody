@@ -1,4 +1,8 @@
-"""Qwen text LLM → flat JSON for OCR+LLM structured extraction."""
+"""Qwen text LLM → flat JSON for OCR+LLM structured extraction.
+
+Thin adapter: OCR transcript + UI schema → one chat completion → leaf fields.
+No document-specific heuristics and no post-hoc value rewriting.
+"""
 
 from __future__ import annotations
 
@@ -71,7 +75,9 @@ def text_to_json_chat_payload(
         f"Top-level keys must be exactly: {keys}. "
         "Use dotted keys for nested fields (e.g. \"address.city\"). "
         "For object-array fields return a JSON array of objects. "
-        "Use empty string when unknown. Copy values from the text; do not invent."
+        "Use empty string when unknown. "
+        "Copy values from the OCR text only — do not invent, translate, "
+        "normalize, correct, or reformat (including dates and IDs)."
     )
     instructions_block = ""
     if extraction_instructions.strip():

@@ -123,6 +123,7 @@ def workflow_to_schema(
                 document_model_id=normalize_public_catalog_id(doc.document_model_id),
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
+                native_pdf_auto=bool(getattr(doc, "native_pdf_auto", False)),
                 extraction_icl_examples=[
                     ExtractionIclExampleSchema(
                         input=str(row.get("input") or ""),

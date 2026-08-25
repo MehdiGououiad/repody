@@ -43,13 +43,13 @@ spec:
     spec:
       {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
       securityContext:
-        {{- include "repody-data.podSecurityContext" (dict "fsGroup" 1000) | nindent 8 }}
+        {{- include "repody-data.podSecurityContext" (dict "root" . "fsGroup" 1000) | nindent 8 }}
       containers:
         - name: minio
           image: {{ include "repody-data.image" .Values.minio.image }}
           imagePullPolicy: IfNotPresent
           securityContext:
-            {{- include "repody-data.containerSecurityContext" (dict "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
+            {{- include "repody-data.containerSecurityContext" (dict "root" . "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
           args:
             - server
             - /data
@@ -122,13 +122,13 @@ spec:
       restartPolicy: OnFailure
       {{- include "repody-data.imagePullSecrets" . | nindent 6 }}
       securityContext:
-        {{- include "repody-data.podSecurityContext" (dict "fsGroup" 1000) | nindent 8 }}
+        {{- include "repody-data.podSecurityContext" (dict "root" . "fsGroup" 1000) | nindent 8 }}
       containers:
         - name: mc
           image: {{ include "repody-data.image" .Values.minio.mcImage }}
           imagePullPolicy: IfNotPresent
           securityContext:
-            {{- include "repody-data.containerSecurityContext" (dict "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
+            {{- include "repody-data.containerSecurityContext" (dict "root" . "runAsUser" 1000 "runAsGroup" 1000) | nindent 12 }}
           env:
             - name: MC_CONFIG_DIR
               value: /tmp/.mc

@@ -1,3 +1,5 @@
+import { browserApi } from "@/lib/api/openapi-client";
+
 export async function fetchSuggestedTemplateType(
   name: string,
   description: string
@@ -6,14 +8,14 @@ export async function fetchSuggestedTemplateType(
   const trimmedDescription = description.trim();
   if (!trimmedName && !trimmedDescription) return null;
 
-  const params = new URLSearchParams({
-    name: trimmedName,
-    description: trimmedDescription,
+  const { data, response } = await browserApi.GET("/v1/schema/suggest-type", {
+    params: {
+      query: {
+        name: trimmedName,
+        description: trimmedDescription,
+      },
+    },
   });
-  const res = await fetch(`/api/v1/schema/suggest-type?${params.toString()}`, {
-    credentials: "include",
-  });
-  if (!res.ok) return null;
-  const data = (await res.json()) as { templateType?: string };
+  if (!response.ok || !data) return null;
   return data.templateType?.trim() || null;
 }

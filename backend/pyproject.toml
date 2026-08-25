@@ -40,6 +40,8 @@ dependencies = [
   # Document preprocessing
   "pillow>=11.1.0",
   "pymupdf>=1.28.0",
+  # Native PDF classify + markdown (Firecrawl); Automode OCR fallback
+  "pdf-inspector>=0.2.0",
 ]
 
 [project.optional-dependencies]

@@ -10,7 +10,10 @@ import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
-import { emptyTestSession, type TestSessionState } from "@/components/workflow/builder/test-run-panel";
+import {
+  emptyTestSession,
+  type TestSessionState,
+} from "@/components/workflow/builder/test-run-session";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 

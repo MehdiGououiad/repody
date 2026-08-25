@@ -90,6 +90,8 @@ run(
     "-f",
     "deploy/client/values-bundled.example.yaml",
     "-f",
+    "deploy/client/values-images.example.yaml",
+    "-f",
     "deploy/client/values-enterprise.example.yaml",
   ],
 );

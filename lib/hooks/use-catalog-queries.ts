@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import type { ModelsCatalogResponse, PlatformConfigResponse } from "@/lib/api/schema-types";
 import type { RuleTemplate } from "@/lib/types";
+import { queryKeys } from "@/lib/hooks/query-keys";
 
-const CATALOG_QUERY_KEY = ["catalog", "models"] as const;
 const CATALOG_STALE_MS = 5 * 60_000;
 
 async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
@@ -15,8 +15,9 @@ async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
 }
 
 export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
+  // Structured extraction only — markdown-only OCR engines are not selectable.
   return catalog.models.filter(
-    (model) => model.kind === "document_model" || model.markdownOnly === true,
+    (model) => model.kind === "document_model" && model.markdownOnly !== true,
   );
 }
 
@@ -27,7 +28,7 @@ export function benchmarkModelsFromCatalog(catalog: ModelsCatalogResponse) {
 
 export function useUnifiedModelsCatalog(enabled = true) {
   return useQuery({
-    queryKey: CATALOG_QUERY_KEY,
+    queryKey: queryKeys.catalog.models,
     enabled,
     queryFn: fetchModelsCatalog,
     staleTime: CATALOG_STALE_MS,
@@ -36,7 +37,7 @@ export function useUnifiedModelsCatalog(enabled = true) {
 
 export function useRulesLibraryCatalog(enabled = true) {
   return useQuery({
-    queryKey: ["catalog", "rules-library"],
+    queryKey: queryKeys.catalog.rulesLibrary,
     enabled,
     queryFn: async (): Promise<RuleTemplate[]> => {
       const { data, error, response } = await browserApi.GET("/v1/rules/library");
@@ -50,7 +51,7 @@ export function useRulesLibraryCatalog(enabled = true) {
 
 export function usePlatformConfig(enabled = true) {
   return useQuery({
-    queryKey: ["catalog", "platform-config"],
+    queryKey: queryKeys.catalog.platformConfig,
     enabled,
     queryFn: async (): Promise<PlatformConfigResponse> => {
       const { data, error, response } = await browserApi.GET("/v1/platform/config");
@@ -100,16 +101,21 @@ export type ModelRuntimeConfigResponse = {
 
 export function useModelRuntimeConfig(enabled = true) {
   return useQuery({
-    queryKey: ["catalog", "model-runtime-config"],
+    queryKey: queryKeys.catalog.modelRuntimeConfig,
     enabled,
     queryFn: async (): Promise<ModelRuntimeConfigResponse> => {
-      const response = await fetch("/api/v1/platform/model-runtime-config", {
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      return (await response.json()) as ModelRuntimeConfigResponse;
+      const { data, error, response } = await browserApi.GET(
+        "/v1/platform/model-runtime-config",
+      );
+      if (error || !response.ok || !data) throwOnApiError(error, response);
+      return {
+        models: (data.models ?? []).map((model) => ({
+          ...model,
+          fields: model.fields ?? [],
+        })),
+        shared: data.shared ?? [],
+        deploymentNotes: data.deploymentNotes ?? [],
+      };
     },
     staleTime: CATALOG_STALE_MS,
   });

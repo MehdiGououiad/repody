@@ -1,13 +1,24 @@
-"""Taskiq worker entrypoint — one pool per process (extract|fast|fraud|computer_use)."""
+"""Taskiq worker entrypoint — one pool per process (extract|fast; fraud|computer_use reserved).
+
+Prefer invoking via the official CLI when possible::
+
+    taskiq worker repody.taskiq.worker:broker --max-async-tasks=N --log-level=INFO
+
+``main()`` uses Taskiq's ``WorkerArgs`` + ``run_worker`` API so we never mutate ``sys.argv``.
+"""
 
 from __future__ import annotations
 
 import signal
-import sys
 
 import structlog
 from taskiq import TaskiqEvents
+from taskiq.cli.common_args import LogLevel
+from taskiq.cli.worker.args import WorkerArgs
+from taskiq.cli.worker.run import run_worker
 
+from repody.extraction.warmup import warmup_repody_vlm
+from repody.inference.openai_compat import close_openai_clients
 from repody.infra.observability.bootstrap import init_observability
 from repody.settings import get_settings
 from repody.taskiq.broker import get_broker
@@ -22,8 +33,6 @@ _process_audit_run_task = get_process_audit_run_task(pool)
 
 
 async def _warmup_document_models(worker_pool: str) -> None:
-    from repody.extraction.warmup import warmup_repody_vlm
-
     if worker_pool != "extract":
         return
 
@@ -39,8 +48,6 @@ async def _startup_warmup(worker_pool: str) -> None:
         if worker_pool == "extract":
             await _warmup_document_models(worker_pool)
     finally:
-        from repody.inference.openai_compat import close_openai_clients
-
         await close_openai_clients()
 
 
@@ -69,16 +76,14 @@ def main() -> None:
     name = f"repody-worker-{pool}"
     log.info("taskiq_worker_starting", name=name, pool=pool, slots=slots)
 
-    sys.argv = [
-        "taskiq",
-        "worker",
-        "repody.taskiq.worker:broker",
-        f"--max-async-tasks={slots}",
-        "--log-level=INFO",
-    ]
-    from taskiq.__main__ import main as taskiq_main
-
-    taskiq_main()
+    run_worker(
+        WorkerArgs(
+            broker="repody.taskiq.worker:broker",
+            modules=[],
+            max_async_tasks=slots,
+            log_level=LogLevel.INFO,
+        )
+    )
 
 
 if __name__ == "__main__":

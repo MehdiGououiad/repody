@@ -5,21 +5,10 @@
 global:
   imagePullSecrets: []
   deploymentEnvironment: production
-  openshift:
-    enabled: false
-    routes:
-      enabled: false
-      tls:
-        termination: edge
-        insecureEdgeTerminationPolicy: Redirect
-      webHost: ""
-      apiHost: ""
-      filesHost: ""
-      filesServiceName: repody-data-minio
-      filesServicePort: 9000
 
-# Portable hardening (Kubernetes Pod Security "restricted").
-# Same profile on every platform. Local dev sets restricted: false.
+# Portable hardening (Kubernetes PSA restricted + OpenShift restricted-v2).
+# Same securityContext on every cluster: runAsNonRoot, no pinned UID.
+# Local / Compose may set restricted: false.
 platform:
   compatibility:
     restricted: true
@@ -28,18 +17,23 @@ images:
   backend:
     repository: repody-backend
     tag: "0.1.0"
+    # Prefer digest in GitOps (image@sha256:…). Empty digest falls back to tag.
+    digest: ""
     pullPolicy: IfNotPresent
   api:
     repository: repody-backend
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
   worker:
     repository: repody-backend
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
   web:
     repository: repody-web
     tag: "0.1.0"
+    digest: ""
     pullPolicy: IfNotPresent
 
 # ── Bundled data plane (local/dev only; disabled for enterprise) ──────────────
@@ -59,7 +53,8 @@ redis:
   enabled: false
   architecture: standalone
   auth:
-    enabled: false
+    # Production forbids enabling this subchart; if enabled outside production, require auth.
+    enabled: true
 
 minio:
   enabled: false
@@ -215,7 +210,7 @@ workerFast:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
 
-# Agent pools (staged queues). replicas 0 until AUDIT_AGENT_*_ENABLED + real load.
+# Reserved agent pools (ADR 007). replicas 0 until real Fraud / Computer Use agents ship.
 workerFraud:
   replicas: 0
   pool: fraud
@@ -356,8 +351,17 @@ secrets:
 config:
   oidcEnabled: true
   authUrl: ""
+  # Public issuer in browser JWTs (route / ingress hostname).
   oidcIssuer: https://auth.example.com/realms/repody
+  # Optional extra accepted JWT iss values (comma-separated list in values).
+  oidcIssuerAliases: []
+  # In-cluster JWKS fetch URL. When empty and keycloak.enabled, Helm derives
+  # http://<release>-keycloak:8080/realms/.../certs (same pattern as Compose
+  # AUDIT_OIDC_JWKS_URL=http://keycloak:8080/...).
   oidcJwksUrl: ""
+  # Web Auth.js server-side token endpoint (in-cluster Keycloak DNS).
+  # Browser still uses oidcIssuer / AUTH_KEYCLOAK_ISSUER for redirects.
+  oidcInternalIssuer: ""
   keycloakAdminUrl: ""
   keycloakAdminUsername: admin
   keycloakAdminPassword: ""
@@ -365,6 +369,7 @@ config:
   keycloakClientId: repody-web
   inferenceMode: llamacpp
   # External OpenAI-compatible document-model endpoint. This chart does not run inference.
+  # Never use host.docker.internal here — that is Compose-only.
   llamacppBaseUrl: https://vlm.example.com/v1
   # Must match llama-server --alias / /v1/models id (local: NuExtract3-Q4_K_M).
   llamacppServedModel: nuextract3-q4_k_m
@@ -407,13 +412,19 @@ config:
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: false
   # Local/dev catalog includes PP-OCRv6 by default; set base URL to a reachable OCR API in-cluster.
+  # Never use host.docker.internal — that is Compose-only (Docker Desktop).
   paddleocrV6Enabled: false
   paddleocrV6BaseUrl: http://paddleocr-v6:8868
   paddleocrV6TimeoutSeconds: 180
   paddleocrV6UseDocOrientationClassify: true
   paddleocrV6UseDocUnwarping: true
   paddleocrV6UseTextlineOrientation: true
-  # GLM-OCR — local Compose uses Ollama :11434; cluster may point at a dedicated service.
+  # paddleocr:qwen (PP-OCR + Qwen text→JSON). Off until cluster URLs are set.
+  paddleocrQwenEnabled: false
+  qwen35BaseUrl: http://qwen35:8084/v1
+  qwen35ServedModel: Qwen3.5-4B
+  qwen35TimeoutSeconds: 180
+  # GLM-OCR — local Compose uses host llama-server; cluster may point at a dedicated service.
   glmOcrEnabled: false
   glmOcrBaseUrl: http://glmocr:8083/v1
   glmOcrServedModel: glm-ocr:latest
@@ -435,16 +446,18 @@ observability:
   otelEnabled: false
   otelEndpoint: ""
 
+# Off by default — cluster / platform team owns NetworkPolicy and egress.
+# Opt in only when the chart must emit policies (generic K8s without platform NP).
+# OpenShift: deploy/values/openshift.yaml keeps this disabled.
 networkPolicy:
-  enabled: true
-  # OVN (OpenShift): port-only DNS egress is insufficient — allow these namespaces (all ports).
+  enabled: false
   dnsNamespaces:
     - openshift-dns
     - kube-system
+  # When networkPolicy.enabled=true, set cluster-specific CIDRs (never 0.0.0.0/0).
   externalEgress:
-    enabled: true
-    cidrs:
-      - 0.0.0.0/0
+    enabled: false
+    cidrs: []
     ports:
       - 80
       - 443
@@ -453,4 +466,7 @@ networkPolicy:
       - 6380
       - 7070
       - 8081
+      - 8083
+      - 8084
+      - 8868
       - 9000

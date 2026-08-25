@@ -122,6 +122,8 @@ export async function startBenchmark(options: {
   form.set("judge_quality", String(options.judgeQuality ?? true));
   if (options.document) form.set("document", options.document);
   if (options.manifest) form.set("manifest", options.manifest);
+  // Multipart File uploads: schema types document/manifest as strings, so keep
+  // thin browserFetch rather than forcing openapi-fetch body typing.
   const response = await browserFetch("/operator/benchmarks", { method: "POST", body: form });
   if (!response.ok) {
     const text = await response.text();

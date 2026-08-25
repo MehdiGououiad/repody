@@ -326,6 +326,8 @@ function promote(images, flags, channel) {
         "-f",
         "deploy/client/values-external.example.yaml",
         "-f",
+        "deploy/client/values-images.example.yaml",
+        "-f",
         "deploy/client/values-enterprise.example.yaml",
       ],
     ],
@@ -349,9 +351,10 @@ Handoff bundle:
   ${path.relative(root, path.join(dir, "helm-images.yaml"))}
 
 Client next steps:
-  1. Merge helm-images.yaml image digests into GitOps values
-  2. pnpm client:check -- --live (on staging cluster)
-  3. Argo CD sync repody-data -> repody-auth -> repody
+  1. Merge values (+ optional helm-images.yaml digests) into GitOps
+  2. Same valueFiles on OpenShift and generic Kubernetes (Ingress only)
+  3. pnpm client:check -- --live (on staging cluster)
+  4. Argo CD sync repody-data -> repody-auth -> repody
 `);
 }
 

@@ -42,7 +42,7 @@ function LoginContent() {
   const clearingSessionRef = useRef(false);
 
   const sessionError = session?.error;
-  const accessToken = session?.accessToken;
+  const sessionOk = status === "authenticated" && Boolean(session?.user) && !sessionError;
 
   useEffect(() => {
     if (!hydrated || status !== "authenticated") {
@@ -51,7 +51,7 @@ function LoginContent() {
       }
       return;
     }
-    if (sessionError || !accessToken) {
+    if (sessionError || !session?.user) {
       if (clearingSessionRef.current) {
         return;
       }
@@ -60,7 +60,7 @@ function LoginContent() {
       return;
     }
     router.replace(callbackUrl);
-  }, [accessToken, callbackUrl, hydrated, router, sessionError, status]);
+  }, [callbackUrl, hydrated, router, session?.user, sessionError, status]);
 
   // Only block on session bootstrap. Authenticated-but-invalid is cleared in the
   // effect above; still show the sign-in form so a stuck signOut cannot hang the UI.
@@ -73,7 +73,7 @@ function LoginContent() {
     );
   }
 
-  if (status === "authenticated" && accessToken && !sessionError) {
+  if (sessionOk) {
     return (
       <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
         <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />

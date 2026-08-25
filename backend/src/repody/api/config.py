@@ -103,11 +103,11 @@ async def get_model_runtime_config() -> ModelRuntimeConfigResponse:
 @router.get(
     "/models/catalog",
     response_model=ModelsCatalogResponse,
+    dependencies=[Depends(require_permission("models", "read"))],
 )
 async def get_models_catalog() -> ModelsCatalogResponse:
     """Document and validation model catalog with live availability."""
     return await fetch_models_catalog()
-
 
 @router.get(
     "/diagnostics/document-model",

@@ -107,6 +107,20 @@ if ((push || pushOnly) && !registry) {
   );
 }
 
+function assertImmutablePushTag(name, tag) {
+  const value = String(tag ?? "").trim();
+  if (!value || value === "latest") {
+    failConfig(
+      `Refusing to push ${name} with mutable/empty tag "${tag}". Set REPODY_IMAGE_TAG (or REPODY_BACKEND_IMAGE_TAG / REPODY_WEB_IMAGE_TAG) to an immutable tag such as a semver or git SHA.`,
+    );
+  }
+}
+
+if (push || pushOnly) {
+  assertImmutablePushTag("repody-backend", backendTag);
+  assertImmutablePushTag("repody-web", webTag);
+}
+
 if (multiPlatform && pushOnly) {
   failConfig(
     "REPODY_IMAGE_PLATFORMS cannot be used with --push-only. Multi-arch images must be built with buildx --push in one step.",
@@ -277,7 +291,7 @@ if (!pushOnly && (want("web") || only === "all")) {
         "-f",
         "Dockerfile.web",
         "--build-arg",
-        `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://repody-api:8000"}`,
+        `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://127.0.0.1:8000"}`,
         "--build-arg",
         `NEXT_PUBLIC_BUGSINK_DSN=${process.env.NEXT_PUBLIC_BUGSINK_DSN ?? ""}`,
         "--build-arg",
@@ -296,7 +310,7 @@ if (!pushOnly && (want("web") || only === "all")) {
       "-f",
       "Dockerfile.web",
       "--build-arg",
-      `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://repody-api:8000"}`,
+      `BACKEND_URL=${process.env.REPODY_WEB_BACKEND_URL ?? "http://127.0.0.1:8000"}`,
       "--build-arg",
       `NEXT_PUBLIC_BUGSINK_DSN=${process.env.NEXT_PUBLIC_BUGSINK_DSN ?? ""}`,
       "--build-arg",

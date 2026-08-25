@@ -10,10 +10,14 @@ def _session_factory():
 
 
 async def get_session() -> AsyncGenerator[AsyncSession]:
+    """Yield a request-scoped session. Callers that mutate must ``await session.commit()``."""
     async with _session_factory()() as session:
         try:
             yield session
-            await session.commit()
         except Exception:
             await session.rollback()
             raise
+
+
+# Alias for older call sites / docs that still say get_db.
+get_db = get_session

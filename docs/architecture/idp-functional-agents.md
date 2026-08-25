@@ -1,7 +1,7 @@
 # IDP functional architecture (as-built)
 
-Functional-first IDP slice on a three-agent platform. Fraud and Computer Use are
-SKIPPED stubs with dedicated Taskiq queues for independent scaling (ADR 007).
+Functional-first IDP agent. Recipe is **IDP-only**; fraud/computer_use pool names
+remain reserved in Helm for a future implementation (ADR 007).
 
 **Principles:** small pure functions · explicit data contracts · composition ·
 side effects only at thin adapters · errors as data where partial failure is normal.
@@ -9,17 +9,13 @@ side effects only at thin adapters · errors as data where partial failure is no
 Canonical map: [CONTEXT.md](../../CONTEXT.md) · Decision: [ADR 006](../adr/006-three-agent-functional-idp.md) ·
 Queues: [ADR 007](../adr/007-staged-agent-queues-taskiq.md).
 
-## Hot path (staged)
+## Hot path
 
 ```
 taskiq (pool extract|fast) → process_run (claim, stage idp)
       → execute_platform_run(agent_stage=idp)
-      → execute_idp_run → compose_idp → persist
-      → if more agents: outbox handoff → pool fraud|computer_use
-      → final stage: complete_run
+      → execute_idp_run → compose_idp → persist → complete_run
 ```
-
-When fraud/CU flags are off, IDP completes in one stage (parity with pre-ADR-007).
 
 ## Layout (live)
 
@@ -27,28 +23,26 @@ When fraud/CU flags are off, IDP completes in one stage (parity with pre-ADR-007
 agents/idp/
   contracts.py     frozen DTOs
   compose.py       pure plan + compose_idp
-  run.py           execute_idp_run + IdpRunPorts
+  run.py           execute_idp_run + thin IdpRunPorts
+  progress.py      UI progress / GPU cold-start labels
   adapters/
-    mapping.py     ORM/snapshot → contracts
+    mapping.py     ORM/snapshot → contracts (+ IdpExtractionMeta)
     extract.py     extract_one → extraction.pipeline
     validate.py    rules.runner + summarize
-    persist.py     fields/rules + optional complete_run
-
-agents/fraud/      SKIPPED execute_fraud
-agents/computer_use/  SKIPPED execute_computer_use
+    persist.py     fields/rules + complete_run
 
 runtime/
   contracts/       Result, AgentOutcome, AgentContext
   recipe.py        resolve_recipe + one-stage execute_platform_run
   pools.py         pool ↔ agent map
-  agent_metadata.py  handoff metadata + PendingCompletion
+  agent_metadata.py  stage metadata + PendingCompletion
   run/             RunStatus, enqueue DTOs, id helpers
 
 app/run/
   lifecycle.py     entity + events + pure transitions
   commands.py      claim / complete / fail / finalize
-  processor.py     claim (idp) / resume (later) + handoff / finalize
-  handoff.py       reuse outbox row for next pool
+  processor.py     claim + finalize
+  handoff.py       reserved for multi-agent handoff
   persistence.py · snapshot.py · progress.py · intake.py
 ```
 
@@ -61,15 +55,13 @@ app/run/
 | Extract + validate | `agents/idp/` |
 | VLM bytes → fields | `extraction/` (behind `adapters/extract.py`) |
 | Rule evaluation | `rules/` (behind `adapters/validate.py`) |
-| Fraud / CU stubs | `agents/fraud/`, `agents/computer_use/` |
 
 ## Worker pools
 
 | Pool | Agent |
 |------|--------|
 | `extract` / `fast` | IDP (document vs logic-only capacity) |
-| `fraud` | Fraud |
-| `computer_use` | Computer Use |
+| `fraud` / `computer_use` | Reserved (not implemented) |
 
 ## Non-goals
 

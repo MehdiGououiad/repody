@@ -47,6 +47,7 @@ async def create_workflow(body: CreateWorkflowBody, session: AsyncSession = Depe
     wf = await workflow_service.create_workflow(
         session, name=body.name, description=body.description, owner=body.owner
     )
+    await session.commit()
     return WorkflowResponse(workflow=wf)
 
 
@@ -59,6 +60,7 @@ async def bulk_delete_workflows(
     body: BulkDeleteWorkflowsBody, session: AsyncSession = Depends(get_session)
 ):
     await workflow_service.bulk_archive_workflows(session, body.ids)
+    await session.commit()
 
 
 @router.get(
@@ -86,6 +88,7 @@ async def update_workflow(
         wf = await workflow_service.upsert_workflow(session, body)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+    await session.commit()
     return WorkflowResponse(workflow=wf)
 
 
@@ -98,6 +101,7 @@ async def delete_workflow(workflow_id: str, session: AsyncSession = Depends(get_
     ok = await workflow_service.archive_workflow(session, workflow_id)
     if not ok:
         raise HTTPException(404, "Workflow not found")
+    await session.commit()
 
 
 @router.post(
@@ -115,6 +119,7 @@ async def deploy_workflow(
     )
     if not wf:
         raise HTTPException(404, "Workflow not found")
+    await session.commit()
     return WorkflowResponse(workflow=wf)
 
 

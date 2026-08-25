@@ -127,6 +127,7 @@ async def presign_uploads(
             )
         )
 
+    await session.commit()
     return PresignResponse(upload_mode="presigned", uploads=items)
 
 
@@ -190,10 +191,32 @@ async def confirm_uploads(
             )
         )
 
-    # Commit before the response so the next request (runs/json) can see confirmed_at.
-    # get_session commits after the response is sent, which races the UI/test client.
     await session.commit()
     return ConfirmUploadResponse(uploads=confirmed)
+
+
+async def _read_upload_capped(upload: UploadFile, *, max_bytes: int) -> bytes:
+    """Read multipart body with a hard cap so oversized uploads fail before full buffer."""
+    declared = getattr(upload, "size", None)
+    if isinstance(declared, int) and declared > max_bytes:
+        raise HTTPException(
+            400,
+            f"File exceeds maximum size of {max_bytes} bytes.",
+        )
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await upload.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                400,
+                f"File exceeds maximum size of {max_bytes} bytes.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.post("", response_model=UploadResponse, status_code=201)
@@ -203,7 +226,7 @@ async def upload_files(files: list[UploadFile] = File(...)) -> UploadResponse:
     storage = get_storage()
     items: list[UploadItem] = []
     for upload in files:
-        data = await upload.read()
+        data = await _read_upload_capped(upload, max_bytes=settings.max_upload_bytes)
         try:
             safe_name, verified_mime = validate_upload_file(
                 filename=upload.filename,

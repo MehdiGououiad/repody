@@ -3,7 +3,7 @@
  * Production stress test — enqueue 1000 real extraction runs inside the API pod.
  *
  * Prerequisites:
- *   - Workers scaled (merge deploy/client/lab/values.stress-test.yaml and sync)
+ *   - Workers scaled in client GitOps values / Helm
  *   - External VLM / llama-server reachable from worker-extract pods
  *   - Optional: OIDC token via STRESS_BEARER or --token
  *

@@ -22,13 +22,14 @@ Official reference: [External Secrets — Vault provider](https://external-secre
 secret/repody/production/
   AUTH_SECRET
   AUTH_KEYCLOAK_CLIENT_SECRET
-  KEYCLOAK_ADMIN_PASSWORD       # only if using repody-auth (lab/small tenant)
+  KEYCLOAK_ADMIN_PASSWORD       # only if using in-cluster repody-auth
   AUDIT_DATABASE_URL            # external: RDS URL | bundled: postgresql+asyncpg://...@repody-data-postgresql:5432/...
   AUDIT_REDIS_URL               # required for Taskiq
   AUDIT_MINIO_ACCESS_KEY
   AUDIT_MINIO_SECRET_KEY
   BUGSINK_DSN
   AUDIT_LLAMACPP_API_KEY
+  AUDIT_OPERATOR_BENCHMARK_PASSWORD  # optional; never put in ConfigMap / Helm config.*
   REGISTRY_DOCKERCONFIGJSON     # dockerconfigjson for registry-pull-secret
 
 secret/repody/production/data/   # bundled data-plane only
@@ -71,10 +72,11 @@ This enforces:
 
 - `platform.compatibility.restricted`
 - `secrets.create: false`
-- `networkPolicy.enabled: true`
 - PodDisruptionBudgets and autoscaling
+- JSON logs + OpenTelemetry hooks (point `observability.otelEndpoint` at your collector)
 
-> `deploy/values/openshift.yaml` sets `networkPolicy.enabled: false` for minimal external smoke tests only. **Client GitOps must use `values-enterprise.example.yaml`** so network policies stay on.
+Networking / NetworkPolicy / egress allowlists are owned by the cluster platform team.
+On OpenShift, merge `deploy/values/openshift.yaml` (chart NetworkPolicy off).
 
 ## Preflight commands
 
@@ -107,12 +109,12 @@ pnpm enterprise:secrets -- \
 
 Only **references** (`existingSecret`, `urlKey`, Vault `remoteRef` paths) belong in values files.
 
-## Lab vs production
+## Production expectations
 
-| | Client test lab (`openshift-client-test`) | Production client |
-|--|-------------------------------------|-------------------|
-| Vault | In-cluster dev server (fast unseal) | Client HA Vault (HTTPS) |
-| ESO + paths | Same layout as production | Same |
-| Secrets in Git | Never | Never |
+| Item | Production |
+|------|------------|
+| Vault | Client HA Vault (HTTPS), not an in-cluster dev server |
+| ESO + paths | [ExternalSecret](../../deploy/client/secrets/) templates in client GitOps |
+| Secrets in Git | Never — only `existingSecret` / Vault path references |
 
-Lab Vault overlays: `deploy/client/lab/` — see [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab).
+Install order and verification: [OPENSHIFT.md](./OPENSHIFT.md).

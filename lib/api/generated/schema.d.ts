@@ -1099,6 +1099,12 @@ export interface components {
              */
             markdownExtraction: boolean;
             /**
+             * Nativepdfauto
+             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @default false
+             */
+            nativePdfAuto: boolean;
+            /**
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).
              */
@@ -1143,6 +1149,12 @@ export interface components {
              * @default false
              */
             markdownExtraction: boolean;
+            /**
+             * Nativepdfauto
+             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @default false
+             */
+            nativePdfAuto: boolean;
             /**
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).

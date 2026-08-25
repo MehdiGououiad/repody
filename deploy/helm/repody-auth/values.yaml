@@ -1,11 +1,6 @@
 global:
   imagePullSecrets: []
   deploymentEnvironment: production
-  openshift:
-    enabled: false
-    routes:
-      enabled: false
-      authHost: ""
 
 ingress:
   enabled: false
@@ -13,7 +8,7 @@ ingress:
   host: ""
   annotations: {}
   tls:
-    enabled: true
+    enabled: false
     secretName: repody-tls
 
 gatewayConsumerNamespace: repody

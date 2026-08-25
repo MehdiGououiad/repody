@@ -8,32 +8,15 @@ from repody.agents.idp.adapters.mapping import document_extraction_from_result
 from repody.agents.idp.contracts import (
     DocumentExtraction,
     DocumentSpec,
-    SchemaField,
     StoredDocument,
 )
-from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
+from repody.extraction.types import ExtractionIclExample, schema_specs_from_fields
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.extraction.nuextract import normalize_template_type
 from repody.extraction.pipeline import get_extract_document
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.app.run.helpers import resolve_run_doc_mime
 from repody.settings import get_settings
-
-
-def _schema_field_to_spec(field: SchemaField) -> SchemaFieldSpec:
-    return SchemaFieldSpec(
-        name=field.name,
-        description=field.description or "",
-        template_type=normalize_template_type(field.template_type),
-        enum_values=list(field.enum_values) if field.enum_values else None,
-        children=[_schema_field_to_spec(c) for c in field.children] or None,
-    )
-
-
-def _schema_fields_to_specs(
-    fields: tuple[SchemaField, ...] | list[SchemaField],
-) -> list[SchemaFieldSpec]:
-    return [_schema_field_to_spec(f) for f in fields if f.name.strip()]
 
 
 async def extract_one(
@@ -55,7 +38,10 @@ async def extract_one(
             raw_bytes or None,
             mime,
             spec.label,
-            _schema_fields_to_specs(spec.schema_fields),
+            schema_specs_from_fields(
+                spec.schema_fields,
+                normalize_template_type=normalize_template_type,
+            ),
             extraction_mode=spec.extraction_mode or DEFAULT_READ_PATH_ID,
             document_model_id=spec.document_model_id or get_settings().default_document_model_id,
             storage_key=stored.storage_key,
@@ -63,6 +49,7 @@ async def extract_one(
             validation_mode=validation_mode,
             extraction_instructions=spec.extraction_instructions,
             markdown_extraction=spec.markdown_extraction,
+            native_pdf_auto=spec.native_pdf_auto,
             extraction_icl_examples=icl_examples or None,
         )
         return Result.ok(

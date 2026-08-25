@@ -19,7 +19,7 @@ async def rules_library(session: AsyncSession = Depends(get_session)):
     if not rows:
         for tpl in RULE_TEMPLATES:
             session.add(tpl)
-        await session.flush()
+        await session.commit()
         result = await session.execute(select(RuleTemplate))
         rows = result.scalars().all()
     llm_enabled = get_settings().llm_validation_enabled
