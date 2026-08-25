@@ -15,9 +15,7 @@ async def queue_position(session: AsyncSession, run_id: str) -> tuple[int | None
         return None, None
 
     queued = Run.status == RunStatus.queued.value
-    depth = int(
-        await session.scalar(select(func.count()).select_from(Run).where(queued)) or 0
-    )
+    depth = int(await session.scalar(select(func.count()).select_from(Run).where(queued)) or 0)
     if depth == 0:
         return None, None
 

@@ -112,10 +112,21 @@ async def _timed(name: str, report: IntegrationReport, coro) -> Any:
     t0 = time.perf_counter()
     try:
         result = await coro
-        report.add(StepResult(name=name, passed=True, duration_s=time.perf_counter() - t0, data=result if isinstance(result, dict) else {}))
+        report.add(
+            StepResult(
+                name=name,
+                passed=True,
+                duration_s=time.perf_counter() - t0,
+                data=result if isinstance(result, dict) else {},
+            )
+        )
         return result
     except Exception as exc:
-        report.add(StepResult(name=name, passed=False, detail=str(exc), duration_s=time.perf_counter() - t0))
+        report.add(
+            StepResult(
+                name=name, passed=False, detail=str(exc), duration_s=time.perf_counter() - t0
+            )
+        )
         return None
 
 
@@ -248,12 +259,26 @@ async def main() -> int:
                 {
                     **document_def(case, doc_id=doc_id),
                     "schema": [
-                        {"id": f"f-total-{uuid.uuid4().hex[:6]}", "name": "total_amount", "description": "Total TTC"},
-                        {"id": f"f-tva-{uuid.uuid4().hex[:6]}", "name": "tva", "description": "Total TVA"},
+                        {
+                            "id": f"f-total-{uuid.uuid4().hex[:6]}",
+                            "name": "total_amount",
+                            "description": "Total TTC",
+                        },
+                        {
+                            "id": f"f-tva-{uuid.uuid4().hex[:6]}",
+                            "name": "tva",
+                            "description": "Total TVA",
+                        },
                     ],
                 }
             ]
-            rules = [{**LOGIC_RULE_TOTAL_OK, "id": f"logic-{uuid.uuid4().hex[:6]}", "appliesTo": [doc_id]}]
+            rules = [
+                {
+                    **LOGIC_RULE_TOTAL_OK,
+                    "id": f"logic-{uuid.uuid4().hex[:6]}",
+                    "appliesTo": [doc_id],
+                }
+            ]
             cold = await _timed(
                 "Repody VLM extraction (cold)",
                 report,
@@ -272,7 +297,11 @@ async def main() -> int:
             if cold:
                 tva = tva_from_result(cold["result"])
                 if tva != EXPECTED_TVA:
-                    report.add(StepResult("TVA field value", False, f"got {tva!r}, expected {EXPECTED_TVA}"))
+                    report.add(
+                        StepResult(
+                            "TVA field value", False, f"got {tva!r}, expected {EXPECTED_TVA}"
+                        )
+                    )
 
             doc_fail = f"doc-{uuid.uuid4().hex[:8]}"
             wf_fail = f"wf-int-fail-{uuid.uuid4().hex[:6]}"

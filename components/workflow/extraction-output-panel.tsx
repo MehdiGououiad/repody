@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Braces, Check, Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
-import type { RunDocumentExtractionMeta } from "@/lib/types/audit";
 import { DocumentMarkdownPanel } from "@/components/workflow/document-markdown-panel";
+import type { RunDocumentExtractionMeta } from "@/lib/types/audit";
+import { cn } from "@/lib/utils";
 
 function formatJson(text: string): string {
   const trimmed = text.trim();
@@ -54,7 +54,13 @@ function ExtractionJsonPanel({ text, className }: { text: string; className?: st
             </p>
           </div>
         </div>
-        <Button type="button" variant="outline" size="sm" className="shrink-0 h-8" onClick={handleCopy}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 h-8"
+          onClick={handleCopy}
+        >
           {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? t("copied") : t("copy")}
         </Button>

@@ -24,7 +24,12 @@ const commandItems: CommandLink[] = [
   { groupKey: "navigate", labelKey: "nav.workflows", fallback: "Workflows", href: "/workflows" },
   { groupKey: "navigate", labelKey: "nav.audits", fallback: "Audit Reports", href: "/audits" },
   { groupKey: "navigate", labelKey: "nav.users", fallback: "Users & access", href: "/users" },
-  { groupKey: "workflows", labelKey: "common.newWorkflow", fallback: "New workflow", href: "/workflows/new" },
+  {
+    groupKey: "workflows",
+    labelKey: "common.newWorkflow",
+    fallback: "New workflow",
+    href: "/workflows/new",
+  },
 ];
 
 const groupKeys: CommandLink["groupKey"][] = ["navigate", "audits", "workflows"];

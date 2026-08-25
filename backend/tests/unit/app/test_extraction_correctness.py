@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import pytest
 
-from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from repody.extraction.cache import (
     CACHE_VERSION,
     cache_key_from_storage,
     schema_fingerprint,
     should_cache_result,
 )
-from repody.extraction.modes import resolve_run_validation_mode
 from repody.extraction.fields import fields_from_nuextract_json
+from repody.extraction.modes import resolve_run_validation_mode
 from repody.extraction.schema import empty_fields_from_schema
+from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from repody.rules.runner import skipped_llm_results
 
 
@@ -105,7 +105,9 @@ def test_schema_fingerprint_includes_descriptions():
 
 
 def test_schema_fingerprint_includes_template_type():
-    as_text = [SchemaFieldSpec(name="total_amount", description="Total", template_type="verbatim-string")]
+    as_text = [
+        SchemaFieldSpec(name="total_amount", description="Total", template_type="verbatim-string")
+    ]
     as_number = [SchemaFieldSpec(name="total_amount", description="Total", template_type="number")]
     assert schema_fingerprint(as_text) != schema_fingerprint(as_number)
 

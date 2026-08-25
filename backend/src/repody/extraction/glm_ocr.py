@@ -66,7 +66,7 @@ def _pdf_page_count(document_bytes: bytes, mime_type: str) -> int | None:
     try:
         with fitz.open(stream=document_bytes, filetype="pdf") as doc:
             return int(doc.page_count)
-    except Exception:  # noqa: BLE001 — telemetry only
+    except Exception:
         return None
 
 
@@ -96,8 +96,7 @@ async def fetch_glm_ocr_markdown(
         model=(settings.glm_ocr_served_model or "GLM-OCR").strip(),
         timeout_seconds=int(settings.glm_ocr_timeout_seconds),
         layout_device=(settings.glm_ocr_layout_device or "cpu").strip() or "cpu",
-        layout_model_dir=(settings.glm_ocr_layout_model_dir or "").strip()
-        or DEFAULT_LAYOUT_MODEL,
+        layout_model_dir=(settings.glm_ocr_layout_model_dir or "").strip() or DEFAULT_LAYOUT_MODEL,
         max_workers=int(settings.glm_ocr_sdk_max_workers),
         pdf_max_pages=pdf_max,
         id_card_profile=bool(settings.glm_ocr_id_card_profile),

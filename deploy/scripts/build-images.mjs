@@ -2,28 +2,25 @@
 import { spawn } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const registry = (process.env.REPODY_IMAGE_REGISTRY ?? process.env.REGISTRY ?? "")
-  .replace(/\/$/, "");
+const registry = (process.env.REPODY_IMAGE_REGISTRY ?? process.env.REGISTRY ?? "").replace(
+  /\/$/,
+  ""
+);
 const backendTag =
   process.env.REPODY_BACKEND_IMAGE_TAG ??
   process.env.REPODY_IMAGE_TAG ??
   process.env.TAG ??
   "latest";
 const webTag =
-  process.env.REPODY_WEB_IMAGE_TAG ??
-  process.env.REPODY_IMAGE_TAG ??
-  process.env.TAG ??
-  backendTag;
+  process.env.REPODY_WEB_IMAGE_TAG ?? process.env.REPODY_IMAGE_TAG ?? process.env.TAG ?? backendTag;
 const { push, pushOnly, only } = parseArgs(process.argv);
-const backendExtras = normalizeBackendExtras(
-  process.env.REPODY_BACKEND_EXTRAS ?? "otel,glmocr",
-);
+const backendExtras = normalizeBackendExtras(process.env.REPODY_BACKEND_EXTRAS ?? "otel,glmocr");
 const includeBenchmarkFixtures = /^(1|true|yes)$/i.test(
-  process.env.REPODY_INCLUDE_BENCHMARK_FIXTURES ?? "",
+  process.env.REPODY_INCLUDE_BENCHMARK_FIXTURES ?? ""
 );
 const platforms = normalizePlatforms(process.env.REPODY_IMAGE_PLATFORMS ?? "");
 const multiPlatform = platforms.length > 0;
@@ -33,8 +30,7 @@ const localCacheRoot =
     ? path.join(os.homedir(), ".cache", "repody", "docker-buildkit")
     : path.join(root, ".docker-cache"));
 
-const image = (name, tag) =>
-  registry ? `${registry}/${name}:${tag}` : `${name}:${tag}`;
+const image = (name, tag) => (registry ? `${registry}/${name}:${tag}` : `${name}:${tag}`);
 
 function failConfig(message) {
   console.error(message);
@@ -74,9 +70,7 @@ function normalizeOnly(raw) {
   if (["all", "backend", "web", "none"].includes(value)) {
     return value;
   }
-  failConfig(
-    `Invalid --only=${raw}. Use one of: all, backend, web, none.`,
-  );
+  failConfig(`Invalid --only=${raw}. Use one of: all, backend, web, none.`);
 }
 
 function normalizeBackendExtras(raw) {
@@ -87,7 +81,7 @@ function normalizeBackendExtras(raw) {
   for (const extra of extras) {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(extra)) {
       failConfig(
-        `Invalid REPODY_BACKEND_EXTRAS entry "${extra}". Use comma-separated Python extra names, for example "otel".`,
+        `Invalid REPODY_BACKEND_EXTRAS entry "${extra}". Use comma-separated Python extra names, for example "otel".`
       );
     }
   }
@@ -103,7 +97,7 @@ function normalizePlatforms(raw) {
 
 if ((push || pushOnly) && !registry) {
   failConfig(
-    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your Docker Hub namespace, GHCR path, or client registry, for example mehdigououiad or ghcr.io/yourorg/repody.",
+    "REPODY_IMAGE_REGISTRY is required for image push. Set it to your Docker Hub namespace, GHCR path, or client registry, for example mehdigououiad or ghcr.io/yourorg/repody."
   );
 }
 
@@ -111,7 +105,7 @@ function assertImmutablePushTag(name, tag) {
   const value = String(tag ?? "").trim();
   if (!value || value === "latest") {
     failConfig(
-      `Refusing to push ${name} with mutable/empty tag "${tag}". Set REPODY_IMAGE_TAG (or REPODY_BACKEND_IMAGE_TAG / REPODY_WEB_IMAGE_TAG) to an immutable tag such as a semver or git SHA.`,
+      `Refusing to push ${name} with mutable/empty tag "${tag}". Set REPODY_IMAGE_TAG (or REPODY_BACKEND_IMAGE_TAG / REPODY_WEB_IMAGE_TAG) to an immutable tag such as a semver or git SHA.`
     );
   }
 }
@@ -123,13 +117,13 @@ if (push || pushOnly) {
 
 if (multiPlatform && pushOnly) {
   failConfig(
-    "REPODY_IMAGE_PLATFORMS cannot be used with --push-only. Multi-arch images must be built with buildx --push in one step.",
+    "REPODY_IMAGE_PLATFORMS cannot be used with --push-only. Multi-arch images must be built with buildx --push in one step."
   );
 }
 
 if (multiPlatform && !push) {
   failConfig(
-    "REPODY_IMAGE_PLATFORMS requires --push (or pnpm images:release). Multi-arch manifests cannot be loaded into a single local Docker daemon.",
+    "REPODY_IMAGE_PLATFORMS requires --push (or pnpm images:release). Multi-arch manifests cannot be loaded into a single local Docker daemon."
   );
 }
 
@@ -181,8 +175,7 @@ function appendBuildKitCacheFlags(args, cacheName) {
   const envPrefix = `REPODY_BUILDKIT_${cacheName.toUpperCase().replace(/[^A-Z0-9]/g, "_")}`;
   const cacheFrom =
     process.env[`${envPrefix}_CACHE_FROM`] ?? process.env.REPODY_BUILDKIT_CACHE_FROM;
-  const cacheTo =
-    process.env[`${envPrefix}_CACHE_TO`] ?? process.env.REPODY_BUILDKIT_CACHE_TO;
+  const cacheTo = process.env[`${envPrefix}_CACHE_TO`] ?? process.env.REPODY_BUILDKIT_CACHE_TO;
   if (cacheFrom) {
     for (const ref of cacheFrom.split(",")) {
       const trimmed = ref.trim();
@@ -217,7 +210,7 @@ async function ensureBuildxBuilder() {
     await runAsync(
       "docker",
       ["buildx", "create", "--name", name, "--driver", "docker-container", "--use"],
-      buildEnv,
+      buildEnv
     );
   } else {
     await runAsync("docker", ["buildx", "use", name], buildEnv);
@@ -325,7 +318,7 @@ if (!pushOnly && (want("web") || only === "all")) {
 }
 
 console.log(
-  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, platforms=${platforms.join(",") || "host"}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"})`,
+  `${pushOnly ? "Pushing" : "Building"} Repody images (backend=${backendTag}, web=${webTag}, only=${only}, registry=${registry || "(local)"}, backendExtras=${backendExtras}, platforms=${platforms.join(",") || "host"}, benchmarkFixtures=${includeBenchmarkFixtures ? "on" : "off"})`
 );
 
 let buildFailed = false;

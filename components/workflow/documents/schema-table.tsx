@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FileJson2, GripVertical, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { GripVertical, FileJson2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,6 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImportNuextractTemplateDialog } from "@/components/workflow/documents/import-nuextract-template-dialog";
+import {
+  SchemaFieldExtraConfig,
+  schemaFieldNeedsExtra,
+} from "@/components/workflow/documents/schema-field-extra";
 import { fetchSuggestedTemplateType } from "@/lib/api/suggest-template-type";
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
@@ -21,17 +26,15 @@ import {
   getVisibleTemplateTypes,
   groupTemplateTypes,
   isListTemplateType,
+  type NuExtractTemplateType,
+  type NuExtractTypeGroup,
   scalarTemplateType,
   supportsListTemplateType,
   withListTemplateType,
-  type NuExtractTemplateType,
-  type NuExtractTypeGroup,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
-import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
-import { SchemaFieldExtraConfig, schemaFieldNeedsExtra } from "@/components/workflow/documents/schema-field-extra";
-import { ImportNuextractTemplateDialog } from "@/components/workflow/documents/import-nuextract-template-dialog";
 import { cn, shortId } from "@/lib/utils";
+import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
 
 const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "structure", "advanced"];
 const VISIBLE_TEMPLATE_TYPES = new Set(getVisibleTemplateTypes());
@@ -49,7 +52,9 @@ function useTypeLabels(t: ReturnType<typeof useTranslations>) {
       const scalar = scalarTemplateType(value);
       if (!VISIBLE_TEMPLATE_TYPES.has(scalar as NuExtractTemplateType)) return value;
       try {
-        return t(`schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label");
+        return t(
+          `schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label"
+        );
       } catch {
         return scalar;
       }
@@ -154,8 +159,7 @@ function SchemaFieldRow({
   const normName = normalizeSchemaFieldName(field.name);
   const isDuplicate = normName.length > 0 && duplicateNames.has(normName);
   const hasIntent = field.name.trim().length > 0 || field.description.trim().length > 0;
-  const showSuggestion =
-    hasIntent && suggestedType !== null && suggestedType !== currentType;
+  const showSuggestion = hasIntent && suggestedType !== null && suggestedType !== currentType;
 
   useEffect(() => {
     if (!hasIntent) return;
@@ -180,84 +184,84 @@ function SchemaFieldRow({
         )}
       >
         <div className="flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border">
-        <span className={FIELD_LABEL_CLASS}>{t("schema.name")}</span>
-        <div className="flex items-center gap-1 min-w-0">
-          <GripVertical className="hidden md:block h-3 w-3 text-outline-variant opacity-0 group-hover:opacity-60 cursor-grab shrink-0" />
-          <Input
-            value={field.name}
-            onChange={(e) => onUpdate({ name: e.target.value })}
-            placeholder={t("schema.namePlaceholder")}
-            aria-invalid={isDuplicate}
-            className={cn(
-              "font-mono text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input",
-              isDuplicate && "border-danger text-danger focus-visible:border-danger"
-            )}
-          />
+          <span className={FIELD_LABEL_CLASS}>{t("schema.name")}</span>
+          <div className="flex items-center gap-1 min-w-0">
+            <GripVertical className="hidden md:block h-3 w-3 text-outline-variant opacity-0 group-hover:opacity-60 cursor-grab shrink-0" />
+            <Input
+              value={field.name}
+              onChange={(e) => onUpdate({ name: e.target.value })}
+              placeholder={t("schema.namePlaceholder")}
+              aria-invalid={isDuplicate}
+              className={cn(
+                "font-mono text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input",
+                isDuplicate && "border-danger text-danger focus-visible:border-danger"
+              )}
+            />
+          </div>
+          {isDuplicate ? (
+            <p className="text-[10px] text-danger md:pl-4">{t("schema.duplicateName")}</p>
+          ) : null}
         </div>
-        {isDuplicate ? (
-          <p className="text-[10px] text-danger md:pl-4">{t("schema.duplicateName")}</p>
-        ) : null}
-      </div>
-      <div className="flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border">
-        <span className={FIELD_LABEL_CLASS}>{t("schema.type")}</span>
-        <TemplateTypeSelect
-          value={currentType}
-          listMode={listMode}
-          onChange={(templateType) => onUpdate({ templateType })}
-          t={t}
-        />
-        {showSuggestion ? (
-          <button
-            type="button"
-            onClick={() => onUpdate({ templateType: suggestedType! })}
-            className="text-left text-[10px] text-primary hover:underline truncate max-w-full"
-            title={t("schema.applySuggestedType")}
-          >
-            {t("schema.suggestedType", { label: label(suggestedType!) })}
-          </button>
-        ) : null}
+        <div className="flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border">
+          <span className={FIELD_LABEL_CLASS}>{t("schema.type")}</span>
+          <TemplateTypeSelect
+            value={currentType}
+            listMode={listMode}
+            onChange={(templateType) => onUpdate({ templateType })}
+            t={t}
+          />
+          {showSuggestion ? (
+            <button
+              type="button"
+              onClick={() => onUpdate({ templateType: suggestedType! })}
+              className="text-left text-[10px] text-primary hover:underline truncate max-w-full"
+              title={t("schema.applySuggestedType")}
+            >
+              {t("schema.suggestedType", { label: label(suggestedType!) })}
+            </button>
+          ) : null}
         </div>
         <div className="flex flex-col gap-1 min-w-0 md:flex-row md:items-center md:px-2 md:border-r md:border-border">
-        <span className={FIELD_LABEL_CLASS}>{t("schema.intent")}</span>
-        <Input
-          value={field.description}
-          onChange={(e) => onUpdate({ description: e.target.value })}
-          placeholder={t("schema.descriptionPlaceholder")}
-          className="text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input"
-        />
-      </div>
-      <div className="flex flex-col gap-1 min-w-0 md:items-center md:justify-center md:px-2 md:border-r md:border-border">
-        <span className={FIELD_LABEL_CLASS}>{t("schema.listModeLabel")}</span>
-        {supportsListTemplateType(currentType) ? (
-          <label
-            className="flex items-center justify-end gap-1.5 text-[10px] text-on-surface-variant whitespace-nowrap cursor-pointer md:justify-center"
-            title={t("schema.listModeHint")}
+          <span className={FIELD_LABEL_CLASS}>{t("schema.intent")}</span>
+          <Input
+            value={field.description}
+            onChange={(e) => onUpdate({ description: e.target.value })}
+            placeholder={t("schema.descriptionPlaceholder")}
+            className="text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input"
+          />
+        </div>
+        <div className="flex flex-col gap-1 min-w-0 md:items-center md:justify-center md:px-2 md:border-r md:border-border">
+          <span className={FIELD_LABEL_CLASS}>{t("schema.listModeLabel")}</span>
+          {supportsListTemplateType(currentType) ? (
+            <label
+              className="flex items-center justify-end gap-1.5 text-[10px] text-on-surface-variant whitespace-nowrap cursor-pointer md:justify-center"
+              title={t("schema.listModeHint")}
+            >
+              <input
+                type="checkbox"
+                className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
+                checked={listMode}
+                onChange={(e) =>
+                  onUpdate({
+                    templateType: withListTemplateType(currentType, e.target.checked),
+                  })
+                }
+              />
+              {t("schema.listModeLabel")}
+            </label>
+          ) : null}
+        </div>
+        <div className="flex justify-end md:items-center md:justify-center md:self-stretch">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-outline hover:text-danger md:opacity-0 md:group-hover:opacity-100"
+            onClick={onRemove}
+            aria-label={tCommon("delete")}
           >
-            <input
-              type="checkbox"
-              className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
-              checked={listMode}
-              onChange={(e) =>
-                onUpdate({
-                  templateType: withListTemplateType(currentType, e.target.checked),
-                })
-              }
-            />
-            {t("schema.listModeLabel")}
-          </label>
-        ) : null}
-      </div>
-      <div className="flex justify-end md:items-center md:justify-center md:self-stretch">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 text-outline hover:text-danger md:opacity-0 md:group-hover:opacity-100"
-          onClick={onRemove}
-          aria-label={tCommon("delete")}
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
       {schemaFieldNeedsExtra(currentType) ? (
         <div className="px-3 pb-3">
@@ -286,9 +290,7 @@ export function SchemaTable({
       if (!norm) continue;
       counts.set(norm, (counts.get(norm) ?? 0) + 1);
     }
-    return new Set(
-      [...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name)
-    );
+    return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([name]) => name));
   }, [schema]);
 
   const update = (id: string, patch: Partial<SchemaField>) =>

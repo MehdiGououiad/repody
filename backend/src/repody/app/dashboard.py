@@ -4,12 +4,12 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app import metrics as metrics_app
+from repody.app.audit.query import list_completed_audits
+from repody.app.run.admission import queue_snapshot_counts
+from repody.app.workflow.service import list_workflows
 from repody.infra.db.base import async_session_factory
 from repody.schemas.dashboard import DashboardResponse, QueueSnapshot
-from repody.app import metrics as metrics_app
-from repody.app.run.admission import queue_snapshot_counts
-from repody.app.audit.query import list_completed_audits
-from repody.app.workflow.service import list_workflows
 
 _DASHBOARD_AUDIT_LIMIT = 50
 

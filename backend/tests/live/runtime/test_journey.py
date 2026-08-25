@@ -10,7 +10,6 @@ import uuid
 
 import httpx
 import pytest
-
 from tests.helpers.workflow_rules import logic_field_gt
 
 from repody.infra.db.seed import SEED_WORKFLOW_ID

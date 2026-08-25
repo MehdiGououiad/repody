@@ -1,18 +1,15 @@
-import { expect, test } from "@playwright/test";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import {
-  clickExtractValidate,
-  goToTestDeployStep,
-} from "../helpers/workflow-builder";
+import { expect, test } from "@playwright/test";
 import { fetchKeycloakToken } from "../helpers/auth";
 import { API_URL } from "../helpers/env";
+import { clickExtractValidate, goToTestDeployStep } from "../helpers/workflow-builder";
 
 const OUT = path.join(process.cwd(), "benchmark-reports", "ui-queue");
 const PDF = path.resolve(
   process.cwd(),
-  "backend/tests/.storage/audit-documents/runs/00b738853d434ed6aa2c6f4b6800bfa0/Facture.pdf",
+  "backend/tests/.storage/audit-documents/runs/00b738853d434ed6aa2c6f4b6800bfa0/Facture.pdf"
 );
 const WORKFLOW_ID = "wf-invoice-audit";
 
@@ -83,7 +80,7 @@ test.describe("UI queue position live", () => {
     await clickExtractValidate(page);
 
     const queueText = page.getByText(
-      /Queue position\s+\d+\s+of\s+\d+|Queued\s+[—-]\s+position\s+\d+\s+of\s+\d+/i,
+      /Queue position\s+\d+\s+of\s+\d+|Queued\s+[—-]\s+position\s+\d+\s+of\s+\d+/i
     );
     await expect(queueText.first()).toBeVisible({ timeout: 180_000 });
     const painted = (await queueText.first().innerText()).trim();
@@ -92,28 +89,28 @@ test.describe("UI queue position live", () => {
     await page.screenshot({ path: path.join(OUT, "03-queue-banner.png"), fullPage: true });
 
     const sseAll = await page.evaluate(
-      () => (window as unknown as { __sseLog?: unknown[] }).__sseLog || [],
+      () => (window as unknown as { __sseLog?: unknown[] }).__sseLog || []
     );
     const sseQueue = (sseAll as Array<{ data?: string }>).filter((f) =>
-      typeof f.data === "string" ? /queuePosition/.test(f.data) : false,
+      typeof f.data === "string" ? /queuePosition/.test(f.data) : false
     );
     // Queue metadata reaches the UI via SSE and/or the parallel status poll.
     expect(painted).toMatch(/\d+\s+of\s+\d+/i);
     expect(
       sseQueue.length > 0 || /Queue position/i.test(painted),
-      "queue position reached the builder UI",
+      "queue position reached the builder UI"
     ).toBeTruthy();
 
     // Resume drain and confirm UI leaves the queue state.
     docker(["start", "repody-worker-extract-1"]);
     await expect(
-      page.getByText(/All checks passed|Open report|View full audit|failed/i).first(),
+      page.getByText(/All checks passed|Open report|View full audit|failed/i).first()
     ).toBeVisible({ timeout: 300_000 });
     await page.screenshot({ path: path.join(OUT, "04-terminal.png"), fullPage: true });
 
     fs.writeFileSync(
       path.join(OUT, "observations.json"),
-      JSON.stringify({ backlog, painted, sseQueueFrames: sseQueue.length, sseAll }, null, 2),
+      JSON.stringify({ backlog, painted, sseQueueFrames: sseQueue.length, sseAll }, null, 2)
     );
   });
 });

@@ -4,14 +4,14 @@ from __future__ import annotations
 
 import pytest
 
+from repody.catalog.registry import parse_document_model
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.extraction.modes import (
     DOCUMENT_MODEL_READ_PATH_ID,
     resolve_read_path_for_document,
 )
-from repody.extraction.render import REPODY_VLM_RENDER
 from repody.extraction.nuextract import structured_chat_payload
-from repody.catalog.registry import parse_document_model
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.render import REPODY_VLM_RENDER
 from repody.extraction.types import SchemaFieldSpec
 
 
@@ -38,7 +38,7 @@ def test_nuextract_payload_official_generation_defaults():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", template_type="verbatim-string")]
     payload = structured_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",

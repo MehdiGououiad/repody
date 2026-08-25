@@ -12,13 +12,6 @@ import uuid
 import httpx
 import pytest
 
-from repody.integration.live_stack import (
-    assert_metrics_access,
-    create_live_client,
-    live_api_base,
-    live_inference_ready,
-    live_oidc_enabled,
-)
 from repody.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_UI_PATHS,
@@ -27,6 +20,13 @@ from repody.integration.facture import (
     facture_bytes,
     rules_for_case,
     total_from_result,
+)
+from repody.integration.live_stack import (
+    assert_metrics_access,
+    create_live_client,
+    live_api_base,
+    live_inference_ready,
+    live_oidc_enabled,
 )
 
 DOCUMENT_MODEL_CASE = FACTURE_UI_PATHS[0]

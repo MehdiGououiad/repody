@@ -1,9 +1,9 @@
 import json
 
 import pytest
+from tests.helpers.api_errors import assert_error_response
 
 from repody.integration.facture import facture_bytes
-from tests.helpers.api_errors import assert_error_response
 
 
 @pytest.mark.asyncio
@@ -17,8 +17,8 @@ async def test_confirm_upload_accepts_real_gououiad_cnie_png_named_jpeg(
     from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from repody.infra.db.base import async_session_factory
     from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     fixture = (
@@ -55,8 +55,8 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
     from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from repody.infra.db.base import async_session_factory
     from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     storage = get_storage()
@@ -87,8 +87,8 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
 async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch, tmp_path):
     """VALIDATION AppError → 422 (not legacy bare 400)."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
     from repody.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
     storage = get_storage()
@@ -128,8 +128,8 @@ async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_p
     from repody.settings import clear_settings_cache
 
     clear_settings_cache()
-    from repody.infra.db.base import async_session_factory
     from repody.app.uploads.intents import record_upload_intent
+    from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     storage = get_storage()

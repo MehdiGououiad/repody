@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,11 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const checkOnly = process.argv.includes("--check");
 const ensure = process.argv.includes("--ensure");
 const update = process.argv.includes("--update");
-const charts = [
-  "deploy/helm/repody-data",
-  "deploy/helm/repody-auth",
-  "deploy/helm/repody",
-];
+const charts = ["deploy/helm/repody-data", "deploy/helm/repody-auth", "deploy/helm/repody"];
 
 function lockedDependencies(chartDir) {
   const lockPath = path.join(chartDir, "Chart.lock");
@@ -39,7 +35,7 @@ let failed = false;
 for (const chart of charts) {
   const chartDir = path.join(root, chart);
   const missing = lockedDependencies(chartDir).filter(
-    ({ name, version }) => !existsSync(path.join(chartDir, "charts", `${name}-${version}.tgz`)),
+    ({ name, version }) => !existsSync(path.join(chartDir, "charts", `${name}-${version}.tgz`))
   );
   if (checkOnly || ensure) {
     if (!missing.length) {

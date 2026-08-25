@@ -1,10 +1,10 @@
 "use client";
 
-import { Check, CircleDot, CheckCircle2, Database, ShieldCheck, Rocket } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
+import { Check, CheckCircle2, CircleDot, Database, Rocket, ShieldCheck } from "lucide-react";
+import type { useTranslations } from "next-intl";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export type BuilderStep = 0 | 1 | 2;
 
@@ -14,11 +14,8 @@ export function stepComplete(
   rules: WorkflowRule[]
 ): boolean {
   if (step === 0)
-    return documents.some(
-      (d) => d.documentType.trim() && d.schema.some((f) => f.name.trim())
-    );
-  if (step === 1)
-    return syncRuleBodies(rules).some((r) => r.name.trim() && r.body.trim());
+    return documents.some((d) => d.documentType.trim() && d.schema.some((f) => f.name.trim()));
+  if (step === 1) return syncRuleBodies(rules).some((r) => r.name.trim() && r.body.trim());
   return false;
 }
 
@@ -103,9 +100,7 @@ export function BuilderStepNav({
     );
   });
 
-  const done = STEP_META.filter((_, i) =>
-    stepComplete(i as BuilderStep, documents, rules)
-  ).length;
+  const done = STEP_META.filter((_, i) => stepComplete(i as BuilderStep, documents, rules)).length;
 
   return (
     <div className="flex flex-col gap-1 h-full">

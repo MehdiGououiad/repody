@@ -42,9 +42,7 @@ export function resolveFieldTemplateType(
 
 export function comparisonOpsForTemplateType(templateType?: string) {
   if (templateType && DATE_LIKE_TEMPLATE_TYPES.has(templateType)) {
-    return COMPARISON_OP_DEFS.filter(
-      (op) => op.value !== "IN" && op.value !== "NOT_IN"
-    );
+    return COMPARISON_OP_DEFS.filter((op) => op.value !== "IN" && op.value !== "NOT_IN");
   }
   return COMPARISON_OP_DEFS;
 }

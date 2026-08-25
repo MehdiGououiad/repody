@@ -1,27 +1,27 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { CheckCircle2, Loader2, Play, Rocket } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { SectionHeading } from "@/components/layout/section-heading";
 import { Button } from "@/components/ui/button";
 import { ApiPanel } from "@/components/workflow/api-panel";
-import { IngestionSection } from "@/components/workflow/ingestion-section";
-import { SectionHeading } from "@/components/layout/section-heading";
 import { TestRunResults } from "@/components/workflow/builder/test-run-results";
 import {
   formatUploadSize,
   type TestSessionState,
 } from "@/components/workflow/builder/test-run-session";
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
+import { IngestionSection } from "@/components/workflow/ingestion-section";
+import { RunErrorAlert } from "@/components/workflow/run-error-alert";
+import { runErrorFromUnknown } from "@/lib/api/api-error";
+import { buildClientProgress } from "@/lib/api/client-run-progress";
 import {
-  runTestInline,
-  runTestWithFiles,
   type ClientStepLabels,
   type RunProgress,
+  runTestInline,
+  runTestWithFiles,
 } from "@/lib/api/workflow-run";
-import { buildClientProgress } from "@/lib/api/client-run-progress";
-import { runErrorFromUnknown } from "@/lib/api/api-error";
+import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 
 function clientStepLabels(t: ReturnType<typeof useTranslations>): ClientStepLabels {
   return {

@@ -15,10 +15,7 @@ export default async function SettingsPage() {
 
   return (
     <Suspense fallback={<div className="panel-elevated rounded-xl h-64 animate-pulse m-6" />}>
-      <SettingsPageClient
-        platformConfig={platformConfig}
-        platformError={platformError}
-      />
+      <SettingsPageClient platformConfig={platformConfig} platformError={platformError} />
     </Suspense>
   );
 }

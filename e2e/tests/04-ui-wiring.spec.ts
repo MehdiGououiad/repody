@@ -74,16 +74,29 @@ test.describe("UI wiring", () => {
       const docType = body.workflow.documents[0].documentType;
 
       await expect(
-        page.locator("code").filter({
-          hasText: `/api/v1/workflows/${workflowId}/runs`,
-        }).first()
+        page
+          .locator("code")
+          .filter({
+            hasText: `/api/v1/workflows/${workflowId}/runs`,
+          })
+          .first()
       ).toBeVisible();
       await expect(page.getByText(new RegExp(`document_types=\\["${docType}"\\]`))).toBeVisible();
       await expect(page.getByText(/-F "files=@\/path\/to\/invoice\.pdf"/)).toBeVisible();
 
       await page.getByRole("tab", { name: "python" }).click();
-      await expect(page.locator("code").filter({ hasText: /document_types/ }).first()).toBeVisible();
-      await expect(page.locator("code").filter({ hasText: /invoice\.pdf/ }).first()).toBeVisible();
+      await expect(
+        page
+          .locator("code")
+          .filter({ hasText: /document_types/ })
+          .first()
+      ).toBeVisible();
+      await expect(
+        page
+          .locator("code")
+          .filter({ hasText: /invoice\.pdf/ })
+          .first()
+      ).toBeVisible();
 
       await page.getByRole("tab", { name: "js" }).click();
       await expect(page.getByText(/form\.append\("document_types"/)).toBeVisible();

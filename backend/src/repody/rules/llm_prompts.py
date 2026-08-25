@@ -13,11 +13,7 @@ Fields: vendor_name=Globex Corp
 
 
 def fields_block(field_values: dict[str, str]) -> str:
-    lines = [
-        f"{key}={value}"
-        for key, value in field_values.items()
-        if value and value != "\u2014"
-    ]
+    lines = [f"{key}={value}" for key, value in field_values.items() if value and value != "\u2014"]
     return "\n".join(lines[:40]) or "(no values)"
 
 

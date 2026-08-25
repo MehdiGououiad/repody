@@ -87,14 +87,8 @@ function backendRun(label, pytestArgs, extraEnv = {}) {
   return run(
     label,
     process.execPath,
-    [
-      join(root, "scripts", "backend-run.mjs"),
-      "--dev",
-      "pytest",
-      ...pytestArgs,
-      "--tb=short",
-    ],
-    { env: extraEnv },
+    [join(root, "scripts", "backend-run.mjs"), "--dev", "pytest", ...pytestArgs, "--tb=short"],
+    { env: extraEnv }
   );
 }
 
@@ -107,7 +101,7 @@ const htmlReport = (name) => [
 if (!args.has("--skip-backend")) {
   if (args.has("--unit-only")) {
     results.push(
-      backendRun("backend-unit", ["tests/unit", "-q", junit("unit"), ...htmlReport("unit")]),
+      backendRun("backend-unit", ["tests/unit", "-q", junit("unit"), ...htmlReport("unit")])
     );
   } else if (args.has("--integration-only")) {
     results.push(
@@ -118,7 +112,7 @@ if (!args.has("--skip-backend")) {
         "not live",
         junit("integration"),
         ...htmlReport("integration"),
-      ]),
+      ])
     );
   } else {
     results.push(
@@ -129,7 +123,7 @@ if (!args.has("--skip-backend")) {
         "not live and not slow",
         junit("unit"),
         ...htmlReport("unit"),
-      ]),
+      ])
     );
     results.push(
       backendRun("backend-integration", [
@@ -139,7 +133,7 @@ if (!args.has("--skip-backend")) {
         "not live and not slow",
         junit("integration"),
         ...htmlReport("integration"),
-      ]),
+      ])
     );
   }
 
@@ -147,16 +141,9 @@ if (!args.has("--skip-backend")) {
     results.push(
       backendRun(
         "backend-live",
-        [
-          "tests/live",
-          "-v",
-          "-m",
-          "live",
-          junit("live"),
-          ...htmlReport("live"),
-        ],
-        e2eEnv,
-      ),
+        ["tests/live", "-v", "-m", "live", junit("live"), ...htmlReport("live")],
+        e2eEnv
+      )
     );
   }
 }
@@ -167,16 +154,14 @@ if (args.has("--with-ui")) {
       "playwright-ui",
       process.platform === "win32" ? "pnpm.cmd" : "pnpm",
       ["exec", "playwright", "test", "--reporter=list", "--reporter=html"],
-      { shell: true, env: e2eEnv },
-    ),
+      { shell: true, env: e2eEnv }
+    )
   );
 }
 
 const rows = results.map((r) => {
   const summary =
-    r.label === "playwright-ui"
-      ? parsePlaywrightSummary(r.output)
-      : parsePytestSummary(r.output);
+    r.label === "playwright-ui" ? parsePlaywrightSummary(r.output) : parsePytestSummary(r.output);
   const infraDown =
     /ConnectionRefusedError|could not connect|OperationalError/i.test(r.output) &&
     summary.passed === 0;
@@ -191,7 +176,7 @@ const infraNotes = rows
   .filter((r) => r.infraDown)
   .map(
     (r) =>
-      `- **${r.label}**: Postgres/Redis not reachable — start stack with \`pnpm dev\` then re-run.`,
+      `- **${r.label}**: Postgres/Redis not reachable — start stack with \`pnpm dev\` then re-run.`
   );
 
 const md = `# Platform test report
@@ -218,10 +203,10 @@ ${rows
 
 - Directory: \`reports/platform-tests/\`
 - HTML summary: \`index.html\`
-- pytest-html: \`pytest-unit.html\`, \`pytest-integration.html\`${args.has("--with-live") ? ", \`pytest-live.html\`" : ""}
+- pytest-html: \`pytest-unit.html\`, \`pytest-integration.html\`${args.has("--with-live") ? ", `pytest-live.html`" : ""}
 - JUnit XML: \`junit-*.xml\`
 - Logs: \`*.log\`
-${args.has("--with-ui") ? "- Playwright HTML: \`e2e/report/\`\n" : ""}
+${args.has("--with-ui") ? "- Playwright HTML: `e2e/report/`\n" : ""}
 
 ## Pyramid
 

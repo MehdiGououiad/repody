@@ -1,4 +1,4 @@
-﻿"""Audit read module — completed runs exposed as audit list/detail."""
+"""Audit read module — completed runs exposed as audit list/detail."""
 
 from __future__ import annotations
 
@@ -6,9 +6,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 
+from repody.app.mappers import run_to_audit_list_item
 from repody.infra.db.models import Run, RunStatus, Workflow
 from repody.schemas.audit import AuditListItem
-from repody.app.mappers import run_to_audit_list_item
 
 _DEFAULT_LIST_LIMIT = 50
 _MAX_LIST_LIMIT = 200

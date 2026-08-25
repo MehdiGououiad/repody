@@ -69,8 +69,7 @@ async def extract_with_paddleocr_qwen(
     model = (settings.qwen35_served_model or "").strip()
     if not model:
         raise RuntimeError(
-            "Qwen model id is empty. Set AUDIT_QWEN35_SERVED_MODEL "
-            "(default Qwen3.5-4B)."
+            "Qwen model id is empty. Set AUDIT_QWEN35_SERVED_MODEL (default Qwen3.5-4B)."
         )
 
     llm_started = time.perf_counter()

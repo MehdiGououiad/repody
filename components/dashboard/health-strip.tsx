@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { AlertOctagon, AlertTriangle, ArrowRight, Info, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { AlertOctagon, AlertTriangle, Info, X, ArrowRight } from "lucide-react";
+import { useState } from "react";
 import type { HealthAlert } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -40,12 +40,8 @@ export function HealthStrip({ alerts }: { alerts: HealthAlert[] }) {
           <>
             <cfg.Icon className={cn("h-4 w-4 shrink-0", cfg.iconClass)} />
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight">
-                {t(a.titleKey as "degraded")}
-              </p>
-              <p className="text-xs opacity-80 mt-0.5">
-                {t(a.detailKey as "degradedDetail")}
-              </p>
+              <p className="font-semibold text-sm leading-tight">{t(a.titleKey as "degraded")}</p>
+              <p className="text-xs opacity-80 mt-0.5">{t(a.detailKey as "degradedDetail")}</p>
             </div>
             {a.href ? <ArrowRight className="h-4 w-4 opacity-70" /> : null}
           </>
@@ -53,10 +49,7 @@ export function HealthStrip({ alerts }: { alerts: HealthAlert[] }) {
         return (
           <div
             key={a.id}
-            className={cn(
-              "flex items-center gap-3 px-4 py-2.5 rounded-md border",
-              cfg.className
-            )}
+            className={cn("flex items-center gap-3 px-4 py-2.5 rounded-md border", cfg.className)}
           >
             {a.href ? (
               <Link href={a.href} className="flex items-center gap-3 flex-1 min-w-0">

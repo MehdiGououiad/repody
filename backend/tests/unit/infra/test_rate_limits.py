@@ -6,10 +6,10 @@ import pytest
 from limits.aio.storage import MemoryStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 
-from repody.rules.logic_evaluator import evaluate_logic_rule
-from repody.runtime.contracts.result import ErrorCode
 from repody.infra import rate_limit as rate_limit_module
 from repody.infra.rate_limit import check_run_rate_limits
+from repody.rules.logic_evaluator import evaluate_logic_rule
+from repody.runtime.contracts.result import ErrorCode
 from repody.settings import Settings, clear_settings_cache
 
 

@@ -4,9 +4,9 @@
  * Prerequisites: local dev stack (pnpm dev) or Kubernetes lab with hosts entries.
  */
 import { spawnSync } from "node:child_process";
+import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
-import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiURL = (process.env.E2E_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -29,7 +29,7 @@ async function waitForOk(url, label, attempts = 90) {
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
       `  Start the stack: pnpm dev:setup && pnpm dev:all\n` +
-      `  Check status: pnpm dev:status`,
+      `  Check status: pnpm dev:status`
   );
   process.exit(1);
 }
@@ -102,26 +102,23 @@ const sharedEnv = {
 
 run(
   process.execPath,
-  ["scripts/backend-run.mjs", "--dev", "python", "scripts/platform_integration_suite.py", "--api", apiURL],
-  root,
-  sharedEnv,
-);
-
-run(
-  process.execPath,
   [
     "scripts/backend-run.mjs",
     "--dev",
     "python",
-    "-m",
-    "pytest",
-    "tests/live",
-    "-v",
-    "-m",
-    "live",
+    "scripts/platform_integration_suite.py",
+    "--api",
+    apiURL,
   ],
   root,
-  sharedEnv,
+  sharedEnv
+);
+
+run(
+  process.execPath,
+  ["scripts/backend-run.mjs", "--dev", "python", "-m", "pytest", "tests/live", "-v", "-m", "live"],
+  root,
+  sharedEnv
 );
 
 run(
@@ -129,7 +126,7 @@ run(
   ["exec", "playwright", "test"],
   root,
   sharedEnv,
-  { shell: process.platform === "win32" },
+  { shell: process.platform === "win32" }
 );
 
 console.log("\n[platform-e2e] All platform tests passed.\n");

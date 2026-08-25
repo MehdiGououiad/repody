@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useRef } from "react";
 
 export function LlmPromptEditor({
   value,

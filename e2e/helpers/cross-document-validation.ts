@@ -1,11 +1,7 @@
-import path from "path";
 import { expect, type Page } from "@playwright/test";
-import { apiAuthHeaders, API } from "./api";
-import {
-  clickExtractValidate,
-  goToTestDeployStep,
-  waitForBuilderReady,
-} from "./workflow-builder";
+import path from "path";
+import { API, apiAuthHeaders } from "./api";
+import { clickExtractValidate, goToTestDeployStep, waitForBuilderReady } from "./workflow-builder";
 
 export const FACTURE_FIXTURE = path.join(
   process.cwd(),
@@ -38,7 +34,10 @@ type WorkflowPayload = {
 };
 
 export async function createCrossDocWorkflow(request: {
-  post: (url: string, options?: object) => Promise<{ ok: () => boolean; json: () => Promise<unknown> }>;
+  post: (
+    url: string,
+    options?: object
+  ) => Promise<{ ok: () => boolean; json: () => Promise<unknown> }>;
   put: (url: string, options?: object) => Promise<{ ok: () => boolean }>;
 }): Promise<{ workflowId: string; docAId: string; docBId: string }> {
   const ts = Date.now();
@@ -125,7 +124,9 @@ export async function addCrossDocumentTotalRule(page: Page, ruleName: string) {
   await ruleCard.getByRole("combobox").nth(2).click();
   await page.getByRole("option", { name: "Facture 2.total_amount" }).click();
 
-  await expect(ruleCard.getByText(/facture_1__total_amount == facture_2__total_amount/i)).toBeVisible();
+  await expect(
+    ruleCard.getByText(/facture_1__total_amount == facture_2__total_amount/i)
+  ).toBeVisible();
 }
 
 export async function uploadDocumentsForCrossTest(
@@ -151,16 +152,23 @@ export async function runExtractValidateAndWait(page: Page) {
 }
 
 export async function expectRuleResult(page: Page, ruleName: string, detailPattern: RegExp) {
-  const ruleRow = page.locator("div").filter({ hasText: ruleName }).filter({
-    has: page.locator("text=/passed|failed|skipped|error/i"),
-  }).first();
+  const ruleRow = page
+    .locator("div")
+    .filter({ hasText: ruleName })
+    .filter({
+      has: page.locator("text=/passed|failed|skipped|error/i"),
+    })
+    .first();
   await expect(ruleRow).toBeVisible();
   await expect(page.getByText(detailPattern).first()).toBeVisible();
 }
 
-export async function deleteWorkflow(request: {
-  delete: (url: string, options?: object) => Promise<{ ok: () => boolean; status: () => number }>;
-}, workflowId: string) {
+export async function deleteWorkflow(
+  request: {
+    delete: (url: string, options?: object) => Promise<{ ok: () => boolean; status: () => number }>;
+  },
+  workflowId: string
+) {
   const res = await request.delete(`${API}/v1/workflows/${workflowId}`, {
     headers: apiAuthHeaders(),
   });

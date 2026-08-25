@@ -1,7 +1,7 @@
+import type { Page } from "@playwright/test";
+import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
-import { spawnSync } from "child_process";
-import type { Page } from "@playwright/test";
 import {
   API_TOKEN_PATH,
   API_URL,

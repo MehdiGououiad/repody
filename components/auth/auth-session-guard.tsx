@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { LoaderCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { LoaderCircle } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
 import { isPublicPage } from "@/lib/auth/public-paths";
-import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
 function AuthGateSpinner({ message }: { message: string }) {
   return (
@@ -70,16 +70,7 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
       const callback = encodeURIComponent(pathname);
       void signOut({ redirectTo: `/login?callbackUrl=${callback}` });
     }
-  }, [
-    authLoading,
-    enforceAuth,
-    hydrated,
-    isPublic,
-    pathname,
-    router,
-    sessionError,
-    status,
-  ]);
+  }, [authLoading, enforceAuth, hydrated, isPublic, pathname, router, sessionError, status]);
 
   if (isPublic || !enforceAuth) {
     return <>{children}</>;

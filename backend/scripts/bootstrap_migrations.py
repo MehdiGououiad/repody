@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Apply Alembic migrations to head."""
+
 from __future__ import annotations
 
 import asyncio

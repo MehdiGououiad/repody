@@ -148,7 +148,7 @@ for (const rule of architectureRules) {
       const imported = match[1];
       if (rule.forbiddenImports.some((pattern) => pattern.test(imported))) {
         failures.push(
-          `${rel}:${lineNumber(text, match.index ?? 0)} ${rule.name} imports outer detail "${imported}"`,
+          `${rel}:${lineNumber(text, match.index ?? 0)} ${rule.name} imports outer detail "${imported}"`
         );
       }
     }

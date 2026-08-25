@@ -1,13 +1,9 @@
 "use client";
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { formatDurationMs } from "@/lib/types/audit";
+import { cn } from "@/lib/utils";
 import { mergeLabels, type RunReportLabels } from "./report-shared";
 
 export function RunStatusBanner({
@@ -54,21 +50,24 @@ export function RunStatusBanner({
   const Icon = cfg.icon;
 
   return (
-    <div className={cn("panel-elevated rounded-xl px-5 py-4 flex items-start gap-4", cfg.bg, className)}>
+    <div
+      className={cn(
+        "panel-elevated rounded-xl px-5 py-4 flex items-start gap-4",
+        cfg.bg,
+        className
+      )}
+    >
       <Icon className={cn("h-6 w-6 shrink-0 mt-0.5", cfg.iconCls)} />
       <div className="flex-1 min-w-0">
         <p className={cn("text-base font-bold", cfg.labelCls)}>{cfg.label}</p>
-        {subtitle && (
-          <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>
-        )}
+        {subtitle && <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>}
         <div className="flex flex-wrap gap-3 mt-3">
           <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">
             <span className="font-semibold text-on-surface">{audit.summary.fieldsExtracted}</span>{" "}
             {L.fieldsExtracted ?? "fields extracted"}
           </span>
           <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">
-            {L.rulesPassed ??
-              `${audit.summary.passed}/${audit.summary.total} rules passed`}
+            {L.rulesPassed ?? `${audit.summary.passed}/${audit.summary.total} rules passed`}
           </span>
           {audit.summary.failed > 0 && (
             <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">

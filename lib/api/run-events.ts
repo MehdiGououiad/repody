@@ -43,9 +43,7 @@ export async function watchRunEvents(
 ): Promise<"done" | "failed" | "fallback"> {
   const maxMs = options?.maxMs ?? 4 * 60_000;
   const url = `/api/v1/runs/${runId}/events`;
-  const hasCustomHeaders = Boolean(
-    options?.headers && Object.keys(options.headers).length > 0
-  );
+  const hasCustomHeaders = Boolean(options?.headers && Object.keys(options.headers).length > 0);
 
   return new Promise((resolve) => {
     let settled = false;

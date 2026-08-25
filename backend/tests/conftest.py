@@ -33,9 +33,6 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
-
-from repody.main import create_app
-from repody.settings import clear_settings_cache, get_settings
 from tests.helpers.db import (
     bind_test_database,
     configure_test_database_url,
@@ -46,6 +43,9 @@ from tests.helpers.db import (
     upgrade_database_to_head,
 )
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
+
+from repody.main import create_app
+from repody.settings import clear_settings_cache, get_settings
 
 _session_dmr_router: dict[str, object] = {"router": None}
 

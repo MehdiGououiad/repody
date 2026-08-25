@@ -1,8 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import type { ReactNode } from "react";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
 type SignOutButtonProps = {
@@ -25,12 +25,7 @@ export function SignOutButton({ className, children, onSignedOut }: SignOutButto
 
   if (!oidcEnabled) {
     return (
-      <button
-        type="button"
-        className={className}
-        disabled
-        title={t("devModeHint")}
-      >
+      <button type="button" className={className} disabled title={t("devModeHint")}>
         {children}
       </button>
     );

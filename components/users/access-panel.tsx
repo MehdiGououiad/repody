@@ -1,9 +1,9 @@
 "use client";
 
 import { Database, Gauge, Shield } from "lucide-react";
+import type { IamCatalog, IamMe } from "@/lib/api/iam";
 import { PermissionMatrix } from "./permission-matrix";
 import { SettingMetric } from "./user-access-shared";
-import type { IamCatalog, IamMe } from "@/lib/api/iam";
 
 export function AccessPanel({ me, catalog }: { me: IamMe | null; catalog: IamCatalog | null }) {
   return (
@@ -19,7 +19,11 @@ export function AccessPanel({ me, catalog }: { me: IamMe | null; catalog: IamCat
         <SettingMetric
           label="Permissions"
           value={`${me?.permissions.length ?? 0}`}
-          detail={me?.permissions.some((grant) => grant.resource === "*") ? "Full access principal" : "Scoped access"}
+          detail={
+            me?.permissions.some((grant) => grant.resource === "*")
+              ? "Full access principal"
+              : "Scoped access"
+          }
           icon={Gauge}
         />
         <SettingMetric

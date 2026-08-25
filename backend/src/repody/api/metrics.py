@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.deps import get_session
-from repody.schemas.metrics import MetricsResponse
 from repody.app import metrics as metrics_app
+from repody.schemas.metrics import MetricsResponse
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 

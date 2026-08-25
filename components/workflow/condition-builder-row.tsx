@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,18 +15,24 @@ import {
 } from "@/components/ui/select";
 import {
   ARITH_OPS,
-  NO_RIGHT,
   type ConditionFieldOption,
+  NO_RIGHT,
 } from "@/components/workflow/condition-builder-model";
 import {
   comparisonOpsForTemplateType,
+  type LiteralInputKind,
   literalInputKindForTemplateType,
   resolveFieldTemplateType,
-  type LiteralInputKind,
 } from "@/lib/rules/condition-input-kind";
-import { cn } from "@/lib/utils";
-import type { ArithmeticOp, ComparisonOp, ConditionOperand, RuleCondition, TableAggregateLeft } from "@/lib/types";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
+import type {
+  ArithmeticOp,
+  ComparisonOp,
+  ConditionOperand,
+  RuleCondition,
+  TableAggregateLeft,
+} from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function literalPlaceholderForKind(
   kind: LiteralInputKind,
@@ -82,10 +88,7 @@ function LiteralValueInput({
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
       step={inputKind === "number" ? "any" : undefined}
-      className={cn(
-        "h-8 text-xs font-mono",
-        inputKind === "datetime-local" ? "w-48" : "w-40"
-      )}
+      className={cn("h-8 text-xs font-mono", inputKind === "datetime-local" ? "w-48" : "w-40")}
     />
   );
 }
@@ -132,10 +135,7 @@ function OperandPicker({
 
   return (
     <div className="flex items-center gap-1">
-      <Select
-        value={operand.value}
-        onValueChange={(value) => onChange({ kind: "field", value })}
-      >
+      <Select value={operand.value} onValueChange={(value) => onChange({ kind: "field", value })}>
         <SelectTrigger className="h-8 text-xs w-40 font-mono">
           <SelectValue placeholder={placeholder ?? t("pickField")} />
         </SelectTrigger>
@@ -146,9 +146,7 @@ function OperandPicker({
             </SelectItem>
           ))}
           {fields.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-on-surface-variant italic">
-              {t("noFields")}
-            </div>
+            <div className="px-3 py-2 text-xs text-on-surface-variant italic">{t("noFields")}</div>
           ) : null}
         </SelectContent>
       </Select>
@@ -197,9 +195,7 @@ export function ConditionRow({
     condition.right?.kind === "field"
       ? resolveFieldTemplateType(condition.right.value, fields)
       : undefined;
-  const literalInputKind = literalInputKindForTemplateType(
-    leftTemplateType ?? rightTemplateType
-  );
+  const literalInputKind = literalInputKindForTemplateType(leftTemplateType ?? rightTemplateType);
   const comparisonOps = comparisonOpsForTemplateType(leftTemplateType).map((definition) => ({
     value: definition.value,
     label: t(definition.key as Parameters<typeof t>[0]),
@@ -318,7 +314,11 @@ export function ConditionRow({
                   </SelectTrigger>
                   <SelectContent>
                     {(activeTable?.columns ?? []).map((column) => (
-                      <SelectItem key={column.name} value={column.name} className="text-xs font-mono">
+                      <SelectItem
+                        key={column.name}
+                        value={column.name}
+                        className="text-xs font-mono"
+                      >
                         {column.label}
                       </SelectItem>
                     ))}
@@ -336,7 +336,11 @@ export function ConditionRow({
                     </SelectTrigger>
                     <SelectContent>
                       {(activeTable?.columns ?? []).map((column) => (
-                        <SelectItem key={column.name} value={column.name} className="text-xs font-mono">
+                        <SelectItem
+                          key={column.name}
+                          value={column.name}
+                          className="text-xs font-mono"
+                        >
                           {column.label}
                         </SelectItem>
                       ))}
@@ -424,19 +428,23 @@ export function ConditionRow({
           <SelectContent>
             <SelectGroup>
               <SelectLabel className="text-[10px]">{t("comparison")}</SelectLabel>
-              {comparisonOps.filter((op) => !op.noRight).map((op) => (
-                <SelectItem key={op.value} value={op.value} className="text-xs font-mono">
-                  {op.label}
-                </SelectItem>
-              ))}
+              {comparisonOps
+                .filter((op) => !op.noRight)
+                .map((op) => (
+                  <SelectItem key={op.value} value={op.value} className="text-xs font-mono">
+                    {op.label}
+                  </SelectItem>
+                ))}
             </SelectGroup>
             <SelectGroup>
               <SelectLabel className="text-[10px]">{t("existence")}</SelectLabel>
-              {comparisonOps.filter((op) => op.noRight).map((op) => (
-                <SelectItem key={op.value} value={op.value} className="text-xs">
-                  {op.label}
-                </SelectItem>
-              ))}
+              {comparisonOps
+                .filter((op) => op.noRight)
+                .map((op) => (
+                  <SelectItem key={op.value} value={op.value} className="text-xs">
+                    {op.label}
+                  </SelectItem>
+                ))}
             </SelectGroup>
           </SelectContent>
         </Select>

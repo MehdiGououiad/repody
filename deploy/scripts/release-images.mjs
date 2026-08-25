@@ -4,8 +4,8 @@
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -24,7 +24,12 @@ export function resolveTag() {
 }
 
 export function resolveBackendTag() {
-  return process.env.REPODY_BACKEND_IMAGE_TAG ?? process.env.REPODY_IMAGE_TAG ?? process.env.TAG ?? "latest";
+  return (
+    process.env.REPODY_BACKEND_IMAGE_TAG ??
+    process.env.REPODY_IMAGE_TAG ??
+    process.env.TAG ??
+    "latest"
+  );
 }
 
 export function resolveWebTag() {
@@ -46,7 +51,12 @@ export function releaseImageSet(options = {}) {
   const backendTag = options.backendTag ?? resolveBackendTag();
   const webTag = options.webTag ?? resolveWebTag();
   return [
-    { role: "backend", name: "repody-backend", tag: backendTag, ref: imageRef("repody-backend", backendTag, registry) },
+    {
+      role: "backend",
+      name: "repody-backend",
+      tag: backendTag,
+      ref: imageRef("repody-backend", backendTag, registry),
+    },
     { role: "web", name: "repody-web", tag: webTag, ref: imageRef("repody-web", webTag, registry) },
   ];
 }
@@ -76,7 +86,7 @@ export function resolveDigest(imageRef) {
   const result = spawnSync(
     "docker",
     ["buildx", "imagetools", "inspect", imageRef, "--format", "{{json .}}"],
-    { encoding: "utf8", shell: false },
+    { encoding: "utf8", shell: false }
   );
   if (result.status !== 0) {
     throw new Error(`Could not resolve digest for ${imageRef}: ${(result.stderr ?? "").trim()}`);
@@ -87,7 +97,9 @@ export function resolveDigest(imageRef) {
     if (!digest) throw new Error("digest missing in inspect output");
     return digest;
   } catch (error) {
-    throw new Error(`Invalid digest response for ${imageRef}: ${error instanceof Error ? error.message : error}`);
+    throw new Error(
+      `Invalid digest response for ${imageRef}: ${error instanceof Error ? error.message : error}`
+    );
   }
 }
 

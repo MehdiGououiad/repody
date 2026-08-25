@@ -1,6 +1,6 @@
 import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
-import type { DocumentDef, SchemaField } from "@/lib/types";
 import { fieldToken } from "@/lib/rules/expression";
+import type { DocumentDef, SchemaField } from "@/lib/types";
 
 export type DocumentFieldOption = {
   label: string;
@@ -15,10 +15,7 @@ export type TableFieldOption = {
   columns: Array<{ label: string; name: string }>;
 };
 
-function fieldOptionsForSchema(
-  doc: DocumentDef,
-  multi: boolean,
-): DocumentFieldOption[] {
+function fieldOptionsForSchema(doc: DocumentDef, multi: boolean): DocumentFieldOption[] {
   const fields: DocumentFieldOption[] = [];
   for (const field of doc.schema) {
     if (!field.name.trim()) continue;
@@ -49,7 +46,7 @@ function fieldOptionsForSchema(
 
 export function resolveDocumentFields(
   documents: DocumentDef[],
-  appliesTo: string[],
+  appliesTo: string[]
 ): DocumentFieldOption[] {
   const targets = appliesTo.length
     ? documents.filter((doc) => appliesTo.includes(doc.id))
@@ -60,7 +57,7 @@ export function resolveDocumentFields(
 
 export function resolveTableFields(
   documents: DocumentDef[],
-  appliesTo: string[],
+  appliesTo: string[]
 ): TableFieldOption[] {
   const targets = appliesTo.length
     ? documents.filter((doc) => appliesTo.includes(doc.id))

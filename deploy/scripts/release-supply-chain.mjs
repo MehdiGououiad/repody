@@ -47,7 +47,8 @@ function parseArgs(argv) {
     } else positionals.push(arg);
   }
   const cmd = positionals[0] ?? "verify";
-  const channel = [...flags].find((f) => f.startsWith("channel:"))?.slice("channel:".length) ?? "staging";
+  const channel =
+    [...flags].find((f) => f.startsWith("channel:"))?.slice("channel:".length) ?? "staging";
   return { cmd, flags, channel };
 }
 
@@ -108,7 +109,10 @@ function defaultCertificateIdentity() {
 }
 
 function defaultOidcIssuer() {
-  return process.env.COSIGN_CERTIFICATE_OIDC_ISSUER?.trim() ?? "https://token.actions.githubusercontent.com";
+  return (
+    process.env.COSIGN_CERTIFICATE_OIDC_ISSUER?.trim() ??
+    "https://token.actions.githubusercontent.com"
+  );
 }
 
 function requireRegistry() {
@@ -169,7 +173,9 @@ function attest(images, flags) {
       const syftResult = run(syft, syftArgs, { dryRun });
       if (syftResult.status !== 0) process.exit(syftResult.status ?? 1);
       if (!dryRun && existsSync(sbomOut)) {
-        console.log(`  wrote ${path.relative(root, sbomOut)} (${sha256File(sbomOut).slice(0, 12)}…)`);
+        console.log(
+          `  wrote ${path.relative(root, sbomOut)} (${sha256File(sbomOut).slice(0, 12)}…)`
+        );
       }
     }
 
@@ -199,7 +205,9 @@ function attest(images, flags) {
   }
 
   writeManifest(images, dir, { channel: "build", phase: "attest" });
-  console.log(`\nAttest complete for ${signed.length} image(s). Artifacts: ${path.relative(root, dir)}`);
+  console.log(
+    `\nAttest complete for ${signed.length} image(s). Artifacts: ${path.relative(root, dir)}`
+  );
 }
 
 function verify(images, flags) {
@@ -368,16 +376,26 @@ function runCheckMode() {
   const cases = [
     ["unknown command", ["wat"], 1],
     ["manifest dry-run", ["manifest", "--dry-run", "--skip-digest"], 0],
-    ["promote dry-run", ["promote", "--dry-run", "--skip-cosign", "--skip-sbom", "--skip-digest"], 0],
+    [
+      "promote dry-run",
+      ["promote", "--dry-run", "--skip-cosign", "--skip-sbom", "--skip-digest"],
+      0,
+    ],
   ];
   for (const [name, args, expected] of cases) {
-    const result = spawnSync(process.execPath, ["deploy/scripts/release-supply-chain.mjs", ...args], {
-      cwd: root,
-      env,
-      encoding: "utf8",
-    });
+    const result = spawnSync(
+      process.execPath,
+      ["deploy/scripts/release-supply-chain.mjs", ...args],
+      {
+        cwd: root,
+        env,
+        encoding: "utf8",
+      }
+    );
     if (result.status !== expected) {
-      console.error(`check failed: ${name} expected exit ${expected}, got ${result.status}\n${result.stderr}`);
+      console.error(
+        `check failed: ${name} expected exit ${expected}, got ${result.status}\n${result.stderr}`
+      );
       process.exit(1);
     }
   }

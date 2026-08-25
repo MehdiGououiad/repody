@@ -414,9 +414,7 @@ def build_cih_model_payload(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
             payload[name] = gt.account_number
         elif name == "agency":
             payload[name] = gt.agency
-        elif name == "currency":
-            payload[name] = "MAD"
-        elif name == "currency_code":
+        elif name == "currency" or name == "currency_code":
             payload[name] = "MAD"
         elif name == "opening_balance_date":
             payload[name] = gt.opening_balance_iso

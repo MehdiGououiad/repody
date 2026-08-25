@@ -38,10 +38,9 @@ async function main() {
   process.stderr.write(
     `\nerror: Timed out waiting for API at ${URL}\n` +
       "  Ensure the cluster is up: pnpm dev\n" +
-      "  Check pods: pnpm status\n",
+      "  Check pods: pnpm status\n"
   );
   process.exit(1);
 }
 
 main();
-

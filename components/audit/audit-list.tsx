@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Filter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Search, Filter, X } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useEffect, useMemo, useState } from "react";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,10 +23,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { formatNumber } from "@/lib/utils";
 import { useQueryParam } from "@/lib/hooks/use-query-param";
 import type { Audit, AuditStatus } from "@/lib/types";
+import { formatNumber } from "@/lib/utils";
 
 function AuditSearchInput({
   id,
@@ -79,9 +79,7 @@ export function AuditList({ audits }: { audits: Audit[] }) {
   );
   const entityOptions = useMemo(
     () =>
-      Array.from(new Set(audits.map((a) => a.entity))).sort((a, b) =>
-        a.localeCompare(b, locale)
-      ),
+      Array.from(new Set(audits.map((a) => a.entity))).sort((a, b) => a.localeCompare(b, locale)),
     [audits, locale]
   );
 
@@ -140,7 +138,10 @@ export function AuditList({ audits }: { audits: Audit[] }) {
           <Label htmlFor={searchId} className="sr-only">
             {t("filters.searchPlaceholder")}
           </Label>
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant" aria-hidden="true" />
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-on-surface-variant"
+            aria-hidden="true"
+          />
           <AuditSearchInput
             key={urlQuery}
             id={searchId}
@@ -260,7 +261,9 @@ export function AuditList({ audits }: { audits: Audit[] }) {
                 </TableCell>
                 <TableCell className="text-sm">{a.workflowName}</TableCell>
                 <TableCell className="text-sm">{a.entity}</TableCell>
-                <TableCell className="text-sm text-on-surface-variant tabular-nums">{fmtDate(a.timestamp)}</TableCell>
+                <TableCell className="text-sm text-on-surface-variant tabular-nums">
+                  {fmtDate(a.timestamp)}
+                </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
                   {a.rows === null ? "—" : formatNumber(a.rows, locale)}
                 </TableCell>

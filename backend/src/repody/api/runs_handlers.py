@@ -6,12 +6,12 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.errors import raise_app_error
+from repody.app.run.upload_bindings import parse_json_form
+from repody.app.uploads.intents import bindings_from_confirmed_uploads
 from repody.infra.auth.run_access import resolve_owner_subject
 from repody.runtime.run.contracts import FileBinding, RunSnapshot
 from repody.schemas.run_requests import RunSnapshotBody, StoredFileBinding
 from repody.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
-from repody.app.run.upload_bindings import parse_json_form
-from repody.app.uploads.intents import bindings_from_confirmed_uploads
 from repody.util.json_shape import normalize_keys_to_snake
 
 

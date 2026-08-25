@@ -1,31 +1,40 @@
 "use client";
 
-import { useTranslations, useLocale } from "next-intl";
-import Link from "next/link";
 import {
-  ChevronLeft, Download, FileText, ShieldCheck,
-  CheckCircle2, AlertTriangle,
-  Globe, Printer,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  Download,
+  FileText,
+  Globe,
+  Printer,
+  ShieldCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { LOCALE_COOKIE } from "@/i18n/config";
-import { ruleStatusLabel, isRuleFailure } from "@/lib/rule-status";
-import type { RunAuditDetail } from "@/lib/types/audit";
-import { formatDurationMs } from "@/lib/types/audit";
+import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import {
   ConfidenceBar,
-  RunDetailedRuleCard,
-  RunStatusBanner,
   formatFieldValue,
+  RunDetailedRuleCard,
   type RunReportLabels,
+  RunStatusBanner,
 } from "@/components/audit/run-report/run-report-core";
-import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
+import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
+import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
+import { LOCALE_COOKIE } from "@/i18n/config";
+import { isRuleFailure, ruleStatusLabel } from "@/lib/rule-status";
+import type { RunAuditDetail } from "@/lib/types/audit";
+import { formatDurationMs } from "@/lib/types/audit";
+import { cn } from "@/lib/utils";
 
 // ── CSV export ────────────────────────────────────────────────────────────────
 
-function buildCsv(audit: RunAuditDetail, t: ReturnType<typeof useTranslations>, locale: string): string {
+function buildCsv(
+  audit: RunAuditDetail,
+  t: ReturnType<typeof useTranslations>,
+  locale: string
+): string {
   const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
   const rows: string[] = [];
 
@@ -53,17 +62,23 @@ function buildCsv(audit: RunAuditDetail, t: ReturnType<typeof useTranslations>, 
           doc.extraction.validationLabel,
           "Ms",
           String(doc.extraction.extractionMs),
-        ].map(esc).join(",")
+        ]
+          .map(esc)
+          .join(",")
       );
     }
     for (const f of doc.fields) {
-      rows.push([
-        f.key,
-        formatFieldValue(f, locale),
-        f.type,
-        f.confidence !== null ? `${Math.round(f.confidence * 100)}%` : "",
-        f.flagged ? t("failed") : t("passed"),
-      ].map(esc).join(","));
+      rows.push(
+        [
+          f.key,
+          formatFieldValue(f, locale),
+          f.type,
+          f.confidence !== null ? `${Math.round(f.confidence * 100)}%` : "",
+          f.flagged ? t("failed") : t("passed"),
+        ]
+          .map(esc)
+          .join(",")
+      );
     }
   }
   rows.push("");
@@ -71,7 +86,11 @@ function buildCsv(audit: RunAuditDetail, t: ReturnType<typeof useTranslations>, 
   rows.push(t("validationRules"));
   rows.push(["ID", t("field"), "Kind", "Scope", t("status"), t("source")].map(esc).join(","));
   for (const r of audit.ruleResults) {
-    rows.push([r.name, r.expression, r.kind, r.scope, ruleStatusLabel(r.status), r.detail].map(esc).join(","));
+    rows.push(
+      [r.name, r.expression, r.kind, r.scope, ruleStatusLabel(r.status), r.detail]
+        .map(esc)
+        .join(",")
+    );
   }
 
   return rows.join("\r\n");
@@ -87,7 +106,10 @@ function downloadCsv(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function auditReportLabels(t: ReturnType<typeof useTranslations>, audit: RunAuditDetail): RunReportLabels {
+function auditReportLabels(
+  t: ReturnType<typeof useTranslations>,
+  audit: RunAuditDetail
+): RunReportLabels {
   return {
     allPassed: t("allRulesPassed"),
     validationFailed: t("validationFailed"),
@@ -173,10 +195,18 @@ function DocExtractionCard({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface-container-lowest">
-              <th className="text-left px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[30%]">{t("field")}</th>
-              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">{t("value")}</th>
-              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[160px]">{t("confidence")}</th>
-              <th className="text-right px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[80px]">{t("status")}</th>
+              <th className="text-left px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[30%]">
+                {t("field")}
+              </th>
+              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
+                {t("value")}
+              </th>
+              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[160px]">
+                {t("confidence")}
+              </th>
+              <th className="text-right px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[80px]">
+                {t("status")}
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -191,15 +221,31 @@ function DocExtractionCard({
                 )}
               >
                 <td className="px-5 py-3">
-                  <code className={cn("text-[12px] font-mono", field.flagged ? "text-danger" : "text-primary")}>
+                  <code
+                    className={cn(
+                      "text-[12px] font-mono",
+                      field.flagged ? "text-danger" : "text-primary"
+                    )}
+                  >
                     {field.key}
                   </code>
                   {field.description && (
-                    <p className="text-[10px] text-on-surface-variant mt-0.5 max-w-[220px] truncate">{field.description}</p>
+                    <p className="text-[10px] text-on-surface-variant mt-0.5 max-w-[220px] truncate">
+                      {field.description}
+                    </p>
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <span className={cn("font-semibold", !field.extracted ? "text-on-surface-variant" : field.flagged ? "text-danger" : "text-on-surface")}>
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      !field.extracted
+                        ? "text-on-surface-variant"
+                        : field.flagged
+                          ? "text-danger"
+                          : "text-on-surface"
+                    )}
+                  >
                     {formatFieldValue(field, locale)}
                   </span>
                 </td>
@@ -246,26 +292,32 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
 
   const failed = audit.ruleResults.filter((r) => isRuleFailure(r.status));
   const passed = audit.ruleResults.filter((r) => r.status === "passed");
-  const other = audit.ruleResults.filter(
-    (r) => r.status !== "passed" && !isRuleFailure(r.status)
-  );
+  const other = audit.ruleResults.filter((r) => r.status !== "passed" && !isRuleFailure(r.status));
 
   const ts = new Date(audit.createdAt).toLocaleString(locale, {
-    year: "numeric", month: "long", day: "numeric",
-    hour: "2-digit", minute: "2-digit",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 
   return (
     <div className="min-h-full page-enter">
       <div className="sticky top-16 z-20 bg-card/75 backdrop-blur-md border-b border-border/80 px-6 py-3 flex items-center gap-3 no-print">
-        <Link href="/audits" className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface transition-colors">
+        <Link
+          href="/audits"
+          className="flex items-center gap-1.5 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
+        >
           <ChevronLeft className="h-4 w-4" />
           {t("backToAudits")}
         </Link>
         <div className="w-px h-4 bg-border mx-1" />
         <span className="text-xs font-mono text-on-surface-variant">{audit.id}</span>
         <span className="text-xs text-on-surface-variant">·</span>
-        <span className="text-xs text-on-surface-variant truncate max-w-[200px]">{audit.workflowName}</span>
+        <span className="text-xs text-on-surface-variant truncate max-w-[200px]">
+          {audit.workflowName}
+        </span>
         <div className="flex-1" />
         <LangToggle />
         <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
@@ -281,7 +333,9 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
       <div className="hidden print:flex items-center justify-between mb-6 pb-4 border-b">
         <div>
           <h1 className="text-2xl font-bold">{t("printTitle")}</h1>
-          <p className="text-sm text-slate-600 print:text-slate-700">{audit.id} · {audit.workflowName}</p>
+          <p className="text-sm text-slate-600 print:text-slate-700">
+            {audit.id} · {audit.workflowName}
+          </p>
         </div>
         <div className="text-right text-sm text-slate-500 print:text-slate-600">
           <p>{t("generatedOn")}</p>
@@ -291,9 +345,13 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-8 page-enter-stagger">
         <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-          <span>{t("runOn")} {ts}</span>
+          <span>
+            {t("runOn")} {ts}
+          </span>
           <span>·</span>
-          <span className="capitalize">{t("via")} {audit.source === "api" ? t("api") : t("interface")}</span>
+          <span className="capitalize">
+            {t("via")} {audit.source === "api" ? t("api") : t("interface")}
+          </span>
         </div>
 
         <RunStatusBanner
@@ -315,7 +373,9 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
 
         {audit.metadata && (
           <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-on-surface">{t("runDetails")}</h2>
+            <h2 className="font-display text-lg font-semibold text-on-surface">
+              {t("runDetails")}
+            </h2>
             <RunMetadataPanel metadata={audit.metadata} />
           </section>
         )}
@@ -323,7 +383,9 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
         <section className="space-y-4 print:break-before-page">
           <div className="flex items-center gap-2.5">
             <FileText className="h-5 w-5 text-on-surface-variant" />
-            <h2 className="font-display text-lg font-semibold text-on-surface">{t("extractedData")}</h2>
+            <h2 className="font-display text-lg font-semibold text-on-surface">
+              {t("extractedData")}
+            </h2>
           </div>
           {audit.documents.map((doc) => (
             <DocExtractionCard key={doc.id} doc={doc} t={t} locale={locale} />
@@ -333,7 +395,9 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
         <section className="space-y-4">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="h-5 w-5 text-on-surface-variant" />
-            <h2 className="font-display text-lg font-semibold text-on-surface">{t("validationRules")}</h2>
+            <h2 className="font-display text-lg font-semibold text-on-surface">
+              {t("validationRules")}
+            </h2>
           </div>
           {[...failed, ...other, ...passed].map((rule) => (
             <RunDetailedRuleCard key={rule.id} rule={rule} labels={labels} size="md" />

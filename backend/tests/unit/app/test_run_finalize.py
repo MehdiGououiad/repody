@@ -7,6 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from repody.app.run.commands import finalize_pending_completion
+from repody.app.run.lifecycle import RunCompletionOutcome
 from repody.runtime.agent_metadata import (
     PendingCompletion,
     clear_pending_completion,
@@ -14,8 +16,6 @@ from repody.runtime.agent_metadata import (
     store_pending_completion,
 )
 from repody.runtime.contracts.result import Result
-from repody.app.run.commands import finalize_pending_completion
-from repody.app.run.lifecycle import RunCompletionOutcome
 
 
 def test_pending_completion_round_trip():

@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import { ShieldCheck } from "lucide-react";
+import { useMemo } from "react";
 import type { IamCatalog } from "@/lib/api/iam";
 
 export function PermissionMatrix({ catalog }: { catalog: IamCatalog | null }) {
@@ -13,18 +13,16 @@ export function PermissionMatrix({ catalog }: { catalog: IamCatalog | null }) {
         keys.add(`${grant.resource}:${grant.action}`);
       }
     }
-    return [...keys]
-      .sort()
-      .map((key) => {
-        const [resource, action] = key.split(":");
-        const byRole: Record<string, boolean> = {};
-        for (const role of catalog.roles) {
-          byRole[role.id] = role.permissions.some(
-            (grant) => grant.resource === resource && grant.action === action
-          );
-        }
-        return { resource, action, byRole };
-      });
+    return [...keys].sort().map((key) => {
+      const [resource, action] = key.split(":");
+      const byRole: Record<string, boolean> = {};
+      for (const role of catalog.roles) {
+        byRole[role.id] = role.permissions.some(
+          (grant) => grant.resource === resource && grant.action === action
+        );
+      }
+      return { resource, action, byRole };
+    });
   }, [catalog]);
 
   if (!catalog) {

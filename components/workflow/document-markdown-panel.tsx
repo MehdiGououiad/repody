@@ -1,15 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Check, Copy, FileText, ScanText } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { DocumentMarkdownPreview } from "@/components/documents/document-markdown-preview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import { normalizeDocumentMarkdown } from "@/lib/document-markdown/normalize";
+import { cn } from "@/lib/utils";
 
 export function DocumentMarkdownPanel({
   text,

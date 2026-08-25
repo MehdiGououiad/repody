@@ -111,9 +111,7 @@ class IdpRunPorts:
             await session.commit()
         await self.progress.on_extract_start(job, index, total)
 
-    async def on_extract_done(
-        self, job: ExtractionJob, result: Result[DocumentExtraction]
-    ) -> None:
+    async def on_extract_done(self, job: ExtractionJob, result: Result[DocumentExtraction]) -> None:
         if not result.is_ok or result.value is None:
             return
         mapped = result.value
@@ -262,7 +260,9 @@ async def execute_idp_run(
         started_at=run.started_at,
     )
     if not overall_r.is_ok:
-        err = overall_r.error or AppError(code=ErrorCode.INFRA, message="persist_idp_outcome failed")
+        err = overall_r.error or AppError(
+            code=ErrorCode.INFRA, message="persist_idp_outcome failed"
+        )
         return Result.fail(err)
 
     overall = overall_r.unwrap()

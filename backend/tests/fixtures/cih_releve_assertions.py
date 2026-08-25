@@ -7,11 +7,11 @@ import re
 from datetime import datetime
 from typing import Any
 
+from tests.fixtures.cih_releve_ground_truth import CihReleveGroundTruth
+
 from repody.extraction.types import ExtractedFieldResult
 from repody.rules.amounts import normalize_amount, parse_numeric_value
 from repody.rules.value_coercion import is_iso_date_like
-
-from tests.fixtures.cih_releve_ground_truth import CihReleveGroundTruth
 
 _DATE_DD_MM = re.compile(r"^\d{2}/\d{2}$")
 _DATE_DD_MM_YYYY = re.compile(r"^\d{2}/\d{2}/\d{4}$")
@@ -43,7 +43,9 @@ def parse_json_value(raw: str) -> Any:
 def assert_is_json_list(raw: str, *, field_name: str = "field") -> list[Any]:
     parsed = parse_json_value(raw)
     if not isinstance(parsed, list):
-        raise AssertionError(f"{field_name} must be a JSON array, got {type(parsed).__name__}: {raw!r}")
+        raise AssertionError(
+            f"{field_name} must be a JSON array, got {type(parsed).__name__}: {raw!r}"
+        )
     return parsed
 
 
@@ -141,9 +143,7 @@ def assert_number_list(
         amounts.append(parsed)
     total = round(sum(amounts), 2)
     if abs(total - expected_sum) > sum_tolerance:
-        raise AssertionError(
-            f"{field.key}: sum {total} != {expected_sum} (±{sum_tolerance})"
-        )
+        raise AssertionError(f"{field.key}: sum {total} != {expected_sum} (±{sum_tolerance})")
     return amounts
 
 
@@ -236,13 +236,17 @@ def assert_object_array_transactions(
         if debit_raw not in (None, "", "—", "null"):
             debit = parse_numeric_value(str(debit_raw))
             if debit is None:
-                raise AssertionError(f"{field.key}[{index}].debit_amount not numeric: {debit_raw!r}")
+                raise AssertionError(
+                    f"{field.key}[{index}].debit_amount not numeric: {debit_raw!r}"
+                )
             debit_total += debit
             debit_rows += 1
         if credit_raw not in (None, "", "—", "null"):
             credit = parse_numeric_value(str(credit_raw))
             if credit is None:
-                raise AssertionError(f"{field.key}[{index}].credit_amount not numeric: {credit_raw!r}")
+                raise AssertionError(
+                    f"{field.key}[{index}].credit_amount not numeric: {credit_raw!r}"
+                )
             credit_total += credit
             credit_rows += 1
 
@@ -250,9 +254,13 @@ def assert_object_array_transactions(
     credit_total = round(credit_total, 2)
     if row_tolerance == 0:
         if debit_rows != gt.debit_count:
-            raise AssertionError(f"{field.key}: expected {gt.debit_count} debit rows, got {debit_rows}")
+            raise AssertionError(
+                f"{field.key}: expected {gt.debit_count} debit rows, got {debit_rows}"
+            )
         if credit_rows != gt.credit_count:
-            raise AssertionError(f"{field.key}: expected {gt.credit_count} credit rows, got {credit_rows}")
+            raise AssertionError(
+                f"{field.key}: expected {gt.credit_count} credit rows, got {credit_rows}"
+            )
     if abs(debit_total - gt.total_debit_movements) > sum_tolerance:
         raise AssertionError(
             f"{field.key}: debit total {debit_total} != {gt.total_debit_movements}"
@@ -286,9 +294,7 @@ def assert_opening_date_in_list(dates: list[str], opening_iso: str) -> None:
     for token in dates:
         if is_iso_date_like(token):
             datetime.fromisoformat(token)
-        elif _DATE_DD_MM.match(token):
-            continue
-        elif _DATE_DD_MM_YYYY.match(token):
+        elif _DATE_DD_MM.match(token) or _DATE_DD_MM_YYYY.match(token):
             continue
         else:
             raise AssertionError(f"unexpected date token in list: {token!r}")

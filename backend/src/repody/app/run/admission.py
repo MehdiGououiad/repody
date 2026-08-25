@@ -104,8 +104,7 @@ async def check_admission(
             AppError(
                 code=ErrorCode.CAPACITY,
                 message=(
-                    f"Queue is full ({queued}/{max_queued} queued runs). "
-                    "Retry after workers drain."
+                    f"Queue is full ({queued}/{max_queued} queued runs). Retry after workers drain."
                 ),
                 retry_after_seconds=retry_after,
             )

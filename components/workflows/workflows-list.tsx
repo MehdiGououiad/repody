@@ -1,18 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Activity, ChevronRight, FileEdit, Pause, Play, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTranslations, useLocale } from "next-intl";
-import {
-  Activity,
-  ChevronRight,
-  FileEdit,
-  Pause,
-  Play,
-  Trash2,
-  TrendingUp,
-} from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -164,7 +156,9 @@ export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow
               key={w.id}
               className={cn(
                 "panel-elevated rounded-xl p-5 transition-[border-color,box-shadow] duration-200 group flex flex-col gap-3 relative",
-                isSelected ? "border-accent-blue ring-1 ring-accent-blue/25" : "hover:border-accent-blue/20"
+                isSelected
+                  ? "border-accent-blue ring-1 ring-accent-blue/25"
+                  : "hover:border-accent-blue/20"
               )}
             >
               <div className="flex items-start gap-3">
@@ -173,7 +167,10 @@ export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow
                   onChange={(checked) => toggleOne(w.id, checked)}
                   ariaLabel={t("delete.selectWorkflow", { name: w.name })}
                 />
-                <Link href={`/workflows/${w.id}/edit`} className="flex-1 min-w-0 flex flex-col gap-3">
+                <Link
+                  href={`/workflows/${w.id}/edit`}
+                  className="flex-1 min-w-0 flex flex-col gap-3"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="text-base font-semibold text-on-surface group-hover:text-primary transition-colors truncate">

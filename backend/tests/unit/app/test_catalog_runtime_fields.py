@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.catalog.runtime_fields import build_model_runtime_config
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 
 
 def test_model_runtime_config_includes_registered_models(monkeypatch):

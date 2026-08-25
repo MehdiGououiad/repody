@@ -9,6 +9,16 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from repody.app.run.commands import (
+    PUBLIC_RUN_FAILURE_MESSAGE,
+    ClaimRunRequest,
+    claim_run,
+    fail_run_terminal,
+    finalize_pending_completion,
+    publish_run_domain_events,
+)
+from repody.app.run.handoff import schedule_next_agent_stage
+from repody.app.run.persistence import bind_try_claim
 from repody.infra.db.models import (
     Document,
     ExtractedField,
@@ -26,16 +36,6 @@ from repody.runtime.recipe import (
     next_agent_after,
     resolve_recipe,
 )
-from repody.app.run.commands import (
-    PUBLIC_RUN_FAILURE_MESSAGE,
-    ClaimRunRequest,
-    claim_run,
-    fail_run_terminal,
-    finalize_pending_completion,
-    publish_run_domain_events,
-)
-from repody.app.run.handoff import schedule_next_agent_stage
-from repody.app.run.persistence import bind_try_claim
 from repody.settings import get_settings
 
 log = structlog.get_logger()

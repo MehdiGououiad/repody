@@ -18,7 +18,6 @@ from repody.app.run.helpers import meta_to_dict
 from repody.infra.db.models import Run
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 
-
 _AGENT_OUTCOMES_KEY = "agentOutcomes"
 _PENDING_COMPLETION_KEY = "pendingCompletion"
 
@@ -213,7 +212,9 @@ def _validation_from_dict(raw: dict[str, Any]) -> ValidationOutput:
                 status=str(item.get("status") or ""),
                 severity=str(item.get("severity") or ""),
                 detail=str(item.get("detail") or ""),
-                affected_fields=tuple(str(x) for x in affected) if isinstance(affected, list) else (),
+                affected_fields=tuple(str(x) for x in affected)
+                if isinstance(affected, list)
+                else (),
                 kind=str(item.get("kind") or "logic"),
                 scope=str(item.get("scope") or "intra"),
                 expression=str(item.get("expression") or ""),

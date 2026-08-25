@@ -22,18 +22,18 @@ from repody.api import (
     workflows,
 )
 from repody.api.openapi_config import install_openapi
+from repody.app.run.dispatch import close_taskiq_brokers
+from repody.inference.openai_compat import close_openai_clients
 from repody.infra.auth.dependencies import require_permission
 from repody.infra.db.base import async_session_factory, engine
 from repody.infra.db.seed import seed_database
-from repody.inference.openai_compat import close_openai_clients
 from repody.infra.observability.bootstrap import init_observability
 from repody.infra.observability.middleware import RequestLoggingMiddleware
 from repody.infra.observability.tracing import instrument_fastapi
 from repody.infra.rate_limit import GlobalRateLimitMiddleware
 from repody.infra.redis.pool import close_redis_pool
-from repody.app.run.dispatch import close_taskiq_brokers
-from repody.settings import get_settings
 from repody.infra.storage.factory import init_storage
+from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 

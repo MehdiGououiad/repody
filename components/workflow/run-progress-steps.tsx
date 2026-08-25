@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Brain,
   CheckCircle2,
@@ -12,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 
 import type { RunProgress } from "@/lib/api/workflow-run";
 import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
@@ -116,17 +116,13 @@ export function RunProgressSteps({
   const total = progress.steps.length;
   const activeStep = progress.steps.find((s) => s.status === "active");
   const elapsedMs = useActiveStepElapsed(activeStep?.id);
-  const showQueue =
-    progress.queuePosition != null &&
-    progress.queueDepth != null;
+  const showQueue = progress.queuePosition != null && progress.queueDepth != null;
   const queueStep = progress.steps.find((s) => s.id === "queue");
   const isQueued =
-    queueStep != null &&
-    (queueStep.status === "active" || queueStep.status === "pending");
+    queueStep != null && (queueStep.status === "active" || queueStep.status === "pending");
 
   const serverlessGpu = inferenceMode === "llamacpp";
-  const extractStepActive =
-    activeStep?.mode === "document_model" && activeStep.status === "active";
+  const extractStepActive = activeStep?.mode === "document_model" && activeStep.status === "active";
   const coldStartContext =
     serverlessGpu &&
     extractStepActive &&

@@ -24,10 +24,10 @@ from repody.agents.idp.contracts import (
     SchemaField,
 )
 from repody.agents.idp.run import agent_status_from_idp
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 from repody.extraction.modes import LOGIC_VALIDATION, extraction_is_needed
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def test_result_ok_and_fail():
@@ -55,18 +55,22 @@ def test_agent_outcome_envelope():
 
 
 def test_extraction_is_needed_requires_file_and_schema_or_markdown():
-    assert extraction_is_needed(
-        has_file=False, has_schema_fields=True, markdown_extraction=False
-    ) is False
-    assert extraction_is_needed(
-        has_file=True, has_schema_fields=True, markdown_extraction=False
-    ) is True
-    assert extraction_is_needed(
-        has_file=True, has_schema_fields=False, markdown_extraction=False
-    ) is False
-    assert extraction_is_needed(
-        has_file=True, has_schema_fields=False, markdown_extraction=True
-    ) is True
+    assert (
+        extraction_is_needed(has_file=False, has_schema_fields=True, markdown_extraction=False)
+        is False
+    )
+    assert (
+        extraction_is_needed(has_file=True, has_schema_fields=True, markdown_extraction=False)
+        is True
+    )
+    assert (
+        extraction_is_needed(has_file=True, has_schema_fields=False, markdown_extraction=False)
+        is False
+    )
+    assert (
+        extraction_is_needed(has_file=True, has_schema_fields=False, markdown_extraction=True)
+        is True
+    )
 
 
 def test_build_extraction_plan():
@@ -84,8 +88,17 @@ def test_build_extraction_plan():
 
 def test_summarize_validation_partial():
     results = (
-        RuleResult(rule_id="1", name="ok", status="passed", severity="reject", detail="", affected_fields=()),
-        RuleResult(rule_id="2", name="bad", status="failed", severity="warn", detail="", affected_fields=()),
+        RuleResult(
+            rule_id="1",
+            name="ok",
+            status="passed",
+            severity="reject",
+            detail="",
+            affected_fields=(),
+        ),
+        RuleResult(
+            rule_id="2", name="bad", status="failed", severity="warn", detail="", affected_fields=()
+        ),
     )
     out = summarize_validation(results)
     assert out.overall_status == "warning"
@@ -130,7 +143,13 @@ def test_rule_spec_round_trip_preserves_junction():
             "severity": "reject",
             "applies_to": ["total"],
             "body": "total > 0",
-            "conditions": [{"left": {"kind": "field", "value": "total"}, "operator": ">", "right": {"kind": "literal", "value": "0"}}],
+            "conditions": [
+                {
+                    "left": {"kind": "field", "value": "total"},
+                    "operator": ">",
+                    "right": {"kind": "literal", "value": "0"},
+                }
+            ],
             "condition_junction": "OR",
         }
     )

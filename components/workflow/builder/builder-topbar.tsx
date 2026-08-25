@@ -1,11 +1,11 @@
 "use client";
 
+import { Check, ChevronLeft, Play, Rocket, Save } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Save, Check, Rocket, ChevronLeft, Play } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 export function BuilderTopbar({
@@ -52,7 +52,10 @@ export function BuilderTopbar({
           {t("statusLive")}
         </Badge>
       ) : (
-        <Badge variant="outline" className="hidden sm:flex text-[10px] shrink-0 text-on-surface-variant">
+        <Badge
+          variant="outline"
+          className="hidden sm:flex text-[10px] shrink-0 text-on-surface-variant"
+        >
           {t("statusDraft")}
         </Badge>
       )}
@@ -82,12 +85,7 @@ export function BuilderTopbar({
             <span>{tCommon("deployWorkflow")}</span>
           </Button>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 gap-1.5 text-xs"
-            onClick={onDeploy}
-          >
+          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onDeploy}>
             <Play className="h-3.5 w-3.5" />
             <span>{tCommon("redeployWorkflow")}</span>
           </Button>

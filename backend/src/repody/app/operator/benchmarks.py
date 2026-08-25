@@ -4,13 +4,13 @@ import shutil
 import sys
 from pathlib import Path
 
+from repody.app.operator.auth import fetch_operator_benchmark_bearer_token
+from repody.app.operator.jobs import append_output, create_job, run_command
+from repody.app.operator.requests import BenchmarkRequest
 from repody.extraction.branding import public_document_model_label
 from repody.extraction.warmup import warmup_repody_vlm
 from repody.runtime.operator.job import OperatorJob
 from repody.runtime.operator.validate import parse_model_identifier
-from repody.app.operator.auth import fetch_operator_benchmark_bearer_token
-from repody.app.operator.jobs import append_output, create_job, load_report, run_command
-from repody.app.operator.requests import BenchmarkRequest
 
 
 def benchmark_command(

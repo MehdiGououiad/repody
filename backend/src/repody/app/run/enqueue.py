@@ -8,17 +8,17 @@ import structlog
 from asgi_correlation_id import correlation_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.queue import refresh_single_queued_run
+from repody.app.run.admission import check_admission
+from repody.app.run.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
+from repody.app.run.intake import create_run
+from repody.app.run.pool import predict_worker_pool
 from repody.infra.auth.dependencies import extract_bearer
 from repody.infra.auth.run_access import resolve_run_enqueue_source
+from repody.infra.rate_limit import check_run_rate_limits
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.contracts import EnqueueRunRequest
 from repody.schemas.workflow import RunCreatedResponse
-from repody.app.run.admission import check_admission
-from repody.app.run.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
-from repody.app.queue import refresh_single_queued_run
-from repody.infra.rate_limit import check_run_rate_limits
-from repody.app.run.intake import create_run
-from repody.app.run.pool import predict_worker_pool
 
 log = structlog.get_logger(__name__)
 
@@ -52,9 +52,7 @@ async def enqueue_run(
     client_key = client_key_from_request(source, req.authorization, req.client_host)
 
     if source == "api" and not wf.deployed_at:
-        return Result.fail(
-            AppError(code=ErrorCode.CONFLICT, message="Workflow is not deployed.")
-        )
+        return Result.fail(AppError(code=ErrorCode.CONFLICT, message="Workflow is not deployed."))
 
     rate = await check_run_rate_limits(
         workflow_id=req.workflow_id,
@@ -62,7 +60,9 @@ async def enqueue_run(
         client_key=client_key,
     )
     if not rate.is_ok:
-        return Result.fail(rate.error or AppError(code=ErrorCode.RATE_LIMIT, message="Rate limited"))
+        return Result.fail(
+            rate.error or AppError(code=ErrorCode.RATE_LIMIT, message="Rate limited")
+        )
 
     # Reuse workflow already loaded for access — avoid a second documents query.
     predicted_pool = await predict_worker_pool(

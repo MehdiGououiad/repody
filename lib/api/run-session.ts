@@ -1,23 +1,23 @@
-import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { workflowAuthHeaders } from "@/lib/api/auth-policy";
 import {
-  buildClientProgress,
   appendWorkerProgress,
+  buildClientProgress,
   type ClientStepLabels,
 } from "@/lib/api/client-run-progress";
 import { browserFetch } from "@/lib/api/http";
-import { waitForRunUntilDone, type RunProgress } from "@/lib/api/run-poll";
+import { type RunProgress, waitForRunUntilDone } from "@/lib/api/run-poll";
 import {
   fetchWithTimeout,
   getUploadCapabilities,
+  type ProgressReporter,
   raiseStepError,
   reportClientStep,
-  type ProgressReporter,
   type StoredUploadBinding,
   uploadViaPresign,
 } from "@/lib/api/run-upload";
-import type { RunAuditDetail } from "@/lib/types/audit";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
-import { workflowAuthHeaders } from "@/lib/api/auth-policy";
+import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import type { RunAuditDetail } from "@/lib/types/audit";
 
 /** Session JWT (builder) or deployed workflow API key (integrators). */
 export type WorkflowRunCredential = "session" | { apiKey: string };
@@ -37,9 +37,7 @@ type RunSnapshot = {
   workflowName: string;
 };
 
-function isApiCredential(
-  credential: WorkflowRunCredential
-): credential is { apiKey: string } {
+function isApiCredential(credential: WorkflowRunCredential): credential is { apiKey: string } {
   return credential !== "session";
 }
 
@@ -123,10 +121,7 @@ function makeProgressHandler(reporter?: ProgressReporter) {
   };
 }
 
-async function waitForRun(
-  runId: string,
-  reporter?: ProgressReporter
-): Promise<WorkflowRunResult> {
+async function waitForRun(runId: string, reporter?: ProgressReporter): Promise<WorkflowRunResult> {
   reportClientStep(reporter, "poll-run");
   const detail = await waitForRunUntilDone(runId, makeProgressHandler(reporter));
   return { ...detail, processedAt: detail.createdAt };

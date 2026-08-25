@@ -14,6 +14,4 @@ def is_iso_date_like(text: str) -> bool:
     value = (text or "").strip()
     if not value:
         return False
-    return bool(
-        _ISO_DATE.match(value) or _ISO_DATETIME.match(value) or _ISO_TIME.match(value)
-    )
+    return bool(_ISO_DATE.match(value) or _ISO_DATETIME.match(value) or _ISO_TIME.match(value))

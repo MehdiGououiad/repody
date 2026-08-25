@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.run.dispatch_outbox import schedule_outbox_dispatch
 from repody.infra.db.models import Run, RunDispatchOutbox
 from repody.runtime.contracts.agent import AgentId
 from repody.runtime.pools import pool_for_agent
-from repody.app.run.dispatch_outbox import schedule_outbox_dispatch
 
 log = structlog.get_logger()
 

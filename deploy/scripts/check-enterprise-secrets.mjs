@@ -25,17 +25,17 @@ const requireVlmApiKey = args.includes("--require-vlm-api-key");
 const valuesFiles = valuesFor("--values");
 const externalSecretFile = valueFor(
   "--external-secret",
-  "deploy/managed/external-secrets/repody-runtime-externalsecret.example.yaml",
+  "deploy/managed/external-secrets/repody-runtime-externalsecret.example.yaml"
 );
 const clusterSecretStoreFile = valueFor(
   "--cluster-secret-store",
-  "deploy/managed/external-secrets/vault-clustersecretstore.example.yaml",
+  "deploy/managed/external-secrets/vault-clustersecretstore.example.yaml"
 );
 
 if (valuesFiles.length === 0) {
   valuesFiles.push(
     "deploy/helm/repody/values-production.yaml.example",
-    "deploy/helm/repody/values-production.onprem-managed.yaml.example",
+    "deploy/helm/repody/values-production.onprem-managed.yaml.example"
   );
 }
 
@@ -66,7 +66,10 @@ function hasLine(text, key, value) {
 
 function collectSecretKeys(externalSecretText) {
   return new Set(
-    Array.from(externalSecretText.matchAll(/^\s*-\s*secretKey:\s*([A-Z0-9_]+)/gm), (match) => match[1]),
+    Array.from(
+      externalSecretText.matchAll(/^\s*-\s*secretKey:\s*([A-Z0-9_]+)/gm),
+      (match) => match[1]
+    )
   );
 }
 
@@ -82,20 +85,34 @@ function requireCondition(condition, message) {
 
 requireCondition(
   hasLine(section(valuesText, "global"), "deploymentEnvironment", "production"),
-  "values must set global.deploymentEnvironment: production",
+  "values must set global.deploymentEnvironment: production"
 );
 requireCondition(
   hasLine(section(valuesText, "secrets"), "create", "false"),
-  "values must set secrets.create: false",
+  "values must set secrets.create: false"
 );
 requireCondition(
   hasLine(section(valuesText, "secrets"), "existingSecret", "repody-runtime-secrets"),
-  "values must set secrets.existingSecret: repody-runtime-secrets",
+  "values must set secrets.existingSecret: repody-runtime-secrets"
 );
 
 for (const [name, requiredLines] of [
-  ["externalDatabase", [["enabled", "true"], ["existingSecret", "repody-runtime-secrets"], ["urlKey", "AUDIT_DATABASE_URL"]]],
-  ["externalRedis", [["enabled", "true"], ["existingSecret", "repody-runtime-secrets"], ["urlKey", "AUDIT_REDIS_URL"]]],
+  [
+    "externalDatabase",
+    [
+      ["enabled", "true"],
+      ["existingSecret", "repody-runtime-secrets"],
+      ["urlKey", "AUDIT_DATABASE_URL"],
+    ],
+  ],
+  [
+    "externalRedis",
+    [
+      ["enabled", "true"],
+      ["existingSecret", "repody-runtime-secrets"],
+      ["urlKey", "AUDIT_REDIS_URL"],
+    ],
+  ],
   [
     "externalObjectStorage",
     [
@@ -115,7 +132,7 @@ for (const [name, requiredLines] of [
 
 requireCondition(
   !/^\s*(accessKey|secretKey|url):\s*['"]?\S+/m.test(section(valuesText, "externalObjectStorage")),
-  "production values must not include inline externalObjectStorage accessKey/secretKey/url secrets",
+  "production values must not include inline externalObjectStorage accessKey/secretKey/url secrets"
 );
 
 const requiredKeys = [
@@ -135,34 +152,40 @@ for (const key of requiredKeys) {
 }
 
 if (!externalSecretKeys.has("AUDIT_LLAMACPP_API_KEY")) {
-  warnings.push("ExternalSecret does not map AUDIT_LLAMACPP_API_KEY; OK only when the external VLM endpoint has no bearer token.");
+  warnings.push(
+    "ExternalSecret does not map AUDIT_LLAMACPP_API_KEY; OK only when the external VLM endpoint has no bearer token."
+  );
 }
 
 requireCondition(
   /kind:\s*ExternalSecret/.test(externalSecretText),
-  "runtime secret manifest must be an ExternalSecret",
+  "runtime secret manifest must be an ExternalSecret"
 );
 requireCondition(
   /name:\s*repody-runtime-secrets/.test(externalSecretText),
-  "ExternalSecret target/name must produce repody-runtime-secrets",
+  "ExternalSecret target/name must produce repody-runtime-secrets"
 );
 requireCondition(
   /kind:\s*ClusterSecretStore/.test(clusterSecretStoreText),
-  "secret store manifest must define a ClusterSecretStore",
+  "secret store manifest must define a ClusterSecretStore"
 );
 requireCondition(
   /auth:\s*\n\s*kubernetes:/.test(clusterSecretStoreText),
-  "Vault ClusterSecretStore should use Kubernetes auth for workload identity",
+  "Vault ClusterSecretStore should use Kubernetes auth for workload identity"
 );
 
 if (!allowPlaceholders) {
-  const placeholderPattern = /(YOUR_ORG|yourdomain\.com|example\.com|CHANGE_ME|<[^>]+>|replace-with|0\.1\.0)/;
+  const placeholderPattern =
+    /(YOUR_ORG|yourdomain\.com|example\.com|CHANGE_ME|<[^>]+>|replace-with|0\.1\.0)/;
   for (const [label, text] of [
     ["values", valuesText],
     ["ExternalSecret", externalSecretText],
     ["ClusterSecretStore", clusterSecretStoreText],
   ]) {
-    requireCondition(!placeholderPattern.test(text), `${label} still contains example placeholders`);
+    requireCondition(
+      !placeholderPattern.test(text),
+      `${label} still contains example placeholders`
+    );
   }
 }
 

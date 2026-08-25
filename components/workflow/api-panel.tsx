@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { ApiInfoScreen } from "@/components/workflow/api-panel-info";
 import { ApiRunLoadingScreen } from "@/components/workflow/api-panel-loading";
-import { ApiRunReportScreen, type ApiRunReport } from "@/components/workflow/api-panel-report";
+import { type ApiRunReport, ApiRunReportScreen } from "@/components/workflow/api-panel-report";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
-import { runWorkflowApi, type RunProgress } from "@/lib/api/workflow-run";
+import { type RunProgress, runWorkflowApi } from "@/lib/api/workflow-run";
 import { reportClientError } from "@/lib/report-error";
 import type { DocumentDef } from "@/lib/types";
 
@@ -70,11 +70,7 @@ export function ApiPanel({
     <>
       {runError ? (
         <div className="mb-4">
-          <RunErrorAlert
-            title={t("test.errorTitle")}
-            message={runError}
-            runId={runErrorRunId}
-          />
+          <RunErrorAlert title={t("test.errorTitle")} message={runError} runId={runErrorRunId} />
         </div>
       ) : null}
       <ApiInfoScreen

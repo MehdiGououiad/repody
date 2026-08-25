@@ -6,17 +6,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.infra.db.models import Run, RunDocument, RunStatus
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.runtime.run.contracts import FileBinding
-from repody.runtime.run.ids import document_row_id, new_run_id
-from repody.schemas.run import RunAuditDetail
-from repody.schemas.workflow import RunPollResponse, RunPollStatus
-from repody.schemas.workflow import (
-    DocumentDefSchema,
-    RunProgressSchema,
-    WorkflowRuleSchema,
-)
 from repody.app.mappers import run_to_audit_detail
 from repody.app.queue import (
     enrich_progress_for_poll,
@@ -27,6 +16,18 @@ from repody.app.run.snapshot import (
     resolve_workflow_display_name,
 )
 from repody.app.workflow import load_workflow
+from repody.infra.db.models import Run, RunDocument, RunStatus
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.run.contracts import FileBinding
+from repody.runtime.run.ids import document_row_id, new_run_id
+from repody.schemas.run import RunAuditDetail
+from repody.schemas.workflow import (
+    DocumentDefSchema,
+    RunPollResponse,
+    RunPollStatus,
+    RunProgressSchema,
+    WorkflowRuleSchema,
+)
 
 
 def _snapshot_from_payload(
@@ -125,9 +126,7 @@ async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:
         return RunPollStatus(status="failed", error="Run not found", progress=None)
     progress_dict = await enrich_progress_for_poll(session, run)
     progress = (
-        RunProgressSchema.model_validate(progress_dict)
-        if progress_dict
-        else progress_from_run(run)
+        RunProgressSchema.model_validate(progress_dict) if progress_dict else progress_from_run(run)
     )
     if run.status == RunStatus.failed.value:
         return RunPollStatus(status="failed", error=run.error or "Run failed", progress=progress)

@@ -64,11 +64,6 @@ export function RunReportCore({
   );
 }
 
-export {
-  ConfidenceBar,
-  formatFieldValue,
-  type RunReportLabels,
-} from "./report-shared";
 export { RunStatusBanner } from "./report-banner";
 export {
   RunDocFieldsList,
@@ -80,3 +75,8 @@ export {
   RunRuleResultsDetailed,
   RunRuleResultsSummary,
 } from "./report-rules";
+export {
+  ConfidenceBar,
+  formatFieldValue,
+  type RunReportLabels,
+} from "./report-shared";

@@ -35,9 +35,9 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
         timeout_minutes=settings.worker_task_timeout_minutes,
     )
     try:
+        from repody.app.run.processor import execute_run_with_timeout
         from repody.infra.observability.context import bind_log_context, log_context
         from repody.infra.observability.tracing import start_span
-        from repody.app.run.processor import execute_run_with_timeout
 
         async with start_span(
             "process_audit_run",

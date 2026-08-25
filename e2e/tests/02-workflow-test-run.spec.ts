@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   clickExtractValidate,
   goToTestDeployStep,
@@ -28,9 +28,9 @@ test.describe("Workflow builder — test run", () => {
     await goToTestDeployStep(page);
     await clickExtractValidate(page);
 
-    await expect(
-      page.getByText(/passed|failed|warning|rule/i).first()
-    ).toBeVisible({ timeout: 180_000 });
+    await expect(page.getByText(/passed|failed|warning|rule/i).first()).toBeVisible({
+      timeout: 180_000,
+    });
 
     const reportLink = page.getByRole("link", {
       name: /Open report|View full audit report/i,

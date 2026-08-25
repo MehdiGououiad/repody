@@ -29,10 +29,11 @@ import json
 import os
 import sys
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Callable, Awaitable
+from typing import Any
 from urllib.parse import urlparse
 
 import httpx
@@ -46,8 +47,8 @@ from repody.benchmarking import score_gououiad_cnie_fields, score_gououiad_cnie_
 from repody.extraction.branding import (
     GLM_OCR_CATALOG_ID,
     GLM_OCR_QWEN_CATALOG_ID,
-    PADDLEOCR_V6_CATALOG_ID,
     PADDLEOCR_QWEN_CATALOG_ID,
+    PADDLEOCR_V6_CATALOG_ID,
     REPODY_VLM_CATALOG_ID,
 )
 from repody.extraction.glm_ocr import extract_with_glm_ocr
@@ -94,7 +95,9 @@ PATHS: tuple[PathSpec, ...] = (
     PathSpec("repody:vlm:markdown", "markdown", REPODY_VLM_CATALOG_ID, "NuExtract markdown"),
     PathSpec("repody:vlm:structured", "structured", REPODY_VLM_CATALOG_ID, "NuExtract structured"),
     PathSpec("paddleocr:v6", "markdown", PADDLEOCR_V6_CATALOG_ID, "PP-OCRv6 markdown"),
-    PathSpec("paddleocr:qwen", "structured", PADDLEOCR_QWEN_CATALOG_ID, "PP-OCRv6 + Qwen structured"),
+    PathSpec(
+        "paddleocr:qwen", "structured", PADDLEOCR_QWEN_CATALOG_ID, "PP-OCRv6 + Qwen structured"
+    ),
     PathSpec("glm:ocr", "markdown", GLM_OCR_CATALOG_ID, "GLM-OCR official"),
     PathSpec("glm:qwen", "structured", GLM_OCR_QWEN_CATALOG_ID, "GLM-OCR + Qwen structured"),
     PathSpec("glm:ocr:id-card", "markdown", GLM_OCR_CATALOG_ID, "GLM-OCR ID-card profile"),
@@ -455,7 +458,11 @@ def _evaluate(path: PathSpec, payload: dict[str, Any]) -> dict[str, Any]:
     expected_limitation = bool(payload.get("note")) and path.path_id == "glm:ocr"
     passed = core_ratio >= min_core
     if path.mode == "markdown":
-        passed = passed and int(payload.get("front_chars") or 0) > 0 and int(payload.get("back_chars") or 0) > 0
+        passed = (
+            passed
+            and int(payload.get("front_chars") or 0) > 0
+            and int(payload.get("back_chars") or 0) > 0
+        )
     if path.mode == "structured":
         passed = passed and bool(score.get("cin_hit"))
     return {
@@ -475,7 +482,9 @@ def _evaluate(path: PathSpec, payload: dict[str, Any]) -> dict[str, Any]:
 
 def _print_summary(rows: list[dict[str, Any]]) -> None:
     print("\n=== Gououiad CNIE benchmark ===")
-    print(f"{'path':<22} {'mode':<11} {'wall_ms':>8} {'core':>12} {'ratio':>7} {'cin':>4} {'mrz':>4} {'ok':>6}")
+    print(
+        f"{'path':<22} {'mode':<11} {'wall_ms':>8} {'core':>12} {'ratio':>7} {'cin':>4} {'mrz':>4} {'ok':>6}"
+    )
     print("-" * 80)
     for row in rows:
         ev = row.get("evaluation") or {}
@@ -488,11 +497,11 @@ def _print_summary(rows: list[dict[str, Any]]) -> None:
         else:
             ok = "FAIL"
         print(
-            f"{row.get('path_id',''):<22} "
-            f"{row.get('mode',''):<11} "
-            f"{row.get('wall_ms','-'):>8} "
-            f"{ev.get('core','-'):>12} "
-            f"{ev.get('core_ratio','-'):>7} "
+            f"{row.get('path_id', ''):<22} "
+            f"{row.get('mode', ''):<11} "
+            f"{row.get('wall_ms', '-'):>8} "
+            f"{ev.get('core', '-'):>12} "
+            f"{ev.get('core_ratio', '-'):>7} "
             f"{'Y' if ev.get('cin_hit') else 'N':>4} "
             f"{'Y' if ev.get('mrz_hit') else 'N':>4} "
             f"{ok:>6}"
@@ -534,7 +543,9 @@ async def run(args: argparse.Namespace) -> int:
 
     services = await _probe_services()
     only = {token.strip() for token in (args.only or "").split(",") if token.strip()}
-    selected = [path for path in PATHS if not only or path.path_id in only or path.catalog_id in only]
+    selected = [
+        path for path in PATHS if not only or path.path_id in only or path.catalog_id in only
+    ]
     if args.skip_glm_id_card:
         selected = [path for path in selected if path.path_id != "glm:ocr:id-card"]
 
@@ -560,13 +571,17 @@ async def run(args: argparse.Namespace) -> int:
             elif path.path_id == "paddleocr:v6":
                 if not services["paddleocr_v6"]["reachable"]:
                     row["skipped"] = True
-                    row["error"] = f"PP-OCRv6 unreachable at {services['paddleocr_v6']['probe_url']}"
+                    row["error"] = (
+                        f"PP-OCRv6 unreachable at {services['paddleocr_v6']['probe_url']}"
+                    )
                 else:
                     payload = await _run_paddle_markdown()
             elif path.path_id == "paddleocr:qwen":
                 if not services["paddleocr_v6"]["reachable"]:
                     row["skipped"] = True
-                    row["error"] = f"PP-OCRv6 unreachable at {services['paddleocr_v6']['probe_url']}"
+                    row["error"] = (
+                        f"PP-OCRv6 unreachable at {services['paddleocr_v6']['probe_url']}"
+                    )
                 elif not services["qwen35"]["reachable"]:
                     row["skipped"] = True
                     row["error"] = f"Qwen unreachable at {services['qwen35']['probe_url']}"
@@ -605,8 +620,18 @@ async def run(args: argparse.Namespace) -> int:
 
         rows.append(row)
         ev = row.get("evaluation") or {}
-        status = "SKIP" if row.get("skipped") else ("LIMIT" if ev.get("expected_limitation") else ("PASS" if ev.get("passed") else "FAIL"))
-        print(f"[{status}] {path.label} ({path.path_id}) — {ev.get('core', '-')} in {row.get('wall_ms', '-')}ms")
+        status = (
+            "SKIP"
+            if row.get("skipped")
+            else (
+                "LIMIT"
+                if ev.get("expected_limitation")
+                else ("PASS" if ev.get("passed") else "FAIL")
+            )
+        )
+        print(
+            f"[{status}] {path.label} ({path.path_id}) — {ev.get('core', '-')} in {row.get('wall_ms', '-')}ms"
+        )
 
     report = {
         "schemaVersion": 1,

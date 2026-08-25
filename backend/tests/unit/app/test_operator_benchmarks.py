@@ -4,10 +4,10 @@ import json
 
 import pytest
 
-from repody.runtime.contracts.result import ErrorCode
-from repody.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
 from repody.app.operator import benchmark_command
 from repody.app.operator.requests import resolve_benchmark_inputs
+from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.operator.validate import parse_benchmark_options, parse_model_identifier
 
 
 class FakeUpload:

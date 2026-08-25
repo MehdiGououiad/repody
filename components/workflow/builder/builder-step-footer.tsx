@@ -3,12 +3,9 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  stepComplete,
-  type BuilderStep,
-} from "@/components/workflow/builder/step-nav";
+import { type BuilderStep, stepComplete } from "@/components/workflow/builder/step-nav";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const CONTINUE_LABEL_KEY: Record<0 | 1, "continueToRules" | "continueToTest"> = {
   0: "continueToRules",
@@ -59,13 +56,7 @@ export function BuilderStepFooter({
     return (
       <div className="shrink-0 border-t border-border/80 bg-card/95 backdrop-blur-sm px-5 py-3 md:px-6">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 h-9"
-            onClick={onBack}
-          >
+          <Button type="button" variant="ghost" size="sm" className="gap-1.5 h-9" onClick={onBack}>
             <ArrowLeft className="h-4 w-4" />
             {tSteps("back")}
           </Button>

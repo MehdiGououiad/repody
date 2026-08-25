@@ -2,9 +2,9 @@ import {
   FileCheck2,
   GitBranch,
   LayoutDashboard,
+  type LucideIcon,
   Settings,
   Users,
-  type LucideIcon,
 } from "lucide-react";
 
 export function isNavActive(pathname: string, href: string): boolean {

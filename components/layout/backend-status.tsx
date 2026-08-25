@@ -1,16 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Circle, Loader2 } from "lucide-react";
-import { checkBackendHealth, type BackendHealth } from "@/lib/api/health";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { type BackendHealth, checkBackendHealth } from "@/lib/api/health";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 export function BackendStatus() {
   const t = useTranslations("common");
@@ -44,10 +39,8 @@ export function BackendStatus() {
           <div
             className={cn(
               "hidden sm:flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium",
-              health.status === "ok" &&
-                "border-success/30 bg-success/5 text-success",
-              health.status === "down" &&
-                "border-danger/30 bg-danger/5 text-danger",
+              health.status === "ok" && "border-success/30 bg-success/5 text-success",
+              health.status === "down" && "border-danger/30 bg-danger/5 text-danger",
               health.status === "checking" &&
                 "border-border bg-surface-container-low text-on-surface-variant"
             )}

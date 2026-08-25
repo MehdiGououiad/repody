@@ -52,9 +52,7 @@ async def test_extract_with_glm_ocr_qwen(monkeypatch: pytest.MonkeyPatch):
                     "choices": [
                         {
                             "message": {
-                                "content": json.dumps(
-                                    {"total_amount": "6000.00", "tva": "1000.00"}
-                                )
+                                "content": json.dumps({"total_amount": "6000.00", "tva": "1000.00"})
                             }
                         }
                     ]

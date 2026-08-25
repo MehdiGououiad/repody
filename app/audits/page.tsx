@@ -1,9 +1,9 @@
-import { Suspense } from "react";
 import { getTranslations } from "next-intl/server";
-import { PageHeader } from "@/components/layout/page-header";
-import { PageShell } from "@/components/layout/page-shell";
+import { Suspense } from "react";
 import { AuditList } from "@/components/audit/audit-list";
 import { AuditListExport } from "@/components/audit/audit-list-export";
+import { PageHeader } from "@/components/layout/page-header";
+import { PageShell } from "@/components/layout/page-shell";
 import { fetchAudits } from "@/lib/api/client";
 
 export default async function AuditsPage() {
@@ -26,9 +26,7 @@ export default async function AuditsPage() {
         title={t("title")}
         description={t("description")}
         eyebrow="Reports"
-        actions={
-          <AuditListExport audits={audits} label={tCommon("exportCsv")} />
-        }
+        actions={<AuditListExport audits={audits} label={tCommon("exportCsv")} />}
       />
       <Suspense fallback={<div className="panel-elevated rounded-xl h-48 animate-pulse" />}>
         <AuditList audits={audits} />

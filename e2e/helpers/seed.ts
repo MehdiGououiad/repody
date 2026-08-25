@@ -24,9 +24,7 @@ asyncio.run(main())
     { input: code, encoding: "utf8", shell: false }
   );
   if (result.status !== 0) {
-    throw new Error(
-      `[e2e] Database seed failed\n${result.stdout}\n${result.stderr}`.trim()
-    );
+    throw new Error(`[e2e] Database seed failed\n${result.stdout}\n${result.stderr}`.trim());
   }
 }
 
@@ -42,7 +40,9 @@ export async function ensureSeedData(): Promise<void> {
   }
 
   if (process.env.E2E_SKIP_SEED === "1") {
-    console.warn("[e2e] Seed workflow missing; set E2E_SKIP_SEED=0 and ensure kubectl access to seed");
+    console.warn(
+      "[e2e] Seed workflow missing; set E2E_SKIP_SEED=0 and ensure kubectl access to seed"
+    );
     return;
   }
 

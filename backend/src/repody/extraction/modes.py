@@ -67,9 +67,7 @@ def normalize_read_path_id(mode: str | None) -> str:
     raw = str(mode).strip().lower()
     if raw in _READ_BY_ID:
         return raw
-    raise ValueError(
-        f"Unknown read path {mode!r}. Supported: {', '.join(sorted(_READ_BY_ID))}."
-    )
+    raise ValueError(f"Unknown read path {mode!r}. Supported: {', '.join(sorted(_READ_BY_ID))}.")
 
 
 def normalize_validation_mode(

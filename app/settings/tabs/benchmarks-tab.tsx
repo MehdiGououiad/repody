@@ -1,8 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Download, LoaderCircle, Play, Upload } from "lucide-react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { DocumentTextPreviewPanel } from "@/components/documents/document-markdown-preview";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,18 +17,21 @@ import {
 } from "@/components/ui/select";
 import {
   artifactUrl,
-  fetchJobReport,
-  fetchLatestBenchmark,
-  startBenchmark,
   type BenchmarkReport,
   type BenchmarkResult,
+  fetchJobReport,
+  fetchLatestBenchmark,
   type OperatorJob,
+  startBenchmark,
 } from "@/lib/api/operator";
-import { benchmarkModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
-import { DocumentTextPreviewPanel } from "@/components/documents/document-markdown-preview";
+import {
+  benchmarkModelsFromCatalog,
+  useUnifiedModelsCatalog,
+} from "@/lib/hooks/use-catalog-queries";
 import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shared";
 
-const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+const SUPPORTED_DOCUMENT_ACCEPT =
+  ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
 
 function scoreLabel(row: BenchmarkResult): string {
   if (row.judgeQuality) {
@@ -77,50 +81,58 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
         <table className="w-full text-sm">
           <thead className="bg-surface-container-low text-left">
             <tr>
-              {["Model", "Phase", "Status", "Wall", "Queue", "Extract", "Validate", "Score"].map((heading) => (
-                <th key={heading} className="px-4 py-3 text-[11px] uppercase tracking-wider text-on-surface-variant">
-                  {heading}
-                </th>
-              ))}
+              {["Model", "Phase", "Status", "Wall", "Queue", "Extract", "Validate", "Score"].map(
+                (heading) => (
+                  <th
+                    key={heading}
+                    className="px-4 py-3 text-[11px] uppercase tracking-wider text-on-surface-variant"
+                  >
+                    {heading}
+                  </th>
+                )
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {report.results.map((row, index) => (
               <Fragment key={`${row.case}-${row.phase}-${index}`}>
                 <tr>
-                <td className="px-4 py-3">
-                  <p className="font-medium">{row.case}</p>
-                  <code className="text-[11px] text-on-surface-variant">{row.model}</code>
-                </td>
-                <td className="px-4 py-3">{row.phase}</td>
-                <td className="px-4 py-3">
-                  <Badge variant={row.passed ? "success" : row.skipped ? "outline" : "danger"}>
-                    {row.status}
-                  </Badge>
-                </td>
-                <td className="px-4 py-3 tabular-nums">{formatDuration(row.wallMs)}</td>
-                <td className="px-4 py-3 tabular-nums">{formatDuration(row.queueMs)}</td>
-                <td className="px-4 py-3 tabular-nums">{formatDuration(row.extractionMs)}</td>
-                <td className="px-4 py-3 tabular-nums">{formatDuration(row.validationMs)}</td>
-                <td className="px-4 py-3 tabular-nums">{scoreLabel(row)}</td>
-              </tr>
-              {row.error ? (
-                <tr key={`${row.case}-${row.phase}-${index}-error`} className="bg-destructive/5">
-                  <td colSpan={8} className="px-4 py-3 text-xs text-destructive">
-                    {row.error}
+                  <td className="px-4 py-3">
+                    <p className="font-medium">{row.case}</p>
+                    <code className="text-[11px] text-on-surface-variant">{row.model}</code>
                   </td>
-                </tr>
-              ) : null}
-              {row.textPreview ? (
-                <tr key={`${row.case}-${row.phase}-${index}-preview`} className="bg-surface-container-low/40">
-                  <td colSpan={8} className="px-4 py-3">
-                    <DocumentTextPreviewPanel
-                      text={row.textPreview}
-                      label="Rendered preview (NuExtract markdown)"
-                    />
+                  <td className="px-4 py-3">{row.phase}</td>
+                  <td className="px-4 py-3">
+                    <Badge variant={row.passed ? "success" : row.skipped ? "outline" : "danger"}>
+                      {row.status}
+                    </Badge>
                   </td>
+                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.wallMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.queueMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.extractionMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.validationMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{scoreLabel(row)}</td>
                 </tr>
-              ) : null}
+                {row.error ? (
+                  <tr key={`${row.case}-${row.phase}-${index}-error`} className="bg-destructive/5">
+                    <td colSpan={8} className="px-4 py-3 text-xs text-destructive">
+                      {row.error}
+                    </td>
+                  </tr>
+                ) : null}
+                {row.textPreview ? (
+                  <tr
+                    key={`${row.case}-${row.phase}-${index}-preview`}
+                    className="bg-surface-container-low/40"
+                  >
+                    <td colSpan={8} className="px-4 py-3">
+                      <DocumentTextPreviewPanel
+                        text={row.textPreview}
+                        label="Rendered preview (NuExtract markdown)"
+                      />
+                    </td>
+                  </tr>
+                ) : null}
               </Fragment>
             ))}
           </tbody>
@@ -149,7 +161,7 @@ export function BenchmarksTab({
   const models = useMemo(() => {
     if (!catalogQuery.data) return [];
     return benchmarkModelsFromCatalog(catalogQuery.data).filter(
-      (model) => model.available !== false,
+      (model) => model.available !== false
     );
   }, [catalogQuery.data]);
   const modelsInitialized = useRef(false);
@@ -225,8 +237,13 @@ export function BenchmarksTab({
             <div className="grid sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="benchmark-profile">Profile</Label>
-                <Select value={profile} onValueChange={(value) => setProfile(value as typeof profile)}>
-                  <SelectTrigger id="benchmark-profile"><SelectValue /></SelectTrigger>
+                <Select
+                  value={profile}
+                  onValueChange={(value) => setProfile(value as typeof profile)}
+                >
+                  <SelectTrigger id="benchmark-profile">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="quick">Quick baseline</SelectItem>
                     <SelectItem value="models">Document models</SelectItem>
@@ -240,7 +257,14 @@ export function BenchmarksTab({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="benchmark-warm-runs">Warm runs per model</Label>
-                <Input id="benchmark-warm-runs" type="number" min="0" max="5" value={warmRuns} onChange={(event) => setWarmRuns(event.target.value)} />
+                <Input
+                  id="benchmark-warm-runs"
+                  type="number"
+                  min="0"
+                  max="5"
+                  value={warmRuns}
+                  onChange={(event) => setWarmRuns(event.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="benchmark-accuracy">Minimum field accuracy</Label>
@@ -266,12 +290,18 @@ export function BenchmarksTab({
               <span className="text-sm">
                 <span className="font-medium block">Judge text quality manually</span>
                 <span className="text-on-surface-variant text-xs">
-                  Enables NuExtract <code className="text-[10px]">mode: markdown</code> on Repody VLM and passes when markdown text is non-empty.
+                  Enables NuExtract <code className="text-[10px]">mode: markdown</code> on Repody
+                  VLM and passes when markdown text is non-empty.
                 </span>
               </span>
             </label>
             <label className="flex items-center gap-3 cursor-pointer">
-              <input type="checkbox" checked={cacheCheck} onChange={(event) => setCacheCheck(event.target.checked)} className="size-4 accent-primary" />
+              <input
+                type="checkbox"
+                checked={cacheCheck}
+                onChange={(event) => setCacheCheck(event.target.checked)}
+                className="size-4 accent-primary"
+              />
               <span className="text-sm">Verify extraction cache on the final repeated run</span>
             </label>
           </div>
@@ -281,8 +311,16 @@ export function BenchmarksTab({
               <p className="text-sm font-semibold">Models</p>
               <div className="grid sm:grid-cols-2 gap-2 mt-2">
                 {models.map((model) => (
-                  <label key={model.id} className="flex min-w-0 items-start gap-3 p-3 rounded-lg border border-border hover:bg-surface-container-low cursor-pointer">
-                    <input type="checkbox" checked={selected.includes(model.id)} onChange={() => toggleModel(model.id)} className="size-4 mt-0.5 accent-primary" />
+                  <label
+                    key={model.id}
+                    className="flex min-w-0 items-start gap-3 p-3 rounded-lg border border-border hover:bg-surface-container-low cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(model.id)}
+                      onChange={() => toggleModel(model.id)}
+                      className="size-4 mt-0.5 accent-primary"
+                    />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">{model.label}</span>
                     </span>
@@ -293,8 +331,8 @@ export function BenchmarksTab({
             <div>
               <p className="text-sm font-semibold">Dataset</p>
               <p className="text-xs text-on-surface-variant mt-1">
-                Default: built-in invoice PDF — no upload needed. For your own file, upload the document only;
-                fields are optional when judging markdown text quality.
+                Default: built-in invoice PDF — no upload needed. For your own file, upload the
+                document only; fields are optional when judging markdown text quality.
               </p>
               <label className="mt-3 flex items-center gap-3 cursor-pointer">
                 <input
@@ -313,7 +351,9 @@ export function BenchmarksTab({
               {customDataset ? (
                 <Label className="mt-3 block rounded-lg border border-dashed border-outline-variant p-4 cursor-pointer hover:bg-surface-container-low">
                   <Upload className="h-4 w-4 mb-2" />
-                  <span className="block text-xs font-medium">{document?.name || "Choose PDF or image"}</span>
+                  <span className="block text-xs font-medium">
+                    {document?.name || "Choose PDF or image"}
+                  </span>
                   <input
                     type="file"
                     className="sr-only"
@@ -331,10 +371,21 @@ export function BenchmarksTab({
         </div>
         <div className="mt-6 pt-5 border-t border-border flex flex-wrap items-center justify-between gap-4">
           <p className="text-xs text-on-surface-variant">
-            {actionsEnabled ? "Runs asynchronously; you can leave this tab." : "Operator actions are disabled by configuration."}
+            {actionsEnabled
+              ? "Runs asynchronously; you can leave this tab."
+              : "Operator actions are disabled by configuration."}
           </p>
-          <Button onClick={() => void run()} disabled={!actionsEnabled || !!active || (profile === "models" && selected.length === 0)}>
-            {active ? <LoaderCircle className="h-4 w-4 mr-2 animate-spin" /> : <Play className="h-4 w-4 mr-2" />}
+          <Button
+            onClick={() => void run()}
+            disabled={
+              !actionsEnabled || !!active || (profile === "models" && selected.length === 0)
+            }
+          >
+            {active ? (
+              <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
             {active ? "Benchmark running" : "Run benchmark"}
           </Button>
         </div>

@@ -42,9 +42,7 @@ def build_extraction_plan(
             has_schema_fields=document_has_schema_fields(spec),
             markdown_extraction=bool(spec.markdown_extraction),
         ):
-            jobs.append(
-                ExtractionJob(document_id=spec.id, spec=spec, stored=stored)
-            )
+            jobs.append(ExtractionJob(document_id=spec.id, spec=spec, stored=stored))
     return tuple(jobs)
 
 
@@ -80,7 +78,7 @@ async def compose_idp(
 
         try:
             blob = await fetch_bytes(job.stored.storage_key)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failed = Result.fail(
                 AppError(
                     code=ErrorCode.INFRA,

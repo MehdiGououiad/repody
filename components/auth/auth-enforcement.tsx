@@ -11,9 +11,7 @@ export function AuthEnforcementProvider({
   enforceAuth: boolean;
   children: React.ReactNode;
 }) {
-  return (
-    <AuthEnforcementContext value={enforceAuth}>{children}</AuthEnforcementContext>
-  );
+  return <AuthEnforcementContext value={enforceAuth}>{children}</AuthEnforcementContext>;
 }
 
 export function useAuthEnforcement(): boolean {

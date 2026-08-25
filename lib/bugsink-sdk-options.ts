@@ -9,10 +9,7 @@ export function bugsinkSdkOptions(dsn?: string): BrowserOptions | NodeOptions {
 
   return {
     dsn: resolved,
-    environment:
-      process.env.BUGSINK_ENVIRONMENT ??
-      process.env.NODE_ENV ??
-      "development",
+    environment: process.env.BUGSINK_ENVIRONMENT ?? process.env.NODE_ENV ?? "development",
     tracesSampleRate: 0,
     sendClientReports: false,
   };

@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-import { useTranslations } from "next-intl";
 import {
   AlertCircle,
   ArrowRight,
@@ -14,19 +12,16 @@ import {
   Loader2,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
-import { cn } from "@/lib/utils";
-import {
-  isRuleFailure,
-  RuleStatusIcon,
-  ruleStatusColor,
-  ruleStatusLabel,
-} from "@/lib/rule-status";
-import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
 import type { TestPhase } from "@/components/workflow/builder/test-run-session";
+import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
+import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
+import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
+import { isRuleFailure, RuleStatusIcon, ruleStatusColor, ruleStatusLabel } from "@/lib/rule-status";
+import { cn } from "@/lib/utils";
 
 const statusColor = {
   passed: "border-success/40 bg-success/5 text-success",
@@ -62,7 +57,10 @@ export function TestRunResults({
       <div key={resultsKey} className="panel-reveal min-w-0">
         {phase === "idle" && !result ? (
           <div className="rounded-xl border border-dashed border-border/80 bg-surface-container-low/40 px-4 py-6 text-center">
-            <FlaskConical className="mx-auto h-6 w-6 text-on-surface-variant/35" aria-hidden="true" />
+            <FlaskConical
+              className="mx-auto h-6 w-6 text-on-surface-variant/35"
+              aria-hidden="true"
+            />
             <p className="mt-2 text-sm text-on-surface-variant">{t("test.idle")}</p>
             <p className="mt-1 text-xs text-on-surface-variant/70">{t("test.idleHint")}</p>
           </div>
@@ -93,9 +91,8 @@ export function TestRunResults({
               <div className="flex-1 min-w-[12rem]">
                 <p className="text-sm font-semibold">{t(`test.status.${result.status}`)}</p>
                 <p className="text-xs opacity-80 mt-0.5">
-                  {result.summary.fieldsExtracted} {t("test.fieldsExtracted")}{" "}
-                  {"\u00b7"} {result.summary.passed}/{result.summary.total}{" "}
-                  {t("test.rulesPassed")}
+                  {result.summary.fieldsExtracted} {t("test.fieldsExtracted")} {"\u00b7"}{" "}
+                  {result.summary.passed}/{result.summary.total} {t("test.rulesPassed")}
                 </p>
               </div>
               <Link href={`/audits/${result.id}`} className="shrink-0" target="_blank">
@@ -123,10 +120,7 @@ export function TestRunResults({
                     <div key={rule.id} className="flex items-start gap-3 px-4 py-3 min-w-0">
                       <RuleStatusIcon
                         status={rule.status}
-                        className={cn(
-                          "h-4 w-4 shrink-0 mt-0.5",
-                          ruleStatusColor(rule.status)
-                        )}
+                        className={cn("h-4 w-4 shrink-0 mt-0.5", ruleStatusColor(rule.status))}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">

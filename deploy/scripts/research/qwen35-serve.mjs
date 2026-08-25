@@ -36,7 +36,7 @@ function resolvePaths() {
   const env = { ...fileEnv, ...process.env };
   const model = env.QWEN35_MODEL?.trim();
   const hfFile = env.QWEN35_HF_FILE?.trim() || "";
-  let exe = env.QWEN35_EXE?.trim() || env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
+  const exe = env.QWEN35_EXE?.trim() || env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
   const port = Number(env.QWEN35_PORT || 8084);
   const context = Number(env.QWEN35_CONTEXT || 8192);
   const gpuLayers = Number(env.QWEN35_GPU_LAYERS || 99);
@@ -99,7 +99,7 @@ function buildArgs(paths) {
   } else {
     args.push("-m", paths.model);
   }
-    args.push(
+  args.push(
     "--host",
     "0.0.0.0",
     "--port",
@@ -117,7 +117,7 @@ function buildArgs(paths) {
     "--jinja",
     // Qwen3.5 defaults to thinking; disable for JSON extraction.
     "--reasoning",
-    "off",
+    "off"
   );
   if (paths.device) {
     args.push("--device", paths.device);
@@ -246,7 +246,7 @@ function download() {
   });
   if (result.status !== 0) {
     console.error(
-      "hf download failed. Install Hugging Face CLI (`pip install huggingface_hub`) or use HF serve mode.",
+      "hf download failed. Install Hugging Face CLI (`pip install huggingface_hub`) or use HF serve mode."
     );
     process.exit(result.status || 1);
   }
@@ -272,7 +272,7 @@ else if (cmd === "stop") {
 } else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/qwen35-serve.mjs serve|stop|restart|verify|warmup|download",
+    "Usage: node deploy/scripts/qwen35-serve.mjs serve|stop|restart|verify|warmup|download"
   );
   process.exit(2);
 }

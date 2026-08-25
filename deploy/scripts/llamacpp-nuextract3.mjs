@@ -48,7 +48,7 @@ function resolvePaths() {
   const env = { ...fileEnv, ...process.env };
   const model = env.LLAMACPP_MODEL?.trim();
   const mmproj = env.LLAMACPP_MMPROJ?.trim();
-  let exe = env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
+  const exe = env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
   const port = Number(env.LLAMACPP_PORT || 8081);
   const context = Number(env.LLAMACPP_CONTEXT || 16384);
   const gpuLayers = Number(env.LLAMACPP_GPU_LAYERS || 99);
@@ -182,14 +182,7 @@ function buildArgs(paths) {
   if (paths.mtmdBatchMaxTokens != null) {
     args.push("--mtmd-batch-max-tokens", String(paths.mtmdBatchMaxTokens));
   }
-  args.push(
-    "--mmproj-offload",
-    "-a",
-    paths.modelAlias,
-    "--jinja",
-    "-rea",
-    "off",
-  );
+  args.push("--mmproj-offload", "-a", paths.modelAlias, "--jinja", "-rea", "off");
   if (paths.device) {
     args.push("--device", paths.device);
   }
@@ -288,17 +281,13 @@ function warmupRepodyVlm(port, { force = false, background = false } = {}) {
     return;
   }
 
-  const result = spawnSync(
-    uv,
-    ["run", "python", "scripts/warmup_repody_vlm.py"],
-    {
-      cwd: backendDir,
-      encoding: "utf8",
-      stdio: "inherit",
-      shell: false,
-      env: warmupEnv,
-    },
-  );
+  const result = spawnSync(uv, ["run", "python", "scripts/warmup_repody_vlm.py"], {
+    cwd: backendDir,
+    encoding: "utf8",
+    stdio: "inherit",
+    shell: false,
+    env: warmupEnv,
+  });
   if (result.status !== 0) {
     console.error("NuExtract warmup failed — first extraction may be slow.");
     process.exit(result.status ?? 1);
@@ -327,7 +316,8 @@ async function verify(port = Number(process.env.LLAMACPP_PORT || 8081)) {
   const parallel = Number(process.env.LLAMACPP_PARALLEL || paths?.parallel || 1);
   const minCtx = parallel > 1 ? Math.floor(16384 / parallel) : 16384;
   if (nCtx < minCtx) failures.push(`n_ctx ${nCtx} < ${minCtx} (parallel=${parallel})`);
-  if (!caps.includes("multimodal")) failures.push("multimodal capability missing (mmproj not loaded?)");
+  if (!caps.includes("multimodal"))
+    failures.push("multimodal capability missing (mmproj not loaded?)");
   if (!ids.some((id) => /nuextract/i.test(id))) failures.push("NuExtract model not in /v1/models");
   if (!ids.includes(expectedAlias)) {
     failures.push(`served model ${ids.join(", ") || "(none)"} != expected ${expectedAlias}`);

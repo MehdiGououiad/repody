@@ -33,9 +33,7 @@ def _issuer(settings: Settings) -> str:
 
 def _accepted_issuers(settings: Settings) -> set[str]:
     issuers = {_issuer(settings)}
-    issuers.update(
-        alias.rstrip("/") for alias in settings.accepted_oidc_issuer_aliases()
-    )
+    issuers.update(alias.rstrip("/") for alias in settings.accepted_oidc_issuer_aliases())
     return issuers
 
 

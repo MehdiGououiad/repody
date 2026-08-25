@@ -1,15 +1,15 @@
 "use client";
 
-import { Suspense, useEffect, useRef } from "react";
+import { LoaderCircle, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { LoaderCircle, ShieldCheck } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Suspense, useEffect, useRef } from "react";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
-import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
+import { Button } from "@/components/ui/button";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
 const ERROR_KEYS: Record<string, string> = {
   Configuration: "errorConfiguration",

@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 /** Send Auth.js error callbacks to the login page with the error query preserved. */
 export function GET(request: NextRequest) {

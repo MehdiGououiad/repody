@@ -10,9 +10,7 @@ async function redirectToLoginAfterUnauthorized(): Promise<void> {
   sessionSignOutInFlight = true;
   try {
     const { signOut: clientSignOut } = await import("next-auth/react");
-    const returnTo = encodeURIComponent(
-      window.location.pathname + window.location.search
-    );
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
     await clientSignOut({ redirectTo: `/login?callbackUrl=${returnTo}` });
   } finally {
     sessionSignOutInFlight = false;
@@ -25,10 +23,7 @@ export function apiPath(path: string): string {
   return `/v1/${path}`;
 }
 
-export async function readApiError(
-  res: Response,
-  label: string
-): Promise<never> {
+export async function readApiError(res: Response, label: string): Promise<never> {
   const text = await res.text();
   const detail = formatApiError(text) || `HTTP ${res.status}`;
   throw new Error(`${label}: ${detail}`);
@@ -41,24 +36,17 @@ export async function browserFetch(
 ): Promise<Response> {
   const { timeoutMs, workflowApiKey, ...rest } = init ?? {};
   const controller = timeoutMs ? new AbortController() : null;
-  const timer =
-    controller && timeoutMs
-      ? setTimeout(() => controller.abort(), timeoutMs)
-      : null;
+  const timer = controller && timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
   const normalized = path.startsWith("/api") ? path : `/api${apiPath(path)}`;
   const credential = resolveAuthCredential(normalized);
   const authHeaders: HeadersInit =
-    credential === "workflow" && workflowApiKey
-      ? workflowAuthHeaders(workflowApiKey)
-      : {};
+    credential === "workflow" && workflowApiKey ? workflowAuthHeaders(workflowApiKey) : {};
   try {
     const res = await fetch(normalized, {
       ...rest,
       signal: controller?.signal ?? rest.signal,
       headers: {
-        ...(rest.body instanceof FormData
-          ? {}
-          : { "content-type": "application/json" }),
+        ...(rest.body instanceof FormData ? {} : { "content-type": "application/json" }),
         ...authHeaders,
         ...rest.headers,
       },
@@ -71,29 +59,16 @@ export async function browserFetch(
     ) {
       void redirectToLoginAfterUnauthorized();
     }
-    if (
-      typeof window !== "undefined" &&
-      res.status === 403 &&
-      credential === "session"
-    ) {
+    if (typeof window !== "undefined" && res.status === 403 && credential === "session") {
       const body = await res.clone().text();
-      if (
-        body.toLowerCase().includes("forbidden") ||
-        body.toLowerCase().includes("permission")
-      ) {
+      if (body.toLowerCase().includes("forbidden") || body.toLowerCase().includes("permission")) {
         window.location.href = "/unauthorized";
       }
     }
     return res;
   } catch (err) {
-    if (
-      controller &&
-      err instanceof DOMException &&
-      err.name === "AbortError"
-    ) {
-      throw new Error(
-        `Request timed out after ${Math.round(timeoutMs! / 1000)}s`
-      );
+    if (controller && err instanceof DOMException && err.name === "AbortError") {
+      throw new Error(`Request timed out after ${Math.round(timeoutMs! / 1000)}s`);
     }
     throw err;
   } finally {

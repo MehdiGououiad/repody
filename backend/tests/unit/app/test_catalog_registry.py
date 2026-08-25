@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.catalog.registry import parse_document_model
 from repody.catalog import probes as catalog_probes
 from repody.catalog.probes import (
     availability_for_spec,
     list_catalog_with_availability,
 )
+from repody.catalog.registry import parse_document_model
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 
 
 @pytest.mark.asyncio

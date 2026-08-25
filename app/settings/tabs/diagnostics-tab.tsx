@@ -3,8 +3,8 @@
 import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import type { PlatformConfig } from "@/lib/api/platform-config";
 import type { OperatorJob, OperatorStatus } from "@/lib/api/operator";
+import type { PlatformConfig } from "@/lib/api/platform-config";
 import { ACTIVE_STATUSES, StatusBadge } from "../settings-shared";
 
 export function DiagnosticsTab({
@@ -27,7 +27,9 @@ export function DiagnosticsTab({
     {
       label: "Queue dispatch",
       ok: !!platform?.taskiqConfigured,
-      detail: platform?.taskiqConfigured ? `${platform.queueBackend} is configured` : "Queue is not configured",
+      detail: platform?.taskiqConfigured
+        ? `${platform.queueBackend} is configured`
+        : "Queue is not configured",
     },
     {
       label: "Operator controls",
@@ -47,7 +49,9 @@ export function DiagnosticsTab({
         <div className="px-6 py-5 border-b border-border bg-surface-container-low flex items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold">System checks</h2>
-            <p className="text-sm text-on-surface-variant mt-1">Live configuration and readiness signals.</p>
+            <p className="text-sm text-on-surface-variant mt-1">
+              Live configuration and readiness signals.
+            </p>
           </div>
           <Button variant="outline" onClick={onRefresh}>
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -73,27 +77,35 @@ export function DiagnosticsTab({
       <section className="panel-elevated rounded-xl overflow-hidden">
         <div className="px-6 py-5 border-b border-border bg-surface-container-low">
           <h2 className="font-display text-lg font-semibold">Operator jobs</h2>
-          <p className="text-sm text-on-surface-variant mt-1">Recent model and benchmark activity.</p>
+          <p className="text-sm text-on-surface-variant mt-1">
+            Recent model and benchmark activity.
+          </p>
         </div>
         <div className="divide-y divide-border max-h-[560px] overflow-y-auto">
           {jobs.length === 0 ? (
             <p className="p-6 text-sm text-on-surface-variant">No operator jobs yet.</p>
-          ) : jobs.map((job) => (
-            <div key={job.id} className="p-5">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">{job.label}</p>
-                  <p className="text-[11px] text-on-surface-variant mt-1">
-                    {new Date(job.createdAt).toLocaleString()}
-                  </p>
+          ) : (
+            jobs.map((job) => (
+              <div key={job.id} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{job.label}</p>
+                    <p className="text-[11px] text-on-surface-variant mt-1">
+                      {new Date(job.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <StatusBadge status={job.status} />
                 </div>
-                <StatusBadge status={job.status} />
+                {job.progress ? (
+                  <p className="text-xs text-on-surface-variant mt-3 break-words">{job.progress}</p>
+                ) : null}
+                {job.error ? <p className="text-xs text-danger mt-2">{job.error}</p> : null}
+                {ACTIVE_STATUSES.has(job.status) ? (
+                  <Progress value={job.status === "queued" ? 15 : 55} className="mt-3 h-1.5" />
+                ) : null}
               </div>
-              {job.progress ? <p className="text-xs text-on-surface-variant mt-3 break-words">{job.progress}</p> : null}
-              {job.error ? <p className="text-xs text-danger mt-2">{job.error}</p> : null}
-              {ACTIVE_STATUSES.has(job.status) ? <Progress value={job.status === "queued" ? 15 : 55} className="mt-3 h-1.5" /> : null}
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </section>
     </div>

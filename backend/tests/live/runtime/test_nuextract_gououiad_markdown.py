@@ -25,8 +25,8 @@ from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.extraction.types import DocumentBundle
 from repody.extraction.vlm import extract_with_repody_vlm
-from repody.settings import get_settings
 from repody.infra.storage.mime import resolve_mime
+from repody.settings import get_settings
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

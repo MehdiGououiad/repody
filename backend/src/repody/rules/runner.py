@@ -3,21 +3,21 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable, Callable
 
-from repody.extraction.types import ExtractionResult
 from repody.extraction.modes import (
     LOGIC_VALIDATION,
     RUN_VALIDATION_LLM,
     ValidationMode,
 )
+from repody.extraction.types import ExtractionResult
 from repody.rules.conditions import expand_rules_for_evaluation, resolve_rule_body
+from repody.rules.field_namespace import (
+    field_values_for_rule,
+    field_values_from_extractions,
+)
 from repody.rules.llm_evaluator import (
     RuleStatus,
     evaluate_llm_rule,
     evaluate_llm_rules_batch,
-)
-from repody.rules.field_namespace import (
-    field_values_for_rule,
-    field_values_from_extractions,
 )
 from repody.rules.logic_evaluator import evaluate_logic_rule
 from repody.rules.types import RuleEvalResult, collect_affected_fields, rule_kind

@@ -13,10 +13,7 @@ export const GLM_OCR_LABEL = "GLM-OCR";
 export const GLM_OCR_QWEN_CATALOG_ID = "glm:qwen";
 export const GLM_OCR_QWEN_LABEL = "GLM-OCR + Qwen";
 
-const MARKDOWN_ONLY_IDS = new Set([
-  PADDLEOCR_V6_CATALOG_ID,
-  GLM_OCR_CATALOG_ID,
-]);
+const MARKDOWN_ONLY_IDS = new Set([PADDLEOCR_V6_CATALOG_ID, GLM_OCR_CATALOG_ID]);
 
 export function publicDocumentModelLabel(modelId: string | null | undefined): string {
   if (!modelId) return REPODY_VLM_LABEL;

@@ -9,7 +9,11 @@ function normalizeSchemaField(field: SchemaField): SchemaField {
     ...(field.templateType ? { templateType: field.templateType } : {}),
     ...(field.enumValues?.length ? { enumValues: [...field.enumValues] } : {}),
     ...(field.children?.length
-      ? { children: field.children.map(normalizeSchemaField).sort((a, b) => a.id.localeCompare(b.id)) }
+      ? {
+          children: field.children
+            .map(normalizeSchemaField)
+            .sort((a, b) => a.id.localeCompare(b.id)),
+        }
       : {}),
     ...(field.sampleValue !== undefined && field.sampleValue !== ""
       ? { sampleValue: field.sampleValue }
@@ -21,9 +25,7 @@ function normalizeDocument(doc: DocumentDef): DocumentDef {
   return {
     id: doc.id,
     documentType: doc.documentType ?? "",
-    schema: [...doc.schema]
-      .map(normalizeSchemaField)
-      .sort((a, b) => a.id.localeCompare(b.id)),
+    schema: [...doc.schema].map(normalizeSchemaField).sort((a, b) => a.id.localeCompare(b.id)),
     extractionMode: doc.extractionMode ?? "document_model",
     validationMode: doc.validationMode ?? "logic_only",
     documentModelId: doc.documentModelId ?? null,

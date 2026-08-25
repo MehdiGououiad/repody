@@ -1,8 +1,8 @@
 "use server";
 
-import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { locales, LOCALE_COOKIE, type Locale } from "@/i18n/config";
+import { cookies } from "next/headers";
+import { LOCALE_COOKIE, type Locale, locales } from "@/i18n/config";
 
 export async function setLocale(locale: Locale) {
   if (!(locales as readonly string[]).includes(locale)) {

@@ -43,7 +43,7 @@ function resolvePaths() {
   const env = { ...fileEnv, ...process.env };
   const model = env.GLMOCR_MODEL?.trim();
   const mmproj = env.GLMOCR_MMPROJ?.trim();
-  let exe = env.GLMOCR_EXE?.trim() || env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
+  const exe = env.GLMOCR_EXE?.trim() || env.LLAMACPP_EXE?.trim() || findLlamaServerExe();
   const port = Number(env.GLMOCR_PORT || 8083);
   // Region crops rarely need 8192; 4096 saves VRAM when sharing iGPU with NuExtract.
   const context = Number(env.GLMOCR_CONTEXT || 4096);
@@ -160,7 +160,7 @@ function buildArgs(paths) {
     "0.00001",
     "--repeat-penalty",
     "1.1",
-    "--jinja",
+    "--jinja"
   );
   if (paths.mtmdBatchMaxTokens != null) {
     args.push("--mtmd-batch-max-tokens", String(paths.mtmdBatchMaxTokens));
@@ -272,7 +272,9 @@ async function serve() {
   }
   console.log(`  alias:  ${paths.modelAlias}`);
   console.log(`  logs:   ${LOG_DIR}`);
-  console.log(`  docs:   https://huggingface.co/zai-org/GLM-OCR (SDK) · https://huggingface.co/ggml-org/GLM-OCR-GGUF`);
+  console.log(
+    `  docs:   https://huggingface.co/zai-org/GLM-OCR (SDK) · https://huggingface.co/ggml-org/GLM-OCR-GGUF`
+  );
 
   const child = spawn(paths.exe, args, {
     cwd: GLM_DIR,
@@ -307,7 +309,7 @@ function download() {
   });
   if (result.status !== 0) {
     console.error(
-      "hf download failed. Install Hugging Face CLI (`pip install huggingface_hub`) or use HF serve mode.",
+      "hf download failed. Install Hugging Face CLI (`pip install huggingface_hub`) or use HF serve mode."
     );
     process.exit(result.status || 1);
   }
@@ -333,7 +335,7 @@ else if (cmd === "stop") {
 } else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download",
+    "Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download"
   );
   process.exit(2);
 }

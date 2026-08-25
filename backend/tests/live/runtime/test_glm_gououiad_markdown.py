@@ -29,17 +29,15 @@ from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import GLM_OCR_CATALOG_ID
 from repody.extraction.glm_ocr import extract_with_glm_ocr
 from repody.extraction.types import DocumentBundle
-from repody.settings import get_settings
 from repody.infra.storage.mime import resolve_mime
+from repody.settings import get_settings
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 
 FIXTURES = Path(__file__).resolve().parents[4] / "e2e" / "fixtures" / "documents"
 FRONT_PATH = FIXTURES / "gououiad-cnie-front.png"
 BACK_PATH = FIXTURES / "gououiad-cnie-back.png"
-REPORT_PATH = (
-    Path(__file__).resolve().parents[4] / "benchmark-reports" / "glm-gououiad-last.json"
-)
+REPORT_PATH = Path(__file__).resolve().parents[4] / "benchmark-reports" / "glm-gououiad-last.json"
 
 MIN_CORE_RATIO = 0.40
 

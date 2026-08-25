@@ -5,22 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
-from repody.infra.auth.dependencies import require_permission
 from repody.api.errors import raise_app_error
-from repody.runtime.operator.validate import (
-    parse_model_identifier,
-    require_operator_actions,
-)
-from repody.schemas.operator import (
-    BenchmarkReportSchema,
-    OperatorJobAcceptedResponse,
-    OperatorJobSchema,
-    OperatorJobsResponse,
-    OperatorStatusResponse,
-    OperatorLimitsSchema,
-    OperatorWarmupConfig,
-)
-from repody.schemas.operator_requests import ModelActionRequest
 from repody.app.operator import (
     create_benchmark_job,
     create_warmup_job,
@@ -33,6 +18,21 @@ from repody.app.operator.requests import (
     build_benchmark_request,
     operator_root,
 )
+from repody.infra.auth.dependencies import require_permission
+from repody.runtime.operator.validate import (
+    parse_model_identifier,
+    require_operator_actions,
+)
+from repody.schemas.operator import (
+    BenchmarkReportSchema,
+    OperatorJobAcceptedResponse,
+    OperatorJobSchema,
+    OperatorJobsResponse,
+    OperatorLimitsSchema,
+    OperatorStatusResponse,
+    OperatorWarmupConfig,
+)
+from repody.schemas.operator_requests import ModelActionRequest
 from repody.settings import get_settings
 
 router = APIRouter(prefix="/operator", tags=["operator"])

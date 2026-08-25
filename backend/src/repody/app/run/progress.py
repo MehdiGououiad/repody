@@ -3,7 +3,6 @@ from __future__ import annotations
 import time
 from typing import Any, Literal
 
-from repody.infra.db.models import Run
 from repody.extraction.branding import normalize_public_catalog_id
 from repody.extraction.modes import (
     document_needs_extraction,
@@ -11,6 +10,7 @@ from repody.extraction.modes import (
     plan_extraction_detail,
     resolve_run_validation_mode,
 )
+from repody.infra.db.models import Run
 from repody.rules.types import rule_kind
 from repody.settings import get_settings
 
@@ -43,6 +43,7 @@ def step_index_for(steps: list[dict[str, Any]], step_id: str) -> int | None:
         if step.get("id") == step_id:
             return index
     return None
+
 
 def _value(item: Any, key: str, default: Any = None) -> Any:
     value = getattr(item, key, None)

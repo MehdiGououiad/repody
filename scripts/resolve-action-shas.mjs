@@ -41,7 +41,7 @@ function get(url) {
               reject(e);
             }
           });
-        },
+        }
       )
       .on("error", reject);
   });

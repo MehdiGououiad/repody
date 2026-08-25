@@ -1,6 +1,5 @@
 """Operator jobs, benchmarks, and warmup."""
 
-from repody.runtime.operator.job import OperatorJob, utc_now
 from repody.app.operator.auth import fetch_operator_benchmark_bearer_token
 from repody.app.operator.benchmarks import (
     benchmark_command,
@@ -17,6 +16,7 @@ from repody.app.operator.jobs import (
     operator_job_schema,
     run_command,
 )
+from repody.runtime.operator.job import OperatorJob, utc_now
 
 __all__ = [
     "OperatorJob",

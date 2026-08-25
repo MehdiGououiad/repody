@@ -7,9 +7,7 @@ export function decodeJwtPayload(token: string): Record<string, unknown> | null 
     const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
     const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
     const json =
-      typeof Buffer !== "undefined"
-        ? Buffer.from(padded, "base64").toString("utf8")
-        : atob(padded);
+      typeof Buffer !== "undefined" ? Buffer.from(padded, "base64").toString("utf8") : atob(padded);
     return JSON.parse(json) as Record<string, unknown>;
   } catch {
     return null;

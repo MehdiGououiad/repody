@@ -1,20 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Bell, HelpCircle, History, Moon, Search, Sun } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { Bell, HelpCircle, History, Search, Sun, Moon } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useTheme } from "@/components/providers/theme-provider";
-import { MobileNav } from "./mobile-nav";
-import { Button } from "@/components/ui/button";
-import { LanguageSwitcher } from "./language-switcher";
-import { BackendStatus } from "./backend-status";
 import { UserMenu } from "@/components/auth/user-menu";
+import { useTheme } from "@/components/providers/theme-provider";
+import { Button } from "@/components/ui/button";
+import { BackendStatus } from "./backend-status";
+import { LanguageSwitcher } from "./language-switcher";
+import { MobileNav } from "./mobile-nav";
 
 const CommandPalette = dynamic(
-  () =>
-    import("./command-palette").then((m) => ({ default: m.CommandPalette })),
+  () => import("./command-palette").then((m) => ({ default: m.CommandPalette })),
   { ssr: false }
 );
 
@@ -26,10 +25,7 @@ export function TopBar() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || e.key === "/") {
-        if (
-          e.target instanceof HTMLInputElement ||
-          e.target instanceof HTMLTextAreaElement
-        ) {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
           return;
         }
         e.preventDefault();
@@ -71,12 +67,7 @@ export function TopBar() {
           <BackendStatus />
         </span>
         <LanguageSwitcher />
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          aria-label={tBar("toggleTheme")}
-        >
+        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={tBar("toggleTheme")}>
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         <Button
@@ -84,12 +75,13 @@ export function TopBar() {
           size="icon"
           className="relative"
           aria-label={tBar("notifications")}
-          onClick={() =>
-            toast.message(tBar("notifications"), { description: tBar("comingSoon") })
-          }
+          onClick={() => toast.message(tBar("notifications"), { description: tBar("comingSoon") })}
         >
           <Bell className="h-4 w-4" />
-          <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent-blue ring-2 ring-card" aria-hidden="true" />
+          <span
+            className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent-blue ring-2 ring-card"
+            aria-hidden="true"
+          />
         </Button>
         <Button
           variant="ghost"

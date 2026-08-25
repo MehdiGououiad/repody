@@ -1,5 +1,5 @@
-import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { browserJson } from "@/lib/api/http";
+import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
 export type RuleValidationResult = {
   ruleId: string;

@@ -1,10 +1,7 @@
 import { raiseRunError } from "@/lib/api/api-error";
-import { browserFetch } from "@/lib/api/http";
 import type { ClientProgressStepId, ClientStepLabels } from "@/lib/api/client-run-progress";
-import {
-  buildClientProgress,
-  buildClientProgressThrough,
-} from "@/lib/api/client-run-progress";
+import { buildClientProgress, buildClientProgressThrough } from "@/lib/api/client-run-progress";
+import { browserFetch } from "@/lib/api/http";
 import type { RunProgress } from "@/lib/api/run-poll";
 
 type UploadCapabilities = {
@@ -151,12 +148,7 @@ function cachedBindingsForRun(
   for (const docId of docOrder) {
     const file = filesByDocId[docId];
     const cached = uploadCache.get(docId);
-    if (
-      !file ||
-      !cached ||
-      cached.file !== file ||
-      cached.fingerprint !== fileFingerprint(file)
-    ) {
+    if (!file || !cached || cached.file !== file || cached.fingerprint !== fileFingerprint(file)) {
       return null;
     }
     bindings.push({
@@ -205,7 +197,11 @@ export async function uploadViaPresign(
   filesByDocId: Record<string, File>,
   reporter?: ProgressReporter
 ): Promise<StoredUploadBinding[]> {
-  reportClientStep(reporter, "upload-check", reporter?.clientLabels?.["upload-check"].pendingDetail);
+  reportClientStep(
+    reporter,
+    "upload-check",
+    reporter?.clientLabels?.["upload-check"].pendingDetail
+  );
 
   const cached = cachedBindingsForRun(docOrder, filesByDocId);
   if (cached) {
@@ -259,11 +255,7 @@ export async function uploadViaPresign(
     throw new Error("presign_unavailable");
   }
 
-  reportClientStep(
-    reporter,
-    "upload-transfer",
-    uploads.map((u) => u.fileName).join(", ")
-  );
+  reportClientStep(reporter, "upload-transfer", uploads.map((u) => u.fileName).join(", "));
 
   for (const item of uploads) {
     const docId = item.documentId ?? "";
@@ -305,9 +297,7 @@ export async function uploadViaPresign(
   const confirmed = (await confirmRes.json()) as {
     uploads?: Array<{ storageKey: string; mimeType?: string; fileName?: string; size?: number }>;
   };
-  const confirmedByKey = new Map(
-    (confirmed.uploads ?? []).map((u) => [u.storageKey, u] as const)
-  );
+  const confirmedByKey = new Map((confirmed.uploads ?? []).map((u) => [u.storageKey, u] as const));
 
   const bindings = uploads.map((item) => {
     const refined = confirmedByKey.get(item.storageKey);

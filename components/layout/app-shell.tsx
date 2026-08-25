@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { AuthSessionGuard } from "@/components/auth/auth-session-guard";
-import { AppSidebar } from "./app-sidebar";
-import { TopBar } from "./topbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isPublicPage } from "@/lib/auth/public-paths";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { AppSidebar } from "./app-sidebar";
+import { TopBar } from "./topbar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const t = useTranslations("common");

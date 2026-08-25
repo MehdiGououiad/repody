@@ -10,12 +10,12 @@ from repody.agents.idp.contracts import (
     DocumentSpec,
     StoredDocument,
 )
-from repody.extraction.types import ExtractionIclExample, schema_specs_from_fields
+from repody.app.run.helpers import resolve_run_doc_mime
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.extraction.nuextract import normalize_template_type
 from repody.extraction.pipeline import get_extract_document
+from repody.extraction.types import ExtractionIclExample, schema_specs_from_fields
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.app.run.helpers import resolve_run_doc_mime
 from repody.settings import get_settings
 
 
@@ -59,7 +59,7 @@ async def extract_one(
                 model_id=spec.document_model_id or "repody:vlm",
             )
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         return Result.fail(
             AppError(
                 code=ErrorCode.EXTRACTION,

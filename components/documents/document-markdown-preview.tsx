@@ -1,10 +1,13 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import {
+  normalizeDocumentMarkdown,
+  splitDocumentMarkdownPages,
+} from "@/lib/document-markdown/normalize";
 import { cn } from "@/lib/utils";
-import { normalizeDocumentMarkdown, splitDocumentMarkdownPages } from "@/lib/document-markdown/normalize";
 
 const MARKDOWN_COMPONENTS = {
   h1: ({ children }: { children?: ReactNode }) => (
@@ -81,7 +84,9 @@ const MARKDOWN_COMPONENTS = {
     </div>
   ),
   thead: ({ children }: { children?: ReactNode }) => (
-    <thead className="bg-gradient-to-r from-accent-blue/10 to-surface-container-low">{children}</thead>
+    <thead className="bg-gradient-to-r from-accent-blue/10 to-surface-container-low">
+      {children}
+    </thead>
   ),
   tbody: ({ children }: { children?: ReactNode }) => <tbody>{children}</tbody>,
   tr: ({ children }: { children?: ReactNode }) => (
@@ -93,7 +98,9 @@ const MARKDOWN_COMPONENTS = {
     </th>
   ),
   td: ({ children }: { children?: ReactNode }) => (
-    <td className="px-3 py-2 text-on-surface-variant align-top border-b border-border/60">{children}</td>
+    <td className="px-3 py-2 text-on-surface-variant align-top border-b border-border/60">
+      {children}
+    </td>
   ),
 };
 
@@ -117,7 +124,7 @@ export function DocumentMarkdownPreview({
           key={section.header || `section-${index}`}
           className={cn(
             section.header &&
-              "rounded-xl border border-border/70 bg-surface-container-lowest/60 overflow-hidden",
+              "rounded-xl border border-border/70 bg-surface-container-lowest/60 overflow-hidden"
           )}
         >
           {section.header ? (
@@ -150,10 +157,15 @@ export function DocumentTextPreviewPanel({
   const normalized = useMemo(() => normalizeDocumentMarkdown(text), [text]);
 
   return (
-    <details className={cn("group rounded-xl border border-border/70 bg-card overflow-hidden", className)} open>
+    <details
+      className={cn("group rounded-xl border border-border/70 bg-card overflow-hidden", className)}
+      open
+    >
       <summary className="cursor-pointer list-none px-4 py-2.5 text-xs font-medium text-on-surface-variant bg-surface-container-low/60 hover:bg-surface-container-low transition-colors [&::-webkit-details-marker]:hidden">
         <span className="inline-flex items-center gap-2">
-          <span className="text-on-surface-variant/60 group-open:rotate-90 transition-transform">▸</span>
+          <span className="text-on-surface-variant/60 group-open:rotate-90 transition-transform">
+            ▸
+          </span>
           {label}
         </span>
       </summary>

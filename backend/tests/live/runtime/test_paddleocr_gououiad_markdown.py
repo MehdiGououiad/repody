@@ -26,8 +26,8 @@ from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
 from repody.extraction.paddleocr_v6 import extract_with_paddleocr_v6
 from repody.extraction.types import DocumentBundle
-from repody.settings import get_settings
 from repody.infra.storage.mime import resolve_mime
+from repody.settings import get_settings
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

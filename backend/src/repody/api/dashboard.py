@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.deps import get_session
+from repody.app.dashboard import get_dashboard
 from repody.infra.auth.dependencies import require_permission
 from repody.schemas.dashboard import DashboardResponse
-from repody.app.dashboard import get_dashboard
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 

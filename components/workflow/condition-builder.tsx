@@ -1,18 +1,18 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import {
+  type ConditionFieldOption,
+  newCondition,
+} from "@/components/workflow/condition-builder-model";
 import { ConditionPreview } from "@/components/workflow/condition-builder-preview";
 import { ConditionRow } from "@/components/workflow/condition-builder-row";
-import {
-  newCondition,
-  type ConditionFieldOption,
-} from "@/components/workflow/condition-builder-model";
-import type { RuleCondition } from "@/lib/types";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
+import type { RuleCondition } from "@/lib/types";
 
-export { conditionToString, conditionsToExpression, fieldToken } from "@/lib/rules/expression";
+export { conditionsToExpression, conditionToString, fieldToken } from "@/lib/rules/expression";
 
 export function ConditionBuilder({
   conditions,
@@ -29,9 +29,7 @@ export function ConditionBuilder({
 
   const update = (id: string, patch: Partial<RuleCondition>) =>
     onConditionsChange(
-      conditions.map((condition) =>
-        condition.id === id ? { ...condition, ...patch } : condition
-      )
+      conditions.map((condition) => (condition.id === id ? { ...condition, ...patch } : condition))
     );
 
   const remove = (id: string) =>

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { API, apiGet } from "../helpers/api";
 
 test.describe("Platform smoke", () => {
@@ -18,9 +18,7 @@ test.describe("Platform smoke", () => {
   });
 
   test("workflows list includes seeded invoice workflow", async ({ page }) => {
-    const { workflows } = await apiGet<{ workflows: { id: string; name: string }[] }>(
-      "/workflows"
-    );
+    const { workflows } = await apiGet<{ workflows: { id: string; name: string }[] }>("/workflows");
     const invoice = workflows.find((w) => w.id === "wf-invoice-audit");
     expect(invoice).toBeTruthy();
 

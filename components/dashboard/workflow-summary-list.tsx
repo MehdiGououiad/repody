@@ -1,11 +1,11 @@
 "use client";
 
+import { ArrowUpRight, GitBranch } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ArrowUpRight, GitBranch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { Workflow } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 function passRateLabel(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -26,7 +26,10 @@ export function WorkflowSummaryList({ workflows }: { workflows: Workflow[] }) {
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <h2 className="font-display text-base font-semibold text-on-surface">{t("title")}</h2>
-        <Link href="/workflows" className="text-xs text-primary hover:underline flex items-center gap-1">
+        <Link
+          href="/workflows"
+          className="text-xs text-primary hover:underline flex items-center gap-1"
+        >
           {t("viewAll")}
           <ArrowUpRight className="h-3 w-3" />
         </Link>
@@ -56,7 +59,10 @@ export function WorkflowSummaryList({ workflows }: { workflows: Workflow[] }) {
             </div>
             <Badge
               variant={workflow.status === "active" ? "success" : "outline"}
-              className={cn("shrink-0 text-[10px]", workflow.status === "paused" && "border-warning/40 text-warning")}
+              className={cn(
+                "shrink-0 text-[10px]",
+                workflow.status === "paused" && "border-warning/40 text-warning"
+              )}
             >
               {tStatus(workflow.status)}
             </Badge>

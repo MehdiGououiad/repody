@@ -45,7 +45,7 @@ def validate_workflow_schema(payload: WorkflowSchema) -> None:
         if dupes:
             joined = ", ".join(f'"{name}"' for name in dupes)
             raise ValueError(
-                f'{doc_label}: duplicate field name(s) {joined}. '
+                f"{doc_label}: duplicate field name(s) {joined}. "
                 "Each field name must be unique (case-insensitive)."
             )
         try:
@@ -62,7 +62,7 @@ def validate_document_schema(doc: DocumentDefSchema) -> list[str]:
     joined = ", ".join(f'"{name}"' for name in dupes)
     doc_label = (doc.document_type or "").strip() or "Document"
     return [
-        f'{doc_label}: duplicate field name(s) {joined}. '
+        f"{doc_label}: duplicate field name(s) {joined}. "
         "Each field name must be unique (case-insensitive)."
     ]
 
@@ -94,11 +94,7 @@ def resolve_document_field_tokens(
     applies_to: list[str],
 ) -> list[str]:
     """Field tokens available to LLM rules — matches the workflow builder UI."""
-    targets = (
-        [doc for doc in documents if doc.id in applies_to]
-        if applies_to
-        else list(documents)
-    )
+    targets = [doc for doc in documents if doc.id in applies_to] if applies_to else list(documents)
     multi = len(documents) > 1
     tokens: list[str] = []
     for doc in targets:
@@ -128,14 +124,10 @@ def _condition_incomplete(condition: dict) -> bool:
 
 def _validate_logic_rule_conditions(rule: WorkflowRuleSchema | dict) -> list[str]:
     conditions = (
-        rule.conditions
-        if isinstance(rule, WorkflowRuleSchema)
-        else rule.get("conditions") or []
+        rule.conditions if isinstance(rule, WorkflowRuleSchema) else rule.get("conditions") or []
     )
     rule_dict = (
-        rule.model_dump(by_alias=False)
-        if isinstance(rule, WorkflowRuleSchema)
-        else dict(rule)
+        rule.model_dump(by_alias=False) if isinstance(rule, WorkflowRuleSchema) else dict(rule)
     )
     if not conditions:
         return ["Add at least one condition."]

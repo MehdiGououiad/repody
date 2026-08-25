@@ -107,7 +107,13 @@ export function TeamPanel({
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing} className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+              disabled={refreshing}
+              className="gap-2"
+            >
               <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
               Refresh
             </Button>
@@ -191,7 +197,9 @@ function TeamMembersTable({
               <tr key={user.id} className="border-b border-border/70 hover:bg-surface-bright/40">
                 <td className="px-6 py-4">
                   <p className="font-medium">{displayName(user)}</p>
-                  <p className="mt-0.5 text-xs text-on-surface-variant">{user.email ?? user.username}</p>
+                  <p className="mt-0.5 text-xs text-on-surface-variant">
+                    {user.email ?? user.username}
+                  </p>
                 </td>
                 <td className="px-4 py-4">
                   <RoleBadges roles={user.roles} />
@@ -203,7 +211,12 @@ function TeamMembersTable({
                 </td>
                 <td className="px-6 py-4 text-right">
                   {canManageUsers ? (
-                    <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => onEdit(user)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => onEdit(user)}
+                    >
                       <UserCog className="h-3.5 w-3.5" />
                       Manage
                     </Button>

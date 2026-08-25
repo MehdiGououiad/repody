@@ -1,4 +1,10 @@
-import type { ComparisonOp, ConditionJunction, ConditionOperand, RuleCondition, TableAggregateLeft } from "@/lib/types";
+import type {
+  ComparisonOp,
+  ConditionJunction,
+  ConditionOperand,
+  RuleCondition,
+  TableAggregateLeft,
+} from "@/lib/types";
 
 const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 

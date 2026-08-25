@@ -1,5 +1,5 @@
-from repody.extraction.types import SchemaFieldSpec
 from repody.extraction.fields import fields_from_leaf_json, fields_from_nuextract_json
+from repody.extraction.types import SchemaFieldSpec
 from repody.rules.amounts import normalize_amount, parse_numeric_value
 
 

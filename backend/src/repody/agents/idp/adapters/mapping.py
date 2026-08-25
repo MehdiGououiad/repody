@@ -19,15 +19,15 @@ from repody.agents.idp.contracts import (
     SchemaField,
     StoredDocument,
 )
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 from repody.catalog.registry import is_markdown_only_model
-from repody.extraction.types import ExtractedFieldResult, ExtractionMetadata, ExtractionResult
 from repody.extraction.schema import (
     enum_values_from_row,
     iter_child_rows,
     merge_field_row,
 )
+from repody.extraction.types import ExtractedFieldResult, ExtractionMetadata, ExtractionResult
 from repody.rules.types import RuleEvalResult
-from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 def _schema_field_from_row(row: dict) -> SchemaField | None:
@@ -214,7 +214,9 @@ def document_extraction_from_result(
     return DocumentExtraction(
         document_id=document_id,
         fields=tuple(extracted_field_from_result(f) for f in result.fields),
-        markdown_text=result.markdown_text if result.markdown_text is not None else meta.markdown_text,
+        markdown_text=result.markdown_text
+        if result.markdown_text is not None
+        else meta.markdown_text,
         raw_text=result.raw_text if result.raw_text is not None else meta.raw_text,
         meta=idp_meta,
     )

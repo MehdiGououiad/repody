@@ -115,7 +115,7 @@ for (const check of checks) {
     failures.push(
       `${check.name}: expected ${check.ok ? "success" : "failure"}${
         check.stderr ? ` containing "${check.stderr}"` : ""
-      }, got status ${result.status}\n${output.trim()}`,
+      }, got status ${result.status}\n${output.trim()}`
     );
   }
 }

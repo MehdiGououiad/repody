@@ -24,7 +24,7 @@ const generatedPaths = new Set([".next/standalone/server.js"]);
 
 function tokenize(segment) {
   return [...segment.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map(
-    (match) => match[1] ?? match[2] ?? match[3],
+    (match) => match[1] ?? match[2] ?? match[3]
   );
 }
 
@@ -68,7 +68,9 @@ function checkBackendRunner(scriptName, tokens) {
     }
   }
   if (tokens.includes("pytest") && !tokens.includes("--dev")) {
-    failures.push(`${scriptName}: backend pytest commands must pass --dev to scripts/backend-run.mjs`);
+    failures.push(
+      `${scriptName}: backend pytest commands must pass --dev to scripts/backend-run.mjs`
+    );
   }
   return true;
 }
@@ -157,19 +159,25 @@ function checkPnpmScriptReference(scriptName, tokens) {
 function checkBackendToolchain(scriptName, command) {
   if (!/\bcd\s+backend\b/.test(command)) return;
   if (/\buv\s+run\b/.test(command)) {
-    failures.push(`${scriptName}: use "node scripts/backend-run.mjs" instead of repeating "cd backend && uv run"`);
+    failures.push(
+      `${scriptName}: use "node scripts/backend-run.mjs" instead of repeating "cd backend && uv run"`
+    );
   }
   if (/\bcd\s+backend\s*&&\s*(python|pytest|alembic|uvicorn)\b/.test(command)) {
     failures.push(`${scriptName}: backend commands must use "node scripts/backend-run.mjs"`);
   }
   if (/\bpytest\b/.test(command) && !/\buv\s+run\s+--extra\s+dev\s+pytest\b/.test(command)) {
-    failures.push(`${scriptName}: backend pytest commands must use "node scripts/backend-run.mjs --dev pytest"`);
+    failures.push(
+      `${scriptName}: backend pytest commands must use "node scripts/backend-run.mjs --dev pytest"`
+    );
   }
   if (
     /\bscripts\/platform_integration_suite\.py\b/.test(command) &&
     !/\buv\s+run\s+--extra\s+dev\s+python\b/.test(command)
   ) {
-    failures.push(`${scriptName}: backend integration test commands must use "node scripts/backend-run.mjs --dev python"`);
+    failures.push(
+      `${scriptName}: backend integration test commands must use "node scripts/backend-run.mjs --dev python"`
+    );
   }
 }
 
@@ -186,4 +194,6 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log("ok: package scripts reference existing local paths, pnpm aliases, package tools, and backend toolchain");
+console.log(
+  "ok: package scripts reference existing local paths, pnpm aliases, package tools, and backend toolchain"
+);

@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { ChevronLeft, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import {
   RunDetailedReportSections,
-  RunStatusBanner,
   type RunReportLabels,
+  RunStatusBanner,
 } from "@/components/audit/run-report/run-report-core";
 import type { RunAuditDetail } from "@/lib/types/audit";
 
@@ -29,7 +29,9 @@ function apiReportLabels(
       ? t("rulesPassed", { passed: report.summary.passed, total: report.summary.total })
       : undefined,
     rulesFailed: report
-      ? t("rulesFailed", { count: report.summary.failed }).replace(String(report.summary.failed), "").trim()
+      ? t("rulesFailed", { count: report.summary.failed })
+          .replace(String(report.summary.failed), "")
+          .trim()
       : undefined,
     docExtracted: (done, total) => t("docExtracted", { done, total }),
     statusPassed: t("statusPassed"),

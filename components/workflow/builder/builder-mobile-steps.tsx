@@ -1,15 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import {
   BUILDER_STEP_META,
+  type BuilderStep,
   stepBlocked,
   stepComplete,
-  type BuilderStep,
 } from "@/components/workflow/builder/step-nav";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function BuilderMobileSteps({
   step,
@@ -28,8 +28,7 @@ export function BuilderMobileSteps({
     <div className="md:hidden flex border-t border-accent-blue/20 bg-card/90 backdrop-blur shrink-0">
       {BUILDER_STEP_META.map(({ icon: Icon, key }, idx) => {
         const isActive = step === idx;
-        const isDone =
-          !isActive && stepComplete(idx as BuilderStep, documents, rules);
+        const isDone = !isActive && stepComplete(idx as BuilderStep, documents, rules);
         const isBlocked = stepBlocked(idx as BuilderStep, documents, rules);
         return (
           <button
@@ -53,11 +52,7 @@ export function BuilderMobileSteps({
                 isDone ? "bg-success text-white" : ""
               )}
             >
-              {isDone ? (
-                <Check className="h-3 w-3" />
-              ) : (
-                <Icon className="h-3.5 w-3.5" />
-              )}
+              {isDone ? <Check className="h-3 w-3" /> : <Icon className="h-3.5 w-3.5" />}
             </div>
             {tSteps(key)}
           </button>

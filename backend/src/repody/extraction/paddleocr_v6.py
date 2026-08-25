@@ -135,8 +135,7 @@ async def fetch_paddleocr_markdown(bundle: DocumentBundle) -> tuple[str, int]:
         response = await client.post(url, json=payload)
     if response.status_code != 200:
         raise RuntimeError(
-            f"PP-OCRv6 /ocr failed HTTP {response.status_code}: "
-            f"{response.text[:500]}"
+            f"PP-OCRv6 /ocr failed HTTP {response.status_code}: {response.text[:500]}"
         )
     body = response.json()
     if not isinstance(body, dict):

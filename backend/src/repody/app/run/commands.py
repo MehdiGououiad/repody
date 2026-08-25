@@ -13,14 +13,6 @@ from datetime import UTC, datetime
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.infra.db import base as db_base
-from repody.infra.db.models import Run
-from repody.infra.db.models.enums import RunStatus as DbRunStatus
-from repody.runtime.agent_metadata import (
-    clear_pending_completion,
-    pending_completion_from_run,
-)
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.app.run.lifecycle import (
     RunCompleted,
     RunCompletionOutcome,
@@ -35,15 +27,21 @@ from repody.app.run.lifecycle import (
 )
 from repody.app.run.persistence import session_run_ports
 from repody.app.run.progress import fail_run_progress
+from repody.infra.db import base as db_base
+from repody.infra.db.models import Run
+from repody.infra.db.models.enums import RunStatus as DbRunStatus
+from repody.runtime.agent_metadata import (
+    clear_pending_completion,
+    pending_completion_from_run,
+)
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
 
 log = structlog.get_logger(__name__)
 
 PUBLIC_RUN_FAILURE_MESSAGE = (
     "Run failed while processing. Contact an operator with the run id for details."
 )
-PUBLIC_DISPATCH_FAILURE_MESSAGE = (
-    "Run dispatch failed. Retry the run or contact an operator."
-)
+PUBLIC_DISPATCH_FAILURE_MESSAGE = "Run dispatch failed. Retry the run or contact an operator."
 
 
 @dataclass(frozen=True, slots=True)

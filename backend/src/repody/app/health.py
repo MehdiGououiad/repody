@@ -4,15 +4,15 @@ from __future__ import annotations
 
 from sqlalchemy import text
 
+from repody.app.run.admission import count_inflight, count_queued, count_running
+from repody.catalog.probes import probe_active_runtime
 from repody.infra.db import base as db_base
+from repody.infra.redis.health import ping_redis
 from repody.schemas.health import (
     HealthLiveResponse,
     HealthReadinessResponse,
     WorkerPoolsHealth,
 )
-from repody.app.run.admission import count_inflight, count_queued, count_running
-from repody.catalog.probes import probe_active_runtime
-from repody.infra.redis.health import ping_redis
 from repody.settings import get_settings
 
 

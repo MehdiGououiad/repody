@@ -66,7 +66,7 @@ function dockerTrivy(args, allowFail = false) {
       `aquasec/trivy:${TRIVY_VERSION}`,
       ...args,
     ],
-    { allowFail },
+    { allowFail }
   );
 }
 
@@ -139,11 +139,10 @@ async function main() {
   }
 
   console.log(`\n[${++step}/${totalSteps}] pip-audit`);
-  const pip = run(
-    "uvx",
-    ["pip-audit", "--locked", "--project", "backend", "-f", "json"],
-    { capture: true, allowFail: true },
-  );
+  const pip = run("uvx", ["pip-audit", "--locked", "--project", "backend", "-f", "json"], {
+    capture: true,
+    allowFail: true,
+  });
   if (pip.stdout?.trim()) {
     writeFileSync(resolve(outDir, "pip-audit.json"), pip.stdout, "utf8");
   } else {
@@ -166,7 +165,7 @@ async function main() {
         trivyFsOutput(target),
         target,
       ],
-      true,
+      true
     );
   }
 
@@ -184,7 +183,7 @@ async function main() {
         `dist/security/trivy-config-${target.replace(/[^a-z0-9._-]+/gi, "_")}.json`,
         target,
       ],
-      true,
+      true
     );
   }
 
@@ -204,13 +203,15 @@ async function main() {
         trivySecretOutput(target),
         target,
       ],
-      true,
+      true
     );
   }
 
   if (!skipImages) {
     if (!hasDocker()) {
-      console.warn(`\n[${++step}/${totalSteps}] Skipping image scan (Docker unavailable). Use --quick to silence.`);
+      console.warn(
+        `\n[${++step}/${totalSteps}] Skipping image scan (Docker unavailable). Use --quick to silence.`
+      );
     } else {
       console.log(`\n[${++step}/${totalSteps}] Build + Trivy image + Syft + Grype`);
       run("node", ["deploy/scripts/build-images.mjs"], {
@@ -234,7 +235,7 @@ async function main() {
           "dist/security/trivy-image-backend.json",
           backendImg,
         ],
-        true,
+        true
       );
       trivy(
         [
@@ -247,7 +248,7 @@ async function main() {
           "dist/security/trivy-image-web.json",
           webImg,
         ],
-        true,
+        true
       );
 
       run(
@@ -264,7 +265,7 @@ async function main() {
           "-o",
           "spdx-json=/out/syft-backend.spdx.json",
         ],
-        { allowFail: true },
+        { allowFail: true }
       );
       run(
         "docker",
@@ -280,7 +281,7 @@ async function main() {
           "--file",
           "/out/grype-backend.json",
         ],
-        { allowFail: true },
+        { allowFail: true }
       );
       run(
         "docker",
@@ -296,7 +297,7 @@ async function main() {
           "-o",
           "spdx-json=/out/syft-web.spdx.json",
         ],
-        { allowFail: true },
+        { allowFail: true }
       );
       run(
         "docker",
@@ -312,7 +313,7 @@ async function main() {
           "--file",
           "/out/grype-web.json",
         ],
-        { allowFail: true },
+        { allowFail: true }
       );
     }
   } else {

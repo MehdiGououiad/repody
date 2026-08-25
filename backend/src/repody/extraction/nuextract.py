@@ -196,8 +196,7 @@ def build_field_template_node(field: SchemaFieldSpec) -> Any:
         # Official multi-enum: [["A", "B", ...]] with ≥2 choices.
         if len(values) < 2:
             raise ValueError(
-                f"multi-enum field {field.name!r} requires at least 2 choices "
-                f"(got {len(values)})"
+                f"multi-enum field {field.name!r} requires at least 2 choices (got {len(values)})"
             )
         return [values]
 
@@ -206,8 +205,7 @@ def build_field_template_node(field: SchemaFieldSpec) -> Any:
         # Official enum: ["a", "b", ...] with ≥2 choices.
         if len(values) < 2:
             raise ValueError(
-                f"enum field {field.name!r} requires at least 2 choices "
-                f"(got {len(values)})"
+                f"enum field {field.name!r} requires at least 2 choices (got {len(values)})"
             )
         return values
 
@@ -244,9 +242,8 @@ def _clean_enum_values(values: list[str] | None) -> list[str]:
 
 # --- Chat completions (official NuExtract multimodal / markdown) ---
 
-def _iter_field_notes(
-    fields: list[SchemaFieldSpec], prefix: str = ""
-) -> Iterator[tuple[str, str]]:
+
+def _iter_field_notes(fields: list[SchemaFieldSpec], prefix: str = "") -> Iterator[tuple[str, str]]:
     """Yield ``(dotted_path, description)`` for every described field, depth-first."""
     for field in fields:
         name = field.name.strip()
@@ -329,9 +326,7 @@ def structured_chat_payload(
     settings = get_settings()
     enable_thinking = bool(settings.repody_vlm_enable_thinking)
     temperature = (
-        NUEXTRACT_THINKING_TEMPERATURE
-        if enable_thinking
-        else NUEXTRACT_STRUCTURED_TEMPERATURE
+        NUEXTRACT_THINKING_TEMPERATURE if enable_thinking else NUEXTRACT_STRUCTURED_TEMPERATURE
     )
     # Official ICL demos use temperature 0 when examples are present.
     if extraction_icl_examples and not enable_thinking:

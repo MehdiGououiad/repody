@@ -24,12 +24,12 @@ import pytest
 
 from repody.benchmarking import score_gououiad_cnie_fields
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
 from repody.integration.live_stack import (
     create_live_async_client,
     live_api_base,
 )
 from repody.integration.workflow_flow import run_test_with_files, save_workflow
-from repody.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 
@@ -296,8 +296,7 @@ async def test_gououiad_cnie_structured_extraction_after_warmup():
                 "runExtractionMs": meta.get("extractionMs") or meta.get("extraction_ms"),
                 "frontExtractionMs": front_ext.get("extractionMs")
                 or front_ext.get("extraction_ms"),
-                "backExtractionMs": back_ext.get("extractionMs")
-                or back_ext.get("extraction_ms"),
+                "backExtractionMs": back_ext.get("extractionMs") or back_ext.get("extraction_ms"),
                 "frontCacheHit": front_ext.get("cacheHit") or front_ext.get("cache_hit"),
                 "backCacheHit": back_ext.get("cacheHit") or back_ext.get("cache_hit"),
                 "note": (
@@ -332,7 +331,9 @@ async def test_gououiad_cnie_structured_extraction_after_warmup():
 
         core_max = max(1, int(scored["core_max"]))
         core_ratio = float(scored["core_score"]) / core_max
-        assert scored["cin_hit"], f"CIN ground truth miss; fields={front_fields} hits={scored['hits']}"
+        assert scored["cin_hit"], (
+            f"CIN ground truth miss; fields={front_fields} hits={scored['hits']}"
+        )
         assert core_ratio >= MIN_CORE_RATIO, (
             f"core score too low: {scored['core_score']}/{scored['core_max']} "
             f"(ratio={core_ratio:.2f}); fields front={front_fields} back={back_fields}"

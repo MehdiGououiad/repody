@@ -42,6 +42,7 @@ class Sample:
 
 async def _db_banner() -> list[str]:
     from sqlalchemy import text
+
     from repody.infra.db.base import async_session_factory
     from repody.settings import get_settings
 
@@ -55,17 +56,23 @@ async def _db_banner() -> list[str]:
         ).one()
         lines.append(f"connected={row[0]} server={row[1]}:{row[2]}")
         counts = (
-            await session.execute(text("select status, count(*)::int from runs group by 1 order by 1"))
+            await session.execute(
+                text("select status, count(*)::int from runs group by 1 order by 1")
+            )
         ).all()
         lines.append(f"runs_by_status={dict(counts)}")
         idx = (
-            await session.execute(
-                text(
-                    "select indexname from pg_indexes "
-                    "where tablename='runs' and indexname like 'ix_runs%' order by 1"
+            (
+                await session.execute(
+                    text(
+                        "select indexname from pg_indexes "
+                        "where tablename='runs' and indexname like 'ix_runs%' order by 1"
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         lines.append(f"runs_indexes={list(idx)}")
     return lines
 
@@ -73,6 +80,7 @@ async def _db_banner() -> list[str]:
 async def seed_queued_runs(n: int) -> list[str]:
     """Insert synthetic queued rows for EXPLAIN / position / admission load tests."""
     from sqlalchemy import text
+
     from repody.infra.db.base import async_session_factory
 
     if n <= 0:
@@ -116,6 +124,7 @@ async def seed_queued_runs(n: int) -> list[str]:
 
 async def cleanup_seeded_runs() -> list[str]:
     from sqlalchemy import text
+
     from repody.infra.db.base import async_session_factory
 
     async with async_session_factory() as session:
@@ -128,14 +137,15 @@ async def cleanup_seeded_runs() -> list[str]:
 
 async def profile_queue_sql(n: int = 50) -> list[str]:
     from sqlalchemy import text
-    from repody.infra.db.base import async_session_factory
+
+    from repody.app.queue.position import queue_position
     from repody.app.run.admission import (
         check_admission,
         count_extract_inflight,
         count_inflight,
         count_queued,
     )
-    from repody.app.queue.position import queue_position
+    from repody.infra.db.base import async_session_factory
 
     lines: list[str] = []
     q_count = Sample("count_queued")
@@ -210,8 +220,8 @@ async def profile_queue_sql(n: int = 50) -> list[str]:
 
 async def profile_admission_reject() -> list[str]:
     """Temporarily lower caps and verify CAPACITY path latency."""
-    from repody.infra.db.base import async_session_factory
     from repody.app.run.admission import check_admission
+    from repody.infra.db.base import async_session_factory
     from repody.settings import get_settings
 
     settings = get_settings()
@@ -251,6 +261,7 @@ async def profile_admission_reject() -> list[str]:
 
 async def profile_outbox_claim(n: int = 30) -> list[str]:
     from sqlalchemy import text
+
     from repody.infra.db.base import async_session_factory
 
     sample = Sample("outbox_pending_count")
@@ -274,15 +285,19 @@ async def profile_outbox_claim(n: int = 30) -> list[str]:
             sample.add((time.perf_counter() - t0) * 1000)
         # EXPLAIN without FOR UPDATE — analyze + row locks are awkward outside a drain.
         plan = (
-            await session.execute(
-                text(
-                    "EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) "
-                    "SELECT run_id FROM run_dispatch_outbox "
-                    "WHERE status = 'pending' "
-                    "ORDER BY created_at ASC LIMIT 32"
+            (
+                await session.execute(
+                    text(
+                        "EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) "
+                        "SELECT run_id FROM run_dispatch_outbox "
+                        "WHERE status = 'pending' "
+                        "ORDER BY created_at ASC LIMIT 32"
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         lines.append("EXPLAIN outbox pending poll:")
         lines.extend(f"  {row}" for row in plan)
         counts = (
@@ -356,7 +371,9 @@ async def main() -> None:
     parser.add_argument("--live", action="store_true", help="Also hit running API")
     parser.add_argument("--base", default="http://127.0.0.1:8000")
     parser.add_argument("-n", type=int, default=40)
-    parser.add_argument("--seed-queue", type=int, default=0, help="Synthetic queued rows before SQL profile")
+    parser.add_argument(
+        "--seed-queue", type=int, default=0, help="Synthetic queued rows before SQL profile"
+    )
     parser.add_argument("--keep-seed", action="store_true", help="Do not delete AUD-PROF rows")
     parser.add_argument("--no-auth", action="store_true", help="Skip Keycloak on live path")
     args = parser.parse_args()

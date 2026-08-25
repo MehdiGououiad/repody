@@ -44,6 +44,8 @@ from repody.extraction.types import (
 from repody.inference.nuextract_cloud import (
     NuExtractCloudConfig,
     NuExtractCloudError,
+)
+from repody.inference.nuextract_cloud import (
     extract_structured as nuextract_extract_structured,
 )
 from repody.inference.openai_compat import post_chat_completion

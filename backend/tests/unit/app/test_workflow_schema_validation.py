@@ -1,10 +1,10 @@
 import pytest
 
-from repody.schemas.workflow import DocumentDefSchema, SchemaFieldSchema, WorkflowSchema
 from repody.app.workflow import (
     duplicate_field_names,
     validate_workflow_schema,
 )
+from repody.schemas.workflow import DocumentDefSchema, SchemaFieldSchema, WorkflowSchema
 
 
 def test_duplicate_field_names_case_insensitive():

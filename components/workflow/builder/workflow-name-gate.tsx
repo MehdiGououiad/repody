@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { ArrowRight, GitBranch } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,7 +28,10 @@ export function WorkflowNameGate({
           <p className="text-sm text-on-surface-variant leading-relaxed">{t("hint")}</p>
         </div>
         <div className="space-y-3 text-left">
-          <label htmlFor="workflow-name" className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+          <label
+            htmlFor="workflow-name"
+            className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant"
+          >
             {t("label")}
           </label>
           <Input
@@ -43,12 +46,7 @@ export function WorkflowNameGate({
             }}
           />
         </div>
-        <Button
-          size="lg"
-          className="w-full gap-2"
-          disabled={!trimmed}
-          onClick={onContinue}
-        >
+        <Button size="lg" className="w-full gap-2" disabled={!trimmed} onClick={onContinue}>
           {t("continue")}
           <ArrowRight className="h-4 w-4" />
         </Button>

@@ -41,9 +41,7 @@ def require_operator_actions(settings: Settings) -> Result[None]:
         return Result.fail(
             AppError(
                 code=ErrorCode.FORBIDDEN,
-                message=(
-                    "Operator actions are disabled. Set AUDIT_OPERATOR_ACTIONS_ENABLED=true."
-                ),
+                message=("Operator actions are disabled. Set AUDIT_OPERATOR_ACTIONS_ENABLED=true."),
             )
         )
     return Result.ok(None)
@@ -81,7 +79,9 @@ def parse_benchmark_options(
     judge_quality: bool = True,
 ) -> Result[BenchmarkOptions]:
     if profile not in PROFILES or validation_mode not in VALIDATION_MODES:
-        return Result.fail(AppError(code=ErrorCode.VALIDATION, message="Invalid benchmark options."))
+        return Result.fail(
+            AppError(code=ErrorCode.VALIDATION, message="Invalid benchmark options.")
+        )
     try:
         selected_models = json.loads(models)
     except json.JSONDecodeError as exc:

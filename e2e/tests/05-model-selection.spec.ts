@@ -2,10 +2,7 @@ import { expect, test } from "@playwright/test";
 import { API, apiAuthHeaders } from "../helpers/api";
 import { waitForBuilderReady } from "../helpers/workflow-builder";
 
-test("users can select Repody VLM for document extraction", async ({
-  page,
-  request,
-}) => {
+test("users can select Repody VLM for document extraction", async ({ page, request }) => {
   const workflowName = `Model selection ${Date.now()}`;
   await page.goto("/workflows/new");
   await waitForBuilderReady(page, { newWorkflowName: workflowName });
@@ -13,9 +10,7 @@ test("users can select Repody VLM for document extraction", async ({
   await page.getByLabel("Document name").fill("Invoice");
   await page.getByRole("button", { name: "Add field" }).click();
   await page.getByPlaceholder("e.g. invoice_number").fill("total_amount");
-  await page
-    .getByPlaceholder(/unique invoice identifier/i)
-    .fill("Total TTC including tax");
+  await page.getByPlaceholder(/unique invoice identifier/i).fill("Total TTC including tax");
 
   const readPath = page.getByLabel("Read path");
   if (await readPath.isVisible().catch(() => false)) {

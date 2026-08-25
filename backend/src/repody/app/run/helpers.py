@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from repody.infra.db.models import RunDocument, Workflow
 from repody.extraction.branding import normalize_public_catalog_id
 from repody.extraction.modes import (
     parse_read_path,
     read_path_label,
     validation_mode_label,
 )
-from repody.rules.conditions import resolve_rule_body
+from repody.infra.db.models import RunDocument, Workflow
 from repody.infra.storage.mime import resolve_mime as resolve_storage_mime
+from repody.rules.conditions import resolve_rule_body
 from repody.util.json_shape import normalize_keys_to_snake
 
 __all__ = [

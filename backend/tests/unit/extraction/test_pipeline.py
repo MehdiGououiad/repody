@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 from repody.extraction.pipeline import extract_document
+from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
 
 
 @pytest.fixture

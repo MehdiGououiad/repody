@@ -3,28 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 from unittest.mock import AsyncMock
 
 import httpx
 import pytest
-
-from repody.catalog.registry import parse_document_model
-from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from repody.extraction.types import load_document_bundle
-from repody.extraction.fields import fields_from_nuextract_json
-from repody.rules.amounts import normalize_amount, parse_numeric_value
-from repody.extraction.nuextract import (
-    NUEXTRACT_ENABLE_THINKING,
-    build_nuextract_template,
-)
-from repody.extraction.pipeline import extract_document
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.extraction.vlm import extract_with_repody_vlm
-from repody.extraction.render import encode_pages_as_image_urls, prepare_nuextract_pages
-from repody.extraction.nuextract import structured_chat_payload
-from repody.inference.factory import get_chat
-from repody.settings import get_settings
 from tests.fixtures.cih_releve_assertions import (
     assert_balance_identity,
     assert_currency_scalar,
@@ -57,6 +39,20 @@ from tests.fixtures.cih_releve_ground_truth import (
     parse_cih_releve_ground_truth,
 )
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
+
+from repody.catalog.registry import parse_document_model
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.fields import fields_from_nuextract_json
+from repody.extraction.nuextract import (
+    build_nuextract_template,
+)
+from repody.extraction.pipeline import extract_document
+from repody.extraction.render import prepare_nuextract_pages
+from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec, load_document_bundle
+from repody.extraction.vlm import extract_with_repody_vlm
+from repody.inference.factory import get_chat
+from repody.rules.amounts import normalize_amount, parse_numeric_value
+from repody.settings import get_settings
 
 pytestmark = pytest.mark.skipif(
     not cih_releve_pdf_path().is_file(),
@@ -142,7 +138,9 @@ def test_cih_full_template_covers_scalar_list_and_object_array():
     assert template["transaction_debit_amounts"] == ["number"]
     assert template["operation_dates"] == ["date"]
     assert template["transaction_descriptions"] == ["verbatim-string"]
-    assert template["movement_categories"] == [["DEPOSIT", "TRANSFER", "WITHDRAWAL", "CARD", "FEE", "OTHER"]]
+    assert template["movement_categories"] == [
+        ["DEPOSIT", "TRANSFER", "WITHDRAWAL", "CARD", "FEE", "OTHER"]
+    ]
     row = template["transactions"][0]
     assert row["operation_date"] == "date"
     assert row["value_date"] == "date"
@@ -176,12 +174,24 @@ def assert_summary_fields(fields: list[ExtractedFieldResult], ground_truth) -> N
     assert_verbatim_contains(require_field(fields, "agency"), "SIDI", "BENNOUR")
     assert_number_scalar(require_field(fields, "opening_balance"), ground_truth.opening_balance)
     assert_number_scalar(require_field(fields, "closing_balance"), ground_truth.closing_balance)
-    assert_number_scalar(require_field(fields, "total_debit_movements"), ground_truth.total_debit_movements)
-    assert_number_scalar(require_field(fields, "total_credit_movements"), ground_truth.total_credit_movements)
-    assert_integer_scalar(require_field(fields, "debit_transaction_count"), ground_truth.debit_count)
-    assert_integer_scalar(require_field(fields, "credit_transaction_count"), ground_truth.credit_count)
-    assert_date_scalar(require_field(fields, "opening_balance_date"), ground_truth.opening_balance_iso)
-    assert_date_scalar(require_field(fields, "closing_balance_date"), ground_truth.closing_balance_iso)
+    assert_number_scalar(
+        require_field(fields, "total_debit_movements"), ground_truth.total_debit_movements
+    )
+    assert_number_scalar(
+        require_field(fields, "total_credit_movements"), ground_truth.total_credit_movements
+    )
+    assert_integer_scalar(
+        require_field(fields, "debit_transaction_count"), ground_truth.debit_count
+    )
+    assert_integer_scalar(
+        require_field(fields, "credit_transaction_count"), ground_truth.credit_count
+    )
+    assert_date_scalar(
+        require_field(fields, "opening_balance_date"), ground_truth.opening_balance_iso
+    )
+    assert_date_scalar(
+        require_field(fields, "closing_balance_date"), ground_truth.closing_balance_iso
+    )
     assert_currency_scalar(require_field(fields, "currency"), "MAD", "DIRHAM")
     assert_enum_scalar(require_field(fields, "currency_code"), {"MAD", "EUR", "USD"})
     assert require_field(fields, "account_number").value == ground_truth.account_number
@@ -397,7 +407,9 @@ async def _live_extract(
 @pytest.mark.asyncio
 @pytest.mark.live
 @pytest.mark.slow
-async def test_live_cih_summary_all_scalar_types(ground_truth, disable_extraction_cache, live_vlm_required):
+async def test_live_cih_summary_all_scalar_types(
+    ground_truth, disable_extraction_cache, live_vlm_required
+):
     fields = await _live_extract(
         cih_summary_schema(),
         instructions=(
@@ -492,7 +504,9 @@ async def test_live_cih_number_lists(ground_truth, disable_extraction_cache, liv
 @pytest.mark.asyncio
 @pytest.mark.live
 @pytest.mark.slow
-async def test_live_cih_object_array_transactions(ground_truth, disable_extraction_cache, live_vlm_required):
+async def test_live_cih_object_array_transactions(
+    ground_truth, disable_extraction_cache, live_vlm_required
+):
     fields = await _live_extract(
         cih_transactions_schema(),
         instructions=(
@@ -512,7 +526,9 @@ async def test_live_cih_object_array_transactions(ground_truth, disable_extracti
 @pytest.mark.asyncio
 @pytest.mark.live
 @pytest.mark.slow
-async def test_live_cih_full_schema_combined_types(ground_truth, disable_extraction_cache, live_vlm_required):
+async def test_live_cih_full_schema_combined_types(
+    ground_truth, disable_extraction_cache, live_vlm_required
+):
     fields = await _live_extract(
         cih_full_schema(),
         instructions=(
@@ -545,4 +561,6 @@ async def test_live_cih_full_schema_combined_types(ground_truth, disable_extract
         row_tolerance=LIVE_ROW_TOLERANCE,
         sum_tolerance=LIVE_SUM_TOLERANCE,
     )
-    assert normalize_amount(require_field(fields, "opening_balance").value) == normalize_amount("77 224,44")
+    assert normalize_amount(require_field(fields, "opening_balance").value) == normalize_amount(
+        "77 224,44"
+    )

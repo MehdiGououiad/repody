@@ -49,11 +49,15 @@ function resolveApiPod() {
 
 function copyIntoPod(local, pod, remote) {
   const data = fs.readFileSync(local);
-  const res = spawnSync("kubectl", ["exec", "-i", "-n", ns, pod, "--", "sh", "-c", `cat > ${remote}`], {
-    input: data,
-    stdio: ["pipe", "inherit", "inherit"],
-    shell: false,
-  });
+  const res = spawnSync(
+    "kubectl",
+    ["exec", "-i", "-n", ns, pod, "--", "sh", "-c", `cat > ${remote}`],
+    {
+      input: data,
+      stdio: ["pipe", "inherit", "inherit"],
+      shell: false,
+    }
+  );
   if (res.status !== 0) {
     throw new Error(`kubectl exec copy exited ${res.status ?? 1}`);
   }
@@ -124,7 +128,16 @@ const base = [
 ];
 
 const profiles = {
-  smoke: [...base, "--in-cluster-auth", "--count", "20", "--concurrency", "4", "--timeout-seconds", "3600"],
+  smoke: [
+    ...base,
+    "--in-cluster-auth",
+    "--count",
+    "20",
+    "--concurrency",
+    "4",
+    "--timeout-seconds",
+    "3600",
+  ],
   full: [...base, "--in-cluster-auth", "--count", "1000", "--concurrency", "24", "--strict"],
 };
 
@@ -132,7 +145,9 @@ const script = profiles[profile] ?? (profile === "custom" ? base : null);
 if (!script) {
   console.error(`Unknown stress profile: ${profile}`);
   console.error(`Available: ${Object.keys(profiles).join(", ")}, custom`);
-  console.error("Pass prod_stress_test.py flags after -- (e.g. node scripts/prod-stress.mjs custom -- --count 50)");
+  console.error(
+    "Pass prod_stress_test.py flags after -- (e.g. node scripts/prod-stress.mjs custom -- --count 50)"
+  );
   process.exit(1);
 }
 
@@ -156,7 +171,7 @@ fs.mkdirSync(path.dirname(reportLocal), { recursive: true });
 const pull = spawnSync(
   "kubectl",
   ["exec", "-n", ns, apiDeploy, "--", "cat", "/tmp/prod-stress.json"],
-  { encoding: "buffer", shell: false },
+  { encoding: "buffer", shell: false }
 );
 if (pull.status === 0 && pull.stdout?.length) {
   fs.writeFileSync(reportLocal, pull.stdout);

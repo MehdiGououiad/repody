@@ -120,10 +120,7 @@ for (const abs of discoverMarkdownDocs()) {
 }
 
 function isExternal(target) {
-  return (
-    /^[a-z][a-z0-9+.-]*:/i.test(target) ||
-    target.startsWith("//")
-  );
+  return /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//");
 }
 
 function markdownAnchorsFor(abs, knownText = null) {

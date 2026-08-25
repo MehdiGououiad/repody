@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import pytest
-
 from tests.helpers.api_errors import assert_error_response
 
 
 @pytest.mark.asyncio
 async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
     from repody.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
     storage = get_storage()
@@ -27,8 +26,8 @@ async def test_confirm_upload_not_found(client, monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_confirm_upload_rejects_empty_object(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
     from repody.infra.storage.factory import get_storage
+    from repody.settings import clear_settings_cache
 
     clear_settings_cache()
     storage = get_storage()

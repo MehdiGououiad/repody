@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { API, apiAuthHeaders, apiGet } from "../helpers/api";
 import { REPODY_VLM_CATALOG_ID } from "../../lib/document-model-branding";
+import { API, apiAuthHeaders, apiGet } from "../helpers/api";
 
 test.describe.configure({ timeout: 300_000 });
 

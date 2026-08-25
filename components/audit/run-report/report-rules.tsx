@@ -1,14 +1,9 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import {
-  isRuleFailure,
-  RuleStatusIcon,
-  ruleStatusColor,
-  ruleStatusLabel,
-} from "@/lib/rule-status";
+import { isRuleFailure, RuleStatusIcon, ruleStatusColor, ruleStatusLabel } from "@/lib/rule-status";
 import type { RunAuditDetail, RunAuditRule } from "@/lib/types/audit";
+import { cn } from "@/lib/utils";
 import { mergeLabels, type RunReportLabels } from "./report-shared";
 
 export function RunDetailedRuleCard({
@@ -46,18 +41,15 @@ export function RunDetailedRuleCard({
   const statusText = passed ? (L.statusPassed ?? L.passed) : ruleStatusLabel(rule.status);
 
   const pad = size === "sm" ? "px-4 py-3" : "px-5 py-4";
-  const detailPad = size === "sm" ? "px-4 pb-3 pt-0 ml-7" : "px-5 pb-4 ml-8 pt-3 border-t border-border/40";
+  const detailPad =
+    size === "sm" ? "px-4 pb-3 pt-0 ml-7" : "px-5 pb-4 ml-8 pt-3 border-t border-border/40";
 
   return (
     <div className={cn("panel-elevated rounded-xl overflow-hidden", borderCls, bgCls)}>
       <div className={cn("flex items-start gap-3", pad)}>
         <RuleStatusIcon
           status={rule.status}
-          className={cn(
-            "h-4 w-4 shrink-0 mt-0.5",
-            iconCls,
-            size === "md" && "h-5 w-5"
-          )}
+          className={cn("h-4 w-4 shrink-0 mt-0.5", iconCls, size === "md" && "h-5 w-5")}
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -87,14 +79,18 @@ export function RunDetailedRuleCard({
             </code>
           )}
         </div>
-        <span className={cn("text-xs font-semibold shrink-0 mt-0.5", passed ? "text-success" : iconCls)}>
+        <span
+          className={cn("text-xs font-semibold shrink-0 mt-0.5", passed ? "text-success" : iconCls)}
+        >
           {statusText}
         </span>
       </div>
 
       {!passed && (
         <div className={cn(detailPad, "space-y-2")}>
-          <p className={cn("text-on-surface leading-relaxed", size === "sm" ? "text-xs" : "text-sm")}>
+          <p
+            className={cn("text-on-surface leading-relaxed", size === "sm" ? "text-xs" : "text-sm")}
+          >
             {rule.detail}
           </p>
           {(rule.expectedValue || rule.actualValue) && (
@@ -119,7 +115,9 @@ export function RunDetailedRuleCard({
           {rule.affectedFields.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
               {size === "md" && (
-                <span className="text-[11px] text-on-surface-variant mr-2">{L.affectedFields}:</span>
+                <span className="text-[11px] text-on-surface-variant mr-2">
+                  {L.affectedFields}:
+                </span>
               )}
               {rule.affectedFields.map((f) => (
                 <code
@@ -142,11 +140,7 @@ export function RunDetailedRuleCard({
   );
 }
 
-export function RunRuleResultsSummary({
-  audit,
-}: {
-  audit: RunAuditDetail;
-}) {
+export function RunRuleResultsSummary({ audit }: { audit: RunAuditDetail }) {
   return (
     <ul className="space-y-2">
       {audit.ruleResults.map((rule) => {
@@ -160,11 +154,7 @@ export function RunRuleResultsSummary({
           >
             <div className="flex items-center gap-2">
               <span className={ruleStatusColor(rule.status)}>
-                <RuleStatusIcon
-                  status={rule.status}
-                  className="h-4 w-4"
-                  aria-hidden="true"
-                />
+                <RuleStatusIcon status={rule.status} className="h-4 w-4" aria-hidden="true" />
               </span>
               <span className="font-medium">{rule.name}</span>
               <span className="text-xs text-on-surface-variant ml-auto">
@@ -192,9 +182,7 @@ export function RunRuleResultsDetailed({
 }) {
   const failed = audit.ruleResults.filter((r) => isRuleFailure(r.status));
   const passed = audit.ruleResults.filter((r) => r.status === "passed");
-  const other = audit.ruleResults.filter(
-    (r) => r.status !== "passed" && !isRuleFailure(r.status)
-  );
+  const other = audit.ruleResults.filter((r) => r.status !== "passed" && !isRuleFailure(r.status));
   const ordered = [...failed, ...other, ...passed];
 
   return (

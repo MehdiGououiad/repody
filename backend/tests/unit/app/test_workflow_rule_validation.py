@@ -1,14 +1,12 @@
-import pytest
-
-from repody.schemas.workflow import (
-    DocumentDefSchema,
-    SchemaFieldSchema,
-    WorkflowRuleSchema,
-)
 from repody.app.workflow.validation import (
     resolve_document_field_tokens,
     validate_rules_preview,
     validate_workflow_rule,
+)
+from repody.schemas.workflow import (
+    DocumentDefSchema,
+    SchemaFieldSchema,
+    WorkflowRuleSchema,
 )
 
 
