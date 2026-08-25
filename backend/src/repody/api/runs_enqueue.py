@@ -19,3 +19,4 @@ async def enqueue_run_http(
         return result.unwrap()
     assert result.error is not None
     raise_app_error(result.error)
+    return None

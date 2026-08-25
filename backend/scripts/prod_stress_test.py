@@ -628,10 +628,8 @@ async def run_prod_stress(args: argparse.Namespace) -> int:
             args=args,
         )
 
-        try:
+        with contextlib.suppress(httpx.HTTPError):
             await client.delete(f"/v1/workflows/{workflow_id}")
-        except httpx.HTTPError:
-            pass
 
     wall_ms = (time.perf_counter() - wall_start) * 1000
     report.summary = _build_summary(report, wall_ms=wall_ms)

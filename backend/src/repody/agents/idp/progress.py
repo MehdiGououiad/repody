@@ -54,9 +54,8 @@ class IdpProgressPresenter:
         return None
 
     async def on_extract_start(self, job: ExtractionJob, index: int, total: int) -> None:
-        snap = self.snap_by_id.get(job.document_id)
         has_file = job.document_id in self.files
-        prog_mode = progress_mode(snap or job.spec, has_file=has_file)
+        prog_mode = progress_mode(has_file=has_file)
         step_id = f"extract-{job.document_id}"
         self.activate(step_id)
 

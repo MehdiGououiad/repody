@@ -1,6 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { existsSync } from "fs";
-import path from "path";
 import { AUTH_STORAGE_PATH } from "./e2e/helpers/env";
 
 const baseURL = process.env.E2E_WEB_URL ?? "http://app.repody.local";

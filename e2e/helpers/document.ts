@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 const FIXTURE_DIR = path.join(process.cwd(), "e2e", "fixtures", "documents");
 

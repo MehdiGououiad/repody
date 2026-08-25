@@ -45,7 +45,7 @@ export type RunReportLabels = {
   validationResults?: string;
 };
 
-export const DEFAULT_LABELS: RunReportLabels = {
+const DEFAULT_LABELS = {
   allPassed: "All rules passed",
   validationFailed: "Validation failed",
   reviewRequired: "Review required",
@@ -63,8 +63,12 @@ export const DEFAULT_LABELS: RunReportLabels = {
   affectedFields: "Affected fields",
   extractedData: "Extracted data",
   validationResults: "Validation results",
-};
+} satisfies RunReportLabels;
 
-export function mergeLabels(labels?: RunReportLabels): RunReportLabels {
+/**
+ * Callers read the merged result without null checks, so the return type keeps
+ * every defaulted key required and leaves the rest optional.
+ */
+export function mergeLabels(labels?: RunReportLabels) {
   return { ...DEFAULT_LABELS, ...labels };
 }

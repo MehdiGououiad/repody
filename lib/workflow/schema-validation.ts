@@ -11,12 +11,13 @@ export function findDuplicateSchemaFieldNames(fields: Array<{ name: string }>): 
     const raw = field.name.trim();
     const norm = normalizeSchemaFieldName(raw);
     if (!norm) continue;
-    if (seen.has(norm)) {
-      const label = raw || seen.get(norm)!;
-      if (!duplicates.includes(label)) duplicates.push(label);
-    } else {
+    const firstSeen = seen.get(norm);
+    if (firstSeen === undefined) {
       seen.set(norm, raw);
+      continue;
     }
+    const label = raw || firstSeen;
+    if (!duplicates.includes(label)) duplicates.push(label);
   }
   return duplicates;
 }

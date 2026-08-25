@@ -7,6 +7,7 @@ Same presigned upload, /runs/json, and poll sequence the Test tab uses.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import random
 from datetime import UTC, datetime
@@ -89,10 +90,8 @@ async def poll_run_until_done(
 
     env_interval = os.getenv("AUDIT_TEST_POLL_INTERVAL_MS", "").strip()
     if env_interval:
-        try:
+        with contextlib.suppress(ValueError):
             interval_ms = float(env_interval)
-        except ValueError:
-            pass
     deadline = asyncio.get_event_loop().time() + max_ms / 1000
     wait_s = interval_ms / 1000
     while asyncio.get_event_loop().time() < deadline:

@@ -20,10 +20,10 @@ test.describe("Platform smoke", () => {
   test("workflows list includes seeded invoice workflow", async ({ page }) => {
     const { workflows } = await apiGet<{ workflows: { id: string; name: string }[] }>("/workflows");
     const invoice = workflows.find((w) => w.id === "wf-invoice-audit");
-    expect(invoice).toBeTruthy();
+    if (!invoice) throw new Error("Seeded workflow wf-invoice-audit is missing from /workflows");
 
     await page.goto("/workflows");
-    await expect(page.getByText(invoice!.name)).toBeVisible();
+    await expect(page.getByText(invoice.name)).toBeVisible();
   });
 
   test("audits list and seeded audit report", async ({ page }) => {

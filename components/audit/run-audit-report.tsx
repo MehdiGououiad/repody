@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
 import { LOCALE_COOKIE } from "@/i18n/config";
+import { setPreferenceCookie } from "@/lib/browser-cookie";
 import { isRuleFailure, ruleStatusLabel } from "@/lib/rule-status";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { formatDurationMs } from "@/lib/types/audit";
@@ -97,7 +98,7 @@ function buildCsv(
 }
 
 function downloadCsv(content: string, filename: string) {
-  const blob = new Blob(["﻿" + content], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob([`﻿${content}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -142,7 +143,7 @@ function LangToggle() {
   const t = useTranslations("audits.report");
   const toggle = () => {
     const next = locale === "fr" ? "en" : "fr";
-    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    setPreferenceCookie(LOCALE_COOKIE, next);
     window.location.reload();
   };
   return (

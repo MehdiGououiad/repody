@@ -31,9 +31,7 @@ def _is_terminal_payload(data: dict[str, Any]) -> bool:
     if data.get("terminal"):
         return True
     progress = data.get("progress")
-    if isinstance(progress, dict) and progress.get("failed"):
-        return True
-    return False
+    return bool(isinstance(progress, dict) and progress.get("failed"))
 
 
 def _parse_message(data: str | bytes) -> dict[str, Any] | None:

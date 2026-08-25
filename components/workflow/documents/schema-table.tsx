@@ -159,7 +159,8 @@ function SchemaFieldRow({
   const normName = normalizeSchemaFieldName(field.name);
   const isDuplicate = normName.length > 0 && duplicateNames.has(normName);
   const hasIntent = field.name.trim().length > 0 || field.description.trim().length > 0;
-  const showSuggestion = hasIntent && suggestedType !== null && suggestedType !== currentType;
+  const suggestion =
+    hasIntent && suggestedType !== null && suggestedType !== currentType ? suggestedType : null;
 
   useEffect(() => {
     if (!hasIntent) return;
@@ -210,14 +211,14 @@ function SchemaFieldRow({
             onChange={(templateType) => onUpdate({ templateType })}
             t={t}
           />
-          {showSuggestion ? (
+          {suggestion ? (
             <button
               type="button"
-              onClick={() => onUpdate({ templateType: suggestedType! })}
+              onClick={() => onUpdate({ templateType: suggestion })}
               className="text-left text-[10px] text-primary hover:underline truncate max-w-full"
               title={t("schema.applySuggestedType")}
             >
-              {t("schema.suggestedType", { label: label(suggestedType!) })}
+              {t("schema.suggestedType", { label: label(suggestion) })}
             </button>
           ) : null}
         </div>

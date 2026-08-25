@@ -152,8 +152,13 @@ ban-relative-imports = "all"
 "tests/integration/api/test_routes.py" = ["E402"]
 # CLI entry points report progress on stdout by design.
 "scripts/**" = ["T20"]
-# Tests assert on fixture arguments that linters read as unused.
+# Tests assert on fixture arguments that linters read as unused, and live
+# journey tests print extraction output for the operator running them.
 "tests/**" = ["ARG001", "ARG002", "ARG005"]
+"tests/live/**" = ["ARG001", "ARG002", "ARG005", "T20"]
+# Pydantic deep-copies field defaults per instance, so a list/dict default is
+# safe here. Annotating these as ClassVar would drop them from the model.
+"src/repody/schemas/*.py" = ["RUF012"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]

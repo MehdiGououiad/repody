@@ -147,10 +147,7 @@ async def list_users(
     response_model=IamUser,
     dependencies=[Depends(require_permission("users", "write"))],
 )
-async def create_user(
-    body: CreateIamUserRequest,
-    principal: Principal = Depends(get_current_principal),
-) -> IamUser:
+async def create_user(body: CreateIamUserRequest) -> IamUser:
     settings = get_settings()
     if not settings.oidc_enabled:
         raise HTTPException(503, "User management requires OIDC/Keycloak.")
@@ -216,11 +213,16 @@ async def update_user(
     settings = get_settings()
     if not settings.oidc_enabled:
         raise HTTPException(503, "User management requires OIDC/Keycloak.")
-    if user_id == principal.subject and body.enabled is False:
+    editing_self = user_id == principal.subject
+    if editing_self and body.enabled is False:
         raise HTTPException(400, "You cannot disable your own account.")
-    if user_id == principal.subject and body.roles is not None:
-        if "platform_admin" not in body.roles and "platform_admin" in principal.roles:
-            raise HTTPException(400, "You cannot remove your own platform_admin role.")
+    if (
+        editing_self
+        and body.roles is not None
+        and "platform_admin" not in body.roles
+        and "platform_admin" in principal.roles
+    ):
+        raise HTTPException(400, "You cannot remove your own platform_admin role.")
 
     raw_users_r = await keycloak.list_users(settings=settings)
     if not raw_users_r.is_ok:

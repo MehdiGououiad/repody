@@ -39,7 +39,7 @@ log = structlog.get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     settings = init_observability()
     log.info(
         "application_starting",

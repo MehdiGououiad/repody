@@ -1,5 +1,5 @@
+import path from "node:path";
 import { expect, type Page } from "@playwright/test";
-import path from "path";
 import { API, apiAuthHeaders } from "./api";
 import { clickExtractValidate, goToTestDeployStep, waitForBuilderReady } from "./workflow-builder";
 

@@ -33,7 +33,7 @@ def resolve_run_doc_mime(run_doc: RunDocument, document_bytes: bytes | None) -> 
     return "application/octet-stream"
 
 
-def progress_mode(doc, *, has_file: bool) -> str:
+def progress_mode(*, has_file: bool) -> str:
     if not has_file:
         return "schema"
     return "document_model"

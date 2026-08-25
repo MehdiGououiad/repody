@@ -1,5 +1,5 @@
+import path from "node:path";
 import { expect, test } from "@playwright/test";
-import path from "path";
 import { hasSampleDocument, resolveSampleDocument } from "../helpers/document";
 import {
   clickExtractValidate,
@@ -30,7 +30,8 @@ test.describe("Extraction and validation errors", () => {
   test.skip(!hasSampleDocument(), "Add a file to e2e/fixtures/documents/ (see README)");
 
   test("document upload run completes or surfaces extraction error", async ({ page }) => {
-    const samplePath = resolveSampleDocument()!;
+    const samplePath = resolveSampleDocument();
+    if (!samplePath) throw new Error("No sample document found in e2e/fixtures/documents/");
     const fileName = path.basename(samplePath);
 
     const fileInput = page.locator('input[type="file"]').first();

@@ -95,6 +95,9 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
           </thead>
           <tbody className="divide-y divide-border">
             {report.results.map((row, index) => (
+              // A benchmark report is a fixed, never-reordered result list, and
+              // case+phase can repeat across runs, so position is the identity.
+              // biome-ignore lint/suspicious/noArrayIndexKey: report rows are positional
               <Fragment key={`${row.case}-${row.phase}-${index}`}>
                 <tr>
                   <td className="px-4 py-3">
@@ -114,17 +117,14 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
                   <td className="px-4 py-3 tabular-nums">{scoreLabel(row)}</td>
                 </tr>
                 {row.error ? (
-                  <tr key={`${row.case}-${row.phase}-${index}-error`} className="bg-destructive/5">
+                  <tr className="bg-destructive/5">
                     <td colSpan={8} className="px-4 py-3 text-xs text-destructive">
                       {row.error}
                     </td>
                   </tr>
                 ) : null}
                 {row.textPreview ? (
-                  <tr
-                    key={`${row.case}-${row.phase}-${index}-preview`}
-                    className="bg-surface-container-low/40"
-                  >
+                  <tr className="bg-surface-container-low/40">
                     <td colSpan={8} className="px-4 py-3">
                       <DocumentTextPreviewPanel
                         text={row.textPreview}

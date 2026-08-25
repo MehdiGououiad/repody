@@ -28,7 +28,7 @@ export function RunStatusBanner({
         bg: "bg-success/10 border-success/30",
         icon: CheckCircle2,
         iconCls: "text-success",
-        label: L.allPassed!,
+        label: L.allPassed,
         labelCls: "text-success",
       }
     : failed
@@ -36,14 +36,14 @@ export function RunStatusBanner({
           bg: "bg-danger/10 border-danger/30",
           icon: XCircle,
           iconCls: "text-danger",
-          label: L.validationFailed!,
+          label: L.validationFailed,
           labelCls: "text-danger",
         }
       : {
           bg: "bg-warning/10 border-warning/30",
           icon: AlertTriangle,
           iconCls: "text-warning",
-          label: L.reviewRequired!,
+          label: L.reviewRequired,
           labelCls: "text-warning",
         };
 

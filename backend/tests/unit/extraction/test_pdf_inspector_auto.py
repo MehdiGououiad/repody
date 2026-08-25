@@ -16,16 +16,16 @@ from repody.extraction.types import ExtractedFieldResult, ExtractionResult, Sche
 
 
 def _inspection(**overrides) -> PdfInspection:
-    base = dict(
-        pdf_type="text_based",
-        confidence=0.95,
-        page_count=2,
-        markdown="# Invoice\n\nTotal: 100 EUR\nVendor: Acme Corp\n",
-        pages_needing_ocr=(),
-        has_encoding_issues=False,
-        available=True,
-        error=None,
-    )
+    base = {
+        "pdf_type": "text_based",
+        "confidence": 0.95,
+        "page_count": 2,
+        "markdown": "# Invoice\n\nTotal: 100 EUR\nVendor: Acme Corp\n",
+        "pages_needing_ocr": (),
+        "has_encoding_issues": False,
+        "available": True,
+        "error": None,
+    }
     base.update(overrides)
     return PdfInspection(**base)
 

@@ -513,7 +513,6 @@
         "pathPlaceholder": "Lecture et validation",
         "pathLoading": "Chargement…",
         "pathHintDefault": "Extraire les champs, puis valider avec vos règles.",
-        "documentModelLabel": "Modèle document",
         "nativePdfAutoLabel": "Auto (PDF natif d'abord)",
         "nativePdfAutoHint": "Essaie d'abord le texte PDF natif (pdf-inspector). Si la qualité est insuffisante — ou si le fichier est une image — utilise le modèle de secours ci-dessous.",
         "fallbackDocumentModelLabel": "OCR / modèle de secours",

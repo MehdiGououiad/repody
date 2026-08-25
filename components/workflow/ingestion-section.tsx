@@ -94,6 +94,7 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
         {namedFields.length > 0 && (
           <div className="rounded-lg border border-border bg-surface-container-lowest overflow-hidden">
             <button
+              type="button"
               onClick={() => setFieldsOpen((o) => !o)}
               className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-surface-container-low transition-colors"
             >
@@ -132,6 +133,7 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
         {docRules.length > 0 && (
           <div className="rounded-lg border border-border bg-surface-container-lowest overflow-hidden">
             <button
+              type="button"
               onClick={() => setRulesOpen((o) => !o)}
               className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-surface-container-low transition-colors"
             >

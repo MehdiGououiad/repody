@@ -51,9 +51,10 @@ function buildSnapshot(payload: WorkflowRunPayload): RunSnapshot | undefined {
 }
 
 function docIdsWithFiles(payload: WorkflowRunPayload): string[] {
-  if (!payload.filesByDocId) return [];
+  const filesByDocId = payload.filesByDocId;
+  if (!filesByDocId) return [];
   return payload.documents
-    .filter((d) => d.documentType.trim() && payload.filesByDocId![d.id])
+    .filter((d) => d.documentType.trim() && filesByDocId[d.id])
     .map((d) => d.id);
 }
 
@@ -143,6 +144,9 @@ export async function executeWorkflowRun(
   }
 
   const docIds = docIdsWithFiles(payload);
+  // docIdsWithFiles only yields ids when filesByDocId is present, so the
+  // fallback below is unreachable whenever docIds is non-empty.
+  const filesByDocId = payload.filesByDocId ?? {};
   const snapshot = credential === "session" ? buildSnapshot(payload) : undefined;
 
   if (docIds.length === 0) {
@@ -160,7 +164,7 @@ export async function executeWorkflowRun(
     );
   }
 
-  const bindings = await uploadViaPresign(docIds, payload.filesByDocId!, reporter);
+  const bindings = await uploadViaPresign(docIds, filesByDocId, reporter);
   reportClientStep(reporter, "start-run");
   const { runId } = await postRunJson(workflowId, credential, {
     snapshot,

@@ -6,15 +6,13 @@ import { isPublicPage } from "@/lib/auth/public-paths";
 import { refreshKeycloakAccessToken } from "@/lib/auth/refresh-keycloak-token";
 
 const keycloakPublicIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
+const keycloakClientId = process.env.AUTH_KEYCLOAK_ID;
 const keycloakServerIssuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? keycloakPublicIssuer;
 const keycloakClientSecret =
   process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
 const apiOidcExplicitlyDisabled = process.env.AUDIT_OIDC_ENABLED === "false";
 const keycloakConfigured = Boolean(
-  !apiOidcExplicitlyDisabled &&
-    keycloakPublicIssuer &&
-    process.env.AUTH_KEYCLOAK_ID &&
-    process.env.AUTH_SECRET
+  !apiOidcExplicitlyDisabled && keycloakPublicIssuer && keycloakClientId && process.env.AUTH_SECRET
 );
 const keycloakScopes =
   process.env.AUTH_KEYCLOAK_OFFLINE_ACCESS === "true"
@@ -28,23 +26,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
     error: "/login",
   },
-  providers: keycloakConfigured
-    ? [
-        Keycloak({
-          clientId: process.env.AUTH_KEYCLOAK_ID!,
-          clientSecret: keycloakClientSecret ?? "",
-          // JWT `iss` matches the public gateway hostname — not the in-cluster service name.
-          issuer: keycloakPublicIssuer!,
-          wellKnown: `${keycloakServerIssuer}/.well-known/openid-configuration`,
-          authorization: {
-            url: `${keycloakPublicIssuer}/protocol/openid-connect/auth`,
-            params: { scope: keycloakScopes },
-          },
-          token: `${keycloakServerIssuer}/protocol/openid-connect/token`,
-          userinfo: `${keycloakServerIssuer}/protocol/openid-connect/userinfo`,
-        }),
-      ]
-    : [],
+  // The extra truthiness checks repeat keycloakConfigured so the compiler can
+  // narrow the two optional env values inside the branch.
+  providers:
+    keycloakConfigured && keycloakClientId && keycloakPublicIssuer
+      ? [
+          Keycloak({
+            clientId: keycloakClientId,
+            clientSecret: keycloakClientSecret ?? "",
+            // JWT `iss` matches the public gateway hostname — not the in-cluster service name.
+            issuer: keycloakPublicIssuer,
+            wellKnown: `${keycloakServerIssuer}/.well-known/openid-configuration`,
+            authorization: {
+              url: `${keycloakPublicIssuer}/protocol/openid-connect/auth`,
+              params: { scope: keycloakScopes },
+            },
+            token: `${keycloakServerIssuer}/protocol/openid-connect/token`,
+            userinfo: `${keycloakServerIssuer}/protocol/openid-connect/userinfo`,
+          }),
+        ]
+      : [],
   callbacks: {
     authorized({ auth: session, request }) {
       if (!keycloakConfigured) {
@@ -61,9 +62,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (path === "/login" && session?.user && !session.error) {
           const callback = request.nextUrl.searchParams.get("callbackUrl");
           const dest =
-            callback && callback.startsWith("/") && !callback.startsWith("//")
-              ? callback
-              : "/dashboard";
+            callback?.startsWith("/") && !callback.startsWith("//") ? callback : "/dashboard";
           return NextResponse.redirect(new URL(dest, request.url));
         }
         return true;

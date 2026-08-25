@@ -58,6 +58,9 @@ function EnumValuesEditor({
         {t("schema.enumValuesLabel")}
       </p>
       {rows.map((value, index) => (
+        // Enum rows are edited in place by index and never reordered, so the
+        // position is the only stable identity available here.
+        // biome-ignore lint/suspicious/noArrayIndexKey: index is the row identity
         <div key={`enum-${index}`} className="flex items-center gap-2">
           <Input
             value={value}

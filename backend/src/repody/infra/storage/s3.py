@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import Any
 
 import boto3
@@ -32,7 +33,7 @@ def _endpoint(settings: Settings) -> str:
 def _public_endpoint(settings: Settings) -> str:
     if settings.minio_public_endpoint:
         raw = settings.minio_public_endpoint.strip()
-        if raw.startswith("http://") or raw.startswith("https://"):
+        if raw.startswith(("http://", "https://")):
             return raw.rstrip("/")
         scheme = "https" if settings.minio_secure else "http"
         return f"{scheme}://{raw.rstrip('/')}"
@@ -57,7 +58,8 @@ def build_s3_store(settings: Settings) -> ObjectStore:
         origins = settings.cors_origins
         if not origins:
             return
-        try:
+        # MinIO may reject PutBucketCors; global CORS is configured in Helm values.
+        with contextlib.suppress(ClientError):
             client.put_bucket_cors(
                 Bucket=bucket,
                 CORSConfiguration={
@@ -72,9 +74,6 @@ def build_s3_store(settings: Settings) -> ObjectStore:
                     ]
                 },
             )
-        except ClientError:
-            # MinIO may reject PutBucketCors; global CORS is configured in Helm values.
-            pass
 
     async def ensure_bucket() -> None:
         def _ensure() -> None:
