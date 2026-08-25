@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from repody.app.run.handoff import schedule_next_agent_stage
 from repody.infra.db.models import (
     Run,
     RunDispatchOutbox,
@@ -14,7 +15,6 @@ from repody.infra.db.models import (
     WorkflowStatus,
 )
 from repody.runtime.contracts.agent import AgentId
-from repody.app.run.handoff import schedule_next_agent_stage
 
 _SKIP_REASON = "reserved for future agents"
 

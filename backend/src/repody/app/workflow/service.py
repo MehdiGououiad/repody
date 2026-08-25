@@ -4,8 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.infra.db.models import Document, Workflow, WorkflowStatus
-from repody.schemas.workflow import WorkflowSchema
 from repody.app.mappers import workflow_to_list_schema, workflow_to_schema
 from repody.app.workflow.deployment import deploy_workflow
 from repody.app.workflow.repository import (
@@ -19,6 +17,8 @@ from repody.app.workflow.stats import (
     workflow_stats,
 )
 from repody.app.workflow.validation import validate_workflow_rules, validate_workflow_schema
+from repody.infra.db.models import Document, Workflow, WorkflowStatus
+from repody.schemas.workflow import WorkflowSchema
 
 
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:

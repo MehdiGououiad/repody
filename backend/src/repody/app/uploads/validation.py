@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from repody.settings import Settings
 from repody.infra.storage.mime import (
     OCTET,
     is_allowed_mime,
@@ -8,6 +7,7 @@ from repody.infra.storage.mime import (
     sanitize_filename,
     sniff_mime,
 )
+from repody.settings import Settings
 
 
 class UploadValidationError(ValueError):
@@ -33,9 +33,7 @@ def validate_upload_file(
     declared_norm = normalize_declared_mime(declared_mime)
     sniffed_mime = sniff_mime(data)
     if sniffed_mime is None and declared_norm in allowed:
-        raise UploadValidationError(
-            f"File content does not match declared type: {declared_norm}."
-        )
+        raise UploadValidationError(f"File content does not match declared type: {declared_norm}.")
     if (
         sniffed_mime is not None
         and declared_norm not in {OCTET, sniffed_mime}

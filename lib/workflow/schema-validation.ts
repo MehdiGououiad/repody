@@ -4,9 +4,7 @@ export function normalizeSchemaFieldName(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
 
-export function findDuplicateSchemaFieldNames(
-  fields: Array<{ name: string }>
-): string[] {
+export function findDuplicateSchemaFieldNames(fields: Array<{ name: string }>): string[] {
   const seen = new Map<string, string>();
   const duplicates: string[] = [];
   for (const field of fields) {

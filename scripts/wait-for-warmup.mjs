@@ -23,7 +23,7 @@ function workerLogs() {
       "--tail=200",
       "--prefix=true",
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8" }
   );
   return (result.stdout ?? "") + (result.stderr ?? "");
 }
@@ -48,10 +48,9 @@ async function main() {
 
   process.stderr.write(
     "\nerror: Timed out waiting for extract worker warmup.\n" +
-      "  Configure external inference with AUDIT_LLAMACPP_BASE_URL or check worker logs.\n",
+      "  Configure external inference with AUDIT_LLAMACPP_BASE_URL or check worker logs.\n"
   );
   process.exit(1);
 }
 
 main();
-

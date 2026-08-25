@@ -4,6 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from repody.app.run.processor import process_run
 from repody.infra.db.models import (
     Document,
     ExtractedField,
@@ -16,7 +17,6 @@ from repody.infra.db.models import (
     WorkflowRule,
     WorkflowStatus,
 )
-from repody.app.run.processor import process_run
 
 
 @pytest.fixture

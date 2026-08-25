@@ -6,9 +6,9 @@ import json
 import uuid
 
 import pytest
+from tests.helpers.workflow_rules import logic_field_gt
 
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from tests.helpers.workflow_rules import logic_field_gt
 from repody.integration.facture import (
     EXPECTED_TOTAL,
     FACTURE_PDF,

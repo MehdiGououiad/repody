@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { FileJson2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 import type { SchemaField } from "@/lib/types";
+import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
 const EXAMPLE = `{
   "document_type": "string",
@@ -44,9 +44,7 @@ export function ImportNuextractTemplateDialog({
   const t = useTranslations("workflows.builder.schema");
   const tCommon = useTranslations("common");
   const [raw, setRaw] = useState(EXAMPLE);
-  const [errorKey, setErrorKey] = useState<"invalid_json" | "not_object" | "empty" | null>(
-    null
-  );
+  const [errorKey, setErrorKey] = useState<"invalid_json" | "not_object" | "empty" | null>(null);
 
   const apply = (mode: "replace" | "append") => {
     const result = importNuextractTemplate(raw);

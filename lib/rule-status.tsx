@@ -1,22 +1,8 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  CircleDashed,
-  XCircle,
-  type LucideProps,
-} from "lucide-react";
+import { AlertTriangle, CheckCircle2, CircleDashed, type LucideProps, XCircle } from "lucide-react";
 
-export type RuleEvalStatus =
-  | "passed"
-  | "failed"
-  | "skipped"
-  | "error"
-  | "warning";
+export type RuleEvalStatus = "passed" | "failed" | "skipped" | "error" | "warning";
 
-export function RuleStatusIcon({
-  status,
-  ...props
-}: { status: RuleEvalStatus } & LucideProps) {
+export function RuleStatusIcon({ status, ...props }: { status: RuleEvalStatus } & LucideProps) {
   if (status === "passed") return <CheckCircle2 {...props} />;
   if (status === "failed") return <XCircle {...props} />;
   if (status === "skipped") return <CircleDashed {...props} />;

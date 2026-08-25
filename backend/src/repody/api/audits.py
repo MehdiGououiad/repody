@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.deps import get_session
-from repody.schemas.audit import AuditListResponse
-from repody.schemas.run import RunAuditDetail
 from repody.app.audit import count_completed_audits, list_completed_audits
 from repody.app.run.intake import get_run_detail
+from repody.schemas.audit import AuditListResponse
+from repody.schemas.run import RunAuditDetail
 
 router = APIRouter(prefix="/audits", tags=["audits"])
 

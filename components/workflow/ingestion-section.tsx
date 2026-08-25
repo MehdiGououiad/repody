@@ -1,21 +1,32 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useTranslations } from "next-intl";
 import {
-  Upload, FileText, X, CheckCircle2,
-  ChevronDown, ChevronUp, ShieldCheck, Tag, AlertTriangle,
+  AlertTriangle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  ShieldCheck,
+  Tag,
+  Upload,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
+import { useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
-interface UploadedFile { name: string; size: string; }
+interface UploadedFile {
+  name: string;
+  size: string;
+}
 
 export type { UploadedFile };
 
-const SUPPORTED_DOCUMENT_ACCEPT = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+const SUPPORTED_DOCUMENT_ACCEPT =
+  ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -92,15 +103,23 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
                   {t("fieldsToExtract")}
                 </span>
               </div>
-              {fieldsOpen ? <ChevronUp className="h-3.5 w-3.5 text-on-surface-variant" /> : <ChevronDown className="h-3.5 w-3.5 text-on-surface-variant" />}
+              {fieldsOpen ? (
+                <ChevronUp className="h-3.5 w-3.5 text-on-surface-variant" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-on-surface-variant" />
+              )}
             </button>
             {fieldsOpen && (
               <div className="px-3 pb-2 divide-y divide-border">
                 {namedFields.map((f) => (
                   <div key={f.id} className="py-1.5 flex items-start gap-2">
-                    <code className="text-[11px] font-mono text-primary bg-primary/8 px-1.5 py-0.5 rounded shrink-0">{f.name}</code>
+                    <code className="text-[11px] font-mono text-primary bg-primary/8 px-1.5 py-0.5 rounded shrink-0">
+                      {f.name}
+                    </code>
                     {f.description && (
-                      <span className="text-[11px] text-on-surface-variant leading-relaxed">{f.description}</span>
+                      <span className="text-[11px] text-on-surface-variant leading-relaxed">
+                        {f.description}
+                      </span>
                     )}
                   </div>
                 ))}
@@ -122,7 +141,11 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
                   {t("validationRulesLabel")}
                 </span>
               </div>
-              {rulesOpen ? <ChevronUp className="h-3.5 w-3.5 text-on-surface-variant" /> : <ChevronDown className="h-3.5 w-3.5 text-on-surface-variant" />}
+              {rulesOpen ? (
+                <ChevronUp className="h-3.5 w-3.5 text-on-surface-variant" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5 text-on-surface-variant" />
+              )}
             </button>
             {rulesOpen && (
               <div className="px-3 pb-2 divide-y divide-border">
@@ -130,16 +153,20 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
                   <div key={r.id} className="py-1.5 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[11px] font-medium text-on-surface truncate">{r.name}</p>
-                      <p className="text-[10px] text-on-surface-variant font-mono truncate mt-0.5">{r.body}</p>
+                      <p className="text-[10px] text-on-surface-variant font-mono truncate mt-0.5">
+                        {r.body}
+                      </p>
                     </div>
                     {/* severity label */}
                     {r.severity === "reject" ? (
                       <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-danger shrink-0">
-                        <AlertTriangle className="h-2.5 w-2.5" />{severityLabels.reject}
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        {severityLabels.reject}
                       </span>
                     ) : r.severity === "flag" ? (
                       <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-warning shrink-0">
-                        <AlertTriangle className="h-2.5 w-2.5" />{severityLabels.flag}
+                        <AlertTriangle className="h-2.5 w-2.5" />
+                        {severityLabels.flag}
                       </span>
                     ) : (
                       <span className="text-[9px] font-semibold uppercase tracking-wide text-on-surface-variant shrink-0">
@@ -187,12 +214,21 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
             />
             <label
               htmlFor={`upload-input-${doc.id}`}
-              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
               onDragLeave={() => setDragging(false)}
-              onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                handleFiles(e.dataTransfer.files);
+              }}
               className={cn(
                 "rounded-lg border-2 border-dashed p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors",
-                dragging ? "border-primary bg-primary/5" : "border-outline-variant hover:border-outline hover:bg-surface-container-low"
+                dragging
+                  ? "border-primary bg-primary/5"
+                  : "border-outline-variant hover:border-outline hover:bg-surface-container-low"
               )}
             >
               <Upload className="h-5 w-5 text-on-surface-variant mb-2" aria-hidden="true" />

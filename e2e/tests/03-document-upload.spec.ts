@@ -1,7 +1,11 @@
+import { expect, test } from "@playwright/test";
 import path from "path";
-import { test, expect } from "@playwright/test";
 import { hasSampleDocument, resolveSampleDocument } from "../helpers/document";
-import { clickExtractValidate, goToTestDeployStep, waitForBuilderReady } from "../helpers/workflow-builder";
+import {
+  clickExtractValidate,
+  goToTestDeployStep,
+  waitForBuilderReady,
+} from "../helpers/workflow-builder";
 
 test.describe("Document upload (sample fixture)", () => {
   test.skip(!hasSampleDocument(), "Add a file to e2e/fixtures/documents/ (see README)");
@@ -22,8 +26,8 @@ test.describe("Document upload (sample fixture)", () => {
 
     await clickExtractValidate(page);
 
-    await expect(
-      page.getByText(/passed|failed|warning|rule/i).first()
-    ).toBeVisible({ timeout: 180_000 });
+    await expect(page.getByText(/passed|failed|warning|rule/i).first()).toBeVisible({
+      timeout: 180_000,
+    });
   });
 });

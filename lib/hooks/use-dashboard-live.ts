@@ -1,11 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { type DashboardSnapshot, dashboardSnapshotFromResponse } from "@/lib/api/dashboard";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
-import {
-  dashboardSnapshotFromResponse,
-  type DashboardSnapshot,
-} from "@/lib/api/dashboard";
 import type { DashboardResponse } from "@/lib/api/schema-types";
 import { queryKeys } from "@/lib/hooks/query-keys";
 
@@ -27,7 +24,9 @@ async function fetchDashboardLive(): Promise<LiveSnapshot> {
   };
 }
 
-export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">): LiveDashboardData {
+export function useDashboardLive(
+  initial: Omit<LiveDashboardData, "lastUpdated">
+): LiveDashboardData {
   const initialSnapshot: LiveSnapshot = {
     apiLive: initial.apiLive,
     kpis: initial.kpis,
@@ -54,9 +53,6 @@ export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">
   const data = query.data ?? initialSnapshot;
   return {
     ...data,
-    lastUpdated:
-      data.apiLive && query.dataUpdatedAt > 0
-        ? new Date(query.dataUpdatedAt)
-        : null,
+    lastUpdated: data.apiLive && query.dataUpdatedAt > 0 ? new Date(query.dataUpdatedAt) : null,
   };
 }

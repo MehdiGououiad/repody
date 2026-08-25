@@ -11,7 +11,15 @@ const REPODY_LOGIN = "operator@repody.local / repody-dev (use localhost in the b
  * @returns {{ title: string; rows: DevServiceRow[] }[]}
  */
 export function buildDevDashboardSections(ctx) {
-  const { apiPort, observability, llama, paddleocr = false, qwen35 = false, glmocr = false, extractOnly } = ctx;
+  const {
+    apiPort,
+    observability,
+    llama,
+    paddleocr = false,
+    qwen35 = false,
+    glmocr = false,
+    extractOnly,
+  } = ctx;
   /** @type {{ title: string; rows: DevServiceRow[] }[]} */
   const sections = [
     {
@@ -174,8 +182,14 @@ export function buildDevDashboardSections(ctx) {
     rows: [
       { name: "pnpm dev:status", role: "Probe every URL above and list Compose containers" },
       { name: "pnpm models:warmup", role: "Warm NuExtract + PP-OCRv6 + Qwen (first inference)" },
-      { name: "pnpm dev:stop", role: "Stop API, UI, NuExtract, PP-OCRv6, Qwen, GLM-OCR, and full Compose stack" },
-      { name: "pnpm dev:restart", role: "Restart NuExtract + PP-OCRv6 + Qwen + GLM-OCR + workers after GPU resets" },
+      {
+        name: "pnpm dev:stop",
+        role: "Stop API, UI, NuExtract, PP-OCRv6, Qwen, GLM-OCR, and full Compose stack",
+      },
+      {
+        name: "pnpm dev:restart",
+        role: "Restart NuExtract + PP-OCRv6 + Qwen + GLM-OCR + workers after GPU resets",
+      },
       { name: "pnpm dev:observability", role: "Start or refresh Grafana/Loki/Tempo/Bugsink only" },
       { name: "pnpm db:migrate", role: "Apply Alembic migrations" },
       { name: "pnpm test:api", role: "Backend pytest suite" },

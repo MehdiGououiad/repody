@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from repody.infra.db.models import Document, Run, Workflow
+from repody.app.run.helpers import rule_dict_from_row, rules_payload
 from repody.extraction.modes import DEFAULT_READ_PATH_ID, normalize_document_modes
 from repody.extraction.schema import field_config_from_parts
-from repody.app.run.helpers import rule_dict_from_row, rules_payload
+from repody.infra.db.models import Document, Run, Workflow
 from repody.util.json_shape import normalize_keys_to_snake
 
 
@@ -80,7 +80,9 @@ def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
 
 def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
     return field_config_from_parts(
-        enum_values=field_row.get("enum_values") if isinstance(field_row.get("enum_values"), list) else None,
+        enum_values=field_row.get("enum_values")
+        if isinstance(field_row.get("enum_values"), list)
+        else None,
         children=field_row.get("children") if isinstance(field_row.get("children"), list) else None,
     )
 

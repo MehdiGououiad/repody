@@ -1,8 +1,9 @@
 "use client";
 
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import { LogOut, ShieldCheck, UserRound } from "lucide-react";
+import { signOut, useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,10 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { initialsFromSession } from "@/lib/auth/jwt-claims";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
-import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 export function UserMenu() {
@@ -71,9 +70,7 @@ export function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium leading-none">{name ?? email ?? t("account")}</p>
-            {email ? (
-              <p className="text-xs text-muted-foreground truncate">{email}</p>
-            ) : null}
+            {email ? <p className="text-xs text-muted-foreground truncate">{email}</p> : null}
             <p className="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
               <ShieldCheck className="h-3 w-3" aria-hidden />
               {primaryRole}

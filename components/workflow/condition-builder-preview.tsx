@@ -1,7 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Code2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { conditionToString } from "@/lib/rules/expression";
 import type { RuleCondition } from "@/lib/types";
 

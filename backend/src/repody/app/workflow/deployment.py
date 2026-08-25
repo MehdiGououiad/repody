@@ -7,12 +7,12 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.infra.db.models import WorkflowStatus
-from repody.schemas.workflow import WorkflowSchema
 from repody.app.api_keys import api_key_hint, hash_api_key
 from repody.app.mappers import workflow_to_schema
 from repody.app.workflow.repository import load_workflow
 from repody.app.workflow.stats import workflow_api_stats, workflow_stats
+from repody.infra.db.models import WorkflowStatus
+from repody.schemas.workflow import WorkflowSchema
 
 
 async def deploy_workflow(

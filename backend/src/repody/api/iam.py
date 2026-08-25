@@ -1,4 +1,4 @@
-﻿"""Identity and access management â€” Casbin matrix + Keycloak user admin."""
+"""Identity and access management â€” Casbin matrix + Keycloak user admin."""
 
 from __future__ import annotations
 
@@ -176,9 +176,13 @@ async def create_user(
         raise_app_error(user_id_r.error or AppError(code=ErrorCode.INFRA, message="create failed"))
 
     user_id = user_id_r.unwrap()
-    password_r = await keycloak.reset_password(user_id, body.password, temporary=False, settings=settings)
+    password_r = await keycloak.reset_password(
+        user_id, body.password, temporary=False, settings=settings
+    )
     if not password_r.is_ok:
-        raise_app_error(password_r.error or AppError(code=ErrorCode.INFRA, message="password failed"))
+        raise_app_error(
+            password_r.error or AppError(code=ErrorCode.INFRA, message="password failed")
+        )
 
     roles_set_r = await keycloak.set_user_app_roles(user_id, body.roles, settings=settings)
     if not roles_set_r.is_ok:
@@ -193,7 +197,9 @@ async def create_user(
 
     roles_r = await keycloak.user_realm_roles(user_id, settings=settings)
     if not roles_r.is_ok:
-        raise_app_error(roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed"))
+        raise_app_error(
+            roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed")
+        )
     return _map_keycloak_user(raw, _role_names(roles_r.unwrap()))
 
 
@@ -240,14 +246,18 @@ async def update_user(
             user_id, body.password, temporary=False, settings=settings
         )
         if not password_r.is_ok:
-            raise_app_error(password_r.error or AppError(code=ErrorCode.INFRA, message="password failed"))
+            raise_app_error(
+                password_r.error or AppError(code=ErrorCode.INFRA, message="password failed")
+            )
 
     if body.roles is not None:
         if not body.roles:
             raise HTTPException(400, "At least one application role is required.")
         roles_set_r = await keycloak.set_user_app_roles(user_id, body.roles, settings=settings)
         if not roles_set_r.is_ok:
-            raise_app_error(roles_set_r.error or AppError(code=ErrorCode.INFRA, message="roles failed"))
+            raise_app_error(
+                roles_set_r.error or AppError(code=ErrorCode.INFRA, message="roles failed")
+            )
 
     refreshed_r = await keycloak.list_users(
         search=str(raw.get("username") or ""), settings=settings
@@ -257,6 +267,7 @@ async def update_user(
     latest = next((item for item in refreshed_r.unwrap() if str(item.get("id")) == user_id), raw)
     roles_r = await keycloak.user_realm_roles(user_id, settings=settings)
     if not roles_r.is_ok:
-        raise_app_error(roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed"))
+        raise_app_error(
+            roles_r.error or AppError(code=ErrorCode.INFRA, message="roles read failed")
+        )
     return _map_keycloak_user(latest, _role_names(roles_r.unwrap()))
-

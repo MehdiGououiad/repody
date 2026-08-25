@@ -12,7 +12,7 @@ const failures = [];
 
 if (expectedNodeMajor && process.versions.node.split(".")[0] !== expectedNodeMajor) {
   failures.push(
-    `Node ${process.versions.node} does not match required major ${expectedNodeMajor}.x`,
+    `Node ${process.versions.node} does not match required major ${expectedNodeMajor}.x`
   );
 }
 
@@ -35,7 +35,7 @@ if (!expectedPnpm) {
     failures.push(`pnpm ${expectedPnpm} is required. Run: corepack enable`);
   } else if (actualPnpm !== expectedPnpm) {
     failures.push(
-      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: corepack enable`,
+      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: corepack enable`
     );
   }
 }

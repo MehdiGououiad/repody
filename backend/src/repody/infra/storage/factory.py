@@ -5,10 +5,10 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from repody.settings import get_settings
 from repody.infra.storage.base import ObjectStore
 from repody.infra.storage.local import build_local_store
 from repody.infra.storage.s3 import build_s3_store
+from repody.settings import get_settings
 
 
 @lru_cache

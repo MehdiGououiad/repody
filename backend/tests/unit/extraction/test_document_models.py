@@ -5,17 +5,15 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from repody.extraction.types import ExtractionResult, SchemaFieldSpec
-from repody.extraction.types import DocumentBundle
-from repody.extraction.fields import fields_from_nuextract_json
-from repody.extraction.branding import (
-    REPODY_VLM_CATALOG_ID,
-    UnknownCatalogIdError,
-)
 from repody.catalog.registry import (
     normalize_model_id,
     parse_document_model,
 )
+from repody.extraction.branding import (
+    REPODY_VLM_CATALOG_ID,
+    UnknownCatalogIdError,
+)
+from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import (
     build_icl_messages,
     build_nuextract_instructions,
@@ -28,6 +26,8 @@ from repody.extraction.render import (
     encode_pages_as_image_urls,
     prepare_nuextract_pages,
 )
+from repody.extraction.types import DocumentBundle, ExtractionResult, SchemaFieldSpec
+
 
 def test_catalog_routes_repody_vlm_to_llamacpp():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
@@ -141,7 +141,7 @@ def test_structured_chat_payload_omits_max_tokens_by_default():
         )
     ]
     payload = structured_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
@@ -216,6 +216,7 @@ def test_repody_vlm_empty_object_and_enum_follow_official_constructors():
 
 def test_repody_vlm_enum_requires_two_choices():
     import pytest
+
     from repody.extraction.nuextract import build_field_template_node
 
     with pytest.raises(ValueError, match="at least 2 choices"):
@@ -304,7 +305,7 @@ def test_markdown_chat_payload_uses_nuextract_mode():
 
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     payload = markdown_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 
@@ -320,7 +321,7 @@ def test_structured_chat_payload_keeps_template():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
     payload = structured_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="Use ISO dates.",
@@ -343,13 +344,13 @@ def test_repody_vlm_payload_uses_official_non_thinking_defaults():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
     structured = structured_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
     )
     markdown = markdown_chat_payload(
-            model=spec.runtime_model,
+        model=spec.runtime_model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 

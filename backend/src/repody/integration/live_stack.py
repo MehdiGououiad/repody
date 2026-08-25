@@ -28,9 +28,7 @@ def fetch_keycloak_token() -> str:
     return fetch_password_grant_token_sync(
         token_url=f"{live_auth_url()}/realms/repody/protocol/openid-connect/token",
         client_id=os.environ.get("E2E_KEYCLOAK_CLIENT_ID", DEFAULT_KEYCLOAK_CLIENT_ID),
-        client_secret=os.environ.get(
-            "E2E_KEYCLOAK_CLIENT_SECRET", DEFAULT_KEYCLOAK_CLIENT_SECRET
-        ),
+        client_secret=os.environ.get("E2E_KEYCLOAK_CLIENT_SECRET", DEFAULT_KEYCLOAK_CLIENT_SECRET),
         username=os.environ.get("E2E_KEYCLOAK_USER", DEFAULT_KEYCLOAK_USER),
         password=os.environ.get("E2E_KEYCLOAK_PASSWORD", DEFAULT_KEYCLOAK_PASSWORD),
     )

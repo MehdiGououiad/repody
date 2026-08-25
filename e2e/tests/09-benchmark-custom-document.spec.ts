@@ -1,5 +1,5 @@
-import { expect, test } from "@playwright/test";
 import path from "node:path";
+import { expect, test } from "@playwright/test";
 import { API, apiAuthHeaders } from "../helpers/api";
 
 test.describe.configure({ timeout: 300_000 });
@@ -12,10 +12,7 @@ test("benchmarks UI custom document shows markdown preview", async ({ page, requ
   const { actionsEnabled } = (await statusRes.json()) as { actionsEnabled: boolean };
   test.skip(!actionsEnabled, "Operator actions disabled on API");
 
-  const fixture = path.join(
-    process.cwd(),
-    "e2e/fixtures/documents/Facture.pdf",
-  );
+  const fixture = path.join(process.cwd(), "e2e/fixtures/documents/Facture.pdf");
 
   await page.goto("/settings?tab=benchmarks");
   await expect(page.getByRole("heading", { name: "Run benchmark suite" })).toBeVisible();

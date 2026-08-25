@@ -8,14 +8,14 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.infra.db.models import Document, SchemaField, Workflow, WorkflowRule
-from repody.extraction.modes import normalize_document_modes
 from repody.catalog.registry import normalize_model_id
+from repody.extraction.modes import normalize_document_modes
 from repody.extraction.nuextract import (
     is_object_array_template_type,
     is_object_template_type,
     normalize_template_type,
 )
+from repody.infra.db.models import Document, SchemaField, Workflow, WorkflowRule
 from repody.rules.conditions import resolve_rule_body
 from repody.schemas.workflow import WorkflowSchema
 from repody.util.json_shape import normalize_keys_to_snake
@@ -58,8 +58,10 @@ def _resolved_template_type(field) -> str:
     resolved = normalize_template_type(getattr(field, "template_type", None))
     children = getattr(field, "children", None) or []
     has_children = any((getattr(child, "name", None) or "").strip() for child in children)
-    if has_children and not is_object_array_template_type(resolved) and not is_object_template_type(
-        resolved
+    if (
+        has_children
+        and not is_object_array_template_type(resolved)
+        and not is_object_template_type(resolved)
     ):
         return "object"
     return resolved

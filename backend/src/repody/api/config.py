@@ -4,21 +4,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
-from repody.infra.auth.dependencies import require_permission
-from repody.extraction.branding import (
-    normalize_public_catalog_id,
-    public_runtime_model_name,
-)
-from repody.extraction.nuextract import NUEXTRACT_PDF_DPI
-from repody.extraction.nuextract import suggest_template_type
-from repody.schemas.models_catalog import ModelsCatalogResponse
-from repody.schemas.platform import (
-    DocumentModelSummary,
-    DocumentModelDiagnosticResponse,
-    DocumentModelDiagnosticSettingsSchema,
-    PlatformConfigResponse,
-    SuggestTemplateTypeResponse,
-)
 from repody.catalog.api import (
     document_model_summaries,
     fetch_models_catalog,
@@ -30,7 +15,21 @@ from repody.catalog.probes import (
     unreachable_detail,
 )
 from repody.catalog.runtime_fields import build_model_runtime_config
+from repody.extraction.branding import (
+    normalize_public_catalog_id,
+    public_runtime_model_name,
+)
+from repody.extraction.nuextract import NUEXTRACT_PDF_DPI, suggest_template_type
+from repody.infra.auth.dependencies import require_permission
 from repody.schemas.model_runtime import ModelRuntimeConfigResponse
+from repody.schemas.models_catalog import ModelsCatalogResponse
+from repody.schemas.platform import (
+    DocumentModelDiagnosticResponse,
+    DocumentModelDiagnosticSettingsSchema,
+    DocumentModelSummary,
+    PlatformConfigResponse,
+    SuggestTemplateTypeResponse,
+)
 from repody.settings import get_settings
 
 router = APIRouter(tags=["platform"])
@@ -108,6 +107,7 @@ async def get_model_runtime_config() -> ModelRuntimeConfigResponse:
 async def get_models_catalog() -> ModelsCatalogResponse:
     """Document and validation model catalog with live availability."""
     return await fetch_models_catalog()
+
 
 @router.get(
     "/diagnostics/document-model",

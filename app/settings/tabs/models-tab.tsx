@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
 import { Box, HardDriveDownload, LoaderCircle, RefreshCw, Zap } from "lucide-react";
+import { useMemo } from "react";
 import { toast } from "sonner";
+import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
-import { warmupModel, type OperatorJob } from "@/lib/api/operator";
+import { type OperatorJob, warmupModel } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { cn } from "@/lib/utils";
@@ -44,11 +44,12 @@ export function ModelsTab({
     return catalog.models.map((model) => ({
       id: model.id,
       label: model.label,
-      kind: model.kind === "validation"
-        ? "Validation LLM"
-        : model.markdownOnly
-          ? "Markdown model"
-          : "Document model",
+      kind:
+        model.kind === "validation"
+          ? "Validation LLM"
+          : model.markdownOnly
+            ? "Markdown model"
+            : "Document model",
       runtime: model.runtime || REPODY_VLM_LABEL,
       available: model.available !== false,
       note: model.availabilityNote,
@@ -73,7 +74,8 @@ export function ModelsTab({
           <div>
             <h2 className="font-display text-lg font-semibold">Model inventory</h2>
             <p className="text-sm text-on-surface-variant mt-1">
-              Catalog availability plus effective runtime knobs (env vars, preprocessing, host inference).
+              Catalog availability plus effective runtime knobs (env vars, preprocessing, host
+              inference).
             </p>
           </div>
           <Button variant="outline" onClick={refresh} disabled={loading}>
@@ -87,7 +89,10 @@ export function ModelsTab({
               (job) => ACTIVE_STATUSES.has(job.status) && job.label.includes(model.label)
             );
             return (
-              <div key={model.id} className="px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4">
+              <div
+                key={model.id}
+                className="px-6 py-4 flex flex-col lg:flex-row lg:items-center gap-4"
+              >
                 <div className="size-11 rounded-xl bg-surface-container-low border border-border flex items-center justify-center shrink-0">
                   <Box className="h-5 w-5 text-primary" aria-hidden="true" />
                 </div>
@@ -110,7 +115,11 @@ export function ModelsTab({
                   disabled={!actionsEnabled || !model.available || !!active}
                   onClick={() => void runAction(model.id)}
                 >
-                  {active ? <LoaderCircle className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
+                  {active ? (
+                    <LoaderCircle className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Zap className="h-4 w-4 mr-2" />
+                  )}
                   Warm up
                 </Button>
               </div>

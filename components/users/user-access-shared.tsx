@@ -1,9 +1,9 @@
 "use client";
 
-import { ShieldCheck, type LucideIcon } from "lucide-react";
+import { type LucideIcon, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { IamCatalog, IamUser } from "@/lib/api/iam";
+import { cn } from "@/lib/utils";
 
 export const ROLE_BADGE: Record<string, "default" | "secondary" | "info" | "outline"> = {
   platform_admin: "default",
@@ -21,7 +21,11 @@ export function RoleBadges({ roles }: { roles: string[] }) {
   return (
     <div className="flex flex-wrap gap-1">
       {roles.map((role) => (
-        <Badge key={role} variant={ROLE_BADGE[role] ?? "outline"} className="text-[10px] font-medium">
+        <Badge
+          key={role}
+          variant={ROLE_BADGE[role] ?? "outline"}
+          className="text-[10px] font-medium"
+        >
           {role}
         </Badge>
       ))}
@@ -157,7 +161,9 @@ export function ConfigTable({
       <dl className="grid sm:grid-cols-2">
         {rows.map(([label, value]) => (
           <div key={label} className="min-w-0 border-b border-r border-border/70 px-5 py-4">
-            <dt className="text-[11px] uppercase tracking-wider text-on-surface-variant">{label}</dt>
+            <dt className="text-[11px] uppercase tracking-wider text-on-surface-variant">
+              {label}
+            </dt>
             <dd className="mt-1 break-words font-mono text-sm text-on-surface">{value}</dd>
           </div>
         ))}

@@ -1,5 +1,5 @@
-import type { ConditionJunction, WorkflowRule } from "@/lib/types";
 import { conditionsToExpression } from "@/lib/rules/expression";
+import type { ConditionJunction, WorkflowRule } from "@/lib/types";
 
 /** Ensure logic rules have a compiled `body` from visual conditions before save/run. */
 export function syncRuleBodies(rules: WorkflowRule[]): WorkflowRule[] {

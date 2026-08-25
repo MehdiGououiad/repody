@@ -14,10 +14,10 @@ const child = spawn(
   process.execPath,
   ["scripts/backend-run.mjs", "python", "-m", "repody.taskiq.worker"],
   {
-  cwd: ROOT,
-  env: { ...process.env, AUDIT_WORKER_POOL: pool },
-  stdio: "inherit",
-  },
+    cwd: ROOT,
+    env: { ...process.env, AUDIT_WORKER_POOL: pool },
+    stdio: "inherit",
+  }
 );
 
 child.on("exit", (code) => process.exit(code ?? 1));

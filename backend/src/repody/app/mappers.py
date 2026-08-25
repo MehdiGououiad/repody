@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from repody.infra.db.models import Run, Workflow
 from repody.extraction.branding import normalize_public_catalog_id
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
+from repody.infra.db.models import Run, Workflow
 from repody.schemas.audit import AuditListItem
-from repody.util.json_shape import normalize_keys_to_snake
 from repody.schemas.run import (
     RunAuditDetail,
     RunAuditDocument,
@@ -24,6 +23,7 @@ from repody.schemas.workflow import (
     WorkflowRuleSchema,
     WorkflowSchema,
 )
+from repody.util.json_shape import normalize_keys_to_snake
 
 
 def _schema_field_from_orm(field) -> SchemaFieldSchema:

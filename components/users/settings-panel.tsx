@@ -1,6 +1,14 @@
 "use client";
 
-import { AlertTriangle, BrainCircuit, ExternalLink, FileCheck2, KeyRound, RefreshCw, ShieldCheck } from "lucide-react";
+import {
+  AlertTriangle,
+  BrainCircuit,
+  ExternalLink,
+  FileCheck2,
+  KeyRound,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { IamCatalog, IamMe } from "@/lib/api/iam";
 import { formatBytes, type PlatformConfig } from "@/lib/api/platform-config";
@@ -85,7 +93,13 @@ export function SettingsPanel({
               </a>
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing} className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={refreshing}
+            className="gap-2"
+          >
             <RefreshCw className={cn("h-3.5 w-3.5", refreshing && "animate-spin")} />
             Refresh
           </Button>
@@ -122,7 +136,9 @@ export function SettingsPanel({
         <SettingMetric
           label="Uploads"
           value={platform ? formatBytes(platform.maxUploadBytes) : "-"}
-          detail={platform ? `${platform.maxUploadFiles} files per batch` : "Upload limits unavailable"}
+          detail={
+            platform ? `${platform.maxUploadFiles} files per batch` : "Upload limits unavailable"
+          }
           icon={FileCheck2}
         />
       </div>
@@ -170,10 +186,22 @@ export function SettingsPanel({
           </div>
           <div className="divide-y divide-border/70">
             {[
-              ["Least privilege", "Keep platform_admin limited to break-glass users; prefer admin/operator/viewer for normal work."],
-              ["Session scope", "Offline Keycloak tokens stay opt-in; normal auth-code refresh tokens are used by default."],
-              ["Runtime evidence", "Use diagnostics and benchmark tabs to capture CPU/GPU readiness before switching inference modes."],
-              ["Upload safety", "Review MIME allowlists, file count, and max size with the backend upload validation tests."],
+              [
+                "Least privilege",
+                "Keep platform_admin limited to break-glass users; prefer admin/operator/viewer for normal work.",
+              ],
+              [
+                "Session scope",
+                "Offline Keycloak tokens stay opt-in; normal auth-code refresh tokens are used by default.",
+              ],
+              [
+                "Runtime evidence",
+                "Use diagnostics and benchmark tabs to capture CPU/GPU readiness before switching inference modes.",
+              ],
+              [
+                "Upload safety",
+                "Review MIME allowlists, file count, and max size with the backend upload validation tests.",
+              ],
             ].map(([title, body]) => (
               <div key={title} className="flex gap-3 px-5 py-4">
                 <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

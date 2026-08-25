@@ -6,8 +6,7 @@ const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 const allowedDevOrigins = [
   "127.0.0.1",
   "localhost",
-  ...(process.env.NEXT_ALLOWED_DEV_ORIGINS
-    ?.split(",")
+  ...(process.env.NEXT_ALLOWED_DEV_ORIGINS?.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean) ?? []),
 ];

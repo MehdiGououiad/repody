@@ -7,9 +7,7 @@ class CoreSettingsFields:
     app_name: str = "Repody"
     debug: bool = False
 
-    database_url: str = Field(
-        default="postgresql+asyncpg://audit:audit@localhost:5432/repody"
-    )
+    database_url: str = Field(default="postgresql+asyncpg://audit:audit@localhost:5432/repody")
     db_pool_size: int = Field(
         default=20,
         description=(

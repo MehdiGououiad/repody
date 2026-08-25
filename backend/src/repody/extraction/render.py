@@ -121,9 +121,7 @@ def _image_mime(mime_type: str, image_bytes: bytes) -> str:
     if mime == "image/png" or image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
         return "image/png"
     if mime in {"image/webp", "image/x-webp"} or (
-        len(image_bytes) >= 12
-        and image_bytes[:4] == b"RIFF"
-        and image_bytes[8:12] == b"WEBP"
+        len(image_bytes) >= 12 and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP"
     ):
         return "image/webp"
     if mime in {"image/jpeg", "image/jpg"} or image_bytes.startswith(b"\xff\xd8"):
@@ -146,9 +144,7 @@ def prepare_nuextract_pages(
         return [(bundle.raw_bytes, mime)], 1
 
     if _is_pdf(bundle.mime_type, bundle.raw_bytes):
-        pages, total = render_nuextract_pdf_pages(
-            bundle.raw_bytes, max_pages=max_pages
-        )
+        pages, total = render_nuextract_pdf_pages(bundle.raw_bytes, max_pages=max_pages)
         bundle.page_count = total
         return [(page, "image/png") for page in pages], total
 
@@ -167,9 +163,7 @@ def encode_pages_as_image_urls(pages: list[PageBytes]) -> list[dict[str, Any]]:
     return [
         {
             "type": "image_url",
-            "image_url": {
-                "url": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-            },
+            "image_url": {"url": f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"},
         }
         for data, mime in pages
     ]

@@ -9,9 +9,9 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.run.commands import fail_run_terminal
 from repody.infra.db.base import async_session_factory
 from repody.infra.db.models import Run, RunStatus
-from repody.app.run.commands import fail_run_terminal
 from repody.settings import get_settings
 
 log = structlog.get_logger()
@@ -19,15 +19,13 @@ log = structlog.get_logger()
 
 def _stale_running_message(minutes: int) -> str:
     return (
-        f"Run exceeded {minutes} minute worker timeout "
-        "(stale running state — retry the test run)"
+        f"Run exceeded {minutes} minute worker timeout (stale running state — retry the test run)"
     )
 
 
 def _stale_queued_message(minutes: int) -> str:
     return (
-        f"Run stayed queued for over {minutes} minutes "
-        "(dispatch may have failed — retry the run)"
+        f"Run stayed queued for over {minutes} minutes (dispatch may have failed — retry the run)"
     )
 
 
@@ -166,11 +164,11 @@ async def run_maintenance_cycle() -> None:
     reaped = await reap_stale_runs()
     replayed = 0
     purged = 0
+    from repody.app.queue import refresh_queued_positions
     from repody.app.run.dispatch_outbox import (
         purge_dispatched_outbox,
         replay_dispatch_outbox,
     )
-    from repody.app.queue import refresh_queued_positions
 
     async with async_session_factory() as session:
         replayed = await replay_dispatch_outbox(session)

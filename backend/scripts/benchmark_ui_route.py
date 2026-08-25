@@ -27,8 +27,8 @@ from typing import Any
 
 import httpx
 
-from repody.infra.auth.keycloak_token import fetch_password_grant_token_sync
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.infra.auth.keycloak_token import fetch_password_grant_token_sync
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PDF = REPO_ROOT / "e2e" / "fixtures" / "documents" / "Facture.pdf"
@@ -361,11 +361,7 @@ async def _run_scenario(
     }
 
     rule_results = result.get("ruleResults") or []
-    failed_rules = [
-        r
-        for r in rule_results
-        if r.get("status") in ("failed", "error")
-    ]
+    failed_rules = [r for r in rule_results if r.get("status") in ("failed", "error")]
 
     return {
         "scenario": scenario.id,
@@ -409,7 +405,7 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
         per_doc = row.get("perDocExtractionMs") or []
         print(
             " | ".join(
-                f"{str(v):>14}"
+                f"{v!s:>14}"
                 for v in (
                     row.get("scenario"),
                     row.get("route"),
@@ -480,10 +476,10 @@ async def run(args: argparse.Namespace) -> int:
             else "multipart"
         )
         route = args.route or default_route
-        print(f"API: {args.api}  route: {route}  cold: {args.cold}  auth: {'yes' if token else 'no'}")
         print(
-            f"LLM validation: {environment.get('diagnostics', {}).get('llmValidationEnabled')}"
+            f"API: {args.api}  route: {route}  cold: {args.cold}  auth: {'yes' if token else 'no'}"
         )
+        print(f"LLM validation: {environment.get('diagnostics', {}).get('llmValidationEnabled')}")
 
         suite_id = uuid.uuid4().hex[:8]
 
@@ -538,7 +534,9 @@ async def run(args: argparse.Namespace) -> int:
     _print_table(rows)
     wall_times = [int(r["wallMs"]) for r in rows if isinstance(r.get("wallMs"), int)]
     extract_times = [int(r["extractionMs"]) for r in rows if isinstance(r.get("extractionMs"), int)]
-    validate_times = [int(r["validationMs"]) for r in rows if isinstance(r.get("validationMs"), int)]
+    validate_times = [
+        int(r["validationMs"]) for r in rows if isinstance(r.get("validationMs"), int)
+    ]
 
     print("\n--- Bottleneck summary ---")
     if wall_times:

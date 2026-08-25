@@ -1,21 +1,21 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { BarChart3 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { BarChart3 } from "lucide-react";
+import { useId, useMemo, useState } from "react";
 import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
-  Cell,
 } from "recharts";
-import { Button } from "@/components/ui/button";
 import { ChartContainer } from "@/components/dashboard/chart-container";
+import { Button } from "@/components/ui/button";
 import type { PerformancePoint } from "@/lib/types";
 
 export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
@@ -30,10 +30,7 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
   const peakIdx = data.length
     ? data.reduce((max, d, i) => (d.runs > data[max].runs ? i : max), 0)
     : 0;
-  const totalRuns = useMemo(
-    () => data.reduce((sum, point) => sum + point.runs, 0),
-    [data]
-  );
+  const totalRuns = useMemo(() => data.reduce((sum, point) => sum + point.runs, 0), [data]);
   const peakDay = data[peakIdx]?.day ?? "";
   const peakRuns = data[peakIdx]?.runs ?? 0;
 
@@ -96,11 +93,7 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
               }
             }}
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="var(--border)"
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis
               dataKey="day"
               tickLine={false}
@@ -136,10 +129,7 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
             ) : null}
             <Bar dataKey="runs" name={t("runs")} radius={[3, 3, 0, 0]}>
               {data.map((point, i) => (
-                <Cell
-                  key={point.day}
-                  fill={i === peakIdx ? peakColor : baseColor}
-                />
+                <Cell key={point.day} fill={i === peakIdx ? peakColor : baseColor} />
               ))}
             </Bar>
           </BarChart>

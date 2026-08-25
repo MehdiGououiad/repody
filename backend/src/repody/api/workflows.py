@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.deps import get_session
-from repody.infra.auth.dependencies import require_permission
+from repody.app.workflow import workflow_service
+from repody.app.workflow.validation import validate_rules_preview
 from repody.extraction.pipeline import extract_document_fields
+from repody.infra.auth.dependencies import require_permission
 from repody.rules.conditions import resolve_rule_body
 from repody.rules.runner import evaluate_dry_run_rules
 from repody.schemas.workflow import (
@@ -21,8 +23,6 @@ from repody.schemas.workflow import (
     WorkflowResponse,
     WorkflowSchema,
 )
-from repody.app.workflow import workflow_service
-from repody.app.workflow.validation import validate_rules_preview
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback } from "react";
 
 export function useQueryParam(key: string, defaultValue = "") {
   const router = useRouter();

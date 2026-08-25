@@ -6,12 +6,12 @@ from types import SimpleNamespace
 
 import pytest
 
-from repody.extraction.modes import parse_read_path
 from repody.app.run.pool import (
     classify_bindings_for_workflow,
     classify_run_documents,
     needs_extract_pool,
 )
+from repody.extraction.modes import parse_read_path
 
 
 def test_needs_extract_pool_document_model():

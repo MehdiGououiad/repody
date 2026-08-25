@@ -63,7 +63,9 @@ export function InviteUserDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Invite user</DialogTitle>
-          <DialogDescription>Creates a Keycloak account with the selected platform roles.</DialogDescription>
+          <DialogDescription>
+            Creates a Keycloak account with the selected platform roles.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid gap-3 sm:grid-cols-2">
@@ -118,7 +120,10 @@ export function InviteUserDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={onSubmit} disabled={saving || form.email.trim().length < 3 || form.password.length < 8}>
+          <Button
+            onClick={onSubmit}
+            disabled={saving || form.email.trim().length < 3 || form.password.length < 8}
+          >
             {saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : "Create user"}
           </Button>
         </DialogFooter>
@@ -151,7 +156,9 @@ export function ManageUserDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Manage user</DialogTitle>
-          <DialogDescription>{user ? displayName(user) : ""} - update roles, status, or password.</DialogDescription>
+          <DialogDescription>
+            {user ? displayName(user) : ""} - update roles, status, or password.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div className="grid gap-3 sm:grid-cols-2">

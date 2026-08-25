@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import { defaultLocale, locales, LOCALE_COOKIE, type Locale } from "./config";
+import { defaultLocale, LOCALE_COOKIE, type Locale, locales } from "./config";
 
 function negotiate(header: string | null): Locale {
   if (!header) return defaultLocale;

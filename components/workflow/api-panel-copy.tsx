@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 function useCopy(timeout = 1800) {

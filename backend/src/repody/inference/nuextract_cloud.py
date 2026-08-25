@@ -124,16 +124,12 @@ def _parse_stream_result(raw: str) -> dict[str, Any]:
         )
     output_data = payload.get("outputData")
     if output_data is None:
-        raise NuExtractCloudError(
-            f"NuExtract cloud job completed without outputData: {payload}"
-        )
+        raise NuExtractCloudError(f"NuExtract cloud job completed without outputData: {payload}")
     if isinstance(output_data, str):
         try:
             return json.loads(output_data)
         except json.JSONDecodeError as exc:
-            raise NuExtractCloudError(
-                f"NuExtract cloud outputData was not JSON: {exc}"
-            ) from exc
+            raise NuExtractCloudError(f"NuExtract cloud outputData was not JSON: {exc}") from exc
     if isinstance(output_data, dict):
         return output_data
     raise NuExtractCloudError(
@@ -144,8 +140,7 @@ def _parse_stream_result(raw: str) -> dict[str, Any]:
 def _require_api_key(config: NuExtractCloudConfig) -> None:
     if not (config.api_key or "").strip():
         raise NuExtractCloudError(
-            "NuExtract cloud API key is missing. "
-            "Set AUDIT_NUEXTRACT_CLOUD_API_KEY."
+            "NuExtract cloud API key is missing. Set AUDIT_NUEXTRACT_CLOUD_API_KEY."
         )
 
 
@@ -243,9 +238,7 @@ async def submit_file_job(
         return str(job_id)
 
 
-async def submit_text_job(
-    config: NuExtractCloudConfig, project_id: str, text: str
-) -> str:
+async def submit_text_job(config: NuExtractCloudConfig, project_id: str, text: str) -> str:
     async with _http_client(config) as client:
         response = await client.post(
             f"/api/structured-extraction/{project_id}/jobs",
@@ -259,30 +252,30 @@ async def submit_text_job(
         return str(job_id)
 
 
-async def stream_job_result(
-    config: NuExtractCloudConfig, job_id: str
-) -> dict[str, Any]:
-    async with _http_client(config) as client:
-        async with client.stream(
+async def stream_job_result(config: NuExtractCloudConfig, job_id: str) -> dict[str, Any]:
+    async with (
+        _http_client(config) as client,
+        client.stream(
             "GET",
             f"/api/jobs/{job_id}/stream",
             headers={"Accept": "text/event-stream"},
-        ) as response:
-            if not response.is_success:
-                body = (await response.aread()).decode("utf-8", errors="replace")
-                detail = body
-                try:
-                    parsed = json.loads(body)
-                    detail = parsed.get("message") or parsed.get("code") or body
-                except Exception:
-                    pass
-                raise NuExtractCloudError(
-                    f"NuExtract cloud stream failed ({response.status_code}): {detail}"
-                )
-            chunks: list[str] = []
-            async for part in response.aiter_text():
-                chunks.append(part)
-            return _parse_stream_result("".join(chunks))
+        ) as response,
+    ):
+        if not response.is_success:
+            body = (await response.aread()).decode("utf-8", errors="replace")
+            detail = body
+            try:
+                parsed = json.loads(body)
+                detail = parsed.get("message") or parsed.get("code") or body
+            except Exception:
+                pass
+            raise NuExtractCloudError(
+                f"NuExtract cloud stream failed ({response.status_code}): {detail}"
+            )
+        chunks: list[str] = []
+        async for part in response.aiter_text():
+            chunks.append(part)
+        return _parse_stream_result("".join(chunks))
 
 
 async def extract_structured(
@@ -346,9 +339,7 @@ async def extract_structured(
 
     result = payload.get("result")
     if not isinstance(result, dict):
-        raise NuExtractCloudError(
-            f"NuExtract cloud result missing or invalid: {payload!r}"
-        )
+        raise NuExtractCloudError(f"NuExtract cloud result missing or invalid: {payload!r}")
     return StructuredExtractionOutput(
         result=result,
         raw_model_output=str(
@@ -356,9 +347,7 @@ async def extract_structured(
         ),
         thinking_trace=payload.get("thinkingTrace") or payload.get("thinking_trace"),
         input_tokens=int(payload.get("inputTokens") or payload.get("input_tokens") or 0),
-        output_tokens=int(
-            payload.get("outputTokens") or payload.get("output_tokens") or 0
-        ),
+        output_tokens=int(payload.get("outputTokens") or payload.get("output_tokens") or 0),
         total_tokens=int(payload.get("totalTokens") or payload.get("total_tokens") or 0),
         project_id=active_project,
         job_id=job_id,

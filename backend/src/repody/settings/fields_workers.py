@@ -38,7 +38,9 @@ class WorkerSettingsFields:
         default=2,
         description="Reserved computer_use pool concurrency (Helm worker at replicas 0).",
     )
-    worker_pool_fast: str = Field(default="fast", description="Taskiq queue name suffix for fast IDP runs.")
+    worker_pool_fast: str = Field(
+        default="fast", description="Taskiq queue name suffix for fast IDP runs."
+    )
     worker_pool_extract: str = Field(
         default="extract",
         description="Taskiq queue name suffix for document-model IDP runs.",

@@ -7,10 +7,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
-from repody.runtime.contracts.agent import AgentId
 from repody.app.run.dispatch_outbox import _supports_skip_locked
 from repody.app.run.handoff import schedule_next_agent_stage
+from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
+from repody.runtime.contracts.agent import AgentId
 
 
 @pytest.fixture
@@ -35,10 +35,14 @@ async def handoff_session(postgres_session, monkeypatch):
 
 
 def test_supports_skip_locked_only_on_postgres():
-    pg = SimpleNamespace(get_bind=lambda: SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    pg = SimpleNamespace(
+        get_bind=lambda: SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
+    )
     assert _supports_skip_locked(pg) is True
 
-    sqlite = SimpleNamespace(get_bind=lambda: SimpleNamespace(dialect=SimpleNamespace(name="sqlite")))
+    sqlite = SimpleNamespace(
+        get_bind=lambda: SimpleNamespace(dialect=SimpleNamespace(name="sqlite"))
+    )
     assert _supports_skip_locked(sqlite) is False
 
 

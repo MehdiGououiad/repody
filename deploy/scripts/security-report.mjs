@@ -3,13 +3,7 @@
  * Merge scanner JSON outputs into dist/security/report.md + report.json.
  * Used by CI (security workflow) and local security-scan.mjs.
  */
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -152,7 +146,7 @@ function section(title, findings) {
   lines.push("|----------|-----|---------|--------|-----|");
   for (const f of gated.slice(0, 50)) {
     lines.push(
-      `| ${f.severity} | ${f.id ?? "—"} | ${f.pkg ?? "—"} | ${f.source} | ${f.fixed || "—"} |`,
+      `| ${f.severity} | ${f.id ?? "—"} | ${f.pkg ?? "—"} | ${f.source} | ${f.fixed || "—"} |`
     );
   }
   if (gated.length > 50) {

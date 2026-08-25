@@ -306,7 +306,7 @@ def _parser_for(cfg: GlmOcrSdkSettings) -> Any:
         if _parser is not None:
             try:
                 _close_parser(_parser)
-            except Exception:  # noqa: BLE001 — best-effort swap
+            except Exception:
                 log.warning("glm_ocr_sdk_close_failed", exc_info=True)
         _parser = _build_parser(cfg)
         _cfg = cfg

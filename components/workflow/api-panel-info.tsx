@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { Eye, EyeOff, Play, Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { CopyButton } from "@/components/workflow/api-panel-copy";
-import { buildWorkflowRunSnippets, workflowDocumentSlots } from "@/lib/api/workflow-run-snippets";
+import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { buildWorkflowRunSnippets, workflowDocumentSlots } from "@/lib/api/workflow-run-snippets";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
-import { cn } from "@/lib/utils";
 import type { DocumentDef } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function ApiInfoScreen({
   workflowId,
@@ -42,8 +42,7 @@ export function ApiInfoScreen({
     : `/api/v1/workflows/${workflowId}/runs`;
   const hasFullKey = isFullWorkflowApiKey(apiKey);
   const maskedKey =
-    apiKeyHint ||
-    (apiKey.length > 12 ? `${apiKey.slice(0, 12)}********` : apiKey || "\u2014");
+    apiKeyHint || (apiKey.length > 12 ? `${apiKey.slice(0, 12)}********` : apiKey || "\u2014");
   const displayKey = showKey && hasFullKey ? apiKey : maskedKey;
   const snippetKey = hasFullKey ? apiKey : maskedKey;
   const slots = workflowDocumentSlots(documents);
@@ -143,7 +142,11 @@ export function ApiInfoScreen({
       ) : null}
 
       <div className="panel-elevated rounded-xl overflow-hidden">
-        <div className="flex items-center border-b border-border" role="tablist" aria-label={t("endpointLabel")}>
+        <div
+          className="flex items-center border-b border-border"
+          role="tablist"
+          aria-label={t("endpointLabel")}
+        >
           {(["curl", "python", "js"] as const).map((tab) => (
             <button
               key={tab}

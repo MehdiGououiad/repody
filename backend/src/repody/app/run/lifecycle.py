@@ -10,6 +10,7 @@ from repody.runtime.run.status import RunStatus
 
 __all__ = ["RunEntity", "RunStatus"]
 
+
 @dataclass
 class RunEntity:
     """Enterprise entity for audit run lifecycle — no framework or persistence imports."""
@@ -30,6 +31,7 @@ class RunEntity:
     finished_at: datetime | None = None
     run_metadata: dict[str, Any] | None = None
     progress: dict[str, Any] | None = None
+
 
 @dataclass(frozen=True, kw_only=True)
 class RunDomainEvent:

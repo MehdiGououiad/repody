@@ -8,10 +8,9 @@ from datetime import datetime
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.run.lifecycle import RunEntity, RunStatus, start_field_updates
 from repody.infra.db.models import Run
 from repody.infra.db.models.enums import RunStatus as OrmRunStatus
-from repody.app.run.lifecycle import RunStatus, RunEntity
-from repody.app.run.lifecycle import start_field_updates
 
 
 def _to_domain_status(value: str) -> RunStatus:

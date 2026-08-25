@@ -11,9 +11,14 @@ from repody.app.run.commands import (
     complete_run,
     fail_run,
 )
-from repody.app.run.lifecycle import RunStatus, RunEntity
-from repody.app.run.lifecycle import RunCompleted, RunDomainEvent, RunFailed
-from repody.app.run.lifecycle import RunCompletionOutcome
+from repody.app.run.lifecycle import (
+    RunCompleted,
+    RunCompletionOutcome,
+    RunDomainEvent,
+    RunEntity,
+    RunFailed,
+    RunStatus,
+)
 
 
 def _store(entity: RunEntity | None):

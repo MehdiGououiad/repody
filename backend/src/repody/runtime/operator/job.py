@@ -62,6 +62,7 @@ def job_from_store(payload: dict[str, Any]) -> OperatorJob:
         report_path=payload.get("report_path"),
     )
 
+
 MAX_OUTPUT_CHARS = 24_000
 
 

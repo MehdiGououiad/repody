@@ -12,8 +12,6 @@ from repody.catalog.registry import (
 )
 from repody.extraction.branding import (
     normalize_public_catalog_id,
-    public_runtime_model_name,
-    public_runtime_name,
 )
 from repody.inference.openai_compat import (
     list_openai_models,
@@ -40,19 +38,13 @@ SERVERLESS_CATALOG_NOTE = (
 NUEXTRACT_CLOUD_CATALOG_NOTE = (
     "NuExtract Cloud API — billed per extraction job (no local GPU probe)."
 )
-PADDLEOCR_V6_CATALOG_NOTE = (
-    "PP-OCRv6 OCR service — markdown-only (paddlex --serve --pipeline OCR)."
-)
-PADDLEOCR_QWEN_CATALOG_NOTE = (
-    "PP-OCRv6 + Qwen — structured extraction (OCR :8868 + Qwen :8084)."
-)
+PADDLEOCR_V6_CATALOG_NOTE = "PP-OCRv6 OCR service — markdown-only (paddlex --serve --pipeline OCR)."
+PADDLEOCR_QWEN_CATALOG_NOTE = "PP-OCRv6 + Qwen — structured extraction (OCR :8868 + Qwen :8084)."
 GLM_OCR_CATALOG_NOTE = (
     "GLM-OCR (zai-org) — markdown-only; official SDK whole-page Text Recognition: "
     "(optional PP-DocLayoutV3) + llama-server GGUF."
 )
-GLM_OCR_QWEN_CATALOG_NOTE = (
-    "GLM-OCR + Qwen — structured extraction (SDK :8083 + Qwen :8084)."
-)
+GLM_OCR_QWEN_CATALOG_NOTE = "GLM-OCR + Qwen — structured extraction (SDK :8083 + Qwen :8084)."
 
 
 @dataclass(frozen=True)
@@ -140,8 +132,12 @@ def availability_for_spec(
     if spec.runtime == "llamacpp":
         if not live_probe:
             return True, SERVERLESS_CATALOG_NOTE
-        note = None if installed else (
-            "Start llama-server and set AUDIT_LLAMACPP_BASE_URL / AUDIT_LLAMACPP_SERVED_MODEL."
+        note = (
+            None
+            if installed
+            else (
+                "Start llama-server and set AUDIT_LLAMACPP_BASE_URL / AUDIT_LLAMACPP_SERVED_MODEL."
+            )
         )
         return installed, note
     return False, "Unsupported document model runtime."

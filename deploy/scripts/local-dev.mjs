@@ -18,6 +18,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
+import { printDevDashboard } from "./dev-dashboard.mjs";
 import {
   fetchOk,
   fetchProbe,
@@ -29,8 +31,6 @@ import {
   runtimeEnv,
   waitForPortRelease,
 } from "./runtime-env.mjs";
-import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
-import { printDevDashboard } from "./dev-dashboard.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const BACKEND_ENV = path.join(ROOT, "backend/.env");
@@ -104,9 +104,7 @@ function inferModelAlias(modelPath, explicitAlias) {
   if (explicitAlias?.trim()) return explicitAlias.trim();
   const base = modelPath ? path.basename(modelPath, ".gguf") : "";
   if (base && !/Q4_K_M/i.test(base)) {
-    console.warn(
-      `warn: expected NuExtract3-Q4_K_M.gguf (official local default); got ${base}`
-    );
+    console.warn(`warn: expected NuExtract3-Q4_K_M.gguf (official local default); got ${base}`);
   }
   return "nuextract3-q4_k_m";
 }
@@ -116,9 +114,12 @@ function syncVlmServedModel() {
   if (!fs.existsSync(BACKEND_ENV)) return;
   const paths = parseEnvFile(LLAMA_PATHS);
   const alias = inferModelAlias(paths.LLAMACPP_MODEL, paths.LLAMACPP_MODEL_ALIAS);
-  let body = fs.readFileSync(BACKEND_ENV, "utf8");
+  const body = fs.readFileSync(BACKEND_ENV, "utf8");
   if (/^AUDIT_LLAMACPP_SERVED_MODEL=/m.test(body)) {
-    const next = body.replace(/^AUDIT_LLAMACPP_SERVED_MODEL=.*$/m, `AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
+    const next = body.replace(
+      /^AUDIT_LLAMACPP_SERVED_MODEL=.*$/m,
+      `AUDIT_LLAMACPP_SERVED_MODEL=${alias}`
+    );
     if (next !== body) {
       fs.writeFileSync(BACKEND_ENV, next);
       console.log(`synced backend/.env AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
@@ -193,11 +194,7 @@ function wantsObservability() {
 }
 
 function wantsNuextract() {
-  if (
-    flags.has("--no-llama") ||
-    flags.has("--no-nuextract") ||
-    flags.has("--no-vlm")
-  ) {
+  if (flags.has("--no-llama") || flags.has("--no-nuextract") || flags.has("--no-vlm")) {
     return false;
   }
   if (flags.has("--llama") || flags.has("--nuextract") || flags.has("--vlm")) {
@@ -257,9 +254,7 @@ function logModelPlan() {
       ? "on"
       : "skip (AUDIT_PADDLEOCR_V6_ENABLED=false)"
     : "off (--no-paddleocr)";
-  const qwen = wantsQwen35()
-    ? "on (with PP-OCR serve)"
-    : "off";
+  const qwen = wantsQwen35() ? "on (with PP-OCR serve)" : "off";
   const glm = wantsGlmocr()
     ? glmocrEnabledInEnv()
       ? "on"
@@ -369,9 +364,9 @@ function recreateWorkersForObservability() {
       "-d",
       "--force-recreate",
       "worker-extract",
-      "worker-fast",
+      "worker-fast"
     ),
-    { allowFail: true },
+    { allowFail: true }
   );
 }
 
@@ -382,9 +377,7 @@ function observabilityStack() {
   if (flags.has("--recreate-workers") || wantsWorkerRebuild()) {
     recreateWorkersForObservability();
   } else {
-    console.log(
-      "observability env enabled — restart workers later if needed: pnpm dev:restart",
-    );
+    console.log("observability env enabled — restart workers later if needed: pnpm dev:restart");
   }
 }
 
@@ -395,7 +388,7 @@ function composeDownArgs() {
     "--profile",
     "observability",
     "down",
-    "--remove-orphans",
+    "--remove-orphans"
   );
   if (flags.has("--volumes") || flags.has("-v")) args.push("-v");
   return args;
@@ -437,7 +430,7 @@ async function stack(options = {}) {
       phaseMs("nuextract serve+warmup", t);
     } else {
       console.warn(
-        "warn: NuExtract not configured — edit deploy/llamacpp/paths.local.env, then pnpm llamacpp:serve",
+        "warn: NuExtract not configured — edit deploy/llamacpp/paths.local.env, then pnpm llamacpp:serve"
       );
     }
   } else {
@@ -453,9 +446,7 @@ async function stack(options = {}) {
       });
       phaseMs("paddleocr-v6 serve", t);
     } else {
-      console.warn(
-        "warn: PP-OCRv6 skipped — AUDIT_PADDLEOCR_V6_ENABLED=false in backend/.env",
-      );
+      console.warn("warn: PP-OCRv6 skipped — AUDIT_PADDLEOCR_V6_ENABLED=false in backend/.env");
     }
   } else {
     console.log("skip: PP-OCRv6 (--no-paddleocr / --no-ocr)");
@@ -470,9 +461,7 @@ async function stack(options = {}) {
       });
       phaseMs("glmocr serve", t);
     } else {
-      console.warn(
-        "warn: GLM-OCR skipped — AUDIT_GLM_OCR_ENABLED=false in backend/.env",
-      );
+      console.warn("warn: GLM-OCR skipped — AUDIT_GLM_OCR_ENABLED=false in backend/.env");
     }
   } else {
     console.log("skip: GLM-OCR (--no-glmocr / --no-glm)");
@@ -550,28 +539,28 @@ async function status() {
   } else if (compose.status !== 0) {
     console.log(
       "\nCompose: unavailable — " +
-        (compose.stderr || compose.stdout || "docker compose did not return status").trim(),
+        (compose.stderr || compose.stdout || "docker compose did not return status").trim()
     );
   }
 
   const workers = run(
     "docker",
     composeArgs("--profile", "workers", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
-    { allowFail: true },
+    { allowFail: true }
   );
   if (workers.stdout?.trim()) {
     console.log("\nWorkers:\n" + workers.stdout.trim());
   } else if (workers.status !== 0) {
     console.log(
       "\nWorkers: unavailable — " +
-        (workers.stderr || workers.stdout || "docker compose did not return status").trim(),
+        (workers.stderr || workers.stdout || "docker compose did not return status").trim()
     );
   }
 
   const obs = run(
     "docker",
     composeArgs("--profile", "observability", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
-    { allowFail: true },
+    { allowFail: true }
   );
   if (obs.stdout?.trim()) {
     console.log("\nObservability:\n" + obs.stdout.trim());
@@ -596,7 +585,7 @@ function killDevApi() {
           "| Where-Object { $_.CommandLine -match 'uvicorn.*repody' } " +
           "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
       ],
-      { encoding: "utf8", shell: false },
+      { encoding: "utf8", shell: false }
     );
   } else {
     spawnSync("sh", ["-c", "pkill -f 'uvicorn.*repody' 2>/dev/null || true"], { shell: false });
@@ -608,7 +597,7 @@ function killDevApi() {
     console.warn(
       stale
         ? `warn: Windows still reports a stale listener on :${API_PORT}; use REPODY_API_PORT=8002 until Windows releases it.`
-        : `warn: API port :${API_PORT} is still in use:\n${listenerDetails(API_PORT)}`,
+        : `warn: API port :${API_PORT} is still in use:\n${listenerDetails(API_PORT)}`
     );
   }
 }
@@ -625,7 +614,7 @@ function killDevUi() {
           "| Where-Object { $_.CommandLine -match 'next[\\\\/]dist[\\\\/]bin[\\\\/]next' -and $_.CommandLine -match ' dev' } " +
           "| ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }",
       ],
-      { encoding: "utf8", shell: false },
+      { encoding: "utf8", shell: false }
     );
     return;
   }
@@ -636,8 +625,14 @@ async function reset() {
   console.log("=== Full platform reset (Compose volumes + DB + seed) ===\n");
   killDevUi();
   killDevApi();
-  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], { allowFail: true, inherit: true });
-  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], { allowFail: true, inherit: true });
+  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], {
+    allowFail: true,
+    inherit: true,
+  });
+  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
+    allowFail: true,
+    inherit: true,
+  });
   run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], { allowFail: true, inherit: true });
 
   run("docker", composeArgs("--profile", "workers", "down", "--remove-orphans", "-v"), {
@@ -658,7 +653,7 @@ async function reset() {
     const probe = run(
       "docker",
       composeArgs("exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "repody"),
-      { allowFail: true },
+      { allowFail: true }
     );
     if (probe.status === 0) break;
     if (attempt === 29) {
@@ -701,13 +696,22 @@ async function reset() {
 
 function stop() {
   console.log(
-    `Stopping host dev servers (UI :3000, API :${API_PORT}, NuExtract :8081, PP-OCRv6 :8868, GLM-OCR :8083)...`,
+    `Stopping host dev servers (UI :3000, API :${API_PORT}, NuExtract :8081, PP-OCRv6 :8868, GLM-OCR :8083)...`
   );
   killDevUi();
   killDevApi();
-  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], { allowFail: true, inherit: true });
-  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], { allowFail: true, inherit: true });
-  run("node", ["deploy/scripts/research/qwen35-serve.mjs", "stop"], { allowFail: true, inherit: true });
+  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], {
+    allowFail: true,
+    inherit: true,
+  });
+  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
+    allowFail: true,
+    inherit: true,
+  });
+  run("node", ["deploy/scripts/research/qwen35-serve.mjs", "stop"], {
+    allowFail: true,
+    inherit: true,
+  });
   run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], { allowFail: true, inherit: true });
 
   const downArgs = composeDownArgs();
@@ -739,7 +743,9 @@ function restart() {
       allowFail: true,
     });
   }
-  run("docker", composeArgs("--profile", "workers", "restart", "worker-extract"), { inherit: true });
+  run("docker", composeArgs("--profile", "workers", "restart", "worker-extract"), {
+    inherit: true,
+  });
   if (!flags.has("--extract-only")) {
     run("docker", composeArgs("--profile", "workers", "restart", "worker-fast"), {
       inherit: true,
@@ -769,7 +775,9 @@ async function waitForInterrupt() {
 /** Block until Ctrl+C or a fatal foreground child exits; optionally tear down children. */
 async function waitForForeground(children) {
   if (children.length === 0) {
-    console.log("\n  Press Ctrl+C to close this terminal (services keep running in the background).\n");
+    console.log(
+      "\n  Press Ctrl+C to close this terminal (services keep running in the background).\n"
+    );
     return waitForInterrupt();
   }
 
@@ -797,20 +805,18 @@ async function waitForForeground(children) {
         console.error(`\n[${label}] stopped — ${detail}`);
 
         // UI-only crash: keep API up so uploads/API still work; models stay in background.
-        const othersAlive = children.some(
-          (c) => c !== child && c.exitCode == null && !c.killed,
-        );
+        const othersAlive = children.some((c) => c !== child && c.exitCode == null && !c.killed);
         if (label === "ui" && othersAlive) {
           console.error(
             "API is still running. Restart UI with: pnpm ui\n" +
-              "Or press Ctrl+C to stop remaining app processes.\n",
+              "Or press Ctrl+C to stop remaining app processes.\n"
           );
           return;
         }
         if (label === "api" && othersAlive) {
           console.error(
             "UI may still be up. Restart API with: pnpm dev:api\n" +
-              "Or press Ctrl+C to stop remaining app processes.\n",
+              "Or press Ctrl+C to stop remaining app processes.\n"
           );
           return;
         }
@@ -843,18 +849,19 @@ async function app(options = {}) {
     console.log(`API already running on :${API_PORT} — skipping`);
   } else {
     killDevApi();
-    const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", String(API_PORT)];
+    const apiArgs = [
+      "run",
+      "--extra",
+      "otel",
+      "uvicorn",
+      "repody.main:app",
+      "--port",
+      String(API_PORT),
+    ];
     if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
       apiArgs.push("--reload");
     }
-    children.push(
-      spawnPrefixed(
-        "api",
-        uv,
-        apiArgs,
-        { cwd: backendDir, env: apiEnv() },
-      ),
-    );
+    children.push(spawnPrefixed("api", uv, apiArgs, { cwd: backendDir, env: apiEnv() }));
     children[children.length - 1].repodyLabel = "api";
   }
 
@@ -866,7 +873,7 @@ async function app(options = {}) {
       spawnPrefixed("ui", process.execPath, [nextBin, "dev", "--turbo"], {
         cwd: ROOT,
         env: uiEnv(),
-      }),
+      })
     );
     children[children.length - 1].repodyLabel = "ui";
   }
@@ -887,7 +894,9 @@ async function app(options = {}) {
     }
   });
 
-  console.log("\n  Streaming API + UI logs — Ctrl+C stops app processes (Compose stack keeps running).\n");
+  console.log(
+    "\n  Streaming API + UI logs — Ctrl+C stops app processes (Compose stack keeps running).\n"
+  );
 
   const exitCode = await waitForForeground(children);
   process.exit(exitCode);
@@ -897,7 +906,15 @@ async function api() {
   const backendDir = path.join(ROOT, "backend");
   const uv = resolveExecutable("uv");
   killDevApi();
-  const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", String(API_PORT)];
+  const apiArgs = [
+    "run",
+    "--extra",
+    "otel",
+    "uvicorn",
+    "repody.main:app",
+    "--port",
+    String(API_PORT),
+  ];
   if (process.platform !== "win32" || process.env.REPODY_DEV_API_RELOAD === "1") {
     apiArgs.push("--reload");
   }
@@ -953,11 +970,11 @@ async function main() {
       break;
     case "observability":
       observabilityStack();
-      await showDevDashboard({ appRunning: await isApiRunning() && (await isUiRunning()) });
+      await showDevDashboard({ appRunning: (await isApiRunning()) && (await isUiRunning()) });
       break;
     default:
       console.error(
-        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-nuextract|--no-llama] [--no-paddleocr] [--no-glmocr] [--extract-only] [--obs|--no-obs] [--rebuild-workers]",
+        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-nuextract|--no-llama] [--no-paddleocr] [--no-glmocr] [--extract-only] [--obs|--no-obs] [--rebuild-workers]"
       );
       process.exit(1);
   }

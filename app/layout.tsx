@@ -2,16 +2,16 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import { QueryProvider } from "@/components/providers/query-provider";
-import { Toaster } from "@/components/ui/sonner";
-import { AppShell } from "@/components/layout/app-shell";
-import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { isOidcConfigured } from "@/auth";
 import { AuthEnforcementProvider } from "@/components/auth/auth-enforcement";
 import { PlatformAuthProvider } from "@/components/auth/platform-auth";
-import { isOidcConfigured } from "@/auth";
-import { THEME_COOKIE, defaultTheme } from "@/i18n/config";
+import { AppShell } from "@/components/layout/app-shell";
+import { QueryProvider } from "@/components/providers/query-provider";
+import { AuthSessionProvider } from "@/components/providers/session-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Toaster } from "@/components/ui/sonner";
 import type { Theme } from "@/i18n/config";
+import { defaultTheme, THEME_COOKIE } from "@/i18n/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,9 +19,7 @@ export const metadata: Metadata = {
   description: "Repody — enterprise document audit platform",
 };
 
-export default async function RootLayout({
-  children,
-}: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [locale, messages, cookieStore] = await Promise.all([
     getLocale(),
     getMessages(),

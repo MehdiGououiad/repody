@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import pytest
+from tests.helpers.api_errors import assert_app_error_status
 
 from repody.runtime.contracts.result import ErrorCode
-from tests.helpers.api_errors import assert_app_error_status
 
 
 @pytest.mark.parametrize(

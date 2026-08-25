@@ -1,15 +1,15 @@
 "use client";
 
+import { LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { LogOut, Plus, ShieldCheck, Menu, X } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const pathname = useClientPathname();
@@ -24,7 +24,10 @@ export function MobileNav() {
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-[260px] p-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col">
+      <SheetContent
+        side="left"
+        className="w-[260px] p-0 bg-sidebar text-sidebar-foreground border-r border-sidebar-border flex flex-col"
+      >
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <div className="px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -32,7 +35,9 @@ export function MobileNav() {
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </div>
             <div>
-              <p className="font-display text-base font-semibold tracking-tight leading-none">{tBrand("name")}</p>
+              <p className="font-display text-base font-semibold tracking-tight leading-none">
+                {tBrand("name")}
+              </p>
               <p className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/55 mt-1.5">
                 {tBrand("tagline")}
               </p>

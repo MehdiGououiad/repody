@@ -10,8 +10,8 @@ import structlog
 from sqlalchemy import delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.infra.db.models import RunDispatchOutbox
 from repody.app.run.dispatch import mark_run_dispatch_failed
+from repody.infra.db.models import RunDispatchOutbox
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)

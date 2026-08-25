@@ -9,8 +9,8 @@ from repody.extraction.nuextract import (
     is_object_array_template_type,
     is_object_template_type,
     normalize_template_type,
+    resolve_template_type,
 )
-from repody.extraction.nuextract import resolve_template_type
 from repody.extraction.types import ExtractedFieldResult, ExtractionIclExample, SchemaFieldSpec
 from repody.util.json_shape import normalize_keys_to_snake
 
@@ -119,9 +119,7 @@ def schema_field_spec_from_row(
         description=description,
         template_type=normalize_template_type(template_type),
         enum_values=enum_values or enum_values_from_row(row),
-        children=_child_specs(
-            resolved_children if isinstance(resolved_children, list) else None
-        ),
+        children=_child_specs(resolved_children if isinstance(resolved_children, list) else None),
     )
 
 

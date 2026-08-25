@@ -102,9 +102,7 @@ async def batch_workflow_api_stats(
     latency_q = await session.execute(
         select(
             Run.workflow_id,
-            func.avg(
-                func.nullif(Run.run_metadata["durationMs"].as_float(), 0.0)
-            ),
+            func.avg(func.nullif(Run.run_metadata["durationMs"].as_float(), 0.0)),
         )
         .where(
             Run.workflow_id.in_(workflow_ids),

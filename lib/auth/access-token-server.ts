@@ -9,7 +9,5 @@ export async function getServerAccessToken(): Promise<string | undefined> {
     return undefined;
   }
   const accessToken = session.accessToken;
-  return typeof accessToken === "string" && accessToken.length > 0
-    ? accessToken
-    : undefined;
+  return typeof accessToken === "string" && accessToken.length > 0 ? accessToken : undefined;
 }

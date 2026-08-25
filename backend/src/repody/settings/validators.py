@@ -75,10 +75,7 @@ def validate_timeout_alignment(settings: Settings) -> None:
 
     for label, seconds in checks:
         if seconds > worker_seconds:
-            msg = (
-                f"{label} ({seconds}) must be <= "
-                f"worker task timeout ({worker_seconds}s)."
-            )
+            msg = f"{label} ({seconds}) must be <= worker task timeout ({worker_seconds}s)."
             if is_prod:
                 raise ValueError(msg)
             warnings.warn(msg, stacklevel=1)

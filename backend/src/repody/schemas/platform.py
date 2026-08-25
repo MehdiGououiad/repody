@@ -71,7 +71,9 @@ class DocumentModelDiagnosticResponse(CamelModel):
     sample_extracted: bool = False
     detail: str = ""
     hint: str = ""
-    settings: DocumentModelDiagnosticSettingsSchema = Field(default_factory=DocumentModelDiagnosticSettingsSchema)
+    settings: DocumentModelDiagnosticSettingsSchema = Field(
+        default_factory=DocumentModelDiagnosticSettingsSchema
+    )
 
 
 class SuggestTemplateTypeResponse(CamelModel):

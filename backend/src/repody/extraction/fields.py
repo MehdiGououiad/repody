@@ -36,9 +36,7 @@ def fields_from_nuextract_json(
     return out
 
 
-def fields_from_leaf_json(
-    raw: str, schema: list[SchemaFieldSpec]
-) -> list[ExtractedFieldResult]:
+def fields_from_leaf_json(raw: str, schema: list[SchemaFieldSpec]) -> list[ExtractedFieldResult]:
     """Map JSON onto schema leaves; accepts flat dotted keys or nested objects."""
     data = _parse_json_object(raw)
     out: list[ExtractedFieldResult] = []
@@ -71,9 +69,7 @@ def _parse_json_object(raw: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _collect_leaf_values(
-    data: dict[str, Any], schema: list[SchemaFieldSpec]
-) -> dict[str, Any]:
+def _collect_leaf_values(data: dict[str, Any], schema: list[SchemaFieldSpec]) -> dict[str, Any]:
     """Walk schema against the model object; keys are dotted paths."""
     out: dict[str, Any] = {}
 
@@ -98,9 +94,7 @@ def _collect_leaf_values(
     return out
 
 
-def _leaf_result(
-    key: str, spec: SchemaFieldSpec, value: Any
-) -> ExtractedFieldResult:
+def _leaf_result(key: str, spec: SchemaFieldSpec, value: Any) -> ExtractedFieldResult:
     text, extracted = _encode_leaf(value)
     return ExtractedFieldResult(
         key=key,

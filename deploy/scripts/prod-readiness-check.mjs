@@ -17,7 +17,10 @@ function parseArg(name) {
   return idx >= 0 && process.argv[idx + 1] ? process.argv[idx + 1] : null;
 }
 
-const apiUrl = (parseArg("--api-url") || process.env.PROD_READINESS_API_URL || "").replace(/\/$/, "");
+const apiUrl = (parseArg("--api-url") || process.env.PROD_READINESS_API_URL || "").replace(
+  /\/$/,
+  ""
+);
 
 function run(label, cmd, args, { optional = false } = {}) {
   console.error(`\n> ${label}\n`);
@@ -42,7 +45,7 @@ function fetchJson(url) {
   const result = spawnSync(
     curl,
     ["-fsS", "--max-time", "12", "-H", "Accept: application/json", url],
-    { encoding: "utf8", cwd: root },
+    { encoding: "utf8", cwd: root }
   );
   if (result.status !== 0) {
     return null;
@@ -64,7 +67,7 @@ function httpStatus(url) {
       encoding: "utf8",
       cwd: root,
       shell: false,
-    },
+    }
   );
   if (result.status !== 0) {
     return null;
@@ -76,29 +79,27 @@ function httpStatus(url) {
 run("Deploy check", "node", ["deploy/scripts/deploy-check.mjs"]);
 run("Client integration check", "node", ["deploy/scripts/client-integration-check.mjs"]);
 
-run(
-  "Helm template (bundled + enterprise)",
-  "helm",
-  [
-    "template",
-    "repody",
-    "deploy/helm/repody",
-    "-f",
-    "deploy/helm/repody/values.yaml",
-    "-f",
-    "deploy/helm/repody/values-common.yaml",
-    "-f",
-    "deploy/client/values-bundled.example.yaml",
-    "-f",
-    "deploy/client/values-images.example.yaml",
-    "-f",
-    "deploy/client/values-enterprise.example.yaml",
-  ],
-);
+run("Helm template (bundled + enterprise)", "helm", [
+  "template",
+  "repody",
+  "deploy/helm/repody",
+  "-f",
+  "deploy/helm/repody/values.yaml",
+  "-f",
+  "deploy/helm/repody/values-common.yaml",
+  "-f",
+  "deploy/client/values-bundled.example.yaml",
+  "-f",
+  "deploy/client/values-images.example.yaml",
+  "-f",
+  "deploy/client/values-enterprise.example.yaml",
+]);
 
 if (!apiUrl) {
   console.error("\nprod-readiness: static checks passed.");
-  console.error("Optional: re-run with --api-url https://api.staging.example.com for live probes.\n");
+  console.error(
+    "Optional: re-run with --api-url https://api.staging.example.com for live probes.\n"
+  );
   process.exit(0);
 }
 

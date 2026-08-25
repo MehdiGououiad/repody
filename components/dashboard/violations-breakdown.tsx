@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
 import type { ViolationBreakdown } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const colorMap = {
   danger: "bg-danger",
@@ -40,15 +40,10 @@ export function ViolationsBreakdown({ items }: { items: ViolationBreakdown[] }) 
               <span className="text-sm text-on-surface flex-1">
                 {violationTypeLabel(t, it.type)}
               </span>
-              <span className="text-xs font-semibold tabular-nums">
-                {it.share}%
-              </span>
+              <span className="text-xs font-semibold tabular-nums">{it.share}%</span>
             </div>
             <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-              <div
-                className={cn("h-full", colorMap[it.color])}
-                style={{ width: `${it.share}%` }}
-              />
+              <div className={cn("h-full", colorMap[it.color])} style={{ width: `${it.share}%` }} />
             </div>
           </div>
         ))}

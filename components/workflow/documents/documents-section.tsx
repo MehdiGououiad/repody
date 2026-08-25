@@ -1,12 +1,15 @@
 "use client";
 
-import { useMemo } from "react";
-import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
-import { documentModelsFromCatalog, useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 import { SectionHeading } from "@/components/layout/section-heading";
-import { cn, shortId } from "@/lib/utils";
+import {
+  documentModelsFromCatalog,
+  useUnifiedModelsCatalog,
+} from "@/lib/hooks/use-catalog-queries";
 import type { DocumentDef } from "@/lib/types";
+import { cn, shortId } from "@/lib/utils";
 import { DocumentCard } from "./document-card";
 import { EMPTY_PROCESSING_OPTIONS, type ProcessingOptions } from "./processing-options";
 
@@ -58,7 +61,11 @@ export function DocumentsSection({
 
   return (
     <div className="space-y-4">
-      <SectionHeading title={t("docSource.title")} description={t("docSource.hint")} eyebrow="Schema" />
+      <SectionHeading
+        title={t("docSource.title")}
+        description={t("docSource.hint")}
+        eyebrow="Schema"
+      />
 
       <div className="space-y-3">
         {documents.map((doc, i) => (

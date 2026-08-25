@@ -11,19 +11,10 @@ const EditWorkflowBuilder = dynamic(
   { loading: () => <BuilderShellLoader /> }
 );
 
-export default async function WorkflowBuilderPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function WorkflowBuilderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [workflow, rulesLibrary] = await Promise.all([
-    fetchWorkflow(id),
-    fetchRulesLibrary(),
-  ]);
+  const [workflow, rulesLibrary] = await Promise.all([fetchWorkflow(id), fetchRulesLibrary()]);
   if (!workflow) notFound();
 
-  return (
-    <EditWorkflowBuilder workflow={workflow} ruleLibrary={rulesLibrary.rules} />
-  );
+  return <EditWorkflowBuilder workflow={workflow} ruleLibrary={rulesLibrary.rules} />;
 }

@@ -1,13 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  LoaderCircle,
-  ShieldCheck,
-  SlidersHorizontal,
-  Users,
-} from "lucide-react";
+import { LoaderCircle, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -15,23 +10,23 @@ import {
   fetchIamCatalog,
   fetchIamMe,
   fetchIamUsers,
-  updateIamUser,
   type IamUser,
   type UpdateIamUserInput,
+  updateIamUser,
 } from "@/lib/api/iam";
 import { fetchPlatformConfig } from "@/lib/api/platform-config";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import { AccessPanel } from "./access-panel";
 import { SettingsPanel } from "./settings-panel";
 import { TeamPanel } from "./team-panel";
+import { displayName } from "./user-access-shared";
 import {
   DEFAULT_INVITE_FORM,
   InviteUserDialog,
-  ManageUserDialog,
   type InviteUserForm,
+  ManageUserDialog,
   type ManageUserForm,
 } from "./user-dialogs";
-import { displayName } from "./user-access-shared";
 
 const DEFAULT_APP_ROLES = ["platform_admin", "admin", "operator", "viewer"];
 
@@ -79,9 +74,7 @@ export function UsersPage() {
 
   useEffect(() => {
     if (!meQuery.isError) return;
-    toast.error(
-      meQuery.error instanceof Error ? meQuery.error.message : "IAM API unavailable",
-    );
+    toast.error(meQuery.error instanceof Error ? meQuery.error.message : "IAM API unavailable");
   }, [meQuery.isError, meQuery.error]);
 
   const createMutation = useMutation({
@@ -122,10 +115,7 @@ export function UsersPage() {
         : null;
 
   const loading =
-    meQuery.isPending ||
-    catalogQuery.isPending ||
-    usersQuery.isPending ||
-    platformQuery.isPending;
+    meQuery.isPending || catalogQuery.isPending || usersQuery.isPending || platformQuery.isPending;
 
   const refreshing =
     (meQuery.isFetching ||

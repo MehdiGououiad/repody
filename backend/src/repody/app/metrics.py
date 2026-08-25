@@ -34,10 +34,14 @@ async def get_metrics(session: AsyncSession) -> MetricsResponse:
             .filter(and_(Run.created_at >= since, Run.status == done))
             .label("done_week"),
             func.count(Run.id)
-            .filter(and_(Run.created_at >= since, Run.status == done, Run.overall_status == "passed"))
+            .filter(
+                and_(Run.created_at >= since, Run.status == done, Run.overall_status == "passed")
+            )
             .label("passed_week"),
             func.count(Run.id)
-            .filter(and_(Run.created_at >= since, Run.status == done, Run.overall_status == "failed"))
+            .filter(
+                and_(Run.created_at >= since, Run.status == done, Run.overall_status == "failed")
+            )
             .label("failed_week"),
             func.count(Run.id).filter(Run.status.in_(running)).label("pending"),
             func.count(Run.id)

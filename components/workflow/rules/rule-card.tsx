@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { AlertOctagon, AlertTriangle, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
@@ -13,10 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConditionBuilder } from "../condition-builder";
-import { conditionsToExpression } from "@/lib/rules/expression";
 import { resolveDocumentFields, resolveTableFields } from "@/lib/rules/document-fields";
-import { cn } from "@/lib/utils";
+import { conditionsToExpression } from "@/lib/rules/expression";
 import type {
   ConditionJunction,
   DocumentDef,
@@ -25,8 +23,10 @@ import type {
   RuleSeverity,
   WorkflowRule,
 } from "@/lib/types";
-import { LlmPromptEditor } from "./llm-prompt-editor";
+import { cn } from "@/lib/utils";
+import { ConditionBuilder } from "../condition-builder";
 import { KindToggle, ScopeToggle } from "./kind-scope-toggles";
+import { LlmPromptEditor } from "./llm-prompt-editor";
 
 export function RuleCard({
   rule,

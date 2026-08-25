@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
 import { Info, RefreshCw } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { useModelRuntimeConfig } from "@/lib/hooks/use-catalog-queries";
+import { cn } from "@/lib/utils";
 
 type ConfigField = {
   key: string;
@@ -69,7 +69,9 @@ function ConfigTable({ fields }: { fields: ConfigField[] }) {
             <tr key={field.key} className="align-top">
               <td className="py-3 pr-4 min-w-[10rem]">
                 <p className="font-medium">{field.label}</p>
-                <p className="text-xs text-on-surface-variant mt-0.5 max-w-md">{field.description}</p>
+                <p className="text-xs text-on-surface-variant mt-0.5 max-w-md">
+                  {field.description}
+                </p>
               </td>
               <td className="py-3 pr-4 font-mono text-xs break-all">{formatValue(field.value)}</td>
               <td className="py-3 pr-4 font-mono text-xs text-on-surface-variant break-all">
@@ -104,11 +106,15 @@ export function ModelRuntimeConfigPanel() {
           <div>
             <h2 className="font-display text-lg font-semibold">Model runtime configuration</h2>
             <p className="text-sm text-on-surface-variant mt-1">
-              Single view of effective knobs per model. Platform values come from AUDIT_* env;
-              host inference is configured outside the cluster.
+              Single view of effective knobs per model. Platform values come from AUDIT_* env; host
+              inference is configured outside the cluster.
             </p>
           </div>
-          <Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>
+          <Button
+            variant="outline"
+            onClick={() => void query.refetch()}
+            disabled={query.isFetching}
+          >
             <RefreshCw className={cn("h-4 w-4 mr-2", query.isFetching && "animate-spin")} />
             Refresh
           </Button>
@@ -126,20 +132,28 @@ export function ModelRuntimeConfigPanel() {
                     {profile.enabled ? "Enabled" : "Disabled"}
                   </Badge>
                   <Badge variant="outline">{profile.runtime}</Badge>
-                  <span className="text-xs font-mono text-on-surface-variant">{profile.modelId}</span>
+                  <span className="text-xs font-mono text-on-surface-variant">
+                    {profile.modelId}
+                  </span>
                 </div>
                 <dl className="grid sm:grid-cols-2 gap-3 text-xs">
                   <div>
-                    <dt className="text-on-surface-variant uppercase tracking-wider">Weights / catalog</dt>
+                    <dt className="text-on-surface-variant uppercase tracking-wider">
+                      Weights / catalog
+                    </dt>
                     <dd className="font-mono mt-0.5 break-all">{profile.runtimeModel}</dd>
                   </div>
                   <div>
-                    <dt className="text-on-surface-variant uppercase tracking-wider">Inference URL</dt>
+                    <dt className="text-on-surface-variant uppercase tracking-wider">
+                      Inference URL
+                    </dt>
                     <dd className="font-mono mt-0.5 break-all">{profile.inferenceUrl || "—"}</dd>
                   </div>
                   {profile.renderPolicy ? (
                     <div className="sm:col-span-2">
-                      <dt className="text-on-surface-variant uppercase tracking-wider">Input policy (upstream docs)</dt>
+                      <dt className="text-on-surface-variant uppercase tracking-wider">
+                        Input policy (upstream docs)
+                      </dt>
                       <dd className="mt-0.5 text-on-surface-variant">{profile.renderPolicy}</dd>
                     </div>
                   ) : null}
@@ -173,7 +187,10 @@ export function ModelRuntimeConfigPanel() {
               </div>
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.changeKind} className="rounded-lg border border-border bg-surface-container-low px-4 py-3">
+                  <div
+                    key={note.changeKind}
+                    className="rounded-lg border border-border bg-surface-container-low px-4 py-3"
+                  >
                     <p className="font-medium text-sm">{note.changeKind}</p>
                     <p className="text-sm text-primary mt-0.5">{note.action}</p>
                     <p className="text-xs text-on-surface-variant mt-1">{note.detail}</p>

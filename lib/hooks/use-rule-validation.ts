@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { issuesByRuleId, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { rulesValidationFingerprint } from "@/lib/workflow/draft-fingerprint";
-import { issuesByRuleId, validateRulesViaApi } from "@/lib/rules/rule-preview";
 
 const DEBOUNCE_MS = 400;
 

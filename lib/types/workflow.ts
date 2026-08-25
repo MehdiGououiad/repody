@@ -45,9 +45,16 @@ export interface DocumentDef {
 export type ArithmeticOp = "+" | "-" | "*" | "/";
 
 export type ComparisonOp =
-  | "==" | "!=" | ">" | ">=" | "<" | "<="
-  | "IN" | "NOT_IN"
-  | "EXISTS" | "IS_EMPTY";
+  | "=="
+  | "!="
+  | ">"
+  | ">="
+  | "<"
+  | "<="
+  | "IN"
+  | "NOT_IN"
+  | "EXISTS"
+  | "IS_EMPTY";
 
 export type ConditionJunction = "AND" | "OR";
 

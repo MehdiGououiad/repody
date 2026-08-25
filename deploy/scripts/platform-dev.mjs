@@ -166,13 +166,7 @@ function composeFileArgs() {
 }
 
 function composeArgs(...parts) {
-  return [
-    "compose",
-    ...composeFileArgs(),
-    "--env-file",
-    "backend/.env",
-    ...parts,
-  ];
+  return ["compose", ...composeFileArgs(), "--env-file", "backend/.env", ...parts];
 }
 
 function whichBin(name) {
@@ -215,11 +209,9 @@ Then re-run: pnpm platform
 }
 
 function ensureInferencePaths() {
-  const qwenSrc =
-    isDarwin && fs.existsSync(QWEN_MAC_EXAMPLE) ? QWEN_MAC_EXAMPLE : QWEN_EXAMPLE;
+  const qwenSrc = isDarwin && fs.existsSync(QWEN_MAC_EXAMPLE) ? QWEN_MAC_EXAMPLE : QWEN_EXAMPLE;
   copyIfMissing(qwenSrc, QWEN_PATHS, "deploy/research/qwen35/paths.local.env");
-  const llamaSrc =
-    isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
+  const llamaSrc = isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
   copyIfMissing(llamaSrc, LLAMA_PATHS, "deploy/llamacpp/paths.local.env");
 }
 
@@ -251,7 +243,7 @@ function logPlan() {
   const glm = opts.withGlm ? "on (host + local worker SDK)" : "off";
   const obs = opts.withObs ? "on" : "off";
   console.log(
-    `Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}  Observability=${obs}`,
+    `Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}  Observability=${obs}`
   );
 }
 
@@ -273,11 +265,11 @@ function disableObservabilityEnv() {
 function startObservabilityStack(composeEnv) {
   console.log("\n── Observability (Grafana · Loki · Tempo · Bugsink) ─────────");
   enableObservabilityEnv();
-  run(
-    "docker",
-    composeArgs("--profile", "observability", "up", "-d", "--no-build"),
-    { inherit: true, allowFail: true, env: composeEnv },
-  );
+  run("docker", composeArgs("--profile", "observability", "up", "-d", "--no-build"), {
+    inherit: true,
+    allowFail: true,
+    env: composeEnv,
+  });
 }
 
 async function waitHttp(url, { timeoutMs = 180_000, label = url } = {}) {
@@ -313,9 +305,7 @@ function setup() {
   const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
   const dockerOk = docker.status === 0;
   console.log(`Docker:       ${dockerOk ? "ok" : "NOT RUNNING — start Docker Desktop"}`);
-  console.log(
-    `llama-server: ${whichBin("llama-server") || `missing — ${llamaInstallHint()}`}`,
-  );
+  console.log(`llama-server: ${whichBin("llama-server") || `missing — ${llamaInstallHint()}`}`);
   console.log(`uv:           ${whichBin("uv") || "missing — https://docs.astral.sh/uv/"}`);
 
   if (dockerOk && !opts.skipPull) {
@@ -385,9 +375,7 @@ async function up() {
   }
 
   const composeEnv = {
-    REPODY_PULL_POLICY: opts.skipPull
-      ? "never"
-      : process.env.REPODY_PULL_POLICY || "missing",
+    REPODY_PULL_POLICY: opts.skipPull ? "never" : process.env.REPODY_PULL_POLICY || "missing",
     AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
     AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
     REPODY_BACKEND_EXTRAS: process.env.REPODY_BACKEND_EXTRAS || "otel,glmocr",
@@ -400,14 +388,11 @@ async function up() {
   }
 
   if (opts.withGlm) {
-    console.log(
-      "\n── Build extract worker (official GlmOcr SDK extras) ─────────",
-    );
-    run(
-      "docker",
-      composeArgs("--profile", "workers", "build", "worker-extract"),
-      { inherit: true, env: composeEnv },
-    );
+    console.log("\n── Build extract worker (official GlmOcr SDK extras) ─────────");
+    run("docker", composeArgs("--profile", "workers", "build", "worker-extract"), {
+      inherit: true,
+      env: composeEnv,
+    });
   }
 
   console.log("\n── Start Hub platform ───────────────────────────────────────");
@@ -480,9 +465,9 @@ async function up() {
       "api",
       "web",
       "worker-extract",
-      "worker-fast",
+      "worker-fast"
     ),
-    { inherit: true, allowFail: true, env: composeEnv },
+    { inherit: true, allowFail: true, env: composeEnv }
   );
   await waitHttp("http://127.0.0.1:8000/v1/healthz/live", {
     label: "API :8000",
@@ -555,7 +540,7 @@ async function status() {
   }
   console.log("");
   console.log("  Logs:  pnpm platform logs");
-  console.log("  Grafana Explore → Loki {container=~\"repody-.*\"}");
+  console.log('  Grafana Explore → Loki {container=~"repody-.*"}');
   console.log("");
 }
 
@@ -579,7 +564,7 @@ function logs() {
       "worker-extract",
       "worker-fast",
     ],
-    { inherit: true, allowFail: true },
+    { inherit: true, allowFail: true }
   );
 }
 
@@ -603,15 +588,8 @@ function stop() {
   });
   run(
     "docker",
-    composeArgs(
-      "--profile",
-      "workers",
-      "--profile",
-      "observability",
-      "down",
-      "--remove-orphans",
-    ),
-    { inherit: true, allowFail: true },
+    composeArgs("--profile", "workers", "--profile", "observability", "down", "--remove-orphans"),
+    { inherit: true, allowFail: true }
   );
   console.log("Stopped. Start again with: pnpm platform");
 }

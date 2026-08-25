@@ -1,5 +1,5 @@
-import { shortId } from "@/lib/utils";
 import type { ArithmeticOp, ComparisonOp, RuleCondition } from "@/lib/types";
+import { shortId } from "@/lib/utils";
 
 export const COMPARISON_OP_DEFS: { value: ComparisonOp; key: string; noRight?: true }[] = [
   { value: "==", key: "opEquals" },

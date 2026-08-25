@@ -15,9 +15,9 @@ function parseArg(name, fallback = null) {
   return idx >= 0 && process.argv[idx + 1] ? process.argv[idx + 1] : fallback;
 }
 
-const apiUrl = (parseArg("--api-url", process.env.E2E_API_URL || "http://localhost:8000")).replace(
+const apiUrl = parseArg("--api-url", process.env.E2E_API_URL || "http://localhost:8000").replace(
   /\/$/,
-  "",
+  ""
 );
 const workflowId = parseArg("--workflow-id", "wf-invoice-audit");
 const token = parseArg("--token", process.env.EXTRACT_SOAK_TOKEN || process.env.E2E_BEARER || "");
@@ -105,7 +105,7 @@ const results = [];
 let wave = 0;
 
 console.error(
-  `extract-soak: api=${apiUrl} workflow=${workflowId} concurrency=${concurrency} duration=${durationMinutes}m`,
+  `extract-soak: api=${apiUrl} workflow=${workflowId} concurrency=${concurrency} duration=${durationMinutes}m`
 );
 
 while (Date.now() < endAt) {
@@ -126,7 +126,7 @@ while (Date.now() < endAt) {
             error: String(err),
           };
         }
-      })(),
+      })()
     );
   }
   const batchResults = await Promise.all(batch);
@@ -134,7 +134,7 @@ while (Date.now() < endAt) {
   const done = results.filter((r) => r.status === "done").length;
   const failed = results.filter((r) => r.status === "failed" || r.status === "error").length;
   console.error(
-    `wave ${wave}: total=${results.length} done=${done} failed=${failed} timeout=${results.filter((r) => r.status === "timeout").length}`,
+    `wave ${wave}: total=${results.length} done=${done} failed=${failed} timeout=${results.filter((r) => r.status === "timeout").length}`
   );
   if (Date.now() >= endAt) {
     break;
@@ -143,7 +143,9 @@ while (Date.now() < endAt) {
 
 const terminal = results.filter((r) => r.status === "done" || r.status === "failed");
 const successRate =
-  terminal.length > 0 ? (results.filter((r) => r.status === "done").length / terminal.length) * 100 : 0;
+  terminal.length > 0
+    ? (results.filter((r) => r.status === "done").length / terminal.length) * 100
+    : 0;
 const durations = results
   .map((r) => r.durationMs)
   .filter((d) => typeof d === "number" && d >= 0)

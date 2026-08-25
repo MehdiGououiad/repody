@@ -1,21 +1,13 @@
 "use client";
 
+import { Brain, Code, FileText, GitCompare, Plus, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  Brain,
-  Code,
-  FileText,
-  GitCompare,
-  Plus,
-  Sparkles,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useRulesLibraryCatalog, usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
-import { useRuleValidationIssues } from "@/lib/hooks/use-rule-validation";
-import { cn, shortId } from "@/lib/utils";
 import { SectionHeading } from "@/components/layout/section-heading";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePlatformConfig, useRulesLibraryCatalog } from "@/lib/hooks/use-catalog-queries";
+import { useRuleValidationIssues } from "@/lib/hooks/use-rule-validation";
 import type {
   ConditionJunction,
   DocumentDef,
@@ -23,6 +15,7 @@ import type {
   RuleTemplate,
   WorkflowRule,
 } from "@/lib/types";
+import { cn, shortId } from "@/lib/utils";
 import { RuleCard } from "./rule-card";
 
 export function RulesPanel({
@@ -196,7 +189,10 @@ export function RulesPanel({
                           )}
                         />
                         <span className="text-sm font-semibold">{tpl.name}</span>
-                        <Badge variant={isLlm ? "info" : "secondary"} className="text-[9px] gap-0.5">
+                        <Badge
+                          variant={isLlm ? "info" : "secondary"}
+                          className="text-[9px] gap-0.5"
+                        >
                           {isLlm ? <Sparkles className="h-2.5 w-2.5" /> : null}
                           {isLlm ? t("kindLlm") : t("kindLogic")}
                         </Badge>

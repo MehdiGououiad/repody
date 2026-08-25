@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.api_keys import api_key_hint, hash_api_key
 from repody.infra.db.models import (
     Document,
     ExtractedField,
@@ -18,7 +19,6 @@ from repody.infra.db.models import (
     WorkflowRule,
     WorkflowStatus,
 )
-from repody.app.api_keys import api_key_hint, hash_api_key
 
 RULE_TEMPLATES = [
     RuleTemplate(

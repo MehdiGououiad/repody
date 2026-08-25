@@ -46,11 +46,7 @@ export function buildClientProgressThrough(
       label: row.label,
       status,
       detail:
-        index === throughIndex
-          ? doneDetail
-          : index === activeIndex
-            ? row.pendingDetail
-            : undefined,
+        index === throughIndex ? doneDetail : index === activeIndex ? row.pendingDetail : undefined,
     };
   });
   return {
@@ -78,7 +74,7 @@ export function buildClientProgress(
       status,
       detail:
         index === activeIndex
-          ? detail ?? row.pendingDetail
+          ? (detail ?? row.pendingDetail)
           : index < activeIndex
             ? undefined
             : row.pendingDetail,
@@ -92,10 +88,7 @@ export function buildClientProgress(
   };
 }
 
-export function appendWorkerProgress(
-  client: RunProgress,
-  server: RunProgress
-): RunProgress {
+export function appendWorkerProgress(client: RunProgress, server: RunProgress): RunProgress {
   const clientDone = client.steps.map((step) => ({
     ...step,
     status: "done" as const,

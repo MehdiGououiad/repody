@@ -2,16 +2,19 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from repody.runtime.contracts.result import ErrorCode
-from repody.app.run.lifecycle import RunStatus, RunEntity
-from repody.app.run.lifecycle import RunCompleted, RunFailed, RunStarted
 from repody.app.run.lifecycle import (
+    RunCompleted,
     RunCompletionOutcome,
+    RunEntity,
+    RunFailed,
+    RunStarted,
+    RunStatus,
     complete_run_entity,
     fail_run_entity,
     record_claimed,
     start_field_updates,
 )
+from repody.runtime.contracts.result import ErrorCode
 
 
 def _entity(*, status: RunStatus = RunStatus.queued) -> RunEntity:

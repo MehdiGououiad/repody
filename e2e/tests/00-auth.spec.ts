@@ -1,6 +1,6 @@
-import { test, expect } from "@playwright/test";
-import { fetchOidcEnabled } from "../helpers/auth";
+import { expect, test } from "@playwright/test";
 import { API, apiAuthHeaders } from "../helpers/api";
+import { fetchOidcEnabled } from "../helpers/auth";
 
 import { WEB_URL } from "../helpers/env";
 

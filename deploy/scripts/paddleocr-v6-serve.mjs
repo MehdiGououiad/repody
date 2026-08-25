@@ -25,10 +25,20 @@ const BACKEND_ENV = path.join(BACKEND, ".env");
 const LOG_DIR = path.join(ROOT, ".logs");
 const PIPELINE_CONFIG = path.join(ROOT, "deploy/paddleocr-v6/OCR.yaml");
 const PORT = Number(process.env.AUDIT_PADDLEOCR_V6_PORT || process.env.PADDLEOCR_V6_PORT || 8868);
-const HOST = (process.env.AUDIT_PADDLEOCR_V6_HOST || process.env.PADDLEOCR_V6_HOST || "0.0.0.0").trim();
-const DEVICE = (process.env.AUDIT_PADDLEOCR_V6_DEVICE || process.env.PADDLEOCR_V6_DEVICE || "").trim();
+const HOST = (
+  process.env.AUDIT_PADDLEOCR_V6_HOST ||
+  process.env.PADDLEOCR_V6_HOST ||
+  "0.0.0.0"
+).trim();
+const DEVICE = (
+  process.env.AUDIT_PADDLEOCR_V6_DEVICE ||
+  process.env.PADDLEOCR_V6_DEVICE ||
+  ""
+).trim();
 const USE_HPIP = ["1", "true", "yes"].includes(
-  (process.env.AUDIT_PADDLEOCR_V6_USE_HPIP || process.env.PADDLEOCR_V6_USE_HPIP || "").trim().toLowerCase(),
+  (process.env.AUDIT_PADDLEOCR_V6_USE_HPIP || process.env.PADDLEOCR_V6_USE_HPIP || "")
+    .trim()
+    .toLowerCase()
 );
 // Official high-performance inference ships for Linux x86-64 only.
 const HPIP_SUPPORTED = process.platform === "linux" && process.arch === "x64";
@@ -40,7 +50,7 @@ const HPI_CONFIG = (
 ).trim();
 const BASE = (process.env.AUDIT_PADDLEOCR_V6_BASE_URL || `http://127.0.0.1:${PORT}`).replace(
   /\/$/,
-  "",
+  ""
 );
 
 function uvBin() {
@@ -149,7 +159,7 @@ function paddlexServingReady() {
       shell: false,
       stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env },
-    },
+    }
   );
   return result.status === 0;
 }
@@ -177,7 +187,7 @@ function install() {
       "--extra-index-url",
       "https://pypi.org/simple",
     ],
-    "Installing PaddlePaddle 3.2.0 (official CPU wheel)…",
+    "Installing PaddlePaddle 3.2.0 (official CPU wheel)…"
   );
   runUv(["pip", "install", "paddleocr"], "Installing paddleocr (pulls paddlex)…");
 
@@ -187,7 +197,7 @@ function install() {
   // directly and get all nine packages instead of a hand-picked subset.
   runUv(
     ["pip", "install", "paddlex[serving]"],
-    'Installing the serving extra (paddlex[serving] == `paddlex --install serving`)…',
+    "Installing the serving extra (paddlex[serving] == `paddlex --install serving`)…"
   );
 
   if (USE_HPIP) {
@@ -196,16 +206,16 @@ function install() {
     if (process.platform === "linux" && process.arch === "x64") {
       runUv(
         ["run", "python", "-m", "paddlex", "--install", "hpi-cpu"],
-        "Installing the official HPIP CPU plugin…",
+        "Installing the official HPIP CPU plugin…"
       );
       runUv(
         ["run", "python", "-m", "paddlex", "--install", "paddle2onnx"],
-        "Installing the official Paddle2ONNX plugin…",
+        "Installing the official Paddle2ONNX plugin…"
       );
     } else {
       console.warn(
         `HPIP requested but unsupported on ${process.platform}/${process.arch} ` +
-          "(official support: linux x86-64). Skipping plugin install.",
+          "(official support: linux x86-64). Skipping plugin install."
       );
     }
   }
@@ -234,11 +244,13 @@ async function serve() {
   if (USE_HPIP && HPIP_SUPPORTED) console.log("  hpip:     enabled (--use_hpip)");
   else if (USE_HPIP) {
     console.warn(
-      `  hpip:     requested but unsupported on ${process.platform}/${process.arch} — ignored`,
+      `  hpip:     requested but unsupported on ${process.platform}/${process.arch} — ignored`
     );
   }
   console.log(`  logs:     ${LOG_DIR}`);
-  console.log(`  docs:     https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html`);
+  console.log(
+    `  docs:     https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html`
+  );
 
   const child = spawn(uvBin(), args, {
     cwd: BACKEND,
@@ -252,7 +264,9 @@ async function serve() {
   const ready = await waitForOcr();
   if (!ready.ready) {
     console.error(`Timed out waiting for PP-OCRv6 at ${BASE}/ocr — ${ready.detail}`);
-    console.error(`Check ${errLog}. If serve fails, re-run serve (auto-install) or: node deploy/scripts/paddleocr-v6-serve.mjs install`);
+    console.error(
+      `Check ${errLog}. If serve fails, re-run serve (auto-install) or: node deploy/scripts/paddleocr-v6-serve.mjs install`
+    );
     process.exit(1);
   }
   console.log("PP-OCRv6 is up (official POST /ocr).");
@@ -292,7 +306,9 @@ async function verify() {
   try {
     res = await postOcr({ file: WARMUP_PNG_B64, fileType: 1, visualize: false }, 300_000);
   } catch (error) {
-    console.error(`PP-OCRv6 contract check failed: ${error instanceof Error ? error.message : error}`);
+    console.error(
+      `PP-OCRv6 contract check failed: ${error instanceof Error ? error.message : error}`
+    );
     process.exit(1);
   }
   if (res.status !== 200 || !res.body) {
@@ -310,7 +326,7 @@ async function verify() {
   console.log(`PP-OCRv6 OK — ${url} returned errorCode 0 with result.ocrResults`);
   console.log(
     "  Client contract: POST /ocr { file, fileType, visualize, " +
-      "useDocOrientationClassify, useDocUnwarping, useTextlineOrientation }",
+      "useDocOrientationClassify, useDocUnwarping, useTextlineOrientation }"
   );
 }
 
@@ -348,6 +364,8 @@ else if (cmd === "stop") stop();
 else if (cmd === "verify") void verify();
 else if (cmd === "warmup") void warmup();
 else {
-  console.error("Usage: node deploy/scripts/paddleocr-v6-serve.mjs install|serve|stop|verify|warmup");
+  console.error(
+    "Usage: node deploy/scripts/paddleocr-v6-serve.mjs install|serve|stop|verify|warmup"
+  );
   process.exit(2);
 }

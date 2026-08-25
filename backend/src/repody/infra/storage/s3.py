@@ -9,8 +9,8 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
-from repody.settings import Settings
 from repody.infra.storage.base import ObjectStore, PresignedPut
+from repody.settings import Settings
 
 
 def _make_client(endpoint_url: str, settings: Settings) -> Any:

@@ -17,7 +17,5 @@ export function getRequestAccessToken(
     return undefined;
   }
   const accessToken = request.auth?.accessToken;
-  return typeof accessToken === "string" && accessToken.length > 0
-    ? accessToken
-    : undefined;
+  return typeof accessToken === "string" && accessToken.length > 0 ? accessToken : undefined;
 }

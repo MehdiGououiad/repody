@@ -18,9 +18,7 @@ from repody.infra.db.seed import seed_database
 from repody.settings import clear_settings_cache
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_TEST_DATABASE_URL = (
-    "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
-)
+DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
 
 
 def resolve_test_database_url() -> str:

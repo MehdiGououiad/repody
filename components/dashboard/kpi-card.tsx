@@ -1,19 +1,19 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { ChartContainer } from "@/components/dashboard/chart-container";
-import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import {
+  CheckCircle2,
+  Coins,
+  Gavel,
+  GitBranch,
+  Timer,
   TrendingDown,
   TrendingUp,
-  GitBranch,
-  CheckCircle2,
-  Gavel,
-  Timer,
-  Coins,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
+import { Area, AreaChart, ResponsiveContainer } from "recharts";
+import { ChartContainer } from "@/components/dashboard/chart-container";
 import type { KpiMetric } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const iconMap: Record<string, React.ElementType> = {
   account_tree: GitBranch,
@@ -28,11 +28,12 @@ export function KpiCard({ metric }: { metric: KpiMetric }) {
   const Icon = iconMap[metric.icon] ?? GitBranch;
   const labelKey = metric.id as Parameters<typeof t>[0];
   const TrendIcon = metric.direction === "up" ? TrendingUp : TrendingDown;
-  const deltaStr =
-    metric.deltaUnit === "percent" ? `${metric.delta}%` : `${metric.delta}`;
+  const deltaStr = metric.deltaUnit === "percent" ? `${metric.delta}%` : `${metric.delta}`;
   const positive = metric.positive;
   const trendColor = positive ? "var(--success)" : "var(--danger)";
-  const trendLabel = positive ? t("trendUp", { delta: deltaStr }) : t("trendDown", { delta: deltaStr });
+  const trendLabel = positive
+    ? t("trendUp", { delta: deltaStr })
+    : t("trendDown", { delta: deltaStr });
 
   return (
     <div className="panel-elevated rounded-xl p-4 hover:border-accent-blue/25 transition-[border-color,box-shadow] duration-200 flex flex-col gap-3 overflow-hidden relative group">
@@ -64,22 +65,11 @@ export function KpiCard({ metric }: { metric: KpiMetric }) {
           minWidth={0}
           initialDimension={{ width: 240, height: 40 }}
         >
-          <AreaChart
-            data={metric.series}
-            margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
-          >
+          <AreaChart data={metric.series} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
             <defs>
               <linearGradient id={`spark-${metric.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="0%"
-                  stopColor={trendColor}
-                  stopOpacity={0.35}
-                />
-                <stop
-                  offset="100%"
-                  stopColor={trendColor}
-                  stopOpacity={0}
-                />
+                <stop offset="0%" stopColor={trendColor} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={trendColor} stopOpacity={0} />
               </linearGradient>
             </defs>
             <Area

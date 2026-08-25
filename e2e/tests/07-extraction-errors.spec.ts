@@ -1,5 +1,5 @@
+import { expect, test } from "@playwright/test";
 import path from "path";
-import { test, expect } from "@playwright/test";
 import { hasSampleDocument, resolveSampleDocument } from "../helpers/document";
 import {
   clickExtractValidate,
@@ -19,9 +19,9 @@ test.describe("Extraction and validation errors", () => {
   test("inline test run surfaces failed rule validation", async ({ page }) => {
     await clickExtractValidate(page);
 
-    await expect(
-      page.getByText(/passed|failed|warning|rule/i).first()
-    ).toBeVisible({ timeout: 180_000 });
+    await expect(page.getByText(/passed|failed|warning|rule/i).first()).toBeVisible({
+      timeout: 180_000,
+    });
 
     const failedRule = page.getByText(/Math integrity|failed|validation failed/i).first();
     await expect(failedRule).toBeVisible();

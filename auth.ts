@@ -1,13 +1,12 @@
+import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
-import { NextResponse } from "next/server";
 import { realmRolesFromAccessToken } from "@/lib/auth/jwt-claims";
 import { isPublicPage } from "@/lib/auth/public-paths";
 import { refreshKeycloakAccessToken } from "@/lib/auth/refresh-keycloak-token";
 
 const keycloakPublicIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
-const keycloakServerIssuer =
-  process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? keycloakPublicIssuer;
+const keycloakServerIssuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? keycloakPublicIssuer;
 const keycloakClientSecret =
   process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
 const apiOidcExplicitlyDisabled = process.env.AUDIT_OIDC_ENABLED === "false";

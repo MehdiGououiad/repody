@@ -69,10 +69,14 @@ export async function fetchOk(url, timeoutMs = 5000, init = {}) {
 
 export function listenerInfos(port) {
   if (process.platform !== "win32") {
-    const result = spawnSync("sh", ["-c", `lsof -nP -iTCP:${port} -sTCP:LISTEN 2>/dev/null || true`], {
-      encoding: "utf8",
-      shell: false,
-    });
+    const result = spawnSync(
+      "sh",
+      ["-c", `lsof -nP -iTCP:${port} -sTCP:LISTEN 2>/dev/null || true`],
+      {
+        encoding: "utf8",
+        shell: false,
+      }
+    );
     return (result.stdout || "")
       .trim()
       .split(/\r?\n/)
@@ -117,7 +121,7 @@ export function killListenerPort(port) {
         "-Command",
         `$ids = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($id in $ids) { if ($id -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200; if (Get-Process -Id $id -ErrorAction SilentlyContinue) { taskkill /PID $id /F /T | Out-Null } } }`,
       ],
-      { encoding: "utf8", shell: false },
+      { encoding: "utf8", shell: false }
     );
     if (result.stderr?.trim()) process.stderr.write(result.stderr);
     return;

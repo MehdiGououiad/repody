@@ -2,13 +2,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Audit } from "@/lib/types";
 
-export function AuditListExport({
-  audits,
-  label,
-}: {
-  audits: Audit[];
-  label: string;
-}) {
+export function AuditListExport({ audits, label }: { audits: Audit[]; label: string }) {
   if (audits.length === 0) {
     return (
       <Button variant="outline" disabled>

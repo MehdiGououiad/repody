@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { Check } from "lucide-react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -54,7 +54,10 @@ const DropdownMenuLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
-    className={cn("px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider", className)}
+    className={cn(
+      "px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider",
+      className
+    )}
     {...props}
   />
 ));
@@ -97,14 +100,14 @@ DropdownMenuCheckboxItem.displayName = DropdownMenuPrimitive.CheckboxItem.displa
 
 export {
   DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
+  DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuPortal,
-  DropdownMenuSub,
   DropdownMenuRadioGroup,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuTrigger,
 };

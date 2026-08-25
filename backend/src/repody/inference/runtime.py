@@ -57,9 +57,8 @@ def inference_mode(settings: Settings | None = None) -> str:
 
 def remote_inference_endpoint(settings: Settings | None = None) -> bool:
     settings = settings or get_settings()
-    return (
-        settings.inference_mode.lower() == "llamacpp"
-        and is_remote_inference_url(llamacpp_base_url(settings))
+    return settings.inference_mode.lower() == "llamacpp" and is_remote_inference_url(
+        llamacpp_base_url(settings)
     )
 
 

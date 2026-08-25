@@ -38,7 +38,9 @@ def extraction_meta_to_dict(doc: DocumentExtraction) -> dict:
     meta = replace(
         doc.meta,
         fields_extracted=fields_n,
-        markdown_text=doc.meta.markdown_text if doc.meta.markdown_text is not None else doc.markdown_text,
+        markdown_text=doc.meta.markdown_text
+        if doc.meta.markdown_text is not None
+        else doc.markdown_text,
         raw_text=doc.meta.raw_text if doc.meta.raw_text is not None else doc.raw_text,
     )
     return meta_to_dict(meta)

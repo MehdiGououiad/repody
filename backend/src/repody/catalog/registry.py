@@ -17,9 +17,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from repody.extraction.modes import DEFAULT_READ_PATH_ID
-from repody.extraction.types import ExtractionIclExample, ExtractionResult, SchemaFieldSpec
-from repody.extraction.types import DocumentBundle
 from repody.extraction.branding import (
     GLM_OCR_QWEN_CATALOG_ID,
     GLM_OCR_QWEN_DESCRIPTION,
@@ -35,6 +32,12 @@ from repody.extraction.branding import (
     REPODY_VLM_LABEL,
     UnknownCatalogIdError,
     normalize_public_catalog_id,
+)
+from repody.extraction.modes import DEFAULT_READ_PATH_ID
+from repody.extraction.types import (
+    DocumentBundle,
+    ExtractionResult,
+    SchemaFieldSpec,
 )
 from repody.inference.runtime import (
     DOCUMENT_RUNTIME,

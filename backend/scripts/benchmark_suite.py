@@ -23,11 +23,8 @@ from typing import Any
 import httpx
 
 from repody.benchmarking import csv_report, html_report, score_fields, score_rules
-from repody.catalog.registry import normalize_model_id
 
-DEFAULT_MODELS = (
-    "repody:vlm",
-)
+DEFAULT_MODELS = ("repody:vlm",)
 
 TEXT_PREVIEW_MAX_CHARS = 4_000
 
@@ -152,7 +149,9 @@ def _cases(
 async def _get_json(client: httpx.AsyncClient, path: str) -> dict[str, Any]:
     response = await client.get(path)
     if response.is_error:
-        raise RuntimeError(f"{response.request.method} {path} failed {response.status_code}: {response.text[:500]}")
+        raise RuntimeError(
+            f"{response.request.method} {path} failed {response.status_code}: {response.text[:500]}"
+        )
     return response.json()
 
 
@@ -184,8 +183,7 @@ async def _save_workflow(
     )
     if response.is_error:
         raise RuntimeError(
-            f"PUT /v1/workflows/{workflow_id} failed {response.status_code}: "
-            f"{response.text[:500]}"
+            f"PUT /v1/workflows/{workflow_id} failed {response.status_code}: {response.text[:500]}"
         )
 
 
@@ -288,9 +286,7 @@ async def _run_once(
     )
     submit_ms = round((time.perf_counter() - submit_started) * 1000)
     if response.is_error:
-        raise RuntimeError(
-            f"POST run failed {response.status_code}: {response.text[:500]}"
-        )
+        raise RuntimeError(f"POST run failed {response.status_code}: {response.text[:500]}")
     run_id = response.json()["runId"]
     detail, polls = await _poll(client, run_id, timeout_s=timeout_s)
     wall_ms = round((time.perf_counter() - wall_started) * 1000)
@@ -299,9 +295,7 @@ async def _run_once(
     document_result = (result.get("documents") or [{}])[0]
     extraction = document_result.get("extraction") or {}
     fields = {
-        str(row.get("key")): row
-        for row in document_result.get("fields") or []
-        if row.get("key")
+        str(row.get("key")): row for row in document_result.get("fields") or [] if row.get("key")
     }
     field_score = score_fields(fields, expected_fields)
     rule_score = score_rules(result.get("ruleResults") or [], expected_rules)
@@ -326,7 +320,9 @@ async def _run_once(
         elif text_chars == 0:
             error = "NuExtract markdown output was empty"
     else:
-        text_preview = _text_preview(markdown_text) if markdown_text_chars else _text_preview(raw_text)
+        text_preview = (
+            _text_preview(markdown_text) if markdown_text_chars else _text_preview(raw_text)
+        )
         passed = (
             field_score["accuracy"] >= minimum_accuracy
             and rule_score["accuracy"] == 1.0
@@ -336,10 +332,7 @@ async def _run_once(
         if not cache_ok:
             error = f"Expected cacheHit={expect_cache}, received {cache_hit}"
         elif field_score["accuracy"] < minimum_accuracy:
-            error = (
-                f"Field accuracy {field_score['accuracy']:.1%} is below "
-                f"{minimum_accuracy:.1%}"
-            )
+            error = f"Field accuracy {field_score['accuracy']:.1%} is below {minimum_accuracy:.1%}"
         elif rule_score["accuracy"] < 1.0:
             error = f"Rule accuracy {rule_score['accuracy']:.1%} is below 100%"
 
@@ -391,7 +384,9 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     measured = [row for row in rows if not row.get("skipped")]
     structured = [row for row in measured if not row.get("judgeQuality")]
     field_total = sum(int((row.get("fieldScore") or {}).get("total") or 0) for row in structured)
-    field_correct = sum(int((row.get("fieldScore") or {}).get("correct") or 0) for row in structured)
+    field_correct = sum(
+        int((row.get("fieldScore") or {}).get("correct") or 0) for row in structured
+    )
     rule_total = sum(int((row.get("ruleScore") or {}).get("total") or 0) for row in structured)
     rule_correct = sum(int((row.get("ruleScore") or {}).get("correct") or 0) for row in structured)
     wall_times = [int(row["wallMs"]) for row in measured if isinstance(row.get("wallMs"), int)]
@@ -423,14 +418,10 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
     print("-" * 145)
     for row in rows:
         field_display = (
-            "-"
-            if row.get("judgeQuality")
-            else f"{float(row.get('fieldAccuracy') or 0):.0%}"
+            "-" if row.get("judgeQuality") else f"{float(row.get('fieldAccuracy') or 0):.0%}"
         )
         rule_display = (
-            "-"
-            if row.get("judgeQuality")
-            else f"{float(row.get('ruleAccuracy') or 0):.0%}"
+            "-" if row.get("judgeQuality") else f"{float(row.get('ruleAccuracy') or 0):.0%}"
         )
         values = (
             str(row.get("case") or "")[:18],
@@ -627,9 +618,7 @@ async def run(args: argparse.Namespace) -> int:
                         cache_enabled=cache_enabled,
                     )
 
-            parallel_results = await asyncio.gather(
-                *[_bounded(case) for case in parallel_cases]
-            )
+            parallel_results = await asyncio.gather(*[_bounded(case) for case in parallel_cases])
             for case_rows in parallel_results:
                 rows.extend(case_rows)
 
@@ -724,7 +713,9 @@ def main() -> int:
         help="NuExtract markdown/text quality check; pass when text output is non-empty.",
     )
     parser.add_argument("--strict-models", action="store_true")
-    parser.add_argument("--continue-on-failure", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--continue-on-failure", action=argparse.BooleanOptionalAction, default=True
+    )
     parser.add_argument("--cache-check", action=argparse.BooleanOptionalAction, default=True)
     args = parser.parse_args()
     if not args.document.is_file():

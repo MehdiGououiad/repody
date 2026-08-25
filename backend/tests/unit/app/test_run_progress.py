@@ -4,9 +4,10 @@ import pytest
 
 from repody.app.run.progress import (
     _last_progress_commit,
+    _step,
+    build_run_progress_plan,
     set_run_progress,
 )
-from repody.app.run.progress import _step, build_run_progress_plan
 from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 

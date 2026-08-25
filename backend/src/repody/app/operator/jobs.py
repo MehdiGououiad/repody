@@ -11,7 +11,6 @@ from typing import Any
 import structlog
 
 from repody.runtime.operator.job import (
-    MAX_OUTPUT_CHARS,
     OperatorJob,
     job_from_store,
     job_to_store,

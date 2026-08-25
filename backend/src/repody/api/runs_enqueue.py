@@ -5,9 +5,9 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.errors import raise_app_error
+from repody.app.run.enqueue import enqueue_run
 from repody.runtime.run.contracts import EnqueueRunRequest
 from repody.schemas.workflow import RunCreatedResponse
-from repody.app.run.enqueue import enqueue_run
 
 
 async def enqueue_run_http(

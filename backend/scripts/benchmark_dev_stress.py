@@ -27,8 +27,9 @@ for _path in (_BACKEND / "src", _BACKEND):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 from scripts.benchmark_ui_route import DEFAULT_PDF, _upload_presign  # noqa: E402
+
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -169,7 +170,14 @@ async def _record(
     detail: str = "",
 ) -> None:
     report.http_events.append(
-        HttpEvent(phase=phase, method=method, path=path, status=status, latency_ms=latency_ms, detail=detail)
+        HttpEvent(
+            phase=phase,
+            method=method,
+            path=path,
+            status=status,
+            latency_ms=latency_ms,
+            detail=detail,
+        )
     )
 
 
@@ -186,7 +194,14 @@ async def _healthz(client: httpx.AsyncClient, report: StressReport, t0: float) -
     start = time.perf_counter()
     res = await client.get("/v1/healthz")
     latency = (time.perf_counter() - start) * 1000
-    await _record(report, phase="health", method="GET", path="/v1/healthz", status=res.status_code, latency_ms=latency)
+    await _record(
+        report,
+        phase="health",
+        method="GET",
+        path="/v1/healthz",
+        status=res.status_code,
+        latency_ms=latency,
+    )
     body = _parse_json_body(res)
     sample = {
         "t_ms": round((time.perf_counter() - t0) * 1000),
@@ -294,7 +309,13 @@ async def phase_invalid_files(
         ("empty", "empty.txt", b"", "text/plain", 400),
         ("text_not_pdf", "notes.txt", b"hello world not a pdf", "text/plain", 400),
         ("exe_declared", "malware.exe", b"MZfake", "application/octet-stream", 400),
-        ("pdf_extension_wrong_content", "fake.pdf", b"not a real pdf at all", "application/pdf", 400),
+        (
+            "pdf_extension_wrong_content",
+            "fake.pdf",
+            b"not a real pdf at all",
+            "application/pdf",
+            400,
+        ),
         ("valid_pdf", "Facture.pdf", pdf_bytes, "application/pdf", 202),
         ("minimal_pdf", "tiny.pdf", _MINIMAL_PDF, "application/pdf", 202),
     ]
@@ -342,7 +363,7 @@ async def phase_invalid_files(
                 pass
         elif name == "minimal_pdf" and res.status_code == 503 and expected == 202:
             for attempt in range(8):
-                await asyncio.sleep(_jitter(min(30.0, 2.0 ** attempt)))
+                await asyncio.sleep(_jitter(min(30.0, 2.0**attempt)))
                 retry = await _multipart_run(
                     client,
                     workflow_id=workflow_id,
@@ -436,7 +457,9 @@ async def _track_run(
                 if status == "failed":
                     lifecycle.error = str(body.get("error") or "")[:500]
                 return
-            wait_s = min(_MAX_POLL_S, max(_QUEUED_POLL_S if status == "queued" else poll_s, wait_s + 0.25))
+            wait_s = min(
+                _MAX_POLL_S, max(_QUEUED_POLL_S if status == "queued" else poll_s, wait_s + 0.25)
+            )
         except httpx.HTTPError:
             pass
         await asyncio.sleep(_jitter(wait_s))
@@ -472,7 +495,9 @@ async def phase_burst(
                 enqueued_ms=round((time.perf_counter() - t0) * 1000),
                 enqueue_latency_ms=enqueue_ms,
             )
-            trackers.append(asyncio.create_task(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s)))
+            trackers.append(
+                asyncio.create_task(_track_run(client, lc, t0=t0, stop=stop, poll_s=poll_s))
+            )
             return lc
         except httpx.HTTPStatusError as exc:
             lc = TrackedRun(
@@ -495,7 +520,9 @@ async def phase_burst(
 
     results = await asyncio.gather(*[_one(i) for i in range(burst)])
     lifecycles.extend(results)
-    report.runs.extend([lc for lc in lifecycles if lc.run_id and not lc.run_id.startswith("rejected")])
+    report.runs.extend(
+        [lc for lc in lifecycles if lc.run_id and not lc.run_id.startswith("rejected")]
+    )
     return lifecycles
 
 
@@ -691,7 +718,9 @@ async def run_stress(args: argparse.Namespace) -> int:
         )
 
         print("Phase 1: invalid / unsupported files …")
-        await phase_invalid_files(client, report, workflow_id=workflow_id, doc_id=doc_id, pdf_bytes=pdf_bytes)
+        await phase_invalid_files(
+            client, report, workflow_id=workflow_id, doc_id=doc_id, pdf_bytes=pdf_bytes
+        )
 
         print(f"Phase 2: burst enqueue ({args.burst} concurrent) …")
         await phase_burst(
@@ -764,9 +793,13 @@ async def run_stress(args: argparse.Namespace) -> int:
     print("\n=== Stress test summary ===")
     print(f"  Wall time:           {s['wallMs']} ms")
     print(f"  Invalid file checks: {s['invalidFilesPass']}")
-    print(f"  Runs submitted:      {s['runsSubmitted']}  done={s['runsDone']}  failed={s['runsFailed']}  pending={s['runsPending']}")
+    print(
+        f"  Runs submitted:      {s['runsSubmitted']}  done={s['runsDone']}  failed={s['runsFailed']}  pending={s['runsPending']}"
+    )
     print(f"  Throughput:          {s['throughputRunsPerMinute']} runs/min")
-    print(f"  Max queue depth:     {s['maxObservedQueueDepth']} (health max queued={s['healthMaxQueued']})")
+    print(
+        f"  Max queue depth:     {s['maxObservedQueueDepth']} (health max queued={s['healthMaxQueued']})"
+    )
     print(f"  Enqueue latency ms:  {s['enqueueLatencyMs']}")
     print(f"  Queue wait ms:       {s['queueWaitMs']}")
     print(f"  Total run ms:        {s['totalRunMs']}")
@@ -776,7 +809,10 @@ async def run_stress(args: argparse.Namespace) -> int:
 
     if s["runsPending"] > 0:
         return 1
-    if s["invalidFilesPass"] != f"{len(report.invalid_file_results)}/{len(report.invalid_file_results)}":
+    if (
+        s["invalidFilesPass"]
+        != f"{len(report.invalid_file_results)}/{len(report.invalid_file_results)}"
+    ):
         return 1
     return 0
 
@@ -789,7 +825,9 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         help="OIDC access token for auth-enabled stacks.",
     )
     parser.add_argument("--document", type=Path, default=DEFAULT_PDF)
-    parser.add_argument("--burst", type=int, default=8, help="Concurrent valid runs enqueued at once")
+    parser.add_argument(
+        "--burst", type=int, default=8, help="Concurrent valid runs enqueued at once"
+    )
     parser.add_argument("--random-rounds", type=int, default=20, help="Random mixed-traffic rounds")
     parser.add_argument("--poll-interval-s", type=float, default=0.75)
     parser.add_argument("--timeout-seconds", type=float, default=1200.0)

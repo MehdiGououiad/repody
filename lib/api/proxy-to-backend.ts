@@ -45,7 +45,7 @@ function filterResponseHeaders(source: Headers): Headers {
  */
 export async function proxyToBackend(
   req: NextRequest,
-  pathSegments: string[],
+  pathSegments: string[]
 ): Promise<NextResponse> {
   const origin = backendOrigin();
   const suffix = pathSegments.join("/");
@@ -68,13 +68,12 @@ export async function proxyToBackend(
       redirect: "manual",
     });
   } catch (err) {
-    const detail =
-      err instanceof Error ? err.message : "upstream fetch failed";
+    const detail = err instanceof Error ? err.message : "upstream fetch failed";
     return NextResponse.json(
       {
         detail: `API unreachable at ${origin}: ${detail}`,
       },
-      { status: 502 },
+      { status: 502 }
     );
   }
 

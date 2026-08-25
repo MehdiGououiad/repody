@@ -22,9 +22,7 @@ def _field(key: str, value: str, *, extracted: bool = True) -> ExtractedFieldRes
 
 
 def _result(fields: dict[str, str], *, extracted: bool = True) -> ExtractionResult:
-    return ExtractionResult(
-        fields=[_field(k, v, extracted=extracted) for k, v in fields.items()]
-    )
+    return ExtractionResult(fields=[_field(k, v, extracted=extracted) for k, v in fields.items()])
 
 
 DOC_INVOICE = "doc-invoice"

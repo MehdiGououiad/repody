@@ -1,9 +1,9 @@
 import "server-only";
 
 import createClient from "openapi-fetch";
-import type { paths } from "@/lib/api/generated/schema";
 import { isOidcConfigured } from "@/auth";
 import { backendOrigin } from "@/lib/api/backend-origin";
+import type { paths } from "@/lib/api/generated/schema";
 import { serverFetch } from "@/lib/api/http-server";
 import { getServerAccessToken } from "@/lib/auth/access-token-server";
 

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Response
 
-from repody.schemas.health import HealthLiveResponse, HealthReadinessResponse
 from repody.app.health import (
     is_readiness_ok,
     probe_liveness,
     probe_readiness,
 )
+from repody.schemas.health import HealthLiveResponse, HealthReadinessResponse
 
 router = APIRouter(tags=["health"])
 

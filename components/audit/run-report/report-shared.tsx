@@ -1,7 +1,7 @@
 "use client";
 
-import { cn, formatExtractedFieldValue } from "@/lib/utils";
 import type { RunAuditField } from "@/lib/types/audit";
+import { cn, formatExtractedFieldValue } from "@/lib/utils";
 
 export function formatFieldValue(field: RunAuditField, locale: string): string {
   if (!field.extracted) return "—";

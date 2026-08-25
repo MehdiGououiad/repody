@@ -1,9 +1,9 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { Brain, Code, FileText, GitCompare } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import type { RuleKind, RuleScope } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export function KindToggle({
   kind,

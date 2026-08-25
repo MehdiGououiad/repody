@@ -4,12 +4,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
 from repody.app.run.dispatch_outbox import (
     dispatch_outbox_row,
     enqueue_dispatch,
     replay_dispatch_outbox,
 )
+from repody.infra.db.models import Run, RunDispatchOutbox, RunStatus, Workflow, WorkflowStatus
 
 
 @pytest.fixture

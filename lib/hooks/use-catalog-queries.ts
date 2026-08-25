@@ -3,8 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import type { ModelsCatalogResponse, PlatformConfigResponse } from "@/lib/api/schema-types";
-import type { RuleTemplate } from "@/lib/types";
 import { queryKeys } from "@/lib/hooks/query-keys";
+import type { RuleTemplate } from "@/lib/types";
 
 const CATALOG_STALE_MS = 5 * 60_000;
 
@@ -17,7 +17,7 @@ async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
 export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
   // Structured extraction only — markdown-only OCR engines are not selectable.
   return catalog.models.filter(
-    (model) => model.kind === "document_model" && model.markdownOnly !== true,
+    (model) => model.kind === "document_model" && model.markdownOnly !== true
   );
 }
 
@@ -104,9 +104,7 @@ export function useModelRuntimeConfig(enabled = true) {
     queryKey: queryKeys.catalog.modelRuntimeConfig,
     enabled,
     queryFn: async (): Promise<ModelRuntimeConfigResponse> => {
-      const { data, error, response } = await browserApi.GET(
-        "/v1/platform/model-runtime-config",
-      );
+      const { data, error, response } = await browserApi.GET("/v1/platform/model-runtime-config");
       if (error || !response.ok || !data) throwOnApiError(error, response);
       return {
         models: (data.models ?? []).map((model) => ({

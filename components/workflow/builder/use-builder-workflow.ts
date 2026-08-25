@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { browserApi } from "@/lib/api/openapi-client";
-import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
-import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
-import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
-import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
 import {
   emptyTestSession,
   type TestSessionState,
 } from "@/components/workflow/builder/test-run-session";
+import { browserApi } from "@/lib/api/openapi-client";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
+import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
+import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
+import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
+import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
 
 function readStoredApiKey(workflowId: string, fromWorkflow?: string | null): string {
   if (isFullWorkflowApiKey(fromWorkflow)) return fromWorkflow;
@@ -53,8 +53,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   );
 
   const dirty = useMemo(
-    () =>
-      workflowDraftFingerprint({ name, documents, rules }) !== savedFingerprint,
+    () => workflowDraftFingerprint({ name, documents, rules }) !== savedFingerprint,
     [name, documents, rules, savedFingerprint]
   );
 
@@ -130,10 +129,13 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const handleDeploy = async () => {
     try {
       const id = await persistWorkflow({ navigate: false, toastOnSuccess: false });
-      const { data, error, response } = await browserApi.POST("/v1/workflows/{workflow_id}/deploy", {
-        params: { path: { workflow_id: id } },
-        body: {},
-      });
+      const { data, error, response } = await browserApi.POST(
+        "/v1/workflows/{workflow_id}/deploy",
+        {
+          params: { path: { workflow_id: id } },
+          body: {},
+        }
+      );
       if (error || !response.ok || !data) {
         throw new Error(`Deploy failed: HTTP ${response.status}`);
       }
@@ -178,9 +180,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   useEffect(() => {
     if (!dirty || saving || isNew) return;
     const timer = window.setTimeout(() => {
-      void persistRef
-        .current({ navigate: false, toastOnSuccess: false })
-        .catch(() => {});
+      void persistRef.current({ navigate: false, toastOnSuccess: false }).catch(() => {});
     }, 2500);
     return () => window.clearTimeout(timer);
   }, [dirty, saving, isNew, name, documents, rules]);

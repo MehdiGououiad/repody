@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { auth, isOidcConfigured } from "@/auth";
 import { getRequestAccessToken } from "@/lib/auth/access-token";
 import { isPublicApi, isPublicPage } from "@/lib/auth/public-paths";
@@ -35,10 +35,7 @@ async function forwardWithSessionBearer(
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
-function redirectToLogin(request: {
-  nextUrl: URL;
-  url: string;
-}): NextResponse {
+function redirectToLogin(request: { nextUrl: URL; url: string }): NextResponse {
   const login = new URL("/login", request.url);
   const path = request.nextUrl.pathname;
   if (path && path !== "/login") {
@@ -47,10 +44,12 @@ function redirectToLogin(request: {
   return NextResponse.redirect(login);
 }
 
-function hasValidSession(auth: {
-  user?: unknown;
-  error?: string | null;
-} | null): boolean {
+function hasValidSession(
+  auth: {
+    user?: unknown;
+    error?: string | null;
+  } | null
+): boolean {
   return Boolean(auth?.user && !auth?.error);
 }
 

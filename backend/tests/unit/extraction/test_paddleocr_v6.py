@@ -86,11 +86,7 @@ async def test_extract_with_paddleocr_v6_http(monkeypatch: pytest.MonkeyPatch):
                     "errorMsg": "Success",
                     "result": {
                         "ocrResults": [
-                            {
-                                "prunedResult": {
-                                    "rec_texts": ["AB123456", "AMINE", "ALAOUI"]
-                                }
-                            }
+                            {"prunedResult": {"rec_texts": ["AB123456", "AMINE", "ALAOUI"]}}
                         ]
                     },
                 },

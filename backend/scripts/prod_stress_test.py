@@ -12,7 +12,6 @@ import asyncio
 import contextlib
 import json
 import os
-import random
 import sys
 import time
 import uuid
@@ -31,8 +30,8 @@ for _path in (_BACKEND / "src", _BACKEND):
         sys.path.insert(0, _text)
 
 from scripts.benchmark_dev_stress import (  # noqa: E402
-    TrackedRun,
     StressReport,
+    TrackedRun,
     _build_summary,
     _jitter,
     _record,
@@ -56,6 +55,7 @@ def _default_output_path() -> Path:
         return preferred
     except OSError:
         return Path("/tmp/prod-stress.json")
+
 
 _MAX_ENQUEUE_RETRIES = 12
 _TRACKER_SAMPLE_SIZE = 40
@@ -178,7 +178,9 @@ class ProdStressReport(StressReport):
     slo: dict[str, Any] = field(default_factory=dict)
 
 
-async def _readiness(client: httpx.AsyncClient, report: ProdStressReport, t0: float) -> dict[str, Any]:
+async def _readiness(
+    client: httpx.AsyncClient, report: ProdStressReport, t0: float
+) -> dict[str, Any]:
     start = time.perf_counter()
     res = await client.get("/v1/healthz")
     latency = (time.perf_counter() - start) * 1000
@@ -311,10 +313,15 @@ async def _enqueue_with_retry(
                         {"index": index, "status": status, "detail": detail, "attempt": attempt + 1}
                     )
                     return None
-                retry_s = _retry_after_s(exc.response) or min(60.0, 2.0 ** attempt)
+                retry_s = _retry_after_s(exc.response) or min(60.0, 2.0**attempt)
                 await asyncio.sleep(_jitter(retry_s))
         report.enqueue_rejections.append(
-            {"index": index, "status": "exhausted", "detail": "max enqueue retries", "attempt": _MAX_ENQUEUE_RETRIES}
+            {
+                "index": index,
+                "status": "exhausted",
+                "detail": "max enqueue retries",
+                "attempt": _MAX_ENQUEUE_RETRIES,
+            }
         )
         return None
 
@@ -384,7 +391,9 @@ async def _finalize_pending(
     async def _poll_one(lc: TrackedRun) -> None:
         async with sem:
             deadline = time.perf_counter() + finalize_deadline_s
-            while lc.terminal_status is None and time.perf_counter() < deadline and not stop.is_set():
+            while (
+                lc.terminal_status is None and time.perf_counter() < deadline and not stop.is_set()
+            ):
                 try:
                     res = await client.get(f"/v1/runs/{lc.run_id}/status")
                     if res.status_code == 401 and args.in_cluster_auth:
@@ -450,9 +459,9 @@ def _evaluate_slo(report: ProdStressReport, *, strict: bool, target_count: int) 
     failed = int(summary.get("runsFailed") or 0)
     pending = int(summary.get("runsPending") or 0)
     invalid_pass = str(summary.get("invalidFilesPass") or "")
-    invalid_ok = invalid_pass.endswith(f"/{len(report.invalid_file_results)}") and invalid_pass.startswith(
-        f"{len(report.invalid_file_results)}/"
-    )
+    invalid_ok = invalid_pass.endswith(
+        f"/{len(report.invalid_file_results)}"
+    ) and invalid_pass.startswith(f"{len(report.invalid_file_results)}/")
 
     success_rate = (done / submitted) if submitted else 0.0
     queue_meta = _queue_position_updates_valid(report.queue_observations)
@@ -542,9 +551,13 @@ async def run_prod_stress(args: argparse.Namespace) -> int:
 
         if not args.skip_invalid:
             print("Phase 1: invalid / unsupported file guards …")
-            await phase_invalid_files(client, report, workflow_id=workflow_id, doc_id=doc_id, pdf_bytes=pdf_bytes)
+            await phase_invalid_files(
+                client, report, workflow_id=workflow_id, doc_id=doc_id, pdf_bytes=pdf_bytes
+            )
 
-        print(f"Phase 2: enqueue {args.count} real extraction runs (concurrency={args.concurrency}) …")
+        print(
+            f"Phase 2: enqueue {args.count} real extraction runs (concurrency={args.concurrency}) …"
+        )
         enqueue_sem = asyncio.Semaphore(args.concurrency)
         enqueue_tasks = [
             _enqueue_with_retry(
@@ -562,7 +575,9 @@ async def run_prod_stress(args: argparse.Namespace) -> int:
         enqueue_results = await asyncio.gather(*enqueue_tasks)
         lifecycles = [lc for lc in enqueue_results if lc is not None]
         report.runs.extend(lifecycles)
-        print(f"  Enqueued {len(lifecycles)}/{args.count} runs ({len(report.enqueue_rejections)} hard failures)")
+        print(
+            f"  Enqueued {len(lifecycles)}/{args.count} runs ({len(report.enqueue_rejections)} hard failures)"
+        )
 
         _apply_bearer(client, args)
         sample_ids = [lc.run_id for lc in lifecycles]
@@ -652,7 +667,9 @@ async def run_prod_stress(args: argparse.Namespace) -> int:
     print(f"  Target / submitted:  {args.count} / {s['runsSubmitted']}")
     print(f"  Done / failed / pend:{s['runsDone']} / {s['runsFailed']} / {s['runsPending']}")
     print(f"  Throughput:          {s['throughputRunsPerMinute']} runs/min")
-    print(f"  Max queue depth:     {s['maxObservedQueueDepth']} (health max={s['healthMaxQueued']})")
+    print(
+        f"  Max queue depth:     {s['maxObservedQueueDepth']} (health max={s['healthMaxQueued']})"
+    )
     print(f"  Queue wait ms:       {s['queueWaitMs']}")
     print(f"  Total run ms:        {s['totalRunMs']}")
     print(f"  429/503 hits:        {s['rateLimitOrAdmissionHits']}")
@@ -684,11 +701,24 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Fetch/refresh OIDC token from Keycloak inside the API pod (recommended for long runs).",
     )
-    parser.add_argument("--document", type=Path, default=DEFAULT_STRESS_PDF if DEFAULT_STRESS_PDF.is_file() else DEFAULT_PDF)
-    parser.add_argument("--count", type=int, default=1000, help="Number of real extraction runs to enqueue")
-    parser.add_argument("--concurrency", type=int, default=24, help="Max concurrent enqueue requests")
+    parser.add_argument(
+        "--document",
+        type=Path,
+        default=DEFAULT_STRESS_PDF if DEFAULT_STRESS_PDF.is_file() else DEFAULT_PDF,
+    )
+    parser.add_argument(
+        "--count", type=int, default=1000, help="Number of real extraction runs to enqueue"
+    )
+    parser.add_argument(
+        "--concurrency", type=int, default=24, help="Max concurrent enqueue requests"
+    )
     parser.add_argument("--poll-interval-s", type=float, default=2.0)
-    parser.add_argument("--timeout-seconds", type=float, default=14_400.0, help="Max wait for queue drain (default 4h)")
+    parser.add_argument(
+        "--timeout-seconds",
+        type=float,
+        default=14_400.0,
+        help="Max wait for queue drain (default 4h)",
+    )
     parser.add_argument("--require-workers", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--minio-upload-base",

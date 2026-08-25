@@ -1,16 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { useTranslations } from "next-intl";
 import { AlertTriangle, ArrowUpRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { QueueLiveBadge } from "@/components/dashboard/queue-live-badge";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts";
+import { QueueLiveBadge } from "@/components/dashboard/queue-live-badge";
 import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
 import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
-import { useDashboardLive, type LiveDashboardData } from "@/lib/hooks/use-dashboard-live";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { type LiveDashboardData, useDashboardLive } from "@/lib/hooks/use-dashboard-live";
 import type { Audit } from "@/lib/types";
 
 const KpiCard = dynamic(
@@ -47,7 +47,11 @@ function AttentionRow({ audits }: { audits: Audit[] }) {
           <p className="text-sm font-semibold text-danger">{t("openFailures")}</p>
         </div>
         <Link href="/audits?status=failed">
-          <Button variant="ghost" size="sm" className="h-7 text-xs text-danger hover:text-danger gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs text-danger hover:text-danger gap-1"
+          >
             {t("viewAll")}
             <ArrowUpRight className="h-3 w-3" />
           </Button>
@@ -119,7 +123,9 @@ export function BusinessDashboard({
       </div>
 
       <section className="space-y-3">
-        <h2 className="font-display text-base font-semibold text-on-surface">{t("auditActivity")}</h2>
+        <h2 className="font-display text-base font-semibold text-on-surface">
+          {t("auditActivity")}
+        </h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {live.kpis.slice(0, 4).map((metric) => (
             <KpiCard key={metric.id} metric={metric} />
@@ -138,8 +144,13 @@ export function BusinessDashboard({
 
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-on-surface">{t("recentSubmissions")}</h2>
-          <Link href="/audits" className="text-xs text-primary hover:underline flex items-center gap-1">
+          <h2 className="font-display text-base font-semibold text-on-surface">
+            {t("recentSubmissions")}
+          </h2>
+          <Link
+            href="/audits"
+            className="text-xs text-primary hover:underline flex items-center gap-1"
+          >
             {tCommon("viewAll")}
             <ArrowUpRight className="h-3 w-3" />
           </Link>

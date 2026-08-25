@@ -4,11 +4,11 @@ import io
 
 from PIL import Image
 
-from repody.extraction.types import DocumentBundle
 from repody.extraction.render import (
     REPODY_VLM_RENDER,
     prepare_nuextract_pages,
 )
+from repody.extraction.types import DocumentBundle
 
 
 def test_render_policies_follow_upstream_docs():

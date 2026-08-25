@@ -8,11 +8,7 @@ export default async function UsersRoutePage() {
 
   return (
     <PageShell>
-      <PageHeader
-        title={t("title")}
-        description={t("description")}
-        eyebrow={t("eyebrow")}
-      />
+      <PageHeader title={t("title")} description={t("description")} eyebrow={t("eyebrow")} />
       <UsersPage />
     </PageShell>
   );

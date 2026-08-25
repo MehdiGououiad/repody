@@ -8,10 +8,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
-from repody.infra.db.models import Run, RunStatus
 from repody.app.queue.position import apply_queue_meta, queue_position
 from repody.app.run.progress import init_queued_progress
 from repody.app.run.sse import publish_run_progress
+from repody.infra.db.models import Run, RunStatus
 from repody.settings import get_settings
 
 

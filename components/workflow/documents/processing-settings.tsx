@@ -1,8 +1,7 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-
 import { AlertCircle, RefreshCw } from "lucide-react";
+import type { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,11 +14,11 @@ import {
 } from "@/components/ui/select";
 import {
   GLM_OCR_CATALOG_ID,
+  isMarkdownOnlyCatalogId,
   PADDLEOCR_QWEN_CATALOG_ID,
   PADDLEOCR_V6_CATALOG_ID,
-  REPODY_VLM_CATALOG_ID,
-  isMarkdownOnlyCatalogId,
   publicDocumentModelLabel,
+  REPODY_VLM_CATALOG_ID,
 } from "@/lib/document-model-branding";
 import type { DocumentDef } from "@/lib/types";
 
@@ -40,10 +39,7 @@ export function ProcessingSettings({
 }) {
   const { error, loaded, documentModelIds, defaultDocumentModel } = options;
   const autoOn = Boolean(doc.nativePdfAuto);
-  const selected =
-    doc.documentModelId?.trim() ||
-    defaultDocumentModel ||
-    REPODY_VLM_CATALOG_ID;
+  const selected = doc.documentModelId?.trim() || defaultDocumentModel || REPODY_VLM_CATALOG_ID;
 
   const modelHint =
     selected === GLM_OCR_CATALOG_ID
@@ -100,17 +96,14 @@ export function ProcessingSettings({
 
       <div className="max-w-sm space-y-1.5">
         <Label htmlFor={`extraction-model-${doc.id}`} className="text-xs font-semibold">
-          {autoOn
-            ? t("extraction.fallbackDocumentModelLabel")
-            : t("extraction.documentModelLabel")}
+          {autoOn ? t("extraction.fallbackDocumentModelLabel") : t("extraction.documentModelLabel")}
         </Label>
         <Select
           value={selected}
           disabled={!loaded || documentModelIds.length === 0}
           onValueChange={(value) => {
             const entry = documentModelIds.find((model) => model.id === value);
-            const nextMarkdownOnly =
-              entry?.markdownOnly === true || isMarkdownOnlyCatalogId(value);
+            const nextMarkdownOnly = entry?.markdownOnly === true || isMarkdownOnlyCatalogId(value);
             onChange({
               documentModelId: value,
               extractionMode: "document_model",
@@ -133,11 +126,7 @@ export function ProcessingSettings({
           </SelectTrigger>
           <SelectContent>
             {documentModelIds.map((model) => (
-              <SelectItem
-                key={model.id}
-                value={model.id}
-                disabled={model.available === false}
-              >
+              <SelectItem key={model.id} value={model.id} disabled={model.available === false}>
                 {publicDocumentModelLabel(model.id)}
                 {model.markdownOnly ? ` · ${t("extraction.markdownOnlyBadge")}` : ""}
                 {model.id === defaultDocumentModel ? ` · ${t("extraction.defaultBadge")}` : ""}

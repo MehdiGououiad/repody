@@ -172,7 +172,9 @@ async function serve() {
   if (!ollama) {
     console.error("ollama not found on PATH.");
     console.error("Install from https://ollama.com/download (official GLM-OCR CPU path).");
-    console.error("Docs: https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md");
+    console.error(
+      "Docs: https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md"
+    );
     process.exit(1);
   }
 
@@ -183,7 +185,9 @@ async function serve() {
     const outLog = path.join(LOG_DIR, "ollama.out.log");
     const errLog = path.join(LOG_DIR, "ollama.err.log");
     console.log(`Starting ollama serve on :${port}…`);
-    console.log(`  docs: https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md`);
+    console.log(
+      `  docs: https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md`
+    );
     const child = spawn(ollama, ["serve"], {
       cwd: GLM_DIR,
       detached: true,
@@ -218,9 +222,7 @@ async function serve() {
 function stopManaged() {
   const { host, port } = resolveConfig();
   if (!fs.existsSync(PID_FILE)) {
-    console.log(
-      `No managed Ollama pid (${PID_FILE}). Leaving system Ollama on :${port} running.`,
-    );
+    console.log(`No managed Ollama pid (${PID_FILE}). Leaving system Ollama on :${port} running.`);
     console.log("To stop system Ollama, quit the Ollama app / service yourself.");
     return;
   }
@@ -260,7 +262,7 @@ else if (cmd === "warmup") void warmup();
 else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download",
+    "Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download"
   );
   process.exit(2);
 }

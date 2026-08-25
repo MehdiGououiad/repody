@@ -10,28 +10,11 @@ from functools import lru_cache
 
 import structlog
 
+import repody.extraction.register  # noqa: F401 — catalog adapters
 from repody.catalog.registry import (
     extract_with_document_model,
     normalize_model_id,
     parse_document_model,
-)
-import repody.extraction.register  # noqa: F401 — catalog adapters
-from repody.extraction.pdf_inspector_auto import (
-    FALLBACK_SOURCE,
-    NATIVE_SOURCE,
-    extract_via_native_markdown,
-    inspect_pdf_bytes,
-    mime_is_pdf,
-    native_pdf_meta,
-    native_quality_ok,
-)
-from repody.extraction.types import (
-    ExtractionIclExample,
-    ExtractionMetadata,
-    ExtractionResult,
-    SchemaFieldSpec,
-    load_document_bundle,
-    truncate_text,
 )
 from repody.extraction.cache import (
     cache_key,
@@ -43,14 +26,31 @@ from repody.extraction.cache import (
 )
 from repody.extraction.modes import (
     LOGIC_VALIDATION,
+    gpu_cold_start_likely,
     parse_read_path,
     read_path_label,
     resolve_read_path_for_document,
     validation_mode_label,
-    gpu_cold_start_likely,
 )
 from repody.extraction.nuextract import extraction_inference_profile_key
+from repody.extraction.pdf_inspector_auto import (
+    FALLBACK_SOURCE,
+    NATIVE_SOURCE,
+    extract_via_native_markdown,
+    inspect_pdf_bytes,
+    mime_is_pdf,
+    native_pdf_meta,
+    native_quality_ok,
+)
 from repody.extraction.schema import empty_fields_from_schema, fields_from_sample_values
+from repody.extraction.types import (
+    ExtractionIclExample,
+    ExtractionMetadata,
+    ExtractionResult,
+    SchemaFieldSpec,
+    load_document_bundle,
+    truncate_text,
+)
 from repody.infra.observability.tracing import start_span
 from repody.settings import get_settings
 from repody.util.json_shape import normalize_keys_to_snake
@@ -317,7 +317,7 @@ async def extract_document(
                         confidence=inspection.confidence,
                         pages=inspection.page_count,
                     )
-                except Exception as exc:  # noqa: BLE001 — fall back to selected model
+                except Exception as exc:
                     log.warning(
                         "native_pdf_auto_qwen_failed",
                         error=repr(exc),

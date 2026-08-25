@@ -6,8 +6,8 @@ from datetime import UTC, datetime
 
 import pytest
 
-from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from repody.app.run.persistence import try_claim_queued_run
+from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 
 
 @pytest.fixture

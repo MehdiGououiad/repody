@@ -1,12 +1,15 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
 import { Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "lucide-react";
-
-import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/types/audit";
-import { formatDurationMs } from "@/lib/types/audit";
+import { useLocale, useTranslations } from "next-intl";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { publicDocumentModelLabel } from "@/lib/document-model-branding";
+import type {
+  RunAuditDetail,
+  RunAuditMetadata,
+  RunDocumentExtractionMeta,
+} from "@/lib/types/audit";
+import { formatDurationMs } from "@/lib/types/audit";
 import { cn, formatExtractedFieldValue } from "@/lib/utils";
 
 function MetaChip({
@@ -19,8 +22,15 @@ function MetaChip({
   className?: string;
 }) {
   return (
-    <div className={cn("rounded-lg border border-border bg-surface-container-low px-3 py-2", className)}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">{label}</p>
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-surface-container-low px-3 py-2",
+        className
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
+        {label}
+      </p>
       <p className="text-xs font-medium text-on-surface mt-0.5">{value}</p>
     </div>
   );
@@ -39,7 +49,13 @@ export function RunMetadataPanel({
       <MetaChip label="Total duration" value={formatDurationMs(metadata.durationMs)} />
       <MetaChip label="Extraction" value={formatDurationMs(metadata.extractionMs)} />
       <MetaChip label="Validation time" value={formatDurationMs(metadata.validationMs)} />
-      {metadata.llmModel && <MetaChip label="LLM model" value={metadata.llmModel} className="col-span-2 sm:col-span-1" />}
+      {metadata.llmModel && (
+        <MetaChip
+          label="LLM model"
+          value={metadata.llmModel}
+          className="col-span-2 sm:col-span-1"
+        />
+      )}
     </div>
   );
 }
@@ -142,7 +158,10 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
                 )}
                 <div className="space-y-1.5">
                   {doc.fields.map((field) => (
-                    <div key={field.key} className="flex items-baseline justify-between gap-3 text-xs">
+                    <div
+                      key={field.key}
+                      className="flex items-baseline justify-between gap-3 text-xs"
+                    >
                       <code className="font-mono text-primary shrink-0">{field.key}</code>
                       <span
                         className={cn(

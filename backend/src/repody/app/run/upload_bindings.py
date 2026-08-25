@@ -10,8 +10,6 @@ from typing import Any, cast
 from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.runtime.run.contracts import FileBinding
 from repody.app.uploads.document_slots import resolve_document_slot_keys
 from repody.app.uploads.validation import (
     UploadValidationError,
@@ -19,8 +17,10 @@ from repody.app.uploads.validation import (
     validate_upload_file,
 )
 from repody.app.workflow import load_workflow
-from repody.settings import get_settings
 from repody.infra.storage.factory import get_storage
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.run.contracts import FileBinding
+from repody.settings import get_settings
 
 
 def _validation_error(message: str) -> AppError:

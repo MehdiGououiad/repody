@@ -6,9 +6,9 @@ from datetime import UTC, datetime
 
 import pytest
 
+from repody.app.run.commands import finalize_pending_completion
 from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from repody.runtime.agent_metadata import PendingCompletion, store_pending_completion
-from repody.app.run.commands import finalize_pending_completion
 
 
 @pytest.fixture

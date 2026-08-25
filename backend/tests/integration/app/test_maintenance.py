@@ -6,9 +6,9 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from repody.app.ops.maintenance import reap_stale_runs
 from repody.app.run.dispatch import mark_run_dispatch_failed
+from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from repody.settings import clear_settings_cache
 
 

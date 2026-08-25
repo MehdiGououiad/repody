@@ -8,8 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.infra.db.models import Run, Workflow
 from repody.extraction.modes import DEFAULT_READ_PATH_ID, parse_read_path
+from repody.infra.db.models import Run, Workflow
 
 WorkerPool = str  # "extract" | "fast"
 
@@ -36,7 +36,11 @@ def classify_bindings_for_workflow(
     for binding in file_bindings:
         doc_id = getattr(binding, "document_id", None)
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
+        mode = (
+            _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID)
+            if wf_doc
+            else DEFAULT_READ_PATH_ID
+        )
         if needs_extract_pool(mode):
             return "extract"
     return "fast"
@@ -55,7 +59,11 @@ def classify_run_documents(
     for rd in uploaded:
         doc_id = _value(rd, "document_id")
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
+        mode = (
+            _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID)
+            if wf_doc
+            else DEFAULT_READ_PATH_ID
+        )
         if needs_extract_pool(mode):
             return "extract"
     return "fast"

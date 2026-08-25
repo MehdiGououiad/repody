@@ -1,6 +1,7 @@
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 from repody.infra.auth.dependencies import (
     extract_bearer,
@@ -8,7 +9,6 @@ from repody.infra.auth.dependencies import (
     require_permission,
 )
 from repody.settings import clear_settings_cache
-from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 
 @pytest.fixture(autouse=True)

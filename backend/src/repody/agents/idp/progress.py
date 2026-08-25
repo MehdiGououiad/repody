@@ -80,9 +80,7 @@ class IdpProgressPresenter:
             force=(index == 0 or index == total - 1),
         )
 
-    async def on_extract_done(
-        self, job: ExtractionJob, meta: IdpExtractionMeta
-    ) -> None:
+    async def on_extract_done(self, job: ExtractionJob, meta: IdpExtractionMeta) -> None:
         step_id = f"extract-{job.document_id}"
         mark_step_done(
             self.progress_steps,

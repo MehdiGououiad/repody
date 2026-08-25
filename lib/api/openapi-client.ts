@@ -1,6 +1,6 @@
 import createClient from "openapi-fetch";
-import type { paths } from "@/lib/api/generated/schema";
 import { formatApiError } from "@/lib/api/api-error";
+import type { paths } from "@/lib/api/generated/schema";
 
 /** Browser client: hits the Next.js `/api` rewrite, where Proxy adds the session token. */
 export function createBrowserOpenApiClient() {
@@ -14,12 +14,7 @@ export function throwOnApiError(
   response: Response,
   fallback = `HTTP ${response.status}`
 ): never {
-  const text =
-    typeof error === "string"
-      ? error
-      : error != null
-        ? JSON.stringify(error)
-        : "";
+  const text = typeof error === "string" ? error : error != null ? JSON.stringify(error) : "";
   throw new Error(formatApiError(text) || fallback);
 }
 

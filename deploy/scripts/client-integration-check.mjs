@@ -107,11 +107,7 @@ const steps = [
       clientRuntimeEs,
     ],
   ],
-  [
-    "Client manifest contract",
-    "node",
-    ["deploy/scripts/check-client-manifests.mjs"],
-  ],
+  ["Client manifest contract", "node", ["deploy/scripts/check-client-manifests.mjs"]],
 ];
 
 console.error("Client integration preflight\n");
@@ -131,7 +127,9 @@ const apiLive =
 if (apiLive) {
   console.error(`ok: API live probe: ${apiLive}\n`);
 } else {
-  console.error("warn: API not reachable — start Compose dev (docs/deploy/LOCAL.md) or K8s stack\n");
+  console.error(
+    "warn: API not reachable — start Compose dev (docs/deploy/LOCAL.md) or K8s stack\n"
+  );
 }
 
 if (live && apiLive) {

@@ -1,8 +1,8 @@
 "use client";
 
 import { BrainCircuit, Gauge, ShieldCheck, Zap } from "lucide-react";
-import { formatBytes, type PlatformConfig } from "@/lib/api/platform-config";
 import type { OperatorStatus } from "@/lib/api/operator";
+import { formatBytes, type PlatformConfig } from "@/lib/api/platform-config";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { MetricCard } from "../settings-shared";
 
@@ -65,13 +65,16 @@ export function OverviewTab({
         <div className="px-6 py-5 border-b border-border bg-surface-container-low">
           <h2 className="font-display text-lg font-semibold">Effective runtime configuration</h2>
           <p className="text-sm text-on-surface-variant mt-1">
-            Values currently used by the API and workers. Environment changes require a service restart.
+            Values currently used by the API and workers. Environment changes require a service
+            restart.
           </p>
         </div>
         <dl className="grid sm:grid-cols-2 xl:grid-cols-3">
           {runtimeRows.map(([label, value]) => (
             <div key={label} className="px-6 py-4 border-b border-r border-border/70">
-              <dt className="text-[11px] uppercase tracking-wider text-on-surface-variant">{label}</dt>
+              <dt className="text-[11px] uppercase tracking-wider text-on-surface-variant">
+                {label}
+              </dt>
               <dd className="font-mono text-sm mt-1 break-words">{value}</dd>
             </div>
           ))}

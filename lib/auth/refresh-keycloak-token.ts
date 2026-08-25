@@ -8,14 +8,10 @@ export type RefreshableJwt = {
   error?: string;
 };
 
-export async function refreshKeycloakAccessToken(
-  token: RefreshableJwt
-): Promise<RefreshableJwt> {
-  const issuer =
-    process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? process.env.AUTH_KEYCLOAK_ISSUER;
+export async function refreshKeycloakAccessToken(token: RefreshableJwt): Promise<RefreshableJwt> {
+  const issuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? process.env.AUTH_KEYCLOAK_ISSUER;
   const clientId = process.env.AUTH_KEYCLOAK_ID;
-  const clientSecret =
-    process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
+  const clientSecret = process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
 
   if (!issuer || !clientId || !token.refreshToken) {
     return { ...token, error: "RefreshTokenError" };

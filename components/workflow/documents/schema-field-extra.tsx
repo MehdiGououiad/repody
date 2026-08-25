@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import type { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,11 +19,11 @@ import {
   groupTemplateTypes,
   isListTemplateType,
   isStructureTemplateType,
+  type NuExtractTemplateType,
+  type NuExtractTypeGroup,
   scalarTemplateType,
   supportsListTemplateType,
   withListTemplateType,
-  type NuExtractTemplateType,
-  type NuExtractTypeGroup,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
 import { shortId } from "@/lib/utils";
@@ -32,7 +32,8 @@ const CHILD_TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "advanced"];
 
 function childTypeLabel(t: ReturnType<typeof useTranslations>, value: string) {
   const scalar = scalarTemplateType(value);
-  const key = `schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label";
+  const key =
+    `schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label";
   try {
     return isListTemplateType(value) ? `${t(key)} · ${t("schema.listModeSuffix")}` : t(key);
   } catch {
@@ -108,7 +109,9 @@ function NestedChildrenEditor({
   const grouped = groupTemplateTypes(
     getSelectableTemplateTypes().filter((type) => {
       if (mode === "object-array") {
-        return type !== "object-array" && type !== "object" && type !== "enum" && type !== "multi-enum";
+        return (
+          type !== "object-array" && type !== "object" && type !== "enum" && type !== "multi-enum"
+        );
       }
       // Nested object groups may themselves nest further objects / tables / enums.
       return true;
@@ -121,10 +124,8 @@ function NestedChildrenEditor({
     onChange(fields.map((child) => (child.id === id ? { ...child, ...patch } : child)));
   };
 
-  const title =
-    mode === "object" ? t("schema.objectFieldsLabel") : t("schema.rowColumnsLabel");
-  const hint =
-    mode === "object" ? t("schema.objectFieldsHint") : t("schema.rowColumnsHint");
+  const title = mode === "object" ? t("schema.objectFieldsLabel") : t("schema.rowColumnsLabel");
+  const hint = mode === "object" ? t("schema.objectFieldsHint") : t("schema.rowColumnsHint");
   const addLabel = mode === "object" ? t("schema.addObjectField") : t("schema.addRowColumn");
   const removeLabel =
     mode === "object" ? t("schema.removeObjectField") : t("schema.removeRowColumn");

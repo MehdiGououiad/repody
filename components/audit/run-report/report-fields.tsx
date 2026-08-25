@@ -1,8 +1,8 @@
 "use client";
 
 import { AlertTriangle, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { RunAuditDetail, RunAuditDocument } from "@/lib/types/audit";
+import { cn } from "@/lib/utils";
 import {
   ConfidenceBar,
   formatFieldValue,
@@ -22,7 +22,7 @@ function RunDocFieldsCardHeader({
   const extractedLabel =
     typeof L.docExtracted === "function"
       ? L.docExtracted(extractedCount, doc.fields.length)
-      : L.docExtracted ?? `${extractedCount}/${doc.fields.length} extracted`;
+      : (L.docExtracted ?? `${extractedCount}/${doc.fields.length} extracted`);
 
   return (
     <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-surface-container-low">
@@ -40,13 +40,7 @@ function RunDocFieldsCardHeader({
   );
 }
 
-function RunDocFieldsListBody({
-  doc,
-  locale,
-}: {
-  doc: RunAuditDocument;
-  locale: string;
-}) {
+function RunDocFieldsListBody({ doc, locale }: { doc: RunAuditDocument; locale: string }) {
   return (
     <div className="divide-y divide-border">
       {doc.fields.map((field) => (
@@ -54,7 +48,9 @@ function RunDocFieldsListBody({
           key={field.key}
           className={cn(
             "flex items-center gap-3 px-4 py-3 transition-colors",
-            field.flagged ? "bg-danger/5 border-l-2 border-l-danger" : "hover:bg-surface-container-lowest"
+            field.flagged
+              ? "bg-danger/5 border-l-2 border-l-danger"
+              : "hover:bg-surface-container-lowest"
           )}
         >
           <div className="flex-1 min-w-0">
@@ -67,7 +63,9 @@ function RunDocFieldsListBody({
               >
                 {field.key}
               </code>
-              {field.flagged ? <AlertTriangle className="h-3 w-3 text-danger shrink-0" aria-hidden="true" /> : null}
+              {field.flagged ? (
+                <AlertTriangle className="h-3 w-3 text-danger shrink-0" aria-hidden="true" />
+              ) : null}
             </div>
             {field.description ? (
               <p className="text-[10px] text-on-surface-variant truncate mt-0.5">
@@ -100,13 +98,7 @@ function RunDocFieldsListBody({
   );
 }
 
-function RunDocFieldsTableBody({
-  doc,
-  locale,
-}: {
-  doc: RunAuditDocument;
-  locale: string;
-}) {
+function RunDocFieldsTableBody({ doc, locale }: { doc: RunAuditDocument; locale: string }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -123,11 +115,7 @@ function RunDocFieldsTableBody({
               <td className="px-4 py-2 font-mono text-xs">{field.key}</td>
               <td className="px-4 py-2 tabular-nums">{formatFieldValue(field, locale)}</td>
               <td className="px-4 py-2">
-                {field.confidence != null ? (
-                  <ConfidenceBar value={field.confidence} />
-                ) : (
-                  "—"
-                )}
+                {field.confidence != null ? <ConfidenceBar value={field.confidence} /> : "—"}
               </td>
             </tr>
           ))}

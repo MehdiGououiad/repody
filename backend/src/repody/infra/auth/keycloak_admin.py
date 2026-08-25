@@ -223,15 +223,11 @@ async def set_user_app_roles(
     if not all_roles_r.is_ok:
         return Result.fail(all_roles_r.error or _admin_error("list_realm_roles failed"))
     by_name = {
-        role["name"]: role
-        for role in all_roles_r.unwrap()
-        if role.get("name") in APP_REALM_ROLES
+        role["name"]: role for role in all_roles_r.unwrap() if role.get("name") in APP_REALM_ROLES
     }
     missing = [name for name in role_names if name not in by_name]
     if missing:
-        return Result.fail(
-            _admin_error(f"Realm roles not found in Keycloak: {', '.join(missing)}")
-        )
+        return Result.fail(_admin_error(f"Realm roles not found in Keycloak: {', '.join(missing)}"))
 
     current_r = await user_realm_roles(user_id, settings=cfg)
     if not current_r.is_ok:

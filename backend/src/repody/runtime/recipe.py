@@ -54,9 +54,7 @@ def resolve_recipe(
     order = requested if requested is not None else DEFAULT_AGENT_ORDER
     enabled = _enabled_set(settings)
     # Only IDP is implemented; ignore fraud/computer_use if still present in requests.
-    agents = tuple(
-        agent for agent in order if agent in enabled and agent is AgentId.IDP
-    )
+    agents = tuple(agent for agent in order if agent in enabled and agent is AgentId.IDP)
 
     if not agents:
         return Result.fail(
@@ -114,8 +112,7 @@ async def execute_platform_run(
     if not recipe_r.is_ok or recipe_r.value is None:
         err = recipe_r.error
         return Result.fail(
-            err
-            or AppError(code=ErrorCode.VALIDATION, message="invalid agent recipe")
+            err or AppError(code=ErrorCode.VALIDATION, message="invalid agent recipe")
         )
 
     recipe = recipe_r.value.agents
@@ -156,9 +153,7 @@ async def execute_platform_run(
     # Reload run after IDP persist (may have committed).
     refreshed = await session.get(Run, run.id)
     if refreshed is None:
-        return Result.fail(
-            AppError(code=ErrorCode.INFRA, message=f"run vanished: {run.id}")
-        )
+        return Result.fail(AppError(code=ErrorCode.INFRA, message=f"run vanished: {run.id}"))
     record_agent_outcome(refreshed, outcome)
     await session.flush()
     await session.commit()

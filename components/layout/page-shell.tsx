@@ -19,11 +19,7 @@ function PageShellRoot({ children, className }: PageShellProps) {
 }
 
 function PageShellStagger({ children, className }: PageShellProps) {
-  return (
-    <PageShellRoot className={cn("page-enter-stagger", className)}>
-      {children}
-    </PageShellRoot>
-  );
+  return <PageShellRoot className={cn("page-enter-stagger", className)}>{children}</PageShellRoot>;
 }
 
 export const PageShell = Object.assign(PageShellRoot, {

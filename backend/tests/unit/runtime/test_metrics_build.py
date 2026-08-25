@@ -5,8 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from repody.runtime.metrics.build import (
-    MetricsSummary,
     DailyCounts,
+    MetricsSummary,
     build_kpis,
     build_stale_alerts,
     build_violations,

@@ -1,8 +1,8 @@
 import pytest
+from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 from repody.infra.auth.jwt_validator import JwtValidationError, principal_from_bearer
 from repody.settings import Settings, clear_settings_cache
-from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
 
 @pytest.fixture(autouse=True)

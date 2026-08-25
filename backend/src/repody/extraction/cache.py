@@ -50,9 +50,7 @@ def _field_config_fingerprint(field: SchemaFieldSpec) -> str:
             child_name = child.name.strip().lower()
             if not child_name:
                 continue
-            chunks.append(
-                f"{child_name}:{child.template_type or ''}:{child.description.strip()}"
-            )
+            chunks.append(f"{child_name}:{child.template_type or ''}:{child.description.strip()}")
     return "|".join(chunks)
 
 

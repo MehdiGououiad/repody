@@ -1,7 +1,8 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import { AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -62,10 +62,7 @@ export function ConfirmDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {cancelLabel ?? tCommon("cancel")}
           </Button>
-          <Button
-            variant={destructive ? "destructive" : "default"}
-            onClick={handleConfirm}
-          >
+          <Button variant={destructive ? "destructive" : "default"} onClick={handleConfirm}>
             {confirmLabel ?? (destructive ? tCommon("delete") : tCommon("confirm"))}
           </Button>
         </DialogFooter>

@@ -6,8 +6,8 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from repody.extraction.modes import LOGIC_VALIDATION, ValidationMode
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.extraction.modes import LOGIC_VALIDATION, ValidationMode
 from repody.integration.fixtures import resolve_facture_pdf
 
 FACTURE_PDF = resolve_facture_pdf()
@@ -16,6 +16,7 @@ EXPECTED_TVA = "1000.00"
 TOTAL_FIELD = "total_amount"
 TVA_FIELD = "tva"
 WORKFLOW_NAME = "Facture E2E"
+
 
 def _logic_compare_rule(
     *,

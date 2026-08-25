@@ -2,9 +2,7 @@ import type { DocumentDef } from "@/lib/types";
 
 /** Workflow document slots that accept an uploaded file (named type + schema fields). */
 export function workflowDocumentSlots(documents: DocumentDef[]): DocumentDef[] {
-  return documents.filter(
-    (d) => d.documentType.trim() && d.schema.some((f) => f.name.trim())
-  );
+  return documents.filter((d) => d.documentType.trim() && d.schema.some((f) => f.name.trim()));
 }
 
 function slugFileName(documentType: string): string {
@@ -40,9 +38,7 @@ export function buildWorkflowRunSnippets({
   const documentTypes = slots.map((d) => d.documentType.trim());
   const typesJson = jsonArray(documentTypes);
 
-  const curlFileLines = slots.map(
-    (d) => `  -F "files=@/path/to/${slugFileName(d.documentType)}"`
-  );
+  const curlFileLines = slots.map((d) => `  -F "files=@/path/to/${slugFileName(d.documentType)}"`);
   const curl =
     slots.length === 0
       ? [

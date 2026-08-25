@@ -6,7 +6,10 @@ from repody.extraction.nuextract import (
 
 
 def test_suggest_template_type_is_document_agnostic_default():
-    assert suggest_template_type("invoice_date", "Date on the invoice") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+    assert (
+        suggest_template_type("invoice_date", "Date on the invoice")
+        == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+    )
     assert suggest_template_type("contact_email", "") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
     assert suggest_template_type("total_amount", "Total TTC") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE
     assert suggest_template_type("custom_label", "") == DEFAULT_NUEXTRACT_TEMPLATE_TYPE

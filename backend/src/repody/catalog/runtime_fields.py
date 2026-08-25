@@ -443,9 +443,7 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             key="glm_ocr_pdf_max_pages",
             env_var="AUDIT_GLM_OCR_PDF_MAX_PAGES",
             label="PDF max pages",
-            description=(
-                "Optional SDK pdf_max_pages cap. Empty = official unlimited (null)."
-            ),
+            description=("Optional SDK pdf_max_pages cap. Empty = official unlimited (null)."),
             value=settings.glm_ocr_pdf_max_pages,
             restart="worker",
         ),
@@ -565,7 +563,9 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
                 runtime_model=spec.runtime_model,
                 enabled=True,
                 inference_url=inference_url,
-                render_policy=RENDER_POLICIES.get(spec.id).doc_ref if spec.id in RENDER_POLICIES else "",
+                render_policy=RENDER_POLICIES.get(spec.id).doc_ref
+                if spec.id in RENDER_POLICIES
+                else "",
                 fields=fields,
             )
         )

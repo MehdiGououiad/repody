@@ -73,7 +73,7 @@ def text_to_json_chat_payload(
         "Extract document fields from OCR text. "
         "Reply with one JSON object only. No markdown fences. No commentary. "
         f"Top-level keys must be exactly: {keys}. "
-        "Use dotted keys for nested fields (e.g. \"address.city\"). "
+        'Use dotted keys for nested fields (e.g. "address.city"). '
         "For object-array fields return a JSON array of objects. "
         "Use empty string when unknown. "
         "Copy values from the OCR text only — do not invent, translate, "

@@ -17,9 +17,9 @@ import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
   isListTemplateType,
   isStructureTemplateType,
+  type NuExtractTemplateType,
   scalarTemplateType,
   withListTemplateType,
-  type NuExtractTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
 import { shortId } from "@/lib/utils";

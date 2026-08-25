@@ -55,7 +55,9 @@ def build_processing_paths(
 async def fetch_models_catalog() -> ModelsCatalogResponse:
     settings = get_settings()
     entries, default_doc = await list_catalog_with_availability()
-    paths, validation_modes, default_path, default_validation_mode = build_processing_paths(settings)
+    paths, validation_modes, default_path, default_validation_mode = build_processing_paths(
+        settings
+    )
     models: list[CatalogModelEntry] = []
 
     for entry in entries:

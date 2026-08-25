@@ -1,7 +1,7 @@
 import dynamic from "next/dynamic";
 import { BuilderShellLoader } from "@/components/workflow/builder-shell-loader";
-import { shortId } from "@/lib/utils";
 import type { Workflow } from "@/lib/types";
+import { shortId } from "@/lib/utils";
 
 const NewWorkflowBuilder = dynamic(
   () =>

@@ -1,17 +1,17 @@
 "use client";
 
-import { useTransition } from "react";
+import { Check, Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { Languages, Check } from "lucide-react";
+import { useTransition } from "react";
+import { setLocale } from "@/app/actions/set-locale";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { setLocale } from "@/app/actions/set-locale";
-import { locales, type Locale } from "@/i18n/config";
+import { type Locale, locales } from "@/i18n/config";
 
 const languages: Record<Locale, { label: string; short: string }> = {
   en: { label: "English", short: "EN" },
@@ -34,9 +34,7 @@ export function LanguageSwitcher() {
           disabled={pending}
         >
           <Languages className="h-4 w-4" />
-          <span className="text-xs font-semibold uppercase">
-            {languages[current].short}
-          </span>
+          <span className="text-xs font-semibold uppercase">{languages[current].short}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[160px]">

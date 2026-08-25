@@ -1,13 +1,13 @@
 import "server-only";
 
 import { cache } from "react";
-import { throwOnApiError } from "@/lib/api/openapi-client";
-import { serverApi } from "@/lib/api/openapi-server";
 import {
+  type DashboardBundle,
   dashboardSnapshotFromResponse,
   EMPTY_DASHBOARD_QUEUE,
-  type DashboardBundle,
 } from "@/lib/api/dashboard";
+import { throwOnApiError } from "@/lib/api/openapi-client";
+import { serverApi } from "@/lib/api/openapi-server";
 
 export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => {
   try {

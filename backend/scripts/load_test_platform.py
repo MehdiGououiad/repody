@@ -92,10 +92,9 @@ async def _phase_control_plane(client: httpx.AsyncClient, n: int) -> list[str]:
         f"healthz snapshot queued={body.get('queuedRuns')} running={body.get('runningRuns')} "
         f"dbPool={body.get('dbPoolSize')} redisOk={body.get('redisOk')}"
     )
-    lines.extend(
-        [health.report(), workflows.report(), audits.report(), dashboard.report()]
-    )
+    lines.extend([health.report(), workflows.report(), audits.report(), dashboard.report()])
     return lines
+
 
 async def _pick_workflow(client: httpx.AsyncClient) -> str:
     from repody.infra.db.seed import SEED_WORKFLOW_ID

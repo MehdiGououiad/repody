@@ -1,7 +1,7 @@
-import type { RunAuditDetail } from "@/lib/types/audit";
 import { raiseRunError } from "@/lib/api/api-error";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import { watchRunEvents } from "@/lib/api/run-events";
+import type { RunAuditDetail } from "@/lib/types/audit";
 
 export type RunProgressStep = {
   id: string;
@@ -85,7 +85,8 @@ export async function pollRunUntilDone(
       params: { path: { run_id: runId } },
     });
     if (response.status === 429) {
-      const retryMs = retryAfterMs(response) ?? Math.max(RATE_LIMIT_POLL_INTERVAL_MS, intervalMs * 2);
+      const retryMs =
+        retryAfterMs(response) ?? Math.max(RATE_LIMIT_POLL_INTERVAL_MS, intervalMs * 2);
       intervalMs = Math.min(MAX_POLL_INTERVAL_MS, retryMs);
       await sleep(withJitter(intervalMs));
       continue;

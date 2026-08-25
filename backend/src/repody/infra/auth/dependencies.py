@@ -9,11 +9,11 @@ from fastapi import Depends, Header, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.api.deps import get_session
+from repody.app.api_keys import verify_api_key
 from repody.infra.auth.casbin_authorizer import authorize
 from repody.infra.auth.jwt_validator import JwtValidationError, principal_from_bearer
 from repody.infra.auth.principal import Principal
 from repody.infra.db.models import Run, Workflow
-from repody.app.api_keys import verify_api_key
 from repody.settings import get_settings
 
 

@@ -10,7 +10,7 @@ import structlog
 from pydantic import BaseModel, ValidationError
 
 from repody.inference.factory import get_chat
-from repody.inference.runtime import openai_api_key_for_base_url, llamacpp_base_url
+from repody.inference.runtime import llamacpp_base_url, openai_api_key_for_base_url
 from repody.inference.validation_model import resolve_llm_validation_model
 from repody.settings import get_settings
 

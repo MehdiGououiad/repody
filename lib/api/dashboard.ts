@@ -1,3 +1,4 @@
+import type { DashboardResponse, QueueSnapshot } from "@/lib/api/schema-types";
 import type {
   Audit,
   HealthAlert,
@@ -6,7 +7,6 @@ import type {
   ViolationBreakdown,
   Workflow,
 } from "@/lib/types";
-import type { DashboardResponse, QueueSnapshot } from "@/lib/api/schema-types";
 
 export type { QueueSnapshot };
 
@@ -30,9 +30,7 @@ export const EMPTY_DASHBOARD_QUEUE: QueueSnapshot = {
   inflightRuns: 0,
 };
 
-export function dashboardSnapshotFromResponse(
-  body: DashboardResponse
-): DashboardSnapshot {
+export function dashboardSnapshotFromResponse(body: DashboardResponse): DashboardSnapshot {
   const metrics = body.metrics;
   return {
     kpis: metrics.kpis as KpiMetric[],

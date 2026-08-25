@@ -59,7 +59,7 @@ export const NUEXTRACT_TEMPLATE_TYPE_DEFS = [
 type NuExtractTypeDefEntry = (typeof NUEXTRACT_TEMPLATE_TYPE_DEFS)[number];
 
 function isHiddenTemplateTypeDef(
-  def: NuExtractTypeDefEntry,
+  def: NuExtractTypeDefEntry
 ): def is NuExtractTypeDefEntry & { hidden: true } {
   return "hidden" in def && def.hidden === true;
 }
@@ -115,7 +115,9 @@ export function isListTemplateType(value?: string): boolean {
 }
 
 export function getVisibleTemplateTypes(): NuExtractTemplateType[] {
-  return NUEXTRACT_TEMPLATE_TYPE_DEFS.filter((t) => !isHiddenTemplateTypeDef(t)).map((t) => t.value);
+  return NUEXTRACT_TEMPLATE_TYPE_DEFS.filter((t) => !isHiddenTemplateTypeDef(t)).map(
+    (t) => t.value
+  );
 }
 
 /** Types shown in the picker: visible types plus the current value when it is hidden/unknown. */
@@ -133,7 +135,9 @@ export function getTemplateTypeGroup(value: string): NuExtractTypeGroup {
   return def?.group ?? "advanced";
 }
 
-export function groupTemplateTypes(types: NuExtractTemplateType[]): Record<NuExtractTypeGroup, NuExtractTemplateType[]> {
+export function groupTemplateTypes(
+  types: NuExtractTemplateType[]
+): Record<NuExtractTypeGroup, NuExtractTemplateType[]> {
   const grouped: Record<NuExtractTypeGroup, NuExtractTemplateType[]> = {
     common: [],
     structure: [],

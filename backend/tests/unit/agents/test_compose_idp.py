@@ -5,21 +5,20 @@ from __future__ import annotations
 import pytest
 
 from repody.agents.idp.compose import compose_idp
-from repody.agents.idp.contracts import StoredDocument
 from repody.agents.idp.contracts import (
     DocumentExtraction,
+    DocumentSpec,
     ExtractedField,
     ExtractionOutput,
-)
-from repody.agents.idp.contracts import IdpInput
-from repody.agents.idp.contracts import RuleResult, ValidationOutput
-from repody.agents.idp.contracts import (
-    DocumentSpec,
+    IdpExtractionMeta,
+    IdpInput,
     IdpWorkflowConfig,
+    RuleResult,
     RuleSpec,
     SchemaField,
+    StoredDocument,
+    ValidationOutput,
 )
-from repody.agents.idp.contracts import IdpExtractionMeta
 from repody.agents.idp.run import wrap_idp_outcome
 from repody.runtime.contracts.agent import AgentStatus
 from repody.runtime.contracts.result import ErrorCode, Result

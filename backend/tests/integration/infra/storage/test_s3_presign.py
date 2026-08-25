@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
-from repody.settings import Settings
 from repody.infra.storage.s3 import build_s3_clients
+from repody.settings import Settings
 
 
 def test_presign_uses_public_endpoint_client_when_configured() -> None:

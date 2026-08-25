@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronDown, ChevronRight, FileText, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  ChevronDown,
-  ChevronRight,
-  FileText,
-  Trash2,
-} from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { DocumentDef } from "@/lib/types";
 import type { ProcessingOptions } from "./processing-options";
-import { SchemaTable } from "./schema-table";
 import { ProcessingSettings } from "./processing-settings";
+import { SchemaTable } from "./schema-table";
 
 export function DocumentCard({
   doc,
@@ -38,9 +33,7 @@ export function DocumentCard({
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(true);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const namedFieldNames = doc.schema
-    .filter((f) => f.name.trim())
-    .map((f) => f.name.trim());
+  const namedFieldNames = doc.schema.filter((f) => f.name.trim()).map((f) => f.name.trim());
 
   return (
     <div className="panel-elevated rounded-xl overflow-hidden">
@@ -134,11 +127,7 @@ export function DocumentCard({
             </p>
           </div>
 
-          <SchemaTable
-            schema={doc.schema}
-            onChange={(schema) => onChange({ schema })}
-            t={t}
-          />
+          <SchemaTable schema={doc.schema} onChange={(schema) => onChange({ schema })} t={t} />
 
           <ProcessingSettings
             t={t}

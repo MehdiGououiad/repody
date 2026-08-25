@@ -29,7 +29,9 @@ class PlatformMixUser(HttpUser):
         self.workflow_id = (os.environ.get("STRESS_WORKFLOW_ID") or "").strip()
         self.active_runs: list[str] = []
         if not self.workflow_id:
-            with self.client.get("/v1/workflows", name="GET /v1/workflows", catch_response=True) as res:
+            with self.client.get(
+                "/v1/workflows", name="GET /v1/workflows", catch_response=True
+            ) as res:
                 if res.status_code == 200:
                     workflows = res.json().get("workflows") or []
                     if workflows:

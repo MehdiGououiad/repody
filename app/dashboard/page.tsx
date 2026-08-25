@@ -1,11 +1,11 @@
-import Link from "next/link";
+import { GitBranch, Plus } from "lucide-react";
 import dynamic from "next/dynamic";
-import { Plus, GitBranch } from "lucide-react";
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { Button } from "@/components/ui/button";
+import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
+import { Button } from "@/components/ui/button";
 import { fetchDashboardBundle } from "@/lib/api/dashboard-server";
 
 const BusinessDashboard = dynamic(

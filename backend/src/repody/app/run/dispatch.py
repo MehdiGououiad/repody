@@ -5,13 +5,13 @@ from __future__ import annotations
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.infra.db.models import RunStatus
-from repody.runtime.pools import agent_for_pool
-from repody.app.run.pool import resolve_worker_pool
 from repody.app.run.commands import (
     PUBLIC_DISPATCH_FAILURE_MESSAGE,
     fail_run_terminal,
 )
+from repody.app.run.pool import resolve_worker_pool
+from repody.infra.db.models import RunStatus
+from repody.runtime.pools import agent_for_pool
 from repody.settings import get_settings
 from repody.taskiq.broker import startup_taskiq_brokers
 from repody.taskiq.models import AuditRunInput

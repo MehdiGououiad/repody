@@ -1,12 +1,12 @@
 "use client";
 
+import { LogOut, Plus, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { LogOut, Plus, ShieldCheck } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = useClientPathname();
@@ -44,7 +44,10 @@ export function AppSidebar() {
           className="group w-full bg-accent-blue text-primary-stitch py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:brightness-110 transition-[filter,box-shadow] shadow-[0_8px_24px_-12px_var(--accent-blue-glow)]"
           style={{ color: "var(--primary-stitch)" }}
         >
-          <Plus className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300" aria-hidden="true" />
+          <Plus
+            className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300"
+            aria-hidden="true"
+          />
           {t("newWorkflow")}
         </Link>
       </div>
@@ -66,7 +69,10 @@ export function AppSidebar() {
               {active ? (
                 <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-accent-blue shadow-[0_0_12px_var(--accent-blue-glow)]" />
               ) : null}
-              <Icon className={cn("h-4 w-4 shrink-0", active && "text-accent-blue")} aria-hidden="true" />
+              <Icon
+                className={cn("h-4 w-4 shrink-0", active && "text-accent-blue")}
+                aria-hidden="true"
+              />
               <span>{t(labelKey)}</span>
             </Link>
           );
@@ -74,9 +80,7 @@ export function AppSidebar() {
       </nav>
 
       <div className="relative mt-auto px-2 pt-4 border-t border-sidebar-border/80">
-        <SignOutButton
-          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/55 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <SignOutButton className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/55 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
           <LogOut className="h-4 w-4" aria-hidden="true" />
           <span>{t("logout")}</span>
         </SignOutButton>

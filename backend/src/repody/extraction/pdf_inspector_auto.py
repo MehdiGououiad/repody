@@ -65,7 +65,7 @@ def inspect_pdf_bytes(raw: bytes) -> PdfInspection:
 
     try:
         result = _pdf_inspector.process_pdf_bytes(raw)
-    except Exception as exc:  # noqa: BLE001 — soft-fail to OCR fallback
+    except Exception as exc:
         log.warning("pdf_inspector_failed", error=repr(exc))
         return PdfInspection(
             pdf_type="unknown",
@@ -104,9 +104,7 @@ def native_quality_ok(
         if min_confidence is not None
         else float(settings.pdf_inspector_min_confidence)
     )
-    char_floor = (
-        int(min_chars) if min_chars is not None else int(settings.pdf_inspector_min_chars)
-    )
+    char_floor = int(min_chars) if min_chars is not None else int(settings.pdf_inspector_min_chars)
 
     if not inspection.available:
         return False, inspection.error or "pdf_inspector_unavailable"
@@ -175,8 +173,7 @@ async def extract_via_native_markdown(
     model = (settings.qwen35_served_model or "").strip()
     if not model:
         raise RuntimeError(
-            "Qwen model id is empty. Set AUDIT_QWEN35_SERVED_MODEL "
-            "(default Qwen3.5-4B)."
+            "Qwen model id is empty. Set AUDIT_QWEN35_SERVED_MODEL (default Qwen3.5-4B)."
         )
 
     fields, raw_json = await extract_fields_from_text(

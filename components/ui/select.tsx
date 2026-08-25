@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown, ChevronUp } from "lucide-react";
+import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const Select = SelectPrimitive.Root;
@@ -84,7 +84,10 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn("py-1.5 pl-8 pr-2 text-xs font-semibold text-muted-foreground uppercase", className)}
+    className={cn(
+      "py-1.5 pl-8 pr-2 text-xs font-semibold text-muted-foreground uppercase",
+      className
+    )}
     {...props}
   />
 ));
@@ -104,11 +107,11 @@ SelectSeparator.displayName = SelectPrimitive.Separator.displayName;
 
 export {
   Select,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectLabel,
   SelectSeparator,
+  SelectTrigger,
+  SelectValue,
 };

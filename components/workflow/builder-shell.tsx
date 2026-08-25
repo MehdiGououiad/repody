@@ -1,22 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { AlertCircle, CalendarDays, User } from "lucide-react";
 import { useTranslations } from "next-intl";
-import {
-  AlertCircle,
-  User,
-  CalendarDays,
-} from "lucide-react";
+import { useState } from "react";
+import type { RuleTemplate, Workflow } from "@/lib/types";
+import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
+import { BuilderStepFooter } from "./builder/builder-step-footer";
+import { BuilderTopbar } from "./builder/builder-topbar";
+import { type BuilderStep, BuilderStepNav, stepComplete } from "./builder/step-nav";
+import { TestDeployStep } from "./builder/test-run-panel";
+import { useBuilderWorkflow } from "./builder/use-builder-workflow";
+import { WorkflowNameGate } from "./builder/workflow-name-gate";
 import { DocumentsSection } from "./documents/documents-section";
 import { RulesPanel } from "./rules/rules-panel";
-import { BuilderStepNav, stepComplete, type BuilderStep } from "./builder/step-nav";
-import { BuilderStepFooter } from "./builder/builder-step-footer";
-import { TestDeployStep } from "./builder/test-run-panel";
-import { BuilderTopbar } from "./builder/builder-topbar";
-import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
-import { WorkflowNameGate } from "./builder/workflow-name-gate";
-import { useBuilderWorkflow } from "./builder/use-builder-workflow";
-import type { Workflow, RuleTemplate } from "@/lib/types";
 
 type BuilderMode = "new" | "edit";
 
@@ -31,7 +27,9 @@ function BuilderShellCore({
 }) {
   const tSteps = useTranslations("workflows.builder.steps");
   const isNew = mode === "new";
-  const [nameConfirmed, setNameConfirmed] = useState(() => !isNew || workflow.name.trim().length > 0);
+  const [nameConfirmed, setNameConfirmed] = useState(
+    () => !isNew || workflow.name.trim().length > 0
+  );
 
   const {
     step,
@@ -78,87 +76,82 @@ function BuilderShellCore({
         />
       ) : (
         <>
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        <aside className="hidden md:flex w-52 xl:w-60 border-r border-border/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-surface-container-lowest/80 backdrop-blur-sm">
-          <BuilderStepNav
-            current={step}
-            documents={documents}
-            rules={rules}
-            onChange={setStep}
-            tSteps={tSteps}
-            testHasResults={!!testSession.result}
-          />
+          <div className="flex flex-1 overflow-hidden min-h-0">
+            <aside className="hidden md:flex w-52 xl:w-60 border-r border-border/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-surface-container-lowest/80 backdrop-blur-sm">
+              <BuilderStepNav
+                current={step}
+                documents={documents}
+                rules={rules}
+                onChange={setStep}
+                tSteps={tSteps}
+                testHasResults={!!testSession.result}
+              />
 
-          <div className="mt-6 border-t border-border pt-4 space-y-2.5 px-1">
-            <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
-              <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">{workflow.owner}</span>
-            </div>
-            {workflow.lastRun ? (
-              <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span className="truncate">{workflow.lastRun}</span>
+              <div className="mt-6 border-t border-border pt-4 space-y-2.5 px-1">
+                <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
+                  <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{workflow.owner}</span>
+                </div>
+                {workflow.lastRun ? (
+                  <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
+                    <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <span className="truncate">{workflow.lastRun}</span>
+                  </div>
+                ) : null}
+                {!schemaReady && step > 0 ? (
+                  <div className="flex items-start gap-1.5 text-[11px] text-warning">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+                    <span>{tSteps("schemaIncomplete")}</span>
+                  </div>
+                ) : null}
               </div>
-            ) : null}
-            {!schemaReady && step > 0 ? (
-              <div className="flex items-start gap-1.5 text-[11px] text-warning">
-                <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
-                <span>{tSteps("schemaIncomplete")}</span>
+            </aside>
+
+            <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
+              <div key={step} className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 min-w-0">
+                <div className="mx-auto w-full max-w-4xl page-enter min-w-0">
+                  {step === 0 ? (
+                    <DocumentsSection documents={documents} onChange={setDocuments} />
+                  ) : null}
+                  {step === 1 ? (
+                    <RulesPanel
+                      rules={rules}
+                      documents={documents}
+                      onChange={setRules}
+                      initialRuleLibrary={ruleLibrary}
+                    />
+                  ) : null}
+                  {step === 2 ? (
+                    <TestDeployStep
+                      workflowId={activeWorkflowId}
+                      name={name || workflow.name}
+                      apiKey={apiKey}
+                      apiKeyHint={workflow.apiKeyHint}
+                      documents={documents}
+                      rules={rules}
+                      deployed={deployed}
+                      onDeploy={handleDeploy}
+                      onBeforeRun={() =>
+                        persistWorkflow({ navigate: false, toastOnSuccess: false })
+                      }
+                      testSession={testSession}
+                      onTestSessionChange={patchTestSession}
+                    />
+                  ) : null}
+                </div>
               </div>
-            ) : null}
-          </div>
-        </aside>
 
-        <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
-          <div key={step} className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 min-w-0">
-            <div className="mx-auto w-full max-w-4xl page-enter min-w-0">
-              {step === 0 ? (
-                <DocumentsSection documents={documents} onChange={setDocuments} />
-              ) : null}
-              {step === 1 ? (
-                <RulesPanel
-                  rules={rules}
-                  documents={documents}
-                  onChange={setRules}
-                  initialRuleLibrary={ruleLibrary}
-                />
-              ) : null}
-              {step === 2 ? (
-                <TestDeployStep
-                  workflowId={activeWorkflowId}
-                  name={name || workflow.name}
-                  apiKey={apiKey}
-                  apiKeyHint={workflow.apiKeyHint}
-                  documents={documents}
-                  rules={rules}
-                  deployed={deployed}
-                  onDeploy={handleDeploy}
-                  onBeforeRun={() =>
-                    persistWorkflow({ navigate: false, toastOnSuccess: false })
-                  }
-                  testSession={testSession}
-                  onTestSessionChange={patchTestSession}
-                />
-              ) : null}
-            </div>
+              <BuilderStepFooter
+                step={step}
+                documents={documents}
+                rules={rules}
+                onBack={() => setStep((step - 1) as BuilderStep)}
+                onContinue={() => setStep((step + 1) as BuilderStep)}
+              />
+            </main>
           </div>
 
-          <BuilderStepFooter
-            step={step}
-            documents={documents}
-            rules={rules}
-            onBack={() => setStep((step - 1) as BuilderStep)}
-            onContinue={() => setStep((step + 1) as BuilderStep)}
-          />
-        </main>
-      </div>
-
-      <BuilderMobileSteps
-        step={step}
-        documents={documents}
-        rules={rules}
-        onChange={setStep}
-      />
+          <BuilderMobileSteps step={step} documents={documents} rules={rules} onChange={setStep} />
         </>
       )}
     </div>
@@ -179,11 +172,6 @@ export function EditWorkflowBuilder({
   ruleLibrary?: RuleTemplate[];
 }) {
   return (
-    <BuilderShellCore
-      key={workflow.id}
-      workflow={workflow}
-      mode="edit"
-      ruleLibrary={ruleLibrary}
-    />
+    <BuilderShellCore key={workflow.id} workflow={workflow} mode="edit" ruleLibrary={ruleLibrary} />
   );
 }
