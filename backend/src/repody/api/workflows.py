@@ -132,10 +132,7 @@ async def validate_rules(body: ValidateRulesBody):
     """Authoritative rule validation for the workflow builder."""
     rows = validate_rules_preview(body.documents, body.rules)
     return ValidateRulesResponse(
-        rules=[
-            RuleValidationItem(rule_id=str(row["rule_id"]), issues=list(row["issues"]))
-            for row in rows
-        ]
+        rules=[RuleValidationItem(rule_id=row.rule_id, issues=row.issues) for row in rows]
     )
 
 

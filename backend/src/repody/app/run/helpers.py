@@ -8,7 +8,7 @@ from repody.extraction.modes import (
     read_path_label,
     validation_mode_label,
 )
-from repody.infra.db.models import RunDocument, Workflow
+from repody.infra.db.models import Workflow
 from repody.infra.storage.mime import resolve_mime as resolve_storage_mime
 from repody.rules.conditions import resolve_rule_body
 from repody.util.json_shape import normalize_keys_to_snake
@@ -17,15 +17,15 @@ __all__ = [
     "extract_label",
     "meta_to_dict",
     "progress_mode",
-    "resolve_run_doc_mime",
+    "resolve_upload_mime",
     "rule_dict_from_row",
     "rules_payload",
 ]
 
 
-def resolve_run_doc_mime(run_doc: RunDocument, document_bytes: bytes | None) -> str:
+def resolve_upload_mime(declared_mime: str | None, document_bytes: bytes | None) -> str:
     """Prefer the declared upload MIME; sniff only when undeclared."""
-    declared = (run_doc.mime_type or "").strip()
+    declared = (declared_mime or "").strip()
     if declared:
         return declared
     if document_bytes:

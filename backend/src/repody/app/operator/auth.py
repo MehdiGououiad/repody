@@ -17,7 +17,7 @@ async def fetch_operator_benchmark_bearer_token() -> str | None:
     password = settings.operator_benchmark_password
     client_id = settings.keycloak_oauth_client_id
     client_secret = settings.keycloak_oauth_client_secret
-    if not all([user, password, client_id, client_secret]):
+    if not (user and password and client_id and client_secret):
         return None
 
     base = (settings.keycloak_admin_url or "http://keycloak:8080").rstrip("/")

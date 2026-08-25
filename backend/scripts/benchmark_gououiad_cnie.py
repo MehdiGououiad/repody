@@ -559,6 +559,8 @@ async def run(args: argparse.Namespace) -> int:
             "label": path.label,
             "mode": path.mode,
         }
+        # Stays None whenever the branch below marks the row skipped.
+        payload: dict[str, Any] | None = None
         try:
             if path.path_id.startswith("repody:vlm"):
                 if not services["nuextract"]["reachable"]:
@@ -610,7 +612,7 @@ async def run(args: argparse.Namespace) -> int:
                 rows.append(row)
                 continue
 
-            if not row.get("skipped"):
+            if payload is not None and not row.get("skipped"):
                 row.update(payload)
                 row["wall_ms"] = payload.get("wall_ms")
                 row["evaluation"] = _evaluate(path, payload)

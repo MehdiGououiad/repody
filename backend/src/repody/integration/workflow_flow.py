@@ -232,10 +232,12 @@ async def save_workflow(
         },
     )
     updated.raise_for_status()
+    last_check: httpx.Response | None = None
     for _ in range(8):
-        check = await client.get(f"/v1/workflows/{wf_id}")
-        if check.status_code == 200:
+        last_check = await client.get(f"/v1/workflows/{wf_id}")
+        if last_check.status_code == 200:
             return wf_id
         await asyncio.sleep(0.25)
-    check.raise_for_status()
+    if last_check is not None:
+        last_check.raise_for_status()
     return wf_id

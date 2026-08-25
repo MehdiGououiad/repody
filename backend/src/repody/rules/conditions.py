@@ -71,21 +71,21 @@ def _list_literal_to_py(value: str) -> str | None:
 def _aggregate_to_py(aggregate: dict | None) -> str | None:
     if not aggregate:
         return None
-    aggregate = normalize_keys_to_snake(aggregate)
-    fn = str(aggregate.get("fn") or "").strip()
-    table = _field_ref(str(aggregate.get("table_field") or ""))
+    fields = normalize_keys_to_snake(aggregate)
+    fn = str(fields.get("fn") or "").strip()
+    table = _field_ref(str(fields.get("table_field") or ""))
     if not table:
         return None
-    amount_col = json.dumps(str(aggregate.get("amount_column") or ""))
+    amount_col = json.dumps(str(fields.get("amount_column") or ""))
     if fn == "sum_rows":
         return f"sum_rows({table}, {amount_col})"
     if fn == "sum_rows_where":
-        filter_col = json.dumps(str(aggregate.get("filter_column") or ""))
-        needle = json.dumps(str(aggregate.get("filter_contains") or ""))
+        filter_col = json.dumps(str(fields.get("filter_column") or ""))
+        needle = json.dumps(str(fields.get("filter_contains") or ""))
         return f"sum_rows_where({table}, {amount_col}, {filter_col}, {needle})"
     if fn == "count_rows_where":
-        filter_col = json.dumps(str(aggregate.get("filter_column") or ""))
-        needle = json.dumps(str(aggregate.get("filter_contains") or ""))
+        filter_col = json.dumps(str(fields.get("filter_column") or ""))
+        needle = json.dumps(str(fields.get("filter_contains") or ""))
         return f"count_rows_where({table}, {filter_col}, {needle})"
     return None
 

@@ -555,6 +555,7 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
             fields = []
             inference_url = None
 
+        render_policy = RENDER_POLICIES.get(spec.id)
         profiles.append(
             ModelRuntimeProfile(
                 model_id=spec.id,
@@ -563,9 +564,7 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
                 runtime_model=spec.runtime_model,
                 enabled=True,
                 inference_url=inference_url,
-                render_policy=RENDER_POLICIES.get(spec.id).doc_ref
-                if spec.id in RENDER_POLICIES
-                else "",
+                render_policy=render_policy.doc_ref if render_policy else "",
                 fields=fields,
             )
         )

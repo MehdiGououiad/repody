@@ -36,6 +36,10 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'tsconfig.json'
               - 'eslint.config.mjs'
+              - 'biome.json'
+              - 'knip.json'
+              - 'e2e/**'
+              - 'scripts/**'
             deploy:
               - 'deploy/**'
               - 'compose.yaml'
@@ -73,6 +77,10 @@ jobs:
           python-version: "3.13"
       - name: Install backend
         run: uv sync --extra dev
+      - name: Lint and format check (ruff)
+        run: uv run ruff format --check src tests scripts && uv run ruff check src tests scripts
+      - name: Typecheck (pyright)
+        run: uv run pyright
       - name: Pytest (unit + integration, Postgres + Alembic)
         run: uv run pytest tests/ -q -m "not live" --tb=short
         env:
@@ -101,10 +109,12 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Generate OpenAPI types
         run: pnpm codegen:api:types
-      - name: Lint
+      - name: Lint and format check (Biome + ESLint)
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      - name: Dead code check
+        run: pnpm deadcode
       - name: OpenAPI type drift check
         run: git diff --exit-code lib/api/generated/schema.d.ts
       - name: Deploy checks

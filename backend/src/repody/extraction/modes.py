@@ -150,7 +150,8 @@ def resolve_run_validation_mode(
     return LOGIC_VALIDATION
 
 
-def _read_doc_value(doc: object, key: str, default: object = None) -> object:
+def _read_doc_value(doc: object, key: str, default: Any = None) -> Any:
+    """Read `key` off a Pydantic model or a raw dict; shape varies by call site."""
     value = getattr(doc, key, None)
     if value is not None:
         return value

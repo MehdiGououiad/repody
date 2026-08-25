@@ -26,13 +26,26 @@ __all__ = [
 
 @runtime_checkable
 class SchemaFieldLike(Protocol):
-    """Port for agent/schema rows → SchemaFieldSpec (anti-corruption at extract edge)."""
+    """Port for agent/schema rows → SchemaFieldSpec (anti-corruption at extract edge).
 
-    name: str
-    description: str
-    template_type: str | None
-    enum_values: Sequence[str] | None
-    children: Sequence[SchemaFieldLike]
+    Members are read-only properties so frozen dataclasses satisfy the protocol;
+    declaring them as plain attributes would demand mutability we never use.
+    """
+
+    @property
+    def name(self) -> str: ...
+
+    @property
+    def description(self) -> str: ...
+
+    @property
+    def template_type(self) -> str | None: ...
+
+    @property
+    def enum_values(self) -> Sequence[str] | None: ...
+
+    @property
+    def children(self) -> Sequence[SchemaFieldLike]: ...
 
 
 @dataclass

@@ -18,10 +18,10 @@ from repody.util.json_shape import normalize_keys_to_snake
 def enum_values_from_row(row: dict[str, Any] | None) -> list[str] | None:
     if not row:
         return None
-    row = normalize_keys_to_snake(row)
-    raw = row.get("enum_values")
+    normalized = normalize_keys_to_snake(row)
+    raw = normalized.get("enum_values")
     if not isinstance(raw, list):
-        config = row.get("field_config")
+        config = normalized.get("field_config")
         if isinstance(config, dict):
             config = normalize_keys_to_snake(config)
             raw = config.get("enum_values")
@@ -43,8 +43,8 @@ def iter_child_rows(raw_children: list[Any] | None) -> Iterator[dict[str, Any]]:
 def children_from_config(config: dict[str, Any] | None) -> list[Any] | None:
     if not isinstance(config, dict):
         return None
-    config = normalize_keys_to_snake(config)
-    children = config.get("children")
+    normalized = normalize_keys_to_snake(config)
+    children = normalized.get("children")
     return children if isinstance(children, list) else None
 
 
