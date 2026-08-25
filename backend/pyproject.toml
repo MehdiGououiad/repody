@@ -169,6 +169,35 @@ reportMissingTypeStubs = false
 venvPath = "."
 venv = ".venv"
 
+# Tests and one-off scripts lean on MagicMock, SimpleNamespace and partially
+# built fixtures. Those patterns are deliberately untyped, so the shape-related
+# rules are relaxed there; everything that catches real defects (unbound names,
+# bad returns, unreachable code) still applies.
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+# Tests import sibling helpers as `tests.*`, matching pytest's pythonpath = ["."].
+extraPaths = ["."]
+reportArgumentType = "none"
+reportCallIssue = "none"
+reportAttributeAccessIssue = "none"
+reportOptionalMemberAccess = "none"
+reportOptionalSubscript = "none"
+reportIndexIssue = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "scripts"
+# Bench scripts import each other as `scripts.*` after inserting the repo root.
+extraPaths = ["."]
+reportArgumentType = "none"
+reportCallIssue = "none"
+reportAttributeAccessIssue = "none"
+reportOptionalMemberAccess = "none"
+reportOptionalSubscript = "none"
+reportIndexIssue = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "src"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"

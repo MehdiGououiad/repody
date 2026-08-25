@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 
 from repody.catalog.registry import normalize_model_id
 from repody.extraction.branding import UnknownCatalogIdError
@@ -77,15 +78,15 @@ def validate_workflow_rules(payload: WorkflowSchema) -> None:
 
 def _schema_fields(doc: DocumentDefSchema | dict) -> list:
     if isinstance(doc, dict):
-        doc = normalize_keys_to_snake(doc)
-        return doc.get("schema_fields") or doc.get("schema") or []
+        fields = normalize_keys_to_snake(doc)
+        return fields.get("schema_fields") or fields.get("schema") or []
     return doc.schema_fields
 
 
 def _document_type(doc: DocumentDefSchema | dict) -> str:
     if isinstance(doc, dict):
-        doc = normalize_keys_to_snake(doc)
-        return str(doc.get("document_type") or "")
+        fields = normalize_keys_to_snake(doc)
+        return str(fields.get("document_type") or "")
     return doc.document_type or ""
 
 
@@ -153,11 +154,11 @@ def validate_workflow_rule(
         applies_to = rule.applies_to or []
         body = rule.body or ""
     else:
-        rule = normalize_keys_to_snake(rule)
-        kind = rule_kind(rule)
-        label = (rule.get("name") or "").strip() or rule.get("id") or "Rule"
-        applies_to = rule_applies_to(rule)
-        body = rule.get("body") or ""
+        fields = normalize_keys_to_snake(rule)
+        kind = rule_kind(fields)
+        label = (fields.get("name") or "").strip() or fields.get("id") or "Rule"
+        applies_to = rule_applies_to(fields)
+        body = fields.get("body") or ""
 
     if kind == "llm":
         text = (body or "").strip()
@@ -176,15 +177,20 @@ def validate_workflow_rule(
     return [f"{label}: {issue}" if not issue.startswith(label) else issue for issue in issues]
 
 
+@dataclass(frozen=True, slots=True)
+class RulePreview:
+    """Validation outcome for one rule in the builder preview."""
+
+    rule_id: str
+    issues: list[str]
+
+
 def validate_rules_preview(
     documents: list[DocumentDefSchema],
     rules: list[WorkflowRuleSchema],
-) -> list[dict[str, object]]:
+) -> list[RulePreview]:
     """Validate all rules for builder preview — one result per rule id."""
     return [
-        {
-            "rule_id": rule.id,
-            "issues": validate_workflow_rule(rule, documents),
-        }
+        RulePreview(rule_id=rule.id, issues=validate_workflow_rule(rule, documents))
         for rule in rules
     ]

@@ -292,7 +292,9 @@ async def extract_document(
         bundle_ms = int((time.perf_counter() - tb) * 1000)
         te = time.perf_counter()
 
-        used_native = False
+        # Stays None until some path produces an extraction; the native branch
+        # may fail and fall through to the document model below.
+        result: ExtractionResult | None = None
         if native_pdf_auto and mime_is_pdf(mime_type, document_bytes):
             inspection = await asyncio.to_thread(inspect_pdf_bytes, document_bytes)
             ok, reason = native_quality_ok(inspection)
@@ -306,7 +308,6 @@ async def extract_document(
                         markdown_extraction=markdown_extraction,
                         page_count=inspection.page_count,
                     )
-                    used_native = True
                     native_meta = native_pdf_meta(
                         source=NATIVE_SOURCE,
                         inspection=inspection,
@@ -345,7 +346,7 @@ async def extract_document(
                 fallback_reason="not_pdf",
             )
 
-        if not used_native:
+        if result is None:
             result = await extract_with_document_model(
                 model_spec,
                 loaded,

@@ -297,15 +297,15 @@ async def extract_structured(
 
     configured = (project_id or config.project_id or "").strip() or None
     ephemeral = configured is None
-    active_project = configured
 
-    if ephemeral:
+    if configured is None:
         active_project = await create_project(
             config,
             template=template,
             instructions=instructions,
         )
     else:
+        active_project = configured
         await update_project(
             config,
             active_project,
@@ -313,7 +313,6 @@ async def extract_structured(
             instructions=instructions,
         )
 
-    assert active_project is not None
     try:
         if file_bytes is not None:
             job_id = await submit_file_job(

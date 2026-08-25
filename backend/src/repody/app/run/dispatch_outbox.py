@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 import structlog
-from sqlalchemy import delete, or_, select
+from sqlalchemy import CursorResult, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.run.dispatch import mark_run_dispatch_failed
@@ -307,7 +308,8 @@ async def purge_dispatched_outbox(session: AsyncSession) -> int:
             RunDispatchOutbox.dispatched_at < cutoff,
         )
     )
-    deleted = int(result.rowcount or 0)
+    # DELETE always yields a CursorResult; the async stubs widen it to Result.
+    deleted = int(cast("CursorResult[Any]", result).rowcount or 0)
     if deleted:
         log.info("outbox_dispatched_purged", count=deleted, older_than_days=days)
     return deleted

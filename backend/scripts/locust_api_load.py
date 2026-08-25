@@ -1,3 +1,6 @@
+# Locust is installed ad hoc for load runs rather than pinned as a project
+# dependency, so it is absent from the checked environment.
+# pyright: reportMissingImports=false
 """Locust real-world mix — control plane + JSON enqueue + poll (not VLM).
 
 Usage:

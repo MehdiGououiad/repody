@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from repody.schemas.metrics import (
     HealthAlert,
@@ -177,7 +177,7 @@ def fold_daily_rows(
 
     for day, status, overall, count in rows:
         day_str = str(day)
-        day_date = day if hasattr(day, "year") else datetime.fromisoformat(day_str).date()
+        day_date = day if isinstance(day, date) else datetime.fromisoformat(day_str).date()
         value = int(count)
         if day_date >= since_date:
             week_counts[day_str] = week_counts.get(day_str, 0) + value

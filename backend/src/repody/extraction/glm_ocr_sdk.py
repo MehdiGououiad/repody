@@ -21,9 +21,9 @@ Optional ID-card profile: deploy/glmocr/config.idcard.yaml.
 from __future__ import annotations
 
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlparse
 
 import structlog
@@ -56,6 +56,14 @@ class GlmOcrSdkSettings:
     id_card_profile: bool = False
     # False (default) → whole-page "Text Recognition:". True → PP-DocLayoutV3.
     layout_enabled: bool = False
+
+
+@dataclass(frozen=True)
+class _EmptyParseResult:
+    """Stand-in shaped like the SDK's parse result when a page yields nothing."""
+
+    markdown_result: str = ""
+    json_result: list[Any] = field(default_factory=list)
 
 
 _lock = threading.Lock()
@@ -186,10 +194,7 @@ class _SelfHostedMarkdownParser:
             )
         )
         if not results:
-            out = type("EmptyResult", (), {})()
-            out.markdown_result = ""
-            out.json_result = []
-            return out
+            return _EmptyParseResult()
         return results[0]
 
     def close(self) -> None:
@@ -244,7 +249,9 @@ def _build_whole_page_parser(cfg: GlmOcrSdkSettings) -> Any:
     )
     pipeline = Pipeline(
         config=config_model.pipeline,
-        layout_detector=WholePageLayoutDetector(config_model.pipeline.layout),
+        # Duck-typed stand-in for the SDK's BaseLayoutDetector: the pipeline only
+        # calls predict(), and subclassing would import the layout stack we skip.
+        layout_detector=cast("Any", WholePageLayoutDetector(config_model.pipeline.layout)),
     )
     pipeline.start()
     return _SelfHostedMarkdownParser(pipeline)

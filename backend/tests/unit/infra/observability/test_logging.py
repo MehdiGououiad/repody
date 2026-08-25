@@ -5,7 +5,7 @@ from repody.settings import Settings
 
 
 def _process_event(event_dict: dict) -> dict:
-    return _redact_sensitive_fields(None, "", dict(event_dict))
+    return dict(_redact_sensitive_fields(None, "", dict(event_dict)))
 
 
 def test_redact_sensitive_fields_masks_tokens() -> None:

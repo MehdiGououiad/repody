@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from repody.agents.idp.adapters.mapping import document_extraction_from_result
 from repody.agents.idp.contracts import (
     DocumentExtraction,
     DocumentSpec,
     StoredDocument,
 )
-from repody.app.run.helpers import resolve_run_doc_mime
+from repody.app.run.helpers import resolve_upload_mime
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.extraction.nuextract import normalize_template_type
 from repody.extraction.pipeline import get_extract_document
@@ -29,10 +27,7 @@ async def extract_one(
 ) -> Result[DocumentExtraction]:
     """Call the document extractor; return frozen DocumentExtraction."""
     try:
-        mime = resolve_run_doc_mime(
-            SimpleNamespace(mime_type=stored.mime_type),
-            raw_bytes if raw_bytes else None,
-        )
+        mime = resolve_upload_mime(stored.mime_type, raw_bytes if raw_bytes else None)
         extract_document = get_extract_document()
         extracted = await extract_document(
             raw_bytes or None,

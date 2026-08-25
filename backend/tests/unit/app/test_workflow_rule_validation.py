@@ -114,5 +114,5 @@ def test_validate_rules_preview_returns_per_rule_rows():
         ),
     ]
     rows = validate_rules_preview(documents, rules)
-    assert rows[0]["issues"] == []
-    assert rows[1]["issues"] == ["LLM prompt is empty."]
+    assert rows[0].issues == []
+    assert rows[1].issues == ["LLM prompt is empty."]

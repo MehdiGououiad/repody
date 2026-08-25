@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, cast
 
 import structlog
 
@@ -115,7 +115,9 @@ def _log_output_streams(settings: Settings) -> TextIO:
         streams.append(log_path.open("a", encoding="utf-8"))
     if len(streams) == 1:
         return streams[0]
-    return _MultiWriter(*streams)
+    # structlog's PrintLogger only ever calls write() and flush(), so the tee
+    # satisfies it in practice without implementing the full TextIO surface.
+    return cast("TextIO", _MultiWriter(*streams))
 
 
 def configure_logging(settings: Settings) -> None:
