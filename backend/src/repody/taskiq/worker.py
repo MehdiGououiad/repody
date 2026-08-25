@@ -1,4 +1,4 @@
-"""Taskiq worker entrypoint — one pool per process (extract|fast; fraud|computer_use reserved).
+"""Taskiq worker entrypoint — one pool per process (extract|fast).
 
 Prefer invoking via the official CLI when possible::
 
@@ -60,10 +60,6 @@ async def _on_worker_startup(_state: object) -> None:
 def _worker_slots() -> int:
     if pool == "extract":
         return settings.worker_extract_max_jobs
-    if pool == "fraud":
-        return settings.worker_fraud_max_jobs
-    if pool == "computer_use":
-        return settings.worker_computer_use_max_jobs
     return settings.worker_fast_max_jobs
 
 

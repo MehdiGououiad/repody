@@ -190,10 +190,3 @@ services:
       AUDIT_WORKER_POOL: fast
       AUDIT_GLM_OCR_ENABLED: "false"
     restart: unless-stopped
-
-  # Base compose attaches these to profile `workers` too; keep them agents-only
-  # so portable `--profile workers --no-build` does not require local builds.
-  worker-fraud:
-    profiles: [agents]
-  worker-computer-use:
-    profiles: [agents]

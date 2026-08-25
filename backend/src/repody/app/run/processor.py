@@ -17,7 +17,6 @@ from repody.app.run.commands import (
     finalize_pending_completion,
     publish_run_domain_events,
 )
-from repody.app.run.handoff import schedule_next_agent_stage
 from repody.app.run.persistence import bind_try_claim
 from repody.infra.db.models import (
     Document,
@@ -33,8 +32,6 @@ from repody.runtime.contracts.agent import AgentId
 from repody.runtime.pools import parse_agent_stage
 from repody.runtime.recipe import (
     execute_platform_run,
-    next_agent_after,
-    resolve_recipe,
 )
 from repody.settings import get_settings
 
@@ -198,10 +195,8 @@ async def _resume_after_recorded_stage(
     session: AsyncSession,
     run: Run,
     stage: AgentId,
-    *,
-    request_id: str | None,
 ) -> bool:
-    """If this stage already recorded an outcome, resume handoff/finalize without re-exec.
+    """If this stage already recorded an outcome, finalize it without re-running.
 
     Returns True when the caller should exit (idempotent path handled).
     """
@@ -214,22 +209,9 @@ async def _resume_after_recorded_stage(
         run_id=run.id,
         agent_stage=stage.value,
     )
-    recipe_r = resolve_recipe(get_settings())
-    if not recipe_r.is_ok or recipe_r.value is None:
-        return True
-    recipe = recipe_r.value.agents
-    next_agent = next_agent_after(recipe, stage)
     await _touch_run_activity(session, run)
-    if next_agent is not None and agent_status_recorded(run, next_agent) is None:
-        await schedule_next_agent_stage(
-            session,
-            run,
-            next_agent,
-            request_id=request_id,
-        )
-        return True
-    if next_agent is None and run.status == RunStatus.running.value:
-        # Final stage recorded but complete_run may have been interrupted.
+    if run.status == RunStatus.running.value:
+        # Stage recorded but complete_run may have been interrupted.
         try:
             await finalize_pending_completion(session, run)
         except Exception:
@@ -250,7 +232,7 @@ async def process_run(
     agent_stage: str = "idp",
     request_id: str | None = None,
 ) -> None:
-    """Platform entry: claim (IDP) or resume (later stages), run one agent, hand off.
+    """Platform entry: claim the run and execute its agent stage.
 
     Workers pass ``session=None``; a short-lived session is opened and committed after
     claim so IDP extract ports can use separate connections without row-lock deadlocks.
@@ -287,15 +269,16 @@ async def _process_run_with_session(
         event_domain="audit_run",
         run_id=run_id,
         agent_stage=stage.value,
+        # Workers run outside the ASGI correlation-id middleware, so the
+        # originating request is carried on the task and logged here.
+        request_id=request_id,
     )
 
     if stage is AgentId.IDP:
         run = await _claim_run(session, run_id)
         if not run:
             run = await _load_running_run(session, run_id)
-            if run and await _resume_after_recorded_stage(
-                session, run, stage, request_id=request_id
-            ):
+            if run and await _resume_after_recorded_stage(session, run, stage):
                 return
             return
     else:
@@ -304,7 +287,7 @@ async def _process_run_with_session(
         return
 
     try:
-        if await _resume_after_recorded_stage(session, run, stage, request_id=request_id):
+        if await _resume_after_recorded_stage(session, run, stage):
             return
         await _touch_run_activity(session, run)
         await session.commit()
@@ -321,19 +304,8 @@ async def _process_run_with_session(
         if not stage_r.is_ok or stage_r.value is None:
             err = stage_r.error
             raise RuntimeError(err.message if err else f"agent stage {stage.value} failed")
-        stage_result = stage_r.value
-        refreshed = await session.get(Run, run_id)
-        if refreshed is None:
-            raise RuntimeError(f"run vanished after stage: {run_id}")
-        if stage_result.next_agent is not None:
-            await schedule_next_agent_stage(
-                session,
-                refreshed,
-                stage_result.next_agent,
-                request_id=request_id,
-            )
-        elif stage_result.finalize_pending:
-            await finalize_pending_completion(session, refreshed)
+        # execute_idp_run completes the platform run itself, so there is nothing
+        # left to finalize or hand off here.
     except Exception as exc:
         await session.rollback()
         await _persist_run_failure(run_id, exc)

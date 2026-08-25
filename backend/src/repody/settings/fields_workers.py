@@ -15,7 +15,7 @@ class WorkerSettingsFields:
     )
     worker_pool: str = Field(
         default="extract",
-        description="Active Taskiq pool for this worker process (extract|fast|fraud|computer_use).",
+        description="Active Taskiq pool for this worker process (extract|fast).",
     )
     worker_extract_max_jobs: int = Field(
         default=1,
@@ -30,26 +30,10 @@ class WorkerSettingsFields:
         default=4,
         description="Max concurrent fast pool tasks per worker process.",
     )
-    worker_fraud_max_jobs: int = Field(
-        default=4,
-        description="Reserved fraud pool concurrency (Helm worker at replicas 0).",
-    )
-    worker_computer_use_max_jobs: int = Field(
-        default=2,
-        description="Reserved computer_use pool concurrency (Helm worker at replicas 0).",
-    )
     worker_pool_fast: str = Field(
         default="fast", description="Taskiq queue name suffix for fast IDP runs."
     )
     worker_pool_extract: str = Field(
         default="extract",
         description="Taskiq queue name suffix for document-model IDP runs.",
-    )
-    worker_pool_fraud: str = Field(
-        default="fraud",
-        description="Reserved Taskiq queue suffix (no producer/API broker until agent ships).",
-    )
-    worker_pool_computer_use: str = Field(
-        default="computer_use",
-        description="Reserved Taskiq queue suffix (no producer/API broker until agent ships).",
     )

@@ -58,23 +58,23 @@ async def test_reap_stale_runs_marks_old_running_failed(maintenance_session):
 
 @pytest.mark.asyncio
 async def test_reap_uses_last_activity_not_started_at(maintenance_session):
-    """Multi-stage runs keep an old started_at; recent activity must not be reaped."""
+    """A long run keeps an old started_at; recent activity must not be reaped."""
     session = maintenance_session
-    active_handoff = Run(
-        id="run-multi-stage",
+    long_running = Run(
+        id="run-long-running",
         workflow_id="wf-maint",
         status=RunStatus.running.value,
         started_at=datetime(2020, 1, 1, tzinfo=UTC),
         last_activity_at=datetime.now(UTC) - timedelta(minutes=2),
-        worker_pool="fraud",
+        worker_pool="extract",
     )
-    session.add(active_handoff)
+    session.add(long_running)
     await session.commit()
 
     count = await reap_stale_runs(session=session)
     assert count == 0
-    await session.refresh(active_handoff)
-    assert active_handoff.status == RunStatus.running.value
+    await session.refresh(long_running)
+    assert long_running.status == RunStatus.running.value
 
 
 @pytest.mark.asyncio

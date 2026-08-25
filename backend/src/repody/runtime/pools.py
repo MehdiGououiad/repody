@@ -1,7 +1,6 @@
 """Map Taskiq worker pools ↔ agent stages.
 
-extract/fast are IDP capacity classes (document vs logic-only).
-fraud / computer_use names are reserved for future agents (Helm replicas 0).
+extract/fast are IDP capacity classes (document-model work vs logic-only).
 """
 
 from __future__ import annotations
@@ -10,13 +9,9 @@ from repody.runtime.contracts.agent import AgentId
 
 POOL_EXTRACT = "extract"
 POOL_FAST = "fast"
-POOL_FRAUD = "fraud"
-POOL_COMPUTER_USE = "computer_use"
 
 IDP_POOLS: frozenset[str] = frozenset({POOL_EXTRACT, POOL_FAST})
-ALL_AGENT_POOLS: frozenset[str] = frozenset(
-    {POOL_EXTRACT, POOL_FAST, POOL_FRAUD, POOL_COMPUTER_USE}
-)
+ALL_AGENT_POOLS: frozenset[str] = IDP_POOLS
 
 
 def agent_for_pool(pool: str) -> AgentId:
@@ -24,10 +19,6 @@ def agent_for_pool(pool: str) -> AgentId:
     normalized = (pool or "").strip().lower()
     if normalized in IDP_POOLS:
         return AgentId.IDP
-    if normalized == POOL_FRAUD:
-        return AgentId.FRAUD
-    if normalized == POOL_COMPUTER_USE:
-        return AgentId.COMPUTER_USE
     raise ValueError(f"unknown worker pool: {pool!r}")
 
 
@@ -41,10 +32,6 @@ def pool_for_agent(agent: AgentId, *, idp_pool: str = POOL_EXTRACT) -> str:
         if pool not in IDP_POOLS:
             return POOL_EXTRACT
         return pool
-    if agent is AgentId.FRAUD:
-        return POOL_FRAUD
-    if agent is AgentId.COMPUTER_USE:
-        return POOL_COMPUTER_USE
     raise ValueError(f"unknown agent: {agent}")
 
 

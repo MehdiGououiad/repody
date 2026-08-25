@@ -135,7 +135,7 @@ class IdpInput:
 
 @dataclass(frozen=True, slots=True)
 class IdpOutcome:
-    """Handoff artifact for Fraud and Computer Use agents."""
+    """Everything one IDP run produced: extraction, validation and soft errors."""
 
     run_id: str
     workflow_id: str

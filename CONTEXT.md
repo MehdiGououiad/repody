@@ -74,7 +74,7 @@ backend/src/repody/
 └── settings/            AUDIT_* settings
 ```
 
-**Hot path:** `process_run` → `execute_platform_run`(IDP) → `compose_idp` → `complete_run`. Recipe is IDP-only; fraud/computer_use pool names remain reserved in Helm for a future implementation.
+**Hot path:** `process_run` → `execute_platform_run`(IDP) → `compose_idp` → `complete_run`.
 
 **Intentional coupling:** `api/config.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
 
@@ -89,7 +89,7 @@ backend/src/repody/
 
 ### Platform agents
 
-**IDP** lives under `agents/idp/` (live). Capacity pools: `extract` / `fast`. Fraud / Computer Use pool names and Helm Deployments remain reserved at replicas 0 — no agent packages yet. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
+**IDP** lives under `agents/idp/` and is the only agent. Capacity pools: `extract` / `fast`. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
 
 Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `runtime/run/status.py`.
 

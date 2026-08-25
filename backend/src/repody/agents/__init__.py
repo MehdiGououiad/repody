@@ -1,1 +1,1 @@
-"""Domain agents — IDP is live; Fraud / Computer Use pool names are reserved (no packages yet)."""
+"""Domain agents. IDP (document extraction and validation) is the only one."""

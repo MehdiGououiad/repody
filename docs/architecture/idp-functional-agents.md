@@ -1,7 +1,6 @@
 # IDP functional architecture (as-built)
 
-Functional-first IDP agent. Recipe is **IDP-only**; fraud/computer_use pool names
-remain reserved in Helm for a future implementation (ADR 007).
+Functional-first IDP agent. It is the only agent in the recipe (ADR 007).
 
 **Principles:** small pure functions · explicit data contracts · composition ·
 side effects only at thin adapters · errors as data where partial failure is normal.
@@ -61,7 +60,6 @@ app/run/
 | Pool | Agent |
 |------|--------|
 | `extract` / `fast` | IDP (document vs logic-only capacity) |
-| `fraud` / `computer_use` | Reserved (not implemented) |
 
 ## Non-goals
 

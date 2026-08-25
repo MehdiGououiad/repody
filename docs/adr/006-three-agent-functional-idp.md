@@ -59,7 +59,13 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 2. ORM/snapshot → `IdpInput` mappers + tests — **done**
 3. Pure extract/validate functions + thin wrappers — **done**
 4. Adapters + `compose_idp` + `execute_idp_run` wired from `process_run` — **done**
-5. Delete obsolete god-phase logic; replace extractor ABC / use-case classes with callables — **done**. Fraud / Computer Use stubs later removed; pool names reserved only ([ADR 007](./007-staged-agent-queues-taskiq.md)).
+5. Delete obsolete god-phase logic; replace extractor ABC / use-case classes with callables — **done**.
+
+> **Amendment (2026-08):** the Fraud and Computer Use slices this ADR anticipated
+> were never built, and their reserved scaffolding has been removed. IDP is the
+> only agent. The platform-vs-agent seam and the `AgentOutcome` envelope remain
+> the extension point. See the amendment in
+> [ADR 007](./007-staged-agent-queues-taskiq.md).
 
 ## References
 

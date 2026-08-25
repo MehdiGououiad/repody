@@ -7,11 +7,7 @@ from dataclasses import dataclass
 from repody.runtime.contracts.agent import AgentId
 from repody.runtime.contracts.result import ErrorCode
 from repody.runtime.pools import agent_for_pool
-from repody.runtime.recipe import (
-    DEFAULT_AGENT_ORDER,
-    next_agent_after,
-    resolve_recipe,
-)
+from repody.runtime.recipe import DEFAULT_AGENT_ORDER, resolve_recipe
 
 
 @dataclass
@@ -27,16 +23,6 @@ def test_default_recipe_idp_only():
     assert DEFAULT_AGENT_ORDER == (AgentId.IDP,)
 
 
-def test_recipe_ignores_unimplemented_agents_in_request():
-    result = resolve_recipe(
-        _Flags(),
-        requested=(AgentId.IDP, AgentId.FRAUD, AgentId.COMPUTER_USE),
-    )
-    assert result.is_ok
-    assert result.value is not None
-    assert result.value.agents == (AgentId.IDP,)
-
-
 def test_recipe_fail_closed_when_no_agents_enabled():
     result = resolve_recipe(_Flags(agent_idp_enabled=False))
     assert not result.is_ok
@@ -45,13 +31,6 @@ def test_recipe_fail_closed_when_no_agents_enabled():
     assert "no agents enabled" in result.error.message
 
 
-def test_next_agent_after():
-    assert next_agent_after((AgentId.IDP,), AgentId.IDP) is None
-    assert next_agent_after((AgentId.IDP, AgentId.FRAUD), AgentId.IDP) is AgentId.FRAUD
-
-
 def test_agent_for_pool_mapping():
     assert agent_for_pool("extract") is AgentId.IDP
     assert agent_for_pool("fast") is AgentId.IDP
-    assert agent_for_pool("fraud") is AgentId.FRAUD
-    assert agent_for_pool("computer_use") is AgentId.COMPUTER_USE

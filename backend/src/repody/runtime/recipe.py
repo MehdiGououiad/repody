@@ -31,12 +31,10 @@ class ResolvedRecipe:
 
 @dataclass(frozen=True, slots=True)
 class PlatformStageResult:
-    """Result of one agent stage — handoff when ``next_agent`` is set."""
+    """Result of one agent stage."""
 
     outcome: AgentOutcome
-    next_agent: AgentId | None
     recipe: tuple[AgentId, ...]
-    finalize_pending: bool = False
 
 
 def _enabled_set(settings: AgentFlagSettings) -> set[AgentId]:
@@ -53,29 +51,13 @@ def resolve_recipe(
     """Intersect requested (or default) order with enable flags."""
     order = requested if requested is not None else DEFAULT_AGENT_ORDER
     enabled = _enabled_set(settings)
-    # Only IDP is implemented; ignore fraud/computer_use if still present in requests.
-    agents = tuple(agent for agent in order if agent in enabled and agent is AgentId.IDP)
+    agents = tuple(agent for agent in order if agent in enabled)
 
     if not agents:
         return Result.fail(
             AppError(code=ErrorCode.VALIDATION, message="no agents enabled for this run")
         )
     return Result.ok(ResolvedRecipe(agents=agents))
-
-
-def next_agent_after(
-    recipe: tuple[AgentId, ...],
-    current: AgentId,
-) -> AgentId | None:
-    """Return the next agent in the recipe after ``current``, or None if final."""
-    try:
-        idx = recipe.index(current)
-    except ValueError:
-        return None
-    nxt = idx + 1
-    if nxt >= len(recipe):
-        return None
-    return recipe[nxt]
 
 
 async def execute_agent_stage(
@@ -104,8 +86,8 @@ async def execute_platform_run(
 ) -> Result[PlatformStageResult]:
     """Run **one** agent stage. Assumes IDP stage already claimed when applicable.
 
-    Returns ``Result`` at the recipe boundary (ADR-006). Callers map failures once
-    at the worker edge. Finalize via ``finalize_pending`` when that flag is set.
+    Returns ``Result`` at the recipe boundary (ADR-006); callers map failures
+    once at the worker edge.
     """
     cfg = settings if settings is not None else get_settings()
     recipe_r = resolve_recipe(cfg, requested)
@@ -125,16 +107,11 @@ async def execute_platform_run(
             )
         )
 
-    next_agent = next_agent_after(recipe, agent)
-    # Reserved for future non-IDP finals; IDP always completes inside execute_idp_run.
-    finalize_pending = next_agent is None and agent is not AgentId.IDP
-
     log.info(
         "platform_run_stage",
         event_domain="audit_run",
         run_id=run.id,
         agent=agent.value,
-        next_agent=next_agent.value if next_agent else None,
         recipe=[a.value for a in recipe],
     )
 
@@ -164,14 +141,5 @@ async def execute_platform_run(
         run_id=run.id,
         agent=agent.value,
         status=outcome.status.value,
-        next_agent=next_agent.value if next_agent else None,
-        finalize_pending=finalize_pending,
     )
-    return Result.ok(
-        PlatformStageResult(
-            outcome=outcome,
-            next_agent=next_agent,
-            recipe=recipe,
-            finalize_pending=finalize_pending,
-        )
-    )
+    return Result.ok(PlatformStageResult(outcome=outcome, recipe=recipe))

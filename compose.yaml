@@ -204,65 +204,6 @@ services:
       AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
     restart: unless-stopped
 
-  # Reserved agent pools (replicas unused locally; profile agents). Recipe is IDP-only.
-  worker-fraud:
-    profiles: [workers, agents]
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_STORAGE_BACKEND: s3
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_OTEL_SERVICE_NAME: repody-worker-fraud
-      AUDIT_WORKER_POOL: fraud
-      AUDIT_WORKER_FRAUD_MAX_JOBS: "4"
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
-    restart: unless-stopped
-
-  worker-computer-use:
-    profiles: [workers, agents]
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_STORAGE_BACKEND: s3
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_OTEL_SERVICE_NAME: repody-worker-computer-use
-      AUDIT_WORKER_POOL: computer_use
-      AUDIT_WORKER_COMPUTER_USE_MAX_JOBS: "2"
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
-    restart: unless-stopped
-
   # ── Observability (optional: docker compose --profile observability up -d) ──
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:observability
   bugsink-db:

@@ -33,11 +33,6 @@ data:
   AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}
   AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: {{ .Values.config.queuedStaleTimeoutMinutes | quote }}
   AUDIT_AGENT_IDP_ENABLED: {{ .Values.config.agentIdpEnabled | quote }}
-  AUDIT_AGENT_FRAUD_ENABLED: {{ .Values.config.agentFraudEnabled | quote }}
-  AUDIT_AGENT_COMPUTER_USE_ENABLED: {{ .Values.config.agentComputerUseEnabled | quote }}
-  {{- /* Gate staged handoff: recipe includes Fraud/CU only when worker Deployments have replicas. */}}
-  AUDIT_AGENT_FRAUD_WORKERS_READY: {{ if gt (int .Values.workerFraud.replicas) 0 }}"true"{{ else }}"false"{{ end }}
-  AUDIT_AGENT_COMPUTER_USE_WORKERS_READY: {{ if gt (int .Values.workerComputerUse.replicas) 0 }}"true"{{ else }}"false"{{ end }}
 
   AUDIT_MAINTENANCE_INTERVAL_SECONDS: {{ .Values.config.maintenanceIntervalSeconds | quote }}
   AUDIT_DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
