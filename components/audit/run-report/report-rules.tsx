@@ -140,37 +140,6 @@ export function RunDetailedRuleCard({
   );
 }
 
-export function RunRuleResultsSummary({ audit }: { audit: RunAuditDetail }) {
-  return (
-    <ul className="space-y-2">
-      {audit.ruleResults.map((rule) => {
-        return (
-          <li
-            key={rule.id}
-            className={cn(
-              "rounded-lg border px-3 py-2 text-sm",
-              isRuleFailure(rule.status) ? "border-danger/30 bg-danger/5" : "border-border bg-card"
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span className={ruleStatusColor(rule.status)}>
-                <RuleStatusIcon status={rule.status} className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <span className="font-medium">{rule.name}</span>
-              <span className="text-xs text-on-surface-variant ml-auto">
-                {ruleStatusLabel(rule.status)}
-              </span>
-            </div>
-            {rule.detail ? (
-              <p className="text-xs text-on-surface-variant mt-1 font-mono">{rule.detail}</p>
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 export function RunRuleResultsDetailed({
   audit,
   labels,

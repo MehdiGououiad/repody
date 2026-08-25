@@ -15,10 +15,8 @@
 
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  isListTemplateType,
   isStructureTemplateType,
   type NuExtractTemplateType,
-  scalarTemplateType,
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
@@ -167,64 +165,4 @@ export function importNuextractTemplate(raw: string): ImportNuextractTemplateRes
   const fields = fieldsFromObject(parsed);
   if (fields.length === 0) return { ok: false, error: "empty" };
   return { ok: true, fields };
-}
-
-function cleanEnumValues(values: string[] | undefined): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of values ?? []) {
-    const token = raw.trim();
-    if (!token || seen.has(token)) continue;
-    seen.add(token);
-    out.push(token);
-  }
-  return out;
-}
-
-function exportFieldNode(field: SchemaField): unknown {
-  const templateType = (field.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE).trim();
-
-  if (templateType === "object" || templateType === "object-array") {
-    const row: Record<string, unknown> = {};
-    for (const child of field.children ?? []) {
-      const childName = child.name.trim();
-      if (!childName) continue;
-      row[childName] = exportFieldNode(child);
-    }
-    return templateType === "object-array" ? [row] : row;
-  }
-
-  if (templateType === "multi-enum") {
-    const values = cleanEnumValues(field.enumValues);
-    if (values.length >= 2) return [values];
-    return ["verbatim-string"];
-  }
-
-  if (templateType === "enum") {
-    const values = cleanEnumValues(field.enumValues);
-    if (values.length >= 2) return values;
-    return "verbatim-string";
-  }
-
-  if (isListTemplateType(templateType)) {
-    return [leafType(scalarTemplateType(templateType))];
-  }
-
-  return leafType(templateType);
-}
-
-/** Build an official NuExtract template object from schema fields (for preview/export). */
-export function exportNuextractTemplate(schema: SchemaField[]): Record<string, unknown> {
-  const template: Record<string, unknown> = {};
-  for (const field of schema) {
-    const name = field.name.trim();
-    if (!name) continue;
-    template[name] = exportFieldNode(field);
-  }
-  return template;
-}
-
-/** Official JSON string (`indent=4`) matching NuExtract examples. */
-export function dumpNuextractTemplate(schema: SchemaField[]): string {
-  return JSON.stringify(exportNuextractTemplate(schema), null, 4);
 }

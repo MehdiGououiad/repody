@@ -3,7 +3,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { isOidcConfigured, signOut } from "@/auth";
 import { backendOrigin } from "@/lib/api/backend-origin";
-import { apiPath, readApiError } from "@/lib/api/http";
+import { apiPath } from "@/lib/api/http";
 import { getServerAccessToken } from "@/lib/auth/access-token-server";
 
 async function sessionAuthHeaders(): Promise<HeadersInit> {
@@ -47,10 +47,4 @@ export async function serverFetch(
   } finally {
     if (timer) clearTimeout(timer);
   }
-}
-
-export async function serverJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await serverFetch(path, init);
-  if (!res.ok) await readApiError(res, `API ${path}`);
-  return res.json() as Promise<T>;
 }

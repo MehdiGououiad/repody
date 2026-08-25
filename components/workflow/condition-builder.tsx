@@ -12,8 +12,6 @@ import { ConditionRow } from "@/components/workflow/condition-builder-row";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
 import type { RuleCondition } from "@/lib/types";
 
-export { conditionsToExpression, conditionToString, fieldToken } from "@/lib/rules/expression";
-
 export function ConditionBuilder({
   conditions,
   fields,

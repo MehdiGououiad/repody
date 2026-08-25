@@ -17,5 +17,3 @@ export function throwOnApiError(
   const text = typeof error === "string" ? error : error != null ? JSON.stringify(error) : "";
   throw new Error(formatApiError(text) || fallback);
 }
-
-export { browserFetch, browserJson } from "@/lib/api/http";

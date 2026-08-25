@@ -260,6 +260,5 @@ Argo CD docs: [Private repositories](https://argo-cd.readthedocs.io/en/stable/us
 |------|---------|
 | `deploy/scripts/build-images.mjs` | Vendor image build/push |
 | `deploy/scripts/release-supply-chain.mjs` | SBOM, cosign, promotion |
-| `deploy/scripts/lib/cli.mjs` | CLI helpers |
 | `deploy/client/` | Client YAML kit (values + ExternalSecrets) |
 | `deploy/helm/` | Production Helm charts |

@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowUpRight, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -22,19 +21,6 @@ interface RecentAuditsTableProps {
   limit?: number;
   /** Compose header actions (e.g. view-all link) instead of boolean flags. */
   actions?: React.ReactNode;
-}
-
-export function RecentAuditsViewAllAction() {
-  const tCommon = useTranslations("common");
-
-  return (
-    <Button asChild variant="ghost" size="sm" className="text-accent-blue h-7">
-      <Link href="/audits">
-        {tCommon("viewAll")}
-        <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-      </Link>
-    </Button>
-  );
 }
 
 export function RecentAuditsTable({ audits, title, limit, actions }: RecentAuditsTableProps) {

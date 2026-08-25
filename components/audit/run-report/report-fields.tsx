@@ -98,33 +98,6 @@ function RunDocFieldsListBody({ doc, locale }: { doc: RunAuditDocument; locale: 
   );
 }
 
-function RunDocFieldsTableBody({ doc, locale }: { doc: RunAuditDocument; locale: string }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs text-on-surface-variant border-b border-border">
-            <th className="px-4 py-2">Field</th>
-            <th className="px-4 py-2">Value</th>
-            <th className="px-4 py-2">Confidence</th>
-          </tr>
-        </thead>
-        <tbody>
-          {doc.fields.map((field) => (
-            <tr key={field.key} className="border-b border-border/50 last:border-0">
-              <td className="px-4 py-2 font-mono text-xs">{field.key}</td>
-              <td className="px-4 py-2 tabular-nums">{formatFieldValue(field, locale)}</td>
-              <td className="px-4 py-2">
-                {field.confidence != null ? <ConfidenceBar value={field.confidence} /> : "—"}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 /** Compact list layout for builder panels and side previews. */
 export function RunDocFieldsList({
   doc,
@@ -139,24 +112,6 @@ export function RunDocFieldsList({
     <div className="panel-elevated rounded-xl overflow-hidden">
       <RunDocFieldsCardHeader doc={doc} labels={labels} />
       <RunDocFieldsListBody doc={doc} locale={locale} />
-    </div>
-  );
-}
-
-/** Full table layout for printable audit reports. */
-export function RunDocFieldsTable({
-  doc,
-  locale,
-  labels,
-}: {
-  doc: RunAuditDocument;
-  locale: string;
-  labels?: RunReportLabels;
-}) {
-  return (
-    <div className="panel-elevated rounded-xl overflow-hidden">
-      <RunDocFieldsCardHeader doc={doc} labels={labels} />
-      <RunDocFieldsTableBody doc={doc} locale={locale} />
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import { FileText, ShieldCheck } from "lucide-react";
 import type { RunAuditDetail } from "@/lib/types/audit";
-import { RunStatusBanner } from "./report-banner";
 import { RunFieldsList } from "./report-fields";
 import { RunRuleResultsDetailed } from "./report-rules";
 import { mergeLabels, type RunReportLabels } from "./report-shared";
@@ -44,39 +43,3 @@ export function RunDetailedReportSections({
     </>
   );
 }
-
-export function RunReportCore({
-  audit,
-  locale = "en",
-  labels,
-  subtitle,
-}: {
-  audit: RunAuditDetail;
-  locale?: string;
-  labels?: RunReportLabels;
-  subtitle?: string;
-}) {
-  return (
-    <div className="space-y-6">
-      <RunStatusBanner audit={audit} labels={labels} subtitle={subtitle} />
-      <RunDetailedReportSections audit={audit} locale={locale} labels={labels} />
-    </div>
-  );
-}
-
-export { RunStatusBanner } from "./report-banner";
-export {
-  RunDocFieldsList,
-  RunDocFieldsTable,
-  RunFieldsList,
-} from "./report-fields";
-export {
-  RunDetailedRuleCard,
-  RunRuleResultsDetailed,
-  RunRuleResultsSummary,
-} from "./report-rules";
-export {
-  ConfidenceBar,
-  formatFieldValue,
-  type RunReportLabels,
-} from "./report-shared";
