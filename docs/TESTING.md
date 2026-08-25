@@ -8,6 +8,7 @@ Repody follows the **test pyramid** (2026 pytest / Playwright practice): many fa
 backend/tests/
   conftest.py              # shared fixtures (Postgres, ASGI client, live_client)
   helpers/ fixtures/
+  support/                 # shared E2E helpers, also imported by backend/scripts
   unit/                    # pure — no live stack; prefer no DB
     agents/ app/ extraction/ inference/ infra/{auth,observability}/
     runtime/ rules/ taskiq/

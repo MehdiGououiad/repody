@@ -1,6 +1,6 @@
 """Benchmark suite scoring and OCR fixture scorers."""
 
-from repody.benchmarking.ocr import (
+from scripts.benchmarking.ocr import (
     hit_field,
     load_expectations,
     orient_cnie_sides,
@@ -13,7 +13,7 @@ from repody.benchmarking.ocr import (
     score_sample_id_fields,
     score_sample_id_markdown,
 )
-from repody.benchmarking.suite import (
+from scripts.benchmarking.suite import (
     compare_value,
     csv_report,
     html_report,
@@ -21,7 +21,7 @@ from repody.benchmarking.suite import (
     score_fields,
     score_rules,
 )
-from repody.benchmarking.text import digits_only, normalize_space, parse_amount
+from scripts.benchmarking.text import digits_only, normalize_space, parse_amount
 
 __all__ = [
     "compare_value",

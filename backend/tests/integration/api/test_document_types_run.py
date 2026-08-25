@@ -1,8 +1,7 @@
 import json
 
 import pytest
-
-from repody.integration.facture import facture_bytes
+from tests.support.facture import facture_bytes
 
 
 @pytest.mark.live
@@ -37,7 +36,7 @@ async def test_multipart_run_accepts_document_types(live_client):
     assert res.status_code == 202, res.text
     run_id = res.json()["runId"]
 
-    from repody.integration.workflow_flow import poll_run_until_done
+    from tests.support.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     assert result is not None

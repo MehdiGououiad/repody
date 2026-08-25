@@ -7,9 +7,7 @@ import uuid
 
 import pytest
 from tests.helpers.workflow_rules import logic_field_gt
-
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.integration.facture import (
+from tests.support.facture import (
     EXPECTED_TOTAL,
     FACTURE_PDF,
     FACTURE_UI_PATHS,
@@ -19,6 +17,8 @@ from repody.integration.facture import (
     rules_for_case,
     total_from_result,
 )
+
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 
 TEXT_LAYER_CASE = FACTURE_UI_PATHS[0]
 
@@ -422,7 +422,7 @@ async def test_multipart_test_run_with_facture(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from repody.integration.workflow_flow import poll_run_until_done
+    from tests.support.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id, max_ms=120_000)
     assert total_from_result(result) == EXPECTED_TOTAL
@@ -444,7 +444,7 @@ async def test_test_run_produces_audit_detail(live_client):
     assert started.status_code == 202
     run_id = started.json()["runId"]
 
-    from repody.integration.workflow_flow import poll_run_until_done
+    from tests.support.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     audit_id = result["id"]
@@ -464,7 +464,7 @@ async def test_api_run_with_seed_key_completes(live_client):
     assert ok.status_code == 202
     run_id = ok.json()["runId"]
 
-    from repody.integration.workflow_flow import poll_run_until_done
+    from tests.support.workflow_flow import poll_run_until_done
 
     result = await poll_run_until_done(live_client, run_id)
     assert result is not None

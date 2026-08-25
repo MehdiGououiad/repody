@@ -10,7 +10,7 @@ import statistics
 from decimal import Decimal
 from typing import Any
 
-from repody.benchmarking.text import normalize_space, parse_amount
+from scripts.benchmarking.text import normalize_space, parse_amount
 
 
 def normalize_text(value: object) -> str:

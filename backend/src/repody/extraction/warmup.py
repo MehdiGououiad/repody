@@ -41,12 +41,10 @@ def _resolve_warmup_document(settings: Settings) -> Path | None:
     raw = (settings.repody_vlm_warmup_document or "").strip()
     if not raw:
         return None
-    path = Path(raw)
-    if path.is_absolute():
-        return path
-    from repody.integration.fixtures import repo_root
-
-    return repo_root() / path
+    # Relative paths resolve against the working directory: the package may be
+    # installed in site-packages, where its own location says nothing about
+    # where the operator's document lives.
+    return Path(raw).resolve()
 
 
 def _mime_type_for_path(path: Path) -> str:

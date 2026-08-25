@@ -2,8 +2,7 @@ import json
 
 import pytest
 from tests.helpers.api_errors import assert_error_response
-
-from repody.integration.facture import facture_bytes
+from tests.support.facture import facture_bytes
 
 
 @pytest.mark.asyncio
@@ -197,7 +196,7 @@ async def test_duplicate_file_upload_run_completes(live_client):
         assert res.status_code == 202, res.text
         return res.json()["runId"]
 
-    from repody.integration.workflow_flow import poll_run_until_done
+    from tests.support.workflow_flow import poll_run_until_done
 
     run_id_1 = await start_run()
     run_id_2 = await start_run()

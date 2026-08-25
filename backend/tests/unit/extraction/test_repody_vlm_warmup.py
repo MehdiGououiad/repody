@@ -27,11 +27,17 @@ def test_warmup_bundle_uses_synthetic_png_when_unset():
     assert label == "synthetic:1x1.png"
 
 
-def test_resolve_warmup_document_honors_relative_override():
-    settings = Settings(repody_vlm_warmup_document="e2e/fixtures/documents/Facture.pdf")
+def test_resolve_warmup_document_resolves_relative_against_cwd(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    settings = Settings(repody_vlm_warmup_document="docs/sample.pdf")
     path = _resolve_warmup_document(settings)
-    assert path is not None
-    assert path.is_file()
+    assert path == tmp_path.resolve() / "docs" / "sample.pdf"
+
+
+def test_resolve_warmup_document_keeps_absolute_override(tmp_path):
+    absolute = tmp_path / "sample.pdf"
+    settings = Settings(repody_vlm_warmup_document=str(absolute))
+    assert _resolve_warmup_document(settings) == absolute.resolve()
 
 
 def test_mime_type_for_path():

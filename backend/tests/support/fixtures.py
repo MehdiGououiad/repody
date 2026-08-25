@@ -7,7 +7,8 @@ from pathlib import Path
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parents[4]
+    # backend/tests/support/fixtures.py → backend/tests → backend → repo root
+    return Path(__file__).resolve().parents[3]
 
 
 def resolve_facture_pdf() -> Path:

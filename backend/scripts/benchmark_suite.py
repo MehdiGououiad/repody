@@ -22,8 +22,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
-from repody.benchmarking import csv_report, html_report, score_fields, score_rules
+from scripts.benchmarking import csv_report, html_report, score_fields, score_rules
 
 DEFAULT_MODELS = ("repody:vlm",)
 

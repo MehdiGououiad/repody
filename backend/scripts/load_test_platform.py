@@ -54,7 +54,7 @@ class Sample:
 
 
 def _auth_headers() -> dict[str, str]:
-    from repody.integration.live_stack import live_auth_headers, live_oidc_enabled
+    from tests.support.live_stack import live_auth_headers, live_oidc_enabled
 
     if not live_oidc_enabled():
         return {}

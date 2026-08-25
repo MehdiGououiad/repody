@@ -14,8 +14,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
-
-from repody.integration.facture import (
+from tests.support.facture import (
     EXPECTED_TOTAL,
     EXPECTED_TVA,
     FACTURE_PDF,
@@ -35,7 +34,7 @@ from repody.integration.facture import (
     total_from_result,
     tva_from_result,
 )
-from repody.integration.workflow_flow import run_test_with_files, save_workflow
+from tests.support.workflow_flow import run_test_with_files, save_workflow
 
 pytestmark = [pytest.mark.e2e_facture, pytest.mark.live, pytest.mark.asyncio]
 

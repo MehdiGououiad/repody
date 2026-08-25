@@ -125,10 +125,13 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 |------|------|
 | `main.py` | FastAPI app, middleware, router wiring |
 | `settings/` | `AUDIT_*` Pydantic settings (`fields_*.py` + `model.py`) |
-| `benchmarking/` | Benchmark scoring helpers (`ocr`, `suite`, `text`) |
 | `runtime/` | Pure contracts, recipe, pools, run status/ids, operator validate/job |
 | `agents/` | Domain agents (`idp` only) |
-| `integration/` | Shared E2E helpers (`facture`, `fixtures`, `live_stack`, `workflow_flow`) for tests + scripts |
+
+The package holds runtime code only. Non-runtime helpers live outside it:
+`backend/tests/support/` (shared E2E helpers: `facture`, `fixtures`,
+`live_stack`, `workflow_flow`) and `backend/scripts/benchmarking/` (scoring
+helpers: `ocr`, `suite`, `text`).
 
 ### `api/` — HTTP layer (thin)
 
