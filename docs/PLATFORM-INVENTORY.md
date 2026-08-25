@@ -391,10 +391,10 @@ Radix UI, Tailwind CSS 4, `class-variance-authority`, `lucide-react`, `sonner`, 
 | Command | Purpose |
 |---------|---------|
 | `pnpm dev:all` | Compose + API + UI + observability |
-| `pnpm dev:stack` | Postgres, Redis, MinIO, Keycloak |
+| `pnpm dev:src` | Postgres, Redis, MinIO, Keycloak |
 | `pnpm dev:api` / `dev:app` | Foreground API or UI |
 | `pnpm dev:worker:extract` / `:fast` | Compose workers |
-| `pnpm dev:observability` | Grafana, Loki, Tempo, Bugsink, OTEL |
+| `pnpm dev:src:observability` | Grafana, Loki, Tempo, Bugsink, OTEL |
 | `pnpm llamacpp:serve` / `llamacpp:restart` / `llamacpp:verify` / `llamacpp:warmup` | NuExtract llama-server lifecycle |
 
 See [COMMANDS.md](./COMMANDS.md) and [deploy/LOCAL.md](./deploy/LOCAL.md).

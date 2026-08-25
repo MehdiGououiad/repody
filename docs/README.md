@@ -71,7 +71,6 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 | Pinned runtime versions | [VERSIONS.md](./VERSIONS.md) |
 | Architecture decisions | [adr/README.md](./adr/README.md) |
 | IDP functional design (3 agents) | [architecture/idp-functional-agents.md](./architecture/idp-functional-agents.md) |
-| Research / experiments (not onboarding) | [experiments/](./experiments/) |
 
 ## Deploy directory
 

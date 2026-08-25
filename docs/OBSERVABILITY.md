@@ -7,7 +7,7 @@ Repody emits **JSON logs by default** (`AUDIT_LOG_JSON=true`). With the observab
 ```powershell
 pnpm dev:all                  # daily driver — observability ON by default
 pnpm dev:all -- --no-obs      # skip Grafana/Loki/Tempo/Bugsink
-pnpm dev:observability        # observability stack only
+pnpm dev:src:observability        # observability stack only
 pnpm dev:status               # includes Grafana, Loki, Tempo, Bugsink checks
 ```
 

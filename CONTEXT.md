@@ -178,8 +178,7 @@ Chart: [deploy/helm/repody](./deploy/helm/repody). Client install: [docs/deploy/
 These directories are agent/tooling assets, not runtime dependencies:
 
 - `.agents/skills/` — Cursor agent skills (including `ui-ux-pro-max` design data)
-- `backend/scripts/research/` · `deploy/scripts/research/` — experimental benches
-- `docs/experiments/` — research notes (not onboarding)
+- `deploy/scripts/research/` · `deploy/research/` — experimental model runners and configs
 - `benchmark-reports/` — local benchmark output (gitignored)
 
 ## Tests

@@ -1,7 +1,7 @@
 """Production-like live API suite — all public endpoints and extraction/validation paths.
 
 Requires a running stack (Taskiq workers + inference). Run via:
-  pnpm test:platform:live
+  pnpm test:live
 """
 
 from __future__ import annotations

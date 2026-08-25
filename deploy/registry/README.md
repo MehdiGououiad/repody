@@ -147,7 +147,6 @@ helm upgrade --install repody deploy/helm/repody -n repody \
   -f ~/repody-gitops/values.yaml \
   -f deploy/client/values-harbor.example.yaml \
   -f deploy/client/values-enterprise.example.yaml \
-  -f deploy/values/openshift.yaml \
   --wait --timeout 25m
 ```
 
