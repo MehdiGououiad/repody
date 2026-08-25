@@ -21,15 +21,15 @@ from typing import Any
 
 import httpx
 import pytest
-
-from repody.benchmarking import score_gououiad_cnie_fields
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
-from repody.integration.live_stack import (
+from scripts.benchmarking import score_gououiad_cnie_fields
+from tests.support.live_stack import (
     create_live_async_client,
     live_api_base,
 )
-from repody.integration.workflow_flow import run_test_with_files, save_workflow
+from tests.support.workflow_flow import run_test_with_files, save_workflow
+
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.infra.storage.mime import JPEG, PDF, PNG, WEBP, resolve_mime
 
 pytestmark = [pytest.mark.live, pytest.mark.slow]
 

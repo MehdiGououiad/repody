@@ -64,7 +64,7 @@ async def live_client(request):
         pytest.skip("live_client fixture requires @pytest.mark.live")
     if os.environ.get("E2E_STACK") != "1" and not os.environ.get("E2E_API_URL"):
         pytest.skip("Set E2E_STACK=1 or E2E_API_URL for live API tests")
-    from repody.integration.live_stack import create_live_async_client
+    from tests.support.live_stack import create_live_async_client
 
     async with create_live_async_client() as ac:
         yield ac

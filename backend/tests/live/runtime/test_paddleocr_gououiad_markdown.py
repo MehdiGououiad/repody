@@ -21,8 +21,8 @@ from typing import Any
 
 import httpx
 import pytest
+from scripts.benchmarking import score_gououiad_cnie_markdown
 
-from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
 from repody.extraction.paddleocr_v6 import extract_with_paddleocr_v6
 from repody.extraction.types import DocumentBundle

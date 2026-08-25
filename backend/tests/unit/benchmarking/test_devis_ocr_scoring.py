@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import pytest
-
-from repody.benchmarking import hit_field, score_devis_markdown
+from scripts.benchmarking import hit_field, score_devis_markdown
 
 GOLDEN_MARKDOWN = """
 HOPITAL PRIVE AGADIR

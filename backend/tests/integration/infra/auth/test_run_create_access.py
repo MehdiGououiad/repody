@@ -75,7 +75,7 @@ async def test_test_run_accepts_operator_jwt(live_client):
     health = await live_client.get("/v1/healthz")
     if not health.json().get("oidcEnabled"):
         pytest.skip("OIDC not enabled on target stack")
-    from repody.integration.live_stack import fetch_keycloak_token
+    from tests.support.live_stack import fetch_keycloak_token
 
     ok = await live_client.post(
         "/v1/workflows/wf-invoice-audit/runs/json",

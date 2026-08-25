@@ -8,9 +8,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from repody.benchmarking.text import digits_only, normalize_space, parse_amount
+from scripts.benchmarking.text import digits_only, normalize_space, parse_amount
 
-_FIXTURES_ROOT = Path(__file__).resolve().parents[4] / "e2e" / "fixtures" / "documents"
+# backend/scripts/benchmarking/ocr.py → backend/scripts → backend → repo root
+_FIXTURES_ROOT = Path(__file__).resolve().parents[3] / "e2e" / "fixtures" / "documents"
 
 
 def hit_field(text: str, field: dict[str, Any]) -> bool:

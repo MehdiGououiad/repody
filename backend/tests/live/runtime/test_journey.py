@@ -11,15 +11,15 @@ import uuid
 import httpx
 import pytest
 from tests.helpers.workflow_rules import logic_field_gt
-
-from repody.infra.db.seed import SEED_WORKFLOW_ID
-from repody.integration.live_stack import (
+from tests.support.live_stack import (
     assert_metrics_access,
     create_anonymous_live_client,
     create_live_client,
     live_api_base,
     live_oidc_enabled,
 )
+
+from repody.infra.db.seed import SEED_WORKFLOW_ID
 
 BASE = live_api_base()
 WF_ID = SEED_WORKFLOW_ID

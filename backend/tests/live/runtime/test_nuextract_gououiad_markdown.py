@@ -20,8 +20,8 @@ from typing import Any
 
 import httpx
 import pytest
+from scripts.benchmarking import score_gououiad_cnie_markdown
 
-from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.extraction.types import DocumentBundle
 from repody.extraction.vlm import extract_with_repody_vlm

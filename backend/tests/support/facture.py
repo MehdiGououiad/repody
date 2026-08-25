@@ -6,9 +6,10 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+from tests.support.fixtures import resolve_facture_pdf
+
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.extraction.modes import LOGIC_VALIDATION, ValidationMode
-from repody.integration.fixtures import resolve_facture_pdf
 
 FACTURE_PDF = resolve_facture_pdf()
 EXPECTED_TOTAL = "6000.00"

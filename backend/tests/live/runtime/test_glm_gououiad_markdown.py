@@ -24,8 +24,8 @@ from urllib.parse import urlparse
 
 import httpx
 import pytest
+from scripts.benchmarking import score_gououiad_cnie_markdown
 
-from repody.benchmarking import score_gououiad_cnie_markdown
 from repody.extraction.branding import GLM_OCR_CATALOG_ID
 from repody.extraction.glm_ocr import extract_with_glm_ocr
 from repody.extraction.types import DocumentBundle

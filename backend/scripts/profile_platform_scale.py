@@ -316,7 +316,7 @@ async def profile_live_enqueue(base: str, n: int = 20, *, auth: bool) -> list[st
     health = Sample("GET /v1/healthz")
     headers: dict[str, str] = {}
     if auth:
-        from repody.integration.live_stack import live_auth_headers
+        from tests.support.live_stack import live_auth_headers
 
         headers = live_auth_headers()
         lines.append(f"live_auth: bearer={'yes' if headers else 'no'}")

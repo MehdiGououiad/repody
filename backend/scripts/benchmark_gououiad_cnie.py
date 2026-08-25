@@ -43,7 +43,9 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
-from repody.benchmarking import score_gououiad_cnie_fields, score_gououiad_cnie_markdown
+from scripts.benchmarking import score_gououiad_cnie_fields, score_gououiad_cnie_markdown
+from tests.support.fixtures import repo_root
+
 from repody.extraction.branding import (
     GLM_OCR_CATALOG_ID,
     GLM_OCR_QWEN_CATALOG_ID,
@@ -59,7 +61,6 @@ from repody.extraction.paddleocr_v6 import extract_with_paddleocr_v6
 from repody.extraction.types import DocumentBundle, SchemaFieldSpec
 from repody.extraction.vlm import extract_with_repody_vlm
 from repody.infra.storage.mime import resolve_mime
-from repody.integration.fixtures import repo_root
 from repody.settings import get_settings
 
 FIXTURES = repo_root() / "e2e" / "fixtures" / "documents"

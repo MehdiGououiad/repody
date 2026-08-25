@@ -11,8 +11,7 @@ import uuid
 
 import httpx
 import pytest
-
-from repody.integration.facture import (
+from tests.support.facture import (
     EXPECTED_TOTAL,
     FACTURE_UI_PATHS,
     WORKFLOW_NAME,
@@ -21,7 +20,7 @@ from repody.integration.facture import (
     rules_for_case,
     total_from_result,
 )
-from repody.integration.live_stack import (
+from tests.support.live_stack import (
     assert_metrics_access,
     create_live_client,
     live_api_base,
