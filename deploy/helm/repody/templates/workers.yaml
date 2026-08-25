@@ -57,6 +57,7 @@ spec:
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-extract
             {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:
@@ -130,6 +131,7 @@ spec:
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-fast
             {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:
@@ -194,6 +196,7 @@ spec:
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-fraud
             {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:
@@ -259,6 +262,7 @@ spec:
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-worker-computer-use
             {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
+            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
           livenessProbe:

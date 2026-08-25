@@ -57,6 +57,10 @@ deploy/env/observability.enabled.env
 /e2e-cookies.txt
 /headers.txt
 
+# throwaway experiment scratch (never commit)
+.tmp_*
+_tmp_*
+
 # env files (can opt-in for committing if needed)
 .env*
 
@@ -89,9 +93,6 @@ deploy/qwen35/logs/
 deploy/nuextract2/paths.local.env
 deploy/nuextract2/models/
 deploy/nuextract2/logs/
-deploy/client/lab/.runtime/
-deploy/client/lab/.runtime-k3s/
-deploy/client/lab/.runtime-enterprise/
 .runtime-enterprise/
 backend/.venv/
 *.tgz

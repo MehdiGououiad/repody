@@ -20,8 +20,7 @@ class FileBindingLike(Protocol):
     document_id: str | None
 
 
-def needs_extract_pool(extraction_mode: str | None, *, doc: object | None = None) -> bool:
-    _ = doc
+def needs_extract_pool(extraction_mode: str | None) -> bool:
     return parse_read_path(extraction_mode).read in _EXTRACT_READ_KINDS
 
 
@@ -38,7 +37,7 @@ def classify_bindings_for_workflow(
         doc_id = getattr(binding, "document_id", None)
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
         mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
-        if needs_extract_pool(mode, doc=wf_doc):
+        if needs_extract_pool(mode):
             return "extract"
     return "fast"
 
@@ -57,7 +56,7 @@ def classify_run_documents(
         doc_id = _value(rd, "document_id")
         wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
         mode = _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID) if wf_doc else DEFAULT_READ_PATH_ID
-        if needs_extract_pool(mode, doc=wf_doc):
+        if needs_extract_pool(mode):
             return "extract"
     return "fast"
 

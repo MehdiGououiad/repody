@@ -2,17 +2,29 @@
 
 from __future__ import annotations
 
+import pytest
+
 from repody.agents.idp.adapters.mapping import (
     build_idp_input,
     document_spec_from_snapshot,
+    rule_dict_from_spec,
     rule_spec_from_dict,
     stored_document,
 )
-from repody.agents.idp.contracts import DocumentSpec, SchemaField
-from repody.agents.idp.compose import build_extraction_plan, needs_extraction
-from repody.agents.idp.adapters.validate import summarize_validation
-from repody.agents.idp.contracts import RuleResult
+from repody.agents.idp.adapters.validate import summarize_validation, validate_extraction
+from repody.agents.idp.compose import build_extraction_plan
+from repody.agents.idp.contracts import (
+    DocumentExtraction,
+    DocumentSpec,
+    ExtractedField,
+    ExtractionOutput,
+    IdpExtractionMeta,
+    IdpOutcome,
+    RuleResult,
+    SchemaField,
+)
 from repody.agents.idp.run import agent_status_from_idp
+from repody.extraction.modes import LOGIC_VALIDATION, extraction_is_needed
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
@@ -42,23 +54,19 @@ def test_agent_outcome_envelope():
     assert outcome.status is AgentStatus.PASSED
 
 
-def test_needs_extraction_requires_file_and_schema_or_markdown():
-    spec = DocumentSpec(
-        id="d1",
-        label="Invoice",
-        schema_fields=(SchemaField(name="total"),),
-    )
-    assert needs_extraction(spec, None) is False
-    stored = stored_document(
-        document_id="d1",
-        storage_key="k1",
-        mime_type="application/pdf",
-    )
-    assert needs_extraction(spec, stored) is True
-    empty = DocumentSpec(id="d2", label="x", schema_fields=())
-    assert needs_extraction(empty, stored) is False
-    md = DocumentSpec(id="d3", label="x", schema_fields=(), markdown_extraction=True)
-    assert needs_extraction(md, stored) is True
+def test_extraction_is_needed_requires_file_and_schema_or_markdown():
+    assert extraction_is_needed(
+        has_file=False, has_schema_fields=True, markdown_extraction=False
+    ) is False
+    assert extraction_is_needed(
+        has_file=True, has_schema_fields=True, markdown_extraction=False
+    ) is True
+    assert extraction_is_needed(
+        has_file=True, has_schema_fields=False, markdown_extraction=False
+    ) is False
+    assert extraction_is_needed(
+        has_file=True, has_schema_fields=False, markdown_extraction=True
+    ) is True
 
 
 def test_build_extraction_plan():
@@ -86,10 +94,6 @@ def test_summarize_validation_partial():
 
 
 def test_agent_status_from_idp_outcome():
-    from repody.agents.idp.contracts import ExtractionOutput
-    from repody.agents.idp.contracts import IdpOutcome
-    from repody.agents.idp.contracts import RuleResult
-
     results = (
         RuleResult(
             rule_id="r1",
@@ -116,6 +120,32 @@ def test_agent_status_from_idp_outcome():
     }
 
 
+def test_rule_spec_round_trip_preserves_junction():
+    rule = rule_spec_from_dict(
+        {
+            "id": "r1",
+            "name": "Total positive",
+            "kind": "logic",
+            "scope": "intra",
+            "severity": "reject",
+            "applies_to": ["total"],
+            "body": "total > 0",
+            "conditions": [{"left": {"kind": "field", "value": "total"}, "operator": ">", "right": {"kind": "literal", "value": "0"}}],
+            "condition_junction": "OR",
+        }
+    )
+    assert rule.kind == "logic"
+    assert rule.applies_to == ("total",)
+    assert rule.condition_junction == "OR"
+    assert len(rule.conditions) == 1
+
+    as_dict = rule_dict_from_spec(rule)
+    assert as_dict["condition_junction"] == "OR"
+    assert as_dict["applies_to"] == ["total"]
+    assert as_dict["body"] == "total > 0"
+    assert as_dict["conditions"] == list(rule.conditions)
+
+
 def test_mappers_build_idp_input():
     snap = SnapshotDocument(
         id="doc-1",
@@ -138,26 +168,19 @@ def test_mappers_build_idp_input():
     assert spec.label == "Invoice"
     assert spec.schema_fields[0].name == "total"
 
-    rule = rule_spec_from_dict(
-        {
-            "id": "r1",
-            "name": "Total positive",
-            "kind": "logic",
-            "scope": "intra",
-            "severity": "reject",
-            "applies_to": ["total"],
-            "body": "total > 0",
-            "conditions": [],
-        }
-    )
-    assert rule.kind == "logic"
-    assert rule.applies_to == ("total",)
-
     inp = build_idp_input(
         run_id="run-1",
         workflow_id="wf-1",
         documents=[snap],
-        rules=[{"id": "r1", "name": "r", "kind": "logic", "body": "true"}],
+        rules=[
+            {
+                "id": "r1",
+                "name": "r",
+                "kind": "logic",
+                "body": "true",
+                "condition_junction": "AND",
+            }
+        ],
         stored=[
             stored_document(
                 document_id="doc-1",
@@ -173,3 +196,57 @@ def test_mappers_build_idp_input():
     assert len(inp.documents) == 1
     assert len(inp.workflow.documents) == 1
     assert len(inp.workflow.rules) == 1
+    assert inp.workflow.rules[0].condition_junction == "AND"
+
+
+@pytest.mark.asyncio
+async def test_validate_extraction_consumes_rule_spec():
+    extraction = ExtractionOutput(
+        by_document=(
+            DocumentExtraction(
+                document_id="doc-1",
+                fields=(
+                    ExtractedField(
+                        key="total",
+                        value="10",
+                        field_type="number",
+                        extracted=True,
+                    ),
+                ),
+                markdown_text=None,
+                meta=IdpExtractionMeta(
+                    read_path_config="document_model",
+                    read_path_used="document_model",
+                    validation_mode="logic_only",
+                    document_model_id="repody:vlm",
+                    cache_hit=False,
+                    extraction_ms=1,
+                    fields_extracted=1,
+                ),
+            ),
+        )
+    )
+    rules = (
+        rule_spec_from_dict(
+            {
+                "id": "r1",
+                "name": "Total positive",
+                "kind": "logic",
+                "scope": "intra",
+                "severity": "reject",
+                "applies_to": [],
+                "body": "total > 0",
+                "conditions": [],
+            }
+        ),
+    )
+    out = await validate_extraction(
+        extraction,
+        rules=rules,
+        labels={"doc-1": "Invoice"},
+        multi_document=False,
+        validation_mode=LOGIC_VALIDATION,
+    )
+    assert out.summary_passed == 1
+    assert out.overall_status == "passed"
+    assert out.rule_results[0].rule_id == "r1"

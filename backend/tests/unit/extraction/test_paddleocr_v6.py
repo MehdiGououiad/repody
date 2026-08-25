@@ -10,7 +10,7 @@ import pytest
 import respx
 
 from repody.catalog.registry import is_markdown_only_model, parse_document_model
-from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
+from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID, UnknownCatalogIdError
 from repody.extraction.paddleocr_v6 import (
     build_ocr_request_payload,
     extract_with_paddleocr_v6,
@@ -59,14 +59,14 @@ def test_build_ocr_request_payload_supports_official_fast_path(monkeypatch: pyte
         get_settings.cache_clear()
 
 
-def test_paddleocr_v6_registered_when_enabled(monkeypatch: pytest.MonkeyPatch):
+def test_paddleocr_v6_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
+    """Markdown-only OCR is an internal stage — not a selectable catalog model."""
     monkeypatch.setenv("AUDIT_PADDLEOCR_V6_ENABLED", "true")
     get_settings.cache_clear()
     try:
-        spec = parse_document_model(PADDLEOCR_V6_CATALOG_ID)
-        assert spec.markdown_only is True
-        assert spec.runtime_model == "PP-OCRv6_medium"
-        assert is_markdown_only_model(PADDLEOCR_V6_CATALOG_ID) is True
+        with pytest.raises(UnknownCatalogIdError):
+            parse_document_model(PADDLEOCR_V6_CATALOG_ID)
+        assert is_markdown_only_model(PADDLEOCR_V6_CATALOG_ID) is False
     finally:
         get_settings.cache_clear()
 

@@ -1,9 +1,14 @@
 # GLM-OCR (markdown-only)
 
-Catalog id: `glm:ocr`. Document → text/Markdown via the **official zai-org SDK**
-([GlmOcr](https://huggingface.co/zai-org/GLM-OCR) + PP-DocLayoutV3). Region OCR
-runs against the configured OCR API. Structured field extraction stays on
-**Repody VLM** (`repody:vlm` / NuExtract).
+Catalog ids:
+- `glm:ocr` — Document → text/Markdown via the **official zai-org SDK**
+  ([GlmOcr](https://huggingface.co/zai-org/GLM-OCR)). Default: whole-page
+  `Text Recognition:` (no layout). Opt-in PP-DocLayoutV3 with
+  `AUDIT_GLM_OCR_LAYOUT_ENABLED=true`.
+- `glm:qwen` — same official SDK markdown, then **Qwen3.5 text→JSON** against the
+  workflow UI schema (same second stage as `paddleocr:qwen`).
+
+Enable structured: `AUDIT_GLM_OCR_QWEN_ENABLED=true` (and `pnpm qwen35:serve`).
 
 ## Official sources
 
@@ -43,14 +48,19 @@ uv sync --extra glmocr
 
 ```env
 AUDIT_GLM_OCR_ENABLED=true
+AUDIT_GLM_OCR_QWEN_ENABLED=true
 AUDIT_GLM_OCR_BASE_URL=http://127.0.0.1:8083/v1
 AUDIT_GLM_OCR_SERVED_MODEL=GLM-OCR
 AUDIT_GLM_OCR_TIMEOUT_SECONDS=600
+AUDIT_GLM_OCR_LAYOUT_ENABLED=false
 AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu
 AUDIT_GLM_OCR_LAYOUT_MODEL_DIR=PaddlePaddle/PP-DocLayoutV3_safetensors
 AUDIT_GLM_OCR_SDK_MAX_WORKERS=1
 # Optional — photo-heavy ID cards (CNIE, etc.)
 AUDIT_GLM_OCR_ID_CARD_PROFILE=false
+# Qwen stage (shared with paddleocr:qwen)
+AUDIT_QWEN35_BASE_URL=http://127.0.0.1:8084/v1
+AUDIT_QWEN35_SERVED_MODEL=Qwen3.5-4B
 ```
 
 Warmup is opt-in: `GLMOCR_WARMUP=on` when running `pnpm glmocr:serve`.
@@ -76,8 +86,20 @@ pnpm glmocr:ollama:serve
 
 ## Contract (official SDK)
 
+**Model-only (default):**
+
+- `AUDIT_GLM_OCR_LAYOUT_ENABLED=false` (default)
+- Whole-page `Text Recognition:` via the SDK Pipeline (no PP-DocLayoutV3).
+  Matches HF transformers / Ollama examples.
+
+**Document parsing (opt-in — zai-org recommended for complex layouts):**
+
+- `AUDIT_GLM_OCR_LAYOUT_ENABLED=true`
 - `GlmOcr(mode="selfhosted")` → PP-DocLayoutV3 → OCR with
   `Text Recognition:` / `Table Recognition:` / `Formula Recognition:`
+
+Shared:
+
 - llama-server: `api_mode=openai`, `/v1/chat/completions`, model alias `GLM-OCR`
 - Sampling: `temperature=0.0`, `top_p=0.00001`, `top_k=1`, `repetition_penalty=1.1`
 - PDF raster: **200 DPI**

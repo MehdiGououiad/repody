@@ -16,16 +16,13 @@ pnpm test:api
 pnpm dev:stop           # stop everything
 ```
 
-Split logs across two terminals: `pnpm dev` then `pnpm dev:app`.
+Split logs across two terminals: `pnpm platform` then `pnpm dev:app` (source contribute path).
 
 Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md)
 
-## OpenShift (client install or CRC lab)
+## OpenShift (client production)
 
-| Need | Guide |
-|------|--------|
-| Client production on OpenShift | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) + [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
-| Vendor OpenShift client test | `pnpm openshift:client-test` — [OPENSHIFT.md](./docs/deploy/OPENSHIFT.md#client-test-lab) |
+Start-to-finish: [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) · profiles/detail: [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md)
 
 ## Release images (GHCR / client registry)
 

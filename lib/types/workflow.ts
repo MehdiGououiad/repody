@@ -37,6 +37,8 @@ export interface DocumentDef {
   documentModelId?: string | null;
   extractionInstructions?: string;
   markdownExtraction?: boolean;
+  /** Try Firecrawl pdf-inspector first; fall back to documentModelId if quality is weak. */
+  nativePdfAuto?: boolean;
   extractionIclExamples?: ExtractionIclExample[];
 }
 

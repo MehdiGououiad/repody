@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { auth, isOidcConfigured } from "@/auth";
+import { getRequestAccessToken } from "@/lib/auth/access-token";
 import { isPublicApi, isPublicPage } from "@/lib/auth/public-paths";
 
 /** Workflow run API: caller Bearer means workflow API key; otherwise use the UI session JWT for builder test runs. */
@@ -13,11 +15,19 @@ function hasCallerBearer(request: { headers: Headers }): boolean {
   return Boolean(request.headers.get("authorization")?.trim());
 }
 
-function forwardWithSessionBearer(
-  request: { auth?: { accessToken?: string | null; error?: string | null } | null; headers: Headers }
-): NextResponse {
-  const accessToken = request.auth?.accessToken;
-  if (!accessToken || request.auth?.error) {
+async function forwardWithSessionBearer(
+  request: NextRequest & {
+    auth?: {
+      accessToken?: string | null;
+      error?: string | null;
+    } | null;
+  }
+): Promise<NextResponse> {
+  if (request.auth?.error) {
+    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+  const accessToken = getRequestAccessToken(request);
+  if (!accessToken) {
     return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
   }
   const requestHeaders = new Headers(request.headers);
@@ -39,13 +49,12 @@ function redirectToLogin(request: {
 
 function hasValidSession(auth: {
   user?: unknown;
-  accessToken?: string | null;
   error?: string | null;
 } | null): boolean {
-  return Boolean(auth?.user && auth?.accessToken && !auth?.error);
+  return Boolean(auth?.user && !auth?.error);
 }
 
-export default auth((request) => {
+export default auth(async (request) => {
   if (!isOidcConfigured()) {
     return NextResponse.next();
   }

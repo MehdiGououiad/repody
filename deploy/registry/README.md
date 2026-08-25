@@ -20,15 +20,17 @@ docker login
 $env:REPODY_IMAGE_REGISTRY="mehdigououiad"
 $env:REPODY_IMAGE_TAG="0.1.0"
 $env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
-# Lean portable image — no GLM-OCR torch stack (opt-in later if needed)
+# Lean portable Hub image — no GLM-OCR torch stack.
+# Local `pnpm platform -- --with-glm` builds a worker with otel,glmocr instead.
+# To publish GLM-ready images: $env:REPODY_BACKEND_EXTRAS="otel,glmocr"
 $env:REPODY_BACKEND_EXTRAS="otel"
 pnpm images:release
 ```
 
 Images:
 
-- `mehdigououiad/repody-backend:0.1.0` (also `:latest`)
-- `mehdigououiad/repody-web:0.1.0` (also `:latest`)
+- `mehdigououiad/repody-backend:0.1.0` (immutable tag; prefer digest in production GitOps)
+- `mehdigououiad/repody-web:0.1.0` (immutable tag; prefer digest in production GitOps)
 
 ### Pull (any machine)
 
@@ -94,9 +96,72 @@ docker login ghcr.io
 pnpm images:release
 ```
 
-## On-prem / client registry
+## Harbor (recommended on-prem registry)
 
-Use any OCI-compatible registry the client can reach (ACR, ECR, GCR, self-hosted Distribution, etc.).
+Harbor is a CNCF graduated OCI registry. Clients commonly run it on OpenShift (Helm)
+or as a standalone Docker Compose install.
+
+Official docs:
+
+- [Install Harbor](https://goharbor.io/docs/latest/install-config/)
+- [Configure harbor.yml](https://goharbor.io/docs/latest/install-config/configure-yml-file/)
+- [Harbor Helm](https://github.com/goharbor/harbor-helm)
+- OpenShift pull secrets: [Using image pull secrets](https://docs.openshift.com/container_platform/latest/openshift_images/managing_images/using-image-pull-secrets.html)
+
+### Vendor push
+
+1. Client creates a Harbor project (example: `repody`) and a robot account with push/pull.
+2. Vendor logs in and pushes an immutable tag:
+
+```powershell
+$env:REPODY_IMAGE_REGISTRY="harbor.example.com/repody"
+$env:REPODY_IMAGE_TAG="1.0.0"
+docker login harbor.example.com -u '<robot$repody+pusher>'
+pnpm images:release
+```
+
+Images:
+
+- `harbor.example.com/repody/repody-backend:1.0.0`
+- `harbor.example.com/repody/repody-web:1.0.0`
+
+### Client OpenShift pull
+
+```bash
+# Official OpenShift pull secret
+oc -n repody create secret docker-registry registry-pull-secret \
+  --docker-server=harbor.example.com \
+  --docker-username='robot$repody+puller' \
+  --docker-password='<token>' \
+  --docker-email=unused@example.com
+
+# Or via External Secrets — deploy/client/secrets/registry-pull.externalsecret.example.yaml
+```
+
+Helm values: [deploy/client/values-harbor.example.yaml](../client/values-harbor.example.yaml)
+
+```bash
+helm upgrade --install repody deploy/helm/repody -n repody \
+  -f deploy/helm/repody/values.yaml \
+  -f deploy/helm/repody/values-common.yaml \
+  -f ~/repody-gitops/values.yaml \
+  -f deploy/client/values-harbor.example.yaml \
+  -f deploy/client/values-enterprise.example.yaml \
+  -f deploy/values/openshift.yaml \
+  --wait --timeout 25m
+```
+
+**TLS:** Production Harbor should use HTTPS. For HTTP-only registries, OpenShift must list the
+host under `image.config.openshift.io/cluster` → `spec.registrySources.insecureRegistries`
+([OKD docs](https://docs.okd.io/latest/openshift_images/image-configuration.html)). Prefer
+HTTPS + `additionalTrustedCA` for self-signed CAs.
+
+Full OpenShift order: [docs/deploy/OPENSHIFT.md](../../docs/deploy/OPENSHIFT.md#harbor-registry).
+
+## Other OCI registries
+
+ACR, ECR, GCR, GHCR, or self-hosted Distribution work the same way — set
+`REPODY_IMAGE_REGISTRY`, push, create `registry-pull-secret`, point Helm `images.*`.
 
 ```powershell
 $env:REPODY_IMAGE_REGISTRY="registry.example.com/repody"
@@ -107,16 +172,6 @@ pnpm images:release
 
 Image push commands fail unless `REPODY_IMAGE_REGISTRY` is set, so release images
 cannot be pushed accidentally to an implicit registry namespace.
-
-The client creates a pull secret and points **their** Argo CD values at your registry:
-
-```bash
-kubectl -n repody create secret docker-registry registry-pull-secret \
-  --docker-server=registry.example.com \
-  --docker-username='<pull-user>' \
-  --docker-password='<token>' \
-  --docker-email=platform@example.com
-```
 
 Then use [deploy/client/values-external.example.yaml](../client/values-external.example.yaml)
 or [deploy/client/values-bundled.example.yaml](../client/values-bundled.example.yaml) as

@@ -31,7 +31,7 @@ flowchart TD
   D --> E[cosign sign + attest SBOM]
   E --> F[promote gate: verify + Helm/client contract]
   F --> G[Upload dist/release artifact]
-  G --> H[Client GitOps: pin digests + ESO + Helm]
+  G --> H[Client GitOps: values + optional digests + ESO + Helm]
   H --> I[client:check --live on staging]
   I --> J[Argo CD promote to production]
 ```
@@ -117,7 +117,7 @@ Send artifact + public cosign key (on-prem lane) to the client.
 
 ### 5. Client promotion
 
-1. Merge `helm-images.yaml` into GitOps (prefer **digest** pins)
+1. Merge release values into GitOps (optional: pin digests from `helm-images.yaml`)
 2. Apply ExternalSecrets ([SECRETS.md](./SECRETS.md))
 3. `pnpm client:check` then `pnpm client:check -- --live` on staging
 4. Argo CD sync: `repody-data` → `repody`
@@ -137,7 +137,9 @@ Send artifact + public cosign key (on-prem lane) to the client.
 | `pnpm release:promote` | Verify + client contract + manifest |
 | `pnpm release:all` | push + attest + promote |
 | `pnpm client:check` | Client Helm/ESO preflight |
-| `pnpm openshift:client-test` | OpenShift client lab (Harbor, Vault, OTEL) |
+| `pnpm deploy:check` | Deploy contract checks |
+
+Client cluster install: [OPENSHIFT.md](./OPENSHIFT.md).
 
 ---
 

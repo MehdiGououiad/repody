@@ -21,9 +21,9 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 
 **Module catalog:** Helm charts under `deploy/helm/` (see [docs/PLATFORM.md](../PLATFORM.md)).
 
-**Local dev:** Docker Compose (`pnpm dev`) for fast iteration. Cluster validation: OpenShift CRC ([docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md)).
+**Local dev:** Docker Compose for fast iteration. Production cluster: Helm on OpenShift / K8s ([docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md)).
 
-**Recipes:** `pnpm dev` · `pnpm dev:api` · `pnpm ui` · `pnpm dev:down`
+**Recipes:** `pnpm platform` · `pnpm dev:api` · `pnpm ui` · `pnpm platform stop`
 
 Production entrypoint: Helm (`deploy/helm/repody`).
 

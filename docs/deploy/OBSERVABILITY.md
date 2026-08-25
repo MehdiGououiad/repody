@@ -24,19 +24,19 @@ Recommended stack (pick one):
 | **kube-prometheus-stack** | https://github.com/prometheus-community/helm-charts/tree/main/charts/kube-prometheus-stack |
 | **Loki stack** | https://grafana.com/docs/loki/latest/setup/install/helm/ |
 
-## CRC lab (optional)
-
-After `pnpm openshift:client-test` and a healthy `repody` namespace:
-
-```powershell
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
-helm install otel open-telemetry/opentelemetry-collector -n repody --create-namespace
-```
-
-Point `observability.otelEndpoint` at the collector service and upgrade the Repody release.
-
 ## Production
 
 Clients own their observability backend. Repody emits JSON logs (`config.logJson: true`) and optional OTLP traces.
+
+1. Deploy a collector (or use an existing platform stack).
+2. Set `observability.otelEnabled: true` and `observability.otelEndpoint` in client values.
+3. Upgrade the Repody release.
+
+Example collector install (optional; use the client's preferred stack):
+
+```powershell
+helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts
+helm install otel open-telemetry/opentelemetry-collector -n monitoring
+```
 
 See also [docs/OBSERVABILITY.md](../OBSERVABILITY.md) for log fields and queries.

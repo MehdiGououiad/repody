@@ -204,7 +204,7 @@ services:
       AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
     restart: unless-stopped
 
-  # Opt-in agent pools (enable AUDIT_AGENT_FRAUD_ENABLED / COMPUTER_USE + profile agents)
+  # Reserved agent pools (replicas unused locally; profile agents). Recipe is IDP-only.
   worker-fraud:
     profiles: [workers, agents]
     build:

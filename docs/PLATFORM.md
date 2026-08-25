@@ -4,19 +4,19 @@ Repody deploys on **Kubernetes with Helm** in production (OpenShift client insta
 
 Command reference: [COMMANDS.md](./COMMANDS.md)
 
-## Development paths
+## Development vs production
 
 | Path | When |
 |------|------|
-| Compose (`pnpm dev`) | Daily API/UI work, unit tests, migrations |
-| OpenShift client test (`pnpm openshift:client-test`) | Vendor cluster smoke — [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| Compose (`pnpm platform`) | Daily API/UI work, unit tests, migrations — [LOCAL.md](./deploy/LOCAL.md) |
+| OpenShift / Kubernetes | Client production — [OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
 ## Production modules
 
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | control | `repody-api` Deployment | Workflows, runs, uploads, dispatch |
-| workers | `repody-worker-extract`, `repody-worker-fast` (+ optional `worker-fraud`, `worker-computer-use`) | IDP capacity pools; agent pools scale independently when enabled ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
+| workers | `repody-worker-extract`, `repody-worker-fast` (+ reserved `worker-fraud` / `worker-computer-use` at replicas 0) | IDP capacity pools; fraud/CU Deployments reserved for future agents ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
 | edge | `repody-web` Deployment | Next.js UI |
 | data plane | Postgres, Redis, object storage | Durable platform state and Taskiq broker |
 | auth | External OIDC provider | Authentication |
@@ -37,7 +37,7 @@ Release registry: GHCR or client container registry — [deploy/registry/README.
 
 ## Edge
 
-**Standard Kubernetes Ingress** (`networking.k8s.io/v1`) everywhere — same manifests on OpenShift, EKS, GKE, on-prem. OpenShift overlay adds `route.openshift.io/termination` for edge TLS.
+**Standard Kubernetes Ingress** (`networking.k8s.io/v1`) everywhere — same manifests on OpenShift, EKS, GKE, on-prem. No chart OpenShift Route CRs.
 
 Optional: Gateway API (Envoy) or OpenShift Routes for clients who prefer them (`gatewayApi.enabled` or `global.openshift.routes.enabled`).
 

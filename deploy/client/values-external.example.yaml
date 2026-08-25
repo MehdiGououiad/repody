@@ -14,6 +14,7 @@ images:
   backend:
     repository: CHANGE_ME_REGISTRY/repody-backend
     tag: CHANGE_ME_TAG
+    # digest set via values-images.example.yaml / release helm-images.yaml
     pullPolicy: IfNotPresent
   api:
     repository: CHANGE_ME_REGISTRY/repody-backend
@@ -53,8 +54,9 @@ ingress:
   host: CHANGE_ME_APP_HOST
   apiHost: CHANGE_ME_API_HOST
   filesHost: CHANGE_ME_FILES_HOST
+  # Portable default: no TLS Secret required. Set enabled=true + secretName when you have certs.
   tls:
-    enabled: true
+    enabled: false
     secretName: repody-tls
 
 gatewayApi:
@@ -63,7 +65,11 @@ gatewayApi:
 config:
   authUrl: https://CHANGE_ME_APP_HOST
   oidcIssuer: https://CHANGE_ME_AUTH_HOST/realms/repody
+  oidcJwksUrl: https://CHANGE_ME_AUTH_HOST/realms/repody/protocol/openid-connect/certs
+  # When IdP is in-cluster (repody-auth), prefer Service DNS for JWKS + internal issuer.
+  # oidcInternalIssuer: http://keycloak.CHANGE_ME_NAMESPACE.svc.cluster.local:8080/realms/repody
   corsOrigins: '["https://CHANGE_ME_APP_HOST"]'
+  # Cluster-reachable inference URLs only (never host.docker.internal).
   llamacppBaseUrl: https://CHANGE_ME_VLM_HOST/v1
   llamacppServedModel: nuextract3-q4_k_m
 

@@ -1,8 +1,6 @@
 import { Suspense } from "react";
-import {
-  fetchPlatformConfigServer,
-  type PlatformConfig,
-} from "@/lib/api/platform-config";
+import type { PlatformConfig } from "@/lib/api/platform-config";
+import { fetchPlatformConfigServer } from "@/lib/api/platform-config-server";
 import { SettingsPageClient } from "./settings-client";
 
 export default async function SettingsPage() {

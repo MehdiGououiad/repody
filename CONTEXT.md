@@ -62,7 +62,7 @@ backend/src/repody/
 ├── app/                 Application use cases (run, workflow, operator, uploads, queue, …)
 │   └── run/             lifecycle · commands · processor · enqueue · outbox · progress · …
 ├── agents/idp/          contracts · compose · run · adapters/
-├── agents/fraud/ · computer_use/   SKIPPED stubs + staged Taskiq pools
+├── agents/idp/                     Live extraction + validation agent
 ├── runtime/             Pure shared: contracts · recipe · pools · agent_metadata · metrics
 ├── extraction/          pipeline · vlm · nuextract · fields · render · paddleocr_v6 · glm_ocr[+sdk]
 ├── inference/           OpenAI-compat + NuExtract cloud (functions)
@@ -74,7 +74,7 @@ backend/src/repody/
 └── settings/            AUDIT_* settings
 ```
 
-**Hot path (staged):** `process_run` → `execute_platform_run`(one agent) → IDP `compose_idp` → optional outbox handoff to `fraud` / `computer_use` pools (updates `worker_pool` + `last_activity_at`) → `finalize_pending_completion` / `complete_run` on final stage ([ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md)). Stale reap keys off activity; Fraud/CU require `*_WORKERS_READY` in addition to enable flags.
+**Hot path:** `process_run` → `execute_platform_run`(IDP) → `compose_idp` → `complete_run`. Recipe is IDP-only; fraud/computer_use pool names remain reserved in Helm for a future implementation.
 
 **Intentional coupling:** `api/config.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
 
@@ -87,9 +87,9 @@ backend/src/repody/
 | **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
 | **Platform / catalog** | Recipe, envelopes, registry, operator | `runtime/`, `catalog/`, `app/operator/` |
 
-### Three-agent platform
+### Platform agents
 
-**IDP** lives under `agents/idp/`. **Fraud** / **Computer Use** are SKIPPED scaffolds under `agents/fraud/` and `agents/computer_use/` with dedicated Taskiq pools (`fraud`, `computer_use`) for independent scaling. IDP capacity pools remain `extract` / `fast`. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
+**IDP** lives under `agents/idp/` (live). Capacity pools: `extract` / `fast`. Fraud / Computer Use pool names and Helm Deployments remain reserved at replicas 0 — no agent packages yet. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
 
 Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `runtime/run/status.py`.
 
@@ -167,9 +167,8 @@ See [docs/COMMANDS.md](./docs/COMMANDS.md).
 
 | Lane | Command |
 |------|---------|
-| App development | `pnpm dev:all` or `pnpm dev` + `pnpm dev:app` |
-| OpenShift CRC lab | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
-| OpenShift verify | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
+| App development | `pnpm platform` / `pnpm dev:all` |
+| OpenShift production | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
 | Release to client | `pnpm images:release` → client Helm / Argo CD |
 
 Chart: [deploy/helm/repody](./deploy/helm/repody). Client install: [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md).

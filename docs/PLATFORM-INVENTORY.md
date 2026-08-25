@@ -241,7 +241,7 @@ backend/src/repody/
 |-------------|--------|
 | Local dev | Docker Compose + host-run API/UI + optional observability profile |
 | Kubernetes | Helm: `repody`, `repody-data`, `repody-auth` |
-| OpenShift | Routes, CRC lab scripts — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| OpenShift | Helm + Ingress (optional Routes) — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 | Release | GHCR images, cosign attest, GitOps promotion — [deploy/RELEASE.md](./deploy/RELEASE.md) |
 
 ### Helm modules

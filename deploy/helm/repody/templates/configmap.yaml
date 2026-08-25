@@ -65,9 +65,6 @@ data:
   {{- if .Values.config.operatorBenchmarkUser }}
   AUDIT_OPERATOR_BENCHMARK_USER: {{ .Values.config.operatorBenchmarkUser | quote }}
   {{- end }}
-  {{- if .Values.config.operatorBenchmarkPassword }}
-  AUDIT_OPERATOR_BENCHMARK_PASSWORD: {{ .Values.config.operatorBenchmarkPassword | quote }}
-  {{- end }}
   {{- if .Values.config.keycloakClientId }}
   AUDIT_KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
   {{- end }}
@@ -78,6 +75,10 @@ data:
   AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY: {{ .Values.config.paddleocrV6UseDocOrientationClassify | quote }}
   AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING: {{ .Values.config.paddleocrV6UseDocUnwarping | quote }}
   AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION: {{ .Values.config.paddleocrV6UseTextlineOrientation | quote }}
+  AUDIT_PADDLEOCR_QWEN_ENABLED: {{ .Values.config.paddleocrQwenEnabled | quote }}
+  AUDIT_QWEN35_BASE_URL: {{ .Values.config.qwen35BaseUrl | quote }}
+  AUDIT_QWEN35_SERVED_MODEL: {{ .Values.config.qwen35ServedModel | quote }}
+  AUDIT_QWEN35_TIMEOUT_SECONDS: {{ .Values.config.qwen35TimeoutSeconds | quote }}
   AUDIT_GLM_OCR_ENABLED: {{ .Values.config.glmOcrEnabled | quote }}
   AUDIT_GLM_OCR_BASE_URL: {{ .Values.config.glmOcrBaseUrl | quote }}
   AUDIT_GLM_OCR_SERVED_MODEL: {{ .Values.config.glmOcrServedModel | quote }}

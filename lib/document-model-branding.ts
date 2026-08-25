@@ -10,6 +10,8 @@ export const PADDLEOCR_QWEN_CATALOG_ID = "paddleocr:qwen";
 export const PADDLEOCR_QWEN_LABEL = "PP-OCRv6 + Qwen";
 export const GLM_OCR_CATALOG_ID = "glm:ocr";
 export const GLM_OCR_LABEL = "GLM-OCR";
+export const GLM_OCR_QWEN_CATALOG_ID = "glm:qwen";
+export const GLM_OCR_QWEN_LABEL = "GLM-OCR + Qwen";
 
 const MARKDOWN_ONLY_IDS = new Set([
   PADDLEOCR_V6_CATALOG_ID,
@@ -33,6 +35,9 @@ export function publicDocumentModelLabel(modelId: string | null | undefined): st
   }
   if (trimmed === GLM_OCR_CATALOG_ID) {
     return GLM_OCR_LABEL;
+  }
+  if (trimmed === GLM_OCR_QWEN_CATALOG_ID) {
+    return GLM_OCR_QWEN_LABEL;
   }
   return trimmed;
 }

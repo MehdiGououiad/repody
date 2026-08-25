@@ -6,10 +6,10 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/deploy/READM
 
 | Goal | Guide | Command |
 |------|-------|---------|
-| Local dev | [LOCAL.md](../docs/deploy/LOCAL.md) | `pnpm dev:all` |
+| Local dev | [LOCAL.md](../docs/deploy/LOCAL.md) | `pnpm platform` |
 | Push images to registry | [VENDOR-TO-CLIENT.md](../docs/deploy/VENDOR-TO-CLIENT.md) | `pnpm images:release` |
-| Client install | [CLIENT.md](../docs/deploy/CLIENT.md) | Helm / Argo CD |
-| Vendor QA | [OPENSHIFT.md](../docs/deploy/OPENSHIFT.md) | `pnpm openshift:client-test` |
+| OpenShift / client install | [OPENSHIFT.md](../docs/deploy/OPENSHIFT.md) | Helm / Argo CD |
+| Profiles & Ingress detail | [CLIENT.md](../docs/deploy/CLIENT.md) | — |
 
 ## Layout
 
@@ -19,11 +19,9 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/deploy/READM
 | `helm/repody-data` | PostgreSQL, Redis, MinIO (bundled profile) |
 | `helm/repody-auth` | Keycloak (optional) |
 | `client/` | Values templates, ExternalSecrets — [client/README.md](./client/README.md) |
-| `values/openshift.yaml` | OpenShift Routes overlay |
 | `managed/` | CNPG, External Secrets examples |
 | `registry/` | GHCR and on-prem registry notes |
-| `scripts/` | Build, release, lab automation |
-| `scripts/lib/` | Shared modules (`cli`, `vault-eso`, `vault-bootstrap`, `bundled-values`, `lab-seed`, `migrations-job`, `lab-security`) |
+| `scripts/` | Image build, release, readiness checks |
 
 ## Image registry convention
 
@@ -35,25 +33,4 @@ pnpm images:release
 
 Helm `images.*.repository` = `{registry}/repody-backend` (not `{registry}/repody/repody-backend` when registry already includes the project).
 
-## Guides
-
-| Topic | Doc |
-|-------|-----|
-| Index | [docs/deploy/README.md](../docs/deploy/README.md) |
-| Vendor → client | [docs/deploy/VENDOR-TO-CLIENT.md](../docs/deploy/VENDOR-TO-CLIENT.md) |
-| Local Compose | [docs/deploy/LOCAL.md](../docs/deploy/LOCAL.md) |
-| Client install | [docs/deploy/CLIENT.md](../docs/deploy/CLIENT.md) |
-| Secrets | [docs/deploy/SECRETS.md](../docs/deploy/SECRETS.md) |
-| Container registry | [registry/README.md](./registry/README.md) |
-| OpenShift | [docs/deploy/OPENSHIFT.md](../docs/deploy/OPENSHIFT.md) |
-
-## Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `build-images.mjs` | Build and push container images |
-| `release-supply-chain.mjs` | SBOM, cosign, promotion |
-| `openshift-client-test.mjs` | OpenShift client test lab (Harbor, Vault, Argo CD, OTEL) |
-| `local-dev.mjs` | Compose local stack (`pnpm dev:all`) |
-
-Shared helpers: `scripts/lib/cli.mjs`, `vault-eso.mjs`, `vault-bootstrap.mjs`, `bundled-values.mjs`, `lab-seed.mjs`, `migrations-job.mjs`.
+Production tags must be **immutable** — never `latest`.

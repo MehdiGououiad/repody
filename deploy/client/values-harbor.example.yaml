@@ -1,0 +1,39 @@
+# Example: images from a client Harbor project (OCI registry).
+# Replace harbor.example.com and project path with your Harbor hostname + project.
+#
+# Official Harbor docs:
+#   https://goharbor.io/docs/latest/install-config/
+#   https://goharbor.io/docs/latest/administration/managing-users/user-account/
+#
+# OpenShift pull secrets:
+#   https://docs.openshift.com/container_platform/latest/openshift_images/managing_images/using-image-pull-secrets.html
+#
+# Production: immutable tag (or digest) — never latest.
+
+images:
+  backend:
+    repository: harbor.example.com/repody/repody-backend
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  api:
+    repository: harbor.example.com/repody/repody-backend
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  worker:
+    repository: harbor.example.com/repody/repody-backend
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  web:
+    repository: harbor.example.com/repody/repody-web
+    tag: "1.0.0"
+    pullPolicy: IfNotPresent
+  workerExtract:
+    repository: harbor.example.com/repody/repody-backend
+    tag: "1.0.0"
+  workerFast:
+    repository: harbor.example.com/repody/repody-backend
+    tag: "1.0.0"
+
+global:
+  imagePullSecrets:
+    - name: registry-pull-secret

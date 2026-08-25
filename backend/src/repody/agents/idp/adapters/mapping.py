@@ -11,6 +11,7 @@ from repody.agents.idp.contracts import (
     DocumentExtraction,
     DocumentSpec,
     ExtractedField,
+    IdpExtractionMeta,
     IdpInput,
     IdpWorkflowConfig,
     RuleResult,
@@ -18,7 +19,8 @@ from repody.agents.idp.contracts import (
     SchemaField,
     StoredDocument,
 )
-from repody.extraction.types import ExtractedFieldResult, ExtractionResult
+from repody.catalog.registry import is_markdown_only_model
+from repody.extraction.types import ExtractedFieldResult, ExtractionMetadata, ExtractionResult
 from repody.extraction.schema import (
     enum_values_from_row,
     iter_child_rows,
@@ -63,8 +65,6 @@ def schema_field_from_snapshot(field: SnapshotSchemaField) -> SchemaField:
 
 
 def document_spec_from_snapshot(doc: SnapshotDocument) -> DocumentSpec:
-    from repody.catalog.registry import is_markdown_only_model
-
     model_id = doc.document_model_id or "repody:vlm"
     markdown = bool(doc.markdown_extraction) or is_markdown_only_model(model_id)
     return DocumentSpec(
@@ -73,6 +73,7 @@ def document_spec_from_snapshot(doc: SnapshotDocument) -> DocumentSpec:
         schema_fields=tuple(schema_field_from_snapshot(f) for f in doc.schema_fields),
         extraction_instructions=doc.extraction_instructions or "",
         markdown_extraction=markdown,
+        native_pdf_auto=bool(getattr(doc, "native_pdf_auto", False)),
         document_model_id=model_id,
         extraction_mode=doc.extraction_mode or "document_model",
         position=doc.position,
@@ -86,6 +87,7 @@ def rule_spec_from_dict(rule: dict) -> RuleSpec:
     conditions = rule.get("conditions") or []
     if not isinstance(conditions, list):
         conditions = []
+    junction = rule.get("condition_junction")
     return RuleSpec(
         id=str(rule.get("id") or ""),
         name=str(rule.get("name") or "Rule"),
@@ -95,7 +97,23 @@ def rule_spec_from_dict(rule: dict) -> RuleSpec:
         applies_to=tuple(str(a) for a in applies),
         conditions=tuple(c for c in conditions if isinstance(c, dict)),
         body=str(rule.get("body") or ""),
+        condition_junction=str(junction) if junction is not None else None,
     )
+
+
+def rule_dict_from_spec(rule: RuleSpec) -> dict:
+    """RuleSpec → rules-engine dict (single seam out of the IDP contract)."""
+    return {
+        "id": rule.id,
+        "name": rule.name,
+        "kind": rule.kind,
+        "scope": rule.scope,
+        "severity": rule.severity,
+        "applies_to": list(rule.applies_to),
+        "conditions": list(rule.conditions),
+        "body": rule.body,
+        "condition_junction": rule.condition_junction,
+    }
 
 
 def workflow_config_from_snapshot(
@@ -160,6 +178,27 @@ def extracted_field_from_result(row: ExtractedFieldResult) -> ExtractedField:
     )
 
 
+def idp_meta_from_extraction(meta: ExtractionMetadata) -> IdpExtractionMeta:
+    """Map pipeline ExtractionMetadata → IDP contract (labels stay at HTTP edge)."""
+    return IdpExtractionMeta(
+        read_path_config=meta.read_path_config,
+        read_path_used=meta.read_path_used,
+        validation_mode=meta.validation_mode,
+        document_model_id=meta.document_model_id,
+        extraction_ms=meta.extraction_ms,
+        cache_hit=meta.cache_hit,
+        gpu_cold_start_likely=meta.gpu_cold_start_likely,
+        fields_extracted=meta.fields_extracted,
+        markdown_extraction=meta.markdown_extraction,
+        markdown_text=meta.markdown_text,
+        raw_text=meta.raw_text,
+        pages_rendered=meta.pages_rendered,
+        pages_sent=meta.pages_sent,
+        pages_dropped=meta.pages_dropped,
+        native_pdf=getattr(meta, "native_pdf", None),
+    )
+
+
 def document_extraction_from_result(
     *,
     document_id: str,
@@ -171,12 +210,13 @@ def document_extraction_from_result(
     meta = result.meta
     if not meta.document_model_id:
         meta = replace(meta, document_model_id=model_id)
+    idp_meta = idp_meta_from_extraction(meta)
     return DocumentExtraction(
         document_id=document_id,
         fields=tuple(extracted_field_from_result(f) for f in result.fields),
         markdown_text=result.markdown_text if result.markdown_text is not None else meta.markdown_text,
         raw_text=result.raw_text if result.raw_text is not None else meta.raw_text,
-        meta=meta,
+        meta=idp_meta,
     )
 
 

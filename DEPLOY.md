@@ -5,7 +5,8 @@
 | Lane | Guide |
 |------|--------|
 | Local dev (Compose) | [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
-| Client OpenShift (bundled / external) | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) |
+| **OpenShift production (start-to-finish)** | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
+| Client profiles / Ingress detail | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) |
 | Vendor release | [docs/deploy/RELEASE.md](./docs/deploy/RELEASE.md) |
 
 ## Vendor — push images

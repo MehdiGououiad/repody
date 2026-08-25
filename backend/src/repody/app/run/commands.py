@@ -33,11 +33,7 @@ from repody.app.run.lifecycle import (
     fail_run_entity,
     record_claimed,
 )
-from repody.app.run.persistence import (
-    bind_commit,
-    bind_load,
-    bind_save,
-)
+from repody.app.run.persistence import session_run_ports
 from repody.app.run.progress import fail_run_progress
 
 log = structlog.get_logger(__name__)
@@ -224,11 +220,12 @@ async def fail_run_terminal(
     )
 
     async def _execute(owned: AsyncSession) -> bool:
+        load, save, commit = session_run_ports(owned)
         return await fail_run(
             request,
-            load=bind_load(owned),
-            save=bind_save(owned),
-            commit=bind_commit(owned),
+            load=load,
+            save=save,
+            commit=commit,
             publish=publish_run_domain_events,
         )
 
@@ -252,6 +249,7 @@ async def finalize_pending_completion(session: AsyncSession, run: Run) -> None:
         merged_meta["agentOutcomes"] = outcomes
     clear_pending_completion(run)
     await session.flush()
+    load, save, commit = session_run_ports(session)
     completed = await complete_run(
         CompleteRunRequest(
             run_id=run.id,
@@ -265,9 +263,9 @@ async def finalize_pending_completion(session: AsyncSession, run: Run) -> None:
                 progress=pending.progress,
             ),
         ),
-        load=bind_load(session),
-        save=bind_save(session),
-        commit=bind_commit(session),
+        load=load,
+        save=save,
+        commit=commit,
         publish=publish_run_domain_events,
         now=datetime.now(UTC),
     )

@@ -180,6 +180,14 @@ class InferenceSettingsFields:
             "Qwen llama-server (:8084)."
         ),
     )
+    glm_ocr_qwen_enabled: bool = Field(
+        default=False,
+        description=(
+            "Register GLM-OCR + Qwen (glm:qwen) for structured extraction: "
+            "official GlmOcr SDK markdown then Qwen text→JSON. Requires GLM-OCR "
+            "(:8083), Qwen (:8084), and worker extras otel,glmocr."
+        ),
+    )
     qwen35_base_url: str = Field(
         default="http://127.0.0.1:8084/v1",
         description=(
@@ -198,6 +206,24 @@ class InferenceSettingsFields:
         description=(
             "HTTP timeout for Qwen text→JSON in paddleocr:qwen. Must stay <= "
             "AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60."
+        ),
+    )
+    pdf_inspector_min_confidence: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Automode (nativePdfAuto): accept Firecrawl pdf-inspector native "
+            "markdown only when confidence >= this value (then Qwen JSON)."
+        ),
+    )
+    pdf_inspector_min_chars: int = Field(
+        default=40,
+        ge=1,
+        le=10_000,
+        description=(
+            "Automode: minimum stripped markdown length before accepting "
+            "native PDF text (else fall back to the selected document model)."
         ),
     )
 
@@ -241,6 +267,14 @@ class InferenceSettingsFields:
         description=(
             "PP-DocLayoutV3 model id/path for the official GLM-OCR SDK "
             "(Hugging Face safetensors export)."
+        ),
+    )
+    glm_ocr_layout_enabled: bool = Field(
+        default=False,
+        description=(
+            "When false (default): official model-only path — whole page with "
+            "'Text Recognition:' (no PP-DocLayoutV3). When true: GlmOcr SDK + "
+            "PP-DocLayoutV3 region OCR (zai-org document-parsing pipeline)."
         ),
     )
     glm_ocr_sdk_max_workers: int = Field(

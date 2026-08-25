@@ -154,4 +154,4 @@ hostnames, image tags, storage endpoints, and VLM base URL.
 - [ ] Redis/Valkey uses TLS/auth.
 - [ ] Object storage bucket has lifecycle/retention policy.
 - [ ] External Redis/Valkey is backed up, monitored, and reachable from API/workers.
-- [ ] NetworkPolicies are enabled in both `repody` and `repody-data`.
+- [ ] Cluster networking (NetworkPolicy / EgressFirewall / SG) allows API/workers to reach Postgres, Redis, and object storage.

@@ -1,46 +1,18 @@
-import { browserJson } from "@/lib/api/http";
+import type { components } from "@/lib/api/generated/schema";
+import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 
-export type PermissionGrant = {
-  resource: string;
-  action: string;
-};
+export type PermissionGrant = components["schemas"]["PermissionGrant"];
+export type RoleDefinition = components["schemas"]["RoleDefinition"];
+export type IamMe = components["schemas"]["IamMeResponse"];
+export type IamCatalog = components["schemas"]["IamCatalogResponse"];
 
-export type RoleDefinition = {
-  id: string;
-  label: string;
-  description: string;
-  permissions: PermissionGrant[];
-};
-
-export type IamUser = {
-  id: string;
-  username: string;
-  email?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  enabled: boolean;
+/** Schema marks roles optional; UI always treats it as a list. */
+export type IamUser = Omit<components["schemas"]["IamUser"], "roles"> & {
   roles: string[];
 };
 
-export type IamMe = {
-  subject: string;
-  email?: string | null;
-  roles: string[];
-  permissions: PermissionGrant[];
-  canManageUsers: boolean;
-  oidcEnabled: boolean;
-  keycloakAdminUrl?: string | null;
-};
-
-export type IamCatalog = {
-  roles: RoleDefinition[];
-  appRoles: string[];
-};
-
-export type IamUsersResponse = {
+export type IamUsersResponse = Omit<components["schemas"]["IamUsersResponse"], "users"> & {
   users: IamUser[];
-  managementAvailable: boolean;
-  managementError?: string | null;
 };
 
 export type CreateIamUserInput = {
@@ -60,31 +32,60 @@ export type UpdateIamUserInput = {
   password?: string;
 };
 
+function normalizeUser(user: components["schemas"]["IamUser"]): IamUser {
+  return { ...user, roles: user.roles ?? [] };
+}
+
 export async function fetchIamMe(): Promise<IamMe> {
-  return browserJson<IamMe>("/iam/me");
+  const { data, error, response } = await browserApi.GET("/v1/iam/me");
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return data;
 }
 
 export async function fetchIamCatalog(): Promise<IamCatalog> {
-  return browserJson<IamCatalog>("/iam/catalog");
+  const { data, error, response } = await browserApi.GET("/v1/iam/catalog");
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return data;
 }
 
 export async function fetchIamUsers(search?: string): Promise<IamUsersResponse> {
-  const query = search?.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-  return browserJson<IamUsersResponse>(`/iam/users${query}`);
+  const trimmed = search?.trim() || undefined;
+  const { data, error, response } = await browserApi.GET("/v1/iam/users", {
+    params: { query: { search: trimmed } },
+  });
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return {
+    ...data,
+    users: data.users.map(normalizeUser),
+  };
 }
 
 export async function createIamUser(body: CreateIamUserInput): Promise<IamUser> {
-  return browserJson<IamUser>("/iam/users", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+  const { data, error, response } = await browserApi.POST("/v1/iam/users", {
+    body: {
+      email: body.email,
+      firstName: body.firstName ?? "",
+      lastName: body.lastName ?? "",
+      password: body.password,
+      roles: body.roles,
+      enabled: body.enabled ?? true,
+    },
   });
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return normalizeUser(data);
 }
 
 export async function updateIamUser(userId: string, body: UpdateIamUserInput): Promise<IamUser> {
-  return browserJson<IamUser>(`/iam/users/${encodeURIComponent(userId)}`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+  const { data, error, response } = await browserApi.PATCH("/v1/iam/users/{user_id}", {
+    params: { path: { user_id: userId } },
+    body: {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      enabled: body.enabled,
+      roles: body.roles,
+      password: body.password,
+    },
   });
+  if (error || !response.ok || !data) throwOnApiError(error, response);
+  return normalizeUser(data);
 }

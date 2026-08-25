@@ -62,8 +62,8 @@ pnpm test:platform:report:full
 3. **Live gated** — `@pytest.mark.live` / `tests/live/` needs `E2E_STACK=1` or `E2E_API_URL`.
 4. **HTTP only in API tests** — service boundaries return `Result` / domain errors; assert **mapped** status codes (`VALIDATION→422`, `FORBIDDEN→403`) via `tests/helpers/api_errors.py`.
 5. **IDP core** — `compose_idp` covered with injected ports (`unit/agents/test_compose_idp.py`).
-6. **Agent peers** — Fraud / Computer Use have contract + SKIPPED-shell unit tests; staging covered by recipe unit + `process_run` staged integration.
-7. **Hot path seams** — claim / handoff / finalize have Postgres integration tests (no workers required).
+6. **Agent recipe** — IDP-only `resolve_recipe` unit tests; reserved pool name map in `runtime/pools.py`. Fraud / Computer Use packages are not present (Helm replicas 0).
+7. **Hot path seams** — claim / finalize have Postgres integration tests (no workers required). Multi-agent handoff tests stay skipped until reserved agents exist.
 8. **Playwright** — critical journeys only; traces on retry; HTML under `e2e/report/`.
 
 ## What each layer should cover
@@ -72,9 +72,9 @@ pnpm test:platform:report:full
 |---------------|------|-------------|-----------|
 | Auth / Casbin / IAM | ✓ | ✓ | Playwright auth |
 | Run lifecycle / Result | ✓ | ✓ claim / finalize | live run completion |
-| Staged agents (recipe) | ✓ flags + shells | ✓ IDP→fraud handoff + finalize | gated multi-agent (optional) |
+| Staged agents (recipe) | ✓ IDP-only recipe | finalize helpers | IDP only |
 | IDP compose / validate | ✓ ports | processor | live journey |
-| Fraud / Computer Use | ✓ contracts + SKIPPED | via staged processor | when workers ready |
+| Fraud / Computer Use | reserved enums / pools | skipped (future agents) | — |
 | Rules engine | ✓ | — | cross-doc UI |
 | Extraction / catalog | ✓ | — | live / slow |
 | Uploads / storage | intent helpers | ✓ status matrix (422/403/404/201) | upload UI |

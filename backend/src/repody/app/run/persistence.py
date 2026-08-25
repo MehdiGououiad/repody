@@ -134,3 +134,8 @@ def bind_try_claim(session: AsyncSession):
         return await try_claim_queued_run(session, run_id, now)
 
     return try_claim
+
+
+def session_run_ports(session: AsyncSession) -> tuple:
+    """Single bind for load/save/commit — prefer over three bind_* call sites."""
+    return bind_load(session), bind_save(session), bind_commit(session)

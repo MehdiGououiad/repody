@@ -92,7 +92,7 @@ Each parallel slot reserves a full context window. Throughput scales roughly lin
 
 | Slots | When | Worker pool |
 |-------|------|-------------|
-| **1** | CRC lab, Arc 8 GB, daily dev | `workerExtract.maxJobs: 1` |
+| **1** | Small GPU / daily dev | `workerExtract.maxJobs: 1` |
 | **2** | Arc 16 GB+, dedicated stress runs | 2 extract workers or `maxJobs: 2` |
 | **4+** | Multi-GPU / production vLLM | Match extract worker concurrency to GPU slots; excess runs wait in Taskiq |
 
@@ -102,7 +102,7 @@ In `paths.local.env`:
 LLAMACPP_PARALLEL=2
 ```
 
-Then align cluster admission (see `deploy/client/lab/values.stress-test.crc.yaml`) and restart:
+Then align cluster admission in client values and restart:
 
 ```powershell
 pnpm llamacpp:restart

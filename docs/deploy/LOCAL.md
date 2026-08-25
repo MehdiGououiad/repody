@@ -38,9 +38,17 @@ PP-OCR Python deps **auto-install** on first OCR start.
 Sign-in: http://localhost:3000 · `operator@repody.local` / `repody-dev`  
 Use **localhost**, not `127.0.0.1`.
 
+Compose defaults (Postgres/Redis/MinIO/Keycloak/Grafana passwords, open host ports)
+are for a **trusted laptop / loopback only**. Do not expose Compose to a LAN or the
+internet, and never reuse these credentials outside `development`.
+
 Hub auth wiring: browser issuer is `http://localhost:8080/realms/repody`; the web
 container uses `AUTH_KEYCLOAK_INTERNAL_ISSUER=http://keycloak:8080/realms/repody`
 for server-side token calls. API fetches JWKS from `http://keycloak:8080/...`.
+
+UI → API: Next.js proxies `/api/v1/*` at **runtime** (`INTERNAL_API_URL=http://api:8000`
+in Compose; Kubernetes sets `http://repody-api:8000`). The same web image works on
+both — no bake-time rewrite to a fixed hostname.
 
 Observability is **on by default** (`--no-obs` to skip):
 
@@ -75,11 +83,25 @@ pnpm platform setup -- --no-pull
 
 | Flag | Effect |
 |------|--------|
-| `--with-nuextract` | NuExtract `:8081` (set GGUF paths in `deploy/llamacpp/paths.local.env`) |
-| `--with-glm` | GLM-OCR (experimental on Hub image) |
-| `--no-paddle` / `--no-qwen` | Skip host models |
+| `--with-nuextract` | NuExtract `:8081` → `repody:vlm` (set GGUF paths in `deploy/llamacpp/paths.local.env`) |
+| `--with-glm` | GLM-OCR `:8083` + rebuild extract worker with official GlmOcr SDK (`compose.glmocr.yaml`) → `glm:qwen` / `glm:ocr` |
+| `--no-paddle` / `--no-qwen` | Skip host models (Qwen is required for `paddleocr:qwen` and `glm:qwen`) |
 | `--platform-only` | Containers only |
 | `--no-pull` | Skip `docker pull` (setup + up) |
+
+All three structured engines together:
+
+```bash
+pnpm platform -- --with-nuextract --with-glm
+```
+
+| Catalog | Pipeline |
+|---------|----------|
+| `paddleocr:qwen` | Official PP-OCR serving → Qwen text→JSON |
+| `glm:qwen` | Official GlmOcr SDK → Qwen text→JSON |
+| `repody:vlm` | Official NuExtract template JSON |
+
+Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option — only used inside the Qwen pipelines.
 
 ## CLI map
 
@@ -106,3 +128,11 @@ pnpm dev:app        # foreground API + UI only
 - Overlay: [`compose.portable.yaml`](../../compose.portable.yaml)
 - Registry: [`deploy/registry/README.md`](../../deploy/registry/README.md)
 - Helm Hub values: [`deploy/client/values-dockerhub.example.yaml`](../../deploy/client/values-dockerhub.example.yaml)
+
+## Cluster install (not local daily path)
+
+Local daily work stays on Compose (`pnpm platform`). For Kubernetes / OpenShift production:
+
+→ [OPENSHIFT.md](./OPENSHIFT.md) (start-to-finish) · [CLIENT.md](./CLIENT.md) · [SECRETS.md](./SECRETS.md)
+
+Charts from Git, images from a registry with **immutable tags**, secrets via Vault + External Secrets.

@@ -112,25 +112,20 @@ class OpsSettingsFields:
         default=True,
         description="When false, IDP is omitted from the platform agent recipe.",
     )
+    # Reserved/inert env keys (Helm/Compose). Not consulted by resolve_recipe (IDP-only).
     agent_fraud_enabled: bool = Field(
         default=False,
-        description="When true, Fraud may run after IDP when included in the recipe.",
+        description="Reserved — ignored until a Fraud agent is implemented.",
     )
     agent_fraud_workers_ready: bool = Field(
         default=False,
-        description=(
-            "When true with agent_fraud_enabled, Fraud is dispatchable. "
-            "Keep false until worker-fraud Deployment has replicas > 0."
-        ),
+        description="Reserved — ignored until a Fraud agent is implemented.",
     )
     agent_computer_use_enabled: bool = Field(
         default=False,
-        description="When true, Computer Use may run after prior agents when included in the recipe.",
+        description="Reserved — ignored until a Computer Use agent is implemented.",
     )
     agent_computer_use_workers_ready: bool = Field(
         default=False,
-        description=(
-            "When true with agent_computer_use_enabled, Computer Use is dispatchable. "
-            "Keep false until worker-computer-use Deployment has replicas > 0."
-        ),
+        description="Reserved — ignored until a Computer Use agent is implemented.",
     )

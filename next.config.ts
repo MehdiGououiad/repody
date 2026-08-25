@@ -3,7 +3,6 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-const backendUrl = process.env.BACKEND_URL ?? "http://127.0.0.1:8000";
 const allowedDevOrigins = [
   "127.0.0.1",
   "localhost",
@@ -29,15 +28,9 @@ const nextConfig: NextConfig = {
       "recharts",
     ],
   },
-  async rewrites() {
-    // Only proxy /api/v1/* — never /api/auth/* (Auth.js route handlers).
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: `${backendUrl}/v1/:path*`,
-      },
-    ];
-  },
+  // /api/v1/* is proxied at runtime by app/api/v1/[...path]/route.ts using
+  // INTERNAL_API_URL (Compose: http://api:8000, K8s: http://repody-api:8000).
+  // Do not bake BACKEND_URL into rewrites — that breaks portable Hub images.
   async redirects() {
     return [
       {

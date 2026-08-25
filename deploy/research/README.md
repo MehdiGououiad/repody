@@ -1,10 +1,7 @@
-# Research model helpers (not product)
+# Research config (not product)
 
-Local-only configs for experimental LLM arms used by CNIE benches.
+| Dir | Used by |
+|-----|---------|
+| `qwen35/` | `pnpm qwen35:serve` / `deploy/scripts/research/qwen35-serve.mjs` |
 
-| Dir | Serve script |
-|-----|----------------|
-| `qwen35/` | `deploy/scripts/research/qwen35-serve.mjs` |
-| `nuextract2/` | `deploy/scripts/research/nuextract2-serve.mjs` |
-
-Copy `paths.local.env.example` → `paths.local.env` (gitignored). See [docs/experiments/CNIE-STRUCTURE-LLM.md](../../docs/experiments/CNIE-STRUCTURE-LLM.md).
+Copy `paths.local.env.example` → `paths.local.env` (gitignored).

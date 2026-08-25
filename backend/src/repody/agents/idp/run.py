@@ -2,22 +2,20 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass
 from typing import Any
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from repody.agents.idp.adapters.extract import extract_one
 from repody.agents.idp.adapters.mapping import build_idp_input, stored_document
 from repody.agents.idp.adapters.persist import (
     ensure_run_document,
-    extraction_step_detail,
     persist_extraction,
     persist_idp_outcome,
 )
 from repody.agents.idp.adapters.validate import validate_extraction
-from repody.agents.idp.adapters.extract import extract_one
 from repody.agents.idp.compose import ExtractionJob, compose_idp
 from repody.agents.idp.contracts import (
     DocumentExtraction,
@@ -25,41 +23,30 @@ from repody.agents.idp.contracts import (
     ExtractionOutput,
     IdpInput,
     IdpOutcome,
+    RuleSpec,
     StoredDocument,
     ValidationOutput,
 )
-from repody.infra.db.models import Run, RunDocument
-from repody.extraction.modes import (
-    DEFAULT_READ_PATH_ID,
-    ValidationMode,
-    is_serverless_inference,
-    parse_read_path,
-    read_path_label,
-    resolve_run_validation_mode,
-    validation_mode_label,
-)
-from repody.extraction.schema import icl_examples_from_document
-from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.rules.types import rule_kind
-from repody.app.run.helpers import extract_label, progress_mode
+from repody.agents.idp.progress import IdpProgressPresenter
 from repody.app.run.progress import (
     build_run_progress_plan,
     mark_step_done,
     set_run_progress,
-    step_index_for,
 )
 from repody.app.run.snapshot import (
-    SnapshotDocument,
     resolve_run_documents,
     resolve_run_rules,
     resolve_workflow_display_name,
 )
+from repody.extraction.modes import ValidationMode, resolve_run_validation_mode
+from repody.extraction.schema import icl_examples_from_document
+from repody.infra.db.base import async_session_factory
+from repody.infra.db.models import Run
 from repody.infra.storage.factory import get_storage
+from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
 
 log = structlog.get_logger()
-
-_GPU_COLD_START_DETAIL = "Serverless GPU may need 1-2 min to start on the first request after idle"
 
 
 def agent_status_from_idp(outcome: IdpOutcome) -> AgentStatus:
@@ -83,22 +70,18 @@ def wrap_idp_outcome(outcome: IdpOutcome) -> AgentOutcome:
 
 @dataclass
 class IdpRunPorts:
-    """Ports for compose_idp — short-lived DB sessions around extract HTTP."""
+    """Thin extract/validate/persist adapters; progress lives on the presenter."""
 
-    run_id: str
-    progress_steps: list[dict]
-    files: set[str]
-    snap_by_id: dict[str, SnapshotDocument]
+    session_factory: async_sessionmaker[AsyncSession]
+    progress: IdpProgressPresenter
     validation_mode: ValidationMode
-    rules_payload: list[dict]
+    rules: tuple[RuleSpec, ...]
     labels: dict[str, str]
     multi_document: bool
     fetch_bytes: Any
-    step_index: int = 1
     fields_extracted: int = 0
     extraction_total_ms: int = 0
     validation_ms: int = 0
-    _validation_started: float | None = field(default=None, repr=False)
 
     async def extract_one(
         self,
@@ -106,8 +89,7 @@ class IdpRunPorts:
         stored: StoredDocument,
         blob: bytes,
     ) -> Result[DocumentExtraction]:
-        # No DB session held during VLM/HTTP extract.
-        snap = self.snap_by_id.get(spec.id)
+        snap = self.progress.snap_by_id.get(spec.id)
         icl = icl_examples_from_document(snap) if snap is not None else []
         return await extract_one(
             spec,
@@ -117,71 +99,28 @@ class IdpRunPorts:
             icl_examples=icl or None,
         )
 
-    def _activate(self, step_id: str) -> int:
-        """Point progress at ``step_id`` (by plan index). Falls back to current index."""
-        found = step_index_for(self.progress_steps, step_id)
-        if found is not None:
-            self.step_index = found
-        return self.step_index
-
-    def _first_rule_step_id(self) -> str | None:
-        for step in self.progress_steps:
-            sid = str(step.get("id") or "")
-            if sid.startswith("rule-"):
-                return sid
-        return None
-
     async def on_extract_start(self, job: ExtractionJob, index: int, total: int) -> None:
-        from repody.infra.db.base import async_session_factory
-
-        snap = self.snap_by_id.get(job.document_id)
-        has_file = job.document_id in self.files
-        prog_mode = progress_mode(snap or job.spec, has_file=has_file)
-        step_id = f"extract-{job.document_id}"
-        self._activate(step_id)
-
-        async with async_session_factory() as session:
+        async with self.session_factory() as session:
             await ensure_run_document(
                 session,
-                run_id=self.run_id,
+                run_id=self.progress.run_id,
                 document_id=job.document_id,
                 document_type=job.spec.label,
                 existing={},
             )
             await session.commit()
-
-        read_label = read_path_label(
-            parse_read_path(job.spec.extraction_mode or DEFAULT_READ_PATH_ID).id
-        )
-        detail = read_label
-        if is_serverless_inference() and prog_mode == "document_model":
-            detail = f"{detail} · {_GPU_COLD_START_DETAIL}"
-            for step in self.progress_steps:
-                if step.get("id") == step_id:
-                    step["gpuColdStartHint"] = True
-                    break
-
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            extract_label(job.spec.label, mode=prog_mode, detail=detail),
-            force=(index == 0 or index == total - 1),
-        )
+        await self.progress.on_extract_start(job, index, total)
 
     async def on_extract_done(
         self, job: ExtractionJob, result: Result[DocumentExtraction]
     ) -> None:
         if not result.is_ok or result.value is None:
             return
-        from repody.infra.db.base import async_session_factory
-
         mapped = result.value
-        async with async_session_factory() as session:
+        async with self.session_factory() as session:
             run_doc = await ensure_run_document(
                 session,
-                run_id=self.run_id,
+                run_id=self.progress.run_id,
                 document_id=job.document_id,
                 document_type=job.spec.label,
                 existing={},
@@ -190,93 +129,23 @@ class IdpRunPorts:
             await session.commit()
         self.fields_extracted += n
         self.extraction_total_ms += mapped.meta.extraction_ms
-        step_id = f"extract-{job.document_id}"
-        mark_step_done(
-            self.progress_steps,
-            step_id,
-            duration_ms=mapped.meta.extraction_ms,
-            detail=extraction_step_detail(mapped),
-            cache_hit=mapped.meta.cache_hit,
-        )
-        # Keep currentIndex on this extract step until validation activates the next one.
-        self._activate(step_id)
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            extract_label(job.spec.label, mode="document_model"),
-            force=True,
-        )
-
-    async def on_rule_start(self, rule: dict) -> None:
-        name = rule.get("name") or "Rule"
-        rule_id = rule.get("id") or "rule"
-        step_id = f"rule-{rule_id}"
-        kind = rule_kind(rule)
-        for step in self.progress_steps:
-            if step.get("id") == step_id:
-                step["detail"] = (
-                    "Evaluating LLM rule against extracted fields"
-                    if kind == "llm"
-                    else "Logic expression on extracted fields"
-                )
-                break
-        self._activate(step_id)
-        label = f"LLM rule · {name}…" if kind == "llm" else f"Validate · {name}…"
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            label,
-            force=True,
-        )
+        await self.progress.on_extract_done(job, mapped.meta)
 
     async def validate(self, extraction: ExtractionOutput) -> ValidationOutput:
-        if extraction.by_document and self.rules_payload:
-            self._validation_started = datetime.now(UTC).timestamp()
-            first_rule = self._first_rule_step_id()
-            if first_rule:
-                self._activate(first_rule)
-            await set_run_progress(
-                None,
-                self.run_id,
-                self.progress_steps,
-                self.step_index,
-                f"Validating rules ({validation_mode_label(self.validation_mode)})…",
-                force=True,
-            )
+        await self.progress.on_validation_start(
+            has_rules=bool(extraction.by_document and self.rules)
+        )
         out = await validate_extraction(
             extraction,
-            rules=self.rules_payload,
+            rules=self.rules,
             labels=self.labels,
             multi_document=self.multi_document,
             validation_mode=self.validation_mode,
-            on_rule_start=self.on_rule_start,
+            on_rule_start=self.progress.on_rule_start,
         )
-        if self._validation_started is not None:
-            self.validation_ms = int(
-                (datetime.now(UTC).timestamp() - self._validation_started) * 1000
-            )
-        for row in out.rule_results:
-            mark_step_done(
-                self.progress_steps,
-                f"rule-{row.rule_id}",
-                detail=f"Status: {row.status} — {row.detail or 'OK'}",
-            )
+        self.validation_ms = self.progress.validation_elapsed_ms()
+        self.progress.mark_rules_done(out.rule_results)
         return out
-
-    async def mark_saving(self) -> None:
-        self._activate("finalize")
-        await set_run_progress(
-            None,
-            self.run_id,
-            self.progress_steps,
-            self.step_index,
-            "Saving audit report…",
-            force=True,
-        )
 
 
 def _docs_with_files(run: Run) -> set[str]:
@@ -328,18 +197,15 @@ def _initial_progress_steps(run: Run) -> list[dict]:
 async def execute_idp_run(
     session: AsyncSession,
     run: Run,
-    *,
-    complete: bool = True,
 ) -> Result[AgentOutcome]:
-    """Load → compose (extract+validate) → persist; complete when ``complete`` is True."""
+    """Load → compose (extract+validate) → persist and complete the platform run."""
     run_id = run.id
     inp = _load_idp_input(run)
     snapshot_docs = resolve_run_documents(run)
     snap_by_id = {d.id: d for d in snapshot_docs}
-    rules_payload = resolve_run_rules(run, run.workflow)
     progress_steps = _initial_progress_steps(run)
     files = _docs_with_files(run)
-    validation_mode = resolve_run_validation_mode(rules_payload)
+    validation_mode = resolve_run_validation_mode(resolve_run_rules(run, run.workflow))
     labels = {d.id: d.label for d in inp.workflow.documents}
     multi_document = sum(1 for d in inp.workflow.documents if d.schema_fields) > 1
 
@@ -351,13 +217,18 @@ async def execute_idp_run(
     async def fetch_bytes(key: str) -> bytes:
         return await storage.get_bytes(key)
 
-    ports = IdpRunPorts(
+    progress = IdpProgressPresenter(
         run_id=run_id,
         progress_steps=progress_steps,
         files=files,
         snap_by_id=snap_by_id,
         validation_mode=validation_mode,
-        rules_payload=rules_payload,
+    )
+    ports = IdpRunPorts(
+        session_factory=async_session_factory,
+        progress=progress,
+        validation_mode=validation_mode,
+        rules=inp.workflow.rules,
         labels=labels,
         multi_document=multi_document,
         fetch_bytes=fetch_bytes,
@@ -377,7 +248,7 @@ async def execute_idp_run(
 
     idp_outcome = outcome_r.value
     await session.flush()
-    await ports.mark_saving()
+    await progress.mark_saving()
 
     overall_r = await persist_idp_outcome(
         session,
@@ -389,7 +260,6 @@ async def execute_idp_run(
         validation_ms=ports.validation_ms,
         validation_mode=validation_mode,
         started_at=run.started_at,
-        complete=complete,
     )
     if not overall_r.is_ok:
         err = overall_r.error or AppError(code=ErrorCode.INFRA, message="persist_idp_outcome failed")
@@ -401,7 +271,6 @@ async def execute_idp_run(
         event_domain="audit_run",
         run_id=run_id,
         overall_status=overall,
-        complete=complete,
         rules_total=len(idp_outcome.validation.rule_results),
         rules_failed=sum(
             1 for row in idp_outcome.validation.rule_results if row.status in ("failed", "error")

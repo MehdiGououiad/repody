@@ -54,7 +54,16 @@ async def load_upload_intent(session: AsyncSession, storage_key: str) -> UploadI
 
 
 def _check_owner(row: UploadIntent, owner_subject: str | None) -> AppError | None:
-    if row.owner_subject and owner_subject and row.owner_subject != owner_subject:
+    """Fail-closed when an intent is owned: caller must present the same subject.
+
+    Workflow API keys resolve to owner_subject=None. They must not bind JWT-owned
+    uploads (IDOR). Unowned legacy intents remain usable by machine principals.
+    """
+    if not row.owner_subject:
+        return None
+    if owner_subject is None:
+        return _forbidden("Upload requires the owning authenticated user.")
+    if row.owner_subject != owner_subject:
         return _forbidden("Upload belongs to a different authenticated user.")
     return None
 

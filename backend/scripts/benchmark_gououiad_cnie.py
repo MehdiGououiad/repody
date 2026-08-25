@@ -9,15 +9,16 @@ Paths:
   - paddleocr:v6 markdown
   - paddleocr:qwen structured (PP-OCRv6 + Qwen text→JSON)
   - glm:ocr markdown (official SDK profile)
+  - glm:qwen structured (GLM-OCR SDK + Qwen text→JSON)
   - glm:ocr markdown + ID-card profile (optional extension)
 
-Usage (host, services on :8081 / :8083 / :8868):
+Usage (host, services on :8081 / :8083 / :8084 / :8868):
 
   cd backend
   uv run python scripts/benchmark_gououiad_cnie.py
 
   uv run python scripts/benchmark_gououiad_cnie.py --skip-glm-id-card
-  uv run python scripts/benchmark_gououiad_cnie.py --only repody:vlm,paddleocr:v6
+  uv run python scripts/benchmark_gououiad_cnie.py --only paddleocr:qwen,glm:qwen,repody:vlm:structured
 """
 
 from __future__ import annotations
@@ -44,11 +45,13 @@ if hasattr(sys.stderr, "reconfigure"):
 from repody.benchmarking import score_gououiad_cnie_fields, score_gououiad_cnie_markdown
 from repody.extraction.branding import (
     GLM_OCR_CATALOG_ID,
+    GLM_OCR_QWEN_CATALOG_ID,
     PADDLEOCR_V6_CATALOG_ID,
     PADDLEOCR_QWEN_CATALOG_ID,
     REPODY_VLM_CATALOG_ID,
 )
 from repody.extraction.glm_ocr import extract_with_glm_ocr
+from repody.extraction.glm_ocr_qwen import extract_with_glm_ocr_qwen
 from repody.extraction.glm_ocr_sdk import reset_glm_ocr_sdk_client
 from repody.extraction.paddleocr_qwen import extract_with_paddleocr_qwen
 from repody.extraction.paddleocr_v6 import extract_with_paddleocr_v6
@@ -93,6 +96,7 @@ PATHS: tuple[PathSpec, ...] = (
     PathSpec("paddleocr:v6", "markdown", PADDLEOCR_V6_CATALOG_ID, "PP-OCRv6 markdown"),
     PathSpec("paddleocr:qwen", "structured", PADDLEOCR_QWEN_CATALOG_ID, "PP-OCRv6 + Qwen structured"),
     PathSpec("glm:ocr", "markdown", GLM_OCR_CATALOG_ID, "GLM-OCR official"),
+    PathSpec("glm:qwen", "structured", GLM_OCR_QWEN_CATALOG_ID, "GLM-OCR + Qwen structured"),
     PathSpec("glm:ocr:id-card", "markdown", GLM_OCR_CATALOG_ID, "GLM-OCR ID-card profile"),
 )
 
@@ -366,6 +370,47 @@ async def _run_paddleocr_qwen_structured(expectations: dict[str, Any]) -> dict[s
     }
 
 
+async def _run_glm_qwen_structured(expectations: dict[str, Any]) -> dict[str, Any]:
+    front_schema = _schema_from_side(expectations["front"])
+    back_schema = _schema_from_side(expectations["back"])
+    front = _bundle(FRONT_PATH)
+    back = _bundle(BACK_PATH)
+    reset_glm_ocr_sdk_client()
+    try:
+        t0 = time.perf_counter()
+        front_result = await extract_with_glm_ocr_qwen(
+            front,
+            front_schema,
+            "CNIE Recto",
+            extraction_instructions=FRONT_INSTRUCTIONS,
+        )
+        front_ms = int((time.perf_counter() - t0) * 1000)
+        t1 = time.perf_counter()
+        back_result = await extract_with_glm_ocr_qwen(
+            back,
+            back_schema,
+            "CNIE Verso",
+            extraction_instructions=BACK_INSTRUCTIONS,
+        )
+        back_ms = int((time.perf_counter() - t1) * 1000)
+    finally:
+        reset_glm_ocr_sdk_client()
+
+    front_fields = _fields_map(front_result.fields)
+    back_fields = _fields_map(back_result.fields)
+    score = score_gououiad_cnie_fields(front_fields, back_fields, include_hard=True)
+    return {
+        "front_ms": front_ms,
+        "back_ms": back_ms,
+        "wall_ms": front_ms + back_ms,
+        "front_fields": front_fields,
+        "back_fields": back_fields,
+        "raw_front": front_result.raw_text,
+        "raw_back": back_result.raw_text,
+        "score": score,
+    }
+
+
 async def _probe_services() -> dict[str, Any]:
     settings = get_settings()
     nuextract_ok, nuextract_url = await _openai_reachable(settings.llamacpp_base_url)
@@ -482,6 +527,7 @@ async def run(args: argparse.Namespace) -> int:
     os.environ.setdefault("AUDIT_GLM_OCR_ENABLED", "true")
     os.environ.setdefault("AUDIT_PADDLEOCR_V6_ENABLED", "true")
     os.environ.setdefault("AUDIT_PADDLEOCR_QWEN_ENABLED", "true")
+    os.environ.setdefault("AUDIT_GLM_OCR_QWEN_ENABLED", "true")
     os.environ.setdefault("AUDIT_QWEN35_BASE_URL", "http://127.0.0.1:8084/v1")
     os.environ.setdefault("AUDIT_EXTRACTION_CACHE_ENABLED", "false")
     get_settings.cache_clear()
@@ -526,6 +572,15 @@ async def run(args: argparse.Namespace) -> int:
                     row["error"] = f"Qwen unreachable at {services['qwen35']['probe_url']}"
                 else:
                     payload = await _run_paddleocr_qwen_structured(expectations)
+            elif path.path_id == "glm:qwen":
+                if not services["glm_ocr"]["reachable"]:
+                    row["skipped"] = True
+                    row["error"] = f"GLM-OCR unreachable at {services['glm_ocr']['probe_url']}"
+                elif not services["qwen35"]["reachable"]:
+                    row["skipped"] = True
+                    row["error"] = f"Qwen unreachable at {services['qwen35']['probe_url']}"
+                else:
+                    payload = await _run_glm_qwen_structured(expectations)
             elif path.path_id.startswith("glm:ocr"):
                 if not services["glm_ocr"]["reachable"]:
                     row["skipped"] = True

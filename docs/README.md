@@ -12,7 +12,7 @@ Single map for all Repody docs. Start at the root guides, then drill into topic 
 | Production deployment | [deploy/README.md](./deploy/README.md) · [../DEPLOY.md](../DEPLOY.md) |
 | **Client integration (their cluster)** | [deploy/CLIENT.md](./deploy/CLIENT.md) |
 | **Secrets + hardening** | [deploy/SECRETS.md](./deploy/SECRETS.md) |
-| **OpenShift (client + CRC lab)** | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| **OpenShift (production install)** | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 | Architecture context and glossary | [../CONTEXT.md](../CONTEXT.md) |
 | **Diagrammes architecture & séquences (FR, Mermaid)** | [diagrams/README.md](./diagrams/README.md) |
 | Agent / Cursor workflow | [../AGENTS.md](../AGENTS.md) |
@@ -37,7 +37,7 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 | Path | URLs |
 |------|------|
 | Compose dev | API http://localhost:8000 · UI http://localhost:3000 · Keycloak http://localhost:8080 |
-| OpenShift CRC | `*.apps-crc.testing` routes — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| OpenShift / client | Ingress hosts from client values — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
 ## Operations
 

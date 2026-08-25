@@ -2,7 +2,8 @@ import { cache } from "react";
 import type { Audit, RuleTemplate, Workflow } from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import type { AuditListResponse } from "@/lib/api/schema-types";
-import { serverApi, throwOnApiError } from "@/lib/api/openapi-client";
+import { throwOnApiError } from "@/lib/api/openapi-client";
+import { serverApi } from "@/lib/api/openapi-server";
 
 export type AuditListResult = Omit<AuditListResponse, "audits"> & {
   audits: Audit[];

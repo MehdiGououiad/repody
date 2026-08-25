@@ -19,11 +19,6 @@ services:
     <<: *portable-backend
     # Hub image is target `backend` (entrypoint only) — role set by command.
     command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
-    # Hub web image rewrites to http://repody-api:8000 (K8s service name).
-    networks:
-      default:
-        aliases:
-          - repody-api
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,6 +38,8 @@ services:
       AUDIT_REDIS_URL: redis://redis:6379/0
       AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
+      # Browser-reachable host for presigned PUTs (internal DNS `minio` is not resolvable in the UI).
+      AUDIT_MINIO_PUBLIC_ENDPOINT: localhost:9000
       AUDIT_MINIO_BUCKET: audit-documents
       AUDIT_MINIO_ACCESS_KEY: minioadmin
       AUDIT_MINIO_SECRET_KEY: minio-local-dev
@@ -79,7 +76,9 @@ services:
       AUDIT_QWEN35_BASE_URL: http://host.docker.internal:8084/v1
       AUDIT_QWEN35_SERVED_MODEL: ${AUDIT_QWEN35_SERVED_MODEL:-Qwen3.5-4B}
       AUDIT_QWEN35_TIMEOUT_SECONDS: ${AUDIT_QWEN35_TIMEOUT_SECONDS:-600}
-      AUDIT_GLM_OCR_ENABLED: "false"
+      AUDIT_GLM_OCR_ENABLED: ${AUDIT_GLM_OCR_ENABLED:-false}
+      AUDIT_GLM_OCR_QWEN_ENABLED: ${AUDIT_GLM_OCR_QWEN_ENABLED:-false}
+      AUDIT_GLM_OCR_BASE_URL: http://host.docker.internal:8083/v1
       AUDIT_EXTRACTION_CACHE_ENABLED: "false"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
     extra_hosts:
@@ -117,9 +116,10 @@ services:
       # Browser redirects use public issuer; Auth.js server calls use Docker DNS.
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
-      # Must match Hub image rewrite target (see networks.aliases on api).
-      BACKEND_URL: http://repody-api:8000
-      INTERNAL_API_URL: http://repody-api:8000
+      # Runtime proxy (app/api/v1/[...path]) — Compose DNS name is `api`.
+      # Kubernetes Helm sets the same vars to http://repody-api:8000.
+      BACKEND_URL: http://api:8000
+      INTERNAL_API_URL: http://api:8000
     restart: unless-stopped
 
   worker-extract:
@@ -153,7 +153,13 @@ services:
       AUDIT_QWEN35_BASE_URL: http://host.docker.internal:8084/v1
       AUDIT_QWEN35_SERVED_MODEL: ${AUDIT_QWEN35_SERVED_MODEL:-Qwen3.5-4B}
       AUDIT_QWEN35_TIMEOUT_SECONDS: ${AUDIT_QWEN35_TIMEOUT_SECONDS:-600}
-      AUDIT_GLM_OCR_ENABLED: "false"
+      AUDIT_GLM_OCR_ENABLED: ${AUDIT_GLM_OCR_ENABLED:-false}
+      AUDIT_GLM_OCR_QWEN_ENABLED: ${AUDIT_GLM_OCR_QWEN_ENABLED:-false}
+      AUDIT_GLM_OCR_BASE_URL: http://host.docker.internal:8083/v1
+      AUDIT_GLM_OCR_SERVED_MODEL: ${AUDIT_GLM_OCR_SERVED_MODEL:-GLM-OCR}
+      AUDIT_GLM_OCR_TIMEOUT_SECONDS: ${AUDIT_GLM_OCR_TIMEOUT_SECONDS:-600}
+      AUDIT_GLM_OCR_LAYOUT_ENABLED: ${AUDIT_GLM_OCR_LAYOUT_ENABLED:-false}
+      AUDIT_GLM_OCR_LAYOUT_DEVICE: ${AUDIT_GLM_OCR_LAYOUT_DEVICE:-cpu}
       AUDIT_EXTRACTION_CACHE_ENABLED: "false"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
       AUDIT_WORKER_TASK_TIMEOUT_MINUTES: ${AUDIT_WORKER_TASK_TIMEOUT_MINUTES:-10}

@@ -24,8 +24,9 @@ pnpm llamacpp:verify
 ```
 
 Enable operator actions on the API (`AUDIT_OPERATOR_ACTIONS_ENABLED=true`) and, when
-using Keycloak, set `AUDIT_OPERATOR_BENCHMARK_USER` / `AUDIT_OPERATOR_BENCHMARK_PASSWORD`
-(or a pre-issued bearer) so the suite can authenticate.
+using Keycloak, set `AUDIT_OPERATOR_BENCHMARK_USER` (ConfigMap/env) and
+`AUDIT_OPERATOR_BENCHMARK_PASSWORD` from the runtime Secret / ESO key (never Helm
+`config.*` or ConfigMap) — or use a pre-issued bearer — so the suite can authenticate.
 
 ## Phases
 
@@ -45,14 +46,10 @@ End-to-end queue + real document-model extraction at scale. Runs inside the API 
 
 ### Prepare cluster
 
-1. Scale workers and raise admission/rate limits — merge
-   `deploy/client/lab/values.stress-test.crc.yaml` (CRC/single-node) or
-   `deploy/client/lab/values.stress-test.yaml` (multi-node) into your promoted values (or append as an
-   extra Helm `-f`), then sync Argo / roll out workers:
+1. Scale workers and raise admission/rate limits in **client GitOps values**,
+   then Helm upgrade / Argo sync and roll out workers:
 
    ```powershell
-   # After editing values.openshift-local.promoted.yaml to include stress-test keys:
-   node deploy/scripts/openshift-client-test.mjs register sync
    kubectl rollout status deployment/repody-worker-extract -n repody --timeout=300s
    kubectl rollout status deployment/repody-worker-fast -n repody --timeout=300s
    ```
@@ -90,9 +87,9 @@ when using `kubectl exec`).
 ### Throughput tuning
 
 1. **VLM slots** — raise `LLAMACPP_PARALLEL` in `deploy/llamacpp/paths.local.env`, then `pnpm llamacpp:restart`.
-2. **Workers** — scale `workerExtract.replicas` / `maxJobs` so the Taskiq extract queue drains (CRC: stay at 1 replica for local GPU).
+2. **Workers** — scale `workerExtract.replicas` / `maxJobs` so the Taskiq extract queue drains.
 3. **Healthchecks** — keep `healthzProbeInference: false` so `/v1/healthz` stays fast under load.
-4. **OTEL** — disable on CRC lab (`observability.otelEnabled: false`) when no collector is deployed.
+4. **OTEL** — set `observability.otelEnabled: false` when no collector is deployed.
 
 ### CPU scaling (when GPU/VLM is fixed)
 
@@ -100,31 +97,19 @@ Use CPU HPA and in-process concurrency before adding VLM hardware:
 
 | Profile | File | When |
 | --- | --- | --- |
-| Multi-node HPA | `deploy/client/lab/values.cpu-scale.yaml` | metrics-server or OpenShift monitoring installed |
-| CRC manual | `deploy/client/lab/values.cpu-scale.crc.yaml` | single-node lab; fixed replicas + CPU limits |
+Tune worker replicas / HPA in client GitOps values (see chart defaults in `deploy/helm/repody/values.yaml`).
 
 **What scales on CPU well**
 
 - **API / web** — enqueue, auth, SSE polling (`targetCPUUtilizationPercentage: 70`).
 - **worker-fast** — rule validation and logic-only runs (`maxJobs: 8`, HPA max 12).
-- **In-pod extract** — PDF render + MinIO fetch (`workerExtract.maxJobs`).
+- **In-pod extract** — PDF render + object-storage fetch (`workerExtract.maxJobs`).
 
 **What does not scale on CPU HPA**
 
 - **worker-extract replicas** while blocked on VLM — average CPU stays low. Keep extract HPA off; scale VLM slots / worker `maxJobs` instead (runs wait in the Taskiq queue).
 
 HPA v2 behavior (scale up in 60s, scale down over 300s) is enabled via `hpaBehavior` in `deploy/helm/repody/values.yaml`. Pods must set `resources.requests.cpu` or HPA cannot compute utilization ([Kubernetes HPA docs](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)).
-
-CRC lab: `kubectl top` fails without metrics-server — merge `values.cpu-scale.crc.yaml` for manual replica/CPU tuning. On a ~12 GiB CRC node, keep memory **requests** low and raise **CPU limits** plus in-process `maxJobs` (avoid second extract pod during rollout):
-
-```powershell
-kubectl -n repody patch configmap repody-config --patch-file deploy/client/lab/stress-configmap-patch.json
-kubectl -n repody set env deployment/repody-worker-fast AUDIT_WORKER_FAST_MAX_JOBS=4
-kubectl -n repody rollout restart deployment/repody-worker-fast deployment/repody-worker-extract
-```
-
-CRC lab enables one extract + one fast worker by default (`values.openshift-local.crc.yaml`).
-Use the stress overlay before a 1000-run test.
 
 Dev-only quick stress (burst 8 + random 20):
 

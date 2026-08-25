@@ -1,4 +1,4 @@
-"""Integration: agent-stage handoff persists outbox + pool against Postgres."""
+"""Integration: agent-stage handoff (reserved for future peer agents)."""
 
 from __future__ import annotations
 
@@ -15,6 +15,8 @@ from repody.infra.db.models import (
 )
 from repody.runtime.contracts.agent import AgentId
 from repody.app.run.handoff import schedule_next_agent_stage
+
+_SKIP_REASON = "reserved for future agents"
 
 
 @pytest.fixture
@@ -48,6 +50,7 @@ async def handoff_session(postgres_session, monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason=_SKIP_REASON)
 async def test_schedule_next_agent_stage_reuses_outbox(handoff_session):
     run = await handoff_session.get(Run, "run-handoff-1")
     assert run is not None
@@ -73,6 +76,7 @@ async def test_schedule_next_agent_stage_reuses_outbox(handoff_session):
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip(reason=_SKIP_REASON)
 async def test_schedule_next_agent_stage_creates_outbox_when_missing(handoff_session):
     row = await handoff_session.get(RunDispatchOutbox, "run-handoff-1")
     assert row is not None

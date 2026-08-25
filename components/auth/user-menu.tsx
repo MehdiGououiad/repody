@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { initialsFromSession, realmRolesFromAccessToken } from "@/lib/auth/jwt-claims";
+import { initialsFromSession } from "@/lib/auth/jwt-claims";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
@@ -45,7 +45,7 @@ export function UserMenu() {
   const email = session?.user?.email ?? undefined;
   const name = session?.user?.name ?? undefined;
   const initials = initialsFromSession(name, email);
-  const roles = realmRolesFromAccessToken(session?.accessToken);
+  const roles = session?.roles ?? [];
   const primaryRole = roles[0] ?? t("roleUnknown");
 
   return (

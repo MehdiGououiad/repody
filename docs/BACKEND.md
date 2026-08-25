@@ -111,7 +111,7 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 
 **Perf / load** (same folder — image + kubectl copy): `load_test_platform.py`, `profile_platform_scale.py`, `locust_api_load.py`, `benchmark_suite.py`, `benchmark_dev_stress.py`, `benchmark_ui_route.py`, `prod_stress_test.py`
 
-**Research** (`research/`): `cnie_structure_llm_bench.py`, `cnie_text_ie_compare.py` — see also `deploy/scripts/research/`
+**Research:** `deploy/scripts/research/qwen35-serve.mjs` (product Qwen arm)
 
 **Repo-root wrappers**: `scripts/prod-stress.mjs`, `scripts/run-platform-e2e.mjs`, `scripts/wait-for-*.mjs`.
 
@@ -127,7 +127,7 @@ Map: [backend/scripts/README.md](../backend/scripts/README.md).
 | `settings/` | `AUDIT_*` Pydantic settings (`fields_*.py` + `model.py`) |
 | `benchmarking/` | Benchmark scoring helpers (`ocr`, `suite`, `text`) |
 | `runtime/` | Pure contracts, recipe, pools, run status/ids, operator validate/job |
-| `agents/` | Domain agents (`idp` live; `fraud` / `computer_use` SKIPPED stubs) |
+| `agents/` | Domain agents (`idp` live; `fraud` / `computer_use` pool names reserved — no packages) |
 | `integration/` | Shared E2E helpers (`facture`, `fixtures`, `live_stack`, `workflow_flow`) for tests + scripts |
 
 ### `api/` — HTTP layer (thin)
@@ -210,7 +210,7 @@ Import `catalog/registry.py` directly from extraction and API call sites.
 | Area | Files |
 |------|-------|
 | **Runs** | `app/run/` — enqueue → outbox → processor → handoff (`lifecycle`, `persistence`, `progress`, …) |
-| **Agents** | `agents/idp/` (compose + adapters); `agents/fraud/`, `agents/computer_use/` (SKIPPED; [ADR 007](./adr/007-staged-agent-queues-taskiq.md)) |
+| **Agents** | `agents/idp/` (compose + adapters); recipe is IDP-only ([ADR 007](./adr/007-staged-agent-queues-taskiq.md) pools reserved) |
 | **Runtime cores** | `runtime/contracts`, `runtime/recipe.py`, `runtime/pools.py`, `runtime/run/*`, `runtime/operator/` |
 | **Workflows** | `app/workflow/` (`service`, `repository`, `deployment`, `validation`, `stats`) |
 | **App services** | `health.py`, `metrics.py`, `dashboard.py`, `ops/maintenance.py` |

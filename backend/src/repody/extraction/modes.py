@@ -39,8 +39,8 @@ class ValidationModeSpec:
 READ_PATHS: tuple[ReadPathSpec, ...] = (
     ReadPathSpec(
         id=DOCUMENT_MODEL_READ_PATH_ID,
-        label="NuExtract vision",
-        description="PDF PNG @ 170 DPI or native image upload (NuExtract3 official).",
+        label="Document model",
+        description="Catalog document model (repody:vlm, paddleocr:*, glm:ocr) — labels come from the model registry.",
         read="document_model",
     ),
 )
@@ -240,9 +240,17 @@ def plan_extraction_detail(
 
 
 def completed_extraction_detail(meta) -> str:
+    read_label = getattr(meta, "read_path_label", None) or read_path_label(
+        parse_read_path(
+            getattr(meta, "read_path_used", None) or getattr(meta, "read_path_config", None)
+        ).id
+    )
+    val_label = getattr(meta, "validation_label", None) or validation_mode_label(
+        meta.validation_mode
+    )
     parts = [
-        f"Engine: {meta.read_path_label}",
-        f"Validation: {meta.validation_label}",
+        f"Engine: {read_label}",
+        f"Validation: {val_label}",
     ]
     if meta.document_model_id:
         parts.append(f"Model: {public_document_model_label(meta.document_model_id)}")

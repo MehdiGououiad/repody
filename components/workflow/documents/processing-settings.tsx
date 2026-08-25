@@ -39,6 +39,7 @@ export function ProcessingSettings({
   onRetry: () => void;
 }) {
   const { error, loaded, documentModelIds, defaultDocumentModel } = options;
+  const autoOn = Boolean(doc.nativePdfAuto);
   const selected =
     doc.documentModelId?.trim() ||
     defaultDocumentModel ||
@@ -76,9 +77,32 @@ export function ProcessingSettings({
         </div>
       ) : null}
 
+      <div className="flex max-w-lg items-start gap-2.5 rounded-md border border-border/80 bg-background/60 px-3 py-2.5">
+        <input
+          id={`native-pdf-auto-${doc.id}`}
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+          checked={autoOn}
+          onChange={(event) => onChange({ nativePdfAuto: event.target.checked })}
+        />
+        <div className="min-w-0 space-y-0.5">
+          <Label
+            htmlFor={`native-pdf-auto-${doc.id}`}
+            className="cursor-pointer text-xs font-semibold leading-none"
+          >
+            {t("extraction.nativePdfAutoLabel")}
+          </Label>
+          <p className="text-[11px] leading-relaxed text-on-surface-variant">
+            {t("extraction.nativePdfAutoHint")}
+          </p>
+        </div>
+      </div>
+
       <div className="max-w-sm space-y-1.5">
         <Label htmlFor={`extraction-model-${doc.id}`} className="text-xs font-semibold">
-          {t("extraction.documentModelLabel")}
+          {autoOn
+            ? t("extraction.fallbackDocumentModelLabel")
+            : t("extraction.documentModelLabel")}
         </Label>
         <Select
           value={selected}
@@ -100,7 +124,9 @@ export function ProcessingSettings({
             <SelectValue
               placeholder={
                 loaded
-                  ? t("extraction.documentModelIdPlaceholder")
+                  ? autoOn
+                    ? t("extraction.fallbackDocumentModelPlaceholder")
+                    : t("extraction.documentModelIdPlaceholder")
                   : t("extraction.documentModelIdLoading")
               }
             />
@@ -126,7 +152,7 @@ export function ProcessingSettings({
           </SelectContent>
         </Select>
         <p className="text-[11px] leading-relaxed text-on-surface-variant">
-          {modelHint}
+          {autoOn ? t("extraction.fallbackDocumentModelHint") : modelHint}
         </p>
       </div>
     </div>

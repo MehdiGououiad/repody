@@ -1,0 +1,23 @@
+# Local GLM-OCR worker overlay — used by `pnpm platform -- --with-glm`.
+#
+# Hub `repody-backend` is intentionally otel-only (lean portable image).
+# Official GlmOcr SDK (zai-org) needs Python extras `otel,glmocr` in the
+# extract worker. This overlay rebuilds only worker-extract locally; API/web
+# stay on Hub images.
+#
+#   docker compose -f compose.yaml -f compose.portable.yaml -f compose.glmocr.yaml \
+#     --profile workers up -d --build worker-extract
+
+name: repody
+
+services:
+  worker-extract:
+    image: repody-backend:local-glmocr
+    pull_policy: never
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker
+      args:
+        # Official SDK + layout deps (CPU torch). Same default as compose.yaml.
+        BACKEND_EXTRAS: ${REPODY_BACKEND_EXTRAS:-otel,glmocr}

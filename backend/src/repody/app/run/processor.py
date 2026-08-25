@@ -313,11 +313,15 @@ async def _process_run_with_session(
         if run is None:
             return
 
-        stage_result = await execute_platform_run(
+        stage_r = await execute_platform_run(
             session,
             run,
             agent_stage=stage,
         )
+        if not stage_r.is_ok or stage_r.value is None:
+            err = stage_r.error
+            raise RuntimeError(err.message if err else f"agent stage {stage.value} failed")
+        stage_result = stage_r.value
         refreshed = await session.get(Run, run_id)
         if refreshed is None:
             raise RuntimeError(f"run vanished after stage: {run_id}")

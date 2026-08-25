@@ -1,12 +1,15 @@
 """GLM-OCR markdown adapter — official zai-org GlmOcr SDK only.
 
-Document parsing (recommended by the model card):
+Document parsing (opt-in):
   https://huggingface.co/zai-org/GLM-OCR
 
-  GlmOcr(mode="selfhosted")
-    → PP-DocLayoutV3 layout
+  AUDIT_GLM_OCR_LAYOUT_ENABLED=true
+    → GlmOcr(mode="selfhosted") + PP-DocLayoutV3
     → region OCR via llama-server (ggml-org/GLM-OCR-GGUF)
     → Text / Table / Formula Recognition prompts from glmocr/config.yaml
+
+Model-only (default, AUDIT_GLM_OCR_LAYOUT_ENABLED=false):
+  whole page → ``Text Recognition:`` (no PP-DocLayoutV3 weights)
 
 Install: ``uv sync --extra glmocr`` (workers: ``REPODY_BACKEND_EXTRAS=otel,glmocr``).
 """
@@ -44,7 +47,7 @@ def _require_sdk() -> None:
     if sdk_importable():
         return
     raise RuntimeError(
-        "GLM-OCR requires the official glmocr SDK (PP-DocLayoutV3) in the extract "
+        "GLM-OCR requires the official glmocr SDK in the extract "
         "worker image. Rebuild with REPODY_BACKEND_EXTRAS=otel,glmocr "
         "(Compose / pnpm images:build default), or for host tests: "
         "uv sync --extra glmocr. Docs: https://huggingface.co/zai-org/GLM-OCR"
@@ -67,25 +70,12 @@ def _pdf_page_count(document_bytes: bytes, mime_type: str) -> int | None:
         return None
 
 
-async def extract_with_glm_ocr(
+async def fetch_glm_ocr_markdown(
     bundle: DocumentBundle,
-    schema: list[SchemaFieldSpec],
-    document_type: str,
-    *,
-    spec: DocumentModelSpec | None = None,
-    extraction_instructions: str = "",
-    markdown_extraction: bool = False,
-    extraction_icl_examples: list[ExtractionIclExample] | None = None,
-) -> ExtractionResult:
-    """Markdown-only extraction via official GlmOcr selfhosted SDK."""
-    _ = document_type
-    _ = extraction_instructions
-    _ = extraction_icl_examples
-    _ = markdown_extraction
+) -> tuple[str, int | None, int | None, int]:
+    """Official GlmOcr SDK → ``(markdown, page_count, pages_sent, pages_dropped)``."""
     _require_sdk()
-
     settings = get_settings()
-    catalog_id = spec.id if spec else GLM_OCR_CATALOG_ID
     base = (settings.glm_ocr_base_url or "").rstrip("/")
     if not base:
         raise RuntimeError(
@@ -111,14 +101,37 @@ async def extract_with_glm_ocr(
         max_workers=int(settings.glm_ocr_sdk_max_workers),
         pdf_max_pages=pdf_max,
         id_card_profile=bool(settings.glm_ocr_id_card_profile),
+        layout_enabled=bool(settings.glm_ocr_layout_enabled),
     )
-    started = time.perf_counter()
     markdown = await asyncio.to_thread(
         parse_markdown,
         bundle.raw_bytes,
         cfg=cfg,
     )
+    return markdown, page_count, pages_sent, pages_dropped
+
+
+async def extract_with_glm_ocr(
+    bundle: DocumentBundle,
+    schema: list[SchemaFieldSpec],
+    document_type: str,
+    *,
+    spec: DocumentModelSpec | None = None,
+    extraction_instructions: str = "",
+    markdown_extraction: bool = False,
+    extraction_icl_examples: list[ExtractionIclExample] | None = None,
+) -> ExtractionResult:
+    """Markdown-only extraction via official GlmOcr selfhosted SDK."""
+    _ = document_type
+    _ = extraction_instructions
+    _ = extraction_icl_examples
+    _ = markdown_extraction
+    settings = get_settings()
+    catalog_id = spec.id if spec else GLM_OCR_CATALOG_ID
+    started = time.perf_counter()
+    markdown, page_count, pages_sent, pages_dropped = await fetch_glm_ocr_markdown(bundle)
     elapsed_ms = int((time.perf_counter() - started) * 1000)
+    base = (settings.glm_ocr_base_url or "").rstrip("/")
     log.info(
         "glm_ocr_sdk_done",
         catalog_id=catalog_id,
@@ -127,12 +140,13 @@ async def extract_with_glm_ocr(
         markdown_chars=len(markdown),
         elapsed_ms=elapsed_ms,
         base_url=base,
-        model=cfg.model,
-        layout_device=cfg.layout_device,
+        model=(settings.glm_ocr_served_model or "GLM-OCR").strip(),
+        layout_enabled=bool(settings.glm_ocr_layout_enabled),
+        layout_device=(settings.glm_ocr_layout_device or "cpu").strip() or "cpu",
         pages_total=page_count,
         pages_sent=pages_sent,
         pages_dropped=pages_dropped,
-        pdf_max_pages=pdf_max,
+        pdf_max_pages=settings.glm_ocr_pdf_max_pages,
         id_card_profile=settings.glm_ocr_id_card_profile,
     )
     return ExtractionResult(

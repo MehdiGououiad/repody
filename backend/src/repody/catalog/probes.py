@@ -22,6 +22,7 @@ from repody.inference.openai_compat import (
     post_chat_completion,
 )
 from repody.inference.runtime import (
+    GLM_OCR_QWEN_RUNTIME,
     GLM_OCR_RUNTIME,
     NUEXTRACT_CLOUD_RUNTIME,
     PADDLEOCR_QWEN_RUNTIME,
@@ -46,7 +47,11 @@ PADDLEOCR_QWEN_CATALOG_NOTE = (
     "PP-OCRv6 + Qwen — structured extraction (OCR :8868 + Qwen :8084)."
 )
 GLM_OCR_CATALOG_NOTE = (
-    "GLM-OCR (zai-org) — markdown-only; official SDK (PP-DocLayoutV3) + llama-server GGUF."
+    "GLM-OCR (zai-org) — markdown-only; official SDK whole-page Text Recognition: "
+    "(optional PP-DocLayoutV3) + llama-server GGUF."
+)
+GLM_OCR_QWEN_CATALOG_NOTE = (
+    "GLM-OCR + Qwen — structured extraction (SDK :8083 + Qwen :8084)."
 )
 
 
@@ -120,6 +125,14 @@ def availability_for_spec(
         if not base:
             return False, "Set AUDIT_GLM_OCR_BASE_URL to the GLM-OCR llama-server /v1 origin."
         return True, GLM_OCR_CATALOG_NOTE
+    if spec.runtime == GLM_OCR_QWEN_RUNTIME:
+        ocr_base = (settings.glm_ocr_base_url or "").strip()
+        qwen_base = (settings.qwen35_base_url or "").strip()
+        if not ocr_base:
+            return False, "Set AUDIT_GLM_OCR_BASE_URL for the GLM-OCR stage."
+        if not qwen_base:
+            return False, "Set AUDIT_QWEN35_BASE_URL for the Qwen text→JSON stage."
+        return True, GLM_OCR_QWEN_CATALOG_NOTE
     if not live_probe and spec.runtime in RUNTIMES:
         return True, SERVERLESS_CATALOG_NOTE
     runtime_models = installed_by_runtime.get(spec.runtime) or set()

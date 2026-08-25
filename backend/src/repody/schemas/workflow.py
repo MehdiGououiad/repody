@@ -58,6 +58,14 @@ class DocumentDefSchema(CamelModel):
             "instead of structured extraction (not in parallel with fields)."
         ),
     )
+    native_pdf_auto: bool = Field(
+        default=False,
+        serialization_alias="nativePdfAuto",
+        description=(
+            "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; "
+            "if quality is weak, fall back to documentModelId."
+        ),
+    )
     extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
         default_factory=list,
         serialization_alias="extractionIclExamples",

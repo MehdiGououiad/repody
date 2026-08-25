@@ -76,16 +76,22 @@ Commands:
   help       This help
 
 Options (pnpm platform -- … / pnpm platform setup -- …):
-  --with-nuextract   Also start NuExtract (:8081)
-  --with-glm         Also start GLM-OCR (:8083, experimental)
+  --with-nuextract   Also start NuExtract (:8081) → catalog repody:vlm
+  --with-glm         Also start GLM-OCR (:8083) + rebuild extract worker
+                     with official GlmOcr SDK → catalog glm:qwen / glm:ocr
   --no-paddle        Skip PP-OCRv6
-  --no-qwen          Skip Qwen
+  --no-qwen          Skip Qwen (needed for paddleocr:qwen and glm:qwen)
   --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
   --platform-only    Containers only (no host models)
   --no-pull          Do not docker pull (setup + up)
 
-Default extraction: paddleocr:qwen  (PP-OCR :8868 + Qwen :8084)
-Images: mehdigououiad/repody-backend:0.1.0 · mehdigououiad/repody-web:0.1.0
+Structured paths:
+  paddleocr:qwen   PP-OCR → Qwen JSON     (default)
+  glm:qwen         GLM-OCR SDK → Qwen JSON (--with-glm)
+  repody:vlm       NuExtract               (--with-nuextract)
+
+Images: mehdigououiad/repody-backend:0.1.0 · mehdigouiad/repody-web:0.1.0
+  (--with-glm builds local worker image repody-backend:local-glmocr)
 
 Guide: docs/deploy/LOCAL.md
 `);
@@ -134,26 +140,35 @@ function setEnvKeys(filePath, sets) {
 
 function patchBackendEnv() {
   const wantPaddle = !opts.noPaddle;
-  const wantQwen = !opts.noQwen && wantPaddle;
+  const wantPaddleQwen = !opts.noQwen && wantPaddle;
+  const wantGlmQwen = !opts.noQwen && opts.withGlm;
   setEnvKeys(BACKEND_ENV, {
     AUDIT_REPODY_VLM_ENABLED: opts.withNuextract ? "true" : "false",
     AUDIT_GLM_OCR_ENABLED: opts.withGlm ? "true" : "false",
+    AUDIT_GLM_OCR_QWEN_ENABLED: wantGlmQwen ? "true" : "false",
     AUDIT_PADDLEOCR_V6_ENABLED: wantPaddle ? "true" : "false",
-    AUDIT_PADDLEOCR_QWEN_ENABLED: wantQwen ? "true" : "false",
+    AUDIT_PADDLEOCR_QWEN_ENABLED: wantPaddleQwen ? "true" : "false",
     AUDIT_QWEN35_BASE_URL: "http://127.0.0.1:8084/v1",
     AUDIT_PADDLEOCR_V6_BASE_URL: "http://127.0.0.1:8868",
     AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
+    AUDIT_GLM_OCR_BASE_URL: "http://127.0.0.1:8083/v1",
     AUDIT_OTEL_ENABLED: "false",
   });
+}
+
+function composeFileArgs() {
+  const files = ["-f", "compose.yaml", "-f", "compose.portable.yaml"];
+  // Hub backend is otel-only; GLM catalog needs the official SDK in the worker.
+  if (opts.withGlm) {
+    files.push("-f", "compose.glmocr.yaml");
+  }
+  return files;
 }
 
 function composeArgs(...parts) {
   return [
     "compose",
-    "-f",
-    "compose.yaml",
-    "-f",
-    "compose.portable.yaml",
+    ...composeFileArgs(),
     "--env-file",
     "backend/.env",
     ...parts,
@@ -230,9 +245,10 @@ function nuextractConfigured() {
 
 function logPlan() {
   const paddle = opts.noPaddle ? "off" : "on";
-  const qwen = opts.noQwen || opts.noPaddle ? "off" : "on (host)";
+  const needQwen = !opts.noQwen && (!opts.noPaddle || opts.withGlm);
+  const qwen = needQwen ? "on (host)" : "off";
   const nue = opts.withNuextract ? "on (host)" : "off";
-  const glm = opts.withGlm ? "on (experimental)" : "off";
+  const glm = opts.withGlm ? "on (host + local worker SDK)" : "off";
   const obs = opts.withObs ? "on" : "off";
   console.log(
     `Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}  Observability=${obs}`,
@@ -368,18 +384,13 @@ async function up() {
     console.log(`NuExtract: ${nue.reason}`);
   }
 
-  if (opts.withGlm) {
-    console.warn(
-      "warn: Hub image is otel-only (no GLM SDK). Workers may lack glmocr deps.",
-    );
-  }
-
   const composeEnv = {
     REPODY_PULL_POLICY: opts.skipPull
       ? "never"
       : process.env.REPODY_PULL_POLICY || "missing",
     AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
     AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
+    REPODY_BACKEND_EXTRAS: process.env.REPODY_BACKEND_EXTRAS || "otel,glmocr",
   };
 
   if (opts.withObs) {
@@ -388,11 +399,22 @@ async function up() {
     disableObservabilityEnv();
   }
 
+  if (opts.withGlm) {
+    console.log(
+      "\n── Build extract worker (official GlmOcr SDK extras) ─────────",
+    );
+    run(
+      "docker",
+      composeArgs("--profile", "workers", "build", "worker-extract"),
+      { inherit: true, env: composeEnv },
+    );
+  }
+
   console.log("\n── Start Hub platform ───────────────────────────────────────");
   const upArgs = [
     "up",
     "-d",
-    "--no-build",
+    opts.withGlm ? "--build" : "--no-build",
     "postgres",
     "redis",
     "minio",
@@ -421,8 +443,9 @@ async function up() {
     });
   }
 
-  if (!opts.noQwen && !opts.noPaddle) {
-    console.log("\n── Qwen3.5 (host, paddleocr:qwen) ───────────────────────────");
+  // Qwen is the JSON stage for paddleocr:qwen and glm:qwen.
+  if (!opts.noQwen && (!opts.noPaddle || opts.withGlm)) {
+    console.log("\n── Qwen3.5 (host, OCR→JSON) ─────────────────────────────────");
     run("node", ["deploy/scripts/research/qwen35-serve.mjs", "serve"], {
       inherit: true,
       allowFail: true,
@@ -438,7 +461,7 @@ async function up() {
   }
 
   if (opts.withGlm) {
-    console.log("\n── GLM-OCR (host, experimental) ─────────────────────────────");
+    console.log("\n── GLM-OCR (host llama-server) ──────────────────────────────");
     run("node", ["deploy/scripts/glmocr-serve.mjs", "serve"], {
       inherit: true,
       allowFail: true,
@@ -450,7 +473,7 @@ async function up() {
     composeArgs(
       "up",
       "-d",
-      "--no-build",
+      opts.withGlm ? "--build" : "--no-build",
       "--pull",
       opts.skipPull ? "never" : "missing",
       "--force-recreate",
@@ -471,7 +494,8 @@ async function up() {
   if (!opts.noPaddle && !opts.noQwen) extraction.push("paddleocr:qwen");
   else if (!opts.noPaddle) extraction.push("paddleocr:v6");
   if (opts.withNuextract) extraction.push("repody:vlm");
-  if (opts.withGlm) extraction.push("glm:ocr");
+  if (opts.withGlm && !opts.noQwen) extraction.push("glm:qwen");
+  else if (opts.withGlm) extraction.push("glm:ocr");
 
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
@@ -541,10 +565,7 @@ function logs() {
     "docker",
     [
       "compose",
-      "-f",
-      "compose.yaml",
-      "-f",
-      "compose.portable.yaml",
+      ...composeFileArgs(),
       "--env-file",
       "backend/.env",
       "--profile",

@@ -59,12 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
 
       if (isPublicPage(path)) {
-        if (
-          path === "/login" &&
-          session?.user &&
-          session?.accessToken &&
-          !session.error
-        ) {
+        if (path === "/login" && session?.user && !session.error) {
           const callback = request.nextUrl.searchParams.get("callbackUrl");
           const dest =
             callback && callback.startsWith("/") && !callback.startsWith("//")
@@ -75,7 +70,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return true;
       }
 
-      return Boolean(session?.user && session?.accessToken && !session.error);
+      return Boolean(session?.user && !session.error);
     },
     async jwt({ token, account }) {
       if (account?.access_token) {
@@ -111,14 +106,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (token.error) {
         session.error = token.error as string;
-        session.accessToken = undefined;
         return session;
       }
       if (!token.accessToken) {
         session.error = "SessionExpired";
-        session.accessToken = undefined;
         return session;
       }
+      // Needed by proxy/RSC so API calls use the token Auth.js just refreshed
+      // (reading the JWT cookie via getToken races a second Keycloak refresh).
       session.accessToken = token.accessToken as string;
       if (token.roles) {
         session.roles = token.roles as string[];

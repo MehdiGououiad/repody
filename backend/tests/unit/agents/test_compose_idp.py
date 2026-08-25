@@ -19,8 +19,8 @@ from repody.agents.idp.contracts import (
     RuleSpec,
     SchemaField,
 )
+from repody.agents.idp.contracts import IdpExtractionMeta
 from repody.agents.idp.run import wrap_idp_outcome
-from repody.extraction.types import ExtractionMetadata
 from repody.runtime.contracts.agent import AgentStatus
 from repody.runtime.contracts.result import ErrorCode, Result
 
@@ -57,12 +57,10 @@ def _extraction(doc_id: str = "d1") -> DocumentExtraction:
             ),
         ),
         markdown_text=None,
-        meta=ExtractionMetadata(
+        meta=IdpExtractionMeta(
             read_path_config="document_model",
             read_path_used="document_model",
-            read_path_label="NuExtract vision",
             validation_mode="logic_only",
-            validation_label="Logic rules",
             document_model_id="repody:vlm",
             cache_hit=False,
             extraction_ms=12,

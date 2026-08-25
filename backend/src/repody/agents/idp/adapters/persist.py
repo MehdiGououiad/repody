@@ -1,4 +1,4 @@
-"""Persist IdpOutcome pieces and optionally complete the platform run."""
+"""Persist IdpOutcome pieces and complete the platform run."""
 
 from __future__ import annotations
 
@@ -10,16 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from repody.agents.idp.contracts import DocumentExtraction, ValidationOutput
-from repody.infra.db.models import (
-    ExtractedField,
-    RuleResult,
-    Run,
-    RunDocument,
-)
-from repody.extraction.modes import completed_extraction_detail, validation_mode_label
-from repody.runtime.agent_metadata import PendingCompletion, store_pending_completion
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
-from repody.runtime.run.ids import new_id
 from repody.app.mappers import duration_ms_between
 from repody.app.run.commands import (
     CompleteRunRequest,
@@ -28,12 +18,17 @@ from repody.app.run.commands import (
 )
 from repody.app.run.helpers import meta_to_dict
 from repody.app.run.lifecycle import RunCompletionOutcome
-from repody.app.run.persistence import (
-    bind_commit,
-    bind_load,
-    bind_save,
-)
+from repody.app.run.persistence import session_run_ports
 from repody.app.run.progress import progress_snapshot
+from repody.extraction.modes import validation_mode_label
+from repody.infra.db.models import (
+    ExtractedField,
+    RuleResult,
+    Run,
+    RunDocument,
+)
+from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.run.ids import new_id
 from repody.settings import get_settings
 
 
@@ -47,10 +42,6 @@ def extraction_meta_to_dict(doc: DocumentExtraction) -> dict:
         raw_text=doc.meta.raw_text if doc.meta.raw_text is not None else doc.raw_text,
     )
     return meta_to_dict(meta)
-
-
-def extraction_step_detail(doc: DocumentExtraction) -> str:
-    return completed_extraction_detail(doc.meta)
 
 
 async def ensure_run_document(
@@ -166,9 +157,8 @@ async def persist_idp_outcome(
     validation_ms: int,
     validation_mode: str,
     started_at: datetime | None,
-    complete: bool = True,
 ) -> Result[str]:
-    """Persist fields/rules. When ``complete`` is True, terminalize the run."""
+    """Persist fields/rules and terminalize the IDP run."""
     run = (
         await session.execute(
             select(Run)
@@ -221,29 +211,12 @@ async def persist_idp_outcome(
         finished_at=finished_at,
     )
 
-    if not complete:
-        store_pending_completion(
-            run,
-            PendingCompletion(
-                overall_status=completion.overall_status,
-                summary_total=completion.summary_total,
-                summary_passed=completion.summary_passed,
-                summary_failed=completion.summary_failed,
-                fields_extracted=completion.fields_extracted,
-                run_metadata=completion.run_metadata,
-                progress=completion.progress,
-            ),
-        )
-        if completion.progress is not None:
-            run.progress = completion.progress
-        await session.commit()
-        return Result.ok(validation.overall_status)
-
+    load, save, commit = session_run_ports(session)
     completed = await complete_run(
         CompleteRunRequest(run_id=run_id, outcome=completion),
-        load=bind_load(session),
-        save=bind_save(session),
-        commit=bind_commit(session),
+        load=load,
+        save=save,
+        commit=commit,
         publish=publish_run_domain_events,
         now=finished_at,
     )

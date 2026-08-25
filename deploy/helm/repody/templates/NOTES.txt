@@ -4,15 +4,16 @@ Release: {{ .Release.Name }}
 Namespace: {{ .Release.Namespace }}
 
 {{- if .Values.ingress.enabled }}
+{{- $scheme := ternary "https" "http" .Values.ingress.tls.enabled }}
 
-UI:    https://{{ .Values.ingress.host }}
+UI:    {{ $scheme }}://{{ .Values.ingress.host }}
 {{- if .Values.ingress.apiHost }}
-API:   https://{{ .Values.ingress.apiHost }}/v1/healthz/live
+API:   {{ $scheme }}://{{ .Values.ingress.apiHost }}/v1/healthz/live
 {{- else }}
 API:   internal {{ include "repody.fullname" . }}-api:8000
 {{- end }}
 {{- if .Values.ingress.filesHost }}
-Files: https://{{ .Values.ingress.filesHost }}
+Files: {{ $scheme }}://{{ .Values.ingress.filesHost }}
 {{- end }}
 
 {{- else }}

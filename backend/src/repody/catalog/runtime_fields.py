@@ -6,8 +6,7 @@ from typing import Any
 
 from repody.catalog.registry import list_document_models
 from repody.extraction.branding import (
-    GLM_OCR_CATALOG_ID,
-    PADDLEOCR_V6_CATALOG_ID,
+    GLM_OCR_QWEN_CATALOG_ID,
     PADDLEOCR_QWEN_CATALOG_ID,
     REPODY_VLM_CATALOG_ID,
     REPODY_VLM_CLOUD_CATALOG_ID,
@@ -289,6 +288,59 @@ def _paddleocr_qwen_fields(settings: Settings) -> list[ModelConfigField]:
             restart="api",
         ),
         _platform_field(
+            key="paddleocr_v6_base_url",
+            env_var="AUDIT_PADDLEOCR_V6_BASE_URL",
+            label="OCR API base URL",
+            description="PaddleX OCR origin for the OCR stage (default http://127.0.0.1:8868).",
+            value=settings.paddleocr_v6_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="qwen35_base_url",
+            env_var="AUDIT_QWEN35_BASE_URL",
+            label="Qwen API base URL",
+            description="OpenAI-compatible origin for text→JSON (default http://127.0.0.1:8084/v1).",
+            value=settings.qwen35_base_url,
+            restart="worker",
+        ),
+        _platform_field(
+            key="qwen35_served_model",
+            env_var="AUDIT_QWEN35_SERVED_MODEL",
+            label="Qwen model id",
+            description="llama-server model alias (default Qwen3.5-4B).",
+            value=settings.qwen35_served_model,
+            restart="worker",
+        ),
+        _platform_field(
+            key="qwen35_timeout_seconds",
+            env_var="AUDIT_QWEN35_TIMEOUT_SECONDS",
+            label="Qwen request timeout (s)",
+            description="HTTP timeout for text→JSON chat/completions.",
+            value=settings.qwen35_timeout_seconds,
+            restart="worker",
+        ),
+    ]
+
+
+def _glm_ocr_qwen_fields(settings: Settings) -> list[ModelConfigField]:
+    return [
+        _platform_field(
+            key="glm_ocr_qwen_enabled",
+            env_var="AUDIT_GLM_OCR_QWEN_ENABLED",
+            label="Enabled",
+            description="Register GLM-OCR + Qwen structured extraction in the catalog.",
+            value=settings.glm_ocr_qwen_enabled,
+            restart="api",
+        ),
+        _platform_field(
+            key="glm_ocr_base_url",
+            env_var="AUDIT_GLM_OCR_BASE_URL",
+            label="GLM-OCR API base URL",
+            description="llama-server /v1 origin for official SDK region OCR (default :8083/v1).",
+            value=settings.glm_ocr_base_url,
+            restart="worker",
+        ),
+        _platform_field(
             key="qwen35_base_url",
             env_var="AUDIT_QWEN35_BASE_URL",
             label="Qwen API base URL",
@@ -347,6 +399,17 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             label="Request timeout (s)",
             description="HTTP timeout for official SDK region OCR.",
             value=settings.glm_ocr_timeout_seconds,
+            restart="worker",
+        ),
+        _platform_field(
+            key="glm_ocr_layout_enabled",
+            env_var="AUDIT_GLM_OCR_LAYOUT_ENABLED",
+            label="PP-DocLayoutV3 enabled",
+            description=(
+                "Off by default: model-only whole-page Text Recognition:. "
+                "On = PP-DocLayoutV3 region OCR (zai-org document-parsing path)."
+            ),
+            value=settings.glm_ocr_layout_enabled,
             restart="worker",
         ),
         _platform_field(
@@ -456,9 +519,18 @@ def _deployment_notes() -> list[DeploymentNote]:
             change_kind="GLM-OCR (official SDK + llama-server)",
             action="uv sync --extra glmocr; pnpm glmocr:serve; set AUDIT_GLM_OCR_*",
             detail=(
-                "glm:ocr uses GlmOcr(mode=selfhosted) + PP-DocLayoutV3; region OCR "
-                "hits llama-server :8083 (ggml-org/GLM-OCR-GGUF). "
+                "glm:ocr defaults to whole-page Text Recognition: (no layout). "
+                "Set AUDIT_GLM_OCR_LAYOUT_ENABLED=true for PP-DocLayoutV3. "
+                "OCR hits llama-server :8083 (ggml-org/GLM-OCR-GGUF). "
                 "See https://huggingface.co/zai-org/GLM-OCR"
+            ),
+        ),
+        DeploymentNote(
+            change_kind="GLM-OCR + Qwen structured extraction",
+            action="pnpm glmocr:serve && pnpm qwen35:serve; set AUDIT_GLM_OCR_QWEN_ENABLED=true",
+            detail=(
+                "glm:qwen runs official GlmOcr SDK markdown then Qwen3.5 text→JSON "
+                "(same schema prompt as paddleocr:qwen)."
             ),
         ),
     ]
@@ -475,15 +547,12 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
         elif spec.id == REPODY_VLM_CLOUD_CATALOG_ID:
             fields = _nuextract_cloud_fields(settings)
             inference_url = settings.nuextract_cloud_base_url
-        elif spec.id == PADDLEOCR_V6_CATALOG_ID:
-            fields = _paddleocr_v6_fields(settings)
-            inference_url = settings.paddleocr_v6_base_url
         elif spec.id == PADDLEOCR_QWEN_CATALOG_ID:
             fields = _paddleocr_qwen_fields(settings)
             inference_url = settings.qwen35_base_url
-        elif spec.id == GLM_OCR_CATALOG_ID:
-            fields = _glm_ocr_fields(settings)
-            inference_url = settings.glm_ocr_base_url
+        elif spec.id == GLM_OCR_QWEN_CATALOG_ID:
+            fields = _glm_ocr_qwen_fields(settings)
+            inference_url = settings.qwen35_base_url
         else:
             fields = []
             inference_url = None
@@ -509,17 +578,13 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
         for profile in profiles:
             if profile.model_id == REPODY_VLM_CLOUD_CATALOG_ID:
                 profile.enabled = False
-    if settings.paddleocr_v6_enabled is False:
-        for profile in profiles:
-            if profile.model_id == PADDLEOCR_V6_CATALOG_ID:
-                profile.enabled = False
     if settings.paddleocr_qwen_enabled is False:
         for profile in profiles:
             if profile.model_id == PADDLEOCR_QWEN_CATALOG_ID:
                 profile.enabled = False
-    if settings.glm_ocr_enabled is False:
+    if settings.glm_ocr_qwen_enabled is False:
         for profile in profiles:
-            if profile.model_id == GLM_OCR_CATALOG_ID:
+            if profile.model_id == GLM_OCR_QWEN_CATALOG_ID:
                 profile.enabled = False
 
     return ModelRuntimeConfigResponse(

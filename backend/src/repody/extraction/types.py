@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from typing import Protocol, runtime_checkable
 
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
 
@@ -14,10 +16,23 @@ __all__ = [
     "ExtractionResult",
     "ExtractedFieldResult",
     "MARKDOWN_TEXT_MAX_CHARS",
+    "SchemaFieldLike",
     "SchemaFieldSpec",
     "load_document_bundle",
+    "schema_specs_from_fields",
     "truncate_text",
 ]
+
+
+@runtime_checkable
+class SchemaFieldLike(Protocol):
+    """Port for agent/schema rows → SchemaFieldSpec (anti-corruption at extract edge)."""
+
+    name: str
+    description: str
+    template_type: str | None
+    enum_values: Sequence[str] | None
+    children: Sequence[SchemaFieldLike]
 
 
 @dataclass
@@ -48,6 +63,33 @@ class SchemaFieldSpec:
     template_type: str | None = None
     enum_values: list[str] | None = None
     children: list[SchemaFieldSpec] | None = None
+
+
+def schema_specs_from_fields(
+    fields: Sequence[SchemaFieldLike],
+    *,
+    normalize_template_type: Callable[[str | None], str | None] | None = None,
+) -> list[SchemaFieldSpec]:
+    """Map agent SchemaField (or any SchemaFieldLike) → extraction SchemaFieldSpec once."""
+
+    def one(field: SchemaFieldLike) -> SchemaFieldSpec | None:
+        name = (field.name or "").strip()
+        if not name:
+            return None
+        tt = field.template_type
+        if normalize_template_type is not None:
+            tt = normalize_template_type(tt)
+        enums = list(field.enum_values) if field.enum_values else None
+        kids = [c for c in (one(child) for child in field.children or ()) if c is not None]
+        return SchemaFieldSpec(
+            name=name,
+            description=field.description or "",
+            template_type=tt,
+            enum_values=enums,
+            children=kids or None,
+        )
+
+    return [spec for field in fields if (spec := one(field)) is not None]
 
 
 @dataclass
@@ -86,6 +128,8 @@ class ExtractionMetadata:
     pages_rendered: int | None = None
     pages_sent: int | None = None
     pages_dropped: int | None = None
+    # Automode routing: {source, pdfType?, confidence?, fallbackReason?}
+    native_pdf: dict | None = None
 
 
 MARKDOWN_TEXT_MAX_CHARS = 80_000

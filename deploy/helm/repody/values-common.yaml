@@ -55,5 +55,6 @@ config:
   keycloakClientId: repody-web
   logJson: true
 
+# Cluster / platform owns NetworkPolicy. Opt in only when needed.
 networkPolicy:
-  enabled: true
+  enabled: false

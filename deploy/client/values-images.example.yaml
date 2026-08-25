@@ -1,0 +1,15 @@
+# Optional image digest pins (recommended for GitOps, not required by the chart).
+#
+# After vendor promote, copy digests from:
+#   dist/release/<tag>/helm-images.yaml
+# Empty digest falls back to tag (images.*.tag).
+
+images:
+  backend:
+    digest: ""
+  api:
+    digest: ""
+  worker:
+    digest: ""
+  web:
+    digest: ""

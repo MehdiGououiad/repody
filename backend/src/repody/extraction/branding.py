@@ -37,20 +37,29 @@ PADDLEOCR_QWEN_DESCRIPTION = (
 GLM_OCR_CATALOG_ID = "glm:ocr"
 GLM_OCR_LABEL = "GLM-OCR"
 GLM_OCR_DESCRIPTION = (
-    "GLM-OCR (zai-org/GLM-OCR) via the official SDK: PP-DocLayoutV3 layout + "
-    "region OCR against llama-server (ggml-org/GLM-OCR-GGUF) with Text/Table/"
-    "Formula Recognition prompts. Markdown-only. "
+    "GLM-OCR (zai-org/GLM-OCR) via the official SDK. Default: whole-page "
+    "Text Recognition: (no PP-DocLayoutV3). Opt-in layout with "
+    "AUDIT_GLM_OCR_LAYOUT_ENABLED=true. Markdown-only. "
     "Requires extract worker image extras otel,glmocr and AUDIT_GLM_OCR_BASE_URL "
     "(default http://127.0.0.1:8083/v1)."
+)
+
+GLM_OCR_QWEN_CATALOG_ID = "glm:qwen"
+GLM_OCR_QWEN_LABEL = "GLM-OCR + Qwen"
+GLM_OCR_QWEN_DESCRIPTION = (
+    "Two-stage structured extraction: official GlmOcr SDK markdown "
+    "(default whole-page Text Recognition:; optional PP-DocLayoutV3), then "
+    "Qwen3.5-4B text→JSON against your workflow schema. Requires "
+    "AUDIT_GLM_OCR_BASE_URL (:8083), AUDIT_QWEN35_BASE_URL (:8084), and worker "
+    "extras otel,glmocr. Start with `pnpm glmocr:serve` and `pnpm qwen35:serve`."
 )
 
 PUBLIC_CATALOG_IDS = frozenset(
     {
         REPODY_VLM_CATALOG_ID,
         REPODY_VLM_CLOUD_CATALOG_ID,
-        PADDLEOCR_V6_CATALOG_ID,
         PADDLEOCR_QWEN_CATALOG_ID,
-        GLM_OCR_CATALOG_ID,
+        GLM_OCR_QWEN_CATALOG_ID,
     }
 )
 
@@ -68,12 +77,6 @@ def normalize_public_catalog_id(model_id: str | None) -> str:
     raise UnknownCatalogIdError(f"Unknown document model catalog id: {stripped!r}")
 
 
-def public_runtime_model_name(runtime_model: str) -> str:
-    """Hide underlying served model names from API/UI consumers."""
-    _ = runtime_model
-    return REPODY_VLM_LABEL
-
-
 def public_runtime_name(runtime: str) -> str:
     if runtime == "llamacpp":
         return REPODY_VLM_LABEL
@@ -85,7 +88,14 @@ def public_runtime_name(runtime: str) -> str:
         return PADDLEOCR_QWEN_LABEL
     if runtime == "glm_ocr":
         return GLM_OCR_LABEL
+    if runtime == "glm_ocr_qwen":
+        return GLM_OCR_QWEN_LABEL
     return runtime
+
+
+def public_runtime_model_name(runtime_model: str) -> str:
+    """Map runtime / catalog id to a user-visible label."""
+    return public_runtime_name(runtime_model) if runtime_model else REPODY_VLM_LABEL
 
 
 def public_document_model_label(model_id: str | None) -> str:
@@ -103,4 +113,6 @@ def public_document_model_label(model_id: str | None) -> str:
         return PADDLEOCR_QWEN_LABEL
     if stripped == GLM_OCR_CATALOG_ID:
         return GLM_OCR_LABEL
+    if stripped == GLM_OCR_QWEN_CATALOG_ID:
+        return GLM_OCR_QWEN_LABEL
     return stripped

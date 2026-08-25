@@ -28,7 +28,8 @@ redis:
     repository: redis
     tag: "8.8.0-alpine"
   auth:
-    enabled: false
+    # Require auth + existingSecret whenever redis.enabled=true (bundled overlay sets both).
+    enabled: true
     existingSecret: ""
     passwordKey: redis-password
   persistence:
@@ -59,3 +60,7 @@ minio:
   resources: {}
 
 gatewayConsumerNamespace: repody
+
+# ReferenceGrant needs gateway.networking.k8s.io CRDs. Keep false for Ingress-only.
+gatewayApi:
+  referenceGrantsEnabled: false

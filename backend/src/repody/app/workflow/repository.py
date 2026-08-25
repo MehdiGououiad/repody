@@ -107,6 +107,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             row.document_model_id = document_model_id
             row.extraction_instructions = doc.extraction_instructions or ""
             row.markdown_extraction = doc.markdown_extraction
+            row.native_pdf_auto = bool(doc.native_pdf_auto)
             row.extraction_icl_examples = [
                 {"input": ex.input, "output": ex.output}
                 for ex in (doc.extraction_icl_examples or [])
@@ -124,6 +125,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 document_model_id=document_model_id,
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=doc.markdown_extraction,
+                native_pdf_auto=bool(doc.native_pdf_auto),
                 extraction_icl_examples=[
                     {"input": ex.input, "output": ex.output}
                     for ex in (doc.extraction_icl_examples or [])

@@ -1,225 +1,111 @@
-# OpenShift
+# Deploy Repody on OpenShift
 
-Two paths — do not mix them:
+Same charts, values, and Ingress path as generic Kubernetes.
+OpenShift is just another cluster that can run this install.
 
-| Path | Audience | Tools |
-|------|----------|-------|
-| **Production client** | Client ops | `kubectl` + `helm` + Vault/ESO ([CLIENT.md](./CLIENT.md)) |
-| **Client test lab** | Vendor QA on OpenShift/CRC | `pnpm openshift:client-test` ([below](#client-test-lab)) |
-
-Same Helm charts on OpenShift and generic Kubernetes. Edge traffic uses **standard Ingress** (`networking.k8s.io/v1`). No `oc`-specific scripts in this repo.
+**Audience:** client platform / DevOps.  
+**Also read:** [CLIENT.md](./CLIENT.md) · [SECRETS.md](./SECRETS.md) · [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md)
 
 ## Official references
 
-- [OpenShift Ingress (standard K8s API)](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/ingress_and_load_balancing/index)
-- [Kubernetes Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/)
-- [Helm on OpenShift](https://docs.openshift.com/container_platform/latest/applications/working_with_helm_charts/installing-a-helm-chart-on-openshift.html)
-- [Pod Security Admission](https://docs.openshift.com/container-platform/latest/authentication/understanding-and-managing-pod-security-admission.html)
-- [External Secrets — Vault](https://external-secrets.io/latest/provider/hashicorp-vault/)
-- [Harbor Docker Compose installer](https://goharbor.io/docs/main/install-config/run-installer-script/)
-- [Harbor push/pull images](https://goharbor.io/docs/main/working-with-projects/working-with-images/pulling-pushing-images/)
-- [Argo CD getting started](https://argo-cd.readthedocs.io/en/stable/getting_started/)
+| Topic | Doc |
+|-------|-----|
+| Helm on OpenShift | [Installing a Helm chart](https://docs.openshift.com/container_platform/latest/applications/working_with_helm_charts/installing-a-helm-chart-on-openshift.html) |
+| Ingress | [OpenShift Ingress / load balancing](https://docs.redhat.com/en/documentation/openshift_container_platform/4.18/html-single/ingress_and_load_balancing/index) |
+| Pod security | [Pod security admission](https://docs.openshift.com/container-platform/latest/authentication/understanding-and-managing-pod-security-admission.html) |
+| Kubernetes Ingress | [Ingress](https://kubernetes.io/docs/concepts/services-networking/ingress/) |
+| External Secrets + Vault | [Vault provider](https://external-secrets.io/latest/provider/hashicorp-vault/) |
+| Harbor registry | [Install Harbor](https://goharbor.io/docs/latest/install-config/) |
 
----
+## One portable path
 
-## Production client
+```
+deploy/helm/repody/values.yaml
+  → values-common.yaml
+  → client values.yaml      (from values-external|bundled.example.yaml)
+  → client enterprise.yaml  (from values-enterprise.example.yaml)
+```
 
-Portable to **any** OpenShift 4.x cluster. Follow [CLIENT.md](./CLIENT.md) and [SECRETS.md](./SECRETS.md), then add the OpenShift overlay.
+No OpenShift-only overlay. No chart `Route` CRs. Exposure is always
+`networking.k8s.io/Ingress` with `ingress.tls.enabled: false` until you add a cert Secret.
 
-### 1. Namespace
+Workloads use the same restricted securityContext everywhere (`runAsNonRoot`, no pinned UID)
+so they fit Kubernetes PSA **restricted** and OpenShift **restricted-v2**.
+
+## Steps
+
+### 1 — Namespace
 
 ```bash
 kubectl apply -f deploy/client/namespace.example.yaml
 ```
 
-`namespace.example.yaml` sets **restricted** Pod Security on enforce, audit, and warn.
+### 2 — Secrets
 
-### 2. Secrets (ESO-first)
+Follow [SECRETS.md](./SECRETS.md). Apply ExternalSecrets, wait until Ready, confirm
+`repody-runtime-secrets` and `registry-pull-secret`.
+
+### 3 — Client values
 
 ```bash
-kubectl apply -f deploy/managed/external-secrets/vault-clustersecretstore.example.yaml  # adapt
-kubectl apply -f deploy/client/secrets/registry-pull.externalsecret.example.yaml
-kubectl apply -f deploy/client/secrets/runtime.externalsecret.example.yaml
-# bundled: also data-plane + runtime-bundled ExternalSecrets
-kubectl -n repody wait externalsecret --all --for=condition=Ready --timeout=5m
+cp deploy/client/values-bundled.example.yaml  ~/repody-gitops/values.yaml   # or external
+cp deploy/client/values-enterprise.example.yaml ~/repody-gitops/enterprise.yaml
 ```
 
-Populate Vault before applying ExternalSecrets. Registry pull credentials: [SECRETS.md](./SECRETS.md).
+Set immutable image tags, Ingress hosts, and OIDC URLs. Keep `ingress.tls.enabled: false`
+until you have a real TLS Secret (then set `enabled: true` + `secretName` on every cluster the same way).
 
-### 3. Helm install
-
-**External profile** (typical enterprise):
+### 4 — Helm install
 
 ```bash
-helm upgrade --install repody deploy/helm/repody -n repody --create-namespace \
+pnpm helm:deps:update
+```
+
+**Bundled:**
+
+```bash
+helm upgrade --install repody-data deploy/helm/repody-data -n repody --create-namespace \
+  -f deploy/helm/repody-data/values.yaml \
+  -f deploy/client/bundled/values.data.yaml \
+  --wait --timeout 20m
+
+# Optional in-cluster Keycloak:
+# helm upgrade --install repody-auth deploy/helm/repody-auth -n repody \
+#   -f deploy/helm/repody-auth/values.yaml \
+#   -f ~/repody-gitops/values.auth.yaml --wait --timeout 15m
+
+helm upgrade --install repody deploy/helm/repody -n repody \
   -f deploy/helm/repody/values.yaml \
   -f deploy/helm/repody/values-common.yaml \
   -f ~/repody-gitops/values.yaml \
-  -f deploy/client/values-enterprise.example.yaml \
-  -f deploy/values/openshift.yaml \
+  -f ~/repody-gitops/enterprise.yaml \
   --wait --timeout 25m
 ```
 
-**Bundled profile:** install `repody-data` first — [CLIENT.md](./CLIENT.md#bundled-profile-in-cluster-data-plane).
+**External:** omit `repody-data`; use `values-external.example.yaml` for the app chart.
 
-### 4. Observability
+### 5 — Optional GitOps
 
-Merge `values-enterprise.example.yaml` for **JSON logs** (`config.logJson: true`) and **OpenTelemetry** (`observability.otelEnabled: true`). Point `observability.otelEndpoint` at your collector. See [OBSERVABILITY.md](./OBSERVABILITY.md).
+Use `deploy/client/argocd.application.yaml` (same Application on OpenShift and elsewhere).
 
-### 5. Smoke test
+### 6 — Verify
 
 ```bash
-kubectl get ingress -n repody
-curl -k https://<api-host>/v1/healthz/live
+kubectl -n repody get pods,ingress
+curl -k https://<api-host>/v1/healthz/live   # or http:// if your ingress is plain HTTP
 pnpm client:check
 ```
 
----
+## Harbor
 
-## Client test lab
+Same as any cluster: pull secret + immutable tags in values. See Harbor section history in
+[registry/README.md](../../deploy/registry/README.md) and `deploy/client/values-harbor.example.yaml`.
 
-**Goal:** end-to-end tester for the Repody **platform** on OpenShift — build → push → pull → sync → deploy → logs. Harbor and Argo CD are **independent infra** (install once); only Repody images go through the push loop.
+## Checklist
 
-**Tools:** `kubectl`, `helm`, `docker` (kubeconfig to OpenShift 4.x).
-
-### E2E phases (official workflows)
-
-| Phase | Command | Upstream docs |
-|-------|---------|---------------|
-| Infra (once) | `pnpm openshift:infra` | [Harbor Docker Compose](https://goharbor.io/docs/main/install-config/run-installer-script/), [Argo CD getting started](https://argo-cd.readthedocs.io/en/stable/getting_started/), [External Secrets + Vault](https://external-secrets.io/latest/provider/hashicorp-vault/) |
-| Build | `node deploy/scripts/openshift-client-test.mjs build` | Docker BuildKit |
-| Push | `node deploy/scripts/openshift-client-test.mjs push` | [Harbor push/pull](https://goharbor.io/docs/main/working-with-projects/working-with-images/pulling-pushing-images/) |
-| Seed | `… seed` | Vault KV → ESO → `registry-pull` secret |
-| Sync | `… register` then `… sync` | [argocd app sync](https://argo-cd.readthedocs.io/en/stable/user-guide/commands/argocd_app_sync/) |
-| Verify + logs | `… verify` · `… logs` | [K8s logging](https://kubernetes.io/docs/concepts/cluster-administration/logging/) |
-
-**Full run:** `pnpm openshift:client-test` (infra + platform e2e). **Fast re-test:** `pnpm openshift:e2e` after infra is up.
-
-### Quick start (bundled + Harbor + GitOps)
-
-```powershell
-# Log in to OpenShift (kubeconfig in KUBECONFIG)
-pnpm openshift:client-test
-pnpm openshift:client-ready -- --profile=bundled --registry=harbor
-```
-
-Second run (skip infra, only platform):
-
-```powershell
-pnpm openshift:e2e --skip-build
-```
-
-### Profiles
-
-| Command | Profile | Deploy mode |
-|---------|---------|-------------|
-| `pnpm openshift:client-test:bundled` | In-cluster data plane | GitOps (default) |
-| `pnpm openshift:client-test:external` | BYO Postgres/Redis/S3 (lab simulates data) | GitOps |
-| `pnpm openshift:client-test:helm` | Bundled | Direct Helm (`--helm`) |
-
-Flags (append to any command or `node deploy/scripts/openshift-client-test.mjs all …`):
-
-| Flag | Default | Meaning |
-|------|---------|---------|
-| `--profile=bundled\|external` | `bundled` | Client profile |
-| `--registry=harbor\|openshift` | `harbor` | Image registry for push |
-| `--helm` | off | Direct Helm instead of Argo CD |
-| `--clean` | off | Tear down lab namespaces before `all` / `e2e` |
-| `--skip-images` | | Reuse existing registry tags (skip push) |
-| `--skip-build` | | Skip local docker build (push only) |
-| `--vlm` | | Start host `llama-server` after deploy |
-| `REPODY_HARBOR_CLUSTER_HOST` | `host.crc.internal:5080` | Registry host OpenShift pods use to pull (CRC) |
-| `REPODY_FORCE_INFRA=1` | | Re-run Harbor Compose / Argo manifests even if running |
-| `REPODY_HELM_DEPS=1` | | Force `pnpm helm:deps:update` on helm deploy |
-
-### What the lab installs
-
-| Component | Namespace | Independent? |
-|-----------|-----------|--------------|
-| Vault (dev) | `vault` | Infra — once |
-| External Secrets | `external-secrets` | Infra — once |
-| Harbor | Docker Compose (host) | Infra — once (`pnpm openshift:harbor` or `infra`) |
-| OTEL collector | `observability` | Infra — once |
-| Argo CD | `argocd` | Infra — once (official `install.yaml`) |
-| Repody stack | `repody` | **Platform e2e** — build/push/sync each run |
-
-### Argo CD and lab UI (OpenShift Routes)
-
-`pnpm openshift:infra` creates **Routes** for infra UIs (no port-forward). Repody app/auth/files routes come from Helm when GitOps sync runs (`global.openshift.routes.enabled: true` in promoted values).
-
-| UI | URL (default CRC) | Login |
-|----|-------------------|-------|
-| **Argo CD** | https://repody-argocd.apps-crc.testing | `admin` + password from `argocd-initial-admin-secret` |
-| **Vault** | https://repody-vault.apps-crc.testing | Token `root` (lab dev mode only) |
-| **Harbor** | https://repody-harbor.apps-crc.testing | `admin` / `Harbor12345` (default lab password) |
-| **Repody web** | https://repody-web.apps-crc.testing | Keycloak (after sync) |
-| **API** | https://repody-api.apps-crc.testing | — |
-| **Auth (Keycloak)** | https://repody-auth.apps-crc.testing | Keycloak admin from runtime secret |
-
-Argo CD admin password:
-
-```powershell
-[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String((kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}')))
-```
-
-**CLI sync** — `argocd login --core` + `argocd app sync` (no port-forward; do not set `ARGOCD_OPTS=--port-forward-namespace argocd` with `--core`).
-
-```powershell
-Remove-Item Env:ARGOCD_OPTS -ErrorAction SilentlyContinue
-argocd login --core
-argocd app list
-```
-
-Port-forward is only needed if Routes are unavailable (non-OpenShift clusters).
-
-### Step-by-step
-
-```powershell
-node deploy/scripts/openshift-client-test.mjs preflight
-node deploy/scripts/openshift-client-test.mjs infra          # Harbor + Vault + ESO + OTEL + Argo CD
-node deploy/scripts/openshift-client-test.mjs build
-node deploy/scripts/openshift-client-test.mjs push           # docker login + push to Harbor
-node deploy/scripts/openshift-client-test.mjs seed
-node deploy/scripts/openshift-client-test.mjs register       # Argo CD Applications (no sync)
-node deploy/scripts/openshift-client-test.mjs sync           # explicit argocd app sync
-node deploy/scripts/openshift-client-test.mjs verify
-node deploy/scripts/openshift-client-test.mjs logs
-```
-
-Tear down app only: `node deploy/scripts/openshift-client-test.mjs clean --app`  
-Tear down infra: `node deploy/scripts/openshift-client-test.mjs clean --infra`  
-Full reset: `node deploy/scripts/openshift-client-test.mjs clean`
-
-### Lab value overlays
-
-Committed under `deploy/client/lab/`:
-
-- `values.lab.common.yaml` — JSON logs, OTEL, NetworkPolicies
-- `values.lab.bundled.yaml` / `values.lab.external.yaml` — profile sizing
-- `values.openshift-local*.yaml` — CRC ingress sizing
-- `harbor/values.yaml` — Harbor Helm lab sizing
-
-Generated at runtime (gitignored): `deploy/client/lab/.runtime/`
-
-### Lab vs production
-
-| | Client test lab | Production OpenShift |
-|--|-----------------|----------------------|
-| Vault | In-cluster dev mode | Client HA Vault |
-| Registry | Harbor or CRC internal | Client Harbor / GHCR |
-| Argo CD | Optional GitOps mode | Client GitOps repo |
-| OTEL | In-cluster debug exporter | Client APM backend |
-| VLM | Host `llama-server` (optional) | Client GPU service |
-
-### E2E on lab cluster
-
-```powershell
-$env:E2E_WEB_URL="https://repody-web.<apps-domain>"
-$env:E2E_API_URL="https://repody-api.<apps-domain>"
-$env:E2E_AUTH_URL="https://repody-auth.<apps-domain>"
-$env:E2E_K8S_NAMESPACE="repody"
-$env:NODE_TLS_REJECT_UNAUTHORIZED="0"
-$env:E2E_IGNORE_TLS="1"
-```
-
-See [E2E.md](../E2E.md).
+- [ ] Namespace with restricted Pod Security
+- [ ] Vault + ESO; ExternalSecrets Ready
+- [ ] Registry pull secret; immutable image tags
+- [ ] Same valueFiles as generic Kubernetes (no OpenShift-only overlay)
+- [ ] Ingress hosts; TLS only when you have a shared Secret
+- [ ] `/v1/healthz/live` OK

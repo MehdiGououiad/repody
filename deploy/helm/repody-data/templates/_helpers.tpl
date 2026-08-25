@@ -36,9 +36,13 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{- /*
+  Portable restricted profile (K8s PSA + OpenShift restricted-v2):
+  omit runAsUser/fsGroup so the platform assigns a non-root UID.
+  Call sites may still pass runAsUser for documentation; they are ignored.
+*/ -}}
 {{- define "repody-data.podSecurityContext" -}}
 runAsNonRoot: true
-fsGroup: {{ .fsGroup }}
 seccompProfile:
   type: RuntimeDefault
 {{- end }}
@@ -49,8 +53,6 @@ capabilities:
   drop:
     - ALL
 runAsNonRoot: true
-runAsUser: {{ .runAsUser }}
-runAsGroup: {{ .runAsGroup | default .runAsUser }}
 seccompProfile:
   type: RuntimeDefault
 {{- end }}

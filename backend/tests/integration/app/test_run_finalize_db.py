@@ -19,7 +19,7 @@ async def finalize_session(postgres_session):
         workflow_id=wf.id,
         source="test",
         status=RunStatus.running.value,
-        worker_pool="fraud",
+        worker_pool="extract",
         started_at=datetime.now(UTC),
     )
     store_pending_completion(
@@ -34,11 +34,10 @@ async def finalize_session(postgres_session):
             progress=None,
         ),
     )
-    # Outcomes recorded after pending was stored (IDP + later agents).
+    # Outcomes recorded after pending was stored (merge path for agentOutcomes).
     meta = dict(run.run_metadata or {})
     meta["agentOutcomes"] = {
         "idp": {"status": "passed", "overallStatus": "passed"},
-        "fraud": {"status": "skipped", "summary": "skipped: not implemented"},
     }
     run.run_metadata = meta
     postgres_session.add_all([wf, run])
@@ -63,7 +62,6 @@ async def test_finalize_pending_completion_marks_run_done(finalize_session):
     assert meta.get("durationMs") == 12
     outcomes = meta.get("agentOutcomes") or {}
     assert "idp" in outcomes
-    assert "fraud" in outcomes
 
 
 @pytest.mark.asyncio

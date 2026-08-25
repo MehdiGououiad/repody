@@ -33,11 +33,4 @@ Do not move these under a subfolder without updating `Dockerfile`, operator `ben
 
 ## Research (`research/`)
 
-Optional benches — not required for product builds.
-
-| Script | Purpose |
-|--------|---------|
-| `research/cnie_structure_llm_bench.py` | CNIE Structure vs OCR+LLM |
-| `research/cnie_text_ie_compare.py` | Text IE compare |
-
-Deploy-side research runners: `deploy/scripts/research/`.
+Optional research runners: `deploy/scripts/research/` (`qwen35-serve.mjs`).

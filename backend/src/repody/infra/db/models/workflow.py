@@ -52,6 +52,7 @@ class Document(Base):
     document_model_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     extraction_instructions: Mapped[str] = mapped_column(Text, default="")
     markdown_extraction: Mapped[bool] = mapped_column(default=False)
+    native_pdf_auto: Mapped[bool] = mapped_column(default=False)
     extraction_icl_examples: Mapped[list[Any]] = mapped_column(JSON, default=list)
 
     workflow: Mapped[Workflow] = relationship(back_populates="documents")

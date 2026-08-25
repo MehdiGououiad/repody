@@ -76,13 +76,13 @@ Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OC
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run IDP extract+validate stage |
-| `AUDIT_AGENT_FRAUD_ENABLED` | `false` | Include Fraud in recipe (SKIPPED stub until implemented) |
-| `AUDIT_AGENT_COMPUTER_USE_ENABLED` | `false` | Include Computer Use in recipe (SKIPPED stub) |
-| `AUDIT_AGENT_FRAUD_WORKERS_READY` | `false` | Set true only when `worker-fraud` replicas > 0 |
-| `AUDIT_AGENT_COMPUTER_USE_WORKERS_READY` | `false` | Set true only when `worker-computer-use` replicas > 0 |
+| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run IDP extract+validate stage (recipe is IDP-only) |
+| `AUDIT_AGENT_FRAUD_ENABLED` | `false` | Reserved/inert — not consulted until a Fraud agent ships |
+| `AUDIT_AGENT_COMPUTER_USE_ENABLED` | `false` | Reserved/inert — not consulted until a Computer Use agent ships |
+| `AUDIT_AGENT_FRAUD_WORKERS_READY` | `false` | Reserved; Helm may set from `worker-fraud` replicas (currently 0) |
+| `AUDIT_AGENT_COMPUTER_USE_WORKERS_READY` | `false` | Reserved; Helm may set from `worker-computer-use` replicas (currently 0) |
 
-Helm sets `*_WORKERS_READY` from Deployment replicas. Enable flags come from `config.agentFraudEnabled` / `config.agentComputerUseEnabled`.
+Recipe ignores Fraud/CU flags today. Helm keeps worker Deployments at replicas 0 as reserved capacity ([ADR 007](../docs/adr/007-staged-agent-queues-taskiq.md)).
 
 Helm values:
 
@@ -140,7 +140,10 @@ workerExtract:
 | `REPODY_IMAGE_TAG` | Image tag (`latest` default) |
 | `REPODY_BACKEND_IMAGE_TAG` | Backend image tag override |
 | `REPODY_WEB_IMAGE_TAG` | Web image tag override |
-| `REPODY_WEB_BACKEND_URL` | Backend URL baked into web image rewrites |
+| `REPODY_WEB_BACKEND_URL` | Optional build-arg placeholder only (rewrites removed; runtime uses `INTERNAL_API_URL`) |
+| `INTERNAL_API_URL` | Runtime web→API origin (Compose: `http://api:8000`, K8s: `http://repody-api:8000`) |
+| `BACKEND_URL` | Fallback origin if `INTERNAL_API_URL` unset |
+| `AUTH_KEYCLOAK_INTERNAL_ISSUER` | In-cluster Keycloak issuer for Auth.js server calls (Compose: `http://keycloak:8080/realms/repody`) |
 | `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel,glmocr`). `glmocr` pulls torch/torchvision from the **PyTorch CPU index** (see `backend/pyproject.toml` `tool.uv.sources`) so images match `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`. Use `otel` only to slim. |
 | `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
 | `REPODY_BUILDKIT_BACKEND_CACHE_FROM` / `REPODY_BUILDKIT_BACKEND_CACHE_TO` | Backend BuildKit cache refs |

@@ -30,6 +30,7 @@ class RunDocumentExtractionMeta(CamelModel):
     pages_rendered: int | None = Field(default=None, serialization_alias="pagesRendered")
     pages_sent: int | None = Field(default=None, serialization_alias="pagesSent")
     pages_dropped: int | None = Field(default=None, serialization_alias="pagesDropped")
+    native_pdf: dict | None = Field(default=None, serialization_alias="nativePdf")
 
 
 class RunAuditDocument(CamelModel):

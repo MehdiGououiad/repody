@@ -7,8 +7,8 @@ Command reference: [COMMANDS.md](./COMMANDS.md).
 | Layer | Command | Needs cluster |
 |-------|---------|---------------|
 | Unit / integration | `pnpm test:api` | No |
-| Playwright smoke | `pnpm test:e2e:smoke` | Optional (OpenShift CRC) |
-| Full platform | `pnpm test:platform` | Optional (OpenShift CRC) |
+| Playwright smoke | `pnpm test:e2e:smoke` | Optional (deployed cluster) |
+| Full platform | `pnpm test:platform` | Optional (deployed cluster) |
 | UI only | `pnpm test:e2e` | Optional |
 
 ## Compose dev (default)
@@ -26,24 +26,21 @@ Use **`localhost`** for the web URL (NextAuth cookies). API and Keycloak can use
 
 API-only tests: `pnpm test:api` (no cluster).
 
-## OpenShift CRC
+## Against a deployed cluster
 
-After `pnpm openshift:client-test`:
+Point E2E at the client's Ingress hosts (replace with real URLs):
 
 ```powershell
-$env:E2E_WEB_URL="https://repody-web.apps-crc.testing"
-$env:E2E_API_URL="https://repody-api.apps-crc.testing"
-$env:E2E_AUTH_URL="https://repody-auth.apps-crc.testing"
+$env:E2E_WEB_URL="https://app.example.com"
+$env:E2E_API_URL="https://api.example.com"
+$env:E2E_AUTH_URL="https://auth.example.com"
 $env:E2E_K8S_NAMESPACE="repody"
-$env:NODE_TLS_REJECT_UNAUTHORIZED="0"
-$env:E2E_IGNORE_TLS="1"
 pnpm test:platform
 ```
 
-See [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
+Cluster install: [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
 
-**Document extraction (live):** skipped when `GET /v1/healthz` reports `llamacpp != true` (when probing is enabled). Start host inference — [REPODY-VLM.md](./REPODY-VLM.md).
-
+**Document extraction (live):** skipped when `GET /v1/healthz` reports `llamacpp != true` (when probing is enabled). Configure external inference — [REPODY-VLM.md](./REPODY-VLM.md).
 ## Sample document
 
 See [e2e/fixtures/documents/README.md](../e2e/fixtures/documents/README.md).

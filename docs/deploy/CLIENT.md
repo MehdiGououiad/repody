@@ -1,12 +1,12 @@
 # Client production install
 
-Install Repody on **the client's** Kubernetes or OpenShift cluster. Same Helm charts as vendor QA; secrets and endpoints are client-owned.
+Install Repody on the client's Kubernetes or OpenShift cluster.
 
-**Vendor shipped images?** Start with [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md) (registry push → pull secret → Helm/Argo).
+**OpenShift start-to-finish:** [OPENSHIFT.md](./OPENSHIFT.md)  
+**Vendor shipped images:** [VENDOR-TO-CLIENT.md](./VENDOR-TO-CLIENT.md)  
+**Secrets before Helm:** [SECRETS.md](./SECRETS.md)
 
-**Security first:** [SECRETS.md](./SECRETS.md) — apply before Helm.
-
-**OpenShift:** add `-f deploy/values/openshift.yaml` and follow [OPENSHIFT.md](./OPENSHIFT.md#production-client).
+This page details profiles, Ingress, and Argo skeletons. Prefer OPENSHIFT.md for the ordered install on OpenShift.
 
 ## Profiles
 
@@ -15,20 +15,39 @@ Install Repody on **the client's** Kubernetes or OpenShift cluster. Same Helm ch
 | **External** (default) | Client has managed Postgres, Redis/Valkey, S3 | `deploy/client/values-external.example.yaml` |
 | **Bundled** | In-cluster Postgres, Redis, MinIO via `repody-data` | `deploy/client/values-bundled.example.yaml` |
 
-Both profiles merge:
+Both profiles merge (same on OpenShift and generic Kubernetes):
 
 ```
 values.yaml (chart)
   → values-common.yaml
-  → client values.yaml (from template above)
-  → values-enterprise.example.yaml   ← required for production
+  → client values.yaml     (from external|bundled template)
+  → enterprise.yaml        (from values-enterprise.example.yaml)
 ```
 
 Copy templates to a **private GitOps repo** — never commit real hostnames or secrets.
 
+Networking / egress is owned by the platform team — chart NetworkPolicy stays off by default.
+Image digests are optional (`helm-images.yaml` from release).
+
+## Web → API (runtime proxy)
+
+The web Deployment sets `INTERNAL_API_URL` / `BACKEND_URL` to
+`http://<release>-api:8000` at runtime. Next.js proxies browser `/api/v1/*`
+through `app/api/v1/[...path]` — the same image works on Compose (`http://api:8000`)
+and Kubernetes without bake-time rewrites.
+
+OIDC: set public `config.oidcIssuer` for browser JWTs; set `config.oidcJwksUrl`
+(and optionally `config.oidcInternalIssuer`) to in-cluster Keycloak Service DNS
+so API JWKS fetch and Auth.js well-known calls do not depend on the public
+ingress hostname. Helm derives `AUTH_KEYCLOAK_INTERNAL_ISSUER` from
+`oidcJwksUrl` when `oidcInternalIssuer` is empty.
+
+Inference URLs (`llamacppBaseUrl`, `paddleocrV6BaseUrl`, `qwen35BaseUrl`) must be
+cluster-reachable — never `host.docker.internal`.
+
 ## Edge (portable Ingress)
 
-Repody uses **standard Kubernetes Ingress** (`networking.k8s.io/v1`) — the same API on OpenShift, EKS, GKE, and on-prem.
+Repody uses **standard Kubernetes Ingress** (`networking.k8s.io/v1`) only — same manifests on OpenShift, EKS, GKE, and on-prem. Chart OpenShift `Route` CRs are not used.
 
 Set in client values:
 
@@ -39,11 +58,9 @@ ingress:
   apiHost: api.client.example.com
   filesHost: files.client.example.com   # bundled profile
   tls:
-    enabled: true
-    secretName: repody-tls
+    enabled: false            # default until you have a cert
+    secretName: repody-tls    # set enabled: true when Secret exists
 ```
-
-On OpenShift, merge `deploy/values/openshift.yaml` (adds `route.openshift.io/termination: edge` for the platform ingress controller).
 
 Workloads are standard `apps/v1` Deployment + `v1` Service. Export plain YAML with `helm template … | kubectl apply -f -`.
 
@@ -60,6 +77,7 @@ Validate secrets layout:
 pnpm enterprise:secrets -- \
   --values deploy/helm/repody/values-common.yaml \
   --values deploy/client/values-external.example.yaml \
+  --values deploy/client/values-images.example.yaml \
   --values deploy/client/values-enterprise.example.yaml \
   --external-secret deploy/client/secrets/runtime.externalsecret.example.yaml
 ```
@@ -88,8 +106,8 @@ Populate Vault paths before applying ExternalSecrets. Full key list: [SECRETS.md
 
 ```bash
 cp deploy/client/values-external.example.yaml ~/repody-gitops/values.yaml
-# Edit: images.*, externalDatabase, externalRedis, externalObjectStorage,
-#       config.oidcIssuer, config.llamacppBaseUrl, ingress or gatewayApi hosts
+cp deploy/client/values-enterprise.example.yaml ~/repody-gitops/enterprise.yaml
+# Edit: images.* repositories/tags, external*, oidc, llamacppBaseUrl, ingress hosts
 ```
 
 ### 3. Helm install
@@ -101,11 +119,9 @@ helm upgrade --install repody deploy/helm/repody -n repody --create-namespace \
   -f deploy/helm/repody/values.yaml \
   -f deploy/helm/repody/values-common.yaml \
   -f ~/repody-gitops/values.yaml \
-  -f deploy/client/values-enterprise.example.yaml \
+  -f ~/repody-gitops/enterprise.yaml \
   --wait --timeout 25m
 ```
-
-On OpenShift, also pass `-f deploy/values/openshift.yaml`.
 
 ### 4. Verify
 
@@ -155,12 +171,10 @@ helm upgrade --install repody-data deploy/helm/repody-data -n repody --create-na
 helm upgrade --install repody deploy/helm/repody -n repody \
   -f deploy/helm/repody/values.yaml \
   -f deploy/helm/repody/values-common.yaml \
-  -f deploy/client/values-bundled.example.yaml \
-  -f deploy/client/values-enterprise.example.yaml \
+  -f ~/repody-gitops/values.yaml \
+  -f ~/repody-gitops/enterprise.yaml \
   --wait --timeout 25m
 ```
-
-On OpenShift: add `-f deploy/values/openshift.yaml` to the **repody** install.
 
 ### 3. Verify
 
@@ -174,6 +188,7 @@ curl -fsS https://<api-host>/v1/healthz/live
 ## Argo CD
 
 Example Application: `deploy/client/argocd.application.yaml` (replace `CHANGE_ME_*`).
+Same Application on OpenShift and generic Kubernetes.
 
 ```yaml
 valueFiles:
@@ -202,9 +217,7 @@ pnpm images:release
 pnpm release:attest
 ```
 
-Give clients: registry URL, immutable tag, chart path `deploy/helm/repody`, and this guide.
-
-**Lab verification** (vendor only): OpenShift CRC — [OPENSHIFT.md](./OPENSHIFT.md#client-test-lab).
+Give clients: registry URL, immutable tag, chart path `deploy/helm/repody`, and [OPENSHIFT.md](./OPENSHIFT.md).
 
 ---
 
@@ -214,7 +227,7 @@ Always merge this overlay:
 
 - `platform.compatibility.restricted` — non-root, drop `ALL` capabilities
 - `secrets.create: false`
-- `networkPolicy.enabled: true`
+- `networkPolicy.enabled: false` by default on OpenShift — platform team owns NetworkPolicy / egress
 - PodDisruptionBudgets and autoscaling on API / web / workers
 
 Namespace labels: `deploy/client/namespace.example.yaml` uses **restricted** Pod Security on all enforce/audit/warn.
@@ -246,4 +259,4 @@ Managed Postgres on-prem: [ONPREM-MANAGED-DATA.md](../ONPREM-MANAGED-DATA.md).
 | `deploy/client/bundled/values.data.yaml` | `repody-data` overlay for bundled |
 | `deploy/client/secrets/` | ExternalSecret examples |
 | `deploy/client/namespace.example.yaml` | Namespace + PSA labels |
-| `deploy/client/argocd.application.yaml` | Argo CD Application skeleton |
+| `deploy/client/argocd.application.yaml` | Argo CD Application skeleton (all clusters) |

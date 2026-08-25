@@ -28,15 +28,6 @@ class ExtractionJob:
     stored: StoredDocument
 
 
-def needs_extraction(spec: DocumentSpec, stored: StoredDocument | None) -> bool:
-    """True when the pipeline should invoke extraction for this document slot."""
-    return extraction_is_needed(
-        has_file=stored is not None,
-        has_schema_fields=document_has_schema_fields(spec),
-        markdown_extraction=bool(spec.markdown_extraction),
-    )
-
-
 def build_extraction_plan(
     documents: tuple[DocumentSpec, ...],
     stored_by_id: dict[str, StoredDocument],
@@ -44,7 +35,13 @@ def build_extraction_plan(
     jobs: list[ExtractionJob] = []
     for spec in documents:
         stored = stored_by_id.get(spec.id)
-        if needs_extraction(spec, stored) and stored is not None:
+        if stored is None:
+            continue
+        if extraction_is_needed(
+            has_file=True,
+            has_schema_fields=document_has_schema_fields(spec),
+            markdown_extraction=bool(spec.markdown_extraction),
+        ):
             jobs.append(
                 ExtractionJob(document_id=spec.id, spec=spec, stored=stored)
             )

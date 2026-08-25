@@ -12,7 +12,7 @@ Pull Hub images, start the platform, and (by default) host PP-OCR + Qwen.
 | `pnpm platform` | **Daily** — start stack + PP-OCR + Qwen |
 | `pnpm platform -- --with-nuextract` | Also start NuExtract (`:8081`) |
 | `pnpm platform -- --platform-only` | Containers only (no host models) |
-| `pnpm platform -- --with-glm` | Opt in GLM-OCR (`:8083`) |
+| `pnpm platform -- --with-glm` | GLM-OCR host + local extract worker with official SDK |
 | `pnpm platform -- --no-paddle` / `--no-qwen` | Skip a host model |
 | `pnpm platform -- --no-pull` | Skip `docker pull` |
 | `pnpm platform status` | Health probes |
@@ -31,16 +31,15 @@ Full guide: [deploy/LOCAL.md](./deploy/LOCAL.md).
 
 | Catalog id | Process | Port | Notes |
 |---|---|---|---|
-| `paddleocr:qwen` | PP-OCRv6 → Qwen | `:8868` + `:8084` | **Default** with `pnpm platform` |
-| `paddleocr:v6` | PP-OCRv6 only | `:8868` | Markdown / OCR without Qwen |
+| `paddleocr:qwen` | PP-OCRv6 → Qwen JSON | `:8868` + `:8084` | **Default** with `pnpm platform` |
 | `repody:vlm` | NuExtract | `:8081` | `--with-nuextract` |
-| `glm:ocr` | GLM-OCR | `:8083` | `--with-glm` (experimental) |
+| `glm:qwen` | GLM-OCR SDK → Qwen JSON | `:8083` + `:8084` | `--with-glm` (builds local worker with SDK) |
 
 ```bash
 pnpm install
 pnpm doctor
 pnpm platform setup
-pnpm platform
+pnpm platform -- --with-nuextract --with-glm   # all three structured paths
 pnpm platform status
 pnpm platform stop
 ```
@@ -60,16 +59,17 @@ Hub path above is the product runtime. For hacking API/UI from source:
 
 ---
 
-## OpenShift / client
+## OpenShift / client production
 
-See [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
+Deploy guide: [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
 
 | Command | When |
 |---------|------|
-| `pnpm openshift:client-test` | Full client-test profile |
-| `pnpm openshift:client-ready` | Readiness gate |
-| `pnpm prod:readiness` | Prod health check |
+| `pnpm helm:deps:update` | Refresh chart dependencies before install |
 | `pnpm helm:lint` / `helm:template` | Chart checks |
+| `pnpm client:check` | Client Helm / ESO preflight |
+| `pnpm deploy:check` | Deploy contract checks |
+| `pnpm prod:readiness` | Live API readiness against a cluster URL |
 
 ## Release / images
 

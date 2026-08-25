@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
 import {
   dashboardSnapshotFromResponse,
   type DashboardSnapshot,
 } from "@/lib/api/dashboard";
 import type { DashboardResponse } from "@/lib/api/schema-types";
+import { queryKeys } from "@/lib/hooks/query-keys";
 
 export type LiveDashboardData = DashboardSnapshot & {
   apiLive: boolean;
@@ -15,38 +16,47 @@ export type LiveDashboardData = DashboardSnapshot & {
 
 const REFRESH_MS = 30_000;
 
+type LiveSnapshot = DashboardSnapshot & { apiLive: boolean };
+
+async function fetchDashboardLive(): Promise<LiveSnapshot> {
+  const { data: body, error, response } = await browserApi.GET("/v1/dashboard");
+  if (error || !response.ok || !body) throwOnApiError(error, response);
+  return {
+    apiLive: true,
+    ...dashboardSnapshotFromResponse(body as DashboardResponse),
+  };
+}
+
 export function useDashboardLive(initial: Omit<LiveDashboardData, "lastUpdated">): LiveDashboardData {
-  const [data, setData] = useState<LiveDashboardData>({
-    ...initial,
-    lastUpdated: initial.apiLive ? new Date() : null,
+  const initialSnapshot: LiveSnapshot = {
+    apiLive: initial.apiLive,
+    kpis: initial.kpis,
+    performanceSeries: initial.performanceSeries,
+    violationBreakdown: initial.violationBreakdown,
+    healthAlerts: initial.healthAlerts,
+    audits: initial.audits,
+    workflows: initial.workflows,
+    queue: initial.queue,
+  };
+
+  const query = useQuery({
+    queryKey: queryKeys.dashboard.live,
+    queryFn: fetchDashboardLive,
+    initialData: initialSnapshot,
+    // SSR already hydrated the first snapshot — skip an immediate duplicate fetch.
+    staleTime: REFRESH_MS,
+    refetchInterval: REFRESH_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    retry: false,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function refresh() {
-      try {
-        const { data: body, error, response } = await browserApi.GET("/v1/dashboard");
-        if (cancelled || !response.ok || !body) return;
-        if (error) throwOnApiError(error, response);
-
-        setData({
-          apiLive: true,
-          ...dashboardSnapshotFromResponse(body as DashboardResponse),
-          lastUpdated: new Date(),
-        });
-      } catch {
-        // Keep last good snapshot when refresh fails.
-      }
-    }
-
-    // SSR already hydrated the first snapshot — skip an immediate duplicate fetch.
-    const id = window.setInterval(() => void refresh(), REFRESH_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, []);
-
-  return data;
+  const data = query.data ?? initialSnapshot;
+  return {
+    ...data,
+    lastUpdated:
+      data.apiLive && query.dataUpdatedAt > 0
+        ? new Date(query.dataUpdatedAt)
+        : null,
+  };
 }

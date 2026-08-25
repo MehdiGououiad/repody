@@ -6,18 +6,10 @@ import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { LoaderCircle } from "lucide-react";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
+import { isPublicPage } from "@/lib/auth/public-paths";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 import { useClientPathname } from "@/lib/hooks/use-client-pathname";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
-
-const PUBLIC_PATHS = new Set(["/login", "/unauthorized"]);
-
-function isSessionValid(session: {
-  error?: string;
-  accessToken?: string;
-} | null): boolean {
-  return Boolean(session?.accessToken && !session.error);
-}
 
 function AuthGateSpinner({ message }: { message: string }) {
   return (
@@ -28,6 +20,10 @@ function AuthGateSpinner({ message }: { message: string }) {
   );
 }
 
+/**
+ * Client-side session error / unauthenticated recovery.
+ * Proxy already gates pages — do not block the shell behind a hydration spinner.
+ */
 export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   const t = useTranslations("auth");
   const router = useRouter();
@@ -39,10 +35,16 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   const clearingSessionRef = useRef(false);
 
   const sessionError = session?.error;
-  const accessToken = session?.accessToken;
   // Empty pathname = pre-hydration snapshot from useClientPathname — do not gate.
-  const isPublic = !pathname || PUBLIC_PATHS.has(pathname);
-  const sessionValid = isSessionValid(session);
+  const isPublic = !pathname || isPublicPage(pathname);
+  const redirecting =
+    !isPublic &&
+    enforceAuth &&
+    hydrated &&
+    Boolean(pathname) &&
+    !authLoading &&
+    status !== "loading" &&
+    (status === "unauthenticated" || Boolean(sessionError));
 
   useEffect(() => {
     if (!hydrated || !pathname || isPublic || !enforceAuth || authLoading) {
@@ -60,7 +62,7 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (status === "authenticated" && !sessionValid) {
+    if (status === "authenticated" && sessionError) {
       if (clearingSessionRef.current) {
         return;
       }
@@ -69,7 +71,6 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
       void signOut({ redirectTo: `/login?callbackUrl=${callback}` });
     }
   }, [
-    accessToken,
     authLoading,
     enforceAuth,
     hydrated,
@@ -77,7 +78,6 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
     pathname,
     router,
     sessionError,
-    sessionValid,
     status,
   ]);
 
@@ -85,11 +85,9 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!hydrated || !pathname || authLoading || status === "loading") {
-    return <AuthGateSpinner message={t("checkingAuth")} />;
-  }
-
-  if (status === "unauthenticated" || !sessionValid) {
+  // Proxy already authenticated the page; keep rendering while session hydrates.
+  // Spinner only once we know we are redirecting away.
+  if (redirecting) {
     return <AuthGateSpinner message={t("redirectingToSignIn")} />;
   }
 

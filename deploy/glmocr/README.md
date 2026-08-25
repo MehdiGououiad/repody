@@ -33,9 +33,10 @@ AUDIT_GLM_OCR_ID_CARD_PROFILE=false
 
 Warmup is opt-in: `GLMOCR_WARMUP=on` when running `pnpm glmocr:serve`, or `pnpm glmocr:warmup`.
 
-Compose workers use `http://host.docker.internal:8083/v1`. Extract worker image
-defaults to `BACKEND_EXTRAS=otel,glmocr` (official SDK). Rebuild after changes:
-`pnpm dev:worker:rebuild`.
+Compose workers use `http://host.docker.internal:8083/v1`. Hub images are
+otel-only; `pnpm platform -- --with-glm` applies `compose.glmocr.yaml` and
+builds extract worker with `BACKEND_EXTRAS=otel,glmocr` (official SDK).
+Manual rebuild: `pnpm dev:worker:rebuild`.
 
 ## Notes
 

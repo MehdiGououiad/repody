@@ -46,8 +46,21 @@ const checks = [
   {
     name: "images push-only no-op with registry",
     args: ["deploy/scripts/build-images.mjs", "--push-only", "--only=none"],
-    env: { REPODY_IMAGE_REGISTRY: "example.invalid/repody" },
+    env: {
+      REPODY_IMAGE_REGISTRY: "example.invalid/repody",
+      REPODY_IMAGE_TAG: "0.1.0",
+    },
     ok: true,
+  },
+  {
+    name: "images reject mutable latest on push",
+    args: ["deploy/scripts/build-images.mjs", "--push-only", "--only=none"],
+    env: {
+      REPODY_IMAGE_REGISTRY: "example.invalid/repody",
+      REPODY_IMAGE_TAG: "latest",
+    },
+    ok: false,
+    stderr: "Refusing to push",
   },
   {
     name: "images reject unknown option",
@@ -64,13 +77,17 @@ const checks = [
   {
     name: "images reject push conflict",
     args: ["deploy/scripts/build-images.mjs", "--push", "--push-only", "--only=none"],
-    env: { REPODY_IMAGE_REGISTRY: "example.invalid/repody" },
+    env: {
+      REPODY_IMAGE_REGISTRY: "example.invalid/repody",
+      REPODY_IMAGE_TAG: "0.1.0",
+    },
     ok: false,
     stderr: "Use either --push or --push-only",
   },
   {
     name: "images reject push without registry",
     args: ["deploy/scripts/build-images.mjs", "--push-only", "--only=none"],
+    env: { REPODY_IMAGE_TAG: "0.1.0" },
     ok: false,
     stderr: "REPODY_IMAGE_REGISTRY is required",
   },
@@ -80,12 +97,6 @@ const checks = [
     env: { REPODY_BACKEND_EXTRAS: "otel,../bad" },
     ok: false,
     stderr: "Invalid REPODY_BACKEND_EXTRAS entry",
-  },
-  {
-    name: "openshift client test reject unknown command",
-    args: ["deploy/scripts/openshift-client-test.mjs", "nope"],
-    ok: false,
-    stderr: "Unknown command",
   },
 ];
 

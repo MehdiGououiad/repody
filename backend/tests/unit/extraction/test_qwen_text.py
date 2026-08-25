@@ -75,7 +75,7 @@ def test_text_to_json_chat_payload_uses_leaf_keys():
         model="Qwen3.5-4B",
         schema=schema,
         ocr_text="BE899456 CASABLANCA",
-        document_type="CNIE",
+        document_type="document",
         extraction_instructions="Copy printed values.",
     )
     system = payload["messages"][0]["content"]
@@ -84,4 +84,6 @@ def test_text_to_json_chat_payload_uses_leaf_keys():
     assert '"address.city"' in system
     assert "address.city" in user
     assert "Copy printed values." in user
+    assert "do not invent" in system
+    assert "reformat" in system
     assert payload["max_tokens"] >= 256

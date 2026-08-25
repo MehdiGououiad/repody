@@ -22,28 +22,21 @@ spec:
     spec:
       restartPolicy: OnFailure
       {{- include "repody-auth.imagePullSecrets" . | nindent 6 }}
-      {{- if .Values.global.openshift.enabled }}
       securityContext:
         runAsNonRoot: true
-        fsGroup: 999
         seccompProfile:
           type: RuntimeDefault
-      {{- end }}
       containers:
         - name: psql
           image: {{ .Values.keycloak.database.initImage | quote }}
-          {{- if .Values.global.openshift.enabled }}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
                 - ALL
             runAsNonRoot: true
-            runAsUser: 999
-            runAsGroup: 999
             seccompProfile:
               type: RuntimeDefault
-          {{- end }}
           env:
             - name: PGHOST
               value: {{ .Values.keycloak.database.host | quote }}
