@@ -36,7 +36,7 @@ corepack enable
 pnpm install
 pnpm doctor
 pnpm platform setup    # once: env files + docker pull Hub images
-pnpm platform          # start API/UI/workers + PP-OCR + Qwen
+pnpm platform          # start API/UI/workers + host NuExtract (repody:vlm)
 pnpm platform status
 ```
 
@@ -44,7 +44,8 @@ Images come from Docker Hub (`mehdigououiad/repody-*`), not a local build.
 Sign in at http://localhost:3000 · `operator@repody.local` / `repody-dev`.
 
 Daily: `pnpm platform` · stop: `pnpm platform stop`  
-Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · [docs/COMMANDS.md](./docs/COMMANDS.md)
+- **Mac (M1/M2/M3) end to end:** [docs/deploy/MAC.md](./docs/deploy/MAC.md)  
+- All OSes: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · commands: [docs/COMMANDS.md](./docs/COMMANDS.md)
 
 **Client OpenShift:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) · [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md)
 
@@ -52,14 +53,16 @@ Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · [docs/COMMANDS.md](./
 
 ## Documentation
 
+**Full map (one place):** [docs/README.md](./docs/README.md)
+
 | Need | Read |
 |------|------|
+| **Mac deploy (end to end)** | [docs/deploy/MAC.md](./docs/deploy/MAC.md) |
 | Commands | [docs/COMMANDS.md](./docs/COMMANDS.md) |
-| Local development | [DEV.md](./DEV.md) |
-| Production deployment | [DEPLOY.md](./DEPLOY.md) |
+| Local development | [DEV.md](./DEV.md) · [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
+| Production / OpenShift | [DEPLOY.md](./DEPLOY.md) · [docs/deploy/README.md](./docs/deploy/README.md) |
 | Architecture | [CONTEXT.md](./CONTEXT.md) |
 | Code quality review | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
-| Full docs map | [docs/README.md](./docs/README.md) |
 
 ## Stack
 

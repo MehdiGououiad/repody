@@ -3,8 +3,8 @@
  * Repody local platform CLI (Windows + macOS + Linux) — same Hub images everywhere.
  *
  *   pnpm platform setup     # once
- *   pnpm platform           # pull images + start stack + default models
- *   pnpm platform -- --with-nuextract
+ *   pnpm platform           # pull images + start stack + host NuExtract (default)
+ *   pnpm platform -- --with-paddle
  *   pnpm platform status | stop | doctor | help
  *
  * Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64)
@@ -35,11 +35,19 @@ const command = positionals[0] || (flags.has("--help") || flags.has("-h") ? "hel
 const isDarwin = process.platform === "darwin";
 const isWin = process.platform === "win32";
 
+const wantPaddle = flags.has("--with-paddle") || flags.has("--with-paddleocr");
+const wantQwen =
+  wantPaddle || flags.has("--with-qwen") || flags.has("--with-qwen35") || flags.has("--with-glm");
+const wantGlm = flags.has("--with-glm") || flags.has("--glmocr") || flags.has("--glm");
+
 const opts = {
-  withNuextract: flags.has("--with-nuextract") || flags.has("--nuextract"),
-  withGlm: flags.has("--with-glm") || flags.has("--glmocr") || flags.has("--glm"),
-  noPaddle: flags.has("--no-paddle") || flags.has("--no-ocr"),
-  noQwen: flags.has("--no-qwen") || flags.has("--no-qwen35"),
+  // Default host model: NuExtract (catalog repody:vlm). Opt out with --no-nuextract.
+  // --with-nuextract kept as a no-op alias for older docs/scripts.
+  withNuextract: !(flags.has("--no-nuextract") || flags.has("--no-vlm")),
+  withGlm: wantGlm,
+  // Paddle / Qwen are opt-in (--with-paddle implies Qwen for paddleocr:qwen).
+  noPaddle: flags.has("--no-paddle") || flags.has("--no-ocr") || !wantPaddle,
+  noQwen: flags.has("--no-qwen") || flags.has("--no-qwen35") || !wantQwen,
   // Observability (Grafana/Loki/Tempo/Bugsink) on by default for Hub platform.
   withObs: !(flags.has("--no-obs") || flags.has("--no-observability")),
   platformOnly: flags.has("--platform-only"),
@@ -60,40 +68,45 @@ Repody platform CLI (same on Windows, macOS, Linux)
 
 Flow (new PC):
   1) pnpm install && pnpm doctor
-  2) pnpm platform setup     # once — env files + pull Hub images
-  3) pnpm platform           # start platform + default models
-  4) pnpm platform status    # health
-  5) pnpm platform stop      # tear down
+  2) Download NuExtract GGUFs → set deploy/llamacpp/paths.local.env
+  3) pnpm platform setup     # once — env files + pull Hub images
+  4) pnpm platform           # start platform + host NuExtract (default)
+  5) pnpm platform status    # health
+  6) pnpm platform stop      # tear down
 
 Commands:
   up         Start Hub platform + default models   [default]
   setup      Once: env / paths + pull Hub images
   bootstrap  setup + up (new machine after git clone / pnpm install)
-  doctor     Check Docker, llama-server, uv, env
+  doctor     Check everything needed before start (Node, Docker, llama-server, NuExtract3 GGUFs, env)
   status     Probe services + observability URLs
   logs       Tail API/web/worker Docker logs (admin)
   stop       Stop host models + Compose
   help       This help
 
+Preflight: pnpm platform doctor — same checks run automatically at the start of pnpm platform.
+
 Options (pnpm platform -- … / pnpm platform setup -- …):
-  --with-nuextract   Also start NuExtract (:8081) → catalog repody:vlm
+  --no-nuextract     Skip host NuExtract (:8081) — default is ON → catalog repody:vlm
+  --with-paddle      Also start PP-OCRv6 + Qwen → catalog paddleocr:qwen
+  --with-qwen        Start Qwen only (for glm:qwen without paddle)
   --with-glm         Also start GLM-OCR (:8083) + rebuild extract worker
                      with official GlmOcr SDK → catalog glm:qwen / glm:ocr
-  --no-paddle        Skip PP-OCRv6
-  --no-qwen          Skip Qwen (needed for paddleocr:qwen and glm:qwen)
+  --no-paddle        Skip PP-OCRv6 (when using --with-paddle)
+  --no-qwen          Skip Qwen
   --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
   --platform-only    Containers only (no host models)
   --no-pull          Do not docker pull (setup + up)
 
 Structured paths:
-  paddleocr:qwen   PP-OCR → Qwen JSON     (default)
+  repody:vlm       NuExtract               (default)
+  paddleocr:qwen   PP-OCR → Qwen JSON     (--with-paddle)
   glm:qwen         GLM-OCR SDK → Qwen JSON (--with-glm)
-  repody:vlm       NuExtract               (--with-nuextract)
 
 Images: mehdigououiad/repody-backend:0.1.0 · mehdigouiad/repody-web:0.1.0
   (--with-glm builds local worker image repody-backend:local-glmocr)
 
-Guide: docs/deploy/LOCAL.md
+Guide: docs/deploy/LOCAL.md · Mac: docs/deploy/MAC.md
 `);
 }
 
@@ -142,6 +155,11 @@ function patchBackendEnv() {
   const wantPaddle = !opts.noPaddle;
   const wantPaddleQwen = !opts.noQwen && wantPaddle;
   const wantGlmQwen = !opts.noQwen && opts.withGlm;
+  const llamaEnv = fs.existsSync(LLAMA_PATHS) ? parseEnvFile(LLAMA_PATHS) : {};
+  const servedModel =
+    (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
+    process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
+    "nuextract3-q4_k_m";
   setEnvKeys(BACKEND_ENV, {
     AUDIT_REPODY_VLM_ENABLED: opts.withNuextract ? "true" : "false",
     AUDIT_GLM_OCR_ENABLED: opts.withGlm ? "true" : "false",
@@ -151,6 +169,7 @@ function patchBackendEnv() {
     AUDIT_QWEN35_BASE_URL: "http://127.0.0.1:8084/v1",
     AUDIT_PADDLEOCR_V6_BASE_URL: "http://127.0.0.1:8868",
     AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
+    AUDIT_LLAMACPP_SERVED_MODEL: servedModel,
     AUDIT_GLM_OCR_BASE_URL: "http://127.0.0.1:8083/v1",
     AUDIT_OTEL_ENABLED: "false",
   });
@@ -223,16 +242,245 @@ function nuextractConfigured() {
   if (!model || !fs.existsSync(model)) {
     return {
       ok: false,
-      reason: "Set LLAMACPP_MODEL in deploy/llamacpp/paths.local.env to a NuExtract GGUF path",
+      reason: "Set LLAMACPP_MODEL in deploy/llamacpp/paths.local.env to a NuExtract3 .gguf path",
     };
   }
   if (!mmproj || !fs.existsSync(mmproj)) {
     return {
       ok: false,
-      reason: "Set LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env to the mmproj GGUF path",
+      reason: "Set LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env to mmproj-NuExtract3*.gguf",
     };
   }
-  return { ok: true, reason: `${path.basename(model)} + mmproj` };
+  return { ok: true, reason: `${path.basename(model)} + ${path.basename(mmproj)}` };
+}
+
+function checkToolchain() {
+  const pnpmBin = isWin ? "pnpm.cmd" : "pnpm";
+  const result = spawnSync(process.execPath, [path.join(ROOT, "scripts/check-toolchain.mjs")], {
+    cwd: ROOT,
+    encoding: "utf8",
+    shell: false,
+    env: {
+      ...process.env,
+      // So plain `node … doctor` still sees pnpm when Corepack/PATH is set.
+      npm_config_user_agent:
+        process.env.npm_config_user_agent ||
+        (() => {
+          const v = spawnSync(pnpmBin, ["--version"], {
+            cwd: ROOT,
+            encoding: "utf8",
+            shell: isWin,
+          });
+          const ver = (v.stdout || "").trim();
+          return ver ? `pnpm/${ver} node/${process.versions.node}` : process.env.npm_config_user_agent;
+        })(),
+    },
+  });
+  if (result.status === 0) {
+    return { ok: true, detail: (result.stdout || "").trim() || "ok" };
+  }
+  const detail = ((result.stderr || result.stdout || "Node/pnpm mismatch").trim()).split(/\r?\n/)[0];
+  return { ok: false, detail };
+}
+
+function hubImagesPresent() {
+  const backend = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
+  const web = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
+  const missing = [];
+  for (const ref of [backend, web]) {
+    const r = spawnSync("docker", ["image", "inspect", ref], {
+      encoding: "utf8",
+      shell: false,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (r.status !== 0) missing.push(ref);
+  }
+  if (missing.length === 0) {
+    return { ok: true, detail: `${backend.split("/").pop()} + ${web.split("/").pop()}` };
+  }
+  return {
+    ok: false,
+    detail: `missing ${missing.join(", ")} — run: pnpm platform setup`,
+  };
+}
+
+function portFree(port) {
+  if (isWin) {
+    const r = spawnSync("netstat", ["-ano"], { encoding: "utf8", shell: false });
+    const text = `${r.stdout || ""}\n${r.stderr || ""}`;
+    const re = new RegExp(`:${port}\\s+.*?LISTENING`, "i");
+    return !re.test(text);
+  }
+  const r = spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], {
+    encoding: "utf8",
+    shell: false,
+  });
+  // lsof exit 1 = nothing listening
+  return r.status !== 0;
+}
+
+function llamaServerRuns() {
+  const exe = whichBin("llama-server");
+  if (!exe) return { ok: false, detail: "not on PATH" };
+  const r = spawnSync(exe, ["--version"], {
+    encoding: "utf8",
+    shell: false,
+    timeout: 15_000,
+  });
+  if (r.status === 0 || (r.stdout || r.stderr || "").includes("version")) {
+    const line = `${r.stdout || ""}${r.stderr || ""}`.trim().split(/\r?\n/)[0] || "ok";
+    return { ok: true, detail: line.slice(0, 80) };
+  }
+  return { ok: false, detail: "llama-server --version failed" };
+}
+
+/**
+ * Single preflight for everything needed before starting the platform.
+ * Used by `pnpm platform doctor` and automatically by `pnpm platform` / bootstrap.
+ *
+ * Checks hard prerequisites (tools, files, images, ports). Does NOT guarantee
+ * that NuExtract loads in VRAM or that an extraction job succeeds — that is runtime.
+ */
+function preflight({ exitOnFail = true, quietOk = false } = {}) {
+  console.log("\n=== Repody platform preflight ===\n");
+
+  const needLlama = !opts.platformOnly && (opts.withNuextract || !opts.noQwen || opts.withGlm);
+  const needNuextract = opts.withNuextract && !opts.platformOnly;
+  const needPaddle = !opts.noPaddle && !opts.platformOnly;
+  const needQwenPaths = !opts.noQwen && !opts.platformOnly;
+
+  const rows = [];
+  const toolchain = checkToolchain();
+  rows.push({
+    name: "Node / pnpm",
+    ok: toolchain.ok,
+    state: toolchain.ok ? toolchain.detail.replace(/^ok:\s*/i, "") : toolchain.detail,
+    required: true,
+    fix: "Install Node 24 + corepack enable (pnpm 11.7.0)",
+  });
+
+  const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
+  const dockerOk = docker.status === 0;
+  rows.push({
+    name: "Docker Desktop",
+    ok: dockerOk,
+    state: dockerOk ? "ok" : "not running",
+    required: true,
+    fix: "Start Docker Desktop, wait until ready",
+  });
+
+  const hub = dockerOk ? hubImagesPresent() : { ok: false, detail: "docker not running" };
+  rows.push({
+    name: "Hub images",
+    ok: hub.ok,
+    state: hub.detail,
+    required: true,
+    fix: "pnpm platform setup  (docker pull mehdigououiad/repody-backend:0.1.0 + repody-web)",
+  });
+
+  const llama = whichBin("llama-server");
+  const llamaRun = needLlama && llama ? llamaServerRuns() : { ok: Boolean(llama), detail: llama || `missing — ${llamaInstallHint()}` };
+  rows.push({
+    name: "llama-server",
+    ok: needLlama ? llamaRun.ok : Boolean(llama),
+    state: needLlama ? llamaRun.detail : llama || `optional — ${llamaInstallHint()}`,
+    required: needLlama,
+    fix: llamaInstallHint(),
+  });
+
+  ensureInferencePaths();
+  const nue = nuextractConfigured();
+  rows.push({
+    name: "NuExtract3 GGUFs",
+    ok: nue.ok,
+    state: nue.ok ? nue.reason : nue.reason,
+    required: needNuextract,
+    fix: "Download NuExtract3 + mmproj from https://huggingface.co/numind/NuExtract3-GGUF → set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env (see deploy/llamacpp/README.md)",
+  });
+
+  rows.push({
+    name: "backend/.env",
+    ok: fs.existsSync(BACKEND_ENV),
+    state: fs.existsSync(BACKEND_ENV) ? "ok" : "missing",
+    required: true,
+    fix: "pnpm platform setup",
+  });
+  rows.push({
+    name: ".env.local",
+    ok: fs.existsSync(AUTH_ENV),
+    state: fs.existsSync(AUTH_ENV) ? "ok" : "missing",
+    required: true,
+    fix: "pnpm platform setup",
+  });
+
+  const uv = whichBin("uv");
+  rows.push({
+    name: "uv (PP-OCR)",
+    ok: Boolean(uv),
+    state: uv || "missing — https://docs.astral.sh/uv/",
+    required: needPaddle,
+    fix: "https://docs.astral.sh/uv/ — required for --with-paddle",
+  });
+
+  rows.push({
+    name: "Qwen paths",
+    ok: fs.existsSync(QWEN_PATHS),
+    state: fs.existsSync(QWEN_PATHS) ? "ok" : "missing",
+    required: needQwenPaths,
+    fix: "pnpm platform setup (copies deploy/research/qwen35/paths.*.env.example)",
+  });
+
+  // Ports used by default Hub stack + NuExtract. Warn if busy (still required=false so
+  // a leftover platform can be restarted after stop — but surface clearly).
+  const ports = [
+    [3000, "UI"],
+    [8000, "API"],
+    [8080, "Keycloak"],
+    [8081, "NuExtract"],
+  ];
+  for (const [port, label] of ports) {
+    const free = portFree(port);
+    rows.push({
+      name: `Port ${port}`,
+      ok: free,
+      state: free ? `free (${label})` : `in use (${label}) — pnpm platform stop if leftover`,
+      required: false,
+      fix: `Free port ${port} or: pnpm platform stop`,
+    });
+  }
+
+  let failed = false;
+  for (const row of rows) {
+    const skip = !row.required && !row.ok;
+    const mark = row.ok ? "ok" : row.required ? "!!" : "--";
+    if (!row.ok && row.required) failed = true;
+    const label = skip ? `${row.state}` : row.state;
+    console.log(`  [${mark}] ${row.name.padEnd(18)} ${label}`);
+  }
+
+  console.log("");
+  console.log(
+    "Scope: tools, Hub images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
+  );
+  if (failed) {
+    console.log("Fix required items, then re-run:\n");
+    for (const row of rows) {
+      if (!row.ok && row.required) console.log(`  • ${row.name}: ${row.fix}`);
+    }
+    console.log(`
+Or:
+  pnpm platform -- --platform-only     # containers only (skip host models)
+  pnpm platform -- --no-nuextract      # skip NuExtract requirement
+  pnpm platform help
+`);
+    if (exitOnFail) process.exit(1);
+    return false;
+  }
+
+  if (!quietOk) {
+    console.log("Preflight OK — ready to start.\n");
+  }
+  return true;
 }
 
 function logPlan() {
@@ -243,7 +491,7 @@ function logPlan() {
   const glm = opts.withGlm ? "on (host + local worker SDK)" : "off";
   const obs = opts.withObs ? "on" : "off";
   console.log(
-    `Plan: Hub images  PP-OCR=${paddle}  Qwen=${qwen}  NuExtract=${nue}  GLM=${glm}  Observability=${obs}`
+    `Plan: Hub images  NuExtract=${nue}  PP-OCR=${paddle}  Qwen=${qwen}  GLM=${glm}  Observability=${obs}`
   );
 }
 
@@ -318,48 +566,29 @@ function setup() {
 
   console.log(`
 Setup done. Next:
-  ${whichBin("llama-server") ? "" : `${llamaInstallHint()}\n  `}pnpm platform
+  ${whichBin("llama-server") ? "" : `${llamaInstallHint()}\n  `}# Download NuExtract GGUFs — see deploy/llamacpp/README.md
+  # Set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env
+  pnpm platform
 
-PP-OCR Python deps install automatically on first OCR start.
-Optional NuExtract: edit deploy/llamacpp/paths.local.env
-  then: pnpm platform -- --with-nuextract
+Default host model: NuExtract (repody:vlm). Optional:
+  pnpm platform -- --with-paddle     # also PP-OCR + Qwen
+  pnpm platform -- --with-glm        # also GLM-OCR
 `);
 }
 
 async function doctor() {
-  console.log("\n=== Repody platform doctor ===\n");
-  const rows = [];
-  const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
-  rows.push(["Docker", docker.status === 0 ? "ok" : "fail"]);
-  rows.push(["llama-server", whichBin("llama-server") ? "ok" : "fail"]);
-  rows.push(["uv", whichBin("uv") ? "ok" : "fail"]);
-  rows.push(["backend/.env", fs.existsSync(BACKEND_ENV) ? "ok" : "missing"]);
-  rows.push([".env.local", fs.existsSync(AUTH_ENV) ? "ok" : "missing"]);
-  rows.push(["qwen paths", fs.existsSync(QWEN_PATHS) ? "ok" : "missing"]);
-  const nue = nuextractConfigured();
-  rows.push(["NuExtract GGUF", nue.ok ? "ok" : `skip (${nue.reason})`]);
-  for (const [name, state] of rows) {
-    const mark = state === "ok" ? "ok" : state.startsWith("skip") ? "--" : "!!";
-    console.log(`  [${mark}] ${name.padEnd(16)} ${state}`);
-  }
-  console.log("");
-  if (rows.some(([, s]) => s === "fail" || s === "missing")) {
-    console.log("Fix gaps with: pnpm platform setup\n");
-    process.exit(1);
-  }
+  // Full preflight — same gates as `pnpm platform` before start.
+  preflight({ exitOnFail: true });
 }
 
 async function up() {
-  const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
-  if (docker.status !== 0) {
-    console.error("Docker is not running. Start Docker Desktop, then: pnpm platform");
-    process.exit(1);
-  }
-
   copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
   copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
   ensureInferencePaths();
   patchBackendEnv();
+
+  // Same comprehensive check as `pnpm platform doctor`.
+  preflight({ exitOnFail: true, quietOk: true });
   logPlan();
 
   const needLlama = !opts.noQwen || opts.withNuextract || opts.withGlm;
@@ -367,10 +596,6 @@ async function up() {
 
   if (opts.withNuextract) {
     const nue = nuextractConfigured();
-    if (!nue.ok) {
-      console.error(`\n--with-nuextract: ${nue.reason}\n`);
-      process.exit(1);
-    }
     console.log(`NuExtract: ${nue.reason}`);
   }
 
@@ -476,9 +701,9 @@ async function up() {
 
   await status();
   const extraction = [];
+  if (opts.withNuextract) extraction.push("repody:vlm");
   if (!opts.noPaddle && !opts.noQwen) extraction.push("paddleocr:qwen");
   else if (!opts.noPaddle) extraction.push("paddleocr:v6");
-  if (opts.withNuextract) extraction.push("repody:vlm");
   if (opts.withGlm && !opts.noQwen) extraction.push("glm:qwen");
   else if (opts.withGlm) extraction.push("glm:ocr");
 

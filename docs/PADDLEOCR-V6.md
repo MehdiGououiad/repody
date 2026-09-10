@@ -114,7 +114,9 @@ Extract workers use `http://host.docker.internal:8868`.
 ## Day-to-day
 
 ```powershell
-pnpm platform                # Hub + PP-OCR + Qwen
+pnpm platform                # Hub + NuExtract (default)
+pnpm platform -- --with-paddle   # also PP-OCR + Qwen
+
 pnpm paddleocr:v6:serve      # OCR alone (advanced; auto-installs)
 pnpm paddleocr:v6:verify
 pnpm paddleocr:v6:warmup

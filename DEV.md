@@ -18,7 +18,7 @@ pnpm dev:stop           # stop everything
 
 Split logs across two terminals: `pnpm platform` then `pnpm dev:app` (source contribute path).
 
-Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md)
+Details: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · Mac: [docs/deploy/MAC.md](./docs/deploy/MAC.md) · hub: [docs/README.md](./docs/README.md)
 
 ## OpenShift (client production)
 
