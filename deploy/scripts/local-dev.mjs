@@ -870,7 +870,7 @@ async function app(options = {}) {
   } else {
     killDevUi();
     children.push(
-      spawnPrefixed("ui", process.execPath, [nextBin, "dev", "--turbo"], {
+      spawnPrefixed("ui", process.execPath, [nextBin, "dev"], {
         cwd: ROOT,
         env: uiEnv(),
       })

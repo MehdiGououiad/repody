@@ -1,4 +1,10 @@
-/** Workflow builder and rule authoring types — aligned with backend workflow schemas. */
+/**
+ * Workflow builder and rule authoring types.
+ *
+ * Wire / API shapes come from OpenAPI (`lib/api/schema-types`). This module keeps
+ * UI-oriented fields (e.g. `sampleValue`) and narrower unions used by the builder.
+ * Prefer OpenAPI aliases when typing API payloads; keep these types for editor state.
+ */
 
 export type RuleKind = "logic" | "llm";
 export type RuleSeverity = "reject" | "flag" | "info";

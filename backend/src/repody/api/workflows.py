@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.api.deps import get_session
-from repody.app.workflow import workflow_service
+from repody.api.deps import SessionDep
+from repody.app.workflow import service as workflow_service
 from repody.app.workflow.validation import validate_rules_preview
 from repody.extraction.pipeline import extract_document_fields
 from repody.infra.auth.dependencies import require_permission
@@ -32,7 +31,7 @@ router = APIRouter(prefix="/workflows", tags=["workflows"])
     response_model=WorkflowListResponse,
     dependencies=[Depends(require_permission("workflow", "read"))],
 )
-async def list_workflows(session: AsyncSession = Depends(get_session)):
+async def list_workflows(session: SessionDep):
     items = await workflow_service.list_workflows(session)
     return WorkflowListResponse(workflows=items)
 
@@ -43,7 +42,7 @@ async def list_workflows(session: AsyncSession = Depends(get_session)):
     status_code=201,
     dependencies=[Depends(require_permission("workflow", "write"))],
 )
-async def create_workflow(body: CreateWorkflowBody, session: AsyncSession = Depends(get_session)):
+async def create_workflow(body: CreateWorkflowBody, session: SessionDep):
     wf = await workflow_service.create_workflow(
         session, name=body.name, description=body.description, owner=body.owner
     )
@@ -56,9 +55,7 @@ async def create_workflow(body: CreateWorkflowBody, session: AsyncSession = Depe
     status_code=204,
     dependencies=[Depends(require_permission("workflow", "delete"))],
 )
-async def bulk_delete_workflows(
-    body: BulkDeleteWorkflowsBody, session: AsyncSession = Depends(get_session)
-):
+async def bulk_delete_workflows(body: BulkDeleteWorkflowsBody, session: SessionDep):
     await workflow_service.bulk_archive_workflows(session, body.ids)
     await session.commit()
 
@@ -68,7 +65,7 @@ async def bulk_delete_workflows(
     response_model=WorkflowResponse,
     dependencies=[Depends(require_permission("workflow", "read"))],
 )
-async def get_workflow(workflow_id: str, session: AsyncSession = Depends(get_session)):
+async def get_workflow(workflow_id: str, session: SessionDep):
     wf = await workflow_service.get_workflow(session, workflow_id)
     if not wf:
         raise HTTPException(404, "Workflow not found")
@@ -80,9 +77,7 @@ async def get_workflow(workflow_id: str, session: AsyncSession = Depends(get_ses
     response_model=WorkflowResponse,
     dependencies=[Depends(require_permission("workflow", "write"))],
 )
-async def update_workflow(
-    workflow_id: str, body: WorkflowSchema, session: AsyncSession = Depends(get_session)
-):
+async def update_workflow(workflow_id: str, body: WorkflowSchema, session: SessionDep):
     body.id = workflow_id
     try:
         wf = await workflow_service.upsert_workflow(session, body)
@@ -97,7 +92,7 @@ async def update_workflow(
     status_code=204,
     dependencies=[Depends(require_permission("workflow", "delete"))],
 )
-async def delete_workflow(workflow_id: str, session: AsyncSession = Depends(get_session)):
+async def delete_workflow(workflow_id: str, session: SessionDep):
     ok = await workflow_service.archive_workflow(session, workflow_id)
     if not ok:
         raise HTTPException(404, "Workflow not found")
@@ -111,8 +106,8 @@ async def delete_workflow(workflow_id: str, session: AsyncSession = Depends(get_
 )
 async def deploy_workflow(
     workflow_id: str,
+    session: SessionDep,
     body: DeployWorkflowBody | None = None,
-    session: AsyncSession = Depends(get_session),
 ):
     wf = await workflow_service.deploy_workflow(
         session, workflow_id, api_key=body.api_key if body else None

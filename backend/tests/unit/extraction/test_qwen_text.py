@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 
 from repody.extraction.fields import fields_from_leaf_json
-from repody.extraction.qwen_text import text_to_json_chat_payload
+from repody.extraction.qwen_text import (
+    leaf_response_json_schema,
+    text_to_json_chat_payload,
+)
 from repody.extraction.types import SchemaFieldSpec
 
 
@@ -87,3 +90,40 @@ def test_text_to_json_chat_payload_uses_leaf_keys():
     assert "do not invent" in system
     assert "reformat" in system
     assert payload["max_tokens"] >= 256
+    assert payload["response_format"]["type"] == "json_schema"
+    schema_body = payload["response_format"]["json_schema"]["schema"]
+    assert schema_body["properties"]["national_id"]["type"] == "string"
+    assert "address.city" in schema_body["properties"]
+    assert set(schema_body["required"]) == {"national_id", "address.city"}
+
+
+def test_leaf_response_json_schema_object_array():
+    schema = [
+        SchemaFieldSpec(
+            name="lines",
+            template_type="object-array",
+            children=[SchemaFieldSpec(name="qty")],
+        )
+    ]
+    body = leaf_response_json_schema(schema)
+    assert body["properties"]["lines"]["type"] == "array"
+    assert body["additionalProperties"] is False
+
+
+def test_text_to_json_chat_payload_can_skip_response_format():
+    schema = [SchemaFieldSpec(name="national_id", description="CIN")]
+    payload = text_to_json_chat_payload(
+        model="Qwen3.5-4B",
+        schema=schema,
+        ocr_text="BE899456",
+        document_type="document",
+        use_json_schema=False,
+    )
+    assert "response_format" not in payload
+
+
+def test_response_format_unsupported_detects_schema_errors():
+    from repody.extraction.qwen_text import _response_format_unsupported
+
+    assert _response_format_unsupported(RuntimeError("response_format type must be json_object"))
+    assert not _response_format_unsupported(TimeoutError("timed out"))

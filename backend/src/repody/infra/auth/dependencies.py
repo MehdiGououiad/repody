@@ -6,9 +6,8 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.api.deps import get_session
+from repody.api.deps import SessionDep
 from repody.app.api_keys import verify_api_key
 from repody.infra.auth.casbin_authorizer import authorize
 from repody.infra.auth.jwt_validator import JwtValidationError, principal_from_bearer
@@ -49,18 +48,17 @@ async def get_current_principal(
     return principal
 
 
-async def require_management_access(
-    principal: Principal = Depends(get_current_principal),
-) -> Principal:
+PrincipalDep = Annotated[Principal, Depends(get_current_principal)]
+
+
+async def require_management_access(principal: PrincipalDep) -> Principal:
     if not principal.has_app_role():
         raise HTTPException(403, "Application role required.")
     return principal
 
 
 def require_permission(resource: str, action: str) -> Callable:
-    async def _dependency(
-        principal: Principal = Depends(get_current_principal),
-    ) -> Principal:
+    async def _dependency(principal: PrincipalDep) -> Principal:
         if not authorize(principal, resource, action):
             raise HTTPException(
                 403,
@@ -73,8 +71,8 @@ def require_permission(resource: str, action: str) -> Callable:
 
 async def require_admin_or_workflow_run(
     run_id: str,
+    session: SessionDep,
     authorization: Annotated[str | None, Header()] = None,
-    session: AsyncSession = Depends(get_session),
 ) -> None:
     settings = get_settings()
     if not settings.oidc_enabled:

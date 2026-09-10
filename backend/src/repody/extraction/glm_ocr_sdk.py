@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 """Official zai-org GLM-OCR SDK (selfhosted).
 
 Docs:

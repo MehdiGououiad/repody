@@ -16,7 +16,7 @@ from repody.app.uploads.validation import (
     validate_upload_batch,
     validate_upload_file,
 )
-from repody.app.workflow import load_workflow
+from repody.app.workflow.repository import load_workflow
 from repody.infra.storage.factory import get_storage
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.contracts import FileBinding

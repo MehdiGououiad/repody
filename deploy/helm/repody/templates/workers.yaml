@@ -60,6 +60,16 @@ spec:
             {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -m
+                - repody.taskiq.healthcheck
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             exec:
               command:
@@ -68,6 +78,7 @@ spec:
                 - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
+            timeoutSeconds: 5
             failureThreshold: 3
           resources:
             {{- toYaml .Values.workerExtract.resources | nindent 12 }}
@@ -134,6 +145,16 @@ spec:
             {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
             {{- include "repody.dataPlaneEnv" . | nindent 12 }}
             {{- include "repody.bugsinkEnv" . | nindent 12 }}
+          readinessProbe:
+            exec:
+              command:
+                - python
+                - -m
+                - repody.taskiq.healthcheck
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           livenessProbe:
             exec:
               command:
@@ -142,6 +163,7 @@ spec:
                 - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
             initialDelaySeconds: 45
             periodSeconds: 30
+            timeoutSeconds: 5
             failureThreshold: 3
           resources:
             {{- toYaml .Values.workerFast.resources | nindent 12 }}

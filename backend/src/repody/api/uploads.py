@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from repody.api.deps import get_session
+from repody.api.deps import SessionDep
 from repody.api.errors import raise_app_error
 from repody.app.uploads.intents import (
     confirm_upload_intent,
@@ -16,8 +15,7 @@ from repody.app.uploads.validation import (
     validate_upload_batch,
     validate_upload_file,
 )
-from repody.infra.auth.dependencies import get_current_principal
-from repody.infra.auth.principal import Principal
+from repody.infra.auth.dependencies import PrincipalDep
 from repody.infra.storage.base import PresignedPut
 from repody.infra.storage.factory import get_storage
 from repody.infra.storage.mime import is_allowed_mime, sanitize_filename
@@ -58,8 +56,8 @@ async def upload_capabilities() -> UploadCapabilitiesResponse:
 @router.post("/presign", response_model=PresignResponse)
 async def presign_uploads(
     body: PresignRequest,
-    session: AsyncSession = Depends(get_session),
-    principal: Principal = Depends(get_current_principal),
+    session: SessionDep,
+    principal: PrincipalDep,
 ) -> PresignResponse:
     settings = get_settings()
     validate_upload_batch(file_count=len(body.files), settings=settings)
@@ -134,8 +132,8 @@ async def presign_uploads(
 @router.post("/confirm", response_model=ConfirmUploadResponse)
 async def confirm_uploads(
     body: ConfirmUploadRequest,
-    session: AsyncSession = Depends(get_session),
-    principal: Principal = Depends(get_current_principal),
+    session: SessionDep,
+    principal: PrincipalDep,
 ) -> ConfirmUploadResponse:
     settings = get_settings()
     storage = get_storage()

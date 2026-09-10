@@ -59,6 +59,7 @@ kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 | **Full platform inventory (features, security, libs, prod)** | [PLATFORM-INVENTORY.md](./PLATFORM-INVENTORY.md) |
 | Backend layout and API inventory | [BACKEND.md](./BACKEND.md) |
 | Code quality review checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
+| Scripts ownership (`scripts/` · `deploy/scripts/` · `backend/scripts/`) | [SCRIPTS.md](./SCRIPTS.md) |
 | Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |
 | External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
 | PP-OCRv6 document model | [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) |

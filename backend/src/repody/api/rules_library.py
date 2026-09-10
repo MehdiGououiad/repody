@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.api.deps import get_session
+from repody.api.deps import SessionDep
 from repody.infra.db.models import RuleTemplate
 from repody.infra.db.seed import RULE_TEMPLATES
 from repody.schemas.rules_library import RuleLibraryResponse
@@ -13,7 +12,7 @@ router = APIRouter(prefix="/rules", tags=["rules"])
 
 
 @router.get("/library", response_model=RuleLibraryResponse)
-async def rules_library(session: AsyncSession = Depends(get_session)):
+async def rules_library(session: SessionDep):
     result = await session.execute(select(RuleTemplate))
     rows = result.scalars().all()
     if not rows:

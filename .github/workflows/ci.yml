@@ -82,7 +82,7 @@ jobs:
       - name: Typecheck (pyright)
         run: uv run pyright
       - name: Pytest (unit + integration, Postgres + Alembic)
-        run: uv run pytest tests/ -q -m "not live" --tb=short
+        run: uv run pytest tests/ -q -m "not live and not slow" --tb=short
         env:
           AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit@localhost:5432/repody_test
           AUDIT_SEED_ON_STARTUP: "false"

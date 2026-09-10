@@ -1,6 +1,6 @@
 import pytest
 
-from repody.app.workflow import (
+from repody.app.workflow.validation import (
     duplicate_field_names,
     validate_workflow_schema,
 )

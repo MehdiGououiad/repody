@@ -40,7 +40,7 @@ READ_PATHS: tuple[ReadPathSpec, ...] = (
     ReadPathSpec(
         id=DOCUMENT_MODEL_READ_PATH_ID,
         label="Document model",
-        description="Catalog document model (repody:vlm, paddleocr:*, glm:ocr) — labels come from the model registry.",
+        description="Catalog document model (repody:vlm, paddleocr:qwen, glm:qwen) — labels come from the model registry.",
         read="document_model",
     ),
 )

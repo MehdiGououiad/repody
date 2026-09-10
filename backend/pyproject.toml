@@ -5,25 +5,25 @@ description = "Repody — document audit platform backend"
 requires-python = ">=3.12"
 dependencies = [
   # Core API
-  "fastapi>=0.137.1",
-  "uvicorn[standard]>=0.34.0",
-  "pydantic>=2.11.0",
-  "pydantic-settings>=2.8.0",
+  "fastapi>=0.141.1",
+  "uvicorn[standard]>=0.52.4",
+  "pydantic>=2.13.5",
+  "pydantic-settings>=2.15.0",
   "python-multipart>=0.0.20",
-  "sse-starlette>=2.3.3",
+  "sse-starlette>=3.4.11",
   "asgi-correlation-id>=4.3.4",
   # Database
-  "sqlalchemy[asyncio]>=2.0.51",
+  "sqlalchemy[asyncio]>=2.0.52",
   "asyncpg>=0.30.0",
   "alembic>=1.15.0",
   # Queue + cache
-  "taskiq>=0.12.0",
+  "taskiq>=0.12.6",
   "taskiq-redis>=1.2.0",
-  "redis>=5.2.0",
+  "redis>=8.1.0",
   "limits[async-redis]>=4.4.1",
   # Structured LLM
   "instructor>=1.15.3",
-  "openai>=1.68.0",
+  "openai>=2.54.0",
   # HTTP + storage
   "httpx>=0.28.0",
   "boto3>=1.43.30",
@@ -36,31 +36,31 @@ dependencies = [
   "casbin>=1.36.0",
   # Observability + reliability
   "structlog>=25.1.0",
-  "sentry-sdk[fastapi]>=2.20.0",
+  "sentry-sdk[fastapi]>=2.69.1",
   # Document preprocessing
   "pillow>=11.1.0",
-  "pymupdf>=1.28.0",
+  "pymupdf>=1.28.2",
   # Native PDF classify + markdown (Firecrawl); Automode OCR fallback
-  "pdf-inspector>=0.2.0",
+  "pdf-inspector>=1.18.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "ruff>=0.11.0",
-  "pyright>=1.1.389",
-  "pytest>=8.3.0",
+  "ruff>=0.16.6",
+  "pyright>=1.1.411",
+  "pytest>=9.1.1",
   "pytest-asyncio>=0.25.0",
   "pytest-html>=4.1.0",
   "pytest-cov>=6.0.0",
   "respx>=0.22.0",
 ]
 otel = [
-  "opentelemetry-sdk>=1.31.0",
-  "opentelemetry-exporter-otlp-proto-http>=1.31.0",
-  "opentelemetry-instrumentation-fastapi>=0.52b0",
-  "opentelemetry-instrumentation-httpx>=0.52b0",
-  "opentelemetry-instrumentation-sqlalchemy>=0.52b0",
-  "opentelemetry-instrumentation-logging>=0.52b0",
+  "opentelemetry-sdk>=1.44.0",
+  "opentelemetry-exporter-otlp-proto-http>=1.44.0",
+  "opentelemetry-instrumentation-fastapi>=0.65b0",
+  "opentelemetry-instrumentation-httpx>=0.65b0",
+  "opentelemetry-instrumentation-sqlalchemy>=0.65b0",
+  "opentelemetry-instrumentation-logging>=0.65b0",
 ]
 # Official zai-org GLM-OCR document-parsing SDK (PP-DocLayoutV3 + region OCR).
 # https://huggingface.co/zai-org/GLM-OCR

@@ -15,10 +15,9 @@ from fastapi import (
     Request,
     UploadFile,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import EventSourceResponse
 
-from repody.api.deps import get_session
+from repody.api.deps import SessionDep
 from repody.api.errors import raise_app_error
 from repody.api.runs_enqueue import enqueue_run_http
 from repody.api.runs_handlers import (
@@ -56,11 +55,14 @@ _RUN_EVENTS_OPENAPI: dict[int | str, dict[str, Any]] = {
 }
 
 
-@router.get("/runs/{run_id}/status", response_model=RunPollResponse)
+@router.get(
+    "/runs/{run_id}/status",
+    response_model=RunPollResponse,
+    dependencies=[Depends(require_admin_or_workflow_run)],
+)
 async def get_run_status(
     run_id: str,
-    session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_admin_or_workflow_run),
+    session: SessionDep,
 ) -> RunPollResponse:
     """Lightweight poll — status and progress only (no full audit payload)."""
     body = await poll_run_status(session, run_id)
@@ -72,12 +74,15 @@ async def get_run_status(
     )
 
 
-@router.get("/runs/{run_id}", response_model=RunPollResponse)
+@router.get(
+    "/runs/{run_id}",
+    response_model=RunPollResponse,
+    dependencies=[Depends(require_admin_or_workflow_run)],
+)
 async def get_run(
     run_id: str,
-    session: AsyncSession = Depends(get_session),
+    session: SessionDep,
     full: bool = Query(True, description="If false, same as /status (lightweight)."),
-    _: None = Depends(require_admin_or_workflow_run),
 ) -> RunPollResponse:
     if not full:
         body = await poll_run_status(session, run_id)
@@ -93,10 +98,10 @@ async def get_run(
 @router.get(
     "/runs/{run_id}/events",
     responses=_RUN_EVENTS_OPENAPI,
+    dependencies=[Depends(require_admin_or_workflow_run)],
 )
 async def stream_run_events(
     run_id: str,
-    _: None = Depends(require_admin_or_workflow_run),
 ):
     """Server-Sent Events stream for live run progress (Redis pub/sub)."""
     from repody.infra.db import base as db_base
@@ -134,14 +139,14 @@ async def stream_run_events(
     "/workflows/{workflow_id}/runs/json",
     response_model=RunCreatedResponse,
     status_code=202,
+    dependencies=[Depends(require_run_create_access)],
 )
 async def create_run_json(
     workflow_id: str,
     body: CreateRunJsonBody,
     request: Request,
+    session: SessionDep,
     authorization: str | None = Header(None),
-    session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_run_create_access),
 ):
     """Create a run with files already uploaded to storage (presigned PUT flow)."""
     bindings = (
@@ -171,12 +176,13 @@ async def create_run_json(
     "/workflows/{workflow_id}/runs",
     response_model=RunCreatedResponse,
     status_code=202,
+    dependencies=[Depends(require_run_create_access)],
 )
 async def create_run(
     workflow_id: str,
     request: Request,
+    session: SessionDep,
     authorization: str | None = Header(None),
-    session: AsyncSession = Depends(get_session),
     files: list[UploadFile] | None = File(None),
     document_ids: str | None = Form(None),
     document_types: str | None = Form(
@@ -184,7 +190,6 @@ async def create_run(
         description="JSON array of configured document type names, same order as files.",
     ),
     payload: str | None = Form(None),
-    _: None = Depends(require_run_create_access),
 ):
     """Multipart fallback when presigned upload is unavailable."""
     bindings: list[FileBinding] | None = None

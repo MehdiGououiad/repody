@@ -128,8 +128,9 @@ class InferenceSettingsFields:
     paddleocr_v6_enabled: bool = Field(
         default=True,
         description=(
-            "Register PP-OCRv6 (paddleocr:v6) as a markdown-only document model. "
-            "Requires a running PaddleX OCR service "
+            "Enable the PP-OCRv6 markdown OCR stage (internal; used by paddleocr:qwen). "
+            "Gates live probes/benchmarks for the PaddleX POST /ocr endpoint — not a "
+            "workflow-selectable catalog entry. Requires a running PaddleX OCR service "
             "(`paddlex --serve --pipeline OCR`, default model PP-OCRv6_medium)."
         ),
     )
@@ -230,9 +231,11 @@ class InferenceSettingsFields:
     glm_ocr_enabled: bool = Field(
         default=True,
         description=(
-            "Register GLM-OCR (glm:ocr) as a markdown-only document model. "
-            "Local default: zai-org GlmOcr SDK (PP-DocLayoutV3) + llama-server "
-            "ggml-org/GLM-OCR-GGUF on AUDIT_GLM_OCR_BASE_URL (default :8083)."
+            "Enable the GLM-OCR markdown OCR stage (internal; used by glm:qwen). "
+            "Gates live probes/benchmarks for the OCR endpoint — not a "
+            "workflow-selectable catalog entry. Local default: zai-org GlmOcr SDK "
+            "(PP-DocLayoutV3) + llama-server ggml-org/GLM-OCR-GGUF on "
+            "AUDIT_GLM_OCR_BASE_URL (default :8083)."
         ),
     )
     glm_ocr_base_url: str = Field(

@@ -164,7 +164,7 @@ async def run_maintenance_cycle() -> None:
     reaped = await reap_stale_runs()
     replayed = 0
     purged = 0
-    from repody.app.queue import refresh_queued_positions
+    from repody.app.queue.progress import refresh_queued_positions
     from repody.app.run.dispatch_outbox import (
         purge_dispatched_outbox,
         replay_dispatch_outbox,

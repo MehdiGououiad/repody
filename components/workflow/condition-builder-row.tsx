@@ -18,151 +18,15 @@ import {
   type ConditionFieldOption,
   NO_RIGHT,
 } from "@/components/workflow/condition-builder-model";
+import { OperandPicker } from "@/components/workflow/condition-operand-picker";
 import {
   comparisonOpsForTemplateType,
-  type LiteralInputKind,
   literalInputKindForTemplateType,
   resolveFieldTemplateType,
 } from "@/lib/rules/condition-input-kind";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
-import type {
-  ArithmeticOp,
-  ComparisonOp,
-  ConditionOperand,
-  RuleCondition,
-  TableAggregateLeft,
-} from "@/lib/types";
+import type { ArithmeticOp, ComparisonOp, RuleCondition, TableAggregateLeft } from "@/lib/types";
 import { cn } from "@/lib/utils";
-
-function literalPlaceholderForKind(
-  kind: LiteralInputKind,
-  t: ReturnType<typeof useTranslations>
-): string | undefined {
-  switch (kind) {
-    case "date":
-      return t("literalDatePlaceholder");
-    case "datetime-local":
-      return t("literalDateTimePlaceholder");
-    case "time":
-      return t("literalTimePlaceholder");
-    case "number":
-      return t("literalNumberPlaceholder");
-    default:
-      return t("literalPlaceholder");
-  }
-}
-
-function LiteralValueInput({
-  value,
-  onChange,
-  inputKind,
-  placeholder,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  inputKind: LiteralInputKind;
-  placeholder?: string;
-}) {
-  if (inputKind === "boolean") {
-    return (
-      <Select value={value || "true"} onValueChange={onChange}>
-        <SelectTrigger className="h-8 text-xs w-32">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="true" className="text-xs font-mono">
-            true
-          </SelectItem>
-          <SelectItem value="false" className="text-xs font-mono">
-            false
-          </SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  return (
-    <Input
-      type={inputKind === "text" ? "text" : inputKind}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      step={inputKind === "number" ? "any" : undefined}
-      className={cn("h-8 text-xs font-mono", inputKind === "datetime-local" ? "w-48" : "w-40")}
-    />
-  );
-}
-
-function OperandPicker({
-  operand,
-  fields,
-  onChange,
-  placeholder,
-  allowLiteral = true,
-  literalInputKind = "text",
-}: {
-  operand: ConditionOperand;
-  fields: ConditionFieldOption[];
-  onChange: (operand: ConditionOperand) => void;
-  placeholder?: string;
-  allowLiteral?: boolean;
-  literalInputKind?: LiteralInputKind;
-}) {
-  const t = useTranslations("workflows.builder.rules.conditions");
-
-  if (operand.kind === "literal") {
-    return (
-      <div className="flex items-center gap-1">
-        <LiteralValueInput
-          value={operand.value}
-          onChange={(value) => onChange({ kind: "literal", value })}
-          inputKind={literalInputKind}
-          placeholder={literalPlaceholderForKind(literalInputKind, t)}
-        />
-        {fields.length > 0 ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 text-[10px] text-on-surface-variant px-2"
-            onClick={() => onChange({ kind: "field", value: fields[0]?.token ?? "" })}
-          >
-            {t("switchToField")}
-          </Button>
-        ) : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex items-center gap-1">
-      <Select value={operand.value} onValueChange={(value) => onChange({ kind: "field", value })}>
-        <SelectTrigger className="h-8 text-xs w-40 font-mono">
-          <SelectValue placeholder={placeholder ?? t("pickField")} />
-        </SelectTrigger>
-        <SelectContent>
-          {fields.map((field) => (
-            <SelectItem key={field.token} value={field.token} className="text-xs font-mono">
-              {field.label}
-            </SelectItem>
-          ))}
-          {fields.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-on-surface-variant italic">{t("noFields")}</div>
-          ) : null}
-        </SelectContent>
-      </Select>
-      {allowLiteral ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 text-[10px] text-on-surface-variant px-2"
-          onClick={() => onChange({ kind: "literal", value: "" })}
-        >
-          {t("switchToValue")}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
 
 export function ConditionRow({
   condition,

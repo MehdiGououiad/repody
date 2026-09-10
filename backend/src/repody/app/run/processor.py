@@ -182,12 +182,13 @@ async def _load_running_run(session: AsyncSession, run_id: str) -> Run | None:
 
 async def _persist_run_failure(run_id: str, exc: Exception) -> None:
     await fail_run_terminal(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
-    log.exception(
+    log.error(
         "run_failed",
         event_domain="audit_run",
         run_id=run_id,
         error_type=type(exc).__name__,
         error_message=repr(exc),
+        exc_info=exc,
     )
 
 

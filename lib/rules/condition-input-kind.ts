@@ -1,4 +1,4 @@
-import { COMPARISON_OP_DEFS } from "@/components/workflow/condition-builder-model";
+import { COMPARISON_OP_DEFS } from "@/lib/rules/comparison-ops";
 
 export type LiteralInputKind = "text" | "date" | "datetime-local" | "time" | "number" | "boolean";
 

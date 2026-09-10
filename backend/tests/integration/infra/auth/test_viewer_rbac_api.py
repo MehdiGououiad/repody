@@ -28,10 +28,11 @@ async def test_viewer_cannot_read_metrics(client):
 
 
 @pytest.mark.asyncio
-async def test_operator_cannot_read_metrics(client):
+async def test_operator_can_read_metrics(client):
+    """Operators have metrics:read in rbac_policy.csv (ops visibility without admin)."""
     operator = mint_access_token(roles=["operator"])
     res = await client.get("/v1/metrics", headers={"Authorization": f"Bearer {operator}"})
-    assert res.status_code == 403
+    assert res.status_code == 200
 
 
 @pytest.mark.asyncio

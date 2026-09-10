@@ -1,18 +1,8 @@
-import type { ArithmeticOp, ComparisonOp, RuleCondition } from "@/lib/types";
+import { NO_RIGHT } from "@/lib/rules/comparison-ops";
+import type { ArithmeticOp, RuleCondition } from "@/lib/types";
 import { shortId } from "@/lib/utils";
 
-export const COMPARISON_OP_DEFS: { value: ComparisonOp; key: string; noRight?: true }[] = [
-  { value: "==", key: "opEquals" },
-  { value: "!=", key: "opNotEquals" },
-  { value: ">", key: "opGt" },
-  { value: ">=", key: "opGte" },
-  { value: "<", key: "opLt" },
-  { value: "<=", key: "opLte" },
-  { value: "IN", key: "opIn" },
-  { value: "NOT_IN", key: "opNotIn" },
-  { value: "EXISTS", key: "opExists", noRight: true },
-  { value: "IS_EMPTY", key: "opIsEmpty", noRight: true },
-];
+export { NO_RIGHT };
 
 export const ARITH_OPS: { value: ArithmeticOp; label: string }[] = [
   { value: "+", label: "+" },
@@ -20,8 +10,6 @@ export const ARITH_OPS: { value: ArithmeticOp; label: string }[] = [
   { value: "*", label: "x" },
   { value: "/", label: "/" },
 ];
-
-export const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 
 export type ConditionFieldOption = {
   label: string;

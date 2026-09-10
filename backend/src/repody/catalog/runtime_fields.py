@@ -230,7 +230,10 @@ def _paddleocr_v6_fields(settings: Settings) -> list[ModelConfigField]:
             key="paddleocr_v6_enabled",
             env_var="AUDIT_PADDLEOCR_V6_ENABLED",
             label="Enabled",
-            description="Register PP-OCRv6 (markdown-only) in the catalog.",
+            description=(
+                "Enable the PP-OCRv6 OCR stage used by paddleocr:qwen "
+                "(not a workflow-selectable catalog entry)."
+            ),
             value=settings.paddleocr_v6_enabled,
             restart="api",
         ),
@@ -373,7 +376,10 @@ def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
             key="glm_ocr_enabled",
             env_var="AUDIT_GLM_OCR_ENABLED",
             label="Enabled",
-            description="Register GLM-OCR (markdown-only) in the catalog.",
+            description=(
+                "Enable the GLM-OCR stage used by glm:qwen "
+                "(not a workflow-selectable catalog entry)."
+            ),
             value=settings.glm_ocr_enabled,
             restart="api",
         ),
@@ -499,7 +505,7 @@ def _deployment_notes() -> list[DeploymentNote]:
             change_kind="PP-OCRv6 service",
             action="pnpm paddleocr:v6:install && pnpm paddleocr:v6:serve, set AUDIT_PADDLEOCR_V6_*",
             detail=(
-                "paddleocr:v6 follows official Basic Serving: "
+                "Internal PP-OCRv6 OCR stage (used by paddleocr:qwen): "
                 "paddlex --serve --pipeline OCR (deploy/paddleocr-v6/OCR.yaml), "
                 "client POST /ocr with Base64 file + fileType. "
                 "See https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html"
@@ -517,7 +523,8 @@ def _deployment_notes() -> list[DeploymentNote]:
             change_kind="GLM-OCR (official SDK + llama-server)",
             action="uv sync --extra glmocr; pnpm glmocr:serve; set AUDIT_GLM_OCR_*",
             detail=(
-                "glm:ocr defaults to whole-page Text Recognition: (no layout). "
+                "Internal GLM-OCR stage (used by glm:qwen) defaults to whole-page "
+                "Text Recognition: (no layout). "
                 "Set AUDIT_GLM_OCR_LAYOUT_ENABLED=true for PP-DocLayoutV3. "
                 "OCR hits llama-server :8083 (ggml-org/GLM-OCR-GGUF). "
                 "See https://huggingface.co/zai-org/GLM-OCR"

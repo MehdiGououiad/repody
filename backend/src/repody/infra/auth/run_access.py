@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.api_keys import verify_api_key
-from repody.app.workflow import load_workflow
+from repody.app.workflow.repository import load_workflow
 from repody.infra.auth.casbin_authorizer import authorize
 from repody.infra.auth.dependencies import extract_bearer
 from repody.infra.auth.jwt_validator import JwtValidationError, principal_from_bearer

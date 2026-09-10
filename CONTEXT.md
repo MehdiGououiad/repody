@@ -9,6 +9,8 @@ Single-page map for tech leads and new contributors. Operational how-tos live in
 | **Repody** | Product, repo, npm package, Helm release | Public name everywhere |
 | **repody** | Python package (`backend/src/repody/`, dist name) | Import path + `pip install -e backend` |
 | **`AUDIT_*`** | Env vars | Settings prefix (kept for stable ops config) |
+| **Next.js `app/`** | Repo root `app/` | App Router routes (thin pages) — not Python |
+| **`repody.app`** | `backend/src/repody/app/` | Python application use cases (Workflow, Run, …) |
 
 Repody VLM local development uses NuExtract through the OpenAI-compatible llama-server/vLLM interface.
 
@@ -18,7 +20,7 @@ Repody VLM local development uses NuExtract through the OpenAI-compatible llama-
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | Catalog adapter that maps document images → fields or markdown (`repody:vlm`, `paddleocr:v6`, `glm:ocr` — see [docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
+| **Document model** | Catalog adapter for workflow-selectable extraction (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` — see [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a Document model |
 | **Processing path** | How a document is read (`document_model` = direct image-to-schema) |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
 | **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
@@ -62,7 +64,6 @@ backend/src/repody/
 ├── app/                 Application use cases (run, workflow, operator, uploads, queue, …)
 │   └── run/             lifecycle · commands · processor · enqueue · outbox · progress · …
 ├── agents/idp/          contracts · compose · run · adapters/
-├── agents/idp/                     Live extraction + validation agent
 ├── runtime/             Pure shared: contracts · recipe · pools · agent_metadata · metrics
 ├── extraction/          pipeline · vlm · nuextract · fields · render · paddleocr_v6 · glm_ocr[+sdk]
 ├── inference/           OpenAI-compat + NuExtract cloud (functions)
@@ -118,12 +119,12 @@ Import `catalog/registry.py` directly for document model catalog operations.
 | Module | Selects | Example ids |
 |--------|---------|-------------|
 | `extraction/pipeline.py` (`get_extract_document`) | **Extractor callable** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `catalog/registry.py` | **Document model catalog** | `repody:vlm`, `repody:vlm:cloud`, `paddleocr:v6`, `glm:ocr` |
+| `catalog/registry.py` | **Document model catalog** | `repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` |
 | `catalog/probes.py` + `catalog/api.py` | **Catalog + live runtime probes** | used by `/models/catalog`, diagnostics, healthz |
 
 Flow: `get_extract_document()` → `extract_document(...)` → catalog → model adapter
-(`extraction/vlm.py`, `paddleocr_v6.py`, or `glm_ocr.py`) on the runtime selected by
-the catalog entry / `AUDIT_*` env.
+(`extraction/vlm.py`, `paddleocr_qwen.py`, `glm_ocr_qwen.py`, …). Markdown OCR helpers
+(`paddleocr_v6`, `glm_ocr`) are stages used inside the Qwen Document models.
 
 ## Inference
 
@@ -177,9 +178,12 @@ Chart: [deploy/helm/repody](./deploy/helm/repody). Client install: [docs/deploy/
 
 These directories are agent/tooling assets, not runtime dependencies:
 
-- `.agents/skills/` — Cursor agent skills (including `ui-ux-pro-max` design data)
-- `deploy/scripts/research/` · `deploy/research/` — experimental model runners and configs
+- `.agents/skills/` — Cursor agent skills (design/architecture helpers; large CSV data under `ui-ux-pro-max` is intentional skill input)
+- `deploy/scripts/research/` · `deploy/research/qwen35/` — optional Qwen 3.5 serve config for local experiments
 - `benchmark-reports/` — local benchmark output (gitignored)
+
+Script ownership map: [docs/SCRIPTS.md](./docs/SCRIPTS.md).
+
 
 ## Tests
 

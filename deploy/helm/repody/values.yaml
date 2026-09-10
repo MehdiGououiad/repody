@@ -103,7 +103,10 @@ init:
   waitImage: busybox:1.37.0
 
 migrations:
-  enabled: false
+  # Prefer a single pre-install/upgrade Job (Alembic once) over concurrent API startups.
+  # Keep enabled=true whenever api.replicas > 1. Setting enabled=false makes every API
+  # pod run migrations on startup (AUDIT_RUN_MIGRATIONS_ON_STARTUP=true in ConfigMap).
+  enabled: true
   hookDeletePolicy: before-hook-creation,hook-succeeded
   backoffLimit: 3
 

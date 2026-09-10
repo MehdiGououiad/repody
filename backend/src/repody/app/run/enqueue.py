@@ -8,7 +8,7 @@ import structlog
 from asgi_correlation_id import correlation_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.queue import refresh_single_queued_run
+from repody.app.queue.progress import refresh_single_queued_run
 from repody.app.run.admission import check_admission
 from repody.app.run.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
 from repody.app.run.intake import create_run
