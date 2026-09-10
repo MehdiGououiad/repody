@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import httpx
 
+from repody.infra.http import get_http_client
+
 
 async def fetch_password_grant_token(
     *,
@@ -14,17 +16,18 @@ async def fetch_password_grant_token(
     password: str,
     timeout: float = 15.0,
 ) -> str:
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(
-            token_url,
-            data={
-                "grant_type": "password",
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "username": username,
-                "password": password,
-            },
-        )
+    client = get_http_client()
+    response = await client.post(
+        token_url,
+        data={
+            "grant_type": "password",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "username": username,
+            "password": password,
+        },
+        timeout=timeout,
+    )
     if response.is_error:
         raise RuntimeError(
             f"Keycloak token request failed ({response.status_code}): {response.text[:500]}"

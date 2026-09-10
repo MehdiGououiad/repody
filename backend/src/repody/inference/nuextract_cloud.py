@@ -15,6 +15,8 @@ from typing import Any
 import httpx
 import structlog
 
+from repody.infra.http import get_http_client
+
 log = structlog.get_logger()
 
 DEFAULT_BASE_URL = "https://nuextract.ai"
@@ -145,20 +147,23 @@ def _require_api_key(config: NuExtractCloudConfig) -> None:
 
 
 def _http_client(config: NuExtractCloudConfig) -> httpx.AsyncClient:
+    """Shared pooled client for this NuExtract base URL + API key."""
     _require_api_key(config)
-    return httpx.AsyncClient(
+    return get_http_client(
         base_url=config.base_url.rstrip("/"),
         headers={"Authorization": f"Bearer {config.api_key.strip()}"},
-        timeout=httpx.Timeout(config.timeout_seconds),
     )
 
 
 async def list_projects(config: NuExtractCloudConfig) -> list[dict[str, Any]]:
-    async with _http_client(config) as client:
-        response = await client.get("/api/structured-extraction")
-        _raise_for_api_error(response, action="list projects")
-        data = response.json()
-        return data if isinstance(data, list) else []
+    client = _http_client(config)
+    response = await client.get(
+        "/api/structured-extraction",
+        timeout=config.timeout_seconds,
+    )
+    _raise_for_api_error(response, action="list projects")
+    data = response.json()
+    return data if isinstance(data, list) else []
 
 
 async def create_project(
@@ -175,13 +180,17 @@ async def create_project(
         "template": template,
         "instructions": instructions or "",
     }
-    async with _http_client(config) as client:
-        response = await client.post("/api/structured-extraction", json=body)
-        _raise_for_api_error(response, action="create project")
-        project_id = response.json().get("id")
-        if not project_id:
-            raise NuExtractCloudError("NuExtract cloud create project returned no id.")
-        return str(project_id)
+    client = _http_client(config)
+    response = await client.post(
+        "/api/structured-extraction",
+        json=body,
+        timeout=config.timeout_seconds,
+    )
+    _raise_for_api_error(response, action="create project")
+    project_id = response.json().get("id")
+    if not project_id:
+        raise NuExtractCloudError("NuExtract cloud create project returned no id.")
+    return str(project_id)
 
 
 async def update_project(
@@ -201,20 +210,24 @@ async def update_project(
         body["name"] = name
     if description is not None:
         body["description"] = description
-    async with _http_client(config) as client:
-        response = await client.patch(
-            f"/api/structured-extraction/{project_id}",
-            json=body,
-        )
-        _raise_for_api_error(response, action="update project")
+    client = _http_client(config)
+    response = await client.patch(
+        f"/api/structured-extraction/{project_id}",
+        json=body,
+        timeout=config.timeout_seconds,
+    )
+    _raise_for_api_error(response, action="update project")
 
 
 async def delete_project(config: NuExtractCloudConfig, project_id: str) -> None:
-    async with _http_client(config) as client:
-        response = await client.delete(f"/api/structured-extraction/{project_id}")
-        if response.status_code == 404:
-            return
-        _raise_for_api_error(response, action="delete project")
+    client = _http_client(config)
+    response = await client.delete(
+        f"/api/structured-extraction/{project_id}",
+        timeout=config.timeout_seconds,
+    )
+    if response.status_code == 404:
+        return
+    _raise_for_api_error(response, action="delete project")
 
 
 async def submit_file_job(
@@ -226,41 +239,42 @@ async def submit_file_job(
     mime_type: str,
 ) -> str:
     files = {"file": (filename, file_bytes, mime_type or "application/octet-stream")}
-    async with _http_client(config) as client:
-        response = await client.post(
-            f"/api/structured-extraction/{project_id}/jobs",
-            files=files,
-        )
-        _raise_for_api_error(response, action="submit file job")
-        job_id = response.json().get("jobId") or response.json().get("job_id")
-        if not job_id:
-            raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
-        return str(job_id)
+    client = _http_client(config)
+    response = await client.post(
+        f"/api/structured-extraction/{project_id}/jobs",
+        files=files,
+        timeout=config.timeout_seconds,
+    )
+    _raise_for_api_error(response, action="submit file job")
+    job_id = response.json().get("jobId") or response.json().get("job_id")
+    if not job_id:
+        raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
+    return str(job_id)
 
 
 async def submit_text_job(config: NuExtractCloudConfig, project_id: str, text: str) -> str:
-    async with _http_client(config) as client:
-        response = await client.post(
-            f"/api/structured-extraction/{project_id}/jobs",
-            content=text.encode("utf-8"),
-            headers={"Content-Type": "text/plain"},
-        )
-        _raise_for_api_error(response, action="submit text job")
-        job_id = response.json().get("jobId") or response.json().get("job_id")
-        if not job_id:
-            raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
-        return str(job_id)
+    client = _http_client(config)
+    response = await client.post(
+        f"/api/structured-extraction/{project_id}/jobs",
+        content=text.encode("utf-8"),
+        headers={"Content-Type": "text/plain"},
+        timeout=config.timeout_seconds,
+    )
+    _raise_for_api_error(response, action="submit text job")
+    job_id = response.json().get("jobId") or response.json().get("job_id")
+    if not job_id:
+        raise NuExtractCloudError("NuExtract cloud submit job returned no jobId.")
+    return str(job_id)
 
 
 async def stream_job_result(config: NuExtractCloudConfig, job_id: str) -> dict[str, Any]:
-    async with (
-        _http_client(config) as client,
-        client.stream(
-            "GET",
-            f"/api/jobs/{job_id}/stream",
-            headers={"Accept": "text/event-stream"},
-        ) as response,
-    ):
+    client = _http_client(config)
+    async with client.stream(
+        "GET",
+        f"/api/jobs/{job_id}/stream",
+        headers={"Accept": "text/event-stream"},
+        timeout=config.timeout_seconds,
+    ) as response:
         if not response.is_success:
             body = (await response.aread()).decode("utf-8", errors="replace")
             detail = body

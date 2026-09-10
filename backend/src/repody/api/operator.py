@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 
 from repody.api.errors import raise_app_error
-from repody.app.operator import (
+from repody.app.operator.benchmarks import (
     create_benchmark_job,
     create_warmup_job,
+)
+from repody.app.operator.jobs import (
     get_job,
     list_jobs,
     load_report,

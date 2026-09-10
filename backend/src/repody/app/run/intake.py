@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from repody.app.mappers import run_to_audit_detail
-from repody.app.queue import (
+from repody.app.queue.progress import (
     enrich_progress_for_poll,
     init_queued_progress_with_position,
 )
@@ -15,7 +15,7 @@ from repody.app.run.snapshot import (
     build_run_snapshot,
     resolve_workflow_display_name,
 )
-from repody.app.workflow import load_workflow
+from repody.app.workflow.repository import load_workflow
 from repody.infra.db.models import Run, RunDocument, RunStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.contracts import FileBinding

@@ -24,6 +24,8 @@ client registry.
 | Node web base | `node:24-alpine` |
 | uv in Dockerfile | `0.11.26` |
 | pnpm | `11.7.0` |
+| TypeScript (workspace) | `~6.0.2` (pin; TS 7 lacks stable API for typescript-eslint / Next eslint until ~7.1) |
+| `@types/node` | `^24` (match Node 24 engines; do not jump to 26 yet) |
 
 ## Enterprise production
 

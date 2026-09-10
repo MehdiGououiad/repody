@@ -44,16 +44,18 @@ def _get_instructor_client() -> Any:
     global _instructor_client
     if _instructor_client is None:
         import instructor
-        from openai import AsyncOpenAI
 
         settings = get_settings()
         base_url = llamacpp_base_url(settings)
-        oai = AsyncOpenAI(
+        # Official API: from_provider + create(). Model is passed per create() call.
+        _instructor_client = instructor.from_provider(
+            "openai/local",
+            async_client=True,
+            mode=instructor.Mode.JSON,
             base_url=base_url,
             api_key=openai_api_key_for_base_url(base_url, settings),
             timeout=60.0,
         )
-        _instructor_client = instructor.from_openai(oai, mode=instructor.Mode.JSON)
     return _instructor_client
 
 
@@ -183,7 +185,7 @@ async def _chat_with_instructor(
     structured = _get_instructor_client()
     return cast(
         T,
-        await structured.chat.completions.create(
+        await structured.create(
             model=model,
             messages=messages,  # type: ignore[arg-type]
             response_model=response_model,

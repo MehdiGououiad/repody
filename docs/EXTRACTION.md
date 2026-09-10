@@ -19,7 +19,7 @@ Qwen pipelines — they are **not** workflow catalog options.
 | `repody:vlm` | NuExtract template JSON, PDF **170 DPI**, temp **0.2** | Vision token cap may be lower than HF defaults for VRAM |
 | `paddleocr:qwen` | OCR official `POST /ocr`; JSON stage is **Repody** UI-schema prompt on Qwen (thin; no value post-process) | Shared `qwen_text.py` with `glm:qwen` |
 | `glm:qwen` | Official GlmOcr SDK whole-page `Text Recognition:` then Qwen JSON | Set `AUDIT_GLM_OCR_LAYOUT_ENABLED=true` for PP-DocLayoutV3 |
-| Qwen stage | Not a document-parse model | Text→JSON against workflow schema only — no OCR rewrite |
+| Qwen stage | OpenAI-compatible ``response_format`` JSON Schema + UI-schema prompt | Constrained decoding when server supports it; parse fallback remains |
 
 NuExtract structured JSON is stored verbatim in `run_documents.extraction_meta.rawText`;
 leaf rows in `extracted_fields` are derived for UI/rules only.

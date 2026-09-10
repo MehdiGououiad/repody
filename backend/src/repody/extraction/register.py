@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import repody.extraction.glm_ocr
-import repody.extraction.glm_ocr_qwen
-import repody.extraction.paddleocr_qwen
-import repody.extraction.paddleocr_v6
-import repody.extraction.vlm  # noqa: F401
+from repody.extraction import glm_ocr_qwen as _glm_ocr_qwen
+from repody.extraction import paddleocr_qwen as _paddleocr_qwen
+from repody.extraction import vlm as _vlm
+
+_ = (_glm_ocr_qwen, _paddleocr_qwen, _vlm)

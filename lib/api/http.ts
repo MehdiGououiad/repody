@@ -62,7 +62,7 @@ export async function browserFetch(
     if (typeof window !== "undefined" && res.status === 403 && credential === "session") {
       const body = await res.clone().text();
       if (body.toLowerCase().includes("forbidden") || body.toLowerCase().includes("permission")) {
-        window.location.href = "/unauthorized";
+        window.location.assign(new URL("/unauthorized", window.location.origin).href);
       }
     }
     return res;

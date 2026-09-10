@@ -19,6 +19,7 @@ from taskiq.cli.worker.run import run_worker
 
 from repody.extraction.warmup import warmup_repody_vlm
 from repody.inference.openai_compat import close_openai_clients
+from repody.infra.http import close_http_clients
 from repody.infra.observability.bootstrap import init_observability
 from repody.settings import get_settings
 from repody.taskiq.broker import get_broker
@@ -49,6 +50,7 @@ async def _startup_warmup(worker_pool: str) -> None:
             await _warmup_document_models(worker_pool)
     finally:
         await close_openai_clients()
+        await close_http_clients()
 
 
 @broker.on_event(TaskiqEvents.WORKER_STARTUP)

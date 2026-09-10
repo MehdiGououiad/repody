@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import load_only, noload, selectinload
 
 from repody.catalog.registry import normalize_model_id
 from repody.extraction.modes import normalize_document_modes
@@ -15,7 +15,7 @@ from repody.extraction.nuextract import (
     is_object_template_type,
     normalize_template_type,
 )
-from repody.infra.db.models import Document, SchemaField, Workflow, WorkflowRule
+from repody.infra.db.models import Document, SchemaField, Workflow, WorkflowRule, WorkflowStatus
 from repody.rules.conditions import resolve_rule_body
 from repody.schemas.workflow import WorkflowSchema
 from repody.util.json_shape import normalize_keys_to_snake
@@ -35,6 +35,31 @@ async def load_workflow(session: AsyncSession, workflow_id: str) -> Workflow | N
         )
     )
     return result.scalar_one_or_none()
+
+
+async def list_workflow_cards(session: AsyncSession) -> list[Workflow]:
+    """Load non-archived workflows for list cards (no nested documents/rules/runs)."""
+    result = await session.execute(
+        select(Workflow)
+        .where(Workflow.status != WorkflowStatus.archived.value)
+        .order_by(Workflow.updated_at.desc())
+        .options(
+            noload(Workflow.documents),
+            noload(Workflow.rules),
+            noload(Workflow.runs),
+            load_only(
+                Workflow.id,
+                Workflow.name,
+                Workflow.description,
+                Workflow.status,
+                Workflow.owner,
+                Workflow.deployed_at,
+                Workflow.api_key_hint,
+                Workflow.updated_at,
+            ),
+        )
+    )
+    return list(result.scalars().all())
 
 
 async def upsert_workflow_aggregate(

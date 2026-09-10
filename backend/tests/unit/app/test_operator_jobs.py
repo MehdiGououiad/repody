@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from repody.app.operator import operator_job_schema
+from repody.app.operator.jobs import operator_job_schema
 from repody.runtime.operator.job import OperatorJob, job_from_store, job_to_store
 
 

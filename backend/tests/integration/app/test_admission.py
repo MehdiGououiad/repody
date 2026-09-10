@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from repody.app.queue import apply_queue_meta, queue_position
+from repody.app.queue.position import apply_queue_meta, queue_position
 from repody.app.run.admission import (
     check_admission,
     count_extract_inflight,

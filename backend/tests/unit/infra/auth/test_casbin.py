@@ -1,5 +1,13 @@
-from repody.infra.auth.casbin_authorizer import authorize
+"""Unit tests for Casbin RBAC (read-only shared enforcer)."""
+
+from __future__ import annotations
+
+from repody.infra.auth.casbin_authorizer import authorize, clear_authorizer_cache
 from repody.infra.auth.principal import Principal
+
+
+def setup_function() -> None:
+    clear_authorizer_cache()
 
 
 def test_platform_admin_has_full_access() -> None:
@@ -19,3 +27,19 @@ def test_operator_can_execute_runs() -> None:
     assert authorize(principal, "run", "execute")
     assert authorize(principal, "operator", "execute")
     assert not authorize(principal, "settings", "write")
+
+
+def test_unknown_role_is_denied() -> None:
+    principal = Principal(subject="u4", roles=("not-a-role",))
+    assert not authorize(principal, "workflow", "read")
+
+
+def test_empty_roles_denied() -> None:
+    principal = Principal(subject="u5", roles=())
+    assert not authorize(principal, "run", "execute")
+
+
+def test_any_matching_role_allows() -> None:
+    principal = Principal(subject="u6", roles=("viewer", "operator"))
+    assert authorize(principal, "run", "execute")
+    assert authorize(principal, "workflow", "read")

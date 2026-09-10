@@ -167,6 +167,12 @@ services:
       AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "python", "-m", "repody.taskiq.healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
 
   worker-fast:
@@ -202,6 +208,12 @@ services:
       AUDIT_DB_POOL_SIZE: ${AUDIT_DB_POOL_SIZE:-20}
       AUDIT_DB_MAX_OVERFLOW: ${AUDIT_DB_MAX_OVERFLOW:-20}
       AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
+    healthcheck:
+      test: ["CMD", "python", "-m", "repody.taskiq.healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
     restart: unless-stopped
 
   # ── Observability (optional: docker compose --profile observability up -d) ──

@@ -1,13 +1,18 @@
 import os
 
-from tests.helpers.db import DEFAULT_TEST_DATABASE_URL
+# Test env MUST be set before any `repody` import. `repody.infra.db.base` calls
+# get_settings() at import time (engine), and Settings is lru_cached — importing
+# tests.helpers.db before these assignments would lock in backend/.env (e.g. OTEL).
+_DEFAULT_TEST_DATABASE_URL = (
+    "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
+)
 
 # Test defaults — production uses Postgres + Alembic; live HTTP E2E uses the docker
 # stack API (backend/.env DB). Only force the isolated *_test DB for in-process tests.
 _db_url = os.environ.get("AUDIT_DATABASE_URL", "")
 _live_stack = os.environ.get("E2E_STACK") == "1" or bool(os.environ.get("E2E_API_URL"))
 if not _db_url and not _live_stack:
-    os.environ["AUDIT_DATABASE_URL"] = DEFAULT_TEST_DATABASE_URL
+    os.environ["AUDIT_DATABASE_URL"] = _DEFAULT_TEST_DATABASE_URL
 elif _live_stack and (not _db_url or _db_url.rstrip("/").endswith("_test")):
     # Align host-side scripts with Compose workers when running live E2E.
     os.environ["AUDIT_DATABASE_URL"] = (
@@ -28,12 +33,16 @@ os.environ["AUDIT_INFERENCE_MODE"] = "llamacpp"
 os.environ["AUDIT_LLAMACPP_BASE_URL"] = "http://llamacpp-mock.test/v1"
 os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
 os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
+# Force off even when backend/.env has Compose OTEL (avoids export noise / closed-file logs).
+os.environ["AUDIT_OTEL_ENABLED"] = "false"
+os.environ["OTEL_SDK_DISABLED"] = "true"
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker
 from tests.helpers.db import (
+    DEFAULT_TEST_DATABASE_URL,
     bind_test_database,
     configure_test_database_url,
     create_test_engine,
@@ -46,6 +55,8 @@ from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
 
 from repody.main import create_app
 from repody.settings import clear_settings_cache, get_settings
+
+assert DEFAULT_TEST_DATABASE_URL == _DEFAULT_TEST_DATABASE_URL
 
 _session_dmr_router: dict[str, object] = {"router": None}
 
@@ -92,6 +103,7 @@ async def app(test_session_factory):
     """Real ASGI app against migrated Postgres (UI-identical routes)."""
     os.environ["AUDIT_OIDC_ENABLED"] = "false"
     os.environ["AUDIT_OIDC_AUDIENCE"] = ""
+    os.environ["AUDIT_OTEL_ENABLED"] = "false"
     get_settings.cache_clear()
     router = enable_dmr_mock(monkeypatch=None)
     _session_dmr_router["router"] = router
@@ -132,13 +144,15 @@ async def drain_background_tasks():
 
 @pytest.fixture(autouse=True)
 async def reset_inference_clients():
-    """Drop cached httpx clients between tests (session loop keeps the same event loop)."""
+    """Drop cached OpenAI/httpx clients between tests (session loop reuse)."""
     yield
     from repody.inference.availability import clear_availability_cache
     from repody.inference.factory import get_chat, get_ensure_available
     from repody.inference.openai_compat import close_openai_clients
+    from repody.infra.http import close_http_clients
 
     await close_openai_clients()
+    await close_http_clients()
     get_chat.cache_clear()
     get_ensure_available.cache_clear()
     clear_availability_cache()

@@ -1,5 +1,7 @@
 from collections.abc import AsyncGenerator
+from typing import Annotated
 
+from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.infra.db import base as db_base
@@ -21,3 +23,6 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
 
 # Alias for older call sites / docs that still say get_db.
 get_db = get_session
+
+# FastAPI preferred form: Annotated[..., Depends(...)] on parameters.
+SessionDep = Annotated[AsyncSession, Depends(get_session)]

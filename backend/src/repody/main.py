@@ -27,6 +27,7 @@ from repody.inference.openai_compat import close_openai_clients
 from repody.infra.auth.dependencies import require_permission
 from repody.infra.db.base import async_session_factory, engine
 from repody.infra.db.seed import seed_database
+from repody.infra.http import close_http_clients
 from repody.infra.observability.bootstrap import init_observability
 from repody.infra.observability.middleware import RequestLoggingMiddleware
 from repody.infra.observability.tracing import instrument_fastapi
@@ -40,7 +41,7 @@ log = structlog.get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    settings = init_observability()
+    settings = get_settings()
     log.info(
         "application_starting",
         event_domain="platform",
@@ -48,7 +49,7 @@ async def lifespan(_app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    from repody.app.operator import hydrate_operator_jobs_from_redis
+    from repody.app.operator.jobs import hydrate_operator_jobs_from_redis
     from repody.taskiq.broker import startup_taskiq_brokers
 
     # Independent startup work — FastAPI lifespan guidance: keep critical path short.
@@ -88,11 +89,13 @@ async def lifespan(_app: FastAPI):
     await close_taskiq_brokers()
     await close_redis_pool()
     await close_openai_clients()
+    await close_http_clients()
     await engine.dispose()
 
 
 def create_app() -> FastAPI:
-    settings = get_settings()
+    # Sentry/Bugsink: init as early as possible (before FastAPI construction).
+    settings = init_observability()
     app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
     app.add_middleware(GlobalRateLimitMiddleware)
     app.add_middleware(CorrelationIdMiddleware)

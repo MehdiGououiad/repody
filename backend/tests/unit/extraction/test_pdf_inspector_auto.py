@@ -74,6 +74,11 @@ def test_native_quality_gate_rejects(overrides, expected):
 
 @pytest.fixture
 def pipeline_mocks(monkeypatch):
+    monkeypatch.setenv("AUDIT_PADDLEOCR_QWEN_ENABLED", "true")
+    from repody.settings import get_settings
+
+    get_settings.cache_clear()
+
     fallback = ExtractionResult(
         fields=[
             ExtractedFieldResult(
@@ -117,7 +122,8 @@ def pipeline_mocks(monkeypatch):
         "repody.extraction.pipeline.extract_via_native_markdown",
         AsyncMock(return_value=native),
     )
-    return {"fallback": fallback, "native": native}
+    yield {"fallback": fallback, "native": native}
+    get_settings.cache_clear()
 
 
 @pytest.mark.asyncio

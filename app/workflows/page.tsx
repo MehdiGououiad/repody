@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
-import { WorkflowsList } from "@/components/workflows/workflows-list";
+import { WorkflowsList } from "@/components/workflow/workflows-list";
 import { fetchWorkflows } from "@/lib/api/client";
 
 export default async function WorkflowsPage() {

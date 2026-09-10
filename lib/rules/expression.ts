@@ -1,12 +1,10 @@
+import { NO_RIGHT } from "@/lib/rules/comparison-ops";
 import type {
-  ComparisonOp,
   ConditionJunction,
   ConditionOperand,
   RuleCondition,
   TableAggregateLeft,
 } from "@/lib/types";
-
-const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;

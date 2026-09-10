@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
-from typing import TextIO, cast
 
 import structlog
 
@@ -92,41 +91,14 @@ def _rename_event_to_body() -> structlog.types.Processor:
     return processor
 
 
-class _MultiWriter:
-    """Write structlog output to stdout and an optional log file."""
-
-    def __init__(self, *streams: TextIO) -> None:
-        self._streams = streams
-
-    def write(self, message: str) -> None:
-        for stream in self._streams:
-            stream.write(message)
-
-    def flush(self) -> None:
-        for stream in self._streams:
-            stream.flush()
-
-
-def _log_output_streams(settings: Settings) -> TextIO:
-    streams: list[TextIO] = [sys.stdout]
-    if settings.log_file:
-        log_path = Path(settings.log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        streams.append(log_path.open("a", encoding="utf-8"))
-    if len(streams) == 1:
-        return streams[0]
-    # structlog's PrintLogger only ever calls write() and flush(), so the tee
-    # satisfies it in practice without implementing the full TextIO surface.
-    return cast("TextIO", _MultiWriter(*streams))
-
-
 def configure_logging(settings: Settings) -> None:
-    """Configure structlog for dev (console) or prod (JSON, OTEL-friendly fields)."""
+    """Configure structlog via stdlib ProcessorFormatter (official bridge)."""
     log_level = logging.DEBUG if settings.debug else logging.INFO
 
     shared_processors: list[structlog.types.Processor] = [
         structlog.contextvars.merge_contextvars,
-        structlog.processors.add_log_level,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso", key="timestamp"),
         _add_service_context(settings),
         _add_otel_trace_context(),
@@ -144,18 +116,37 @@ def configure_logging(settings: Settings) -> None:
     structlog.configure(
         processors=[
             *shared_processors,
-            structlog.processors.UnicodeDecoder(),
-            renderer,
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=_log_output_streams(settings)),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 
-    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=log_level)
+    formatter = structlog.stdlib.ProcessorFormatter(
+        foreign_pre_chain=list(shared_processors),
+        processors=[
+            structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            renderer,
+        ],
+    )
 
-    # Route stdlib loggers through structlog for consistent formatting.
+    stream = sys.stdout
+    handlers: list[logging.Handler] = [logging.StreamHandler(stream)]
+    if settings.log_file:
+        log_path = Path(settings.log_file)
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding="utf-8"))
+
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.setLevel(log_level)
+    for handler in handlers:
+        handler.setFormatter(formatter)
+        root.addHandler(handler)
+
+    # Route stdlib loggers through the same formatter.
     for name in ("uvicorn", "uvicorn.error", "sqlalchemy.engine"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True

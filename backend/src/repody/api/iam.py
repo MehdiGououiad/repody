@@ -1,4 +1,4 @@
-"""Identity and access management â€” Casbin matrix + Keycloak user admin."""
+"""Identity and access management - Casbin matrix + Keycloak user admin."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from repody.api.errors import raise_app_error
 from repody.infra.auth import keycloak_admin as keycloak
 from repody.infra.auth.casbin_authorizer import authorize
-from repody.infra.auth.dependencies import get_current_principal, require_permission
-from repody.infra.auth.principal import APP_REALM_ROLES, Principal
+from repody.infra.auth.dependencies import PrincipalDep, require_permission
+from repody.infra.auth.principal import APP_REALM_ROLES
 from repody.infra.auth.rbac_catalog import (
     ROLE_DESCRIPTIONS,
     ROLE_LABELS,
@@ -52,7 +52,7 @@ def _role_names(roles: list[dict]) -> list[str]:
 
 
 @router.get("/me", response_model=IamMeResponse)
-async def iam_me(principal: Principal = Depends(get_current_principal)) -> IamMeResponse:
+async def iam_me(principal: PrincipalDep) -> IamMeResponse:
     settings = get_settings()
     return IamMeResponse(
         subject=principal.subject,
@@ -67,7 +67,7 @@ async def iam_me(principal: Principal = Depends(get_current_principal)) -> IamMe
 
 @router.get("/catalog", response_model=IamCatalogResponse)
 async def iam_catalog(
-    _principal: Principal = Depends(get_current_principal),
+    _principal: PrincipalDep,
 ) -> IamCatalogResponse:
     role_map = list_role_permission_map()
     roles = [
@@ -208,7 +208,7 @@ async def create_user(body: CreateIamUserRequest) -> IamUser:
 async def update_user(
     user_id: str,
     body: UpdateIamUserRequest,
-    principal: Principal = Depends(get_current_principal),
+    principal: PrincipalDep,
 ) -> IamUser:
     settings = get_settings()
     if not settings.oidc_enabled:

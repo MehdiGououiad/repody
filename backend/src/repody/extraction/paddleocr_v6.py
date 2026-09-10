@@ -21,10 +21,8 @@ import base64
 import time
 from typing import Any
 
-import httpx
 import structlog
 
-from repody.catalog.adapters import register_document_model_adapter
 from repody.catalog.registry import DocumentModelSpec
 from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
 from repody.extraction.schema import empty_fields_from_schema
@@ -35,6 +33,7 @@ from repody.extraction.types import (
     SchemaFieldSpec,
     truncate_text,
 )
+from repody.infra.http import get_http_client
 from repody.settings import get_settings
 
 log = structlog.get_logger()
@@ -131,8 +130,8 @@ async def fetch_paddleocr_markdown(bundle: DocumentBundle) -> tuple[str, int]:
     payload = build_ocr_request_payload(bundle)
     url = f"{base}/ocr"
     timeout = float(settings.paddleocr_v6_timeout_seconds)
-    async with httpx.AsyncClient(timeout=timeout) as client:
-        response = await client.post(url, json=payload)
+    client = get_http_client()
+    response = await client.post(url, json=payload, timeout=timeout)
     if response.status_code != 200:
         raise RuntimeError(
             f"PP-OCRv6 /ocr failed HTTP {response.status_code}: {response.text[:500]}"
@@ -189,6 +188,3 @@ async def extract_with_paddleocr_v6(
         pages_sent=page_count,
         pages_dropped=0,
     )
-
-
-register_document_model_adapter(PADDLEOCR_V6_CATALOG_ID, extract_with_paddleocr_v6)

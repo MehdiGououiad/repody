@@ -6,11 +6,11 @@ import json
 from functools import lru_cache
 from typing import Any, cast
 
-import httpx
 import jwt
 from jwt import PyJWKClient
 
 from repody.infra.auth.principal import APP_REALM_ROLES, Principal
+from repody.infra.http import get_http_client
 from repody.settings import Settings, get_settings
 
 _JWKS_CACHE_TTL = 300
@@ -131,5 +131,5 @@ async def warm_jwks_cache(settings: Settings | None = None) -> None:
     if not settings.oidc_enabled or settings.oidc_jwks_json:
         return
     url = _jwks_url(settings)
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        await client.get(url)
+    client = get_http_client()
+    await client.get(url, timeout=10.0)

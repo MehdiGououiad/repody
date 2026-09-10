@@ -86,13 +86,6 @@ deploy/glmocr/logs/
 deploy/research/**/paths.local.env
 deploy/research/**/models/
 deploy/research/**/logs/
-# legacy research paths (pre-move)
-deploy/qwen35/paths.local.env
-deploy/qwen35/models/
-deploy/qwen35/logs/
-deploy/nuextract2/paths.local.env
-deploy/nuextract2/models/
-deploy/nuextract2/logs/
 .runtime-enterprise/
 backend/.venv/
 *.tgz

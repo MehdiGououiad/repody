@@ -8,3 +8,7 @@ export type PlatformConfigResponse = Schema["PlatformConfigResponse"];
 export type AuditListResponse = Schema["AuditListResponse"];
 export type DashboardResponse = Schema["DashboardResponse"];
 export type QueueSnapshot = Schema["QueueSnapshot"];
+
+/** Wire shapes from OpenAPI (prefer Output aliases for reads). */
+export type WorkflowListResponse = Schema["WorkflowListResponse"];
+export type WorkflowResponse = Schema["WorkflowResponse"];

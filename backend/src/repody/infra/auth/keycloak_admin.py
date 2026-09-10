@@ -9,6 +9,7 @@ import httpx
 import structlog
 
 from repody.infra.auth.principal import APP_REALM_ROLES
+from repody.infra.http import get_http_client
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.settings import Settings, get_settings
 
@@ -64,16 +65,17 @@ async def _admin_token(settings: Settings) -> Result[str]:
         return Result.ok(cached)
 
     token_url = f"{base}/realms/master/protocol/openid-connect/token"
-    async with httpx.AsyncClient(timeout=20.0) as client:
-        response = await client.post(
-            token_url,
-            data={
-                "grant_type": "password",
-                "client_id": "admin-cli",
-                "username": user,
-                "password": password,
-            },
-        )
+    client = get_http_client()
+    response = await client.post(
+        token_url,
+        data={
+            "grant_type": "password",
+            "client_id": "admin-cli",
+            "username": user,
+            "password": password,
+        },
+        timeout=20.0,
+    )
     if response.status_code >= 400:
         return Result.fail(
             _admin_error(
@@ -104,14 +106,15 @@ async def _admin_request(
         return Result.fail(token_r.error or _admin_error("Admin token failed"))
     base, realm, _user, _password = _admin_base(settings)
     url = f"{base}/admin/realms/{realm}{path}"
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        response = await client.request(
-            method,
-            url,
-            headers={"Authorization": f"Bearer {token_r.unwrap()}"},
-            params=params,
-            json=json,
-        )
+    client = get_http_client()
+    response = await client.request(
+        method,
+        url,
+        headers={"Authorization": f"Bearer {token_r.unwrap()}"},
+        params=params,
+        json=json,
+        timeout=30.0,
+    )
     if response.status_code >= 400:
         detail = response.text.strip()[:240] or response.reason_phrase
         return Result.fail(

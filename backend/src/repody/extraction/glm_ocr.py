@@ -21,7 +21,6 @@ import time
 
 import structlog
 
-from repody.catalog.adapters import register_document_model_adapter
 from repody.catalog.registry import DocumentModelSpec
 from repody.extraction.branding import GLM_OCR_CATALOG_ID
 from repody.extraction.glm_ocr_sdk import (
@@ -156,6 +155,3 @@ async def extract_with_glm_ocr(
         pages_sent=pages_sent,
         pages_dropped=pages_dropped if pages_dropped else None,
     )
-
-
-register_document_model_adapter(GLM_OCR_CATALOG_ID, extract_with_glm_ocr)

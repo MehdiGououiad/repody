@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.mappers import workflow_to_list_schema, workflow_to_schema
 from repody.app.workflow.deployment import deploy_workflow
 from repody.app.workflow.repository import (
+    list_workflow_cards,
     load_workflow,
     short_id,
     upsert_workflow_aggregate,
@@ -27,29 +27,7 @@ async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
     Full ``api_stats`` (series / failing rules / latency) stays on GET detail —
     the UI list never reads those fields and they dominate list latency.
     """
-    from sqlalchemy.orm import load_only, noload
-
-    result = await session.execute(
-        select(Workflow)
-        .where(Workflow.status != WorkflowStatus.archived.value)
-        .order_by(Workflow.updated_at.desc())
-        .options(
-            noload(Workflow.documents),
-            noload(Workflow.rules),
-            noload(Workflow.runs),
-            load_only(
-                Workflow.id,
-                Workflow.name,
-                Workflow.description,
-                Workflow.status,
-                Workflow.owner,
-                Workflow.deployed_at,
-                Workflow.api_key_hint,
-                Workflow.updated_at,
-            ),
-        )
-    )
-    workflows = result.scalars().all()
+    workflows = await list_workflow_cards(session)
     if not workflows:
         return []
 

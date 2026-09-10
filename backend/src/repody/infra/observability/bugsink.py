@@ -8,12 +8,18 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
+_initialized = False
+
 
 def bugsink_enabled() -> bool:
     return bool(os.getenv("BUGSINK_DSN", "").strip())
 
 
 def init_bugsink(service_name: str | None = None) -> None:
+    """Init once, as early as possible (before FastAPI()/ASGI serve)."""
+    global _initialized
+    if _initialized:
+        return
     dsn = os.getenv("BUGSINK_DSN", "").strip()
     if not dsn:
         return
@@ -33,3 +39,4 @@ def init_bugsink(service_name: str | None = None) -> None:
             FastApiIntegration(),
         ],
     )
+    _initialized = True

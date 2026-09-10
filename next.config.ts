@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -16,6 +17,7 @@ const nextConfig: NextConfig = {
   // Next 16 blocks cross-origin HMR when UI is opened as 127.0.0.1 vs localhost.
   allowedDevOrigins,
   experimental: {
+    // lucide-react + recharts are already in Next's default optimize list.
     optimizePackageImports: [
       "@radix-ui/react-dialog",
       "@radix-ui/react-dropdown-menu",
@@ -23,8 +25,6 @@ const nextConfig: NextConfig = {
       "@radix-ui/react-tabs",
       "@radix-ui/react-tooltip",
       "cmdk",
-      "lucide-react",
-      "recharts",
     ],
   },
   // /api/v1/* is proxied at runtime by app/api/v1/[...path]/route.ts using
@@ -41,4 +41,9 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Official @sentry/nextjs build wrapper. Source-map upload disabled — Bugsink
+// is Sentry-SDK-compatible for events but not SaaS map upload.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  silent: true,
+  sourcemaps: { disable: true },
+});

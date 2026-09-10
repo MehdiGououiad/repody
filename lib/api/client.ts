@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { throwOnApiError } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
-import type { AuditListResponse } from "@/lib/api/schema-types";
+import type {
+  AuditListResponse,
+  WorkflowListResponse,
+  WorkflowResponse,
+} from "@/lib/api/schema-types";
 import type { Audit, RuleTemplate, Workflow } from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
 
@@ -12,7 +16,8 @@ export type AuditListResult = Omit<AuditListResponse, "audits"> & {
 export const fetchWorkflows = cache(async (): Promise<Workflow[]> => {
   const { data, error, response } = await serverApi.GET("/v1/workflows");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return (data as { workflows: Workflow[] }).workflows;
+  const body = data as WorkflowListResponse;
+  return body.workflows as Workflow[];
 });
 
 export async function fetchWorkflow(id: string): Promise<Workflow | null> {
@@ -21,7 +26,8 @@ export async function fetchWorkflow(id: string): Promise<Workflow | null> {
       params: { path: { workflow_id: id } },
     });
     if (error || !response.ok || !data) throwOnApiError(error, response);
-    return (data as { workflow: Workflow }).workflow;
+    const body = data as WorkflowResponse;
+    return body.workflow as Workflow;
   } catch {
     return null;
   }
