@@ -4,42 +4,42 @@ Deploy follows **official upstream docs** — see [docs/deploy/README.md](./depl
 
 ## Develop (daily) — same on Windows · macOS · Linux
 
-Pull Hub images, start the platform, and (by default) host PP-OCR + Qwen.
+Pull Hub images, start the platform, and (by default) **host NuExtract** (`repody:vlm`).
 
 | Command | When |
 |---------|------|
 | `pnpm platform setup` | **Once** — env files + pull Hub images |
-| `pnpm platform` | **Daily** — start stack + PP-OCR + Qwen |
-| `pnpm platform -- --with-nuextract` | Also start NuExtract (`:8081`) |
+| `pnpm platform doctor` | **Preflight** — Node/pnpm, Docker, Hub images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
+| `pnpm platform` | **Daily** — preflight + start stack + NuExtract on host |
+| `pnpm platform -- --with-paddle` | Also PP-OCR + Qwen (`paddleocr:qwen`) |
 | `pnpm platform -- --platform-only` | Containers only (no host models) |
 | `pnpm platform -- --with-glm` | GLM-OCR host + local extract worker with official SDK |
-| `pnpm platform -- --no-paddle` / `--no-qwen` | Skip a host model |
+| `pnpm platform -- --no-nuextract` | Skip NuExtract |
 | `pnpm platform -- --no-pull` | Skip `docker pull` |
 | `pnpm platform status` | Health probes |
 | `pnpm platform stop` | Tear down |
-| `pnpm platform doctor` | Prereqs |
 | `pnpm platform help` | Flags |
-| `pnpm models:warmup` | Re-warm PP-OCR + Qwen (+ NuExtract if configured) |
-| `pnpm doctor` | Toolchain check |
+| `pnpm models:warmup` | Re-warm configured host models |
+| `pnpm doctor` | Toolchain only (Node/pnpm) — prefer `pnpm platform doctor` |
 | `pnpm db:migrate` | Apply Alembic migrations |
 
 Aliases: `pnpm dev:all` → `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` → same CLI.
 
-Full guide: [deploy/LOCAL.md](./deploy/LOCAL.md).
+Guides: [deploy/MAC.md](./deploy/MAC.md) (Apple Silicon) · [deploy/LOCAL.md](./deploy/LOCAL.md) (all OSes) · [README.md](./README.md) (docs hub).
 
 ### Document models
 
 | Catalog id | Process | Port | Notes |
 |---|---|---|---|
-| `paddleocr:qwen` | PP-OCRv6 → Qwen JSON | `:8868` + `:8084` | **Default** with `pnpm platform` |
-| `repody:vlm` | NuExtract | `:8081` | `--with-nuextract` |
+| `repody:vlm` | NuExtract | `:8081` | **Default** with `pnpm platform` |
+| `paddleocr:qwen` | PP-OCRv6 → Qwen JSON | `:8868` + `:8084` | `--with-paddle` |
 | `glm:qwen` | GLM-OCR SDK → Qwen JSON | `:8083` + `:8084` | `--with-glm` (builds local worker with SDK) |
 
 ```bash
 pnpm install
 pnpm doctor
 pnpm platform setup
-pnpm platform -- --with-nuextract --with-glm   # all three structured paths
+pnpm platform -- --with-paddle --with-glm   # NuExtract + paddle + GLM
 pnpm platform status
 pnpm platform stop
 ```

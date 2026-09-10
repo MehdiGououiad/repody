@@ -2,6 +2,8 @@
 
 One flow everywhere: **setup (env + pull) → start**.
 
+**Apple Silicon Mac?** Prefer the dedicated walkthrough: **[MAC.md](./MAC.md)** (prereqs, env, sign-in, troubleshooting).
+
 Images: `mehdigououiad/repody-backend` + `mehdigououiad/repody-web` (`linux/amd64` + `linux/arm64`).
 
 ## New PC
@@ -18,22 +20,22 @@ cd repody
 pnpm install
 pnpm doctor
 pnpm platform setup             # env files + docker pull Hub images
-pnpm platform                   # start API/UI/workers + PP-OCR + Qwen
+pnpm platform                   # start API/UI/workers + host NuExtract
 # or one shot after install: pnpm platform bootstrap
 pnpm platform status
 ```
 
-PP-OCR Python deps **auto-install** on first OCR start.
+PP-OCR is **opt-in** (`--with-paddle`); Python deps auto-install on first OCR start if you enable it.
 
 | Layer | Source |
 |-------|--------|
 | API / UI / workers | Docker Hub |
 | Postgres / Redis / MinIO / Keycloak | Compose |
-| PP-OCRv6 `:8868` | Host (auto-install) |
-| Qwen `:8084` | Host |
-| NuExtract / GLM | Off unless flagged |
+| NuExtract `:8081` | Host (default) |
+| PP-OCRv6 `:8868` / Qwen `:8084` | Host (`--with-paddle`) |
+| GLM | Off unless `--with-glm` |
 
-**Default extraction:** `paddleocr:qwen`
+**Default extraction:** `repody:vlm` (NuExtract on host)
 
 Sign-in: http://localhost:3000 · `operator@repody.local` / `repody-dev`  
 Use **localhost**, not `127.0.0.1`.
@@ -72,10 +74,9 @@ pnpm platform help
 ## Options
 
 ```bash
-pnpm platform -- --with-nuextract
+pnpm platform -- --with-paddle
 pnpm platform -- --platform-only
-pnpm platform -- --no-paddle
-pnpm platform -- --no-qwen
+pnpm platform -- --no-nuextract
 pnpm platform -- --with-glm
 pnpm platform -- --no-pull
 pnpm platform setup -- --no-pull
@@ -83,23 +84,24 @@ pnpm platform setup -- --no-pull
 
 | Flag | Effect |
 |------|--------|
-| `--with-nuextract` | NuExtract `:8081` → `repody:vlm` (set GGUF paths in `deploy/llamacpp/paths.local.env`) |
-| `--with-glm` | GLM-OCR `:8083` + rebuild extract worker with official GlmOcr SDK (`compose.glmocr.yaml`) → `glm:qwen` / `glm:ocr` |
-| `--no-paddle` / `--no-qwen` | Skip host models (Qwen is required for `paddleocr:qwen` and `glm:qwen`) |
+| (default) | Host NuExtract `:8081` → `repody:vlm` (set GGUF paths in `deploy/llamacpp/paths.local.env`) |
+| `--with-paddle` | Also PP-OCRv6 + Qwen → `paddleocr:qwen` |
+| `--with-glm` | GLM-OCR `:8083` + rebuild extract worker with official GlmOcr SDK → `glm:qwen` / `glm:ocr` |
+| `--no-nuextract` | Skip NuExtract |
 | `--platform-only` | Containers only |
 | `--no-pull` | Skip `docker pull` (setup + up) |
 
 All three structured engines together:
 
 ```bash
-pnpm platform -- --with-nuextract --with-glm
+pnpm platform -- --with-paddle --with-glm
 ```
 
 | Catalog | Pipeline |
 |---------|----------|
+| `repody:vlm` | Official NuExtract template JSON (**default**) |
 | `paddleocr:qwen` | Official PP-OCR serving → Qwen text→JSON |
 | `glm:qwen` | Official GlmOcr SDK → Qwen text→JSON |
-| `repody:vlm` | Official NuExtract template JSON |
 
 Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option — only used inside the Qwen pipelines.
 
@@ -108,8 +110,8 @@ Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option — only used i
 | Command | Purpose |
 |---------|---------|
 | `pnpm platform setup` | Once — env + pull Hub images |
-| `pnpm platform` | Start |
-| `pnpm platform doctor` | Prereqs |
+| `pnpm platform doctor` | Preflight (llama-server, NuExtract3 GGUFs, Docker, …) |
+| `pnpm platform` | Preflight + start |
 | `pnpm platform status` | Health |
 | `pnpm platform stop` | Tear down |
 | `pnpm platform help` | Flags |
@@ -125,9 +127,11 @@ pnpm dev:app        # foreground API + UI only
 
 ## Related
 
+- **Mac walkthrough:** [MAC.md](./MAC.md)
 - Overlay: [`compose.portable.yaml`](../../compose.portable.yaml)
 - Registry: [`deploy/registry/README.md`](../../deploy/registry/README.md)
 - Helm Hub values: [`deploy/client/values-dockerhub.example.yaml`](../../deploy/client/values-dockerhub.example.yaml)
+- Docs hub: [`../README.md`](../README.md)
 
 ## Cluster install (not local daily path)
 

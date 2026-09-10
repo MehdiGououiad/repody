@@ -1,10 +1,11 @@
 # Deployment
 
-**All guides:** [docs/deploy/README.md](./docs/deploy/README.md)
+**All guides:** [docs/deploy/README.md](./docs/deploy/README.md) · **docs hub:** [docs/README.md](./docs/README.md)
 
 | Lane | Guide |
 |------|--------|
-| Local dev (Compose) | [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
+| **Mac (Apple Silicon) end to end** | [docs/deploy/MAC.md](./docs/deploy/MAC.md) |
+| Local laptop (Win / Mac / Linux) | [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
 | **OpenShift production (start-to-finish)** | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
 | Client profiles / Ingress detail | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) |
 | Vendor release | [docs/deploy/RELEASE.md](./docs/deploy/RELEASE.md) |

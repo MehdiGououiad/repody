@@ -59,7 +59,7 @@ selected model.
 One command for all three structured paths:
 
 ```bash
-pnpm platform -- --with-nuextract --with-glm
+pnpm platform -- --with-paddle --with-glm
 ```
 
 First `--with-glm` worker build downloads torch/layout wheels (official SDK).

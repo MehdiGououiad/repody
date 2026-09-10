@@ -1,96 +1,109 @@
 # Documentation
 
-Single map for all Repody docs. Start at the root guides, then drill into topic docs here.
+**One place for all Repody docs.** Pick a lane below, then drill into topic pages.
 
-## Start here
+---
 
-| Need | Doc |
-|------|-----|
-| **All commands** | [COMMANDS.md](./COMMANDS.md) |
-| Product overview and quick start | [../README.md](../README.md) |
-| Local development | [../DEV.md](../DEV.md) · [deploy/LOCAL.md](./deploy/LOCAL.md) |
-| Production deployment | [deploy/README.md](./deploy/README.md) · [../DEPLOY.md](../DEPLOY.md) |
-| **Client integration (their cluster)** | [deploy/CLIENT.md](./deploy/CLIENT.md) |
-| **Secrets + hardening** | [deploy/SECRETS.md](./deploy/SECRETS.md) |
-| **OpenShift (production install)** | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
-| Architecture context and glossary | [../CONTEXT.md](../CONTEXT.md) |
-| **Diagrammes architecture & séquences (FR, Mermaid)** | [diagrams/README.md](./diagrams/README.md) |
-| Agent / Cursor workflow | [../AGENTS.md](../AGENTS.md) |
+## I want to…
 
-## Namespaces
+| Goal | Start here |
+|------|------------|
+| **Run on a Mac (M1/M2/M3) end to end** | **[deploy/MAC.md](./deploy/MAC.md)** |
+| Run on Windows / Linux laptop | [deploy/LOCAL.md](./deploy/LOCAL.md) |
+| See every `pnpm` command | [COMMANDS.md](./COMMANDS.md) |
+| Deploy to OpenShift / Kubernetes (client prod) | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| Understand the product / architecture | [../CONTEXT.md](../CONTEXT.md) · [PLATFORM-INVENTORY.md](./PLATFORM-INVENTORY.md) |
+| Publish images (Docker Hub / GHCR) | [../deploy/registry/README.md](../deploy/registry/README.md) · [deploy/RELEASE.md](./deploy/RELEASE.md) |
 
-| Scope | Namespace | Contents |
-|-------|-----------|----------|
-| Compose dev | (none — Docker) | API :8000, UI :3000, Keycloak :8080 |
-| OpenShift / client | `repody` | API, web, workers; bundled data in same namespace |
-| Optional CNPG | `repody-data` | Managed Postgres operator manifests |
+Root shortcuts: [../README.md](../README.md) · [../DEV.md](../DEV.md) · [../DEPLOY.md](../DEPLOY.md)
 
-**kubectl examples (OpenShift / client):**
+---
+
+## Deploy (all lanes)
+
+Canonical index: **[deploy/README.md](./deploy/README.md)**
+
+| Path | Audience | Guide |
+|------|----------|-------|
+| **Mac laptop** | Apple Silicon from Hub images | [deploy/MAC.md](./deploy/MAC.md) |
+| **Local** (Win / Mac / Linux) | Daily Compose platform | [deploy/LOCAL.md](./deploy/LOCAL.md) |
+| **OpenShift / Kubernetes** | Client production | [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| Client profiles / Ingress | Integrators | [deploy/CLIENT.md](./deploy/CLIENT.md) |
+| Secrets + hardening | Integrators | [deploy/SECRETS.md](./deploy/SECRETS.md) |
+| Vendor → client handoff | Release managers | [deploy/VENDOR-TO-CLIENT.md](./deploy/VENDOR-TO-CLIENT.md) |
+| Registry (Hub / GHCR / Harbor) | Release | [../deploy/registry/README.md](../deploy/registry/README.md) |
+| Release / SBOM / cosign | Release | [deploy/RELEASE.md](./deploy/RELEASE.md) |
+| Prod observability notes | Ops | [deploy/PROD-OBSERVABILITY.md](./deploy/PROD-OBSERVABILITY.md) · [deploy/OBSERVABILITY.md](./deploy/OBSERVABILITY.md) |
+
+---
+
+## Platform & engineering
+
+| Topic | Doc |
+|-------|-----|
+| Full platform inventory | [PLATFORM-INVENTORY.md](./PLATFORM-INVENTORY.md) |
+| Platform modules / Helm shape | [PLATFORM.md](./PLATFORM.md) |
+| Backend layout | [BACKEND.md](./BACKEND.md) |
+| Extraction overview | [EXTRACTION.md](./EXTRACTION.md) |
+| External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
+| PP-OCRv6 | [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) |
+| GLM-OCR | [GLM-OCR.md](./GLM-OCR.md) |
+| Observability (logs / traces) | [OBSERVABILITY.md](./OBSERVABILITY.md) |
+| Bugsink | [BUGSINK.md](./BUGSINK.md) |
+| Testing pyramid | [TESTING.md](./TESTING.md) |
+| E2E / live tests | [E2E.md](./E2E.md) |
+| Benchmarks | [BENCHMARKING.md](./BENCHMARKING.md) |
+| Code quality checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
+| Scripts ownership | [SCRIPTS.md](./SCRIPTS.md) |
+| Pinned versions | [VERSIONS.md](./VERSIONS.md) |
+| ADRs | [adr/README.md](./adr/README.md) |
+| Diagrams (FR Mermaid) | [diagrams/README.md](./diagrams/README.md) |
+| IDP functional design | [architecture/idp-functional-agents.md](./architecture/idp-functional-agents.md) |
+| On-prem managed data | [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) |
+| Presentation notes | [PRESENTATION.md](./PRESENTATION.md) |
+
+---
+
+## Namespaces & local URLs
+
+| Scope | Namespace | Notes |
+|-------|-----------|-------|
+| Compose laptop | (Docker) | API :8000 · UI :3000 · Keycloak :8080 |
+| OpenShift / client | `repody` | API, web, workers (+ bundled data) |
+| Optional CNPG | `repody-data` | Managed Postgres operator |
 
 ```powershell
 kubectl -n repody logs -f deploy/repody-api
 kubectl -n repody logs -l app.kubernetes.io/component=worker-extract --tail=200
 ```
 
-## Local URLs
-
 | Path | URLs |
 |------|------|
-| Compose dev | API http://localhost:8000 · UI http://localhost:3000 · Keycloak http://localhost:8080 |
-| OpenShift / client | Ingress hosts from client values — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
+| Laptop Compose | http://localhost:3000 · http://localhost:8000 · http://localhost:8080 |
+| Cluster | Ingress hosts from client values — [deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md) |
 
-## Operations
+---
 
-| Topic | Doc |
-|-------|-----|
-| Deploy guides (all lanes) | [deploy/README.md](./deploy/README.md) |
-| Client production | [deploy/CLIENT.md](./deploy/CLIENT.md) |
-| Prod observability | [deploy/PROD-OBSERVABILITY.md](./deploy/PROD-OBSERVABILITY.md) |
-| On-prem managed data plane | [ONPREM-MANAGED-DATA.md](./ONPREM-MANAGED-DATA.md) |
-| Runtime env and secrets | [../deploy/ENV.md](../deploy/ENV.md) |
-| Container registry (GHCR / on-prem) | [../deploy/registry/README.md](../deploy/registry/README.md) |
-| Host llama-server helpers | [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md) |
-| External Secrets example | [../deploy/managed/external-secrets/README.md](../deploy/managed/external-secrets/README.md) |
-
-## Engineering
-
-| Topic | Doc |
-|-------|-----|
-| **Full platform inventory (features, security, libs, prod)** | [PLATFORM-INVENTORY.md](./PLATFORM-INVENTORY.md) |
-| Backend layout and API inventory | [BACKEND.md](./BACKEND.md) |
-| Code quality review checklist | [CODE-QUALITY.md](./CODE-QUALITY.md) |
-| Scripts ownership (`scripts/` · `deploy/scripts/` · `backend/scripts/`) | [SCRIPTS.md](./SCRIPTS.md) |
-| Platform modules and Helm shape | [PLATFORM.md](./PLATFORM.md) |
-| External VLM contract | [REPODY-VLM.md](./REPODY-VLM.md) |
-| PP-OCRv6 document model | [PADDLEOCR-V6.md](./PADDLEOCR-V6.md) |
-| GLM-OCR document model | [GLM-OCR.md](./GLM-OCR.md) |
-| Test pyramid (unit / integration / live) | [TESTING.md](./TESTING.md) |
-| Observability (logs, traces, Grafana) | [OBSERVABILITY.md](./OBSERVABILITY.md) |
-| Error tracking (Bugsink) | [BUGSINK.md](./BUGSINK.md) |
-| E2E and live tests | [E2E.md](./E2E.md) |
-| Benchmarks | [BENCHMARKING.md](./BENCHMARKING.md) |
-| Pinned runtime versions | [VERSIONS.md](./VERSIONS.md) |
-| Architecture decisions | [adr/README.md](./adr/README.md) |
-| IDP functional design (3 agents) | [architecture/idp-functional-agents.md](./architecture/idp-functional-agents.md) |
-
-## Deploy directory
-
-Implementation files live under [../deploy/](../deploy/). Read [../deploy/README.md](../deploy/README.md) for the layout.
+## Repo layout (implementation)
 
 | Path | Purpose |
 |------|---------|
-| `helm/repody/` | Application chart (API, web, Taskiq workers) |
-| `helm/repody/values-common.yaml` | **Shared values layer** (local + production) |
-| `helm/repody-data/` | Bundled data plane (Postgres, Redis, MinIO) |
-| `helm/repody-auth/` | Optional Keycloak |
-| `client/` | **Client integration kit** (values, secrets, Argo CD app) |
-| `scripts/` | build, registry, Helm, OpenShift promote, smoke helpers |
-| `managed/` | Optional production data-plane manifests |
+| [`deploy/`](../deploy/) | Helm, client kit, registry, scripts — [../deploy/README.md](../deploy/README.md) |
+| `deploy/helm/repody/` | App chart (API, web, workers) |
+| `deploy/helm/repody-data/` | Bundled Postgres / Redis / MinIO |
+| `deploy/helm/repody-auth/` | Optional Keycloak |
+| `deploy/client/` | Client values, secrets, Argo examples |
+| `deploy/scripts/` | Platform, images, checks |
+| `compose.portable.yaml` | Hub-image Compose overlay for `pnpm platform` |
+
+Runtime env keys: [../deploy/ENV.md](../deploy/ENV.md) · host llama helpers: [../deploy/llamacpp/README.md](../deploy/llamacpp/README.md)
+
+---
 
 ## Conventions
 
-- **How-to guides** live at the repo root: `README.md`, `DEV.md`, `DEPLOY.md`, `CONTEXT.md`.
-- **Topic references** live in `docs/`.
-- **Deploy implementation** lives in `deploy/` with short READMEs per subdirectory.
-- **Decisions** are recorded in `docs/adr/` and summarized in `CONTEXT.md`.
-- Do not write platform logs to workspace files - use `kubectl` or Grafana ([OBSERVABILITY.md](./OBSERVABILITY.md)).
+- **How-to** at repo root: `README.md`, `DEV.md`, `DEPLOY.md`, `CONTEXT.md`.
+- **Topic references** in `docs/` (this tree).
+- **Deploy how-tos** in `docs/deploy/`; **manifests/scripts** in `deploy/`.
+- **Decisions** in `docs/adr/`, summarized in `CONTEXT.md`.
+- Do not write platform logs into the workspace — use `kubectl`, Compose logs, or Grafana ([OBSERVABILITY.md](./OBSERVABILITY.md)).
