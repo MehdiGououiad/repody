@@ -1,75 +1,82 @@
-%% Architecture OpenShift / production Repody
-%% Éditable : Mermaid flowchart
-%% Doc : docs/PLATFORM.md · docs/deploy/CLIENT.md · docs/deploy/OPENSHIFT.md · ADR 004 / 005
+%% Repody — Production architecture (Kubernetes / OpenShift)
+%% Same portable path everywhere: Ingress only — no chart Route CRs
+%% Docs: docs/CLUSTER.md · CONTEXT.md · ADR 004 / 005
 
 flowchart TB
-  subgraph Ext["Hors cluster / géré par le client"]
-    User["Utilisateurs métier"]
-    IdP["Fournisseur OIDC<br/>Keycloak ou IdP client"]
-    Inf["Inférence VLM externe<br/>OpenAI-compatible<br/>AUDIT_LLAMACPP_BASE_URL<br/>NuExtract / endpoint client"]
-    Vault["Vault + External Secrets<br/>Operator"]
-    Reg["Registre images<br/>GHCR / Harbor client"]
-    GitOps["Dépôt GitOps<br/>valeurs Helm"]
-    Argo["Argo CD<br/>optionnel"]
+  %% ── Outside the cluster ────────────────────────────────
+  subgraph Outside["Outside cluster — client / vendor owned"]
+    Users["Business users<br/>browsers"]
+    IdP["OIDC IdP<br/>Keycloak or client IdP<br/>public issuer URL"]
+    VLM["External inference<br/>OpenAI-compatible VLM<br/>NuExtract / vLLM / managed<br/>AUDIT_LLAMACPP_BASE_URL<br/>NOT in Repody chart"]
+    Vault["HashiCorp Vault<br/>+ External Secrets Operator"]
+    Registry["Image registry<br/>GHCR · Harbor · Docker Hub<br/>repody-backend · repody-web"]
+    GitOps["Private GitOps repo<br/>client values + enterprise overlay"]
+    Argo["Argo CD — optional<br/>sync Helm release"]
   end
 
-  subgraph Cluster["Cluster OpenShift / Kubernetes<br/>namespace repody PSA restricted"]
-    subgraph Edge["Edge"]
-      Ing["Ingress networking.k8s.io<br/>+ overlay OpenShift Routes<br/>TLS edge"]
+  %% ── Cluster ────────────────────────────────────────────
+  subgraph Cluster["Kubernetes / OpenShift cluster<br/>namespace repody · PSA restricted / restricted-v2"]
+    direction TB
+
+    subgraph Edge["Edge — portable"]
+      Ing["networking.k8s.io/Ingress<br/>hosts: web · api · files<br/>TLS via Secret when ready<br/>no OpenShift Route CRs in chart"]
     end
 
-    subgraph App["Chart Helm repody"]
-      Web["Deployment repody-web<br/>Next.js edge"]
-      Ctrl["Deployment repody-api<br/>module control"]
-      WX["Deployment repody-worker-extract<br/>module workers"]
-      WF["Deployment repody-worker-fast<br/>module workers"]
+    subgraph App["Helm chart: deploy/helm/repody"]
+      Web["Deployment repody-web<br/>module edge · Next.js"]
+      API["Deployment repody-api<br/>module control · FastAPI"]
+      WX["Deployment repody-worker-extract<br/>module workers · pool extract"]
+      WF["Deployment repody-worker-fast<br/>module workers · pool fast"]
     end
 
-    subgraph DataPlane["Plan de données"]
-      direction TB
-      Bundled["Profil bundled :<br/>chart repody-data<br/>Postgres + Redis + MinIO"]
-      External["Profil external :<br/>Postgres / Redis / S3<br/>gérés hors chart"]
+    subgraph DataChoice["Data plane — pick one profile"]
+      Bundled["Bundled profile<br/>Helm chart repody-data<br/>Postgres + Redis + MinIO<br/>in-cluster"]
+      External["External profile<br/>managed Postgres / Redis / S3<br/>outside Repody charts"]
     end
 
-    subgraph AuthOpt["Auth optionnelle lab"]
-      KCLab["Chart repody-auth<br/>Keycloak lab CRC"]
-    end
-
-    Secrets["Secret repody-runtime-secrets<br/>injecté par ESO"]
+    AuthLab["Optional lab only<br/>Helm chart repody-auth<br/>Keycloak — not for prod IdP"]
+    Secrets["Secret: repody-runtime-secrets<br/>+ registry-pull-secret<br/>materialized by ESO"]
   end
 
-  User --> Ing
+  %% ── Values merge (vendor packaging) ────────────────────
+  Values["Helm values merge<br/>values.yaml → values-common.yaml<br/>→ client values.yaml<br/>→ enterprise.yaml"]
+
+  %% ── Traffic & dependencies ─────────────────────────────
+  Users --> Ing
+  Users -->|"login"| IdP
   Ing --> Web
-  Ing --> Ctrl
-  Web -->|"API /v1 + JWT"| Ctrl
-  User --> IdP
-  Web -->|"OIDC"| IdP
-  Ctrl -->|"JWKS / validation JWT"| IdP
+  Ing --> API
+  Web -->|"OIDC Auth.js"| IdP
+  Web -->|"/api/v1 + Bearer JWT"| API
+  API -->|"JWKS / JWT validate"| IdP
 
-  Ctrl --> DataPlane
-  WX --> DataPlane
-  WF --> DataPlane
-  Ctrl -->|"Redis Streams Taskiq"| DataPlane
-  DataPlane --> Bundled
-  DataPlane --> External
+  API --> DataChoice
+  WX --> DataChoice
+  WF --> DataChoice
+  API -->|"Redis Streams Taskiq<br/>outbox → extract | fast"| DataChoice
 
-  WX -->|"chat completions"| Inf
-  WF -.->|"règles LLM optionnelles"| Inf
+  WX -->|"chat.completions<br/>document models"| VLM
+  WF -.->|"optional LLM rules"| VLM
 
-  Vault --> Secrets
-  Secrets --> Ctrl
+  Vault -->|"ExternalSecret"| Secrets
+  Secrets --> Web
+  Secrets --> API
   Secrets --> WX
   Secrets --> WF
-  Secrets --> Web
 
-  Reg -->|"pull images<br/>repody-backend / repody-web"| App
+  Registry -->|"imagePull"| App
   GitOps --> Argo
-  Argo -->|"sync Helm"| App
-  KCLab -.-> IdP
+  Argo -->|"helm upgrade --install"| App
+  Values -.-> App
+  AuthLab -.->|"lab issuer only"| IdP
 
-  classDef ext fill:#fce8e8,stroke:#8a3a3a
-  classDef app fill:#e8f4fc,stroke:#1a5f8a
-  classDef data fill:#f5f0e6,stroke:#8a6d3b
-  class User,IdP,Inf,Vault,Reg,GitOps,Argo ext
-  class Web,Ctrl,WX,WF,Ing app
-  class Bundled,External,Secrets data
+  classDef outside fill:#fce8e8,stroke:#8a3a3a,color:#111
+  classDef edge fill:#fff8e7,stroke:#b08900,color:#111
+  classDef app fill:#e8f4fc,stroke:#1a5f8a,color:#111
+  classDef data fill:#f5f0e6,stroke:#8a6d3b,color:#111
+  classDef sec fill:#f5e6f0,stroke:#6b3d5a,color:#111
+  class Users,IdP,VLM,Vault,Registry,GitOps,Argo outside
+  class Ing edge
+  class Web,API,WX,WF app
+  class Bundled,External data
+  class Secrets,AuthLab,Values sec

@@ -2,7 +2,7 @@
 
 **Status:** Accepted  
 **Date:** 2026-07-15  
-**Context:** [CONTEXT.md](../../CONTEXT.md) · Design detail: [architecture/idp-functional-agents.md](../architecture/idp-functional-agents.md)
+**Context:** [CONTEXT.md](../../CONTEXT.md) · Queues: [ADR 007](./007-staged-agent-queues-taskiq.md)
 
 ## Context
 
@@ -72,4 +72,4 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 - [Taskiq ADR](./001-taskiq-async-runs.md) — async runs stay platform/queue
 - [Clean Architecture skill](../../.agents/skills/clean-architecture/SKILL.md) — dependency rule
 - PEP 544 Protocols / callables for ports (not inheritance trees)
-- As-built layout: [idp-functional-agents.md](../architecture/idp-functional-agents.md) · Run lifecycle: `app/run/lifecycle.py` · Recipe: `runtime/recipe.py` · Staged queues: [ADR 007](./007-staged-agent-queues-taskiq.md)
+- As-built layout: `agents/idp/` · Run lifecycle: `app/run/lifecycle.py` · Recipe: `runtime/recipe.py` · Staged queues: [ADR 007](./007-staged-agent-queues-taskiq.md) · Map: [CONTEXT.md](../../CONTEXT.md)

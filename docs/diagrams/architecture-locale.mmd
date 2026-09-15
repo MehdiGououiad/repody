@@ -1,70 +1,97 @@
-%% Architecture locale Repody — Docker Compose + processus hôte
-%% Éditable : Mermaid flowchart
-%% Doc : docs/deploy/LOCAL.md · CONTEXT.md
+%% Repody — Local development architecture
+%% Default path: Hub images in Docker Compose + host NuExtract (llama-server)
+%% Docs: docs/LOCAL.md · CONTEXT.md
+%% Commands: pnpm platform  |  Mac no-source: ./bin/repody start
 
 flowchart TB
-  subgraph Utilisateur["Utilisateur développeur"]
-    Dev["Navigateur"]
+  %% ── Actors ──────────────────────────────────────────────
+  Browser["Browser<br/>http://localhost:3000<br/>use localhost not 127.0.0.1"]
+
+  %% ── Host machine ───────────────────────────────────────
+  subgraph Host["Host machine — Windows · macOS · Linux"]
+    direction TB
+
+    subgraph HostInf["Inference on host metal — NOT in Docker"]
+      Llama["llama-server :8081<br/>NuExtract3 GGUF + mmproj<br/>catalog: repody:vlm  ★ default"]
+      OptPaddle["optional --with-paddle<br/>PP-OCRv6 :8868 → Qwen :8084<br/>paddleocr:qwen"]
+      OptGlm["optional --with-glm<br/>GLM-OCR :8083<br/>glm:qwen"]
+    end
+
+    subgraph Docker["Docker Desktop — Compose project repody"]
+      direction TB
+
+      subgraph Edge["App images — pulled from Docker Hub<br/>mehdigououiad/repody-web · repody-backend"]
+        Web["repody-web :3000<br/>Next.js + Auth.js<br/>proxies /api/v1 → api:8000"]
+        API["repody-api :8000<br/>FastAPI · migrations · seed<br/>OIDC JWT validation"]
+        WX["worker-extract<br/>Taskiq pool extract<br/>PDF / VLM / rules"]
+        WF["worker-fast<br/>Taskiq pool fast<br/>logic-only runs"]
+      end
+
+      subgraph Data["Data plane — public images"]
+        PG[("PostgreSQL :5432<br/>workflows · runs · outbox")]
+        Redis[("Redis :6379<br/>Taskiq Streams · SSE · cache")]
+        MinIO[("MinIO :9000<br/>audit-documents bucket")]
+      end
+
+      subgraph Auth["Auth — Compose"]
+        KC["Keycloak :8080<br/>realm repody<br/>operator@repody.local"]
+      end
+
+      subgraph Obs["Observability — optional profile<br/>pnpm platform default on; --no-obs to skip"]
+        Graf["Grafana :3030"]
+        Loki["Loki"]
+        Tempo["Tempo"]
+        OTEL["OTLP collector :4318"]
+        Bug["Bugsink :8090"]
+      end
+    end
   end
 
-  subgraph Hote["Machine hôte (Windows / Linux)"]
-    UI["Next.js UI<br/>:3000<br/>pnpm ui / dev:app"]
-    API["FastAPI / Uvicorn<br/>:8000<br/>pnpm dev:api"]
-    Llama["llama-server<br/>NuExtract3-Q4_K_M<br/>:8081<br/>pnpm llamacpp:serve"]
-  end
+  %% ── Delivery variants (same runtime shape) ─────────────
+  Pack["Same runtime shape:<br/>git + pnpm platform<br/>or Mac zip ./bin/repody<br/>no app source required"]
 
-  subgraph Compose["Docker Compose"]
-    subgraph Data["Plan de données"]
-      PG[("PostgreSQL<br/>:5432<br/>repody")]
-      Redis[("Redis<br/>:6379<br/>Taskiq + SSE + cache")]
-      MinIO[("MinIO S3<br/>:9000<br/>bucket audit-documents")]
-    end
+  %% ── Traffic ────────────────────────────────────────────
+  Browser -->|"OIDC login"| KC
+  Browser -->|"UI"| Web
+  Pack -.-> Web
+  Web -->|"Bearer JWT /api/v1/*"| API
+  API -->|"JWKS"| KC
 
-    subgraph Auth["Authentification"]
-      KC["Keycloak<br/>:8080<br/>realm repody"]
-    end
-
-    subgraph Workers["Plan workers Taskiq"]
-      WX["worker-extract<br/>pool extract<br/>VLM / PDF"]
-      WF["worker-fast<br/>pool fast<br/>logic-only"]
-    end
-
-    subgraph Obs["Observabilité optionnelle"]
-      Graf["Grafana :3030"]
-      Loki["Loki :3100"]
-      Tempo["Tempo :3200"]
-      OTEL["OTLP collector :4318"]
-      Bug["Bugsink :8090"]
-    end
-  end
-
-  Dev --> UI
-  Dev --> KC
-  UI -->|"/api/v1/* + Bearer JWT"| API
-  UI -->|"OIDC Auth.js"| KC
   API --> PG
   API --> Redis
   API --> MinIO
-  API -->|"enqueue Redis Streams<br/>repody:audit:extract|fast"| Redis
+  API -->|"enqueue after outbox commit<br/>repody:audit:extract | fast"| Redis
+
   Redis --> WX
   Redis --> WF
   WX --> PG
   WX --> Redis
   WX --> MinIO
-  WX -->|"host.docker.internal:8081<br/>OpenAI /v1/chat/completions"| Llama
   WF --> PG
   WF --> Redis
-  API -.->|"JWT JWKS"| KC
+
+  WX -->|"host.docker.internal:8081<br/>OpenAI /v1/chat/completions"| Llama
+  WX -.->|"optional"| OptPaddle
+  WX -.->|"optional"| OptGlm
+
   API -.-> OTEL
   WX -.-> OTEL
   OTEL --> Tempo
   OTEL --> Loki
   Graf --> Loki
   Graf --> Tempo
+  API -.-> Bug
 
-  classDef host fill:#e8f4fc,stroke:#1a5f8a
-  classDef data fill:#f5f0e6,stroke:#8a6d3b
-  classDef work fill:#eef6e8,stroke:#3d6b2f
-  class UI,API,Llama host
+  classDef browser fill:#fff8e7,stroke:#b08900,color:#111
+  classDef hostInf fill:#e8f4fc,stroke:#1a5f8a,color:#111
+  classDef app fill:#eef6e8,stroke:#3d6b2f,color:#111
+  classDef data fill:#f5f0e6,stroke:#8a6d3b,color:#111
+  classDef auth fill:#f5e6f0,stroke:#6b3d5a,color:#111
+  classDef obs fill:#f0f0f0,stroke:#666,color:#111
+  class Browser browser
+  class Llama,OptPaddle,OptGlm hostInf
+  class Web,API,WX,WF app
   class PG,Redis,MinIO data
-  class WX,WF work
+  class KC auth
+  class Graf,Loki,Tempo,OTEL,Bug obs
+  class Pack browser

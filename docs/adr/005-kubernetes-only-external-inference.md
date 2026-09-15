@@ -11,7 +11,7 @@ the Repody release as **vLLM** or **llama-server**.
 
 ## Decision
 
-- **Kubernetes with Helm** for production (client OpenShift or generic K8s). Daily dev: Docker Compose. Install guide: [docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md).
+- **Kubernetes with Helm** for production (client OpenShift or generic K8s). Daily dev: Docker Compose. Install guide: [docs/CLUSTER.md](../CLUSTER.md).
 - The Repody Helm chart does **not** deploy inference.
 - `config.inferenceMode: llamacpp` and `config.llamacppBaseUrl` point workers at the external endpoint.
 - Inference credentials live in Kubernetes Secret key `AUDIT_LLAMACPP_API_KEY`.
@@ -26,5 +26,5 @@ the Repody release as **vLLM** or **llama-server**.
 ## References
 
 - [DEV.md](../../DEV.md)
-- [docs/REPODY-VLM.md](../REPODY-VLM.md)
-- [docs/deploy/CLIENT.md](../deploy/CLIENT.md)
+- [docs/EXTRACTION.md](../EXTRACTION.md)
+- [docs/CLUSTER.md](../CLUSTER.md)

@@ -127,7 +127,7 @@ if (apiLive) {
   console.error(`ok: API live probe: ${apiLive}\n`);
 } else {
   console.error(
-    "warn: API not reachable — start Compose dev (docs/deploy/LOCAL.md) or K8s stack\n"
+    "warn: API not reachable — start Compose (docs/LOCAL.md) or K8s stack\n"
   );
 }
 
@@ -140,7 +140,7 @@ if (live && apiLive) {
 console.error(`
 Client integration preflight passed.
 
-Client guide: docs/deploy/CLIENT.md
+Client guide: docs/CLUSTER.md
 
 Next steps for the client:
   1. Copy deploy/client/values-external.example.yaml (or values-bundled.example.yaml) -> private GitOps repo (values.yaml)

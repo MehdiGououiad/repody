@@ -10,6 +10,6 @@
 | [006](./006-three-agent-functional-idp.md) | Three-agent platform + functional IDP slice |
 | [007](./007-staged-agent-queues-taskiq.md) | Staged agent queues on Taskiq (independent scale) |
 
-Design narrative: [architecture/idp-functional-agents.md](../architecture/idp-functional-agents.md).
+IDP design: [ADR 006](./006-three-agent-functional-idp.md) · queues: [ADR 007](./007-staged-agent-queues-taskiq.md).
 
 Start with [CONTEXT.md](../../CONTEXT.md) and the [documentation map](../README.md).

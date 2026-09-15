@@ -19,9 +19,9 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 | `traces` | Tempo, OTEL | Traces (local addons) |
 | `bugsink` | Bugsink | Error tracking (local addons) |
 
-**Module catalog:** Helm charts under `deploy/helm/` (see [docs/PLATFORM.md](../PLATFORM.md)).
+**Module catalog:** Helm charts under `deploy/helm/` (see [CONTEXT.md](../../CONTEXT.md#deploy-modules)).
 
-**Local dev:** Docker Compose for fast iteration. Production cluster: Helm on OpenShift / K8s ([docs/deploy/OPENSHIFT.md](../deploy/OPENSHIFT.md)).
+**Local dev:** Docker Compose for fast iteration. Production cluster: Helm on OpenShift / K8s ([docs/CLUSTER.md](../CLUSTER.md)).
 
 **Recipes:** `pnpm platform` · `pnpm dev:api` · `pnpm ui` · `pnpm platform stop`
 
@@ -35,6 +35,6 @@ Production entrypoint: Helm (`deploy/helm/repody`).
 
 ## References
 
-- [docs/PLATFORM.md](../PLATFORM.md)
+- [CONTEXT.md](../../CONTEXT.md)
 - [docs/adr/004-cloud-kubernetes-packaging.md](./004-cloud-kubernetes-packaging.md)
 - [docs/adr/005-kubernetes-only-external-inference.md](./005-kubernetes-only-external-inference.md)

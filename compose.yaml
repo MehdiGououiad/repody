@@ -1,7 +1,7 @@
 # Local/dev data plane (see deploy/pinned-images.env)
 # MinIO: pgsty community fork — upstream minio/minio no longer publishes images.
 # Redis/Postgres: official Docker Library pins.
-# Docs: docs/deploy/LOCAL.md
+# Docs: docs/LOCAL.md
 #
 #   docker compose up -d
 #   pnpm db:migrate

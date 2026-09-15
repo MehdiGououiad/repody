@@ -1,11 +1,14 @@
 # Client deployment kit
 
-YAML templates and ExternalSecret examples for **client production** clusters.
+| Delivery | Audience | Path |
+|----------|----------|------|
+| **Mac runtime zip** (no source) | Laptop demos / evaluation | [`mac-runtime/`](./mac-runtime/) · `pnpm client:pack:mac` |
+| **Helm / GitOps** | OpenShift / Kubernetes production | values below · [docs/CLUSTER.md](../../docs/CLUSTER.md) |
 
-**Start-to-finish OpenShift:** [docs/deploy/OPENSHIFT.md](../../docs/deploy/OPENSHIFT.md)  
-Profiles / Ingress detail: [docs/deploy/CLIENT.md](../../docs/deploy/CLIENT.md)  
-Vendor → client images: [docs/deploy/VENDOR-TO-CLIENT.md](../../docs/deploy/VENDOR-TO-CLIENT.md)
-## Choose a profile
+**Start-to-finish cluster:** [docs/CLUSTER.md](../../docs/CLUSTER.md)  
+**Mac without git:** [docs/LOCAL.md — Mac runtime](../../docs/LOCAL.md#mac-runtime-no-source)
+
+## Choose a profile (Kubernetes)
 
 | Profile | When | Start here |
 |---------|------|------------|
@@ -16,7 +19,7 @@ Both profiles merge `values-enterprise.example.yaml` for production hardening.
 On OpenShift no extra overlay is needed: the chart leaves `networkPolicy.enabled` false by default, so the cluster keeps ownership of networking.
 
 **Harbor images:** merge `values-harbor.example.yaml` (or copy its `images` / `imagePullSecrets` into GitOps values).
-See [OPENSHIFT.md — Harbor registry](../../docs/deploy/OPENSHIFT.md#harbor-registry).
+See [CLUSTER.md — Harbor registry](../../docs/CLUSTER.md#harbor-registry).
 
 ## Image registry
 
@@ -61,7 +64,7 @@ deploy/client/
 
 ## Helm install order (bundled)
 
-1. Namespace + secrets ([SECRETS.md](../../docs/deploy/SECRETS.md))
+1. Namespace + secrets ([CLUSTER.md](../../docs/CLUSTER.md#secrets-and-hardening))
 2. `helm upgrade --install repody-data …`
 3. Optional `repody-auth` (in-cluster Keycloak)
 4. `helm upgrade --install repody …`

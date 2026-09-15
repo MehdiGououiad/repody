@@ -218,7 +218,7 @@ ${args.has("--with-ui") ? "- Playwright HTML: `e2e/report/`\n" : ""}
 | UI E2E | \`e2e/tests/\` | \`pnpm test:e2e\` |
 | Full report | — | \`pnpm test:platform:report\` |
 
-See [docs/TESTING.md](../../docs/TESTING.md).
+See [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md#testing).
 `;
 
 const reportPath = join(reportsDir, "REPORT.md");

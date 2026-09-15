@@ -5,7 +5,7 @@
 #
 # Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64).
 # Inference stays on the host (llama-server for Qwen; PP-OCRv6 via uv).
-# See docs/deploy/LOCAL.md
+# See docs/LOCAL.md
 
 name: repody
 

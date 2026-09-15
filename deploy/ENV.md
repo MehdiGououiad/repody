@@ -4,7 +4,7 @@ Single reference for secrets and `AUDIT_*` configuration.
 
 Daily local values are copied from `deploy/env/compose.env.example` into
 `backend/.env`, with Auth.js values in `.env.local` from `deploy/env.auth.example`.
-Kubernetes values are supplied through Helm values and Kubernetes Secrets (see [docs/deploy/SECRETS.md](../docs/deploy/SECRETS.md)).
+Kubernetes values are supplied through Helm values and Kubernetes Secrets (see [docs/CLUSTER.md](../docs/CLUSTER.md#secrets-and-hardening)).
 
 ## Production Secret
 
@@ -70,7 +70,7 @@ Store the API key in secrets only — never commit it.
 Model HTTP timeouts must stay ≤ `AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60` (ceiling 15 min).
 Compose extract defaults: worker **10** min, model timeouts **600** s, stale **12** min.
 
-Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm dev:all`). See [docs/PADDLEOCR-V6.md](../docs/PADDLEOCR-V6.md), [docs/GLM-OCR.md](../docs/GLM-OCR.md), and [docs/EXTRACTION.md](../docs/EXTRACTION.md).
+Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm platform -- --with-paddle` / `--with-glm`). See [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
 ## Platform agents
 

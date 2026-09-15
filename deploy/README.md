@@ -1,15 +1,14 @@
 # Deploy assets
 
-Helm charts, client YAML kit, and scripts. **Documentation:** [docs/deploy/README.md](../docs/deploy/README.md)
+Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](../docs/LOCAL.md) (laptop) · [docs/CLUSTER.md](../docs/CLUSTER.md) (cluster).
 
 ## Quick links
 
 | Goal | Guide | Command |
 |------|-------|---------|
-| Local dev | [LOCAL.md](../docs/deploy/LOCAL.md) | `pnpm platform` |
-| Push images to registry | [VENDOR-TO-CLIENT.md](../docs/deploy/VENDOR-TO-CLIENT.md) | `pnpm images:release` |
-| OpenShift / client install | [OPENSHIFT.md](../docs/deploy/OPENSHIFT.md) | Helm / Argo CD |
-| Profiles & Ingress detail | [CLIENT.md](../docs/deploy/CLIENT.md) | — |
+| Local laptop | [LOCAL.md](../docs/LOCAL.md) | `pnpm platform` |
+| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#vendor-client-handoff) | `pnpm images:release` |
+| OpenShift / client install | [CLUSTER.md](../docs/CLUSTER.md) | Helm / Argo CD |
 
 ## Layout
 

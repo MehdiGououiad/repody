@@ -106,7 +106,7 @@ Structured paths:
 Images: mehdigououiad/repody-backend:0.1.0 · mehdigouiad/repody-web:0.1.0
   (--with-glm builds local worker image repody-backend:local-glmocr)
 
-Guide: docs/deploy/LOCAL.md · Mac: docs/deploy/MAC.md
+Guide: docs/LOCAL.md
 `);
 }
 

@@ -88,4 +88,4 @@ worker and handoff step at that time, against real requirements.
 - `runtime/recipe.py` — stage execution
 - `app/run/processor.py` — claim, execute, and resume an already-recorded stage
 - `taskiq/broker.py` — producers for the IDP pools (`extract` / `fast`)
-- [docs/architecture/idp-functional-agents.md](../architecture/idp-functional-agents.md)
+- [ADR 006](./006-three-agent-functional-idp.md) · [CONTEXT.md](../../CONTEXT.md)

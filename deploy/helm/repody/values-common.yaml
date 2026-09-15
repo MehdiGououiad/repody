@@ -5,7 +5,7 @@
 #
 # Profiles (global.deploymentProfile):
 #   external  — client-managed Postgres, Redis, S3 (default)
-#   bundled   — in-cluster data chart (see docs/deploy/CLIENT.md)
+#   bundled   — in-cluster data chart (see docs/CLUSTER.md)
 
 global:
   deploymentProfile: external

@@ -1,6 +1,6 @@
 # E2E sample documents
 
-Place test files here. See [docs/E2E.md](../../../docs/E2E.md).
+Place test files here. Platform tests: [docs/DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing) · commands: [docs/COMMANDS.md](../../../docs/COMMANDS.md).
 
 ## Hard OCR / extraction fixtures
 
@@ -13,6 +13,6 @@ Place test files here. See [docs/E2E.md](../../../docs/E2E.md).
 
 ## Prerequisites
 
-**Compose (default):** `pnpm dev:all`, then `pnpm test:platform`.
+**Compose (default):** `pnpm platform`, then `pnpm test:platform` (use `E2E_WEB_URL=http://localhost:3000`).
 
-**Deployed cluster:** [docs/deploy/OPENSHIFT.md](../../../docs/deploy/OPENSHIFT.md), then `pnpm test:platform` with Ingress URLs from [E2E.md](../../../docs/E2E.md).
+**Deployed cluster:** [docs/CLUSTER.md](../../../docs/CLUSTER.md), then `pnpm test:platform` with Ingress URLs (see [DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing)).

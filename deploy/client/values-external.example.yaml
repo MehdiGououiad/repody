@@ -2,7 +2,7 @@
 # Copy to GitOps repo as values.yaml; merge with deploy/helm/repody/values-common.yaml on install.
 # Registry: CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody (host + project)
 # Images resolve to: {CHANGE_ME_REGISTRY}/repody-backend and .../repody-web
-# Full flow: docs/deploy/VENDOR-TO-CLIENT.md
+# Full flow: docs/CLUSTER.md#vendor-client-handoff
 
 global:
   deploymentEnvironment: production

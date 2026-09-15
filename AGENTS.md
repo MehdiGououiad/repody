@@ -4,13 +4,13 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-## Commands
+## Docs
 
-[docs/COMMANDS.md](./docs/COMMANDS.md) — **develop** (Compose), **OpenShift client**, **release** (GHCR push).
+**Hub:** [docs/README.md](./docs/README.md) · **Commands:** [docs/COMMANDS.md](./docs/COMMANDS.md)
 
-Daily: `pnpm platform` (same on Windows/Mac) · once: `pnpm platform setup` · `pnpm platform stop` · contributors: `pnpm dev:src:all`
+Daily: `pnpm platform` · once: `pnpm platform setup` · stop: `pnpm platform stop` · contributors: `pnpm dev:src:all`
 
-Deploy guides: [docs/deploy/README.md](./docs/deploy/README.md)
+Guides: [docs/LOCAL.md](./docs/LOCAL.md) · [docs/CLUSTER.md](./docs/CLUSTER.md) · architecture: [CONTEXT.md](./CONTEXT.md)
 
 ## Platform logs (OpenShift / client cluster)
 

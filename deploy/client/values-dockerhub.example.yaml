@@ -3,7 +3,7 @@
 #
 # Production: use an immutable tag from the vendor release — never latest.
 # Platform only: API / web / workers. Inference stays external
-# (docs/REPODY-VLM.md, docs/PADDLEOCR-V6.md).
+# (docs/EXTRACTION.md).
 
 images:
   backend:

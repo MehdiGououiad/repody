@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Repody — Architecture (composants principaux)
+  Open: https://demo.bpmn.io
+-->
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+             id="Definitions_Architecture"
+             name="Repody Architecture"
+             targetNamespace="https://repody.local/bpmn/architecture"
+             exporter="repody"
+             exporterVersion="0.1.0">
+
+  <collaboration id="Collab_Arch" name="Repody — Architecture">
+
+    <participant id="P_User" name="User" processRef="Proc_User"/>
+    <participant id="P_Frontend" name="Frontend — Next.js (repody-web)" processRef="Proc_Frontend"/>
+    <participant id="P_API" name="API — FastAPI (repody-api)" processRef="Proc_API"/>
+    <participant id="P_Auth" name="Auth — Keycloak OIDC + Casbin roles" processRef="Proc_Auth"/>
+    <participant id="P_Taskiq" name="Background jobs — Taskiq workers" processRef="Proc_Taskiq"/>
+    <participant id="P_SSE" name="Live updates — Redis + SSE streams" processRef="Proc_SSE"/>
+    <participant id="P_Postgres" name="Database — PostgreSQL" processRef="Proc_Postgres"/>
+    <participant id="P_Minio" name="File storage — MinIO / S3" processRef="Proc_Minio"/>
+    <participant id="P_Inference" name="Inference — NuExtract / VLM (external)" processRef="Proc_Inference"/>
+
+    <!-- Interfaces -->
+    <messageFlow id="MF1" name="Open UI" sourceRef="T_User_Open" targetRef="T_FE_Pages"/>
+    <messageFlow id="MF2" name="Login" sourceRef="T_FE_Login" targetRef="T_Auth_OIDC"/>
+    <messageFlow id="MF3" name="API + JWT" sourceRef="T_FE_Proxy" targetRef="T_API_Receive"/>
+    <messageFlow id="MF4" name="Check roles" sourceRef="T_API_Receive" targetRef="T_Auth_Casbin"/>
+    <messageFlow id="MF5" name="Validate JWT" sourceRef="T_API_Receive" targetRef="T_Auth_JWKS"/>
+    <messageFlow id="MF6" name="Save data" sourceRef="T_API_Business" targetRef="T_PG_Store"/>
+    <messageFlow id="MF7" name="Upload files" sourceRef="T_API_Business" targetRef="T_Minio_Store"/>
+    <messageFlow id="MF8" name="Enqueue job" sourceRef="T_API_Enqueue" targetRef="T_SSE_Broker"/>
+    <messageFlow id="MF9" name="Consume job" sourceRef="T_SSE_Broker" targetRef="T_TQ_Claim"/>
+    <messageFlow id="MF10" name="Read / write run" sourceRef="T_TQ_Work" targetRef="T_PG_Store"/>
+    <messageFlow id="MF11" name="Get file" sourceRef="T_TQ_Work" targetRef="T_Minio_Store"/>
+    <messageFlow id="MF12" name="Extract fields" sourceRef="T_TQ_Extract" targetRef="T_Inf_Run"/>
+    <messageFlow id="MF13" name="Publish progress" sourceRef="T_TQ_Work" targetRef="T_SSE_Publish"/>
+    <messageFlow id="MF14" name="SSE to UI" sourceRef="T_SSE_Publish" targetRef="T_API_SSE"/>
+    <messageFlow id="MF15" name="Stream to browser" sourceRef="T_API_SSE" targetRef="T_FE_Proxy"/>
+
+    <textAnnotation id="Ann_Help">
+      <text>How to read
+• Each band = one main component
+• Dashed arrows = calls between components
+• Local: Docker Hub images + llama-server on the Mac/PC
+• Prod: Kubernetes/OpenShift + external VLM URL
+• Default AI model: repody:vlm (NuExtract)</text>
+    </textAnnotation>
+    <association id="Assoc_Help" sourceRef="P_User" targetRef="Ann_Help"/>
+  </collaboration>
+
+  <!-- USER -->
+  <process id="Proc_User" isExecutable="false">
+    <startEvent id="S_User" name="Start"/>
+    <sequenceFlow id="U1" sourceRef="S_User" targetRef="T_User_Open"/>
+    <task id="T_User_Open" name="Open Repody"/>
+    <sequenceFlow id="U2" sourceRef="T_User_Open" targetRef="T_User_Audit"/>
+    <task id="T_User_Audit" name="Run an audit"/>
+    <sequenceFlow id="U3" sourceRef="T_User_Audit" targetRef="E_User"/>
+    <endEvent id="E_User" name="Done"/>
+  </process>
+
+  <!-- FRONTEND -->
+  <process id="Proc_Frontend" isExecutable="false">
+    <startEvent id="S_FE" name="Browser"/>
+    <sequenceFlow id="F1" sourceRef="S_FE" targetRef="T_FE_Pages"/>
+    <task id="T_FE_Pages" name="Pages &amp; UI"/>
+    <sequenceFlow id="F2" sourceRef="T_FE_Pages" targetRef="T_FE_Login"/>
+    <task id="T_FE_Login" name="Auth.js login"/>
+    <sequenceFlow id="F3" sourceRef="T_FE_Login" targetRef="T_FE_Proxy"/>
+    <task id="T_FE_Proxy" name="Proxy /api → backend"/>
+    <sequenceFlow id="F4" sourceRef="T_FE_Proxy" targetRef="E_FE"/>
+    <endEvent id="E_FE" name="UI ready"/>
+  </process>
+
+  <!-- API -->
+  <process id="Proc_API" isExecutable="false">
+    <startEvent id="S_API" name="/v1 request"/>
+    <sequenceFlow id="A1" sourceRef="S_API" targetRef="T_API_Receive"/>
+    <task id="T_API_Receive" name="Receive request"/>
+    <sequenceFlow id="A2" sourceRef="T_API_Receive" targetRef="T_API_Business"/>
+    <task id="T_API_Business" name="Workflows · uploads · runs"/>
+    <sequenceFlow id="A3" sourceRef="T_API_Business" targetRef="T_API_Enqueue"/>
+    <task id="T_API_Enqueue" name="Create job (outbox)"/>
+    <sequenceFlow id="A4" sourceRef="T_API_Enqueue" targetRef="T_API_SSE"/>
+    <task id="T_API_SSE" name="SSE endpoint"/>
+    <sequenceFlow id="A5" sourceRef="T_API_SSE" targetRef="E_API"/>
+    <endEvent id="E_API" name="Response"/>
+  </process>
+
+  <!-- AUTH: Keycloak + Casbin -->
+  <process id="Proc_Auth" isExecutable="false">
+    <startEvent id="S_Auth" name="Auth"/>
+    <sequenceFlow id="H1" sourceRef="S_Auth" targetRef="T_Auth_OIDC"/>
+    <task id="T_Auth_OIDC" name="Keycloak OIDC login"/>
+    <sequenceFlow id="H2" sourceRef="T_Auth_OIDC" targetRef="T_Auth_JWKS"/>
+    <task id="T_Auth_JWKS" name="JWT keys (JWKS)"/>
+    <sequenceFlow id="H3" sourceRef="T_Auth_JWKS" targetRef="T_Auth_Casbin"/>
+    <task id="T_Auth_Casbin" name="Casbin roles&#10;viewer · operator · admin"/>
+    <sequenceFlow id="H4" sourceRef="T_Auth_Casbin" targetRef="E_Auth"/>
+    <endEvent id="E_Auth" name="Allowed / denied"/>
+  </process>
+
+  <!-- TASKIQ -->
+  <process id="Proc_Taskiq" isExecutable="false">
+    <startEvent id="S_TQ" name="New job"/>
+    <sequenceFlow id="Q1" sourceRef="S_TQ" targetRef="T_TQ_Claim"/>
+    <task id="T_TQ_Claim" name="Claim run"/>
+    <sequenceFlow id="Q2" sourceRef="T_TQ_Claim" targetRef="T_TQ_Extract"/>
+    <task id="T_TQ_Extract" name="Extract document"/>
+    <sequenceFlow id="Q3" sourceRef="T_TQ_Extract" targetRef="T_TQ_Work"/>
+    <task id="T_TQ_Work" name="Apply rules · finish run&#10;pools: extract | fast"/>
+    <sequenceFlow id="Q4" sourceRef="T_TQ_Work" targetRef="E_TQ"/>
+    <endEvent id="E_TQ" name="Job done"/>
+  </process>
+
+  <!-- SSE / REDIS -->
+  <process id="Proc_SSE" isExecutable="false">
+    <startEvent id="S_SSE" name="Events"/>
+    <sequenceFlow id="R1" sourceRef="S_SSE" targetRef="T_SSE_Broker"/>
+    <task id="T_SSE_Broker" name="Redis Streams (Taskiq)"/>
+    <sequenceFlow id="R2" sourceRef="T_SSE_Broker" targetRef="T_SSE_Publish"/>
+    <task id="T_SSE_Publish" name="Pub/sub progress"/>
+    <sequenceFlow id="R3" sourceRef="T_SSE_Publish" targetRef="E_SSE"/>
+    <endEvent id="E_SSE" name="Live to UI"/>
+  </process>
+
+  <!-- POSTGRES -->
+  <process id="Proc_Postgres" isExecutable="false">
+    <startEvent id="S_PG" name="DB"/>
+    <sequenceFlow id="P1" sourceRef="S_PG" targetRef="T_PG_Store"/>
+    <task id="T_PG_Store" name="Workflows · runs · fields · rules · outbox"/>
+    <sequenceFlow id="P2" sourceRef="T_PG_Store" targetRef="E_PG"/>
+    <endEvent id="E_PG" name="Saved"/>
+  </process>
+
+  <!-- MINIO -->
+  <process id="Proc_Minio" isExecutable="false">
+    <startEvent id="S_Minio" name="Files"/>
+    <sequenceFlow id="M1" sourceRef="S_Minio" targetRef="T_Minio_Store"/>
+    <task id="T_Minio_Store" name="Store PDF / images&#10;bucket: audit-documents"/>
+    <sequenceFlow id="M2" sourceRef="T_Minio_Store" targetRef="E_Minio"/>
+    <endEvent id="E_Minio" name="Stored"/>
+  </process>
+
+  <!-- INFERENCE -->
+  <process id="Proc_Inference" isExecutable="false">
+    <startEvent id="S_Inf" name="AI"/>
+    <sequenceFlow id="N1" sourceRef="S_Inf" targetRef="T_Inf_Run"/>
+    <task id="T_Inf_Run" name="NuExtract (repody:vlm)&#10;optional: paddleocr:qwen · glm:qwen"/>
+    <sequenceFlow id="N2" sourceRef="T_Inf_Run" targetRef="E_Inf"/>
+    <endEvent id="E_Inf" name="JSON fields"/>
+  </process>
+
+  <!-- ===================== LAYOUT ===================== -->
+  <bpmndi:BPMNDiagram id="Diag_Arch">
+    <bpmndi:BPMNPlane id="Plane_Arch" bpmnElement="Collab_Arch">
+
+      <!-- Pools: tall enough for readable text -->
+      <bpmndi:BPMNShape id="P_User_di" bpmnElement="P_User" isHorizontal="true">
+        <dc:Bounds x="140" y="60" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Frontend_di" bpmnElement="P_Frontend" isHorizontal="true">
+        <dc:Bounds x="140" y="180" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_API_di" bpmnElement="P_API" isHorizontal="true">
+        <dc:Bounds x="140" y="300" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Auth_di" bpmnElement="P_Auth" isHorizontal="true">
+        <dc:Bounds x="140" y="420" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Taskiq_di" bpmnElement="P_Taskiq" isHorizontal="true">
+        <dc:Bounds x="140" y="540" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_SSE_di" bpmnElement="P_SSE" isHorizontal="true">
+        <dc:Bounds x="140" y="660" width="1000" height="100"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Postgres_di" bpmnElement="P_Postgres" isHorizontal="true">
+        <dc:Bounds x="140" y="780" width="1000" height="90"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Minio_di" bpmnElement="P_Minio" isHorizontal="true">
+        <dc:Bounds x="140" y="890" width="1000" height="90"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Inference_di" bpmnElement="P_Inference" isHorizontal="true">
+        <dc:Bounds x="140" y="1000" width="1000" height="90"/>
+      </bpmndi:BPMNShape>
+
+      <bpmndi:BPMNShape id="Ann_Help_di" bpmnElement="Ann_Help">
+        <dc:Bounds x="1160" y="60" width="260" height="160"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Assoc_Help_di" bpmnElement="Assoc_Help">
+        <di:waypoint x="1140" y="110"/><di:waypoint x="1160" y="110"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- User -->
+      <bpmndi:BPMNShape id="S_User_di" bpmnElement="S_User"><dc:Bounds x="180" y="92" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_User_Open_di" bpmnElement="T_User_Open"><dc:Bounds x="260" y="80" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_User_Audit_di" bpmnElement="T_User_Audit"><dc:Bounds x="440" y="80" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_User_di" bpmnElement="E_User"><dc:Bounds x="620" y="92" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="U1_di" bpmnElement="U1"><di:waypoint x="216" y="110"/><di:waypoint x="260" y="110"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="U2_di" bpmnElement="U2"><di:waypoint x="400" y="110"/><di:waypoint x="440" y="110"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="U3_di" bpmnElement="U3"><di:waypoint x="580" y="110"/><di:waypoint x="620" y="110"/></bpmndi:BPMNEdge>
+
+      <!-- Frontend -->
+      <bpmndi:BPMNShape id="S_FE_di" bpmnElement="S_FE"><dc:Bounds x="180" y="212" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_FE_Pages_di" bpmnElement="T_FE_Pages"><dc:Bounds x="260" y="200" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_FE_Login_di" bpmnElement="T_FE_Login"><dc:Bounds x="440" y="200" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_FE_Proxy_di" bpmnElement="T_FE_Proxy"><dc:Bounds x="620" y="200" width="160" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_FE_di" bpmnElement="E_FE"><dc:Bounds x="820" y="212" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="216" y="230"/><di:waypoint x="260" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="400" y="230"/><di:waypoint x="440" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="580" y="230"/><di:waypoint x="620" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="780" y="230"/><di:waypoint x="820" y="230"/></bpmndi:BPMNEdge>
+
+      <!-- API -->
+      <bpmndi:BPMNShape id="S_API_di" bpmnElement="S_API"><dc:Bounds x="180" y="332" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_API_Receive_di" bpmnElement="T_API_Receive"><dc:Bounds x="260" y="320" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_API_Business_di" bpmnElement="T_API_Business"><dc:Bounds x="440" y="320" width="160" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_API_Enqueue_di" bpmnElement="T_API_Enqueue"><dc:Bounds x="640" y="320" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_API_SSE_di" bpmnElement="T_API_SSE"><dc:Bounds x="820" y="320" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_API_di" bpmnElement="E_API"><dc:Bounds x="980" y="332" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="A1_di" bpmnElement="A1"><di:waypoint x="216" y="350"/><di:waypoint x="260" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A2_di" bpmnElement="A2"><di:waypoint x="400" y="350"/><di:waypoint x="440" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A3_di" bpmnElement="A3"><di:waypoint x="600" y="350"/><di:waypoint x="640" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A4_di" bpmnElement="A4"><di:waypoint x="780" y="350"/><di:waypoint x="820" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A5_di" bpmnElement="A5"><di:waypoint x="940" y="350"/><di:waypoint x="980" y="350"/></bpmndi:BPMNEdge>
+
+      <!-- Auth -->
+      <bpmndi:BPMNShape id="S_Auth_di" bpmnElement="S_Auth"><dc:Bounds x="180" y="452" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Auth_OIDC_di" bpmnElement="T_Auth_OIDC"><dc:Bounds x="260" y="440" width="160" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Auth_JWKS_di" bpmnElement="T_Auth_JWKS"><dc:Bounds x="460" y="440" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Auth_Casbin_di" bpmnElement="T_Auth_Casbin"><dc:Bounds x="640" y="440" width="180" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Auth_di" bpmnElement="E_Auth"><dc:Bounds x="860" y="452" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="H1_di" bpmnElement="H1"><di:waypoint x="216" y="470"/><di:waypoint x="260" y="470"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="H2_di" bpmnElement="H2"><di:waypoint x="420" y="470"/><di:waypoint x="460" y="470"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="H3_di" bpmnElement="H3"><di:waypoint x="600" y="470"/><di:waypoint x="640" y="470"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="H4_di" bpmnElement="H4"><di:waypoint x="820" y="470"/><di:waypoint x="860" y="470"/></bpmndi:BPMNEdge>
+
+      <!-- Taskiq -->
+      <bpmndi:BPMNShape id="S_TQ_di" bpmnElement="S_TQ"><dc:Bounds x="180" y="572" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_TQ_Claim_di" bpmnElement="T_TQ_Claim"><dc:Bounds x="260" y="560" width="120" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_TQ_Extract_di" bpmnElement="T_TQ_Extract"><dc:Bounds x="420" y="560" width="140" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_TQ_Work_di" bpmnElement="T_TQ_Work"><dc:Bounds x="600" y="560" width="180" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_TQ_di" bpmnElement="E_TQ"><dc:Bounds x="820" y="572" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Q1_di" bpmnElement="Q1"><di:waypoint x="216" y="590"/><di:waypoint x="260" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Q2_di" bpmnElement="Q2"><di:waypoint x="380" y="590"/><di:waypoint x="420" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Q3_di" bpmnElement="Q3"><di:waypoint x="560" y="590"/><di:waypoint x="600" y="590"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Q4_di" bpmnElement="Q4"><di:waypoint x="780" y="590"/><di:waypoint x="820" y="590"/></bpmndi:BPMNEdge>
+
+      <!-- SSE -->
+      <bpmndi:BPMNShape id="S_SSE_di" bpmnElement="S_SSE"><dc:Bounds x="180" y="692" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_SSE_Broker_di" bpmnElement="T_SSE_Broker"><dc:Bounds x="260" y="680" width="180" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_SSE_Publish_di" bpmnElement="T_SSE_Publish"><dc:Bounds x="480" y="680" width="160" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_SSE_di" bpmnElement="E_SSE"><dc:Bounds x="680" y="692" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="R1_di" bpmnElement="R1"><di:waypoint x="216" y="710"/><di:waypoint x="260" y="710"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="R2_di" bpmnElement="R2"><di:waypoint x="440" y="710"/><di:waypoint x="480" y="710"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="R3_di" bpmnElement="R3"><di:waypoint x="640" y="710"/><di:waypoint x="680" y="710"/></bpmndi:BPMNEdge>
+
+      <!-- Postgres -->
+      <bpmndi:BPMNShape id="S_PG_di" bpmnElement="S_PG"><dc:Bounds x="180" y="807" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_PG_Store_di" bpmnElement="T_PG_Store"><dc:Bounds x="260" y="795" width="280" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_PG_di" bpmnElement="E_PG"><dc:Bounds x="580" y="807" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="P1_di" bpmnElement="P1"><di:waypoint x="216" y="825"/><di:waypoint x="260" y="825"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="P2_di" bpmnElement="P2"><di:waypoint x="540" y="825"/><di:waypoint x="580" y="825"/></bpmndi:BPMNEdge>
+
+      <!-- MinIO -->
+      <bpmndi:BPMNShape id="S_Minio_di" bpmnElement="S_Minio"><dc:Bounds x="180" y="917" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Minio_Store_di" bpmnElement="T_Minio_Store"><dc:Bounds x="260" y="905" width="220" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Minio_di" bpmnElement="E_Minio"><dc:Bounds x="520" y="917" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="M1_di" bpmnElement="M1"><di:waypoint x="216" y="935"/><di:waypoint x="260" y="935"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M2_di" bpmnElement="M2"><di:waypoint x="480" y="935"/><di:waypoint x="520" y="935"/></bpmndi:BPMNEdge>
+
+      <!-- Inference -->
+      <bpmndi:BPMNShape id="S_Inf_di" bpmnElement="S_Inf"><dc:Bounds x="180" y="1027" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Inf_Run_di" bpmnElement="T_Inf_Run"><dc:Bounds x="260" y="1015" width="280" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Inf_di" bpmnElement="E_Inf"><dc:Bounds x="580" y="1027" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="216" y="1045"/><di:waypoint x="260" y="1045"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N2_di" bpmnElement="N2"><di:waypoint x="540" y="1045"/><di:waypoint x="580" y="1045"/></bpmndi:BPMNEdge>
+
+      <!-- Message flows -->
+      <bpmndi:BPMNEdge id="MF1_di" bpmnElement="MF1"><di:waypoint x="330" y="140"/><di:waypoint x="330" y="200"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF2_di" bpmnElement="MF2"><di:waypoint x="510" y="260"/><di:waypoint x="510" y="400"/><di:waypoint x="340" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF3_di" bpmnElement="MF3"><di:waypoint x="700" y="260"/><di:waypoint x="700" y="290"/><di:waypoint x="330" y="320"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF4_di" bpmnElement="MF4"><di:waypoint x="330" y="380"/><di:waypoint x="330" y="410"/><di:waypoint x="730" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF5_di" bpmnElement="MF5"><di:waypoint x="300" y="380"/><di:waypoint x="300" y="410"/><di:waypoint x="530" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF6_di" bpmnElement="MF6"><di:waypoint x="520" y="380"/><di:waypoint x="520" y="795"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF7_di" bpmnElement="MF7"><di:waypoint x="560" y="380"/><di:waypoint x="560" y="700"/><di:waypoint x="370" y="905"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF8_di" bpmnElement="MF8"><di:waypoint x="710" y="380"/><di:waypoint x="710" y="640"/><di:waypoint x="350" y="680"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF9_di" bpmnElement="MF9"><di:waypoint x="350" y="680"/><di:waypoint x="320" y="680"/><di:waypoint x="320" y="620"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF10_di" bpmnElement="MF10"><di:waypoint x="690" y="620"/><di:waypoint x="690" y="750"/><di:waypoint x="400" y="795"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF11_di" bpmnElement="MF11"><di:waypoint x="720" y="620"/><di:waypoint x="720" y="850"/><di:waypoint x="370" y="905"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF12_di" bpmnElement="MF12"><di:waypoint x="490" y="620"/><di:waypoint x="490" y="1015"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF13_di" bpmnElement="MF13"><di:waypoint x="690" y="620"/><di:waypoint x="560" y="620"/><di:waypoint x="560" y="680"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF14_di" bpmnElement="MF14"><di:waypoint x="560" y="680"/><di:waypoint x="880" y="680"/><di:waypoint x="880" y="380"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF15_di" bpmnElement="MF15"><di:waypoint x="880" y="320"/><di:waypoint x="880" y="280"/><di:waypoint x="700" y="260"/></bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>

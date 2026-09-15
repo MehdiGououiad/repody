@@ -1,8 +1,20 @@
 # Commands
 
-Deploy follows **official upstream docs** — see [docs/deploy/README.md](./deploy/README.md).
+Deploy follows **official upstream docs** — see [LOCAL.md](./LOCAL.md) (laptop) and [CLUSTER.md](./CLUSTER.md) (production).
 
-## Develop (daily) — same on Windows · macOS · Linux
+## Mac client (no source)
+
+Pack from the private repo, ship the zip (not git):
+
+| Command | When |
+|---------|------|
+| `pnpm client:pack:mac` | Build `dist/repody-mac-runtime-<tag>.zip` |
+
+Client (on the Mac, after unzip): `./bin/repody setup` → `./bin/repody start` — see [LOCAL.md — Mac runtime](./LOCAL.md#mac-runtime-no-source).
+
+---
+
+## Develop (daily) — vendors / contributors (git checkout)
 
 Pull Hub images, start the platform, and (by default) **host NuExtract** (`repody:vlm`).
 
@@ -25,7 +37,7 @@ Pull Hub images, start the platform, and (by default) **host NuExtract** (`repod
 
 Aliases: `pnpm dev:all` → `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` → same CLI.
 
-Guides: [deploy/MAC.md](./deploy/MAC.md) (Apple Silicon) · [deploy/LOCAL.md](./deploy/LOCAL.md) (all OSes) · [README.md](./README.md) (docs hub).
+Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.md) (docs hub).
 
 ### Document models
 
@@ -76,7 +88,7 @@ which tool owns which concern.
 
 ## OpenShift / client production
 
-Deploy guide: [docs/deploy/OPENSHIFT.md](./deploy/OPENSHIFT.md).
+Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
 | Command | When |
 |---------|------|

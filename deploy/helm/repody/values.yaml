@@ -345,7 +345,7 @@ config:
   defaultDocumentModelId: repody:vlm
   repodyVlmEnabled: true
   repodyVlmTimeoutSeconds: 180
-  # Hard cap: audit tasks must finish within 3 minutes (see docs/deploy/PROD-OBSERVABILITY.md)
+  # Hard cap: audit tasks must finish within 3 minutes (see docs/CLUSTER.md#production-observability-baseline)
   workerTaskTimeoutMinutes: 3
   staleRunTimeoutMinutes: 5
   # For long OCR PDFs raise together, e.g. workerTaskTimeoutMinutes: 10,

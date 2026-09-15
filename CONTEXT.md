@@ -1,6 +1,8 @@
 # Repody — architecture context
 
-Single-page map for tech leads and new contributors. Operational how-tos live in [README.md](./README.md), [DEV.md](./DEV.md), and [DEPLOY.md](./DEPLOY.md). Recorded decisions live in [docs/adr/](./docs/adr/).
+Single-page map for tech leads and new contributors. How-tos: [docs/README.md](./docs/README.md). Decisions: [docs/adr/](./docs/adr/).
+
+Full functional + technical architecture dossier (FR): [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ## Names (read once)
 
@@ -12,7 +14,7 @@ Single-page map for tech leads and new contributors. Operational how-tos live in
 | **Next.js `app/`** | Repo root `app/` | App Router routes (thin pages) — not Python |
 | **`repody.app`** | `backend/src/repody/app/` | Python application use cases (Workflow, Run, …) |
 
-Repody VLM local development uses NuExtract through the OpenAI-compatible llama-server/vLLM interface.
+Default document extraction: NuExtract via OpenAI-compatible llama-server (`repody:vlm`).
 
 ## Domain glossary
 
@@ -20,17 +22,16 @@ Repody VLM local development uses NuExtract through the OpenAI-compatible llama-
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | Catalog adapter for workflow-selectable extraction (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` — see [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a Document model |
-| **Processing path** | How a document is read (`document_model` = direct image-to-schema) |
+| **Document model** | Catalog adapter (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` — [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a UI catalog option |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
-| **LLM rule** | Natural-language rule evaluated by a small text model (separate from Repody VLM) |
-| **Worker pool `extract`** | Taskiq worker that runs document-model extraction (GPU/CPU bound) |
+| **LLM rule** | Natural-language rule via a separate text model |
+| **Worker pool `extract`** | Taskiq worker for document-model extraction |
 | **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
-| **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Env name for default document model id (`repody:vlm`) |
+| **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Default catalog id (`repody:vlm`) |
 
 ## Request lifecycle
 
-Vue détaillée (FR, fichiers Mermaid éditables) : [docs/diagrams/](./docs/diagrams/README.md).
+Production architecture for executives (ArchiMate + logos): [docs/diagrams/architecture-enterprise.html](./docs/diagrams/architecture-enterprise.html). Engineers: [docs/diagrams/architecture.mmd](./docs/diagrams/architecture.mmd).
 
 ```mermaid
 sequenceDiagram
@@ -47,172 +48,121 @@ sequenceDiagram
   API->>Q: enqueue audit-run task (Taskiq)
   Q->>W: execute run task
   W->>Store: fetch PDF/image
-  W->>Inf: Repody VLM chat completion (document model)
+  W->>Inf: document-model chat completion
   Inf-->>W: structured JSON fields
   W->>W: validate rules (logic + optional LLM)
   W->>API: persist Run / RuleResults
   UI->>API: GET /runs/{id} (poll / SSE)
 ```
 
-All audit runs are dispatched through Taskiq (Redis Streams); worker containers execute `process_run`.
-
 ## Backend layers
 
 ```
 backend/src/repody/
 ├── api/                 HTTP routers → app use cases
-├── app/                 Application use cases (run, workflow, operator, uploads, queue, …)
-│   └── run/             lifecycle · commands · processor · enqueue · outbox · progress · …
+├── app/                 Application use cases (run, workflow, operator, …)
 ├── agents/idp/          contracts · compose · run · adapters/
-├── runtime/             Pure shared: contracts · recipe · pools · agent_metadata · metrics
-├── extraction/          pipeline · vlm · nuextract · fields · render · paddleocr_v6 · glm_ocr[+sdk]
-├── inference/           OpenAI-compat + NuExtract cloud (functions)
-├── rules/               Logic + LLM evaluators (+ amounts)
+├── runtime/             contracts · recipe · pools · run status
+├── extraction/          pipeline · nuextract · paddleocr · glm · render
+├── inference/           OpenAI-compat clients
+├── rules/               Logic + LLM evaluators
 ├── catalog/             Document-model registry + probes
 ├── taskiq/              Worker entrypoint + async tasks
-├── infra/               db · storage · auth · observability · redis · rate_limit
+├── infra/               db · storage · auth · observability
 ├── schemas/             HTTP Pydantic DTOs
 └── settings/            AUDIT_* settings
 ```
 
 **Hot path:** `process_run` → `execute_platform_run`(IDP) → `compose_idp` → `complete_run`.
 
-**Intentional coupling:** `api/config.py` exposes diagnostics/catalog that call extraction/inference for operator visibility.
-
 ### Bounded contexts
 
 | Context | Responsibility | Key modules |
 |---------|----------------|-------------|
 | **Workflow configuration** | Templates, rules, deployment | `app/workflow/` |
-| **Audit execution** | Claim/complete, queue, worker | `app/run/`, `app/run/processor.py`, `app/run/enqueue.py`, `taskiq/` |
+| **Audit execution** | Claim/complete, queue, worker | `app/run/`, `taskiq/` |
 | **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
 | **Platform / catalog** | Recipe, envelopes, registry, operator | `runtime/`, `catalog/`, `app/operator/` |
 
 ### Platform agents
 
-**IDP** lives under `agents/idp/` and is the only agent. Capacity pools: `extract` / `fast`. Envelopes: `runtime/contracts/`. Design: [docs/architecture/idp-functional-agents.md](./docs/architecture/idp-functional-agents.md) · [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
+**IDP** under `agents/idp/` is the only agent. Capacity pools: `extract` / `fast`. Decisions: [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
 
-Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` is canonical in `runtime/run/status.py`.
-
-**Run lifecycle (flat):** `app/run/lifecycle.py` (entity + pure transitions) · `commands.py` (claim/complete/fail/finalize + event publish) · `persistence.py`. Worker entry: `app/run/processor.py`.
-
-## Operator tools
-
-Operator endpoints are diagnostic/admin workflows, not the audit run hot path:
-
-- `api/operator.py` keeps HTTP concerns: routes, permissions, status codes, and typed response models.
-- `app/operator/` — job lifecycle (`jobs.py` + Redis persistence), benchmarks (`benchmarks.py` subprocess), direct VLM warmup (`warmup_repody_vlm`), form validation (`requests.py`), reports, and Keycloak token via `infra/auth/keycloak_token.py`.
-
-## Catalog package (unified)
-
-| Module | Role |
-|--------|------|
-| `catalog/registry.py` | Document model specs and extraction dispatch |
-| `catalog/probes.py` | Live runtime probes |
-| `catalog/api.py` | `/models/catalog` assembly |
-| `catalog/runtime_fields.py` | Operator runtime config |
-
-Import `catalog/registry.py` directly for document model catalog operations.
+Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` lives in `runtime/run/status.py`. Lifecycle: `app/run/lifecycle.py` · `commands.py` · `persistence.py`. Worker entry: `app/run/processor.py`.
 
 ## Three registries (do not merge)
 
 | Module | Selects | Example ids |
 |--------|---------|-------------|
-| `extraction/pipeline.py` (`get_extract_document`) | **Extractor callable** | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `catalog/registry.py` | **Document model catalog** | `repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` |
-| `catalog/probes.py` + `catalog/api.py` | **Catalog + live runtime probes** | used by `/models/catalog`, diagnostics, healthz |
-
-Flow: `get_extract_document()` → `extract_document(...)` → catalog → model adapter
-(`extraction/vlm.py`, `paddleocr_qwen.py`, `glm_ocr_qwen.py`, …). Markdown OCR helpers
-(`paddleocr_v6`, `glm_ocr`) are stages used inside the Qwen Document models.
+| `extraction/pipeline.py` | Extractor callable | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
+| `catalog/registry.py` | Document model catalog | `repody:vlm`, `paddleocr:qwen`, `glm:qwen` |
+| `catalog/probes.py` + `api.py` | Live runtime probes | `/models/catalog`, healthz |
 
 ## Inference
 
 | Concern | Configuration |
 |---------|---------------|
 | Document extraction | `AUDIT_INFERENCE_MODE=llamacpp`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
-| LLM rule validation | `get_chat()` / `chat_validation` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
+| LLM rule validation | `get_chat()` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
 
-Document extraction and LLM rule validation use **separate** models and endpoints.
-
-### LLM rule validation modules
-
-- `rules/runner.py` chooses logic vs LLM rule execution for a Run.
-- `rules/llm_evaluator.py` orchestrates validation-model availability, structured calls, and batch result handling.
-- `rules/llm_fields.py` owns field-reference parsing, selected field values, and deterministic keyword shortcuts.
-- `rules/llm_prompts.py` owns prompt text for single-rule and batch validation.
-
-Add future document models in `catalog/registry.py` (`_registered_models()`).
+Separate models/endpoints for extraction vs LLM rules. Add models in `catalog/registry.py`.
 
 ## Frontend layout
 
-Next.js 16 App Router at repo root (not under `frontend/`):
+Next.js 16 App Router at repo root:
 
-- `app/` — routes (thin pages)
-- `components/` — domain UI (`workflow/`, `audit/`, `dashboard/`)
-- `lib/api/` — typed clients; RSC uses `serverFetch`, client islands use `/api/*` rewrite to backend `/v1/*`
+- `app/` — thin pages
+- `components/` — domain UI
+- `lib/api/` — typed clients; RSC `serverFetch`, client islands via `/api/*` → backend `/v1/*`
 
-## Platform modules (deploy)
+## Deploy modules
 
-Runtime is split into deploy **modules** (`control`, `workers`, `edge`). Production uses Kubernetes + Helm on the client cluster; **daily local dev uses Docker Compose** ([docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md)). OpenShift install: [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md). See [docs/PLATFORM.md](./docs/PLATFORM.md), [ADR 004](./docs/adr/004-cloud-kubernetes-packaging.md), and [ADR 005](./docs/adr/005-kubernetes-only-external-inference.md).
+| Module | Kubernetes shape | Purpose |
+|--------|------------------|---------|
+| control | `repody-api` | Workflows, runs, uploads, dispatch |
+| workers | `repody-worker-extract`, `repody-worker-fast` | IDP pools |
+| edge | `repody-web` | Next.js UI |
+| data plane | Postgres, Redis, object storage | Durable state + Taskiq broker |
+| auth | External OIDC | Authentication |
+| inference | External OpenAI-compatible | Not in the Repody chart |
 
-| Term | Meaning |
-|------|---------|
-| **Platform module** | Independently deployable Kubernetes workload group (microservice seam) |
-| **Local stack** | Compose + host processes (`pnpm dev`, `pnpm dev:api`, `pnpm ui`) |
-| **Worker plane** | Horizontally scaled Taskiq workers (`worker-extract`, `worker-fast`) |
-
-## Local development
-
-See [docs/COMMANDS.md](./docs/COMMANDS.md).
+Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs/CLUSTER.md](./docs/CLUSTER.md)). Packaging: [ADR 004](./docs/adr/004-cloud-kubernetes-packaging.md) · [ADR 005](./docs/adr/005-kubernetes-only-external-inference.md).
 
 | Lane | Command |
 |------|---------|
 | App development | `pnpm platform` / `pnpm dev:all` |
-| OpenShift production | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
-| Release to client | `pnpm images:release` → client Helm / Argo CD |
-
-Chart: [deploy/helm/repody](./deploy/helm/repody). Client install: [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md).
-
-## Non-product paths
-
-These directories are agent/tooling assets, not runtime dependencies:
-
-- `.agents/skills/` — Cursor agent skills (design/architecture helpers; large CSV data under `ui-ux-pro-max` is intentional skill input)
-- `deploy/scripts/research/` · `deploy/research/qwen35/` — optional Qwen 3.5 serve config for local experiments
-- `benchmark-reports/` — local benchmark output (gitignored)
-
-Script ownership map: [docs/SCRIPTS.md](./docs/SCRIPTS.md).
-
-
-## Tests
-
-| Layer | Command | CI |
-|-------|---------|-----|
-| Backend unit/integration | `pnpm test:api` | `.github/workflows/ci.yml` |
-| Live stack (Taskiq workers) | `E2E_STACK=1 pytest -m live` | k8s-smoke / manual |
-| Playwright smoke | `pnpm test:e2e:smoke` | `.github/workflows/ci.yml` |
-| Full platform | `pnpm test:platform` | Manual / nightly (heavier) |
-
-Command reference: [docs/COMMANDS.md](./docs/COMMANDS.md).
-
-Run completion and Taskiq dispatch are **not** simulated in-process. Use `@pytest.mark.live` with a running Kubernetes stack (`E2E_STACK=1`, `E2E_API_URL`).
+| Source contribute | `pnpm dev:src:all` |
+| OpenShift production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
+| Release to client | `pnpm images:release` |
 
 ## Authorization (Casbin)
 
-JWT roles map to permissions in `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)` — not a blanket admin gate. When `AUDIT_OIDC_ENABLED=false` (local dev/tests), the API uses a `platform_admin` dev principal.
+JWT roles → `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal.
 
 | Role | Typical access |
 |------|----------------|
 | `viewer` | Read workflows, runs, audits, models, rules |
-| `operator` | Viewer + write workflows, execute runs, metrics/dashboard, operator tools |
+| `operator` | Viewer + write workflows, execute runs, metrics, operator tools |
 | `admin` | Operator + settings, diagnostics, users |
+
+## Tests
+
+| Layer | Command |
+|-------|---------|
+| Backend unit/integration | `pnpm test:api` |
+| Live stack | `pnpm test:live` (needs stack) |
+| Playwright smoke | `pnpm test:e2e:smoke` |
+
+Full command list: [docs/COMMANDS.md](./docs/COMMANDS.md). Engineering notes: [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
+
+## Non-product paths
+
+- `.agents/skills/` — Cursor agent skills
+- `deploy/scripts/research/` · `deploy/research/qwen35/` — optional local experiments
+- `benchmark-reports/` — local output (gitignored)
 
 ## Further reading
 
-- [docs/README.md](./docs/README.md) — documentation index
-- [docs/PLATFORM-INVENTORY.md](./docs/PLATFORM-INVENTORY.md) — full platform inventory (features, security, prod, libs)
-- [docs/adr/001-taskiq-async-runs.md](./docs/adr/001-taskiq-async-runs.md)
-- [docs/adr/002-repody-vlm-dual-inference-runtimes.md](./docs/adr/002-repody-vlm-dual-inference-runtimes.md)
-- [docs/BACKEND.md](./docs/BACKEND.md) — backend layout and conventions
-- [docs/E2E.md](./docs/E2E.md) — full stack test layers
+- [docs/README.md](./docs/README.md) — docs hub
+- [docs/EXTRACTION.md](./docs/EXTRACTION.md) — document models
+- [docs/adr/](./docs/adr/README.md) — ADRs

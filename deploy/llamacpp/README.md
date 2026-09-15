@@ -1,7 +1,7 @@
 # llama-server + NuExtract3 for Repody
 
 Serve [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) with the official
-**llama-server** binary (`winget install llama.cpp`). Platform wiring: `docs/REPODY-VLM.md`.
+**llama-server** binary (`winget install llama.cpp`). Platform wiring: `docs/EXTRACTION.md`.
 
 ## 1. Install llama.cpp
 

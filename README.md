@@ -21,10 +21,16 @@ flowchart LR
   W --> PG
 ```
 
-Production inference is not bundled in the chart. Run vLLM, llama-server, or a
-managed OpenAI-compatible endpoint separately and point Repody at it.
+Production inference is external. Point Repody at llama-server, vLLM, or a managed OpenAI-compatible endpoint.
 
-## Quick start (new machine)
+## Two laptop paths
+
+| Who | What | Start |
+|-----|------|--------|
+| **Mac clients (no source)** | Zip + Hub images + host NuExtract | [docs/LOCAL.md — Mac runtime](./docs/LOCAL.md#mac-runtime-no-source) · pack with `pnpm client:pack:mac` |
+| **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
+
+### Git path (Windows · macOS · Linux)
 
 Prerequisites: Docker Desktop, Node 24.x, Corepack pnpm 11.7.0, `llama-server` on PATH
 (`winget install ggml.llamacpp` / `brew install llama.cpp`).
@@ -36,40 +42,39 @@ corepack enable
 pnpm install
 pnpm doctor
 pnpm platform setup    # once: env files + docker pull Hub images
+# edit deploy/llamacpp/paths.local.env with NuExtract GGUF paths
 pnpm platform          # start API/UI/workers + host NuExtract (repody:vlm)
 pnpm platform status
 ```
 
-Images come from Docker Hub (`mehdigououiad/repody-*`), not a local build.
-Sign in at http://localhost:3000 · `operator@repody.local` / `repody-dev`.
+Images: Docker Hub `mehdigououiad/repody-*` (multi-arch).  
+Sign in: http://localhost:3000 · `operator@repody.local` / `repody-dev` (use **localhost**, not `127.0.0.1`).
 
-Daily: `pnpm platform` · stop: `pnpm platform stop`  
-- **Mac (M1/M2/M3) end to end:** [docs/deploy/MAC.md](./docs/deploy/MAC.md)  
-- All OSes: [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) · commands: [docs/COMMANDS.md](./docs/COMMANDS.md)
+Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS.md](./docs/COMMANDS.md)
 
-**Client OpenShift:** [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) · [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md)
+### OpenShift / Kubernetes
 
-**Release to a client:** `pnpm images:release` to GHCR or client registry; they deploy with Helm or Argo CD. See [docs/COMMANDS.md](./docs/COMMANDS.md).
+[docs/CLUSTER.md](./docs/CLUSTER.md) · release: `pnpm images:release`
 
 ## Documentation
 
-**Full map (one place):** [docs/README.md](./docs/README.md)
+**Hub:** [docs/README.md](./docs/README.md)
 
 | Need | Read |
 |------|------|
-| **Mac deploy (end to end)** | [docs/deploy/MAC.md](./docs/deploy/MAC.md) |
+| Laptop | [docs/LOCAL.md](./docs/LOCAL.md) |
 | Commands | [docs/COMMANDS.md](./docs/COMMANDS.md) |
-| Local development | [DEV.md](./DEV.md) · [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
-| Production / OpenShift | [DEPLOY.md](./DEPLOY.md) · [docs/deploy/README.md](./docs/deploy/README.md) |
+| Cluster | [docs/CLUSTER.md](./docs/CLUSTER.md) |
 | Architecture | [CONTEXT.md](./CONTEXT.md) |
-| Code quality review | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
+| Extraction | [docs/EXTRACTION.md](./docs/EXTRACTION.md) |
+| Code quality | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
 
 ## Stack
 
 - Frontend: Next.js 16, React 19, Tailwind
 - Backend: FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
 - Jobs: Taskiq over Redis Streams
-- Local platform: kind, Helm, Envoy Gateway
+- Local: Docker Compose + Hub images (`pnpm platform`)
 - Storage: MinIO or S3-compatible object storage
 
 ## License

@@ -1,32 +1,12 @@
 # Deployment
 
-**All guides:** [docs/deploy/README.md](./docs/deploy/README.md) · **docs hub:** [docs/README.md](./docs/README.md)
+**Docs hub:** [docs/README.md](./docs/README.md)
 
 | Lane | Guide |
 |------|--------|
-| **Mac (Apple Silicon) end to end** | [docs/deploy/MAC.md](./docs/deploy/MAC.md) |
-| Local laptop (Win / Mac / Linux) | [docs/deploy/LOCAL.md](./docs/deploy/LOCAL.md) |
-| **OpenShift production (start-to-finish)** | [docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) |
-| Client profiles / Ingress detail | [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md) |
-| Vendor release | [docs/deploy/RELEASE.md](./docs/deploy/RELEASE.md) |
+| Laptop (git) | [docs/LOCAL.md](./docs/LOCAL.md) |
+| Mac client (no source) | [docs/LOCAL.md — Mac runtime](./docs/LOCAL.md#mac-runtime-no-source) · `pnpm client:pack:mac` |
+| OpenShift / Kubernetes | [docs/CLUSTER.md](./docs/CLUSTER.md) |
+| Registry / release | [docs/CLUSTER.md#release-methodology](./docs/CLUSTER.md#release-methodology) · [deploy/registry/README.md](./deploy/registry/README.md) |
 
-## Vendor — push images
-
-```powershell
-$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
-$env:REPODY_IMAGE_TAG="1.2.3"
-pnpm images:release
-```
-
-Give clients: registry URL, immutable tag, Helm charts, and [docs/deploy/CLIENT.md](./docs/deploy/CLIENT.md).
-
-## Client — four steps
-
-1. Copy `deploy/client/values-external.example.yaml` (or bundled) to private GitOps repo
-2. Apply namespace + ExternalSecrets ([docs/deploy/SECRETS.md](./docs/deploy/SECRETS.md))
-3. `helm upgrade --install` or Argo CD ([docs/deploy/OPENSHIFT.md](./docs/deploy/OPENSHIFT.md) on OpenShift)
-4. `curl https://api.<domain>/v1/healthz/live`
-
-Preflight: `pnpm client:check` · `pnpm deploy:check`
-
-Runtime secret keys: [deploy/ENV.md](./deploy/ENV.md)
+Runtime env keys: [deploy/ENV.md](./deploy/ENV.md)

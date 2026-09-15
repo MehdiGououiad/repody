@@ -2,7 +2,7 @@
 # Install data chart first: deploy/client/bundled/values.data.yaml
 # Registry: CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody (host + project)
 # Images resolve to: {CHANGE_ME_REGISTRY}/repody-backend and .../repody-web
-# Secrets: Vault → ESO → repody-runtime-secrets (see docs/deploy/SECRETS.md)
+# Secrets: Vault → ESO → repody-runtime-secrets (see docs/CLUSTER.md#secrets-and-hardening)
 # migrations.enabled comes from values-common.yaml (Helm hook job)
 
 global:

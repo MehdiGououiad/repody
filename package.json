@@ -73,6 +73,7 @@
     "wait:api": "node scripts/wait-for-api.mjs",
     "wait:warmup": "node scripts/wait-for-warmup.mjs",
     "client:check": "node deploy/scripts/client-integration-check.mjs",
+    "client:pack:mac": "node deploy/scripts/pack-mac-runtime.mjs",
     "prod:readiness": "node deploy/scripts/prod-readiness-check.mjs",
     "extract:soak": "node deploy/scripts/extract-soak.mjs",
     "deploy:check": "node deploy/scripts/deploy-check.mjs",

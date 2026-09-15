@@ -2,7 +2,7 @@
 
 This is the review-facing map for keeping Repody simple, testable, and free of
 generated-code smells. It complements [CONTEXT.md](../CONTEXT.md), which is the
-domain and architecture glossary, and [BACKEND.md](./BACKEND.md), which is the
+domain and architecture glossary, and [DEVELOPMENT.md](./DEVELOPMENT.md), which is the
 backend source inventory.
 
 ## Review Goals
@@ -113,12 +113,12 @@ During day-to-day work, run the smallest command that covers the change:
 
 ## Documentation Rules
 
-- `README.md`: product overview and fastest correct start.
-- `DEV.md`: daily developer workflow.
-- `DEPLOY.md`: short deployment entry point.
-- `docs/README.md`: full docs map.
-- `docs/COMMANDS.md`: canonical command list.
-- `CONTEXT.md`: architecture vocabulary, domain glossary, and context decisions.
+- `README.md`: product overview and two laptop paths (Mac zip vs git).
+- `DEV.md` / `DEPLOY.md`: thin pointers only.
+- `docs/README.md`: “I want to…” hub.
+- `docs/LOCAL.md` / `docs/CLUSTER.md`: laptop vs cluster how-tos.
+- `docs/COMMANDS.md`: canonical command list (must match `package.json`).
+- `CONTEXT.md`: architecture vocabulary and domain glossary.
 - `docs/adr/`: accepted decisions that future reviews should not relitigate.
 
 When code changes behavior, update the smallest doc that owns that behavior and add

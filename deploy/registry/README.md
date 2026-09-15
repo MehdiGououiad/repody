@@ -49,7 +49,7 @@ Verify arches:
 docker buildx imagetools inspect mehdigououiad/repody-backend:0.1.0
 ```
 
-**Daily path** (pulls these for you): `pnpm platform` — see [docs/deploy/LOCAL.md](../../docs/deploy/LOCAL.md).
+**Daily path** (pulls these for you): `pnpm platform` — see [docs/LOCAL.md](../../docs/LOCAL.md).
 
 **Helm:** [deploy/client/values-dockerhub.example.yaml](../client/values-dockerhub.example.yaml).
 
@@ -155,7 +155,7 @@ host under `image.config.openshift.io/cluster` → `spec.registrySources.insecur
 ([OKD docs](https://docs.okd.io/latest/openshift_images/image-configuration.html)). Prefer
 HTTPS + `additionalTrustedCA` for self-signed CAs.
 
-Full OpenShift order: [docs/deploy/OPENSHIFT.md](../../docs/deploy/OPENSHIFT.md#harbor-registry).
+Full OpenShift order: [docs/CLUSTER.md](../../docs/CLUSTER.md#harbor-registry).
 
 ## Other OCI registries
 

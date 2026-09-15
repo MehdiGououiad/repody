@@ -79,8 +79,8 @@ Register an adapter with `register_document_model_adapter(id, extract_fn)` and i
 Examples (workflow-selectable Document models):
 
 - `repody:vlm` / `repody:vlm:cloud` — NuExtract structured (+ optional markdown)
-- `paddleocr:qwen` — OCR stage + Qwen structured extraction ([docs/PADDLEOCR-V6.md](../PADDLEOCR-V6.md))
-- `glm:qwen` — GLM-OCR stage + Qwen structured extraction ([docs/GLM-OCR.md](../GLM-OCR.md))
+- `paddleocr:qwen` — OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#pp-ocrv6))
+- `glm:qwen` — GLM-OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#glm-ocr))
 
 Internal OCR stages (direct helpers only — not catalog entries):
 
@@ -91,9 +91,7 @@ If the new model needs a different serve profile, point a dedicated base URL set
 
 ## References
 
-- [docs/REPODY-VLM.md](../REPODY-VLM.md)
-- [docs/PADDLEOCR-V6.md](../PADDLEOCR-V6.md)
-- [docs/GLM-OCR.md](../GLM-OCR.md)
+- [docs/EXTRACTION.md](../EXTRACTION.md)
 - [DEPLOY.md](../../DEPLOY.md)
 - `backend/src/repody/catalog/registry.py`
 - `backend/src/repody/extraction/vlm.py`

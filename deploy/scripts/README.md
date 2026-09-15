@@ -2,7 +2,7 @@
 
 Platform, Compose, release, and optional model-serve helpers.
 
-See [docs/SCRIPTS.md](../../docs/SCRIPTS.md) for how this folder relates to `scripts/` and `backend/scripts/`.
+See [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md#scripts-map) for how this folder relates to `scripts/` and `backend/scripts/`.
 
 | Area | Entry |
 |------|--------|

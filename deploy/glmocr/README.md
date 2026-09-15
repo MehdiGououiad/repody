@@ -41,9 +41,9 @@ Manual rebuild: `pnpm dev:worker:rebuild`.
 ## Notes
 
 - Port **8083** (NuExtract **:8081**, PP-OCRv6 **:8868**).
-- Started by `pnpm dev:all` when `AUDIT_GLM_OCR_ENABLED=true` (skip with `--no-glmocr`).
+- Started by `pnpm platform -- --with-glm` (or `pnpm glmocr:serve`).
 
 ## Related
 
-- Modular catalog map: [docs/EXTRACTION.md](../../docs/EXTRACTION.md)
-- Docs: [docs/GLM-OCR.md](../../docs/GLM-OCR.md)
+- [docs/EXTRACTION.md](../../docs/EXTRACTION.md#glm-ocr)
+- Laptop: [docs/LOCAL.md](../../docs/LOCAL.md)

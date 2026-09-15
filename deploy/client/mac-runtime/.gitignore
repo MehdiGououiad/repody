@@ -1,0 +1,6 @@
+.env
+models/paths.env
+logs/*
+!logs/.gitkeep
+.pids/
+*.log
