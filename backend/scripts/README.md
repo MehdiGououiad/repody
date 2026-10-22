@@ -16,6 +16,7 @@ Used by containers, CI, and daily development. Paths are stable (`/app/scripts/.
 | `platform_integration_suite.py` | Fresh deploy verification |
 | `warmup_repody_vlm.py` | One-shot VLM warmup |
 | `generate_facture_fixture.py` | E2E Facture PDF |
+| `generate_bank_statement_fixture.py` | Fictional two-page bank statement PDF for list and object-array extraction tests |
 
 ## Perf / load (same folder - image + kubectl copy paths)
 
