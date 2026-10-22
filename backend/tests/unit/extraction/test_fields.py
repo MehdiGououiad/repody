@@ -162,11 +162,11 @@ def test_fields_expands_nested_objects():
 
 def test_fields_from_leaf_json_flat_and_nested_equivalent():
     nested = """{
-      "address": {"city": "Casablanca", "street": "BD REDACTED"}
+      "address": {"city": "Casablanca", "street": "BD DES FLEURS"}
     }"""
     flat = """{
       "address.city": "Casablanca",
-      "address.street": "BD REDACTED"
+      "address.street": "BD DES FLEURS"
     }"""
     schema = [
         SchemaFieldSpec(

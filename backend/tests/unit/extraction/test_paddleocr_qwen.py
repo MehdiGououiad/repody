@@ -113,7 +113,7 @@ async def test_extract_with_paddleocr_qwen_nested_schema(monkeypatch: pytest.Mon
                                 "prunedResult": {
                                     "rec_texts": [
                                         "N° AB123456",
-                                        "Adresse 125 BD REDACTED CASABLANCA",
+                                        "Adresse 125 BD DES FLEURS CASABLANCA",
                                     ]
                                 }
                             }
@@ -134,7 +134,7 @@ async def test_extract_with_paddleocr_qwen_nested_schema(monkeypatch: pytest.Mon
                                         "national_id": "AB123456",
                                         "address": {
                                             "number": "125",
-                                            "street": "BD REDACTED",
+                                            "street": "BD DES FLEURS",
                                             "city": "CASABLANCA",
                                         },
                                     }
@@ -170,7 +170,7 @@ async def test_extract_with_paddleocr_qwen_nested_schema(monkeypatch: pytest.Mon
         by_key = {field.key: field.value for field in result.fields}
         assert by_key["national_id"] == "AB123456"
         assert by_key["address.city"] == "CASABLANCA"
-        assert by_key["address.street"] == "BD REDACTED"
+        assert by_key["address.street"] == "BD DES FLEURS"
         assert by_key["address.number"] == "125"
     finally:
         get_settings.cache_clear()

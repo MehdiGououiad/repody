@@ -41,7 +41,7 @@ def test_fields_from_leaf_json_flat_dotted_keys():
     raw = json.dumps(
         {
             "address.city": "Casablanca",
-            "address.street": "BD REDACTED",
+            "address.street": "BD DES FLEURS",
             "national_id": "AB123456",
         }
     )
@@ -60,7 +60,7 @@ def test_fields_from_leaf_json_flat_dotted_keys():
     by_key = {field.key: field.value for field in fields}
     assert by_key["national_id"] == "AB123456"
     assert by_key["address.city"] == "Casablanca"
-    assert by_key["address.street"] == "BD REDACTED"
+    assert by_key["address.street"] == "BD DES FLEURS"
 
 
 def test_text_to_json_chat_payload_uses_leaf_keys():
