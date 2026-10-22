@@ -14,7 +14,7 @@ Cluster / OpenShift: [CLUSTER.md](./CLUSTER.md). Commands: [COMMANDS.md](./COMMA
 
 ## Mac runtime (no source)
 
-Ship **images + a runtime kit** — not the git repo.
+Ship **images + a runtime kit** - not the git repo.
 
 | Layer | Client receives |
 |-------|-----------------|
@@ -68,7 +68,7 @@ Full checkout for daily work on **Windows · macOS · Linux** (`pnpm platform`).
 | PP-OCRv6 `:8868` / Qwen `:8084` | Host (`--with-paddle`) |
 | GLM-OCR `:8083` | Off unless `--with-glm` |
 
-Images pull as public multi-arch — no Hub login required.
+Images pull as public multi-arch - no Hub login required.
 
 ---
 
@@ -83,7 +83,7 @@ Images pull as public multi-arch — no Hub login required.
 3. **llama-server** on PATH (NuExtract):
    - macOS: `brew install llama.cpp`
    - Windows: `winget install ggml.llamacpp`
-4. **NuExtract GGUFs** — download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
+4. **NuExtract GGUFs** - download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
 5. Disk / RAM for Hub images (~2–4 GB) and GGUFs. `uv` is required only with `--with-paddle`.
 
 ---
@@ -111,9 +111,9 @@ One-shot after clone/install: `pnpm platform bootstrap`.
 | `backend/.env` | `deploy/env/compose.env.example` | API / Compose / inference URLs |
 | `.env.local` | `deploy/env.auth.example` | Next.js / Auth.js / Keycloak browser issuer |
 | `deploy/llamacpp/paths.local.env` | Mac/Win example | **Required** NuExtract GGUF paths |
-| `deploy/research/qwen35/paths.local.env` | Mac example if present | Qwen paths (only with `--with-paddle`) |
+| `deploy/qwen35/paths.local.env` | Mac example if present | Qwen paths (only with `--with-paddle`) |
 
-Trusted laptop / localhost defaults only — do not expose Compose ports to a LAN or reuse passwords outside development.
+Trusted laptop / localhost defaults only - do not expose Compose ports to a LAN or reuse passwords outside development.
 
 ### Preflight
 
@@ -131,7 +131,7 @@ Same checks run at the start of `pnpm platform`. Required for the default path:
 
 ---
 
-## Mac (Apple Silicon) — with git (vendors only)
+## Mac (Apple Silicon) with git (vendors only)
 
 Prefer the [no-source Mac runtime](#mac-runtime-no-source) for clients.  
 With a private checkout:
@@ -161,7 +161,7 @@ Docker selects `linux/arm64` automatically.
 
 Hub auth: browser issuer `http://localhost:8080/realms/repody`; web container uses `AUTH_KEYCLOAK_INTERNAL_ISSUER=http://keycloak:8080/realms/repody`; API JWKS from `http://keycloak:8080/...`.
 
-UI → API: Next.js proxies `/api/v1/*` at runtime (`INTERNAL_API_URL=http://api:8000` in Compose; Kubernetes sets `http://repody-api:8000`). Same web image on both.
+UI -> API: Next.js proxies `/api/v1/*` at runtime (`INTERNAL_API_URL=http://api:8000` in Compose; Kubernetes sets `http://repody-api:8000`). Same web image on both.
 
 Observability is **on by default** (`--no-obs` to skip):
 
@@ -175,7 +175,7 @@ Observability is **on by default** (`--no-obs` to skip):
 
 JSON logs go to Loki; traces to Tempo (`trace_id` links them in Grafana). Config: `deploy/observability/`.
 
-**Bugsink (optional):** create a project → set `BUGSINK_DSN` / `NEXT_PUBLIC_BUGSINK_DSN` in `backend/.env` and `.env.local`. For Compose workers, use `host.docker.internal` in the DSN and recreate `api` / workers. Stack-only: `pnpm dev:src:observability`.
+**Bugsink (optional):** create a project -> set `BUGSINK_DSN` / `NEXT_PUBLIC_BUGSINK_DSN` in `backend/.env` and `.env.local`. For Compose workers, use `host.docker.internal` in the DSN and recreate `api` / workers. Stack-only: `pnpm dev:src:observability`.
 
 ---
 
@@ -190,7 +190,7 @@ pnpm platform stop
 pnpm platform help
 ```
 
-Aliases: `pnpm dev:all` → start · `pnpm dev:setup` / `dev:status` / `dev:stop` → same CLI.
+Aliases: `pnpm dev:all` -> start · `pnpm dev:setup` / `dev:status` / `dev:stop` -> same CLI.
 
 ---
 
@@ -208,9 +208,9 @@ pnpm platform setup -- --no-pull
 
 | Flag | Effect |
 |------|--------|
-| (default) | Host NuExtract `:8081` → `repody:vlm` |
-| `--with-paddle` | Also PP-OCRv6 + Qwen → `paddleocr:qwen` |
-| `--with-glm` | GLM-OCR `:8083` + local extract worker with official SDK → `glm:qwen` / `glm:ocr` |
+| (default) | Host NuExtract `:8081` -> `repody:vlm` |
+| `--with-paddle` | Also PP-OCRv6 + Qwen -> `paddleocr:qwen` |
+| `--with-glm` | GLM-OCR `:8083` + local extract worker with official SDK -> `glm:qwen` / `glm:ocr` |
 | `--no-nuextract` | Skip NuExtract |
 | `--platform-only` | Containers only |
 | `--no-pull` | Skip `docker pull` |
@@ -221,14 +221,14 @@ All three structured engines: `pnpm platform -- --with-paddle --with-glm`
 | Catalog | Pipeline |
 |---------|----------|
 | `repody:vlm` | Official NuExtract template JSON (**default**) |
-| `paddleocr:qwen` | PP-OCR → Qwen text→JSON |
-| `glm:qwen` | GlmOcr SDK → Qwen text→JSON |
+| `paddleocr:qwen` | PP-OCR -> Qwen text -> JSON |
+| `glm:qwen` | GlmOcr SDK -> Qwen text -> JSON |
 
-Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option — only used inside Qwen pipelines. See [EXTRACTION.md](./EXTRACTION.md).
+Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option - only used inside Qwen pipelines. See [EXTRACTION.md](./EXTRACTION.md).
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm platform setup` | Once — env + pull Hub images |
+| `pnpm platform setup` | Once - env + pull Hub images |
 | `pnpm platform doctor` | Preflight |
 | `pnpm platform` | Preflight + start |
 | `pnpm platform status` | Health |

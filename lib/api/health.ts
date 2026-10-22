@@ -8,7 +8,7 @@ export type BackendHealth = {
 export async function checkBackendHealth(): Promise<BackendHealth> {
   const start = Date.now();
   try {
-    // Liveness only — badge should not ping Redis/DB/queues every 30s.
+    // Liveness only - badge should not ping Redis/DB/queues every 30s.
     const { data, response } = await browserApi.GET("/v1/healthz/live");
     if (!response.ok || data?.status !== "ok") return { status: "down" };
     return { status: "ok", latencyMs: Date.now() - start };

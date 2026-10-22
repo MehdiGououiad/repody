@@ -15,7 +15,7 @@ __all__ = ["RunEntity", "RunStatus"]
 
 @dataclass
 class RunEntity:
-    """Enterprise entity for audit run lifecycle — no framework or persistence imports."""
+    """Enterprise entity for audit run lifecycle - no framework or persistence imports."""
 
     id: str
     workflow_id: str
@@ -79,7 +79,7 @@ class RunCompletionOutcome:
 
 @dataclass(frozen=True)
 class RunStartFieldUpdates:
-    """Field values applied when a queued run starts — persistence maps these to columns."""
+    """Field values applied when a queued run starts - persistence maps these to columns."""
 
     status: RunStatus
     started_at: datetime

@@ -1,4 +1,4 @@
-"""Postgres test database helpers — Alembic migrations, same path as production."""
+"""Postgres test database helpers - Alembic migrations, same path as production."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def configure_test_database_url(url: str | None = None) -> str:
 
 
 def upgrade_database_to_head(database_url: str | None = None) -> None:
-    """Apply Alembic migrations (subprocess — safe inside pytest-asyncio)."""
+    """Apply Alembic migrations (subprocess - safe inside pytest-asyncio)."""
     url = configure_test_database_url(database_url)
     env = os.environ.copy()
     env["AUDIT_DATABASE_URL"] = url
@@ -102,7 +102,7 @@ def create_test_engine(database_url: str | None = None) -> AsyncEngine:
 
 
 async def reset_test_database(session_factory: async_sessionmaker) -> None:
-    """Truncate all tables and re-seed — one clean slate per test."""
+    """Truncate all tables and re-seed - one clean slate per test."""
     table_names = ", ".join(f'"{table.name}"' for table in Base.metadata.sorted_tables)
     async with session_factory() as session:
         if table_names:

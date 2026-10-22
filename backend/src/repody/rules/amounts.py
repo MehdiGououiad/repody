@@ -28,7 +28,7 @@ def _locale_normalize_numeric(token: str) -> str:
 
 
 def normalize_amount(value: str) -> str:
-    """Locale amount parse for rules comparison only — not extraction storage."""
+    """Locale amount parse for rules comparison only - not extraction storage."""
     s = value.strip()
     if not s or s == "—":
         return s

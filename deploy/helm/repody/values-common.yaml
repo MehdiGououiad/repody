@@ -1,11 +1,11 @@
-# Shared app-plane contract — portable Kubernetes Ingress edge (networking.k8s.io/v1).
+# Shared app-plane contract - portable Kubernetes Ingress edge (networking.k8s.io/v1).
 #
 # Helm layering:
-#   values.yaml → values-common.yaml → profile overlay → optional enterprise
+#   values.yaml -> values-common.yaml -> profile overlay -> optional enterprise
 #
 # Profiles (global.deploymentProfile):
-#   external  — client-managed Postgres, Redis, S3 (default)
-#   bundled   — in-cluster data chart (see docs/CLUSTER.md)
+#   external - client-managed Postgres, Redis, S3 (default)
+#   bundled - in-cluster data chart (see docs/CLUSTER.md)
 
 global:
   deploymentProfile: external

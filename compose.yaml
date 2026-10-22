@@ -1,5 +1,5 @@
 # Local/dev data plane (see deploy/pinned-images.env)
-# MinIO: pgsty community fork — upstream minio/minio no longer publishes images.
+# MinIO: pgsty community fork - upstream minio/minio no longer publishes images.
 # Redis/Postgres: official Docker Library pins.
 # Docs: docs/LOCAL.md
 #
@@ -7,8 +7,8 @@
 #   pnpm db:migrate
 #   copy deploy\env\compose.env.example backend\.env
 #   copy deploy\env.auth.example .env.local
-#   pnpm dev:setup        # once — env files + migrate
-#   pnpm dev:all          # daily — stack + API + UI (one terminal)
+#   pnpm dev:setup        # once - env files + migrate
+#   pnpm dev:all          # daily - stack + API + UI (one terminal)
 #   pnpm dev              # background only (Compose + workers + NuExtract)
 #   pnpm dev:app          # foreground API + UI
 #   pnpm dev:stop         # stop everything
@@ -87,7 +87,7 @@ services:
       retries: 12
       start_period: 30s
 
-  # Taskiq workers — Linux containers (same image as API).
+  # Taskiq workers - Linux containers (same image as API).
   worker-extract:
     profiles: [workers]
     build:
@@ -150,7 +150,7 @@ services:
       AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
       AUDIT_LLM_VALIDATION_ENABLED: "false"
       AUDIT_REPODY_VLM_TIMEOUT_SECONDS: ${AUDIT_REPODY_VLM_TIMEOUT_SECONDS:-600}
-      # NuExtract Cloud (optional) — values from `docker compose --env-file backend/.env`
+      # NuExtract Cloud (optional) - values from `docker compose --env-file backend/.env`
       AUDIT_NUEXTRACT_CLOUD_ENABLED: ${AUDIT_NUEXTRACT_CLOUD_ENABLED:-false}
       AUDIT_NUEXTRACT_CLOUD_API_KEY: ${AUDIT_NUEXTRACT_CLOUD_API_KEY:-}
       AUDIT_NUEXTRACT_CLOUD_BASE_URL: ${AUDIT_NUEXTRACT_CLOUD_BASE_URL:-https://nuextract.ai}
@@ -216,7 +216,7 @@ services:
       start_period: 20s
     restart: unless-stopped
 
-  # ── Observability (optional: docker compose --profile observability up -d) ──
+  # Observability (optional: docker compose --profile observability up -d)
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:observability
   bugsink-db:
     profiles: [observability]

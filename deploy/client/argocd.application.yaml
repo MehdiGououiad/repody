@@ -2,9 +2,9 @@
 #
 # Prerequisites:
 #   1. Client GitOps repo contains:
-#        values.yaml     — from values-external.example.yaml or values-bundled.example.yaml
-#        enterprise.yaml — from values-enterprise.example.yaml
-#        images.yaml     — optional digests from vendor helm-images.yaml
+#        values.yaml - from values-external.example.yaml or values-bundled.example.yaml
+#        enterprise.yaml - from values-enterprise.example.yaml
+#        images.yaml - optional digests from vendor helm-images.yaml
 #   2. ExternalSecrets created repody-runtime-secrets + registry-pull-secret
 #   3. Replace CHANGE_ME_* below
 #   4. Same Application on OpenShift and generic Kubernetes (Ingress only)

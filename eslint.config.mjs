@@ -38,7 +38,7 @@ export default defineConfig([
     "build/**",
     "dist/**",
     "next-env.d.ts",
-    // Non-frontend trees (Python, infra, generated artifacts) — Biome and ruff
+    // Non-frontend trees (Python, infra, generated artifacts) - Biome and ruff
     // cover these instead.
     "backend/**",
     "deploy/**",

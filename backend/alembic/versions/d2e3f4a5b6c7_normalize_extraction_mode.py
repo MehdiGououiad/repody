@@ -45,5 +45,5 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Irreversible data normalization — no-op.
+    # Irreversible data normalization - no-op.
     pass

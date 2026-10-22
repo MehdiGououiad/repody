@@ -1,4 +1,4 @@
-"""Pure metrics builders — no SQL / session."""
+"""Pure metrics builders - no SQL / session."""
 
 from __future__ import annotations
 

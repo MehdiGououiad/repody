@@ -26,7 +26,7 @@ export type ImportNuextractTemplateResult =
   | { ok: true; fields: SchemaField[] }
   | { ok: false; error: "invalid_json" | "not_object" | "empty" };
 
-/** HF prose aliases → TYPES.md names. */
+/** HF prose aliases -> TYPES.md names. */
 const TYPE_ALIASES: Record<string, string> = {
   email: "email-address",
   phone: "phone-number",
@@ -116,7 +116,7 @@ function fieldFromArrayNode(name: string, value: unknown[]): SchemaField {
     });
   }
 
-  // Official list: ["string"] — single type string in an array.
+  // Official list: ["string"] - single type string in an array.
   if (value.length === 1 && typeof value[0] === "string") {
     const scalar = leafType(value[0]);
     if (!isStructureTemplateType(scalar)) {
@@ -128,7 +128,7 @@ function fieldFromArrayNode(name: string, value: unknown[]): SchemaField {
     }
   }
 
-  // Official enum: ["yes", "no", …] — ≥2 choice strings.
+  // Official enum: ["yes", "no", …] - ≥2 choice strings.
   if (value.length >= 2 && value.every((item) => typeof item === "string")) {
     const strings = value.map((item) => String(item).trim()).filter(Boolean);
     return newField({

@@ -16,7 +16,7 @@ async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
 }
 
 export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
-  // Structured extraction only — markdown-only OCR engines are not selectable.
+  // Structured extraction only - markdown-only OCR engines are not selectable.
   return catalog.models.filter(
     (model) => model.kind === "document_model" && model.markdownOnly !== true
   );

@@ -1,4 +1,4 @@
-"""Ephemeral per-run workflow config (microservice boundary — no workflow mutation)."""
+"""Ephemeral per-run workflow config (microservice boundary - no workflow mutation)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class SnapshotSchemaField:
 
 @dataclass
 class SnapshotDocument:
-    """Document view for run pipeline — ORM Document or snapshot JSON."""
+    """Document view for run pipeline - ORM Document or snapshot JSON."""
 
     id: str
     document_type: str

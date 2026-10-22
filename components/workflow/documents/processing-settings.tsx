@@ -107,7 +107,7 @@ export function ProcessingSettings({
             onChange({
               documentModelId: value,
               extractionMode: "document_model",
-              // Markdown-only catalog models (e.g. PP-OCRv6) always run document→markdown.
+              // Markdown-only catalog models (e.g. PP-OCRv6) always run document -> markdown.
               markdownExtraction: nextMarkdownOnly ? true : doc.markdownExtraction,
               ...(nextMarkdownOnly ? { schema: [] } : {}),
             });

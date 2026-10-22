@@ -11,7 +11,7 @@ Enterprise guardrails — profile-aware. Fails fast when production values drift
 {{- $profile := .Values.global.deploymentProfile | default "external" -}}
 {{- if eq $env "production" -}}
 
-  {{- /* ── Both profiles: no inline app secrets, immutable tags ── */ -}}
+  {{- /* Both profiles: no inline app secrets, immutable tags */ -}}
   {{- if .Values.secrets.create -}}
     {{- fail "production must not create inline chart secrets; use External Secrets, Vault, SOPS, or client secret manager" -}}
   {{- end -}}
@@ -24,7 +24,7 @@ Enterprise guardrails — profile-aware. Fails fast when production values drift
     {{- end -}}
   {{- end -}}
 
-  {{- /* ── App chart never bundles stateful subcharts in production ── */ -}}
+  {{- /* App chart never bundles stateful subcharts in production */ -}}
   {{- if .Values.postgresql.enabled -}}
     {{- fail "enable Postgres via repody-data chart (bundled profile) or externalDatabase (external profile)" -}}
   {{- end -}}

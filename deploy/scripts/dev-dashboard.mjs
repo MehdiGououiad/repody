@@ -1,5 +1,5 @@
 /**
- * Local dev startup dashboard — URLs, credentials, and what each component does.
+ * Local dev startup dashboard - URLs, credentials, and what each component does.
  */
 
 const REPODY_LOGIN = "operator@repody.local / repody-dev (use localhost in the browser)";

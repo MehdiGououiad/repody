@@ -1,4 +1,4 @@
-"""Document model extraction adapters — breaks catalog ↔ extraction import cycles."""
+"""Document model extraction adapters - breaks catalog ↔ extraction import cycles."""
 
 from __future__ import annotations
 

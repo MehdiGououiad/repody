@@ -1,7 +1,7 @@
-"""GLM-OCR + Qwen structured extraction — official SDK markdown then text LLM → JSON.
+"""GLM-OCR + Qwen structured extraction - official SDK markdown then text LLM -> JSON.
 
-Stage 1: official GlmOcr SDK (PP-DocLayoutV3 + GLM-OCR region OCR) — same as ``glm:ocr``.
-Stage 2: shared OCR→Qwen pipeline in ``extraction.ocr_qwen``.
+Stage 1: official GlmOcr SDK (PP-DocLayoutV3 + GLM-OCR region OCR) - same as ``glm:ocr``.
+Stage 2: shared OCR -> Qwen pipeline in ``extraction.ocr_qwen``.
 
 Requires:
   pnpm glmocr:serve    (:8083)
@@ -35,7 +35,7 @@ async def extract_with_glm_ocr_qwen(
     markdown_extraction: bool = False,
     extraction_icl_examples: list[ExtractionIclExample] | None = None,
 ) -> ExtractionResult:
-    """Structured extraction: GLM-OCR markdown → Qwen JSON (UI schema)."""
+    """Structured extraction: GLM-OCR markdown -> Qwen JSON (UI schema)."""
     # In-context examples steer the vision path only; the text LLM ignores them.
     _ = extraction_icl_examples
 

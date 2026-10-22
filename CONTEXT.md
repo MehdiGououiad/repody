@@ -1,4 +1,4 @@
-# Repody — architecture context
+# Repody - architecture context
 
 Single-page map for tech leads and new contributors. How-tos: [docs/README.md](./docs/README.md). Decisions: [docs/adr/](./docs/adr/).
 
@@ -11,7 +11,7 @@ Full functional + technical architecture dossier (FR): [docs/ARCHITECTURE.md](./
 | **Repody** | Product, repo, npm package, Helm release | Public name everywhere |
 | **repody** | Python package (`backend/src/repody/`, dist name) | Import path + `pip install -e backend` |
 | **`AUDIT_*`** | Env vars | Settings prefix (kept for stable ops config) |
-| **Next.js `app/`** | Repo root `app/` | App Router routes (thin pages) — not Python |
+| **Next.js `app/`** | Repo root `app/` | App Router routes (thin pages) - not Python |
 | **`repody.app`** | `backend/src/repody/app/` | Python application use cases (Workflow, Run, …) |
 
 Default document extraction: NuExtract via OpenAI-compatible llama-server (`repody:vlm`).
@@ -22,7 +22,7 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | Catalog adapter (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` — [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a UI catalog option |
+| **Document model** | Catalog adapter (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` - [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a UI catalog option |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
 | **LLM rule** | Natural-language rule via a separate text model |
 | **Worker pool `extract`** | Taskiq worker for document-model extraction |
@@ -73,7 +73,7 @@ backend/src/repody/
 └── settings/            AUDIT_* settings
 ```
 
-**Hot path:** `process_run` → `execute_platform_run`(IDP) → `compose_idp` → `complete_run`.
+**Hot path:** `process_run` -> `execute_platform_run`(IDP) -> `compose_idp` -> `complete_run`.
 
 ### Bounded contexts
 
@@ -111,9 +111,9 @@ Separate models/endpoints for extraction vs LLM rules. Add models in `catalog/re
 
 Next.js 16 App Router at repo root:
 
-- `app/` — thin pages
-- `components/` — domain UI
-- `lib/api/` — typed clients; RSC `serverFetch`, client islands via `/api/*` → backend `/v1/*`
+- `app/` - thin pages
+- `components/` - domain UI
+- `lib/api/` - typed clients; RSC `serverFetch`, client islands via `/api/*` -> backend `/v1/*`
 
 ## Deploy modules
 
@@ -137,7 +137,7 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs
 
 ## Authorization (Casbin)
 
-JWT roles → `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal.
+JWT roles -> `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal.
 
 | Role | Typical access |
 |------|----------------|
@@ -155,14 +155,8 @@ JWT roles → `auth/rbac_policy.csv`. Routers use `require_permission(resource, 
 
 Full command list: [docs/COMMANDS.md](./docs/COMMANDS.md). Engineering notes: [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
 
-## Non-product paths
-
-- `.agents/skills/` — Cursor agent skills
-- `deploy/scripts/research/` · `deploy/research/qwen35/` — optional local experiments
-- `benchmark-reports/` — local output (gitignored)
-
 ## Further reading
 
-- [docs/README.md](./docs/README.md) — docs hub
-- [docs/EXTRACTION.md](./docs/EXTRACTION.md) — document models
-- [docs/adr/](./docs/adr/README.md) — ADRs
+- [docs/README.md](./docs/README.md) - docs hub
+- [docs/EXTRACTION.md](./docs/EXTRACTION.md) - document models
+- [docs/adr/](./docs/adr/README.md) - ADRs

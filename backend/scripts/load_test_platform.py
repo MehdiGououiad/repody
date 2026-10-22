@@ -1,7 +1,7 @@
-"""Real-world platform load test — control plane + JSON fast path + admission.
+"""Real-world platform load test - control plane + JSON fast path + admission.
 
 Mimics operators and API clients: list workflows/audits, enqueue empty JSON runs,
-poll status while queued, saturate admission caps, measure claim→done latency.
+poll status while queued, saturate admission caps, measure claim -> done latency.
 
 Does **not** stress VLM extraction (use ``prod_stress_test.py`` for that).
 

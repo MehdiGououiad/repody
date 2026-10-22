@@ -1,4 +1,4 @@
-"""Casbin RBAC — immutable shared enforcer; JWT roles checked as policy subjects."""
+"""Casbin RBAC - immutable shared enforcer; JWT roles checked as policy subjects."""
 
 from __future__ import annotations
 

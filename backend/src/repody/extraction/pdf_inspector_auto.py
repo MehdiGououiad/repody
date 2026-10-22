@@ -1,7 +1,7 @@
 """Automode: Firecrawl pdf-inspector native PDF text, then Qwen JSON or fallback.
 
 When ``native_pdf_auto`` is on and the upload is a PDF, classify + extract with
-pdf-inspector. If quality is good enough, run the same Qwen text→JSON path as
+pdf-inspector. If quality is good enough, run the same Qwen text -> JSON path as
 ``paddleocr:qwen``. Otherwise the caller falls back to the selected document model.
 """
 
@@ -145,7 +145,7 @@ async def extract_via_native_markdown(
     markdown_extraction: bool = False,
     page_count: int = 0,
 ) -> ExtractionResult:
-    """Structured extraction: native markdown → Qwen JSON (same path as paddleocr:qwen)."""
+    """Structured extraction: native markdown -> Qwen JSON (same path as paddleocr:qwen)."""
     pages = page_count or 1
 
     async def native_markdown() -> OcrPages:

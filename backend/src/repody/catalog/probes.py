@@ -1,4 +1,4 @@
-"""Document model catalog — registry entries plus optional live runtime probes."""
+"""Document model catalog - registry entries plus optional live runtime probes."""
 
 from __future__ import annotations
 

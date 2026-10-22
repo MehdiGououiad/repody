@@ -76,7 +76,7 @@ def _snapshot_from_form_payload(payload: str | None) -> RunSnapshot | None:
     dependencies=[Depends(require_admin_or_workflow_run)],
 )
 async def get_run_status(run_id: str, session: SessionDep) -> RunPollResponse:
-    """Lightweight poll — status and progress only (no full audit payload)."""
+    """Lightweight poll - status and progress only (no full audit payload)."""
     body = await poll_run_status(session, run_id)
     return RunPollResponse(
         status=body.status,

@@ -123,7 +123,7 @@ async def _touch_run_activity(session: AsyncSession, run: Run) -> None:
 
 
 async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
-    """CAS queued→running; skip if already running or finished."""
+    """CAS queued -> running; skip if already running or finished."""
     if not await _try_advisory_lock(session, run_id):
         log.info(
             "run_claim_lock_busy",

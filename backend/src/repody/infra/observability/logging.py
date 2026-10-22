@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -95,7 +96,7 @@ def _wrap_for_formatter(
     logger: logging.Logger,
     method_name: str,
     event_dict: structlog.types.EventDict,
-) -> tuple[tuple[structlog.types.EventDict], dict[str, object]]:
+) -> tuple[tuple[structlog.types.EventDict], dict[str, Any]]:
     """Finish the structlog chain and keep exc_info on the stdlib record.
 
     Sentry's logging integration reports record.exc_info as the exception.

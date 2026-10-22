@@ -1,4 +1,4 @@
-"""Taskiq Redis stream brokers — one queue per worker pool."""
+"""Taskiq Redis stream brokers - one queue per worker pool."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ _api_brokers_started = False
 
 
 def _producer_pools(settings) -> tuple[str, ...]:
-    """Queues the API produces to — the two IDP capacity classes."""
+    """Queues the API produces to - the two IDP capacity classes."""
     return (
         settings.worker_pool_extract,
         settings.worker_pool_fast,

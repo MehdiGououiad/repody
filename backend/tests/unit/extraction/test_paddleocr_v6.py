@@ -60,7 +60,7 @@ def test_build_ocr_request_payload_supports_official_fast_path(monkeypatch: pyte
 
 
 def test_paddleocr_v6_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
-    """Markdown-only OCR is an internal stage — not a selectable catalog model."""
+    """Markdown-only OCR is an internal stage - not a selectable catalog model."""
     monkeypatch.setenv("AUDIT_PADDLEOCR_V6_ENABLED", "true")
     get_settings.cache_clear()
     try:

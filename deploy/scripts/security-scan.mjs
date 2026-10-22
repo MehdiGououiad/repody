@@ -22,7 +22,7 @@ const checkOnly = process.argv.includes("--check");
 const skipImages =
   process.argv.includes("--quick") || process.env.REPODY_SECURITY_SKIP_IMAGES === "1";
 
-/** Scan these paths only — avoids .next/node_modules churn on local dev. */
+/** Scan these paths only - avoids .next/node_modules churn on local dev. */
 const FS_TARGETS = ["backend", "pnpm-lock.yaml", "deploy"];
 
 function run(cmd, args, opts = {}) {

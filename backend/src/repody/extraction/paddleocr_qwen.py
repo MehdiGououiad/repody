@@ -1,7 +1,7 @@
-"""PP-OCRv6 + Qwen structured extraction — official OCR then text LLM → JSON.
+"""PP-OCRv6 + Qwen structured extraction - official OCR then text LLM -> JSON.
 
 Stage 1: PaddleX Basic Serving ``POST /ocr`` (same as ``paddleocr:v6``).
-Stage 2: shared OCR→Qwen pipeline in ``extraction.ocr_qwen``.
+Stage 2: shared OCR -> Qwen pipeline in ``extraction.ocr_qwen``.
 
 Requires both services:
   pnpm paddleocr:v6:serve   (:8868)
@@ -34,7 +34,7 @@ async def extract_with_paddleocr_qwen(
     markdown_extraction: bool = False,
     extraction_icl_examples: list[ExtractionIclExample] | None = None,
 ) -> ExtractionResult:
-    """Structured extraction: PP-OCRv6 markdown → Qwen JSON."""
+    """Structured extraction: PP-OCRv6 markdown -> Qwen JSON."""
     # In-context examples steer the vision path only; the text LLM ignores them.
     _ = extraction_icl_examples
 

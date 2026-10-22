@@ -8,7 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const packageJson = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
 const scripts = new Set(Object.keys(packageJson.scripts ?? {}));
 const pnpmBuiltins = new Set(["dlx", "exec", "install", "update"]);
-const rootDocs = new Set(["AGENTS.md", "CLAUDE.md", "DEPLOY.md", "DEV.md", "README.md"]);
+const rootDocs = new Set(["CONTEXT.md", "README.md"]);
 const docRoots = ["deploy", "docs", "e2e"];
 const skipDirs = new Set([
   ".git",

@@ -1,4 +1,4 @@
-"""Document extraction pipeline — cache-aware functional entrypoint."""
+"""Document extraction pipeline - cache-aware functional entrypoint."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from functools import lru_cache
 
 import structlog
 
-import repody.extraction.register  # noqa: F401 — catalog adapters
+import repody.extraction.register  # noqa: F401 - catalog adapters
 from repody.catalog.registry import (
     extract_with_document_model,
     normalize_model_id,
@@ -65,7 +65,7 @@ def extract_document_fields(
     *,
     sample_values: dict[str, str] | None = None,
 ) -> list:
-    """Sync helper for dry-run callers — never injects hardcoded demo data."""
+    """Sync helper for dry-run callers - never injects hardcoded demo data."""
     specs = [
         SchemaFieldSpec(
             name=(row.get("name") or "").strip(),
@@ -126,7 +126,7 @@ def _icl_fingerprint(examples: list[ExtractionIclExample] | None) -> str:
 
 
 def _store_markdown_text(text: str | None, *, markdown_extraction: bool) -> str | None:
-    """Persist markdown for UI/cache — truncate only."""
+    """Persist markdown for UI/cache - truncate only."""
     if not markdown_extraction:
         return None
     return truncate_text(text)

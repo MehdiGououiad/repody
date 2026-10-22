@@ -1,4 +1,4 @@
-"""Canonical run lifecycle status — shared by ORM, domain, and services."""
+"""Canonical run lifecycle status - shared by ORM, domain, and services."""
 
 from __future__ import annotations
 

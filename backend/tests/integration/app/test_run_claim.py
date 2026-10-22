@@ -1,4 +1,4 @@
-"""Integration: claim queued→running is idempotent against Postgres."""
+"""Integration: claim queued -> running is idempotent against Postgres."""
 
 from __future__ import annotations
 

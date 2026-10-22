@@ -1,4 +1,4 @@
-"""OIDC-enabled run creation — API keys for deployed runs, JWT for test runs."""
+"""OIDC-enabled run creation - API keys for deployed runs, JWT for test runs."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ def _oidc_enabled(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.asyncio
 async def test_deployed_run_rejects_missing_api_key(client):
-    """Production POST /runs must not require platform JWT — only the workflow key."""
+    """Production POST /runs must not require platform JWT - only the workflow key."""
     unauthorized = await client.post("/v1/workflows/wf-invoice-audit/runs")
     assert unauthorized.status_code == 401
 

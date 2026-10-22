@@ -1,4 +1,4 @@
-"""Shared ``httpx.AsyncClient`` pool — reuse connections across requests.
+"""Shared ``httpx.AsyncClient`` pool - reuse connections across requests.
 
 Official HTTPX guidance: create clients once, share them, and ``aclose()`` on
 shutdown. Per-request ``async with AsyncClient()`` throws away the connection
@@ -13,7 +13,7 @@ from typing import Any
 
 import httpx
 
-# (base_url, frozen headers, loop id) → client. Timeout is passed per request.
+# (base_url, frozen headers, loop id) -> client. Timeout is passed per request.
 _client_cache: dict[tuple[str, tuple[tuple[str, str], ...], int | None], httpx.AsyncClient] = {}
 
 

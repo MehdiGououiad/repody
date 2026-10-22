@@ -1,4 +1,4 @@
-/** Public document-model branding — keep in sync with extraction/branding.py */
+/** Public document-model branding - keep in sync with extraction/branding.py */
 
 export const REPODY_VLM_CATALOG_ID = "repody:vlm";
 export const REPODY_VLM_LABEL = "Repody VLM";

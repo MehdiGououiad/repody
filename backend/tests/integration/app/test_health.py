@@ -1,4 +1,4 @@
-"""Readiness probe against real Postgres + Redis — no mocked connectivity."""
+"""Readiness probe against real Postgres + Redis - no mocked connectivity."""
 
 from __future__ import annotations
 

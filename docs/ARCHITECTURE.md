@@ -1,6 +1,6 @@
-# Dossier d'architecture fonctionnelle et technique — Repody
+# Repody : dossier d'architecture fonctionnelle et technique
 
-**Produit :** Repody — plateforme d'audit documentaire (IDP : *Intelligent Document Processing*).
+**Produit :** Repody - plateforme d'audit documentaire (IDP : *Intelligent Document Processing*).
 **Objet du document :** décrire l'ensemble des fonctionnalités de la solution, expliquer chaque composant, et fournir les vues d'architecture (séquence et technique).
 **Public visé :** architectes d'entreprise, direction technique, équipes d'intégration client.
 
@@ -12,7 +12,7 @@ Documents liés : [CONTEXT.md](../CONTEXT.md) (carte produit) · [LOCAL.md](./LO
 
 1. [Périmètre et principes directeurs](#1-périmètre-et-principes-directeurs)
 2. [Architecture fonctionnelle](#2-architecture-fonctionnelle)
-3. [Architecture applicative — les composants](#3-architecture-applicative-les-composants)
+3. [Architecture applicative - les composants](#3-architecture-applicative-les-composants)
 4. [Architecture technique](#4-architecture-technique)
 5. [Diagrammes de séquence](#5-diagrammes-de-séquence)
 6. [Diagrammes d'architecture technique](#6-diagrammes-darchitecture-technique)
@@ -85,7 +85,7 @@ La matrice complète figure en [annexe 7.3](#73-matrice-dhabilitations-casbin).
 
 | Capacité | Description |
 |---|---|
-| Création / édition guidée | Assistant en trois étapes : documents → règles → test et déploiement. |
+| Création / édition guidée | Assistant en trois étapes : documents -> règles -> test et déploiement. |
 | Multi-documents | Un workflow peut exiger plusieurs pièces, ordonnées par position. |
 | Schéma de champs | Définition nom, description, type NuExtract, configuration avancée ; **suggestion automatique de type**. |
 | Import de template | Import d'un template JSON NuExtract existant pour amorcer le schéma. |
@@ -178,7 +178,7 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 
 ---
 
-## 3. Architecture applicative — les composants
+## 3. Architecture applicative : les composants
 
 ### 3.1 Vue d'ensemble
 
@@ -189,7 +189,7 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 | 3 | **Autorisation** | Casbin | Décision d'accès `(ressource, action)` sur chaque route. |
 | 4 | **Bus de jobs / événements** | Redis Streams + pub/sub | Transport Taskiq et diffusion de la progression. |
 | 5 | **Workers** | Taskiq (pools `extract`, `fast`) | Exécution asynchrone des runs. |
-| 6 | **Agent IDP** | Python (`agents/idp/`) | Orchestration extraction → validation → persistance. |
+| 6 | **Agent IDP** | Python (`agents/idp/`) | Orchestration extraction -> validation -> persistance. |
 | 7 | **Pipeline d'extraction** | Python (`extraction/`) | Rendu, appel modèle, projection des champs, cache. |
 | 8 | **Moteur de règles** | `simpleeval` + LLM | Évaluation des contrôles déterministes et sémantiques. |
 | 9 | **Base de données** | PostgreSQL | Source de vérité (workflows, runs, champs, résultats, outbox). |
@@ -262,18 +262,18 @@ Les contrats (`contracts.py`) isolent l'agent de l'ORM : `DocumentSpec`, `RuleSp
 | Automode PDF | `pdf_inspector_auto.py` | Si PDF et option active : analyse de qualité, acceptation du markdown natif sous conditions strictes, sinon repli sur le modèle choisi. |
 | Rendu | `render.py` | Conversion PDF/images en pages pour les modèles de vision, politique de DPI. |
 | Adaptateur | `vlm.py`, `paddleocr_qwen.py`, `glm_ocr_qwen.py` | Appel du modèle du catalogue. |
-| Projection | `fields.py` | JSON du modèle → champs feuilles exploitables par l'UI et les règles. |
+| Projection | `fields.py` | JSON du modèle -> champs feuilles exploitables par l'UI et les règles. |
 | Schéma | `schema.py`, `nuextract.py` | Conversion du schéma workflow en template de modèle, exemples ICL. |
 | Warmup | `warmup.py` | Préchauffage du modèle au démarrage du worker `extract`. |
 
-**Catalogue de modèles documentaires** (`catalog/registry.py`) — identifiants sélectionnables dans un workflow :
+**Catalogue de modèles documentaires** (`catalog/registry.py`) - identifiants sélectionnables dans un workflow :
 
 | Identifiant | Chaîne de traitement |
 |---|---|
-| **`repody:vlm`** | NuExtract servi localement (llama-server) — **modèle par défaut**. |
+| **`repody:vlm`** | NuExtract servi localement (llama-server) - **modèle par défaut**. |
 | `repody:vlm:cloud` | NuExtract en mode service géré. |
-| `paddleocr:qwen` | OCR PP-OCRv6 (markdown) puis Qwen texte→JSON. |
-| `glm:qwen` | GLM-OCR (markdown) puis Qwen texte→JSON. |
+| `paddleocr:qwen` | OCR PP-OCRv6 (markdown) puis Qwen texte -> JSON. |
+| `glm:qwen` | GLM-OCR (markdown) puis Qwen texte -> JSON. |
 
 `paddleocr:v6` et `glm:ocr` sont des **étapes internes** de markdown, non proposées dans l'interface. La disponibilité réelle dépend des indicateurs `AUDIT_*` et des sondes de joignabilité (`catalog/probes.py`). Détail : [EXTRACTION.md](./EXTRACTION.md).
 
@@ -305,13 +305,13 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 | Rôles | Extraits des claims *realm*/*groups*, filtrés sur la liste applicative connue. |
 | Autorisation | Casbin (`rbac_model.conf` + `rbac_policy.csv`), via `require_permission(resource, action)`. |
 | Accès run | Double voie : JWT porteur du droit `run:execute`, ou **clé API de workflow** (source `api`). |
-| Mode développement | Si `AUDIT_OIDC_ENABLED=false`, principal fixe `platform_admin` — **refusé en production** par les validateurs de configuration. |
+| Mode développement | Si `AUDIT_OIDC_ENABLED=false`, principal fixe `platform_admin` - **refusé en production** par les validateurs de configuration. |
 
 ### 3.10 Persistance et stockage
 
-**PostgreSQL** — entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `run_dispatch_outbox`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
+**PostgreSQL** - entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `run_dispatch_outbox`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
 
-**Stockage objet** (`infra/storage/`) — deux implémentations du contrat `ObjectStore` :
+**Stockage objet** (`infra/storage/`) - deux implémentations du contrat `ObjectStore` :
 
 | Backend | Usage | Présigné |
 |---|---|---|
@@ -348,11 +348,11 @@ Deux modes de livraison : dépôt Git complet (`pnpm platform`) ou **kit runtime
 | Élément | Choix |
 |---|---|
 | Orchestration | Kubernetes ou OpenShift, namespace `repody`. |
-| Exposition | `networking.k8s.io/Ingress` uniquement — **aucune ressource `Route` propre à OpenShift** dans le chart. |
+| Exposition | `networking.k8s.io/Ingress` uniquement - **aucune ressource `Route` propre à OpenShift** dans le chart. |
 | Sécurité des pods | `runAsNonRoot`, sans UID figé : compatible PSA *restricted* et *restricted-v2*. |
 | Chartes Helm | `repody` (applicatif), `repody-data` (données embarquées), `repody-auth` (Keycloak de laboratoire). |
-| Fusion des valeurs | `values.yaml` → `values-common.yaml` → valeurs client → surcouche entreprise. |
-| Secrets | Vault → External Secrets Operator → Secrets Kubernetes (`repody-runtime-secrets`, `registry-pull-secret`). |
+| Fusion des valeurs | `values.yaml` -> `values-common.yaml` -> valeurs client -> surcouche entreprise. |
+| Secrets | Vault -> External Secrets Operator -> Secrets Kubernetes (`repody-runtime-secrets`, `registry-pull-secret`). |
 | Images | Registre client (GHCR, Harbor…), tags immuables, empreintes épinglables. |
 | Réseau | NetworkPolicy et egress restent à la charge de la plateforme cliente. |
 
@@ -392,7 +392,7 @@ Les workers initialisent la même pile d'observabilité que l'API.
 | Risque | Parade |
 |---|---|
 | Perte du message après commit | **Outbox** `run_dispatch_outbox` : publication après commit, rejeu des entrées non distribuées. |
-| Double traitement d'un run | Réclamation atomique (verrou consultatif + transition conditionnelle `queued → running`). |
+| Double traitement d'un run | Réclamation atomique (verrou consultatif + transition conditionnelle `queued -> running`). |
 | Run bloqué | Détection des runs périmés et passage en échec contrôlé. |
 | Saturation | Plafonds d'admission et limitation de débit à l'entrée. |
 | Traitement trop long | Délai maximal par tâche, aligné avec les délais des modèles. |
@@ -420,25 +420,25 @@ Interaction des composants principaux sur une exécution complète.
 
 Source : [`diagrams/sequence-architecture.mmd`](./diagrams/sequence-architecture.mmd)
 
-Découpage en cinq phases : authentification et autorisation → dépôt présigné → mise en file → traitement asynchrone → restitution temps réel et rapport.
+Découpage en cinq phases : authentification et autorisation -> dépôt présigné -> mise en file -> traitement asynchrone -> restitution temps réel et rapport.
 
 ### 5.2 Dépôt, mise en file, extraction et règles
 
-![Diagramme de séquence — upload, enqueue, extraction, règles, SSE](./diagrams/exports/sequence-upload-et-run.svg)
+![Diagramme de séquence - upload, enqueue, extraction, règles, SSE](./diagrams/exports/sequence-upload-et-run.svg)
 
 Source : [`diagrams/sequence-upload-et-run.mmd`](./diagrams/sequence-upload-et-run.mmd)
 
 Points saillants :
 
-1. **Dépôt présigné** — `presign` → `PUT` direct vers le stockage → `confirm` avec vérification `HeadObject` et du type MIME réel.
-2. **Mise en file** — résolution de la source (JWT de test ou clé API), limitation de débit, admission, classification de pool, insertion du run et de l'entrée outbox, réponse `202`, puis publication Taskiq.
-3. **Extraction** — réclamation atomique, récupération de l'objet, rendu des pages, appel du modèle documentaire, persistance des champs.
-4. **Validation** — règles logic puis, si activées, règles LLM ; écriture des résultats et clôture du run.
-5. **Suivi** — publication des événements de progression consommés par le flux SSE.
+1. **Dépôt présigné** - `presign` -> `PUT` direct vers le stockage -> `confirm` avec vérification `HeadObject` et du type MIME réel.
+2. **Mise en file** - résolution de la source (JWT de test ou clé API), limitation de débit, admission, classification de pool, insertion du run et de l'entrée outbox, réponse `202`, puis publication Taskiq.
+3. **Extraction** - réclamation atomique, récupération de l'objet, rendu des pages, appel du modèle documentaire, persistance des champs.
+4. **Validation** - règles logic puis, si activées, règles LLM ; écriture des résultats et clôture du run.
+5. **Suivi** - publication des événements de progression consommés par le flux SSE.
 
 ### 5.3 Cycle de vie fonctionnel complet
 
-![Diagramme de séquence — cycle de vie complet de la plateforme](./diagrams/exports/sequence-cycle-vie-complet.svg)
+![Diagramme de séquence - cycle de vie complet de la plateforme](./diagrams/exports/sequence-cycle-vie-complet.svg)
 
 Source : [`diagrams/sequence-cycle-vie-complet.mmd`](./diagrams/sequence-cycle-vie-complet.mmd)
 
@@ -456,7 +456,7 @@ Détaille l'échange du code d'autorisation, la constitution de la session, l'in
 
 ### 6.1 Architecture de production
 
-Vue en couches : acteurs → edge → API (autorisation, SSE) → bus Redis → couche logique (workers, inférence) → couche données.
+Vue en couches : acteurs -> edge -> API (autorisation, SSE) -> bus Redis -> couche logique (workers, inférence) -> couche données.
 
 Source : [`diagrams/architecture.mmd`](./diagrams/architecture.mmd)
 
@@ -464,7 +464,7 @@ Source : [`diagrams/architecture.mmd`](./diagrams/architecture.mmd)
 
 Vue à destination de la direction et des architectes d'entreprise, organisée en couches métier / applicative / technologique / externe, avec les logos des technologies.
 
-Source : [`diagrams/architecture-enterprise.html`](./diagrams/architecture-enterprise.html) — à ouvrir dans un navigateur.
+Source : [`diagrams/architecture-enterprise.html`](./diagrams/architecture-enterprise.html) - à ouvrir dans un navigateur.
 
 ### 6.3 Topologie Kubernetes / OpenShift
 
@@ -488,7 +488,7 @@ Même chaîne applicative que la production, avec les services de données en co
 
 Source : [`diagrams/architecture-backend-couches.mmd`](./diagrams/architecture-backend-couches.mmd)
 
-Présentation → application → domaine → extraction et catalogue → infrastructure, avec le chemin critique `processor → recipe → agent IDP → persistance`.
+Présentation -> application -> domaine -> extraction et catalogue -> infrastructure, avec le chemin critique `processor -> recipe -> agent IDP -> persistance`.
 
 ### 6.6 Processus BPMN
 
@@ -525,17 +525,17 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 
 | Table | Contenu | Relations |
 |---|---|---|
-| `workflows` | Nom, statut, propriétaire, date de déploiement, empreinte de clé API | 1→N documents, règles, runs |
-| `documents` | Type, position, mode d'extraction et de validation, modèle documentaire, instructions, automode PDF | N→1 workflow ; 1→N champs |
-| `schema_fields` | Nom, description, type de template, configuration, position | N→1 document |
-| `workflow_rules` | Nom, nature, portée, corps, sévérité, conditions | N→1 workflow |
-| `rule_templates` | Bibliothèque de règles réutilisables | — |
-| `runs` | Source, statut, statut global, erreur, résumés, progression, instantané, pool | N→1 workflow ; 1→N documents et résultats |
-| `run_documents` | Clé de stockage, type MIME, nom de fichier, métadonnées d'extraction | N→1 run ; 1→N champs extraits |
-| `extracted_fields` | Clé, valeur, type, confiance, indicateurs, boîte englobante | N→1 document de run |
-| `rule_results` | Statut, sévérité, expression, champs concernés, valeurs attendue et constatée | N→1 run |
-| `run_dispatch_outbox` | Pool, étape, tentatives, statut, erreur | N→1 run (suppression en cascade) |
-| `upload_intents` | Clé de stockage unique, fichier, taille, propriétaire, date de confirmation | — |
+| `workflows` | Nom, statut, propriétaire, date de déploiement, empreinte de clé API | 1 -> N documents, règles, runs |
+| `documents` | Type, position, mode d'extraction et de validation, modèle documentaire, instructions, automode PDF | N -> 1 workflow ; 1 -> N champs |
+| `schema_fields` | Nom, description, type de template, configuration, position | N -> 1 document |
+| `workflow_rules` | Nom, nature, portée, corps, sévérité, conditions | N -> 1 workflow |
+| `rule_templates` | Bibliothèque de règles réutilisables | - |
+| `runs` | Source, statut, statut global, erreur, résumés, progression, instantané, pool | N -> 1 workflow ; 1 -> N documents et résultats |
+| `run_documents` | Clé de stockage, type MIME, nom de fichier, métadonnées d'extraction | N -> 1 run ; 1 -> N champs extraits |
+| `extracted_fields` | Clé, valeur, type, confiance, indicateurs, boîte englobante | N -> 1 document de run |
+| `rule_results` | Statut, sévérité, expression, champs concernés, valeurs attendue et constatée | N -> 1 run |
+| `run_dispatch_outbox` | Pool, étape, tentatives, statut, erreur | N -> 1 run (suppression en cascade) |
+| `upload_intents` | Clé de stockage unique, fichier, taille, propriétaire, date de confirmation | - |
 
 ### 7.3 Matrice d'habilitations Casbin
 
@@ -544,14 +544,14 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 | `workflow` | read | read, write | read, write, delete | tout |
 | `run` | read | read, execute | read, execute | tout |
 | `audit` | read | read | read | tout |
-| `upload` | — | write | write | tout |
+| `upload` | - | write | write | tout |
 | `models` | read | read | read | tout |
 | `rules` | read | read | read | tout |
-| `metrics` | — | read | read | tout |
-| `settings` | — | read | read, write | tout |
-| `operator` | — | execute | execute | tout |
-| `diagnostics` | — | read | read | tout |
-| `users` | — | — | read, write | tout |
+| `metrics` | - | read | read | tout |
+| `settings` | - | read | read, write | tout |
+| `operator` | - | execute | execute | tout |
+| `diagnostics` | - | read | read | tout |
+| `users` | - | - | read, write | tout |
 
 Source : `backend/src/repody/infra/auth/rbac_policy.csv`.
 

@@ -1,4 +1,4 @@
-"""Inference chat callables — no client ABC."""
+"""Inference chat callables - no client ABC."""
 
 from __future__ import annotations
 

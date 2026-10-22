@@ -29,7 +29,7 @@ When `secrets.create=false`, create `repody-runtime-secrets` with:
 ## NuExtract Cloud (platform API)
 
 Catalog id: `repody:vlm:cloud`. Uses the official NuExtract REST API
-([docs](https://nuextract.ai/doc)) — not local llama-server.
+([docs](https://nuextract.ai/doc)) - not local llama-server.
 
 | Variable | Purpose |
 |----------|---------|
@@ -39,7 +39,7 @@ Catalog id: `repody:vlm:cloud`. Uses the official NuExtract REST API
 | `AUDIT_NUEXTRACT_CLOUD_PROJECT_ID` | Optional fixed `sprj_…`; omit to create a temp project per request |
 | `AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS` | HTTP/SSE job timeout (default 180) |
 
-Store the API key in secrets only — never commit it.
+Store the API key in secrets only - never commit it.
 
 ## Alternate document models (OCR)
 
@@ -54,7 +54,7 @@ Store the API key in secrets only — never commit it.
 | `AUDIT_PADDLEOCR_QWEN_ENABLED` | Register `paddleocr:qwen` (PP-OCRv6 + Qwen structured extraction) |
 | `AUDIT_QWEN35_BASE_URL` | Qwen OpenAI API root, e.g. `http://127.0.0.1:8084/v1` |
 | `AUDIT_QWEN35_SERVED_MODEL` | Qwen model alias (default `Qwen3.5-4B`) |
-| `AUDIT_QWEN35_TIMEOUT_SECONDS` | Qwen text→JSON timeout (default 180) |
+| `AUDIT_QWEN35_TIMEOUT_SECONDS` | Qwen text -> JSON timeout (default 180) |
 | `AUDIT_GLM_OCR_ENABLED` | Register `glm:ocr` in the catalog (markdown-only) |
 | `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
 | `AUDIT_GLM_OCR_SERVED_MODEL` | Model id / alias (default `GLM-OCR`) |
@@ -135,7 +135,7 @@ workerExtract:
 | `REPODY_BACKEND_IMAGE_TAG` | Backend image tag override |
 | `REPODY_WEB_IMAGE_TAG` | Web image tag override |
 | `REPODY_WEB_BACKEND_URL` | Optional build-arg placeholder only (rewrites removed; runtime uses `INTERNAL_API_URL`) |
-| `INTERNAL_API_URL` | Runtime web→API origin (Compose: `http://api:8000`, K8s: `http://repody-api:8000`) |
+| `INTERNAL_API_URL` | Runtime web -> API origin (Compose: `http://api:8000`, K8s: `http://repody-api:8000`) |
 | `BACKEND_URL` | Fallback origin if `INTERNAL_API_URL` unset |
 | `AUTH_KEYCLOAK_INTERNAL_ISSUER` | In-cluster Keycloak issuer for Auth.js server calls (Compose: `http://keycloak:8080/realms/repody`) |
 | `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel,glmocr`). `glmocr` pulls torch/torchvision from the **PyTorch CPU index** (see `backend/pyproject.toml` `tool.uv.sources`) so images match `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`. Use `otel` only to slim. |

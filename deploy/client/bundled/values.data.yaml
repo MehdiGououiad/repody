@@ -1,4 +1,4 @@
-# Bundled data plane — production namespace repody.
+# Bundled data plane - production namespace repody.
 # Postgres/Redis/MinIO passwords from ESO (repody-data-credentials), not Helm values.
 
 global:

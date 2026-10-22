@@ -7,7 +7,7 @@ Sources are Mermaid (`.mmd`) or BPMN (`.bpmn`). SVG exports under `exports/` are
 | File | Audience | What it is |
 |------|----------|------------|
 | **[architecture-enterprise.html](./architecture-enterprise.html)** | **Top management · enterprise architects** | ArchiMate-style layers + technology logos (open in a browser) |
-| [architecture.mmd](./architecture.mmd) | Engineers | Layered Mermaid flow (Users → Edge → API → Redis → Logic → Data) |
+| [architecture.mmd](./architecture.mmd) | Engineers | Layered Mermaid flow (Users -> Edge -> API -> Redis -> Logic -> Data) |
 
 Open the HTML file in a browser. Logos load from the Simple Icons CDN.
 

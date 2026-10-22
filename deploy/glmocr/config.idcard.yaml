@@ -1,4 +1,4 @@
-# GLM-OCR optional profile — photo-heavy documents (e.g. ID cards).
+# GLM-OCR optional profile - photo-heavy documents (e.g. ID cards).
 #
 # Enables non-official extensions documented in upstream glmocr as skipped for
 # generic layouts: OCR on layout labels `image` and `chart`, plus Repody

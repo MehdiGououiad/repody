@@ -1,4 +1,4 @@
-"""Verbose platform scale profiler — SQL, admission, queue, outbox, live enqueue.
+"""Verbose platform scale profiler - SQL, admission, queue, outbox, live enqueue.
 
 Usage (Postgres + Redis up; API for --live):
 
@@ -283,7 +283,7 @@ async def profile_outbox_claim(n: int = 30) -> list[str]:
                 )
             )
             sample.add((time.perf_counter() - t0) * 1000)
-        # EXPLAIN without FOR UPDATE — analyze + row locks are awkward outside a drain.
+        # EXPLAIN without FOR UPDATE - analyze + row locks are awkward outside a drain.
         plan = (
             (
                 await session.execute(

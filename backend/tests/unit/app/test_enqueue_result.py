@@ -1,4 +1,4 @@
-"""Enqueue + auth Result boundary (unit — no HTTP)."""
+"""Enqueue + auth Result boundary (unit - no HTTP)."""
 
 from __future__ import annotations
 

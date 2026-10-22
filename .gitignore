@@ -81,17 +81,25 @@ next-env.d.ts
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-backend/.agents/
+/backend/.agents/
 deploy/llamacpp/paths.local.env
 deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
 deploy/glmocr/paths.local.env
 deploy/glmocr/models/
 deploy/glmocr/logs/
-deploy/research/**/paths.local.env
-deploy/research/**/models/
-deploy/research/**/logs/
+deploy/qwen35/paths.local.env
+deploy/qwen35/models/
+deploy/qwen35/logs/
 .runtime-enterprise/
 backend/.venv/
 *.tgz
 
+# local assistant tooling
+/.agents/
+/skills-lock.json
+/AGENTS.md
+/CLAUDE.md
+
+# local-only benchmark material
+/private/

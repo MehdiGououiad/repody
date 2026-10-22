@@ -1,4 +1,4 @@
-"""Validation adapter — ExtractionOutput → ValidationOutput via rules.runner."""
+"""Validation adapter - ExtractionOutput -> ValidationOutput via rules.runner."""
 
 from __future__ import annotations
 

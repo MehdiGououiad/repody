@@ -46,6 +46,6 @@ Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the 
 
 ## References
 
-- `backend/src/repody/taskiq/` — broker, tasks, worker
-- `deploy/helm/repody/templates/workers.yaml` — worker Deployments
+- `backend/src/repody/taskiq/` - broker, tasks, worker
+- `deploy/helm/repody/templates/workers.yaml` - worker Deployments
 - [Taskiq guide](https://taskiq-python.github.io/guide/)

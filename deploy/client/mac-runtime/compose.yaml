@@ -1,4 +1,4 @@
-# Repody Mac runtime — Hub images only (no application source).
+# Repody Mac runtime - Hub images only (no application source).
 # Vendor packs this folder; clients never need the monorepo.
 #
 #   ./bin/repody setup && ./bin/repody start

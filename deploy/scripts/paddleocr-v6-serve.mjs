@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PP-OCRv6 Basic Serving — official PaddleX OCR pipeline.
+ * PP-OCRv6 Basic Serving - official PaddleX OCR pipeline.
  *
  * Follows:
  *   https://www.paddleocr.ai/latest/en/version3.x/inference_deployment/serving/serving.html
@@ -59,7 +59,7 @@ function uvBin() {
 
 function buildServeArgs() {
   const pipeline = fs.existsSync(PIPELINE_CONFIG) ? PIPELINE_CONFIG : "OCR";
-  // Prefer `python -m paddlex` — `uv run paddlex` can fail with "program not found"
+  // Prefer `python -m paddlex` - `uv run paddlex` can fail with "program not found"
   // right after install until console scripts are refreshed on PATH.
   const args = [
     "run",
@@ -118,7 +118,7 @@ async function waitForOcr({ timeoutMs = 300_000 } = {}) {
   return { ready: false, detail: last };
 }
 
-/** Official POST /ocr request — returns the parsed envelope. */
+/** Official POST /ocr request - returns the parsed envelope. */
 async function postOcr(payload, timeoutMs) {
   const res = await fetch(`${BASE}/ocr`, {
     method: "POST",
@@ -286,7 +286,7 @@ function paddleocrQwenEnabledInEnv() {
 function maybeStartQwenCompanion() {
   if (!paddleocrQwenEnabledInEnv()) return;
   console.log("Starting Qwen3.5 companion for paddleocr:qwen …");
-  spawnSync(process.execPath, ["deploy/scripts/research/qwen35-serve.mjs", "serve"], {
+  spawnSync(process.execPath, ["deploy/scripts/qwen35-serve.mjs", "serve"], {
     cwd: ROOT,
     stdio: "inherit",
     shell: false,
@@ -330,7 +330,7 @@ async function verify() {
   );
 }
 
-/** 1×1 PNG — loads pipeline weights without a real document. */
+/** 1×1 PNG - loads pipeline weights without a real document. */
 const WARMUP_PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 

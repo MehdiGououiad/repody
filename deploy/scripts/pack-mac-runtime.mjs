@@ -3,7 +3,7 @@
  * Pack the Mac client runtime zip (no application source).
  *
  *   pnpm client:pack:mac
- *   → dist/repody-mac-runtime-<tag>.zip
+ * -> dist/repody-mac-runtime-<tag>.zip
  *
  * Contents: Compose + bash CLI + Keycloak realm + env examples.
  * Clients pull Hub images; they never need the monorepo.
@@ -92,7 +92,7 @@ function main() {
     }
   }
 
-  // VENDOR.txt — what to tell the client
+  // VENDOR.txt - what to tell the client
   fs.writeFileSync(
     path.join(stage, "VENDOR.txt"),
     [

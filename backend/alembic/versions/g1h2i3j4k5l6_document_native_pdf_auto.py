@@ -1,4 +1,4 @@
-"""Add native_pdf_auto to documents for Automode (pdf-inspector → OCR fallback).
+"""Add native_pdf_auto to documents for Automode (pdf-inspector -> OCR fallback).
 
 Revision ID: g1h2i3j4k5l6
 Revises: a5b6c7d8e9f0

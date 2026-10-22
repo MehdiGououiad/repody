@@ -1,4 +1,4 @@
-"""IDP compose_idp — pure orchestration with injected ports."""
+"""IDP compose_idp - pure orchestration with injected ports."""
 
 from __future__ import annotations
 

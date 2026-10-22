@@ -25,7 +25,7 @@ from repody.schemas.workflow import WorkflowSchema
 async def list_workflows(session: AsyncSession) -> list[WorkflowSchema]:
     """List workflows with lightweight run stats only (no per-workflow API analytics).
 
-    Full ``api_stats`` (series / failing rules / latency) stays on GET detail —
+    Full ``api_stats`` (series / failing rules / latency) stays on GET detail -
     the UI list never reads those fields and they dominate list latency.
     """
     workflows = await list_workflow_cards(session)

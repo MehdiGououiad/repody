@@ -30,7 +30,7 @@ def test_openai_host_port_from_v1_base():
 
 
 def test_glm_ocr_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
-    """Markdown-only GLM-OCR is an internal stage — not a selectable catalog model."""
+    """Markdown-only GLM-OCR is an internal stage - not a selectable catalog model."""
     monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
     monkeypatch.setenv("AUDIT_GLM_OCR_SERVED_MODEL", "GLM-OCR")
     get_settings.cache_clear()
@@ -192,7 +192,7 @@ def test_whole_page_layout_detector_emits_text_region():
 
 
 def test_build_parser_without_layout_uses_whole_page(monkeypatch: pytest.MonkeyPatch):
-    """layout_enabled=false → model-only path (no GlmOcr / PP-DocLayoutV3)."""
+    """layout_enabled=false -> model-only path (no GlmOcr / PP-DocLayoutV3)."""
     import repody.extraction.glm_ocr_sdk as sdk_mod
 
     fake_parser = object()

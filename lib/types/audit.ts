@@ -1,4 +1,4 @@
-/** Audit run DTOs — aligned with backend schemas/run.py */
+/** Audit run DTOs - aligned with backend schemas/run.py */
 
 export interface RunAuditField {
   key: string;

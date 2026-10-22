@@ -278,7 +278,7 @@ async def test_cross_field_equals_literal_value_fails():
     assert status == "failed"
 
 
-# --- UI condition builder → cross expression ---
+# --- UI condition builder -> cross expression ---
 
 
 @pytest.mark.asyncio

@@ -1,4 +1,4 @@
-# Local GLM-OCR worker overlay — used by `pnpm platform -- --with-glm`.
+# Local GLM-OCR worker overlay - used by `pnpm platform -- --with-glm`.
 #
 # Hub `repody-backend` is intentionally otel-only (lean portable image).
 # Official GlmOcr SDK (zai-org) needs Python extras `otel,glmocr` in the

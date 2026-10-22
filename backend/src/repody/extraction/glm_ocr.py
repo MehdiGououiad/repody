@@ -1,15 +1,15 @@
-"""GLM-OCR markdown adapter — official zai-org GlmOcr SDK only.
+"""GLM-OCR markdown adapter - official zai-org GlmOcr SDK only.
 
 Document parsing (opt-in):
   https://huggingface.co/zai-org/GLM-OCR
 
   AUDIT_GLM_OCR_LAYOUT_ENABLED=true
-    → GlmOcr(mode="selfhosted") + PP-DocLayoutV3
-    → region OCR via llama-server (ggml-org/GLM-OCR-GGUF)
-    → Text / Table / Formula Recognition prompts from glmocr/config.yaml
+     -> GlmOcr(mode="selfhosted") + PP-DocLayoutV3
+     -> region OCR via llama-server (ggml-org/GLM-OCR-GGUF)
+     -> Text / Table / Formula Recognition prompts from glmocr/config.yaml
 
 Model-only (default, AUDIT_GLM_OCR_LAYOUT_ENABLED=false):
-  whole page → ``Text Recognition:`` (no PP-DocLayoutV3 weights)
+  whole page -> ``Text Recognition:`` (no PP-DocLayoutV3 weights)
 
 Install: ``uv sync --extra glmocr`` (workers: ``REPODY_BACKEND_EXTRAS=otel,glmocr``).
 """
@@ -72,7 +72,7 @@ def _pdf_page_count(document_bytes: bytes, mime_type: str) -> int | None:
 async def fetch_glm_ocr_markdown(
     bundle: DocumentBundle,
 ) -> tuple[str, int | None, int | None, int]:
-    """Official GlmOcr SDK → ``(markdown, page_count, pages_sent, pages_dropped)``."""
+    """Official GlmOcr SDK -> ``(markdown, page_count, pages_sent, pages_dropped)``."""
     _require_sdk()
     settings = get_settings()
     base = (settings.glm_ocr_base_url or "").rstrip("/")

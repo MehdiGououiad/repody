@@ -6,10 +6,10 @@ Workers call external servers; the backend does not ship model weights.
 | Catalog id | Adapter | Official docs | Local serve | Worker needs |
 |---|---|---|---|---|
 | `repody:vlm` | `extraction/nuextract.py` | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) | `pnpm llamacpp:serve` **:8081** | OpenAI-compat URL only |
-| `paddleocr:qwen` | `extraction/paddleocr_qwen.py` | PP-OCR serving + Qwen text→JSON | `:8868` + `pnpm qwen35:serve` **:8084** | HTTP only |
-| `glm:qwen` | `extraction/glm_ocr_qwen.py` | GlmOcr SDK markdown + Qwen text→JSON | `:8083` + `:8084` | **`otel,glmocr`** + Qwen URL |
+| `paddleocr:qwen` | `extraction/paddleocr_qwen.py` | PP-OCR serving + Qwen text -> JSON | `:8868` + `pnpm qwen35:serve` **:8084** | HTTP only |
+| `glm:qwen` | `extraction/glm_ocr_qwen.py` | GlmOcr SDK markdown + Qwen text -> JSON | `:8083` + `:8084` | **`otel,glmocr`** + Qwen URL |
 
-Markdown-only OCR adapters (`paddleocr:v6`, `glm:ocr`) remain as **internal stages** for the Qwen pipelines — they are **not** workflow catalog options.
+Markdown-only OCR adapters (`paddleocr:v6`, `glm:ocr`) remain as **internal stages** for the Qwen pipelines - they are **not** workflow catalog options.
 
 ## Contents
 
@@ -37,18 +37,18 @@ NuExtract structured JSON is stored verbatim in `run_documents.extraction_meta.r
 
 ## Automode (`nativePdfAuto`)
 
-Per-document toggle (workflow UI). Not a catalog id — keep selecting `documentModelId` as the OCR/VLM fallback.
+Per-document toggle (workflow UI). Not a catalog id - keep selecting `documentModelId` as the OCR/VLM fallback.
 
 | Step | Behavior |
 |---|---|
-| Input is not PDF | Skip inspector → selected model |
+| Input is not PDF | Skip inspector -> selected model |
 | PDF + Auto on | [pdf-inspector](https://github.com/firecrawl/pdf-inspector) `process_pdf_bytes` |
-| Quality OK | Native markdown → Qwen text→JSON (same as `paddleocr:qwen`) |
+| Quality OK | Native markdown -> Qwen text -> JSON (same as `paddleocr:qwen`) |
 | Quality weak | Selected `documentModelId` |
 
 **Accept native** only when all hold: `pdf_type == text_based`, `confidence >= AUDIT_PDF_INSPECTOR_MIN_CONFIDENCE` (default `0.7`), no encoding issues, empty `pages_needing_ocr`, markdown length `>= AUDIT_PDF_INSPECTOR_MIN_CHARS` (default `40`). `mixed` / `scanned` / `image_based` always fall back.
 
-Decision is recorded on `extraction_meta.nativePdf`. Dependency: `pdf-inspector` on the extract worker — missing package soft-fails to the selected model.
+Decision is recorded on `extraction_meta.nativePdf`. Dependency: `pdf-inspector` on the extract worker - missing package soft-fails to the selected model.
 
 ---
 
@@ -57,7 +57,7 @@ Decision is recorded on `extraction_meta.nativePdf`. Dependency: `pdf-inspector`
 | Layer | Local (`pnpm platform`) | Prod (Helm) |
 |---|---|---|
 | Extract worker | Hub image, or **local `otel,glmocr` build** when `--with-glm` | Backend image with extras you publish |
-| Python extras | Hub = `otel` (lean). `--with-glm` → `compose.glmocr.yaml` builds `repody-backend:local-glmocr` | Set `REPODY_BACKEND_EXTRAS=otel,glmocr` when releasing if GLM is required |
+| Python extras | Hub = `otel` (lean). `--with-glm` -> `compose.glmocr.yaml` builds `repody-backend:local-glmocr` | Set `REPODY_BACKEND_EXTRAS=otel,glmocr` when releasing if GLM is required |
 | NuExtract / Paddle / GLM GGUF | Host scripts on `:8081` / `:8868` / `:8083` | External services; set Helm `config.*BaseUrl` and enable flags |
 
 ```bash
@@ -76,7 +76,7 @@ Reference: [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGU
 
 ### What you configure
 
-Only wiring and operational limits — extraction behavior follows the official NuExtract contract (`extraction/nuextract.py`, `extraction/render.py`).
+Only wiring and operational limits - extraction behavior follows the official NuExtract contract (`extraction/nuextract.py`, `extraction/render.py`).
 
 ```env
 AUDIT_INFERENCE_MODE=llamacpp
@@ -131,9 +131,9 @@ Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires au
 |-------|----------|
 | PDF | PNG @ 170 DPI; **all pages** by default. Optional cap: `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` |
 | Image | Native PNG/JPEG/WebP bytes |
-| Other MIME | Rejected — upload PDF or image only |
+| Other MIME | Rejected - upload PDF or image only |
 | Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking`, `temperature=0.2` (or `0.6` thinking; `0` with ICL), no `max_tokens` |
-| `instructions` | Workflow document notes + `Field guidance:` list — hints here, not in the template |
+| `instructions` | Workflow document notes + `Field guidance:` list - hints here, not in the template |
 | Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` (`0.7` when thinking) |
 | Source of truth | Model JSON as `extraction.rawText`; leaf `extracted_fields` are UI/rules projection |
 | ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only; local only) |
@@ -147,13 +147,13 @@ pnpm llamacpp:verify
 
 ### Extraction accuracy (NuExtract contract)
 
-Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) — do not hardcode document-specific rules:
+Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not hardcode document-specific rules:
 
 | Practice | Why |
 |----------|-----|
 | Use `verbatim-string` for exact copy | Official type for no reformulation |
 | Format/location hints in field **description** | Maps to `instructions` |
-| Prefer native image uploads | Avoids extra PDF→PNG |
+| Prefer native image uploads | Avoids extra PDF -> PNG |
 | Keep llama.cpp `--image-min-tokens` ≥ 1024 | Qwen-VL accuracy floor |
 | Import NuExtract JSON templates in the builder | Same constructors as the docs |
 | Prefer one **full name** field on ID photos | Split nom/prenom often swaps on holograms |
@@ -229,8 +229,8 @@ Config: `deploy/paddleocr-v6/OCR.yaml` · Serve: `deploy/scripts/paddleocr-v6-se
 
 Catalog ids:
 
-- `glm:ocr` — Document → Markdown via official [GlmOcr](https://huggingface.co/zai-org/GLM-OCR) SDK. Default: whole-page `Text Recognition:` (no layout). Opt-in PP-DocLayoutV3 with `AUDIT_GLM_OCR_LAYOUT_ENABLED=true`.
-- `glm:qwen` — same SDK markdown, then **Qwen3.5 text→JSON** (same second stage as `paddleocr:qwen`).
+- `glm:ocr` - Document -> Markdown via official [GlmOcr](https://huggingface.co/zai-org/GLM-OCR) SDK. Default: whole-page `Text Recognition:` (no layout). Opt-in PP-DocLayoutV3 with `AUDIT_GLM_OCR_LAYOUT_ENABLED=true`.
+- `glm:qwen` - same SDK markdown, then **Qwen3.5 text -> JSON** (same second stage as `paddleocr:qwen`).
 
 Enable structured: `AUDIT_GLM_OCR_QWEN_ENABLED=true` (and `pnpm qwen35:serve`). Start with `pnpm platform -- --with-glm`.
 
@@ -241,11 +241,11 @@ Enable structured: `AUDIT_GLM_OCR_QWEN_ENABLED=true` (and `pnpm qwen35:serve`). 
 | Model card | [zai-org/GLM-OCR](https://huggingface.co/zai-org/GLM-OCR) |
 | SDK | [github.com/zai-org/GLM-OCR](https://github.com/zai-org/GLM-OCR) |
 | Official NVIDIA | vLLM / SGLang with BF16 |
-| Official local / CPU | [Ollama](https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md) — optional via `pnpm glmocr:ollama:serve` |
+| Official local / CPU | [Ollama](https://github.com/zai-org/GLM-OCR/blob/main/examples/ollama-deploy/README.md) - optional via `pnpm glmocr:ollama:serve` |
 | **This repo default** | [ggml-org/GLM-OCR-GGUF](https://huggingface.co/ggml-org/GLM-OCR-GGUF) via `llama-server` (**F16**) |
 | Layout | [PP-DocLayoutV3_safetensors](https://huggingface.co/PaddlePaddle/PP-DocLayoutV3_safetensors) |
 
-> Local default is **llama-server** on `:8083` (Vulkan/CPU/CUDA) — community GGUF runtime, not zai-org's documented vLLM/SGLang or Ollama. SDK/API contract remains official. Profile: `deploy/glmocr/config.selfhosted.yaml`. Optional ID-card: `AUDIT_GLM_OCR_ID_CARD_PROFILE=true` → `config.idcard.yaml`.
+> Local default is **llama-server** on `:8083` (Vulkan/CPU/CUDA) - community GGUF runtime, not zai-org's documented vLLM/SGLang or Ollama. SDK/API contract remains official. Profile: `deploy/glmocr/config.selfhosted.yaml`. Optional ID-card: `AUDIT_GLM_OCR_ID_CARD_PROFILE=true` -> `config.idcard.yaml`.
 
 ### Install / env
 
@@ -278,7 +278,7 @@ Optional Ollama: `pnpm glmocr:ollama:serve` then set base URL `http://127.0.0.1:
 
 **Model-only (default):** whole-page `Text Recognition:` via SDK Pipeline (no PP-DocLayoutV3).
 
-**Document parsing (opt-in):** `AUDIT_GLM_OCR_LAYOUT_ENABLED=true` → PP-DocLayoutV3 → OCR with Text/Table/Formula Recognition prompts.
+**Document parsing (opt-in):** `AUDIT_GLM_OCR_LAYOUT_ENABLED=true` -> PP-DocLayoutV3 -> OCR with Text/Table/Formula Recognition prompts.
 
 Shared: llama-server `api_mode=openai`, sampling `temperature=0.0`, `top_p=0.00001`, `top_k=1`, `repetition_penalty=1.1`, PDF raster **200 DPI**.
 

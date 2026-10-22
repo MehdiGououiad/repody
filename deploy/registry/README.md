@@ -34,7 +34,7 @@ Images:
 
 ### Pull (any machine)
 
-Public Hub images — no login required to pull:
+Public Hub images - no login required to pull:
 
 ```bash
 docker pull mehdigououiad/repody-backend:0.1.0
@@ -49,14 +49,14 @@ Verify arches:
 docker buildx imagetools inspect mehdigououiad/repody-backend:0.1.0
 ```
 
-**Daily path** (pulls these for you): `pnpm platform` — see [docs/LOCAL.md](../../docs/LOCAL.md).
+**Daily path** (pulls these for you): `pnpm platform` - see [docs/LOCAL.md](../../docs/LOCAL.md).
 
 **Helm:** [deploy/client/values-dockerhub.example.yaml](../client/values-dockerhub.example.yaml).
 
 **Portability boundary:** these images cover API, UI, and workers. Document-model
 inference (NuExtract / PP-OCRv6 / Qwen / GLM-OCR) is **external** by design
 ([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)). On a Mac
-you still run or point at an inference endpoint separately — that is what makes
+you still run or point at an inference endpoint separately - that is what makes
 the platform portable across Windows, Linux, and macOS.
 
 ## GHCR
@@ -151,7 +151,7 @@ helm upgrade --install repody deploy/helm/repody -n repody \
 ```
 
 **TLS:** Production Harbor should use HTTPS. For HTTP-only registries, OpenShift must list the
-host under `image.config.openshift.io/cluster` → `spec.registrySources.insecureRegistries`
+host under `image.config.openshift.io/cluster` -> `spec.registrySources.insecureRegistries`
 ([OKD docs](https://docs.okd.io/latest/openshift_images/image-configuration.html)). Prefer
 HTTPS + `additionalTrustedCA` for self-signed CAs.
 
@@ -159,7 +159,7 @@ Full OpenShift order: [docs/CLUSTER.md](../../docs/CLUSTER.md#harbor-registry).
 
 ## Other OCI registries
 
-ACR, ECR, GCR, GHCR, or self-hosted Distribution work the same way — set
+ACR, ECR, GCR, GHCR, or self-hosted Distribution work the same way - set
 `REPODY_IMAGE_REGISTRY`, push, create `registry-pull-secret`, point Helm `images.*`.
 
 ```powershell

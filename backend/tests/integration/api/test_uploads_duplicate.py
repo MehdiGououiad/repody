@@ -6,12 +6,7 @@ from tests.support.facture import facture_bytes
 
 
 @pytest.mark.asyncio
-async def test_confirm_upload_accepts_real_sample_id_png_named_jpeg(
-    client, monkeypatch, tmp_path
-):
-    """Full fixture: sample-id-front.png is JPEG magic with a .png name."""
-    from pathlib import Path
-
+async def test_confirm_upload_sniffs_jpeg_named_png(client, monkeypatch, tmp_path):
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from repody.settings import clear_settings_cache
 
@@ -20,23 +15,16 @@ async def test_confirm_upload_accepts_real_sample_id_png_named_jpeg(
     from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
-    fixture = (
-        Path(__file__).resolve().parents[4]
-        / "e2e"
-        / "fixtures"
-        / "documents"
-        / "sample-id-front.png"
-    )
-    data = fixture.read_bytes()
+    data = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" + b"\x00" * 64
     storage = get_storage()
     await storage.ensure_bucket()
-    key = "runs/demo/sample-id-front.png"
+    key = "runs/demo/photo.png"
     await storage.put_bytes(key, data, "image/png")
     async with async_session_factory() as session:
         await record_upload_intent(
             session,
             storage_key=key,
-            file_name="sample-id-front.png",
+            file_name="photo.png",
             mime_type="image/png",
             size=len(data),
             owner_subject="dev-local",
@@ -84,7 +72,7 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
 
 @pytest.mark.asyncio
 async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch, tmp_path):
-    """VALIDATION AppError → 422 (not legacy bare 400)."""
+    """VALIDATION AppError -> 422 (not legacy bare 400)."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from repody.infra.storage.factory import get_storage
     from repody.settings import clear_settings_cache
@@ -102,7 +90,7 @@ async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch
 
 @pytest.mark.asyncio
 async def test_run_json_rejects_unconfirmed_file_binding(client):
-    """Unconfirmed bindings fail closed with VALIDATION → 422."""
+    """Unconfirmed bindings fail closed with VALIDATION -> 422."""
     res = await client.post(
         "/v1/workflows/wf-invoice-audit/runs/json",
         json={
@@ -122,7 +110,7 @@ async def test_run_json_rejects_unconfirmed_file_binding(client):
 
 @pytest.mark.asyncio
 async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_path):
-    """FORBIDDEN AppError → 403 when intent owner ≠ principal."""
+    """FORBIDDEN AppError -> 403 when intent owner ≠ principal."""
     monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from repody.settings import clear_settings_cache
 

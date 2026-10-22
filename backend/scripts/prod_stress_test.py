@@ -1,4 +1,4 @@
-"""Production-scale platform stress test — real extraction queue at 1000+ documents.
+"""Production-scale platform stress test - real extraction queue at 1000+ documents.
 
 Run inside the API pod (see scripts/prod-stress.mjs) or locally against a live API:
 

@@ -1,4 +1,4 @@
-"""IDP persist uses IdpExtractionMeta → meta_to_dict wire shape."""
+"""IDP persist uses IdpExtractionMeta -> meta_to_dict wire shape."""
 
 from __future__ import annotations
 

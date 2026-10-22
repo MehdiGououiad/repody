@@ -1,13 +1,13 @@
 """Pluggable document model registry.
 
 Each catalog id maps to a runtime and extraction adapter module:
-- ``repody:vlm`` — local llama.cpp NuExtract structured extraction
-- ``repody:vlm:cloud`` — official NuExtract platform REST API
-- ``paddleocr:qwen`` — PP-OCRv6 OCR + Qwen3.5 text→JSON structured extraction
-- ``glm:qwen`` — GLM-OCR SDK markdown + Qwen3.5 text→JSON structured extraction
+- ``repody:vlm`` - local llama.cpp NuExtract structured extraction
+- ``repody:vlm:cloud`` - official NuExtract platform REST API
+- ``paddleocr:qwen`` - PP-OCRv6 OCR + Qwen3.5 text -> JSON structured extraction
+- ``glm:qwen`` - GLM-OCR SDK markdown + Qwen3.5 text -> JSON structured extraction
 
 Markdown-only engines (``paddleocr:v6``, ``glm:ocr``) are adapter internals for the
-Qwen stages — they are not workflow-selectable catalog entries.
+Qwen stages - they are not workflow-selectable catalog entries.
 
 Render policies: ``extraction/render.py``
 """

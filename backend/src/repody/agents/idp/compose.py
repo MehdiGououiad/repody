@@ -65,7 +65,7 @@ async def compose_idp(
     on_extract_start: OnExtractStart | None = None,
     on_extract_done: OnExtractDone | None = None,
 ) -> Result[IdpOutcome]:
-    """Plan → extract → validate. Soft per-document failures become IdpOutcome.errors."""
+    """Plan -> extract -> validate. Soft per-document failures become IdpOutcome.errors."""
     stored_by_id = {d.document_id: d for d in inp.documents}
     jobs = build_extraction_plan(inp.workflow.documents, stored_by_id)
 

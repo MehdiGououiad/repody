@@ -1,4 +1,4 @@
-"""Shared Facture.pdf E2E helpers — expected Total TTC = 6000.00."""
+"""Shared Facture.pdf E2E helpers - expected Total TTC = 6000.00."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def _logic_compare_rule(
     operator: str,
     value: str,
 ) -> dict[str, Any]:
-    """Structured conditions — API rejects body-only logic rules."""
+    """Structured conditions - API rejects body-only logic rules."""
     return {
         "id": rule_id,
         "name": name,

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * llama-server for GLM-OCR (ggml-org GGUF pack — default local backend).
+ * llama-server for GLM-OCR (ggml-org GGUF pack - default local backend).
  *
  *   llama-server -hf ggml-org/GLM-OCR-GGUF:F16
  *   https://huggingface.co/ggml-org/GLM-OCR-GGUF
@@ -162,7 +162,7 @@ async function verify(port) {
   }
 }
 
-/** 1×1 PNG — primes vision path without a real document. */
+/** 1×1 PNG - primes vision path without a real document. */
 const WARMUP_PNG_B64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * llama-server for Unsloth Qwen3.5-4B GGUF (text→JSON experiment arm).
+ * llama-server for Unsloth Qwen3.5-4B GGUF (text -> JSON experiment arm).
  *
  * Official pack:
  *   https://huggingface.co/unsloth/Qwen3.5-4B-GGUF
  *
- * Usage: node deploy/scripts/research/qwen35-serve.mjs serve|stop|restart|verify|warmup|download
+ * Usage: node deploy/scripts/qwen35-serve.mjs serve|stop|restart|verify|warmup|download
  */
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -18,10 +18,10 @@ import {
   parseEnvFile,
   resolveExecutable,
   waitForLlamaServer,
-} from "../runtime-env.mjs";
+} from "./runtime-env.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const QWEN_DIR = path.join(ROOT, "deploy/research/qwen35");
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const QWEN_DIR = path.join(ROOT, "deploy/qwen35");
 const PATHS_FILE = path.join(QWEN_DIR, "paths.local.env");
 const LOG_DIR = path.join(QWEN_DIR, "logs");
 const HF_REPO = "unsloth/Qwen3.5-4B-GGUF";
@@ -220,7 +220,7 @@ function download() {
     );
     process.exit(result.status || 1);
   }
-  console.log("Done. Point QWEN35_MODEL under deploy/research/qwen35/models/");
+  console.log("Done. Point QWEN35_MODEL under deploy/qwen35/models/");
 }
 
 const cmd = process.argv[2] || "serve";

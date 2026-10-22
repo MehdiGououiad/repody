@@ -1,4 +1,4 @@
-# Local dev — single-node Tempo (OTLP in, local blocks).
+# Local dev - single-node Tempo (OTLP in, local blocks).
 # https://grafana.com/docs/tempo/latest/configuration/
 stream_over_http_enabled: true
 

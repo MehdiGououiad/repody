@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Repody local platform CLI (Windows + macOS + Linux) — same Hub images everywhere.
+ * Repody local platform CLI (Windows + macOS + Linux) - same Hub images everywhere.
  *
  *   pnpm platform setup     # once
  *   pnpm platform           # pull images + start stack + host NuExtract (default)
@@ -21,9 +21,9 @@ const BACKEND_ENV = path.join(ROOT, "backend/.env");
 const AUTH_ENV = path.join(ROOT, ".env.local");
 const COMPOSE_ENV_EXAMPLE = path.join(ROOT, "deploy/env/compose.env.example");
 const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
-const QWEN_PATHS = path.join(ROOT, "deploy/research/qwen35/paths.local.env");
-const QWEN_MAC_EXAMPLE = path.join(ROOT, "deploy/research/qwen35/paths.mac.env.example");
-const QWEN_EXAMPLE = path.join(ROOT, "deploy/research/qwen35/paths.local.env.example");
+const QWEN_PATHS = path.join(ROOT, "deploy/qwen35/paths.local.env");
+const QWEN_MAC_EXAMPLE = path.join(ROOT, "deploy/qwen35/paths.mac.env.example");
+const QWEN_EXAMPLE = path.join(ROOT, "deploy/qwen35/paths.local.env.example");
 const LLAMA_PATHS = path.join(ROOT, "deploy/llamacpp/paths.local.env");
 const LLAMA_MAC_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.mac.env.example");
 const LLAMA_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.local.env.example");
@@ -229,7 +229,7 @@ Then re-run: pnpm platform
 
 function ensureInferencePaths() {
   const qwenSrc = isDarwin && fs.existsSync(QWEN_MAC_EXAMPLE) ? QWEN_MAC_EXAMPLE : QWEN_EXAMPLE;
-  copyIfMissing(qwenSrc, QWEN_PATHS, "deploy/research/qwen35/paths.local.env");
+  copyIfMissing(qwenSrc, QWEN_PATHS, "deploy/qwen35/paths.local.env");
   const llamaSrc = isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
   copyIfMissing(llamaSrc, LLAMA_PATHS, "deploy/llamacpp/paths.local.env");
 }
@@ -341,7 +341,7 @@ function llamaServerRuns() {
  * Used by `pnpm platform doctor` and automatically by `pnpm platform` / bootstrap.
  *
  * Checks hard prerequisites (tools, files, images, ports). Does NOT guarantee
- * that NuExtract loads in VRAM or that an extraction job succeeds — that is runtime.
+ * that NuExtract loads in VRAM or that an extraction job succeeds - that is runtime.
  */
 function preflight({ exitOnFail = true, quietOk = false } = {}) {
   console.log("\n=== Repody platform preflight ===\n");
@@ -432,11 +432,11 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     ok: fs.existsSync(QWEN_PATHS),
     state: fs.existsSync(QWEN_PATHS) ? "ok" : "missing",
     required: needQwenPaths,
-    fix: "pnpm platform setup (copies deploy/research/qwen35/paths.*.env.example)",
+    fix: "pnpm platform setup (copies deploy/qwen35/paths.*.env.example)",
   });
 
   // Ports used by default Hub stack + NuExtract. Warn if busy (still required=false so
-  // a leftover platform can be restarted after stop — but surface clearly).
+  // a leftover platform can be restarted after stop - but surface clearly).
   const ports = [
     [3000, "UI"],
     [8000, "API"],
@@ -582,7 +582,7 @@ Default host model: NuExtract (repody:vlm). Optional:
 }
 
 async function doctor() {
-  // Full preflight — same gates as `pnpm platform` before start.
+  // Full preflight - same gates as `pnpm platform` before start.
   preflight({ exitOnFail: true });
 }
 
@@ -661,7 +661,7 @@ async function up() {
   // Qwen is the JSON stage for paddleocr:qwen and glm:qwen.
   if (!opts.noQwen && (!opts.noPaddle || opts.withGlm)) {
     console.log("\n── Qwen3.5 (host, OCR→JSON) ─────────────────────────────────");
-    run("node", ["deploy/scripts/research/qwen35-serve.mjs", "serve"], {
+    run("node", ["deploy/scripts/qwen35-serve.mjs", "serve"], {
       inherit: true,
       allowFail: true,
     });
@@ -800,7 +800,7 @@ function logs() {
 
 function stop() {
   console.log("Stopping host models + Hub Compose stack…");
-  run("node", ["deploy/scripts/research/qwen35-serve.mjs", "stop"], {
+  run("node", ["deploy/scripts/qwen35-serve.mjs", "stop"], {
     allowFail: true,
     inherit: true,
   });

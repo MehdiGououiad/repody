@@ -1,4 +1,4 @@
-"""Taskiq worker entrypoint — one pool per process (extract|fast).
+"""Taskiq worker entrypoint - one pool per process (extract|fast).
 
 Prefer invoking via the official CLI when possible::
 

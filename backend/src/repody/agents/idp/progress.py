@@ -1,4 +1,4 @@
-"""IDP progress / UI presentation — kept out of extract/validate ports.
+"""IDP progress / UI presentation - kept out of extract/validate ports.
 
 State is a plain record; every operation is a module-level function that takes
 it explicitly, so there is no hidden receiver and each step can be called or

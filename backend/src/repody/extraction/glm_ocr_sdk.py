@@ -7,9 +7,9 @@ Docs:
 
 Two official paths (model card):
 
-1. **Model-only (default)** — whole page with ``Text Recognition:`` (no layout).
+1. **Model-only (default)** - whole page with ``Text Recognition:`` (no layout).
    ``AUDIT_GLM_OCR_LAYOUT_ENABLED=false``.
-2. **Document parsing** — ``GlmOcr(mode="selfhosted")`` + PP-DocLayoutV3
+2. **Document parsing** - ``GlmOcr(mode="selfhosted")`` + PP-DocLayoutV3
    region OCR when ``AUDIT_GLM_OCR_LAYOUT_ENABLED=true``.
 
 Local OCR backend default: **llama-server** (ggml-org/GLM-OCR-GGUF on :8083).
@@ -52,10 +52,10 @@ class GlmOcrSdkSettings:
     layout_device: str
     layout_model_dir: str
     max_workers: int
-    # None → omit override; official glmocr/config.yaml uses pdf_max_pages: null
+    # None -> omit override; official glmocr/config.yaml uses pdf_max_pages: null
     pdf_max_pages: int | None = None
     id_card_profile: bool = False
-    # False (default) → whole-page "Text Recognition:". True → PP-DocLayoutV3.
+    # False (default) -> whole-page "Text Recognition:". True -> PP-DocLayoutV3.
     layout_enabled: bool = False
 
 
@@ -302,7 +302,7 @@ def close_glm_ocr_sdk() -> None:
 
 
 def reset_glm_ocr_sdk_client() -> None:
-    """Test helper — drop the cached GlmOcr instance."""
+    """Test helper - drop the cached GlmOcr instance."""
     close_glm_ocr_sdk()
 
 

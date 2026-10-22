@@ -1,4 +1,4 @@
-"""Pure helpers for run create — no session / framework I/O."""
+"""Pure helpers for run create - no session / framework I/O."""
 
 from __future__ import annotations
 

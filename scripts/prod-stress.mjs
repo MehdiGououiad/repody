@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Production stress test — enqueue 1000 real extraction runs inside the API pod.
+ * Production stress test - enqueue 1000 real extraction runs inside the API pod.
  *
  * Prerequisites:
  *   - Workers scaled in client GitOps values / Helm

@@ -225,7 +225,7 @@ def _nuextract_cloud_fields(settings: Settings) -> list[ModelConfigField]:
 
 
 def _qwen_stage_fields(settings: Settings) -> list[ModelConfigField]:
-    """Text→JSON stage shared by every OCR + Qwen catalog entry."""
+    """Text -> JSON stage shared by every OCR + Qwen catalog entry."""
     return [
         _platform_field(
             key="qwen35_base_url",
@@ -347,7 +347,7 @@ def _deployment_notes() -> list[DeploymentNote]:
             action="pnpm paddleocr:v6:serve && pnpm qwen35:serve; set AUDIT_PADDLEOCR_QWEN_* and AUDIT_QWEN35_*",
             detail=(
                 "paddleocr:qwen runs official POST /ocr then Qwen3.5 text→JSON. "
-                "See deploy/research/qwen35/paths.local.env.example"
+                "See deploy/qwen35/paths.local.env.example"
             ),
         ),
         DeploymentNote(

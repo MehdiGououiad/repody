@@ -11,13 +11,13 @@ Used by containers, CI, and daily development. Paths are stable (`/app/scripts/.
 | `docker-entrypoint.sh` | Container entry |
 | `bootstrap_migrations.py` | Alembic upgrade |
 | `db_reset.py` | Local DB reset |
-| `export_openapi.py` | OpenAPI → `lib/api/openapi.json` |
+| `export_openapi.py` | OpenAPI -> `lib/api/openapi.json` |
 | `auth_oidc_smoke.py` | Keycloak JWT smoke |
 | `platform_integration_suite.py` | Fresh deploy verification |
 | `warmup_repody_vlm.py` | One-shot VLM warmup |
 | `generate_facture_fixture.py` | E2E Facture PDF |
 
-## Perf / load (same folder — image + kubectl copy paths)
+## Perf / load (same folder - image + kubectl copy paths)
 
 | Script | Purpose |
 |--------|---------|
@@ -30,7 +30,3 @@ Used by containers, CI, and daily development. Paths are stable (`/app/scripts/.
 | `prod_stress_test.py` | Prod-scale extraction stress (`pnpm stress:prod`) |
 
 Do not move these under a subfolder without updating `Dockerfile`, operator `benchmarks.py`, and `scripts/prod-stress.mjs` pod copy paths.
-
-## Research (`research/`)
-
-Optional research runners: `deploy/scripts/research/` (`qwen35-serve.mjs`).

@@ -1,4 +1,4 @@
-"""IDP frozen contracts — workflow, documents, extraction, validation, outcomes."""
+"""IDP frozen contracts - workflow, documents, extraction, validation, outcomes."""
 
 from __future__ import annotations
 
@@ -70,7 +70,7 @@ class ExtractedField:
 
 @dataclass(frozen=True, slots=True)
 class IdpExtractionMeta:
-    """IDP-owned extraction meta — no display labels (those are HTTP/progress edge)."""
+    """IDP-owned extraction meta - no display labels (those are HTTP/progress edge)."""
 
     read_path_config: str
     read_path_used: str

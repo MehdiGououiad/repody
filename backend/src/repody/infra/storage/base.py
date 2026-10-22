@@ -1,4 +1,4 @@
-"""Object storage contracts — frozen DTOs + callable ops bundle (no ABC)."""
+"""Object storage contracts - frozen DTOs + callable ops bundle (no ABC)."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ PresignPutFn = Callable[..., Awaitable[PresignedPut]]
 
 @dataclass(frozen=True, slots=True)
 class ObjectStore:
-    """Injected storage operations — same attribute names as the old client API."""
+    """Injected storage operations - same attribute names as the old client API."""
 
     ensure_bucket: EnsureBucketFn
     put_bytes: PutBytesFn

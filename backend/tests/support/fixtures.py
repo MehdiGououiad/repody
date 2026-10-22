@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def repo_root() -> Path:
-    # backend/tests/support/fixtures.py → backend/tests → backend → repo root
+    # backend/tests/support/fixtures.py -> backend/tests -> backend -> repo root
     return Path(__file__).resolve().parents[3]
 
 

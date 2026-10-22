@@ -1,4 +1,4 @@
-"""Durable Taskiq dispatch outbox — claim/commit then kiq (no lock across Redis)."""
+"""Durable Taskiq dispatch outbox - claim/commit then kiq (no lock across Redis)."""
 
 from __future__ import annotations
 
@@ -170,7 +170,7 @@ async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> 
 
     Prefer ``dispatch_outbox_run`` / ``replay_dispatch_outbox`` which commit before Redis.
     This helper claims in ``session``; caller must ``commit`` before awaiting the returned
-    work — use ``claim_and_dispatch_outbox_row`` for the safe pattern.
+    work - use ``claim_and_dispatch_outbox_row`` for the safe pattern.
     """
     claimed = await _claim_outbox_row(session, row)
     if claimed is None:

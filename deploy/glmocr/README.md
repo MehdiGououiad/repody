@@ -17,7 +17,7 @@ pnpm glmocr:stop
 pnpm glmocr:download   # optional local GGUFs under deploy/glmocr/models/
 ```
 
-Optional zai-org CPU path (Ollama): `pnpm glmocr:ollama:serve` — then point env at
+Optional zai-org CPU path (Ollama): `pnpm glmocr:ollama:serve` - then point env at
 `:11434` and `glm-ocr:latest`.
 
 ## Platform env

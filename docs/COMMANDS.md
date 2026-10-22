@@ -1,6 +1,6 @@
 # Commands
 
-Deploy follows **official upstream docs** — see [LOCAL.md](./LOCAL.md) (laptop) and [CLUSTER.md](./CLUSTER.md) (production).
+Deploy follows **official upstream docs** - see [LOCAL.md](./LOCAL.md) (laptop) and [CLUSTER.md](./CLUSTER.md) (production).
 
 ## Mac client (no source)
 
@@ -10,19 +10,19 @@ Pack from the private repo, ship the zip (not git):
 |---------|------|
 | `pnpm client:pack:mac` | Build `dist/repody-mac-runtime-<tag>.zip` |
 
-Client (on the Mac, after unzip): `./bin/repody setup` → `./bin/repody start` — see [LOCAL.md — Mac runtime](./LOCAL.md#mac-runtime-no-source).
+Client (on the Mac, after unzip): `./bin/repody setup` -> `./bin/repody start` - see [LOCAL.md - Mac runtime](./LOCAL.md#mac-runtime-no-source).
 
 ---
 
-## Develop (daily) — vendors / contributors (git checkout)
+## Develop (daily) - vendors / contributors (git checkout)
 
 Pull Hub images, start the platform, and (by default) **host NuExtract** (`repody:vlm`).
 
 | Command | When |
 |---------|------|
-| `pnpm platform setup` | **Once** — env files + pull Hub images |
-| `pnpm platform doctor` | **Preflight** — Node/pnpm, Docker, Hub images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
-| `pnpm platform` | **Daily** — preflight + start stack + NuExtract on host |
+| `pnpm platform setup` | **Once** - env files + pull Hub images |
+| `pnpm platform doctor` | **Preflight** - Node/pnpm, Docker, Hub images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
+| `pnpm platform` | **Daily** - preflight + start stack + NuExtract on host |
 | `pnpm platform -- --with-paddle` | Also PP-OCR + Qwen (`paddleocr:qwen`) |
 | `pnpm platform -- --platform-only` | Containers only (no host models) |
 | `pnpm platform -- --with-glm` | GLM-OCR host + local extract worker with official SDK |
@@ -32,10 +32,10 @@ Pull Hub images, start the platform, and (by default) **host NuExtract** (`repod
 | `pnpm platform stop` | Tear down |
 | `pnpm platform help` | Flags |
 | `pnpm models:warmup` | Re-warm configured host models |
-| `pnpm doctor` | Toolchain only (Node/pnpm) — prefer `pnpm platform doctor` |
+| `pnpm doctor` | Toolchain only (Node/pnpm) - prefer `pnpm platform doctor` |
 | `pnpm db:migrate` | Apply Alembic migrations |
 
-Aliases: `pnpm dev:all` → `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` → same CLI.
+Aliases: `pnpm dev:all` -> `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` -> same CLI.
 
 Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.md) (docs hub).
 
@@ -44,8 +44,8 @@ Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.
 | Catalog id | Process | Port | Notes |
 |---|---|---|---|
 | `repody:vlm` | NuExtract | `:8081` | **Default** with `pnpm platform` |
-| `paddleocr:qwen` | PP-OCRv6 → Qwen JSON | `:8868` + `:8084` | `--with-paddle` |
-| `glm:qwen` | GLM-OCR SDK → Qwen JSON | `:8083` + `:8084` | `--with-glm` (builds local worker with SDK) |
+| `paddleocr:qwen` | PP-OCRv6 -> Qwen JSON | `:8868` + `:8084` | `--with-paddle` |
+| `glm:qwen` | GLM-OCR SDK -> Qwen JSON | `:8083` + `:8084` | `--with-glm` (builds local worker with SDK) |
 
 ```bash
 pnpm install
@@ -76,7 +76,7 @@ which tool owns which concern.
 
 | Command | When |
 |---------|------|
-| `pnpm verify` | **Before pushing** — lint, format, types and dead code, both languages |
+| `pnpm verify` | **Before pushing** - lint, format, types and dead code, both languages |
 | `pnpm format` | Reformat everything in place (Biome + ruff) |
 | `pnpm lint:fix` / `pnpm lint:py:fix` | Apply the safe lint fixes |
 | `pnpm lint` / `pnpm lint:py` | Lint and format check only |

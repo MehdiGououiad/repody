@@ -1,1 +1,1 @@
-"""Audit query package (import defining modules directly)."""
+"""Audit query package."""

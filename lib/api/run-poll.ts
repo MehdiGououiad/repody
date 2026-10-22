@@ -132,7 +132,7 @@ export async function waitForRunUntilDone(
           if (body.progress) onProgress?.(body.progress);
         }
       } catch {
-        /* transient — SSE remains primary completion signal */
+        /* transient - SSE remains primary completion signal */
       }
       await sleep(withJitter(intervalMs));
       intervalMs = Math.min(RATE_LIMIT_POLL_INTERVAL_MS, intervalMs + 250);

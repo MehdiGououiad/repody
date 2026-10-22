@@ -161,7 +161,7 @@ export interface paths {
         };
         /**
          * Get Run Status
-         * @description Lightweight poll — status and progress only (no full audit payload).
+         * @description Lightweight poll - status and progress only (no full audit payload).
          */
         get: operations["get_run_status_v1_runs__run_id__status_get"];
         put?: never;
@@ -1100,7 +1100,7 @@ export interface components {
             markdownExtraction: boolean;
             /**
              * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @description When true, try Firecrawl pdf-inspector native PDF text -> Qwen JSON; if quality is weak, fall back to documentModelId.
              * @default false
              */
             nativePdfAuto: boolean;
@@ -1151,7 +1151,7 @@ export interface components {
             markdownExtraction: boolean;
             /**
              * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @description When true, try Firecrawl pdf-inspector native PDF text -> Qwen JSON; if quality is weak, fall back to documentModelId.
              * @default false
              */
             nativePdfAuto: boolean;
@@ -2144,7 +2144,7 @@ export interface components {
         };
         /**
          * RunSnapshotBody
-         * @description Ephemeral workflow config for a single run — does not mutate the saved workflow.
+         * @description Ephemeral workflow config for a single run - does not mutate the saved workflow.
          */
         RunSnapshotBody: {
             /**
@@ -2439,7 +2439,7 @@ export interface components {
             deployedAt?: string | null;
             /**
              * Apikey
-             * @description Plaintext key — returned only once on deploy.
+             * @description Plaintext key - returned only once on deploy.
              */
             apiKey?: string | null;
             /**
@@ -2496,7 +2496,7 @@ export interface components {
             deployedAt?: string | null;
             /**
              * Apikey
-             * @description Plaintext key — returned only once on deploy.
+             * @description Plaintext key - returned only once on deploy.
              */
             apiKey?: string | null;
             /**

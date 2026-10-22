@@ -10,7 +10,7 @@ type ValidateRulesResponse = {
   rules: Array<{ ruleId: string; issues: string[] }>;
 };
 
-/** Authoritative rule validation — backend compiler is the source of truth. */
+/** Authoritative rule validation - backend compiler is the source of truth. */
 export async function validateRulesViaApi(
   documents: DocumentDef[],
   rules: WorkflowRule[]

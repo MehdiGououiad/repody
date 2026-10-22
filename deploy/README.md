@@ -7,7 +7,7 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](..
 | Goal | Guide | Command |
 |------|-------|---------|
 | Local laptop | [LOCAL.md](../docs/LOCAL.md) | `pnpm platform` |
-| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#vendor-client-handoff) | `pnpm images:release` |
+| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#vendor-to-client-handoff) | `pnpm images:release` |
 | OpenShift / client install | [CLUSTER.md](../docs/CLUSTER.md) | Helm / Argo CD |
 
 ## Layout
@@ -17,7 +17,7 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](..
 | `helm/repody` | API, web, Taskiq workers, Ingress |
 | `helm/repody-data` | PostgreSQL, Redis, MinIO (bundled profile) |
 | `helm/repody-auth` | Keycloak (optional) |
-| `client/` | Values templates, ExternalSecrets — [client/README.md](./client/README.md) |
+| `client/` | Values templates, ExternalSecrets - [client/README.md](./client/README.md) |
 | `managed/` | CNPG, External Secrets examples |
 | `registry/` | GHCR and on-prem registry notes |
 | `scripts/` | Image build, release, readiness checks |
@@ -32,4 +32,4 @@ pnpm images:release
 
 Helm `images.*.repository` = `{registry}/repody-backend` (not `{registry}/repody/repody-backend` when registry already includes the project).
 
-Production tags must be **immutable** — never `latest`.
+Production tags must be **immutable** - never `latest`.

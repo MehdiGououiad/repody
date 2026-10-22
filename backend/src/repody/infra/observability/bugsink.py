@@ -9,12 +9,15 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import TYPE_CHECKING
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.integrations.starlette import StarletteIntegration
 
+if TYPE_CHECKING:
+    from sentry_sdk.types import Breadcrumb, BreadcrumbHint, Event, Hint
 _initialized = False
 
 _EVENT_DICT_SKIP = frozenset(
@@ -32,7 +35,7 @@ def _json_safe(value: object) -> bool:
     return False
 
 
-def _structlog_event_name(hint: dict[str, object]) -> str | None:
+def _structlog_event_name(hint: Hint | BreadcrumbHint) -> str | None:
     record = hint.get("log_record")
     message = getattr(record, "msg", None)
     if not isinstance(message, dict):
@@ -43,7 +46,7 @@ def _structlog_event_name(hint: dict[str, object]) -> str | None:
     return None
 
 
-def _before_send(event: dict[str, object], hint: dict[str, object]) -> dict[str, object]:
+def _before_send(event: Event, hint: Hint) -> Event:
     """Use the structlog event name as the Sentry message and keep its fields."""
     record = hint.get("log_record")
     message = getattr(record, "msg", None)
@@ -65,7 +68,7 @@ def _before_send(event: dict[str, object], hint: dict[str, object]) -> dict[str,
     return event
 
 
-def _before_breadcrumb(crumb: dict[str, object], hint: dict[str, object]) -> dict[str, object]:
+def _before_breadcrumb(crumb: Breadcrumb, hint: BreadcrumbHint) -> Breadcrumb:
     event_name = _structlog_event_name(hint)
     if event_name:
         crumb["message"] = event_name
@@ -84,26 +87,26 @@ def init_bugsink(service_name: str | None = None) -> None:
     dsn = os.getenv("BUGSINK_DSN", "").strip()
     if not dsn:
         return
-
     # Bugsink stores error events only. Traces, sessions, client reports, and
     # Sentry's logs product stay off (capture_sentry_logs=False).
     # Bugsink's Python setup sets send_default_pii and max_request_body_size="always".
     # FastAPI requires both StarletteIntegration and FastApiIntegration when set explicitly.
     # LoggingIntegration turns stdlib ERROR records into events. structlog reaches
     # that path through LoggerFactory; before_send keeps the event name as the message.
-    options: dict[str, object] = {
-        "dsn": dsn,
-        "environment": os.getenv("BUGSINK_ENVIRONMENT")
+    sentry_sdk.init(
+        dsn=dsn,
+        environment=os.getenv("BUGSINK_ENVIRONMENT")
         or os.getenv("AUDIT_DEPLOYMENT_ENVIRONMENT", "development"),
-        "server_name": service_name,
-        "send_default_pii": True,
-        "max_request_body_size": "always",
-        "traces_sample_rate": 0,
-        "send_client_reports": False,
-        "auto_session_tracking": False,
-        "before_send": _before_send,
-        "before_breadcrumb": _before_breadcrumb,
-        "integrations": [
+        release=os.getenv("BUGSINK_RELEASE", "").strip() or None,
+        server_name=service_name,
+        send_default_pii=True,
+        max_request_body_size="always",
+        traces_sample_rate=0,
+        send_client_reports=False,
+        auto_session_tracking=False,
+        before_send=_before_send,
+        before_breadcrumb=_before_breadcrumb,
+        integrations=[
             StarletteIntegration(),
             FastApiIntegration(),
             LoggingIntegration(
@@ -112,10 +115,5 @@ def init_bugsink(service_name: str | None = None) -> None:
                 capture_sentry_logs=False,
             ),
         ],
-    }
-    release = os.getenv("BUGSINK_RELEASE", "").strip()
-    if release:
-        options["release"] = release
-
-    sentry_sdk.init(**options)
+    )
     _initialized = True

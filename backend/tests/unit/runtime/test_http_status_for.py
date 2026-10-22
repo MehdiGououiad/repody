@@ -1,4 +1,4 @@
-"""Unit: AppError → HTTP status contract (API adapters depend on this map)."""
+"""Unit: AppError -> HTTP status contract (API adapters depend on this map)."""
 
 from __future__ import annotations
 

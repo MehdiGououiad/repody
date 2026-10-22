@@ -1,4 +1,4 @@
-"""Keycloak Admin REST — plain async functions returning Result."""
+"""Keycloak Admin REST - plain async functions returning Result."""
 
 from __future__ import annotations
 

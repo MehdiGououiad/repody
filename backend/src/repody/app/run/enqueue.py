@@ -1,4 +1,4 @@
-"""Enqueue run — Result-only application boundary."""
+"""Enqueue run - Result-only application boundary."""
 
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ async def enqueue_run(
     session: AsyncSession,
     req: EnqueueRunRequest,
 ) -> Result[RunCreatedResponse]:
-    """Create and queue a Run — errors as data."""
+    """Create and queue a Run - errors as data."""
     access = await resolve_run_enqueue_source(
         session,
         req.workflow_id,
@@ -64,7 +64,7 @@ async def enqueue_run(
             rate.error or AppError(code=ErrorCode.RATE_LIMIT, message="Rate limited")
         )
 
-    # Reuse workflow already loaded for access — avoid a second documents query.
+    # Reuse workflow already loaded for access - avoid a second documents query.
     predicted_pool = await predict_worker_pool(
         session,
         req.workflow_id,
@@ -102,7 +102,7 @@ async def enqueue_run(
         workflow_id=req.workflow_id,
         request_id=request_id,
     )
-    # O(1) position for the new run only — full queue refresh happens on claim.
+    # O(1) position for the new run only - full queue refresh happens on claim.
     await refresh_single_queued_run(session, run.id)
     await session.commit()
     schedule_outbox_dispatch(run.id)

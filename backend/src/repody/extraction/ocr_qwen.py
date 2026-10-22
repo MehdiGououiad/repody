@@ -1,8 +1,8 @@
 """Shared two-stage pipeline: OCR to markdown, then Qwen text-to-JSON.
 
 `glm:qwen`, `paddleocr:qwen` and the native-PDF automode differ only in which
-stage produces the markdown. Everything after that — the empty-schema short
-circuit, Qwen configuration checks, timing, logging and result shape — lives here.
+stage produces the markdown. Everything after that - the empty-schema short
+circuit, Qwen configuration checks, timing, logging and result shape - lives here.
 """
 
 from __future__ import annotations

@@ -36,7 +36,7 @@ images:
     digest: ""
     pullPolicy: IfNotPresent
 
-# ── Bundled data plane (local/dev only; disabled for enterprise) ──────────────
+# Bundled data plane (local/dev only; disabled for enterprise)
 postgresql:
   enabled: false
   auth:
@@ -72,7 +72,7 @@ minio:
     enabled: true
     size: 50Gi
 
-# ── External data plane (disable subcharts above, set URLs) ───────────────────
+# External data plane (disable subcharts above, set URLs)
 externalDatabase:
   enabled: true
   url: ""
@@ -114,7 +114,7 @@ migrations:
 dev:
   apiReload: false
 
-# HPA v2 behavior — requires metrics-server (or OpenShift cluster monitoring).
+# HPA v2 behavior - requires metrics-server (or OpenShift cluster monitoring).
 # Scale up quickly on CPU spikes; scale down slowly to avoid flapping.
 # See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior
 hpaBehavior:
@@ -137,7 +137,7 @@ hpaBehavior:
         value: 10
         periodSeconds: 60
 
-# ── Control plane (api) ───────────────────────────────────────────────────────
+# Control plane (api)
 api:
   replicas: 2
   resources:
@@ -160,7 +160,7 @@ api:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
 
-# ── Worker plane (scale here first) ───────────────────────────────────────────
+# Worker plane (scale here first)
 workerExtract:
   replicas: 2
   pool: extract
@@ -213,7 +213,7 @@ workerFast:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
 
-# ── Edge (web) ────────────────────────────────────────────────────────────────
+# Edge (web)
 web:
   replicas: 2
   resources:
@@ -236,13 +236,13 @@ web:
     topologyKey: kubernetes.io/hostname
     whenUnsatisfiable: ScheduleAnyway
 
-# ── In-cluster Keycloak (staging/local; production usually uses external IdP) ─
+# In-cluster Keycloak (staging/local; production usually uses external IdP)
 keycloak:
   enabled: false
   image: quay.io/keycloak/keycloak:26.7.4
   realm: repody
   hostname: auth.example.com
-  # Busybox image for web pod init that maps gatewayApi.authHost → in-cluster Keycloak.
+  # Busybox image for web pod init that maps gatewayApi.authHost -> in-cluster Keycloak.
   authHostAliasInitImage: ""
   hostnameStrict: false
   hostnameStrictHttps: false
@@ -308,7 +308,7 @@ gatewayApi:
     secretName: repody-tls
     redirectHttp: true
 
-# ── Platform secrets & config ─────────────────────────────────────────────────
+# Platform secrets & config
 secrets:
   authSecret: ""
   keycloakClientSecret: ""
@@ -337,7 +337,7 @@ config:
   keycloakClientId: repody-web
   inferenceMode: llamacpp
   # External OpenAI-compatible document-model endpoint. This chart does not run inference.
-  # Never use host.docker.internal here — that is Compose-only.
+  # Never use host.docker.internal here - that is Compose-only.
   llamacppBaseUrl: https://vlm.example.com/v1
   # Must match llama-server --alias / /v1/models id (local: NuExtract3-Q4_K_M).
   llamacppServedModel: nuextract3-q4_k_m
@@ -378,24 +378,24 @@ config:
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: false
   # Local/dev catalog includes PP-OCRv6 by default; set base URL to a reachable OCR API in-cluster.
-  # Never use host.docker.internal — that is Compose-only (Docker Desktop).
+  # Never use host.docker.internal - that is Compose-only (Docker Desktop).
   paddleocrV6Enabled: false
   paddleocrV6BaseUrl: http://paddleocr-v6:8868
   paddleocrV6TimeoutSeconds: 180
   paddleocrV6UseDocOrientationClassify: true
   paddleocrV6UseDocUnwarping: true
   paddleocrV6UseTextlineOrientation: true
-  # paddleocr:qwen (PP-OCR + Qwen text→JSON). Off until cluster URLs are set.
+  # paddleocr:qwen (PP-OCR + Qwen text -> JSON). Off until cluster URLs are set.
   paddleocrQwenEnabled: false
   qwen35BaseUrl: http://qwen35:8084/v1
   qwen35ServedModel: Qwen3.5-4B
   qwen35TimeoutSeconds: 180
-  # GLM-OCR — local Compose uses host llama-server; cluster may point at a dedicated service.
+  # GLM-OCR - local Compose uses host llama-server; cluster may point at a dedicated service.
   glmOcrEnabled: false
   glmOcrBaseUrl: http://glmocr:8083/v1
   glmOcrServedModel: glm-ocr:latest
   glmOcrTimeoutSeconds: 180
-  # Official SDK layout (PP-DocLayoutV3) — requires backend image built with
+  # Official SDK layout (PP-DocLayoutV3) - requires backend image built with
   # REPODY_BACKEND_EXTRAS=otel,glmocr (default for pnpm images:build).
   glmOcrLayoutDevice: cpu
   glmOcrLayoutModelDir: PaddlePaddle/PP-DocLayoutV3_safetensors
@@ -412,7 +412,7 @@ observability:
   otelEnabled: false
   otelEndpoint: ""
 
-# Off by default — cluster / platform team owns NetworkPolicy and egress.
+# Off by default - cluster / platform team owns NetworkPolicy and egress.
 # Opt in only when the chart must emit policies (generic K8s without platform NP).
 # OpenShift installs rely on this default staying disabled.
 networkPolicy:

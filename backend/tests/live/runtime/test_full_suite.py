@@ -1,4 +1,4 @@
-"""Production-like live API suite — all public endpoints and extraction/validation paths.
+"""Production-like live API suite - all public endpoints and extraction/validation paths.
 
 Requires a running stack (Taskiq workers + inference). Run via:
   pnpm test:live

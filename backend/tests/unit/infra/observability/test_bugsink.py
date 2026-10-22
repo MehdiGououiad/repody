@@ -71,12 +71,9 @@ def test_before_send_uses_structlog_event_name():
         args=(),
         exc_info=None,
     )
-    event = {
-        "logentry": {"message": str(record.msg), "formatted": str(record.msg)},
-        "extra": {},
-    }
-    sent = bugsink._before_send(event, {"log_record": record})
-    assert sent["logentry"]["message"] == "probe_failed"
-    assert sent["logentry"]["formatted"] == "probe_failed"
-    assert sent["extra"]["trace_id"] == "abc"
-    assert "exc_info" not in sent["extra"]
+    logentry: dict[str, object] = {"message": str(record.msg), "formatted": str(record.msg)}
+    extra: dict[str, object] = {}
+    bugsink._before_send({"logentry": logentry, "extra": extra}, {"log_record": record})
+    assert logentry == {"message": "probe_failed", "formatted": "probe_failed"}
+    assert extra["trace_id"] == "abc"
+    assert "exc_info" not in extra

@@ -1,4 +1,4 @@
-"""Worker readiness check — Redis/broker reachability for K8s readiness probes.
+"""Worker readiness check - Redis/broker reachability for K8s readiness probes.
 
 Taskiq has no first-class health CLI yet (see taskiq#240). Kubernetes readiness
 should prove the worker can reach its broker. Keep liveness process-local so a

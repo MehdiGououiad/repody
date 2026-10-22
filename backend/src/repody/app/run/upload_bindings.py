@@ -1,4 +1,4 @@
-"""Upload binding helpers for Run enqueue — Result at the service boundary."""
+"""Upload binding helpers for Run enqueue - Result at the service boundary."""
 
 from __future__ import annotations
 

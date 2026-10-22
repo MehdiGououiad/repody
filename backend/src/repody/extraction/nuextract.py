@@ -15,7 +15,7 @@ from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
 from repody.settings import Settings, get_settings
 
 # https://huggingface.co/numind/NuExtract3-GGUF
-# https://github.com/numindai/nuextract — non-thinking / markdown examples
+# https://github.com/numindai/nuextract - non-thinking / markdown examples
 NUEXTRACT_PDF_DPI = 170
 NUEXTRACT_ENABLE_THINKING = False
 NUEXTRACT_STRUCTURED_TEMPERATURE = 0.2
@@ -97,7 +97,7 @@ def is_list_template_type(value: str | None) -> bool:
     raw = (value or "").strip()
     if not raw.endswith(_LIST_SUFFIX) or is_structure_template_type(raw):
         return False
-    # Platform encoding of official ["type"] arrays — allow catalogued and passthrough scalars.
+    # Platform encoding of official ["type"] arrays - allow catalogued and passthrough scalars.
     return bool(raw[: -len(_LIST_SUFFIX)])
 
 
@@ -123,7 +123,7 @@ def is_structure_template_type(value: str | None) -> bool:
 
 
 def list_template_scalar_type(value: str) -> str:
-    """Map `number-list` → `number` for NuExtract array leaf types."""
+    """Map `number-list` -> `number` for NuExtract array leaf types."""
     if not is_list_template_type(value):
         return value
     return value[: -len(_LIST_SUFFIX)]

@@ -1,4 +1,4 @@
-"""VLM extraction adapter — thin function over extract_document."""
+"""VLM extraction adapter - thin function over extract_document."""
 
 from __future__ import annotations
 

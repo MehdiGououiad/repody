@@ -1,4 +1,4 @@
-"""Platform run contracts — frozen data only."""
+"""Platform run contracts - frozen data only."""
 
 from __future__ import annotations
 

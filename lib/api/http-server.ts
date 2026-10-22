@@ -13,7 +13,7 @@ async function sessionAuthHeaders(): Promise<Record<string, string>> {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 }
 
-/** Server Components — Python API directly with the session token (10s default timeout). */
+/** Server Components - Python API directly with the session token (10s default timeout). */
 export async function serverFetch(path: string, init?: TimedRequestInit): Promise<Response> {
   const { timeoutMs = 10_000, ...rest } = init ?? {};
   const sessionHeaders = await sessionAuthHeaders();
@@ -26,7 +26,7 @@ export async function serverFetch(path: string, init?: TimedRequestInit): Promis
     headers,
     timeoutMs,
   });
-  // Stale Keycloak JWT (e.g. realm keys rotated) → clear the session and sign in again.
+  // Stale Keycloak JWT (e.g. realm keys rotated) -> clear the session and sign in again.
   if (res.status === 401 && Object.keys(sessionHeaders).length > 0) {
     await signOut({ redirect: false });
     redirect("/login");

@@ -1,4 +1,4 @@
-"""Extraction result types (data only — no extractor ABC)."""
+"""Extraction result types (data only - no extractor ABC)."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ __all__ = [
 
 @runtime_checkable
 class SchemaFieldLike(Protocol):
-    """Port for agent/schema rows → SchemaFieldSpec (anti-corruption at extract edge).
+    """Port for agent/schema rows -> SchemaFieldSpec (anti-corruption at extract edge).
 
     Members are read-only properties so frozen dataclasses satisfy the protocol;
     declaring them as plain attributes would demand mutability we never use.
@@ -83,7 +83,7 @@ def schema_specs_from_fields(
     *,
     normalize_template_type: Callable[[str | None], str | None] | None = None,
 ) -> list[SchemaFieldSpec]:
-    """Map agent SchemaField (or any SchemaFieldLike) → extraction SchemaFieldSpec once."""
+    """Map agent SchemaField (or any SchemaFieldLike) -> extraction SchemaFieldSpec once."""
 
     def one(field: SchemaFieldLike) -> SchemaFieldSpec | None:
         name = (field.name or "").strip()

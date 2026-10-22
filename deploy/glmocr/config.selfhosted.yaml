@@ -1,4 +1,4 @@
-# GLM-OCR Configuration — Repody self-hosted profile (llama-server GGUF)
+# GLM-OCR Configuration - Repody self-hosted profile (llama-server GGUF)
 #
 # Default local backend: ggml-org/GLM-OCR-GGUF via llama-server on :8083
 # (OpenAI-compatible /v1/chat/completions). Works with Vulkan/CPU/CUDA.

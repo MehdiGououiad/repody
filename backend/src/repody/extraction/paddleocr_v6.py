@@ -1,4 +1,4 @@
-"""PP-OCRv6 markdown adapter — official PaddleX Basic Serving client.
+"""PP-OCRv6 markdown adapter - official PaddleX Basic Serving client.
 
 Serve (host):
   paddlex --install serving
@@ -118,7 +118,7 @@ def build_ocr_request_payload(bundle: DocumentBundle) -> dict[str, Any]:
 
 
 async def fetch_paddleocr_markdown(bundle: DocumentBundle) -> tuple[str, int]:
-    """Official ``POST /ocr`` → ``(markdown, page_count)``."""
+    """Official ``POST /ocr`` -> ``(markdown, page_count)``."""
     settings = get_settings()
     base = (settings.paddleocr_v6_base_url or "").rstrip("/")
     if not base:

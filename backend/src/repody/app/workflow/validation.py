@@ -94,7 +94,7 @@ def resolve_document_field_tokens(
     documents: list[DocumentDefSchema],
     applies_to: list[str],
 ) -> list[str]:
-    """Field tokens available to LLM rules — matches the workflow builder UI."""
+    """Field tokens available to LLM rules - matches the workflow builder UI."""
     targets = [doc for doc in documents if doc.id in applies_to] if applies_to else list(documents)
     multi = len(documents) > 1
     tokens: list[str] = []
@@ -189,7 +189,7 @@ def validate_rules_preview(
     documents: list[DocumentDefSchema],
     rules: list[WorkflowRuleSchema],
 ) -> list[RulePreview]:
-    """Validate all rules for builder preview — one result per rule id."""
+    """Validate all rules for builder preview - one result per rule id."""
     return [
         RulePreview(rule_id=rule.id, issues=validate_workflow_rule(rule, documents))
         for rule in rules

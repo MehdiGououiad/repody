@@ -19,7 +19,7 @@ _STANDARD_CHAT_KEYS = frozenset(
     }
 )
 
-# Reuse clients per event loop — avoids TLS + connection setup on every VLM request.
+# Reuse clients per event loop - avoids TLS + connection setup on every VLM request.
 _client_cache: dict[tuple[str, float, str | None, int | None], AsyncOpenAI] = {}
 
 

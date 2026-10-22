@@ -67,7 +67,7 @@ def mimes_match_for_confirm(*, prepared: str | None, verified: str | None) -> bo
     if prep == OCTET:
         return ver != OCTET
     # Prepared was a concrete type; verified sniffed something else concrete.
-    # Trust content — validate_upload_file already enforced the allow-list.
+    # Trust content - validate_upload_file already enforced the allow-list.
     return ver != OCTET
 
 

@@ -1,4 +1,4 @@
-"""Operator validate — Result / AppError only (no exception bridges)."""
+"""Operator validate - Result / AppError only (no exception bridges)."""
 
 from __future__ import annotations
 

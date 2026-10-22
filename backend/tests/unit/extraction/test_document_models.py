@@ -208,7 +208,7 @@ def test_repody_vlm_empty_object_and_enum_follow_official_constructors():
         "status": ["open", "closed"],
         "tags": [["a", "b"]],
     }
-    # No platform aliases — TYPES.md full names only.
+    # No platform aliases - TYPES.md full names only.
     assert normalize_template_type("email") == "email"
     assert normalize_template_type("email-address") == "email-address"
     assert normalize_template_type("email-address-list") == "email-address-list"

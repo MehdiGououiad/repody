@@ -1,11 +1,11 @@
 import os
 
 # Test env MUST be set before any `repody` import. `repody.infra.db.base` calls
-# get_settings() at import time (engine), and Settings is lru_cached — importing
+# get_settings() at import time (engine), and Settings is lru_cached - importing
 # tests.helpers.db before these assignments would lock in backend/.env (e.g. OTEL).
 _DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
 
-# Test defaults — production uses Postgres + Alembic; live HTTP E2E uses the docker
+# Test defaults - production uses Postgres + Alembic; live HTTP E2E uses the docker
 # stack API (backend/.env DB). Only force the isolated *_test DB for in-process tests.
 _db_url = os.environ.get("AUDIT_DATABASE_URL", "")
 _live_stack = os.environ.get("E2E_STACK") == "1" or bool(os.environ.get("E2E_API_URL"))

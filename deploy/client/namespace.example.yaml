@@ -1,4 +1,4 @@
-# Optional — apply before Helm/Argo CD sync.
+# Optional - apply before Helm/Argo CD sync.
 # Portable Pod Security labels (Kubernetes 1.25+).
 apiVersion: v1
 kind: Namespace

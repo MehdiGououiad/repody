@@ -6,7 +6,7 @@
 | **Helm / GitOps** | OpenShift / Kubernetes production | values below · [docs/CLUSTER.md](../../docs/CLUSTER.md) |
 
 **Start-to-finish cluster:** [docs/CLUSTER.md](../../docs/CLUSTER.md)  
-**Mac without git:** [docs/LOCAL.md — Mac runtime](../../docs/LOCAL.md#mac-runtime-no-source)
+**Mac without git:** [docs/LOCAL.md - Mac runtime](../../docs/LOCAL.md#mac-runtime-no-source)
 
 ## Choose a profile (Kubernetes)
 
@@ -19,7 +19,7 @@ Both profiles merge `values-enterprise.example.yaml` for production hardening.
 On OpenShift no extra overlay is needed: the chart leaves `networkPolicy.enabled` false by default, so the cluster keeps ownership of networking.
 
 **Harbor images:** merge `values-harbor.example.yaml` (or copy its `images` / `imagePullSecrets` into GitOps values).
-See [CLUSTER.md — Harbor registry](../../docs/CLUSTER.md#harbor-registry).
+See [CLUSTER.md - Harbor registry](../../docs/CLUSTER.md#harbor-registry).
 
 ## Image registry
 
@@ -41,7 +41,7 @@ pnpm images:release
 
 Optional: pin digests from `dist/release/<tag>/helm-images.yaml` after `pnpm release:promote`.
 
-On-prem example: `registry.example.com/repody` — see [deploy/registry/README.md](../registry/README.md).
+On-prem example: `registry.example.com/repody` - see [deploy/registry/README.md](../registry/README.md).
 
 ## Directory layout
 

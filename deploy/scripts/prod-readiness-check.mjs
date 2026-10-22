@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Production readiness gate — orchestrates deploy checks and optional staging HTTP probes.
+ * Production readiness gate - orchestrates deploy checks and optional staging HTTP probes.
  *
  *   pnpm prod:readiness
  *   pnpm prod:readiness -- --api-url https://api.staging.example.com

@@ -7,7 +7,7 @@
 ## Context
 
 Independent scaling of IDP / Fraud / Computer Use requires each agent to run on its own
-worker pool. Running the full recipe inside one Taskiq task (IDP → Fraud → CU) holds a
+worker pool. Running the full recipe inside one Taskiq task (IDP -> Fraud -> CU) holds a
 single worker across all stages and prevents HPA per agent.
 
 We already left Hatchet (ADR 001) because a heavy workflow engine was overkill. Temporal
@@ -15,7 +15,7 @@ remains optional later if mid-run resume / HITL / complex retries become product
 
 ## Decision
 
-1. **Keep Taskiq + Redis Streams** — one `RedisStreamBroker` per queue (`queue_name`),
+1. **Keep Taskiq + Redis Streams** - one `RedisStreamBroker` per queue (`queue_name`),
    task registered on that broker, API `broker.startup()` before `kiq`, one worker process
    per pool ([Taskiq architecture](https://taskiq-python.github.io/guide/architecture-overview.html),
    [taskiq-redis](https://github.com/taskiq-python/taskiq-redis)).
@@ -25,7 +25,7 @@ remains optional later if mid-run resume / HITL / complex retries become product
    Postgres outbox. A second agent, if one is ever required, re-adds its own pool then.
 4. **As-built:** Recipe is **IDP-only**. API producers start brokers for `extract` / `fast` only.
 5. **No workers-ready gate** for agents that do not exist.
-6. **Stage-aware ops** — handoff updates `worker_pool` + `last_activity_at`; stale reap uses
+6. **Stage-aware ops** - handoff updates `worker_pool` + `last_activity_at`; stale reap uses
    activity (not only `started_at`); outbox replay claims with `FOR UPDATE SKIP LOCKED`;
    later stages skip re-exec when `agentOutcomes` already recorded.
 
@@ -77,12 +77,12 @@ worker and handoff step at that time, against real requirements.
 ## Non-goals
 
 - Temporal / Celery migration
-- Renaming `extract` → `idp`
+- Renaming `extract` -> `idp`
 - Restoring SKIPPED stub packages for Fraud / Computer Use
 
 ## References
 
-- `runtime/recipe.py` — stage execution
-- `app/run/processor.py` — claim, execute, and resume an already-recorded stage
-- `taskiq/broker.py` — producers for the IDP pools (`extract` / `fast`)
+- `runtime/recipe.py` - stage execution
+- `app/run/processor.py` - claim, execute, and resume an already-recorded stage
+- `taskiq/broker.py` - producers for the IDP pools (`extract` / `fast`)
 - [ADR 006](./006-three-agent-functional-idp.md) · [CONTEXT.md](../../CONTEXT.md)

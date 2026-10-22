@@ -1,6 +1,6 @@
 """Page/image/PDF preparation for document-model adapters.
 
-NuExtract: PDF → PNG @ 170 DPI (official). Images pass through as native bytes.
+NuExtract: PDF -> PNG @ 170 DPI (official). Images pass through as native bytes.
 GLM-OCR: layout SDK loads PDFs itself at pdf_dpi=200.
 """
 
@@ -134,7 +134,7 @@ def prepare_nuextract_pages(
     *,
     max_pages: int | None = None,
 ) -> tuple[list[PageBytes], int]:
-    """Pages for NuExtract vision: native image, or PDF → PNG @ 170 DPI.
+    """Pages for NuExtract vision: native image, or PDF -> PNG @ 170 DPI.
 
     Returns ``(pages, document_page_count)``.
     """

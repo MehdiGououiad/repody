@@ -1,6 +1,6 @@
 # BPMN diagrams
 
-Standard **BPMN 2.0** — open in [bpmn.io](https://demo.bpmn.io) or [Camunda Modeler](https://camunda.com/download/modeler/).
+Standard **BPMN 2.0** - open in [bpmn.io](https://demo.bpmn.io) or [Camunda Modeler](https://camunda.com/download/modeler/).
 
 ## Canonical architecture (start here)
 
@@ -15,17 +15,13 @@ Short labels on purpose (readable in bpmn.io). Each horizontal band is one compo
 | File | Process |
 |------|---------|
 | [local-platform-start.bpmn](./local-platform-start.bpmn) | Start laptop / Mac zip |
-| [prod-deploy.bpmn](./prod-deploy.bpmn) | Vendor release → client Helm |
+| [prod-deploy.bpmn](./prod-deploy.bpmn) | Vendor release -> client Helm |
 | [audit-run.bpmn](./audit-run.bpmn) | Single audit run detail |
 
 ## View
 
-1. https://demo.bpmn.io → open `architecture.bpmn`  
-2. Or Camunda Modeler → Open file  
-
-## MCP
-
-No BPMN MCP connected in this session. Connect one in Cursor settings if you want round-trip editing via tools.
+1. https://demo.bpmn.io -> open `architecture.bpmn`  
+2. Or Camunda Modeler -> Open file  
 
 ## Related
 

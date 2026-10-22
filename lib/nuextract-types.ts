@@ -78,7 +78,7 @@ export function scalarTemplateType(value?: string): string {
   return raw;
 }
 
-/** Apply or remove NuExtract array wrapper (`type-list` → template `["type"]`). */
+/** Apply or remove NuExtract array wrapper (`type-list` -> template `["type"]`). */
 export function withListTemplateType(value: string | undefined, asList: boolean): string {
   const scalar = scalarTemplateType(value);
   if (isStructureTemplateType(scalar)) return scalar;
@@ -102,7 +102,7 @@ export function isStructureTemplateType(value?: string): boolean {
 export function isListTemplateType(value?: string): boolean {
   const raw = (value || "").trim();
   if (!raw.endsWith(LIST_SUFFIX) || isStructureTemplateType(raw)) return false;
-  // Platform encoding of official `["type"]` arrays — allow known and passthrough scalars.
+  // Platform encoding of official `["type"]` arrays - allow known and passthrough scalars.
   return raw.slice(0, -LIST_SUFFIX.length).length > 0;
 }
 

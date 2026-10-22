@@ -1,7 +1,7 @@
 # Repody Mac runtime (no source code)
 
 Ship this folder (or the zip from `pnpm client:pack:mac`) to Mac users.  
-They **pull Docker images** and run Compose — they never get `backend/`, `app/`, or the git repo.
+They **pull Docker images** and run Compose - they never get `backend/`, `app/`, or the git repo.
 
 | Layer | What they get |
 |-------|----------------|
@@ -75,4 +75,4 @@ pnpm client:pack:mac
 
 Hand the zip + image tag to the client. Keep the git repo private.
 
-Cluster / OpenShift clients use Helm (`deploy/client/`) instead — see docs/CLUSTER.md.
+Cluster / OpenShift clients use Helm (`deploy/client/`) instead - see docs/CLUSTER.md.

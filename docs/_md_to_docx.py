@@ -17,7 +17,7 @@ MD_PATH = ROOT / "ARCHITECTURE.md"
 OUT_PATH = ROOT / "ARCHITECTURE.docx"
 PNG_DIR = ROOT / "diagrams" / "exports" / "png"
 
-# Map markdown image basenames (without ext) → PNG files
+# Map markdown image basenames (without ext) -> PNG files
 IMAGE_MAP = {
     "sequence-upload-et-run": PNG_DIR / "sequence-upload-et-run.png",
     "sequence-cycle-vie-complet": PNG_DIR / "sequence-cycle-vie-complet.png",
@@ -473,7 +473,7 @@ def convert():
             i += 1
             continue
 
-        # Source: references — embed PNG when export exists and not already inserted
+        # Source: references - embed PNG when export exists and not already inserted
         if stripped.startswith("Source"):
             p = doc.add_paragraph()
             set_paragraph_spacing(p, before=2, after=6)

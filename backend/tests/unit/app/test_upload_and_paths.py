@@ -8,10 +8,12 @@ from repody.app.uploads.intents import _check_owner
 from repody.app.uploads.validation import UploadValidationError, validate_upload_file
 from repody.extraction.modes import parse_read_path
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from repody.infra.storage.mime import resolve_mime, sanitize_filename, sniff_mime
+from repody.infra.storage.mime import JPEG, resolve_mime, sanitize_filename, sniff_mime
 from repody.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
 from repody.runtime.contracts.result import ErrorCode
 from repody.settings import Settings
+
+JPEG_BYTES = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" + b"\x00" * 64
 
 
 def test_check_owner_fail_closed_without_caller_subject():
@@ -103,7 +105,7 @@ def test_confirm_accepts_octet_stream_when_sniffed_png():
     )
     assert mimes_match_for_confirm(prepared="image/png", verified="image/png")
     assert mimes_match_for_confirm(prepared="image/jpg", verified="image/jpeg")
-    # JPEG bytes named .png (sample ID card fixtures) — sniff wins
+    # JPEG bytes named .png (e.g. phone exports) - sniff wins
     assert mimes_match_for_confirm(prepared="image/png", verified="image/jpeg")
     assert mimes_match_for_confirm(prepared="image/jpeg", verified="image/png")
     # Prepared PDF + sniffed image: content wins (allow-list already enforced)
@@ -119,15 +121,8 @@ def test_confirm_accepts_octet_stream_when_sniffed_png():
     )
 
 
-def test_sample_id_fixtures_are_jpeg_despite_png_extension():
-    from pathlib import Path
-
-    from repody.infra.storage.mime import JPEG, sniff_mime
-
-    root = Path(__file__).resolve().parents[4] / "e2e" / "fixtures" / "documents"
-    for name in ("sample-id-front.png", "sample-id-back.png"):
-        data = (root / name).read_bytes()
-        assert sniff_mime(data) == JPEG, name
+def test_sniff_mime_reads_content_not_extension():
+    assert sniff_mime(JPEG_BYTES) == JPEG
 
 
 def test_validate_logic_rule_body():

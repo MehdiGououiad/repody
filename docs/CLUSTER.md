@@ -1,6 +1,6 @@
 # Cluster and production
 
-Install Repody on the client's **Kubernetes or OpenShift** cluster. Same charts, values merge order, and Ingress path everywhere — OpenShift is just another cluster.
+Install Repody on the client's **Kubernetes or OpenShift** cluster. Same charts, values merge order, and Ingress path everywhere - OpenShift is just another cluster.
 
 Laptop Compose daily path: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md).
 
@@ -10,7 +10,7 @@ Laptop Compose daily path: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COM
 2. [OpenShift / Kubernetes install](#openshift-kubernetes-install)
 3. [Client profiles](#client-profiles)
 4. [Secrets and hardening](#secrets-and-hardening)
-5. [Vendor → client handoff](#vendor-client-handoff)
+5. [Vendor -> client handoff](#vendor-to-client-handoff)
 6. [Release methodology](#release-methodology)
 7. [Observability (cluster)](#observability-cluster)
 8. [Production observability baseline](#production-observability-baseline)
@@ -42,28 +42,28 @@ Workloads use the same restricted securityContext everywhere (`runAsNonRoot`, no
 
 Principles:
 
-1. Compose for local daily work — cluster is not required daily.
+1. Compose for local daily work - cluster is not required daily.
 2. Standard Ingress on every platform.
-3. Secrets outside Git for production — Vault → ESO → Kubernetes Secrets.
+3. Secrets outside Git for production - Vault -> ESO -> Kubernetes Secrets.
 4. Inference outside the app chart (external VLM).
 5. Cluster platform owns NetworkPolicy and egress.
-6. Client kit is YAML templates + these docs — not a lab orchestrator.
+6. Client kit is YAML templates + these docs - not a lab orchestrator.
 
 ---
 
 ## OpenShift / Kubernetes install
 
-### 1 — Namespace
+### 1. Namespace
 
 ```bash
 kubectl apply -f deploy/client/namespace.example.yaml
 ```
 
-### 2 — Secrets
+### 2. Secrets
 
 Follow [Secrets and hardening](#secrets-and-hardening). Apply ExternalSecrets, wait until Ready, confirm `repody-runtime-secrets` and `registry-pull-secret`.
 
-### 3 — Client values
+### 3. Client values
 
 ```bash
 cp deploy/client/values-bundled.example.yaml  ~/repody-gitops/values.yaml   # or external
@@ -72,7 +72,7 @@ cp deploy/client/values-enterprise.example.yaml ~/repody-gitops/enterprise.yaml
 
 Set immutable image tags, Ingress hosts, and OIDC URLs. Keep `ingress.tls.enabled: false` until you have a real TLS Secret.
 
-### 4 — Helm install
+### 4. Helm install
 
 ```bash
 pnpm helm:deps:update
@@ -101,11 +101,11 @@ helm upgrade --install repody deploy/helm/repody -n repody \
 
 **External:** omit `repody-data`; use `values-external.example.yaml` for the app chart.
 
-### 5 — Optional GitOps
+### 5. Optional GitOps
 
 Use `deploy/client/argocd.application.yaml` (same Application on OpenShift and elsewhere).
 
-### 6 — Verify
+### 6. Verify
 
 ```bash
 kubectl -n repody get pods,ingress
@@ -136,17 +136,17 @@ Pull secret + immutable tags in values. See [deploy/registry/README.md](../deplo
 | **External** (default) | Client has managed Postgres, Redis/Valkey, S3 | `deploy/client/values-external.example.yaml` |
 | **Bundled** | In-cluster Postgres, Redis, MinIO via `repody-data` | `deploy/client/values-bundled.example.yaml` |
 
-Copy templates to a **private GitOps repo** — never commit real hostnames or secrets.
+Copy templates to a **private GitOps repo** - never commit real hostnames or secrets.
 
-Networking / egress is owned by the platform team — chart NetworkPolicy stays off by default. Image digests are optional (`helm-images.yaml` from release).
+Networking / egress is owned by the platform team - chart NetworkPolicy stays off by default. Image digests are optional (`helm-images.yaml` from release).
 
-### Web → API (runtime proxy)
+### Web to API (runtime proxy)
 
-The web Deployment sets `INTERNAL_API_URL` / `BACKEND_URL` to `http://<release>-api:8000` at runtime. Next.js proxies browser `/api/v1/*` — the same image works on Compose and Kubernetes.
+The web Deployment sets `INTERNAL_API_URL` / `BACKEND_URL` to `http://<release>-api:8000` at runtime. Next.js proxies browser `/api/v1/*` - the same image works on Compose and Kubernetes.
 
 OIDC: set public `config.oidcIssuer` for browser JWTs; set `config.oidcJwksUrl` (and optionally `config.oidcInternalIssuer`) to in-cluster Keycloak Service DNS. Helm derives `AUTH_KEYCLOAK_INTERNAL_ISSUER` from `oidcJwksUrl` when `oidcInternalIssuer` is empty.
 
-Inference URLs (`llamacppBaseUrl`, `paddleocrV6BaseUrl`, `qwen35BaseUrl`) must be cluster-reachable — never `host.docker.internal`.
+Inference URLs (`llamacppBaseUrl`, `paddleocrV6BaseUrl`, `qwen35BaseUrl`) must be cluster-reachable - never `host.docker.internal`.
 
 ### Edge (portable Ingress)
 
@@ -214,10 +214,10 @@ From a worker pod, confirm VLM reachability ([EXTRACTION.md](./EXTRACTION.md#nue
 |--|---------|----------|
 | Data plane | `repody-data` chart | Client RDS / ElastiCache / S3 |
 | Job queue | Taskiq over in-cluster Redis | Client Redis / Valkey |
-| Secrets | Vault → ESO | Vault → ESO |
+| Secrets | Vault -> ESO | Vault -> ESO |
 | Charts | `repody-data` + `repody` | `repody` only |
 
-**IdP:** bundled does **not** include Keycloak by default — set `config.oidcIssuer` to the organization's IdP. Optional: `repody-auth` for lab/small tenants.
+**IdP:** bundled does **not** include Keycloak by default - set `config.oidcIssuer` to the organization's IdP. Optional: `repody-auth` for lab/small tenants.
 
 Apply ExternalSecrets: `registry-pull`, `data-plane`, `runtime-bundled`. Ensure Vault `AUDIT_REDIS_URL` targets the Redis service from `repody-data` (e.g. `redis://repody-data-redis-master.repody.svc:6379`).
 
@@ -231,9 +231,9 @@ Example: `deploy/client/argocd.application.yaml`. **Bundled:** sync `repody-data
 
 Always merge `values-enterprise.example.yaml`:
 
-- `platform.compatibility.restricted` — non-root, drop `ALL` capabilities
+- `platform.compatibility.restricted` - non-root, drop `ALL` capabilities
 - `secrets.create: false`
-- `networkPolicy.enabled: false` by default — platform team owns NetworkPolicy / egress
+- `networkPolicy.enabled: false` by default - platform team owns NetworkPolicy / egress
 - PodDisruptionBudgets and autoscaling on API / web / workers
 
 ---
@@ -249,8 +249,8 @@ Manifests: `deploy/client/secrets/` · ClusterSecretStore: `deploy/managed/exter
 | Secret | Profile | Created by |
 |--------|---------|------------|
 | `registry-pull-secret` | both | ESO or manual bootstrap |
-| `repody-runtime-secrets` | both | ESO — `runtime` or `runtime-bundled` |
-| `repody-data-postgresql` | bundled | ESO — `data-plane` |
+| `repody-runtime-secrets` | both | ESO - `runtime` or `runtime-bundled` |
+| `repody-data-postgresql` | bundled | ESO - `data-plane` |
 | `repody-data-redis` | bundled | ESO |
 | `repody-data-minio` | bundled | ESO |
 
@@ -302,7 +302,7 @@ Examples live under `deploy/managed/cloudnativepg/` (Cluster, Pooler, ScheduledB
 
 ---
 
-## Vendor → client handoff
+## Vendor to client handoff
 
 ```mermaid
 flowchart LR
@@ -355,7 +355,7 @@ Supply chain: `pnpm release:attest` · `pnpm release:promote -- --channel=stagin
 
 **Hand off:** registry host + project, immutable tag, pull credentials, Helm charts (`deploy/helm/repody`, `repody-data`, `repody-auth`), values templates, this guide.
 
-**Mac laptop (no source):** `pnpm client:pack:mac` → zip under `dist/` — [LOCAL.md — Mac runtime](./LOCAL.md#mac-runtime-no-source). Do not hand the monorepo.
+**Mac laptop (no source):** `pnpm client:pack:mac` -> zip under `dist/` - [LOCAL.md - Mac runtime](./LOCAL.md#mac-runtime-no-source). Do not hand the monorepo.
 
 ### Client: pull and deploy
 
@@ -391,7 +391,7 @@ flowchart TD
   I --> J[Argo CD promote to production]
 ```
 
-**GitHub:** `git tag v1.2.3 && git push origin v1.2.3` → workflow builds, attests, promotes staging, uploads `dist/release/<tag>/`.
+**GitHub:** `git tag v1.2.3 && git push origin v1.2.3` -> workflow builds, attests, promotes staging, uploads `dist/release/<tag>/`.
 
 **Manual:**
 
@@ -421,7 +421,7 @@ Promotion artifact: `release-manifest.json`, `helm-images.yaml`, `sbom/*.spdx.js
 
 ## Observability (cluster)
 
-Use upstream Helm charts — no hand-maintained observability YAML in this repo.
+Use upstream Helm charts - no hand-maintained observability YAML in this repo.
 
 ```yaml
 observability:
@@ -449,7 +449,7 @@ Minimum signals and connection budgeting. Clients own Prometheus/Grafana/Loki.
 | `repodyVlmTimeoutSeconds` | `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` | 180 | VLM HTTP ≤ worker seconds |
 | `staleRunTimeoutMinutes` | `AUDIT_STALE_RUN_TIMEOUT_MINUTES` | 5 | Reap `running` |
 | `queuedStaleTimeoutMinutes` | `AUDIT_QUEUED_STALE_TIMEOUT_MINUTES` | 60 | Reap `queued` when no workers |
-| `workerExtract.terminationGracePeriodSeconds` | — | 240 | ≥ worker task timeout (seconds) |
+| `workerExtract.terminationGracePeriodSeconds` | - | 240 | ≥ worker task timeout (seconds) |
 
 **Rule:** `repodyVlmTimeoutSeconds` ≤ `workerTaskTimeoutMinutes` × 60; `staleRunTimeoutMinutes` ≥ worker timeout + one maintenance interval.
 
@@ -462,12 +462,12 @@ Postgres ≈ (api + extract + fast replicas) × (dbPoolSize + dbMaxOverflow)
 Redis ≈ (api + extract + fast) × redisMaxConnections
 ```
 
-Example: 2+2+2 → up to 90 Postgres connections at peak overflow.
+Example: 2+2+2 -> up to 90 Postgres connections at peak overflow.
 
 ### Readiness and health
 
-- **`GET /v1/healthz/live`** — liveness
-- **`GET /v1/healthz`** — readiness: Postgres + Redis PING (503 when `redisOk: false`)
+- **`GET /v1/healthz/live`** - liveness
+- **`GET /v1/healthz`** - readiness: Postgres + Redis PING (503 when `redisOk: false`)
 
 ### Log-based alerts (pilot)
 
@@ -480,7 +480,7 @@ Example: 2+2+2 → up to 90 Postgres connections at peak overflow.
 | VLM slow | `run_metadata.extractionMs` | p99 > 80% of worker timeout |
 | Worker unhealthy | `worker-extract` restart loop | >3 restarts / 15m |
 
-`GET /v1/dashboard` / `GET /v1/metrics` for business KPIs. **Not included today:** Prometheus `/metrics` scrape — use OTLP + log alerts.
+`GET /v1/dashboard` / `GET /v1/metrics` for business KPIs. **Not included today:** Prometheus `/metrics` scrape - use OTLP + log alerts.
 
 ```powershell
 kubectl -n repody logs -l app.kubernetes.io/component=control --tail=300 --timestamps
@@ -504,7 +504,7 @@ pnpm extract:soak -- --api-url https://api.staging.example.com --token $TOKEN --
 | Upload failures | `filesHost` / public object-storage endpoint |
 | Auth failures | OIDC issuer and JWKS reachable from API pods |
 | `ImagePullBackOff` | `registry-pull-secret`; auth host must match image registry host |
-| `no basic auth credentials` | ESO not synced — `kubectl describe externalsecret -n repody` |
+| `no basic auth credentials` | ESO not synced - `kubectl describe externalsecret -n repody` |
 | Wrong image path | Registry = `host/project`; repository = `{registry}/repody-backend` |
 | API crash `Invalid endpoint: http://` | Set `externalObjectStorage.endpoint` |
 | DB `relation does not exist` | Enable `migrations.enabled: true` or run migrations job |

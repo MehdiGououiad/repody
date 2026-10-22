@@ -1,6 +1,6 @@
-"""Qwen text LLM → flat JSON for OCR+LLM structured extraction.
+"""Qwen text LLM -> flat JSON for OCR+LLM structured extraction.
 
-Thin adapter: OCR transcript + UI schema → one chat completion → leaf fields.
+Thin adapter: OCR transcript + UI schema -> one chat completion -> leaf fields.
 Uses OpenAI-compatible ``response_format`` JSON Schema (Structured Outputs)
 when the server supports it; always validates/parses content afterward.
 """
@@ -88,8 +88,8 @@ def _leaf_property_schema(field: SchemaFieldSpec) -> dict[str, Any]:
 def leaf_response_json_schema(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
     """Build a flat JSON Schema for OpenAI/llama.cpp constrained decoding.
 
-    Leaf keys (including dotted nested keys) are top-level properties — no ``$ref``
-    — so llama.cpp grammar conversion stays reliable.
+    Leaf keys (including dotted nested keys) are top-level properties - no ``$ref``
+     - so llama.cpp grammar conversion stays reliable.
     """
     properties: dict[str, Any] = {}
     required: list[str] = []

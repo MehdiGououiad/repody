@@ -1,4 +1,4 @@
-"""Cached inference availability checks — avoid ping on every LLM call."""
+"""Cached inference availability checks - avoid ping on every LLM call."""
 
 from __future__ import annotations
 

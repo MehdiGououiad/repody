@@ -7,10 +7,10 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
-  Repody design tokens — ported from Stitch DESIGN.md.
+  Repody design tokens.
   Two layers:
-    1. Stitch-named tokens (surface, on-surface, surface-container-*, primary, etc.)
-       drive component code that mirrors the original markup.
+    1. Material-style surface tokens (surface, on-surface, surface-container-*, primary, etc.)
+       used directly by domain components.
     2. shadcn-style semantic tokens (background, foreground, card, muted, etc.)
        drive the shadcn primitives.
 */
@@ -52,7 +52,7 @@
   --on-tertiary-fixed: var(--brand-primary-dark);
   --on-tertiary-fixed-variant: #004d32;
 
-  /* Accent + semantic — driven by brand preset (app/theme.css) */
+  /* Accent + semantic, driven by the brand preset (app/theme.css) */
   --accent-blue: var(--brand-primary);
   --accent-blue-soft: var(--brand-primary-soft);
   --accent-blue-glow: var(--brand-primary-glow);
@@ -90,7 +90,7 @@
   --ring: var(--brand-primary);
   --radius: 0.5rem;
 
-  /* Motion tokens (ui-ux-pro-max: 150–300ms micro-interactions) */
+  /* Motion tokens: 150-300ms micro-interactions */
   --motion-fast: 150ms;
   --motion-normal: 200ms;
   --motion-slow: 300ms;

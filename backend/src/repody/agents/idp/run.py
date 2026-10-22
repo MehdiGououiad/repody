@@ -1,4 +1,4 @@
-"""IDP agent run — load claimed Run → compose_idp → persist/complete."""
+"""IDP agent run - load claimed Run -> compose_idp -> persist/complete."""
 
 from __future__ import annotations
 
@@ -225,7 +225,7 @@ async def execute_idp_run(
     session: AsyncSession,
     run: Run,
 ) -> Result[AgentOutcome]:
-    """Load → compose (extract+validate) → persist and complete the platform run."""
+    """Load -> compose (extract+validate) -> persist and complete the platform run."""
     run_id = run.id
     config = materialize_run_config(run)
     inp = _load_idp_input(run, config)

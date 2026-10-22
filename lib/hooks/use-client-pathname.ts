@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
 
 const subscribe = () => () => {};
 
-/** Pathname safe for SSR/hydration — empty until the client has mounted. */
+/** Pathname safe for SSR/hydration - empty until the client has mounted. */
 export function useClientPathname(): string {
   const pathname = usePathname();
   return useSyncExternalStore(

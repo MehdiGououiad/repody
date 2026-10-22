@@ -2,9 +2,9 @@
 Facture E2E via the same HTTP flow as the UI Test tab (workflow-run).
 
 Uses:
-  PUT  /v1/workflows/{id}          — save documents + read path + validationMode
-  POST /v1/workflows/{id}/runs   — multipart payload + document_ids + files
-  GET  /v1/runs/{id}/status       — poll (then GET /v1/runs/{id} for result)
+  PUT  /v1/workflows/{id} - save documents + read path + validationMode
+  POST /v1/workflows/{id}/runs - multipart payload + document_ids + files
+  GET  /v1/runs/{id}/status - poll (then GET /v1/runs/{id} for result)
 
 Requires a running docker stack with Taskiq workers:
   E2E_STACK=1 E2E_API_URL=http://localhost:8000 pnpm test:live

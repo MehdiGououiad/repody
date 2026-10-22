@@ -27,7 +27,7 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 
 | Who | What | Start |
 |-----|------|--------|
-| **Mac clients (no source)** | Zip + Hub images + host NuExtract | [docs/LOCAL.md — Mac runtime](./docs/LOCAL.md#mac-runtime-no-source) · pack with `pnpm client:pack:mac` |
+| **Mac clients (no source)** | Zip + Hub images + host NuExtract | [docs/LOCAL.md - Mac runtime](./docs/LOCAL.md#mac-runtime-no-source) · pack with `pnpm client:pack:mac` |
 | **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
 
 ### Git path (Windows · macOS · Linux)

@@ -1,7 +1,7 @@
-"""Repody VLM adapters — local llama-server + NuExtract cloud.
+"""Repody VLM adapters - local llama-server + NuExtract cloud.
 
 Flow (local):
-  1. prepare_nuextract_pages → encode_pages_as_image_urls
+  1. prepare_nuextract_pages -> encode_pages_as_image_urls
   2. structured and/or markdown chat.completions
   3. store raw model JSON; project leaves for UI/rules
 """
@@ -118,7 +118,7 @@ async def extract_with_repody_vlm(
     )
     thinking = bool(settings.repody_vlm_enable_thinking)
 
-    # Markdown-only (no schema fields) — one official NuExtract call.
+    # Markdown-only (no schema fields) - one official NuExtract call.
     if markdown_only:
         started = time.perf_counter()
         markdown_text = await _markdown(

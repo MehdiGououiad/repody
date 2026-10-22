@@ -3,7 +3,7 @@
 Official API: https://nuextract.ai/doc / https://documentation.nuextract.ai/
 
 Auth: ``Authorization: Bearer <api_key>``
-Jobs are async: submit → stream ``/api/jobs/{jobId}/stream`` (SSE) until event ``result``.
+Jobs are async: submit -> stream ``/api/jobs/{jobId}/stream`` (SSE) until event ``result``.
 """
 
 from __future__ import annotations

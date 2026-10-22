@@ -8,7 +8,7 @@ from repody.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema
 
 
 class RunSnapshotBody(CamelModel):
-    """Ephemeral workflow config for a single run — does not mutate the saved workflow."""
+    """Ephemeral workflow config for a single run - does not mutate the saved workflow."""
 
     documents: list[DocumentDefSchema] = []
     rules: list[WorkflowRuleSchema] = []

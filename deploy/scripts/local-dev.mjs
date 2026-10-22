@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Unified Compose local development — setup, stack, app, status, stop.
+ * Unified Compose local development - setup, stack, app, status, stop.
  *
  *   pnpm dev:setup   first-time env + migrate
  *   pnpm dev         background stack (Compose + workers + NuExtract + PP-OCRv6 + GLM-OCR)
@@ -86,7 +86,7 @@ function composeArgs(...parts) {
 function apiEnv() {
   // Prefer backend/.env over inherited shell env. Otherwise a prior pytest
   // AUDIT_DATABASE_URL=..._test leaks into the live API and workers (Compose)
-  // keep using repody — claims no-op and runs stay queued forever.
+  // keep using repody - claims no-op and runs stay queued forever.
   const fileEnv = parseEnvFile(BACKEND_ENV);
   return { ...process.env, ...fileEnv };
 }
@@ -263,7 +263,7 @@ function logModelPlan() {
   console.log(`Models: NuExtract=${nue}  PP-OCRv6=${pad}  Qwen=${qwen}  GLM-OCR=${glm}`);
 }
 
-/** Windows 0xC0000409 — Node/Next native abort; often RAM pressure with local VLMs. */
+/** Windows 0xC0000409 - Node/Next native abort; often RAM pressure with local VLMs. */
 function describeExitCode(code) {
   if (code === 3221226505 || code === -1073740791) {
     return (
@@ -373,7 +373,7 @@ function recreateWorkersForObservability() {
 function observabilityStack() {
   run("docker", composeArgs("--profile", "observability", "up", "-d"));
   enableObservabilityInBackendEnv();
-  // Recreate only when explicitly requested — default path just enables OTEL env.
+  // Recreate only when explicitly requested - default path just enables OTEL env.
   if (flags.has("--recreate-workers") || wantsWorkerRebuild()) {
     recreateWorkersForObservability();
   } else {
@@ -518,7 +518,7 @@ async function status() {
             body: "{}",
           })
         : await fetchProbe(url, 3000);
-    // OCR empty body may return 4xx — any HTTP response means the service is up.
+    // OCR empty body may return 4xx - any HTTP response means the service is up.
     const ok = name === "PP-OCRv6" ? Boolean(probe.status) : probe.ok;
     const result = ok ? "ok" : "--";
     const statusText = probe.status ? `HTTP ${probe.status}` : "no response";
@@ -708,7 +708,7 @@ function stop() {
     allowFail: true,
     inherit: true,
   });
-  run("node", ["deploy/scripts/research/qwen35-serve.mjs", "stop"], {
+  run("node", ["deploy/scripts/qwen35-serve.mjs", "stop"], {
     allowFail: true,
     inherit: true,
   });
@@ -935,7 +935,7 @@ async function api() {
 async function all() {
   await stack({ suppressDashboard: true });
   console.log("\nStarting API + UI (Ctrl+C stops app processes; stack keeps running)...\n");
-  // Reuse warm processes when already healthy — avoids killing Turbopack cache.
+  // Reuse warm processes when already healthy - avoids killing Turbopack cache.
   await app({ keepAlive: true });
 }
 

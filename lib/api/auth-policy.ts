@@ -1,5 +1,5 @@
 /**
- * Central auth policy — which credential applies per API route pattern.
+ * Central auth policy - which credential applies per API route pattern.
  *
  * Human UI: Keycloak JWT via Auth.js session (Proxy + serverFetch).
  * Workflow key: deployed run API (`/api/v1/workflows/.../runs`).

@@ -11,7 +11,7 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@12.5.1 --activate
-# Build-time placeholders only — runtime proxy uses INTERNAL_API_URL / BACKEND_URL
+# Build-time placeholders only - runtime proxy uses INTERNAL_API_URL / BACKEND_URL
 # from the container env (Compose: http://api:8000, K8s: http://repody-api:8000).
 ARG BACKEND_URL=http://127.0.0.1:8000
 ARG NEXT_PUBLIC_BUGSINK_DSN=

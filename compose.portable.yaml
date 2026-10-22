@@ -1,4 +1,4 @@
-# Portable overlay — pull Hub images (no local Docker build). Windows + macOS + Linux.
+# Portable overlay - pull Hub images (no local Docker build). Windows + macOS + Linux.
 #
 #   pnpm platform
 #   docker compose -f compose.yaml -f compose.portable.yaml --profile workers up -d --no-build
@@ -17,7 +17,7 @@ x-portable-backend: &portable-backend
 services:
   api:
     <<: *portable-backend
-    # Hub image is target `backend` (entrypoint only) — role set by command.
+    # Hub image is target `backend` (entrypoint only) - role set by command.
     command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       postgres:
@@ -59,7 +59,7 @@ services:
       AUDIT_SEED_ON_STARTUP: ${AUDIT_SEED_ON_STARTUP:-true}
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
       AUDIT_LOG_JSON: "true"
-      # Host backend/.env often sets ../.logs — not writable in-container.
+      # Host backend/.env often sets ../.logs - not writable in-container.
       AUDIT_LOG_FILE: /tmp/repody/api.log
       AUDIT_OTEL_ENABLED: ${AUDIT_OTEL_ENABLED:-false}
       AUDIT_OTEL_EXPORTER_ENDPOINT: ${AUDIT_OTEL_EXPORTER_ENDPOINT:-http://otel-collector:4318/v1/traces}
@@ -116,7 +116,7 @@ services:
       # Browser redirects use public issuer; Auth.js server calls use Docker DNS.
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
-      # Runtime proxy (app/api/v1/[...path]) — Compose DNS name is `api`.
+      # Runtime proxy (app/api/v1/[...path]) - Compose DNS name is `api`.
       # Kubernetes Helm sets the same vars to http://repody-api:8000.
       BACKEND_URL: http://api:8000
       INTERNAL_API_URL: http://api:8000

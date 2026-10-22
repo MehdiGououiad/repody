@@ -129,7 +129,7 @@ async function waitForRun(runId: string, reporter?: ProgressReporter): Promise<W
 }
 
 /**
- * Deep client module — presign → bind → enqueue → wait until terminal.
+ * Deep client module - presign -> bind -> enqueue -> wait until terminal.
  */
 export async function executeWorkflowRun(
   workflowId: string,

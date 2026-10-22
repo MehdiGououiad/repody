@@ -27,7 +27,7 @@ async def init_queued_progress_with_position(session: AsyncSession, run_id: str)
 
 
 async def refresh_single_queued_run(session: AsyncSession, run_id: str) -> bool:
-    """Update one queued run's position/depth (enqueue path — O(1) SQL counts)."""
+    """Update one queued run's position/depth (enqueue path - O(1) SQL counts)."""
     run = await session.get(Run, run_id)
     if not run or run.status != RunStatus.queued.value or not run.progress:
         return False

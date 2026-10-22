@@ -42,7 +42,7 @@ export function useDashboardLive(
     queryKey: queryKeys.dashboard.live,
     queryFn: fetchDashboardLive,
     initialData: initialSnapshot,
-    // SSR already hydrated the first snapshot — skip an immediate duplicate fetch.
+    // SSR already hydrated the first snapshot - skip an immediate duplicate fetch.
     staleTime: REFRESH_MS,
     refetchInterval: REFRESH_MS,
     refetchOnMount: false,

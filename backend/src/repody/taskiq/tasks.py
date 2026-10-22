@@ -64,7 +64,7 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
                         workflow_id = run.workflow_id if run else None
                         if workflow_id:
                             bind_log_context(workflow_id=workflow_id)
-                # No long-lived session across extract HTTP — process_run manages phases.
+                # No long-lived session across extract HTTP - process_run manages phases.
                 await execute_run_with_timeout(
                     run_id,
                     agent_stage=input.agent_stage,

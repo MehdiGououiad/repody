@@ -1,4 +1,4 @@
-"""Shared API assertion helpers — contract-style checks for HTTP + AppError mapping."""
+"""Shared API assertion helpers - contract-style checks for HTTP + AppError mapping."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from repody.runtime.contracts.result import AppError, ErrorCode, http_status_for
 
 
 def assert_app_error_status(code: ErrorCode, expected_status: int) -> None:
-    """Unit seam: ErrorCode → HTTP status mapping stays stable."""
+    """Unit seam: ErrorCode -> HTTP status mapping stays stable."""
     assert http_status_for(AppError(code=code, message="x")) == expected_status
 
 

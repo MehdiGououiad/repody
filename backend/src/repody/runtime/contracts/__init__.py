@@ -1,1 +1,1 @@
-"""Platform-wide data contracts — no I/O."""
+"""Platform-wide data contracts - no I/O."""

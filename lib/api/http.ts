@@ -30,7 +30,7 @@ export async function readApiError(res: Response, label: string): Promise<never>
   throw new Error(`${label}: ${detail}`);
 }
 
-/** Browser — Next.js `/api/v1` runtime proxy (credential per auth policy). */
+/** Browser - Next.js `/api/v1` runtime proxy (credential per auth policy). */
 export async function browserFetch(
   path: string,
   init?: TimedRequestInit & { workflowApiKey?: string }

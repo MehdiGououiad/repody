@@ -1,7 +1,7 @@
 # Code Quality Review
 
 This is the review-facing map for keeping Repody simple, testable, and free of
-generated-code smells. It complements [CONTEXT.md](../CONTEXT.md), which is the
+dead code and needless indirection. It complements [CONTEXT.md](../CONTEXT.md), which is the
 domain and architecture glossary, and [DEVELOPMENT.md](./DEVELOPMENT.md), which is the
 backend source inventory.
 
@@ -22,7 +22,7 @@ rule is a matter of opinion in review.
 |---------|-------------------------|--------|
 | Formatting | Biome (`biome.json`) | ruff format (`[tool.ruff.format]`) |
 | Linting | Biome | ruff (`[tool.ruff.lint]`) |
-| Framework rules | ESLint, narrowed to Next.js-specific rules and React Hooks | — |
+| Framework rules | ESLint, narrowed to Next.js-specific rules and React Hooks | - |
 | Types | `tsc --noEmit` | pyright |
 | Dead code | knip | ruff `F401`/`ARG`, plus review |
 
@@ -40,7 +40,7 @@ Biome already covers, so the two linters never disagree about the same line.
   (frozen dataclasses, Pydantic models, SQLAlchemy models) or for interfaces a
   third-party framework demands (Starlette middleware, SDK adapters). Behaviour
   lives in module-level functions that take their state explicitly, or in
-  closures bundled into a frozen record of callables — see
+  closures bundled into a frozen record of callables - see
   `infra/storage/base.py` and `agents/idp/run.py`.
 - **No pass-through re-exports.** Import from the module that defines a symbol.
   A barrel is acceptable only for a types-only module that is erased at compile
@@ -60,7 +60,7 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 | Package | May import | Must not import |
 |---------|------------|-----------------|
-| `api/` (FastAPI routers, auth dependencies) | everything below | — |
+| `api/` (FastAPI routers, auth dependencies) | everything below | - |
 | `app/` (use cases) | domain packages, `infra`, `schemas`, `settings`, `taskiq` (dispatch) | `fastapi`, `starlette`, `api` |
 | `infra/` (DB, storage, auth tokens, Redis, observability) | `runtime.contracts`, `settings` | `api`, `app`, `agents`, `taskiq` |
 | `settings/` | `util` | any other `repody` package |
@@ -131,7 +131,6 @@ During day-to-day work, run the smallest command that covers the change:
 ## Documentation Rules
 
 - `README.md`: product overview and two laptop paths (Mac zip vs git).
-- `DEV.md` / `DEPLOY.md`: thin pointers only.
 - `docs/README.md`: “I want to…” hub.
 - `docs/LOCAL.md` / `docs/CLUSTER.md`: laptop vs cluster how-tos.
 - `docs/COMMANDS.md`: canonical command list (must match `package.json`).

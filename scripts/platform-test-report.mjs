@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Platform test runner — pyramid layers + unified Markdown/HTML report.
+ * Platform test runner - pyramid layers + unified Markdown/HTML report.
  *
  * Default: unit + integration (excludes live / Playwright).
  * Flags:

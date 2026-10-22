@@ -1,4 +1,4 @@
-"""Operator job DTO — mutable job record + store serialization (platform)."""
+"""Operator job DTO - mutable job record + store serialization (platform)."""
 
 from __future__ import annotations
 

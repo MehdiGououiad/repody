@@ -34,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           Keycloak({
             clientId: keycloakClientId,
             clientSecret: keycloakClientSecret ?? "",
-            // JWT `iss` matches the public gateway hostname — not the in-cluster service name.
+            // JWT `iss` matches the public gateway hostname - not the in-cluster service name.
             issuer: keycloakPublicIssuer,
             wellKnown: `${keycloakServerIssuer}/.well-known/openid-configuration`,
             authorization: {

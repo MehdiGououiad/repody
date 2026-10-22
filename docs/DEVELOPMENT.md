@@ -20,7 +20,7 @@ Backend layout, tests, and script ownership. Laptop start: [LOCAL.md](./LOCAL.md
 | `infra/` | DB, auth, storage, observability |
 | `schemas/`, `settings/` | DTOs · `AUDIT_*` settings |
 
-Hot path: `process_run` → `execute_platform_run` → `compose_idp` → `complete_run`.
+Hot path: `process_run` -> `execute_platform_run` -> `compose_idp` -> `complete_run`.
 
 Python ops scripts: [backend/scripts/README.md](../backend/scripts/README.md).
 
@@ -39,7 +39,7 @@ reports/platform-tests/    # pnpm test:platform:report
 | `pnpm test:live` | Needs running stack |
 | `pnpm test:e2e:smoke` | Playwright smoke |
 | `pnpm test:platform:report` | Report under `reports/platform-tests/` |
-| `pnpm review:check` | Full gate — [CODE-QUALITY.md](./CODE-QUALITY.md) |
+| `pnpm review:check` | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
 
 Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH_URL`, then `pnpm test:platform`. Use **localhost** for the web URL (OIDC cookies).
 

@@ -1,4 +1,4 @@
-"""Audit read module — completed runs exposed as audit list/detail."""
+"""Audit read module - completed runs exposed as audit list/detail."""
 
 from __future__ import annotations
 

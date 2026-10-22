@@ -231,7 +231,7 @@ def plan_extraction_detail(
         return "Schema placeholders (no file uploaded)"
     read_spec = parse_read_path(_read_doc_value(doc, "extraction_mode", DEFAULT_READ_PATH_ID))
     document_model_id = _read_doc_value(doc, "document_model_id")
-    # Extraction step only — do not mention validation here (separate progress steps).
+    # Extraction step only - do not mention validation here (separate progress steps).
     _ = run_validation_mode
     parts = [f"Read: {read_spec.label}"]
     if document_model_id and read_spec.show_document_model:

@@ -22,7 +22,7 @@ function AuthGateSpinner({ message }: { message: string }) {
 
 /**
  * Client-side session error / unauthenticated recovery.
- * Proxy already gates pages — do not block the shell behind a hydration spinner.
+ * Proxy already gates pages - do not block the shell behind a hydration spinner.
  */
 export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   const t = useTranslations("auth");
@@ -35,7 +35,7 @@ export function AuthSessionGuard({ children }: { children: React.ReactNode }) {
   const clearingSessionRef = useRef(false);
 
   const sessionError = session?.error;
-  // Empty pathname = pre-hydration snapshot from useClientPathname — do not gate.
+  // Empty pathname = pre-hydration snapshot from useClientPathname - do not gate.
   const isPublic = !pathname || isPublicPage(pathname);
   const redirecting =
     !isPublic &&

@@ -6,8 +6,8 @@
 
 ## Context
 
-Repody today implements **Intelligent Document Processing (IDP)** only: ingest → extract →
-validate → review. Product direction is a **three-agent platform**:
+Repody today implements **Intelligent Document Processing (IDP)** only: ingest -> extract -> 
+validate -> review. Product direction is a **three-agent platform**:
 
 | Agent | Role |
 |-------|------|
@@ -22,15 +22,15 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 
 ## Decision
 
-1. **Platform vs agents** — Shared runtime (run claim/complete, Taskiq, auth, SSE,
+1. **Platform vs agents** - Shared runtime (run claim/complete, Taskiq, auth, SSE,
    storage) stays platform-owned. IDP / Fraud / Computer Use are **peer agent slices**.
-2. **Functional-first IDP** — Prefer small pure functions, frozen data contracts,
+2. **Functional-first IDP** - Prefer small pure functions, frozen data contracts,
    composition, and thin adapters. Avoid deep class hierarchies for the IDP pipeline.
-3. **Errors as data** — Use `Result[T]` / `AppError` at pipeline boundaries; allow
+3. **Errors as data** - Use `Result[T]` / `AppError` at pipeline boundaries; allow
    per-document soft failures on `IdpOutcome.errors`.
-4. **Handoff type** — `IdpOutcome` wrapped in `AgentOutcome` is the extension point
+4. **Handoff type** - `IdpOutcome` wrapped in `AgentOutcome` is the extension point
    for Fraud and Computer Use.
-5. **Strangler migration** — Introduce `repody.runtime.contracts` and
+5. **Strangler migration** - Introduce `repody.runtime.contracts` and
    `repody.agents.idp` alongside existing modules; switch `process_run`
    only after compose + adapters are tested. No big-bang rewrite.
 
@@ -50,16 +50,16 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 ## Non-goals
 
 - Rewriting Helm, auth/Casbin, or the frontend in this ADR
-- Mandatory always-on IDP → Fraud → Computer Use chain
+- Mandatory always-on IDP -> Fraud -> Computer Use chain
 - Empty plugin frameworks or Agent base-class hierarchies
 
 ## Migration phases
 
-1. Contracts + architecture lint — **done**
-2. ORM/snapshot → `IdpInput` mappers + tests — **done**
-3. Pure extract/validate functions + thin wrappers — **done**
-4. Adapters + `compose_idp` + `execute_idp_run` wired from `process_run` — **done**
-5. Delete obsolete god-phase logic; replace extractor ABC / use-case classes with callables — **done**.
+1. Contracts + architecture lint - **done**
+2. ORM/snapshot -> `IdpInput` mappers + tests - **done**
+3. Pure extract/validate functions + thin wrappers - **done**
+4. Adapters + `compose_idp` + `execute_idp_run` wired from `process_run` - **done**
+5. Delete obsolete god-phase logic; replace extractor ABC / use-case classes with callables - **done**.
 
 > **Amendment (2026-08):** the Fraud and Computer Use slices this ADR anticipated
 > were never built, and their reserved scaffolding has been removed. IDP is the
@@ -69,7 +69,6 @@ yet a clean agent slice (mixed orchestration + I/O in phase functions).
 
 ## References
 
-- [Taskiq ADR](./001-taskiq-async-runs.md) — async runs stay platform/queue
-- [Clean Architecture skill](../../.agents/skills/clean-architecture/SKILL.md) — dependency rule
+- [Taskiq ADR](./001-taskiq-async-runs.md) - async runs stay platform/queue
 - PEP 544 Protocols / callables for ports (not inheritance trees)
 - As-built layout: `agents/idp/` · Run lifecycle: `app/run/lifecycle.py` · Recipe: `runtime/recipe.py` · Staged queues: [ADR 007](./007-staged-agent-queues-taskiq.md) · Map: [CONTEXT.md](../../CONTEXT.md)

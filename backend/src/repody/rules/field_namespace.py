@@ -1,4 +1,4 @@
-"""Evaluator field namespace — shared by rules runner and IDP validate."""
+"""Evaluator field namespace - shared by rules runner and IDP validate."""
 
 from __future__ import annotations
 

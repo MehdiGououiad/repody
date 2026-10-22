@@ -1,4 +1,4 @@
-# Local dev — receive Tempo metrics-generator remote writes.
+# Local dev - receive Tempo metrics-generator remote writes.
 # https://prometheus.io/docs/prometheus/latest/configuration/configuration/
 global:
   scrape_interval: 15s

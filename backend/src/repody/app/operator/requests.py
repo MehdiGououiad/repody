@@ -1,4 +1,4 @@
-"""Operator request I/O — returns Result; validation lives in repody.runtime.operator.validate."""
+"""Operator request I/O - returns Result; validation lives in repody.runtime.operator.validate."""
 
 from __future__ import annotations
 

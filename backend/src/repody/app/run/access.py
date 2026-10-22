@@ -1,4 +1,4 @@
-"""Run access policy — credential → principal/source as Result."""
+"""Run access policy - credential -> principal/source as Result."""
 
 from __future__ import annotations
 

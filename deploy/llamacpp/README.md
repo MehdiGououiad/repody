@@ -22,9 +22,9 @@ Use the device id in `paths.local.env` (e.g. `Vulkan0`, `CUDA0`).
 
 | File | Purpose |
 |------|---------|
-| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) — **deep-bench winner on Arc** |
+| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) - **deep-bench winner on Arc** |
 | `NuExtract3-Q6_K.gguf` | Strong runner-up (~3.5 GB) |
-| `NuExtract3-Q4_K_M.gguf` | Smaller / faster (~2.7 GB) — official HF “local default” |
+| `NuExtract3-Q4_K_M.gguf` | Smaller / faster (~2.7 GB) - official HF “local default” |
 | `mmproj-NuExtract3-BF16.gguf` | Vision projector (required for images) |
 
 ## 3. Configure paths

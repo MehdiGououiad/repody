@@ -28,8 +28,6 @@ import { isRuleFailure, ruleStatusLabel } from "@/lib/rule-status";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { cn, formatDurationMs } from "@/lib/utils";
 
-// ── CSV export ────────────────────────────────────────────────────────────────
-
 function buildCsv(
   audit: RunAuditDetail,
   t: ReturnType<typeof useTranslations>,
@@ -135,8 +133,6 @@ function auditReportLabels(
   };
 }
 
-// ── Language switcher ─────────────────────────────────────────────────────────
-
 function LangToggle() {
   const locale = useLocale();
   const t = useTranslations("audits.report");
@@ -157,8 +153,6 @@ function LangToggle() {
     </button>
   );
 }
-
-// ── Extraction table ──────────────────────────────────────────────────────────
 
 function DocExtractionCard({
   doc,
@@ -273,8 +267,6 @@ function DocExtractionCard({
     </div>
   );
 }
-
-// ── Main export ───────────────────────────────────────────────────────────────
 
 export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
   const t = useTranslations("audits.report");

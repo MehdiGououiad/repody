@@ -74,7 +74,7 @@ PublishFn = Callable[[Sequence[RunDomainEvent]], Awaitable[None]]
 
 
 async def _on_run_started(event: RunStarted) -> None:
-    # Do not refresh all queued positions here — that is O(N) DB + SSE and
+    # Do not refresh all queued positions here - that is O(N) DB + SSE and
     # dominated claim latency under deep queues. Pollers recompute position
     # with O(1) SQL; maintenance periodically reconciles progress rows.
     log.info(

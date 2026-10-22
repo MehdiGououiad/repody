@@ -24,7 +24,7 @@ MISSING = "—"
 def fields_from_nuextract_json(
     raw: str, schema: list[SchemaFieldSpec]
 ) -> list[ExtractedFieldResult]:
-    """Map NuExtract template JSON onto every schema leaf (missing → ``—``)."""
+    """Map NuExtract template JSON onto every schema leaf (missing -> ``MISSING``)."""
     data = _parse_json_object(raw)
     values = _collect_leaf_values(data, schema)
     out: list[ExtractedFieldResult] = []

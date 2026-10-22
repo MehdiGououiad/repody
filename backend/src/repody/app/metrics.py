@@ -1,4 +1,4 @@
-"""Metrics application — SQL adapters + pure builders."""
+"""Metrics application - SQL adapters + pure builders."""
 
 from __future__ import annotations
 

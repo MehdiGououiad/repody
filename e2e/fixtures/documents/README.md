@@ -2,14 +2,19 @@
 
 Place test files here. Platform tests: [docs/DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing) · commands: [docs/COMMANDS.md](../../../docs/COMMANDS.md).
 
-## Hard OCR / extraction fixtures
+## Fixtures
+
+All files here are public samples or synthetic documents. Never commit real personal
+documents (ID cards, bank statements, payslips, medical records); keep them under the
+gitignored `private/` folder at the repo root.
 
 | File | Use |
 |------|-----|
-| `hopital-devis-agadir.png` | Hôpital Privé Agadir medical quote — ICE stamp `001639657000061`, table sub-totals |
-| `E8cbebbXMAIU1Mj.jpg` | Same devis scan (JPEG alias) |
-| `hopital-devis-agadir.ocr-expectations.json` | Ground truth for OCR markdown scoring (ICE + hard fields) |
-| `hopital-devis-agadir.benchmark.json` | Structured extraction benchmark manifest |
+| `Facture.pdf` · `Facture.benchmark.json` | Invoice used by API, e2e and benchmark suites |
+| `commercial-invoice.png` · `10986_tutorial_invoice_logo_left.png` | Printed invoice samples |
+| `Facture RETOUCHE remplie AVEC TVA.png` · `facturehandwritten.png` · `handwritten.jpg` | Handwritten invoices and receipts |
+| `fiche.webp` · `../bulletin-pdf.png` | Payslip templates (demo data) |
+| `Carte_identité_électronique_marocaine_(2020,_recto).png` | Public specimen of the Moroccan e-ID card |
 
 ## Prerequisites
 

@@ -1,4 +1,4 @@
-# Local dev — ship Docker container logs + host-run API log file to Loki.
+# Local dev - ship Docker container logs + host-run API log file to Loki.
 # Requires Docker socket mount (Docker Desktop on Windows/macOS/Linux).
 server:
   http_listen_port: 9080

@@ -8,7 +8,7 @@
 # OpenShift pull secrets:
 #   https://docs.openshift.com/container_platform/latest/openshift_images/managing_images/using-image-pull-secrets.html
 #
-# Production: immutable tag (or digest) — never latest.
+# Production: immutable tag (or digest) - never latest.
 
 images:
   backend:

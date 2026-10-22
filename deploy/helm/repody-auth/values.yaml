@@ -28,7 +28,7 @@ keycloak:
   adminPassword: ""
   # Production / lab: set existingSecret (e.g. repody-runtime-secrets) and store passwords in Vault.
   existingSecret: ""
-  # PostgreSQL (required for production start mode — see keycloak.org/server/containers).
+  # PostgreSQL (required for production start mode - see keycloak.org/server/containers).
   database:
     enabled: false
     host: repody-data-postgresql

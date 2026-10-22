@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-06-14
+Accepted - 2026-06-14
 
 ## Decision
 
@@ -31,7 +31,7 @@ Production entrypoint: Helm (`deploy/helm/repody`).
 
 - One packaging path for local and production
 - `pnpm deploy:check` validates Helm-oriented prerequisites
-- Scale priority: worker pools → API → data plane → edge → external inference
+- Scale priority: worker pools -> API -> data plane -> edge -> external inference
 
 ## References
 

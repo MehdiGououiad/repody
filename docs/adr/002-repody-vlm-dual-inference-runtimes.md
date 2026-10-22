@@ -7,19 +7,19 @@
 
 ## Context
 
-Structured field extraction uses pluggable **document models** (image/PDF → JSON schema or markdown). Inference runs outside the Repody Helm release on runtime-specific endpoints. Routing must not hard-code a single endpoint or a dual-runtime story.
+Structured field extraction uses pluggable **document models** (image/PDF -> JSON schema or markdown). Inference runs outside the Repody Helm release on runtime-specific endpoints. Routing must not hard-code a single endpoint or a dual-runtime story.
 
 ## Decision
 
-1. **Single catalog** in `catalog/registry.py` — each entry has `runtime` + `runtime_model`, gated by settings flags. Catalog entries are **workflow-selectable structured Document models** only.
+1. **Single catalog** in `catalog/registry.py` - each entry has `runtime` + `runtime_model`, gated by settings flags. Catalog entries are **workflow-selectable structured Document models** only.
 2. **Runtime catalog** (as of this ADR refresh):
 
 | Runtime id | Typical catalog id | Role |
 |------------|--------------------|------|
 | `llamacpp` | `repody:vlm` | Local OpenAI-compatible llama-server (NuExtract) |
 | `nuextract_cloud` | `repody:vlm:cloud` | Official NuExtract cloud REST |
-| `paddleocr_qwen` | `paddleocr:qwen` | PP-OCRv6 + Qwen text→JSON |
-| `glm_ocr_qwen` | `glm:qwen` | GLM-OCR SDK markdown + Qwen text→JSON |
+| `paddleocr_qwen` | `paddleocr:qwen` | PP-OCRv6 + Qwen text -> JSON |
+| `glm_ocr_qwen` | `glm:qwen` | GLM-OCR SDK markdown + Qwen text -> JSON |
 
 **Internal markdown OCR stages** (not catalog / not workflow-selectable):
 
@@ -41,9 +41,9 @@ Default catalog id when enabled: `repody:vlm`.
 | Concern | Runtime selector |
 |---------|------------------|
 | Document extraction | Catalog entry `runtime` + per-runtime settings (`AUDIT_LLAMACPP_*`, cloud/Paddle/GLM flags) |
-| LLM rule validation | `get_chat()` → validation model or stub |
+| LLM rule validation | `get_chat()` -> validation model or stub |
 
-Global `AUDIT_INFERENCE_MODE` may still exist as a legacy / operator shorthand; **catalog-first routing** (model id → runtime) is the source of truth for which endpoint a document uses.
+Global `AUDIT_INFERENCE_MODE` may still exist as a legacy / operator shorthand; **catalog-first routing** (model id -> runtime) is the source of truth for which endpoint a document uses.
 
 ## Consequences
 
@@ -78,21 +78,21 @@ Register an adapter with `register_document_model_adapter(id, extract_fn)` and i
 
 Examples (workflow-selectable Document models):
 
-- `repody:vlm` / `repody:vlm:cloud` — NuExtract structured (+ optional markdown)
-- `paddleocr:qwen` — OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#pp-ocrv6))
-- `glm:qwen` — GLM-OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#glm-ocr))
+- `repody:vlm` / `repody:vlm:cloud` - NuExtract structured (+ optional markdown)
+- `paddleocr:qwen` - OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#pp-ocrv6))
+- `glm:qwen` - GLM-OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#glm-ocr))
 
-Internal OCR stages (direct helpers only — not catalog entries):
+Internal OCR stages (direct helpers only - not catalog entries):
 
-- `paddleocr:v6` — PP-OCRv6 markdown via official `/ocr`
-- `glm:ocr` — GLM-OCR markdown via llama-server / official SDK
+- `paddleocr:v6` - PP-OCRv6 markdown via official `/ocr`
+- `glm:ocr` - GLM-OCR markdown via llama-server / official SDK
 
 If the new model needs a different serve profile, point a dedicated base URL setting at that endpoint (do not hard-code inside the pipeline).
 
 ## References
 
 - [docs/EXTRACTION.md](../EXTRACTION.md)
-- [DEPLOY.md](../../DEPLOY.md)
+- [docs/CLUSTER.md](../CLUSTER.md)
 - `backend/src/repody/catalog/registry.py`
 - `backend/src/repody/extraction/vlm.py`
 - `backend/tests/test_inference/test_llamacpp_runtime.py`

@@ -1,4 +1,4 @@
-"""Map run snapshot / rule dicts / extraction types → IDP contracts.
+"""Map run snapshot / rule dicts / extraction types -> IDP contracts.
 
 Adapters may import snapshot helpers and extraction base types. Pure slices must not.
 """
@@ -102,7 +102,7 @@ def rule_spec_from_dict(rule: dict) -> RuleSpec:
 
 
 def rule_dict_from_spec(rule: RuleSpec) -> dict:
-    """RuleSpec → rules-engine dict (single seam out of the IDP contract)."""
+    """RuleSpec -> rules-engine dict (single seam out of the IDP contract)."""
     return {
         "id": rule.id,
         "name": rule.name,
@@ -179,7 +179,7 @@ def extracted_field_from_result(row: ExtractedFieldResult) -> ExtractedField:
 
 
 def idp_meta_from_extraction(meta: ExtractionMetadata) -> IdpExtractionMeta:
-    """Map pipeline ExtractionMetadata → IDP contract (labels stay at HTTP edge)."""
+    """Map pipeline ExtractionMetadata -> IDP contract (labels stay at HTTP edge)."""
     return IdpExtractionMeta(
         read_path_config=meta.read_path_config,
         read_path_used=meta.read_path_used,

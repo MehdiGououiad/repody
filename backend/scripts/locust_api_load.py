@@ -1,7 +1,7 @@
 # Locust is installed ad hoc for load runs rather than pinned as a project
 # dependency, so it is absent from the checked environment.
 # pyright: reportMissingImports=false
-"""Locust real-world mix — control plane + JSON enqueue + poll (not VLM).
+"""Locust real-world mix - control plane + JSON enqueue + poll (not VLM).
 
 Usage:
   # PowerShell
@@ -91,7 +91,7 @@ class PlatformMixUser(HttpUser):
             name="POST /workflows/{id}/runs/json",
             catch_response=True,
         ) as res:
-            # 202 accepted; 429 rate limit; 503 admission — all expected under load.
+            # 202 accepted; 429 rate limit; 503 admission - all expected under load.
             if res.status_code in (202, 429, 503):
                 if res.status_code == 202:
                     run_id = res.json().get("runId")

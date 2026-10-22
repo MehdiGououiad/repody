@@ -5,7 +5,7 @@ import { backendOrigin } from "@/lib/api/backend-origin";
 import type { paths } from "@/lib/api/generated/schema";
 import { serverFetch } from "@/lib/api/http-server";
 
-/** Server Components — typed client over `serverFetch` (session token + timeout). */
+/** Server Components - typed client over `serverFetch` (session token + timeout). */
 export const serverApi = createClient<paths>({
   baseUrl: backendOrigin(),
   fetch: (input: Request) => {

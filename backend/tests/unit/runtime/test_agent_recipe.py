@@ -1,4 +1,4 @@
-"""Unit tests for agent recipe resolution — IDP only."""
+"""Unit tests for agent recipe resolution - IDP only."""
 
 from __future__ import annotations
 

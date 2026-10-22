@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
   },
   // /api/v1/* is proxied at runtime by app/api/v1/[...path]/route.ts using
   // INTERNAL_API_URL (Compose: http://api:8000, K8s: http://repody-api:8000).
-  // Do not bake BACKEND_URL into rewrites — that breaks portable Hub images.
+  // Do not bake BACKEND_URL into rewrites - that breaks portable Hub images.
   async redirects() {
     return [
       {
@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
   },
 };
 
-// Official @sentry/nextjs build wrapper. Source-map upload disabled — Bugsink
+// Official @sentry/nextjs build wrapper. Source-map upload disabled - Bugsink
 // is Sentry-SDK-compatible for events but not SaaS map upload.
 export default withSentryConfig(withNextIntl(nextConfig), {
   silent: true,

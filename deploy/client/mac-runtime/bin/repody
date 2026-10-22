@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Repody Mac runtime CLI — images + Compose only (no application source).
+# Repody Mac runtime CLI - images + Compose only (no application source).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -1,4 +1,4 @@
-# Local dev — single-node Loki (filesystem storage).
+# Local dev - single-node Loki (filesystem storage).
 # https://grafana.com/docs/loki/latest/configure/
 auth_enabled: false
 

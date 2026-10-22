@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted — 2026-06-19
+Accepted - 2026-06-19
 
 ## Context
 
@@ -25,6 +25,6 @@ the Repody release as **vLLM** or **llama-server**.
 
 ## References
 
-- [DEV.md](../../DEV.md)
+- [docs/LOCAL.md](../LOCAL.md)
 - [docs/EXTRACTION.md](../EXTRACTION.md)
 - [docs/CLUSTER.md](../CLUSTER.md)

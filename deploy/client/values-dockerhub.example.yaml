@@ -1,7 +1,7 @@
 # Example: public Docker Hub repositories (linux/amd64 + linux/arm64).
 # Replace mehdigououiad if you publish under a different Hub namespace.
 #
-# Production: use an immutable tag from the vendor release — never latest.
+# Production: use an immutable tag from the vendor release - never latest.
 # Platform only: API / web / workers. Inference stays external
 # (docs/EXTRACTION.md).
 

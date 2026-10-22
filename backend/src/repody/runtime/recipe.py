@@ -1,4 +1,4 @@
-"""Platform run orchestrator — one agent stage per Taskiq task (IDP)."""
+"""Platform run orchestrator - one agent stage per Taskiq task (IDP)."""
 
 from __future__ import annotations
 

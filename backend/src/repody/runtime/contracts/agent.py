@@ -22,7 +22,7 @@ class AgentStatus(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class AgentOutcome:
-    """Common envelope — downstream agents consume prior payloads without ORM coupling."""
+    """Common envelope - downstream agents consume prior payloads without ORM coupling."""
 
     agent: AgentId
     status: AgentStatus
