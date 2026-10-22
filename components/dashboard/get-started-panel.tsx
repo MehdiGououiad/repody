@@ -9,9 +9,7 @@ const STEPS = [
   { icon: Rocket, key: "upload" as const },
 ] as const;
 
-export async function GetStartedPanel({ show }: { show: boolean }) {
-  if (!show) return null;
-
+export async function GetStartedPanel() {
   const [t, tSteps, tCommon] = await Promise.all([
     getTranslations("dashboard.getStarted"),
     getTranslations("workflows.builder.steps"),

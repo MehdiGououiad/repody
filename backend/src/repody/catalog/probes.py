@@ -15,6 +15,7 @@ from repody.extraction.branding import (
 )
 from repody.inference.openai_compat import (
     list_openai_models,
+    message_content,
     model_is_available,
     ping_openai_compat,
     post_chat_completion,
@@ -250,7 +251,7 @@ async def run_generation_probe(
             },
             timeout=settings.repody_vlm_timeout_seconds,
         )
-        raw = str(data["choices"][0]["message"]["content"])
+        raw = message_content(data)
         infer_ms = int((time.perf_counter() - started) * 1000)
         ok = '"warmup"' in raw and "true" in raw.lower()
         return GenerationProbeResult(

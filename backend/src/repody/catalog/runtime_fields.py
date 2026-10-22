@@ -224,57 +224,31 @@ def _nuextract_cloud_fields(settings: Settings) -> list[ModelConfigField]:
     ]
 
 
-def _paddleocr_v6_fields(settings: Settings) -> list[ModelConfigField]:
+def _qwen_stage_fields(settings: Settings) -> list[ModelConfigField]:
+    """Text→JSON stage shared by every OCR + Qwen catalog entry."""
     return [
         _platform_field(
-            key="paddleocr_v6_enabled",
-            env_var="AUDIT_PADDLEOCR_V6_ENABLED",
-            label="Enabled",
-            description=(
-                "Enable the PP-OCRv6 OCR stage used by paddleocr:qwen "
-                "(not a workflow-selectable catalog entry)."
-            ),
-            value=settings.paddleocr_v6_enabled,
-            restart="api",
-        ),
-        _platform_field(
-            key="paddleocr_v6_base_url",
-            env_var="AUDIT_PADDLEOCR_V6_BASE_URL",
-            label="OCR API base URL",
-            description="PaddleX OCR origin (default http://127.0.0.1:8868).",
-            value=settings.paddleocr_v6_base_url,
+            key="qwen35_base_url",
+            env_var="AUDIT_QWEN35_BASE_URL",
+            label="Qwen API base URL",
+            description="OpenAI-compatible origin for text→JSON (default http://127.0.0.1:8084/v1).",
+            value=settings.qwen35_base_url,
             restart="worker",
         ),
         _platform_field(
-            key="paddleocr_v6_timeout_seconds",
-            env_var="AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS",
-            label="Request timeout (s)",
-            description="HTTP timeout for POST /ocr.",
-            value=settings.paddleocr_v6_timeout_seconds,
+            key="qwen35_served_model",
+            env_var="AUDIT_QWEN35_SERVED_MODEL",
+            label="Qwen model id",
+            description="llama-server model alias (default Qwen3.5-4B).",
+            value=settings.qwen35_served_model,
             restart="worker",
         ),
         _platform_field(
-            key="paddleocr_v6_use_doc_orientation_classify",
-            env_var="AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY",
-            label="Document orientation classification",
-            description="Official /ocr override; disable for already-oriented inputs.",
-            value=settings.paddleocr_v6_use_doc_orientation_classify,
-            restart="worker",
-        ),
-        _platform_field(
-            key="paddleocr_v6_use_doc_unwarping",
-            env_var="AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING",
-            label="Document unwarping",
-            description="Official /ocr override; disable for clean documents.",
-            value=settings.paddleocr_v6_use_doc_unwarping,
-            restart="worker",
-        ),
-        _platform_field(
-            key="paddleocr_v6_use_textline_orientation",
-            env_var="AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION",
-            label="Text-line orientation",
-            description="Official /ocr override; disable for the fast path.",
-            value=settings.paddleocr_v6_use_textline_orientation,
+            key="qwen35_timeout_seconds",
+            env_var="AUDIT_QWEN35_TIMEOUT_SECONDS",
+            label="Qwen request timeout (s)",
+            description="HTTP timeout for text→JSON chat/completions.",
+            value=settings.qwen35_timeout_seconds,
             restart="worker",
         ),
     ]
@@ -298,30 +272,7 @@ def _paddleocr_qwen_fields(settings: Settings) -> list[ModelConfigField]:
             value=settings.paddleocr_v6_base_url,
             restart="worker",
         ),
-        _platform_field(
-            key="qwen35_base_url",
-            env_var="AUDIT_QWEN35_BASE_URL",
-            label="Qwen API base URL",
-            description="OpenAI-compatible origin for text→JSON (default http://127.0.0.1:8084/v1).",
-            value=settings.qwen35_base_url,
-            restart="worker",
-        ),
-        _platform_field(
-            key="qwen35_served_model",
-            env_var="AUDIT_QWEN35_SERVED_MODEL",
-            label="Qwen model id",
-            description="llama-server model alias (default Qwen3.5-4B).",
-            value=settings.qwen35_served_model,
-            restart="worker",
-        ),
-        _platform_field(
-            key="qwen35_timeout_seconds",
-            env_var="AUDIT_QWEN35_TIMEOUT_SECONDS",
-            label="Qwen request timeout (s)",
-            description="HTTP timeout for text→JSON chat/completions.",
-            value=settings.qwen35_timeout_seconds,
-            restart="worker",
-        ),
+        *_qwen_stage_fields(settings),
     ]
 
 
@@ -343,127 +294,7 @@ def _glm_ocr_qwen_fields(settings: Settings) -> list[ModelConfigField]:
             value=settings.glm_ocr_base_url,
             restart="worker",
         ),
-        _platform_field(
-            key="qwen35_base_url",
-            env_var="AUDIT_QWEN35_BASE_URL",
-            label="Qwen API base URL",
-            description="OpenAI-compatible origin for text→JSON (default http://127.0.0.1:8084/v1).",
-            value=settings.qwen35_base_url,
-            restart="worker",
-        ),
-        _platform_field(
-            key="qwen35_served_model",
-            env_var="AUDIT_QWEN35_SERVED_MODEL",
-            label="Qwen model id",
-            description="llama-server model alias (default Qwen3.5-4B).",
-            value=settings.qwen35_served_model,
-            restart="worker",
-        ),
-        _platform_field(
-            key="qwen35_timeout_seconds",
-            env_var="AUDIT_QWEN35_TIMEOUT_SECONDS",
-            label="Qwen request timeout (s)",
-            description="HTTP timeout for text→JSON chat/completions.",
-            value=settings.qwen35_timeout_seconds,
-            restart="worker",
-        ),
-    ]
-
-
-def _glm_ocr_fields(settings: Settings) -> list[ModelConfigField]:
-    return [
-        _platform_field(
-            key="glm_ocr_enabled",
-            env_var="AUDIT_GLM_OCR_ENABLED",
-            label="Enabled",
-            description=(
-                "Enable the GLM-OCR stage used by glm:qwen "
-                "(not a workflow-selectable catalog entry)."
-            ),
-            value=settings.glm_ocr_enabled,
-            restart="api",
-        ),
-        _platform_field(
-            key="glm_ocr_base_url",
-            env_var="AUDIT_GLM_OCR_BASE_URL",
-            label="OpenAI API base URL",
-            description="llama-server /v1 origin for official SDK region OCR (default :8083/v1).",
-            value=settings.glm_ocr_base_url,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_served_model",
-            env_var="AUDIT_GLM_OCR_SERVED_MODEL",
-            label="Served model id",
-            description="Model id / alias from /v1/models (default GLM-OCR).",
-            value=settings.glm_ocr_served_model,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_timeout_seconds",
-            env_var="AUDIT_GLM_OCR_TIMEOUT_SECONDS",
-            label="Request timeout (s)",
-            description="HTTP timeout for official SDK region OCR.",
-            value=settings.glm_ocr_timeout_seconds,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_layout_enabled",
-            env_var="AUDIT_GLM_OCR_LAYOUT_ENABLED",
-            label="PP-DocLayoutV3 enabled",
-            description=(
-                "Off by default: model-only whole-page Text Recognition:. "
-                "On = PP-DocLayoutV3 region OCR (zai-org document-parsing path)."
-            ),
-            value=settings.glm_ocr_layout_enabled,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_layout_device",
-            env_var="AUDIT_GLM_OCR_LAYOUT_DEVICE",
-            label="Layout device",
-            description="PP-DocLayoutV3 device (cpu recommended when GPU runs llama).",
-            value=settings.glm_ocr_layout_device,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_layout_model_dir",
-            env_var="AUDIT_GLM_OCR_LAYOUT_MODEL_DIR",
-            label="Layout model",
-            description="PP-DocLayoutV3 HF id or local path (safetensors).",
-            value=settings.glm_ocr_layout_model_dir,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_sdk_max_workers",
-            env_var="AUDIT_GLM_OCR_SDK_MAX_WORKERS",
-            label="SDK region workers",
-            description=(
-                "Official SDK pipeline.max_workers (SDK default 32; keep low when "
-                "llama-server -np is 1)."
-            ),
-            value=settings.glm_ocr_sdk_max_workers,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_pdf_max_pages",
-            env_var="AUDIT_GLM_OCR_PDF_MAX_PAGES",
-            label="PDF max pages",
-            description=("Optional SDK pdf_max_pages cap. Empty = official unlimited (null)."),
-            value=settings.glm_ocr_pdf_max_pages,
-            restart="worker",
-        ),
-        _platform_field(
-            key="glm_ocr_id_card_profile",
-            env_var="AUDIT_GLM_OCR_ID_CARD_PROFILE",
-            label="ID-card profile",
-            description=(
-                "Optional GLM-OCR profile for photo-heavy ID cards (config.idcard.yaml + "
-                "region-text fallback). Default off — official SDK layout mapping."
-            ),
-            value=settings.glm_ocr_id_card_profile,
-            restart="worker",
-        ),
+        *_qwen_stage_fields(settings),
     ]
 
 
@@ -474,7 +305,7 @@ def _deployment_notes() -> list[DeploymentNote]:
             action="Rebuild the affected image, then rollout",
             detail=(
                 "Worker extraction logic, API routes, and benchmark scripts are baked into "
-                "container images. Use pnpm dev:build to rebuild and redeploy."
+                "container images. Rebuild with pnpm images:build, then redeploy."
             ),
         ),
         DeploymentNote(
@@ -503,7 +334,7 @@ def _deployment_notes() -> list[DeploymentNote]:
         ),
         DeploymentNote(
             change_kind="PP-OCRv6 service",
-            action="pnpm paddleocr:v6:install && pnpm paddleocr:v6:serve, set AUDIT_PADDLEOCR_V6_*",
+            action="pnpm paddleocr:v6:serve, set AUDIT_PADDLEOCR_V6_*",
             detail=(
                 "Internal PP-OCRv6 OCR stage (used by paddleocr:qwen): "
                 "paddlex --serve --pipeline OCR (deploy/paddleocr-v6/OCR.yaml), "
@@ -543,25 +374,33 @@ def _deployment_notes() -> list[DeploymentNote]:
 
 def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntimeConfigResponse:
     settings = settings or get_settings()
+    # catalog id -> (field builder, inference URL, enabled flag)
+    profile_sources = {
+        REPODY_VLM_CATALOG_ID: (
+            _repody_vlm_fields,
+            settings.llamacpp_base_url,
+            settings.repody_vlm_enabled,
+        ),
+        REPODY_VLM_CLOUD_CATALOG_ID: (
+            _nuextract_cloud_fields,
+            settings.nuextract_cloud_base_url,
+            settings.nuextract_cloud_enabled,
+        ),
+        PADDLEOCR_QWEN_CATALOG_ID: (
+            _paddleocr_qwen_fields,
+            settings.qwen35_base_url,
+            settings.paddleocr_qwen_enabled,
+        ),
+        GLM_OCR_QWEN_CATALOG_ID: (
+            _glm_ocr_qwen_fields,
+            settings.qwen35_base_url,
+            settings.glm_ocr_qwen_enabled,
+        ),
+    }
+
     profiles: list[ModelRuntimeProfile] = []
-
     for spec in list_document_models():
-        if spec.id == REPODY_VLM_CATALOG_ID:
-            fields = _repody_vlm_fields(settings)
-            inference_url = settings.llamacpp_base_url
-        elif spec.id == REPODY_VLM_CLOUD_CATALOG_ID:
-            fields = _nuextract_cloud_fields(settings)
-            inference_url = settings.nuextract_cloud_base_url
-        elif spec.id == PADDLEOCR_QWEN_CATALOG_ID:
-            fields = _paddleocr_qwen_fields(settings)
-            inference_url = settings.qwen35_base_url
-        elif spec.id == GLM_OCR_QWEN_CATALOG_ID:
-            fields = _glm_ocr_qwen_fields(settings)
-            inference_url = settings.qwen35_base_url
-        else:
-            fields = []
-            inference_url = None
-
+        source = profile_sources.get(spec.id)
         render_policy = RENDER_POLICIES.get(spec.id)
         profiles.append(
             ModelRuntimeProfile(
@@ -569,29 +408,12 @@ def build_model_runtime_config(settings: Settings | None = None) -> ModelRuntime
                 label=spec.label,
                 runtime=spec.runtime,
                 runtime_model=spec.runtime_model,
-                enabled=True,
-                inference_url=inference_url,
+                enabled=source is None or source[2] is not False,
+                inference_url=source[1] if source else None,
                 render_policy=render_policy.doc_ref if render_policy else "",
-                fields=fields,
+                fields=source[0](settings) if source else [],
             )
         )
-
-    if settings.repody_vlm_enabled is False:
-        for profile in profiles:
-            if profile.model_id == REPODY_VLM_CATALOG_ID:
-                profile.enabled = False
-    if settings.nuextract_cloud_enabled is False:
-        for profile in profiles:
-            if profile.model_id == REPODY_VLM_CLOUD_CATALOG_ID:
-                profile.enabled = False
-    if settings.paddleocr_qwen_enabled is False:
-        for profile in profiles:
-            if profile.model_id == PADDLEOCR_QWEN_CATALOG_ID:
-                profile.enabled = False
-    if settings.glm_ocr_qwen_enabled is False:
-        for profile in profiles:
-            if profile.model_id == GLM_OCR_QWEN_CATALOG_ID:
-                profile.enabled = False
 
     return ModelRuntimeConfigResponse(
         models=profiles,

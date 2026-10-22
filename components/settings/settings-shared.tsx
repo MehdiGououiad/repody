@@ -8,16 +8,7 @@ export const ACTIVE_STATUSES = new Set(["queued", "running"]);
 export const SETTINGS_TABS = ["overview", "models", "benchmarks", "diagnostics"] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
-export function formatDuration(ms?: number | null) {
-  if (ms == null) return "-";
-  return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
-}
-
-export function formatPercent(value?: number | null) {
-  return value == null ? "-" : `${Math.round(value * 100)}%`;
-}
-
-export function StatusBadge({ status }: { status: OperatorJob["status"] }) {
+export function OperatorJobStatusBadge({ status }: { status: OperatorJob["status"] }) {
   const active = ACTIVE_STATUSES.has(status);
   return (
     <Badge

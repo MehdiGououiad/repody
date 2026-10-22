@@ -28,12 +28,7 @@ from repody.app.run.lifecycle import (
 from repody.app.run.persistence import session_run_ports
 from repody.app.run.progress import fail_run_progress
 from repody.infra.db import base as db_base
-from repody.infra.db.models import Run
 from repody.infra.db.models.enums import RunStatus as DbRunStatus
-from repody.runtime.agent_metadata import (
-    clear_pending_completion,
-    pending_completion_from_run,
-)
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 
 log = structlog.get_logger(__name__)
@@ -232,41 +227,3 @@ async def fail_run_terminal(
 
     async with db_base.async_session_factory() as owned_session:
         return await _execute(owned_session)
-
-
-async def finalize_pending_completion(session: AsyncSession, run: Run) -> None:
-    """Complete a run from ``run_metadata.pendingCompletion`` (final non-IDP stage)."""
-    pending = pending_completion_from_run(run)
-    if pending is None:
-        raise RuntimeError(f"missing pendingCompletion for run {run.id}")
-    # pending.run_metadata is timing/summary only — keep agentOutcomes written after IDP.
-    merged_meta = dict(pending.run_metadata)
-    current = run.run_metadata if isinstance(run.run_metadata, dict) else {}
-    outcomes = current.get("agentOutcomes")
-    if isinstance(outcomes, dict) and outcomes:
-        merged_meta["agentOutcomes"] = outcomes
-    clear_pending_completion(run)
-    await session.flush()
-    load, save, commit = session_run_ports(session)
-    completed = await complete_run(
-        CompleteRunRequest(
-            run_id=run.id,
-            outcome=RunCompletionOutcome(
-                overall_status=pending.overall_status,
-                summary_total=pending.summary_total,
-                summary_passed=pending.summary_passed,
-                summary_failed=pending.summary_failed,
-                fields_extracted=pending.fields_extracted,
-                run_metadata=merged_meta,
-                progress=pending.progress,
-            ),
-        ),
-        load=load,
-        save=save,
-        commit=commit,
-        publish=publish_run_domain_events,
-        now=datetime.now(UTC),
-    )
-    if not completed.is_ok:
-        err = completed.error
-        raise RuntimeError(err.message if err else "complete_run failed")

@@ -4,6 +4,7 @@ packages:
 overrides:
   postcss: "^8.5.15"
   "@opentelemetry/core": "^2.8.0"
+  "js-yaml@>=4.0.0 <4.3.2": "4.3.2"
 
 minimumReleaseAge: 0
 

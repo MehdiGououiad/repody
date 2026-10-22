@@ -88,7 +88,6 @@ def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
 
 
 def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
-    doc = normalize_keys_to_snake(doc)
     read_id, val_id = normalize_document_modes(
         doc.get("extraction_mode"),
         doc.get("validation_mode"),
@@ -134,19 +133,25 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
     )
 
 
-def resolve_run_documents(run: Run) -> list[SnapshotDocument]:
-    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
+@dataclass(frozen=True, slots=True)
+class MaterializedRunConfig:
+    """One read of a Run's snapshot (or live Workflow) for the whole execution."""
+
+    documents: list[SnapshotDocument]
+    rules: list[dict]
+    workflow_name: str
+
+
+def _documents_from(snapshot: dict, workflow: Workflow | None) -> list[SnapshotDocument]:
     raw_docs = snapshot.get("documents")
     if raw_docs:
         return [_document_from_snapshot(doc, idx) for idx, doc in enumerate(raw_docs)]
-    workflow = run.workflow
-    if not workflow:
+    if workflow is None or not getattr(workflow, "documents", None):
         return []
     return [_document_from_orm(doc) for doc in sorted(workflow.documents, key=lambda d: d.position)]
 
 
-def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
-    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
+def _rules_from(snapshot: dict, workflow: Workflow | None) -> list[dict]:
     raw_rules = snapshot.get("rules")
     if raw_rules:
         return [
@@ -163,9 +168,35 @@ def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
             )
             for idx, rule in enumerate(raw_rules)
         ]
+    if workflow is None:
+        return []
     return rules_payload(workflow)
+
+
+def _workflow_name_from(snapshot: dict, workflow: Workflow | None) -> str:
+    return str(snapshot.get("workflow_name") or getattr(workflow, "name", None) or "Workflow")
+
+
+def materialize_run_config(run: Run) -> MaterializedRunConfig:
+    """Normalize the Run snapshot once. Callers must not re-resolve documents or rules."""
+    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
+    workflow = run.workflow
+    return MaterializedRunConfig(
+        documents=_documents_from(snapshot, workflow),
+        rules=_rules_from(snapshot, workflow),
+        workflow_name=_workflow_name_from(snapshot, workflow),
+    )
+
+
+def resolve_run_documents(run: Run) -> list[SnapshotDocument]:
+    return materialize_run_config(run).documents
+
+
+def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
+    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
+    return _rules_from(snapshot, workflow)
 
 
 def resolve_workflow_display_name(run: Run, workflow: Workflow) -> str:
     snapshot = normalize_keys_to_snake(run.run_snapshot or {})
-    return str(snapshot.get("workflow_name") or workflow.name or "Workflow")
+    return _workflow_name_from(snapshot, workflow)

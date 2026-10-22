@@ -40,7 +40,7 @@ async def test_dispatch_outbox_retries_transient_errors(outbox_session, monkeypa
 
     dispatch = AsyncMock(side_effect=[ConnectionError("connection refused"), None])
     monkeypatch.setattr(
-        "repody.app.run.dispatch.dispatch_audit_run",
+        "repody.app.run.dispatch_outbox.dispatch_audit_run",
         dispatch,
     )
     monkeypatch.setattr(
@@ -82,7 +82,7 @@ async def test_replay_dispatch_outbox_picks_pending_rows(outbox_session, monkeyp
 
     dispatch = AsyncMock()
     monkeypatch.setattr(
-        "repody.app.run.dispatch.dispatch_audit_run",
+        "repody.app.run.dispatch_outbox.dispatch_audit_run",
         dispatch,
     )
     monkeypatch.setattr(

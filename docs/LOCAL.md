@@ -75,10 +75,10 @@ Images pull as public multi-arch — no Hub login required.
 ## Prerequisites (once)
 
 1. **Docker Desktop** running.
-2. **Node 24** + **pnpm 11.7.0**:
+2. **Node 24** + **pnpm 12.5.1**:
    ```bash
    corepack enable
-   corepack prepare pnpm@11.7.0 --activate
+   corepack prepare pnpm@12.5.1 --activate
    ```
 3. **llama-server** on PATH (NuExtract):
    - macOS: `brew install llama.cpp`
@@ -123,7 +123,7 @@ pnpm platform doctor
 
 Same checks run at the start of `pnpm platform`. Required for the default path:
 
-- Node 24 / pnpm 11
+- Node 24 / pnpm 12
 - Docker Desktop running
 - `llama-server` on PATH
 - NuExtract3 `.gguf` + mmproj on disk
@@ -169,6 +169,7 @@ Observability is **on by default** (`--no-obs` to skip):
 |----|-----|
 | Grafana | http://localhost:3030 (admin / admin) |
 | Loki | http://localhost:3100 |
+| Prometheus | http://localhost:9090 |
 | Bugsink | http://localhost:8090 · `admin@repody.local` / `repody-dev` |
 | OTLP HTTP | http://localhost:4318/v1/traces |
 

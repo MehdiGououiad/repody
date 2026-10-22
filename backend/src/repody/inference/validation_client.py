@@ -7,7 +7,7 @@ from typing import Any
 
 import structlog
 
-from repody.inference.openai_compat import ping_openai_compat, post_chat_completion
+from repody.inference.openai_compat import message_content, ping_openai_compat, post_chat_completion
 from repody.inference.runtime import llamacpp_base_url
 from repody.inference.validation_model import VALIDATION_MODEL_REQUIRED_MSG
 from repody.settings import get_settings
@@ -42,7 +42,7 @@ async def chat_validation(messages: list[dict[str, Any]], **opts: Any) -> str:
         payload["response_format"] = {"type": "json_object"}
     started = time.perf_counter()
     data = await post_chat_completion(base_url, payload, timeout=timeout)
-    content = str(data["choices"][0]["message"]["content"])
+    content = message_content(data)
     log.info(
         "validation_chat_done",
         model=model,

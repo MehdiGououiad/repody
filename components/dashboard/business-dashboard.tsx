@@ -4,7 +4,7 @@ import { AlertTriangle, ArrowUpRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { DashboardAlerts } from "@/components/dashboard/dashboard-alerts";
+import { HealthStrip } from "@/components/dashboard/health-strip";
 import { QueueLiveBadge } from "@/components/dashboard/queue-live-badge";
 import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
 import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
@@ -115,7 +115,7 @@ export function BusinessDashboard({
 
   return (
     <div className="space-y-6">
-      <DashboardAlerts alerts={live.healthAlerts} />
+      <HealthStrip alerts={live.healthAlerts} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <LiveIndicator updated={live.lastUpdated} />

@@ -2,8 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import type { RunAuditDetail } from "@/lib/types/audit";
-import { formatDurationMs } from "@/lib/types/audit";
-import { cn } from "@/lib/utils";
+import { cn, formatDurationMs } from "@/lib/utils";
 import { mergeLabels, type RunReportLabels } from "./report-shared";
 
 export function RunStatusBanner({

@@ -17,7 +17,7 @@ name: repody
 
 services:
   postgres:
-    image: postgres:17.10-alpine
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
@@ -33,7 +33,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:8.8.0-alpine
+    image: redis:8.8.3-alpine
     ports:
       - "6379:6379"
     healthcheck:
@@ -43,7 +43,7 @@ services:
       retries: 10
 
   minio:
-    image: pgsty/minio:RELEASE.2026-06-18T00-00-00Z
+    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -55,7 +55,7 @@ services:
       - repody-minio:/data
 
   minio-init:
-    image: pgsty/mc:RELEASE.2026-04-17T00-00-00Z
+    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
     depends_on:
       - minio
     restart: on-failure
@@ -67,7 +67,7 @@ services:
       "
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.6.4
+    image: quay.io/keycloak/keycloak:26.7.4
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -220,7 +220,7 @@ services:
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:observability
   bugsink-db:
     profiles: [observability]
-    image: postgres:17.10-alpine
+    image: postgres:17.11-alpine
     environment:
       POSTGRES_USER: bugsink
       POSTGRES_PASSWORD: bugsink-local-dev
@@ -251,7 +251,7 @@ services:
 
   loki:
     profiles: [observability]
-    image: grafana/loki:3.6.11
+    image: grafana/loki:3.7.8
     command: -config.file=/etc/loki/config.yaml
     ports:
       - "3100:3100"
@@ -259,19 +259,35 @@ services:
       - ./deploy/observability/loki-config.yaml:/etc/loki/config.yaml:ro
       - repody-loki:/loki
 
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:v3.14.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+      - --enable-feature=exemplar-storage
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - repody-prometheus:/prometheus
+
   tempo:
     profiles: [observability]
-    image: grafana/tempo:2.9.2
+    image: grafana/tempo:2.10.8
     command: ["-config.file=/etc/tempo/config.yaml"]
     ports:
       - "3200:3200"
     volumes:
       - ./deploy/observability/tempo-config.yaml:/etc/tempo/config.yaml:ro
       - repody-tempo:/var/tempo
+    depends_on:
+      prometheus:
+        condition: service_started
 
   otel-collector:
     profiles: [observability]
-    image: otel/opentelemetry-collector-contrib:0.146.0
+    image: otel/opentelemetry-collector-contrib:0.161.0
     command: ["--config=/etc/otel/config.yaml"]
     ports:
       - "4318:4318"
@@ -297,7 +313,7 @@ services:
 
   grafana:
     profiles: [observability]
-    image: grafana/grafana:12.4.1
+    image: grafana/grafana:13.0.9
     ports:
       - "3030:3000"
     environment:
@@ -314,6 +330,8 @@ services:
         condition: service_started
       tempo:
         condition: service_started
+      prometheus:
+        condition: service_started
 
 volumes:
   repody-postgres:
@@ -321,4 +339,5 @@ volumes:
   repody-bugsink-db:
   repody-loki:
   repody-tempo:
+  repody-prometheus:
   repody-grafana:

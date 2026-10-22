@@ -29,6 +29,11 @@
 # production
 /build
 /dist/
+/backend/dist/
+
+# security scan output (pnpm security:scan / CI)
+/dist-security/
+/dist-security-*
 
 # misc
 .DS_Store

@@ -1,4 +1,4 @@
-"""Background maintenance: stale run recovery."""
+"""Background maintenance: stale run recovery, outbox replay, and queue refresh."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app.queue.progress import refresh_queued_positions
 from repody.app.run.commands import fail_run_terminal
-from repody.infra.db.base import async_session_factory
+from repody.app.run.dispatch_outbox import purge_dispatched_outbox, replay_dispatch_outbox
+from repody.infra.db import base as db_base
 from repody.infra.db.models import Run, RunStatus
 from repody.settings import get_settings
 
@@ -153,7 +155,7 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
         queued = await _reap_stale_queued_runs(session, minutes=queued_minutes)
         return running + queued
 
-    async with async_session_factory() as owned:
+    async with db_base.async_session_factory() as owned:
         running = await _reap_stale_running_runs(owned, minutes=running_minutes)
         queued = await _reap_stale_queued_runs(owned, minutes=queued_minutes)
         return running + queued
@@ -162,15 +164,7 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
 async def run_maintenance_cycle() -> None:
     """One pass: stale runs, outbox replay, queue head refresh, outbox purge."""
     reaped = await reap_stale_runs()
-    replayed = 0
-    purged = 0
-    from repody.app.queue.progress import refresh_queued_positions
-    from repody.app.run.dispatch_outbox import (
-        purge_dispatched_outbox,
-        replay_dispatch_outbox,
-    )
-
-    async with async_session_factory() as session:
+    async with db_base.async_session_factory() as session:
         replayed = await replay_dispatch_outbox(session)
         await refresh_queued_positions(session)
         purged = await purge_dispatched_outbox(session)

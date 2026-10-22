@@ -4,6 +4,8 @@ import os
 import warnings
 from typing import TYPE_CHECKING
 
+from repody.util.urls import is_remote_inference_url
+
 if TYPE_CHECKING:
     from repody.settings.model import Settings
 
@@ -13,8 +15,6 @@ MAX_WORKER_TASK_TIMEOUT_MINUTES = 15
 
 
 def apply_inference_probe_defaults(settings: Settings) -> None:
-    from repody.inference.runtime import is_remote_inference_url
-
     if settings.inference_mode.lower() == "llamacpp":
         probe_env = os.getenv("AUDIT_GPU_LIVE_PROBE", "").strip().lower()
         health_env = os.getenv("AUDIT_HEALTHZ_PROBE_INFERENCE", "").strip().lower()

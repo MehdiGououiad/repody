@@ -1,10 +1,11 @@
 "use client";
 
 import { BrainCircuit, Gauge, ShieldCheck, Zap } from "lucide-react";
+import { MetricCard } from "@/components/settings/settings-shared";
 import type { OperatorStatus } from "@/lib/api/operator";
-import { formatBytes, type PlatformConfig } from "@/lib/api/platform-config";
+import type { PlatformConfig } from "@/lib/api/platform-config";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
-import { MetricCard } from "../settings-shared";
+import { formatBytes } from "@/lib/utils";
 
 export function OverviewTab({
   platform,

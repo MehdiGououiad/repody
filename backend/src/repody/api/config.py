@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 
+from repody.api.auth import require_permission
+from repody.app.uploads.service import presign_supported
 from repody.catalog.api import (
     document_model_summaries,
     fetch_models_catalog,
@@ -20,7 +22,6 @@ from repody.extraction.branding import (
     public_runtime_model_name,
 )
 from repody.extraction.nuextract import NUEXTRACT_PDF_DPI, suggest_template_type
-from repody.infra.auth.dependencies import require_permission
 from repody.schemas.model_runtime import ModelRuntimeConfigResponse
 from repody.schemas.models_catalog import ModelsCatalogResponse
 from repody.schemas.platform import (
@@ -63,7 +64,7 @@ async def get_platform_config() -> PlatformConfigResponse:
         inference_mode=settings.inference_mode,
         storage_backend=settings.storage_backend,
         queue_backend="taskiq",
-        direct_upload_enabled=settings.direct_upload_enabled and settings.storage_backend == "s3",
+        direct_upload_enabled=presign_supported(settings),
         cache_enabled=settings.extraction_cache_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
         structured_llm=settings.structured_llm_enabled,

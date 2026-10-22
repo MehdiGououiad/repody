@@ -120,6 +120,7 @@ services:
       # Kubernetes Helm sets the same vars to http://repody-api:8000.
       BACKEND_URL: http://api:8000
       INTERNAL_API_URL: http://api:8000
+      BUGSINK_DSN: ${BUGSINK_DSN:-}
     restart: unless-stopped
 
   worker-extract:
@@ -167,6 +168,7 @@ services:
       AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
       AUDIT_WORKER_POOL: extract
       AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
+      BUGSINK_DSN: ${BUGSINK_DSN:-}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -189,4 +191,5 @@ services:
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
       AUDIT_WORKER_POOL: fast
       AUDIT_GLM_OCR_ENABLED: "false"
+      BUGSINK_DSN: ${BUGSINK_DSN:-}
     restart: unless-stopped

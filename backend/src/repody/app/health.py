@@ -5,6 +5,7 @@ from __future__ import annotations
 from sqlalchemy import text
 
 from repody.app.run.admission import count_inflight, count_queued, count_running
+from repody.app.uploads.service import presign_supported
 from repody.catalog.probes import probe_active_runtime
 from repody.infra.db import base as db_base
 from repody.infra.redis.health import ping_redis
@@ -47,7 +48,7 @@ async def probe_readiness() -> HealthReadinessResponse:
         inference=settings.inference_mode,
         llamacpp=inference_reachable if mode == "llamacpp" else None,
         storage_backend=settings.storage_backend,
-        direct_upload_enabled=settings.direct_upload_enabled and settings.storage_backend == "s3",
+        direct_upload_enabled=presign_supported(settings),
         cache_enabled=settings.extraction_cache_enabled,
         db_pool_size=settings.db_pool_size,
         queue_backend="taskiq",

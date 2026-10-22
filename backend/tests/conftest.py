@@ -3,9 +3,7 @@ import os
 # Test env MUST be set before any `repody` import. `repody.infra.db.base` calls
 # get_settings() at import time (engine), and Settings is lru_cached — importing
 # tests.helpers.db before these assignments would lock in backend/.env (e.g. OTEL).
-_DEFAULT_TEST_DATABASE_URL = (
-    "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
-)
+_DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
 
 # Test defaults — production uses Postgres + Alembic; live HTTP E2E uses the docker
 # stack API (backend/.env DB). Only force the isolated *_test DB for in-process tests.
@@ -37,6 +35,7 @@ os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
 os.environ["AUDIT_OTEL_ENABLED"] = "false"
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
+import httpx
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -53,6 +52,7 @@ from tests.helpers.db import (
 )
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
 
+from repody.inference import openai_compat
 from repody.main import create_app
 from repody.settings import clear_settings_cache, get_settings
 
@@ -140,6 +140,24 @@ async def drain_background_tasks():
     from repody.app.run.dispatch_outbox import drain_dispatch_tasks
 
     await drain_dispatch_tasks()
+
+
+@pytest.fixture(autouse=True)
+def respx_visible_openai_transport(request, monkeypatch):
+    """Route OpenAI SDK traffic through a plain ``httpx`` client so ``respx`` can mock it.
+
+    ``openai>=3`` sends requests with ``httpx2``, which ``respx`` does not patch. The SDK
+    still accepts an ``httpx.AsyncClient`` via ``http_client``. Live tests keep the real
+    transport.
+    """
+    if request.node.get_closest_marker("live") is not None:
+        return
+    real_async_openai = openai_compat.AsyncOpenAI
+
+    def async_openai_with_httpx(**kwargs):
+        return real_async_openai(**kwargs, http_client=httpx.AsyncClient())
+
+    monkeypatch.setattr(openai_compat, "AsyncOpenAI", async_openai_with_httpx)
 
 
 @pytest.fixture(autouse=True)

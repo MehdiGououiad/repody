@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.api_keys import api_key_hint, hash_api_key
+from repody.infra.auth.api_keys import api_key_hint, hash_api_key
 from repody.infra.db.models import (
     Document,
     ExtractedField,
@@ -20,35 +20,43 @@ from repody.infra.db.models import (
     WorkflowStatus,
 )
 
-RULE_TEMPLATES = [
-    RuleTemplate(
-        id="tpl-sum-check",
-        name="Sum check",
-        kind="logic",
-        scope="intra",
-        description="Verify part_a + part_b equals total.",
-        body="part_a + part_b == total",
-        severity="reject",
-    ),
-    RuleTemplate(
-        id="tpl-cross-match",
-        name="Cross-document match",
-        kind="logic",
-        scope="cross",
-        description="A field must match across two documents.",
-        body="doc_a.reference == doc_b.reference",
-        severity="reject",
-    ),
-    RuleTemplate(
-        id="tpl-llm-review",
-        name="LLM policy review",
-        kind="llm",
-        scope="intra",
-        description="Natural-language check against extracted fields.",
-        body="Review the extracted fields and fail if any required clause or value is missing or inconsistent.",
-        severity="flag",
-    ),
-]
+_RULE_TEMPLATE_DEFAULTS: tuple[dict[str, str], ...] = (
+    {
+        "id": "tpl-sum-check",
+        "name": "Sum check",
+        "kind": "logic",
+        "scope": "intra",
+        "description": "Verify part_a + part_b equals total.",
+        "body": "part_a + part_b == total",
+        "severity": "reject",
+    },
+    {
+        "id": "tpl-cross-match",
+        "name": "Cross-document match",
+        "kind": "logic",
+        "scope": "cross",
+        "description": "A field must match across two documents.",
+        "body": "doc_a.reference == doc_b.reference",
+        "severity": "reject",
+    },
+    {
+        "id": "tpl-llm-review",
+        "name": "LLM policy review",
+        "kind": "llm",
+        "scope": "intra",
+        "description": "Natural-language check against extracted fields.",
+        "body": (
+            "Review the extracted fields and fail if any required clause or value "
+            "is missing or inconsistent."
+        ),
+        "severity": "flag",
+    },
+)
+
+
+def default_rule_templates() -> list[RuleTemplate]:
+    """Fresh ORM rows for the built-in templates (never share instances across sessions)."""
+    return [RuleTemplate(**values) for values in _RULE_TEMPLATE_DEFAULTS]
 
 
 SEED_WORKFLOW_ID = "wf-invoice-audit"
@@ -56,22 +64,12 @@ SEED_API_KEY = "wbk_live_4f8a2c1e9d3b7f6a0c5e2d8b1a4f7c3e"
 
 
 async def seed_database(session: AsyncSession) -> None:
-    for tpl in RULE_TEMPLATES:
-        if not await session.get(RuleTemplate, tpl.id):
-            session.add(
-                RuleTemplate(
-                    id=tpl.id,
-                    name=tpl.name,
-                    kind=tpl.kind,
-                    scope=tpl.scope,
-                    description=tpl.description,
-                    body=tpl.body,
-                    severity=tpl.severity,
-                )
-            )
+    for template in default_rule_templates():
+        if not await session.get(RuleTemplate, template.id):
+            session.add(template)
     await session.flush()
 
-    existing = await session.execute(select(Workflow).where(Workflow.id == "wf-invoice-audit"))
+    existing = await session.execute(select(Workflow).where(Workflow.id == SEED_WORKFLOW_ID))
     seeded = existing.scalar_one_or_none()
     if seeded:
         if seeded.status == WorkflowStatus.archived.value:

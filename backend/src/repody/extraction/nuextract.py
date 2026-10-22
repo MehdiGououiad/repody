@@ -82,12 +82,6 @@ NUEXTRACT_STRUCTURE_TEMPLATE_TYPES = {
     "object-array",
 }
 
-NUEXTRACT_TEMPLATE_TYPES = (
-    NUEXTRACT_SCALAR_TEMPLATE_TYPES
-    | NUEXTRACT_LIST_TEMPLATE_TYPES
-    | NUEXTRACT_STRUCTURE_TEMPLATE_TYPES
-)
-
 DEFAULT_NUEXTRACT_TEMPLATE_TYPE = "verbatim-string"
 
 
@@ -303,14 +297,13 @@ def dump_nuextract_template(template: Any) -> str:
     return json.dumps(template, ensure_ascii=False, indent=4)
 
 
-_THINKING_END_TAGS = ("</think>", "</" + "think" + ">")
+_THINKING_END_TAG = "</think>"
 
 
 def strip_thinking(raw: str) -> str:
     """Drop NuExtract reasoning wrapper when thinking mode is enabled."""
-    for tag in _THINKING_END_TAGS:
-        if tag in raw:
-            return raw.split(tag, 1)[1].strip()
+    if _THINKING_END_TAG in raw:
+        return raw.split(_THINKING_END_TAG, 1)[1].strip()
     return raw.strip()
 
 

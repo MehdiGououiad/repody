@@ -1,4 +1,4 @@
-"""Run create / poll application — session orchestration (services layer)."""
+"""Run create and poll use cases."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from repody.app.run.snapshot import (
     resolve_workflow_display_name,
 )
 from repody.app.workflow.repository import load_workflow
+from repody.infra.db import base as db_base
 from repody.infra.db.models import Run, RunDocument, RunStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.contracts import FileBinding
@@ -118,6 +119,15 @@ def progress_from_run(run: Run) -> RunProgressSchema | None:
     if not run.progress:
         return None
     return RunProgressSchema.model_validate(run.progress)
+
+
+async def initial_run_progress(run_id: str) -> Result[dict | None]:
+    """Read current progress in a short-lived session (SSE streams must not hold one open)."""
+    async with db_base.async_session_factory() as session:
+        run = await session.get(Run, run_id)
+        if not run:
+            return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Run not found"))
+        return Result.ok(run.progress)
 
 
 async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:

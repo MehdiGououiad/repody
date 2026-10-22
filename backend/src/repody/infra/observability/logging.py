@@ -91,6 +91,25 @@ def _rename_event_to_body() -> structlog.types.Processor:
     return processor
 
 
+def _wrap_for_formatter(
+    logger: logging.Logger,
+    method_name: str,
+    event_dict: structlog.types.EventDict,
+) -> tuple[tuple[structlog.types.EventDict], dict[str, object]]:
+    """Finish the structlog chain and keep exc_info on the stdlib record.
+
+    Sentry's logging integration reports record.exc_info as the exception.
+    format_exc_info stays on the formatter so the rendered line still has the traceback.
+    """
+    exc_info = event_dict.get("exc_info")
+    args, kwargs = structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
+        logger, method_name, event_dict
+    )
+    if exc_info:
+        kwargs["exc_info"] = exc_info
+    return args, kwargs
+
+
 def configure_logging(settings: Settings) -> None:
     """Configure structlog via stdlib ProcessorFormatter (official bridge)."""
     log_level = logging.DEBUG if settings.debug else logging.INFO
@@ -104,7 +123,6 @@ def configure_logging(settings: Settings) -> None:
         _add_otel_trace_context(),
         _redact_sensitive_fields,
         structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
         _rename_event_to_body(),
     ]
 
@@ -116,7 +134,11 @@ def configure_logging(settings: Settings) -> None:
     structlog.configure(
         processors=[
             *shared_processors,
-            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+            # Last: hand the event dict to ProcessorFormatter, and copy exc_info
+            # onto the LogRecord. Sentry's logging integration reads that field.
+            # format_exc_info runs later, while rendering, so the traceback still
+            # appears in the log line.
+            _wrap_for_formatter,
         ],
         wrapper_class=structlog.make_filtering_bound_logger(log_level),
         context_class=dict,
@@ -128,6 +150,7 @@ def configure_logging(settings: Settings) -> None:
         foreign_pre_chain=list(shared_processors),
         processors=[
             structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+            structlog.processors.format_exc_info,
             renderer,
         ],
     )

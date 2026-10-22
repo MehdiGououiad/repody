@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from datetime import datetime
+from functools import partial
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,38 +104,14 @@ async def try_claim_queued_run(
     )
 
 
-async def commit_session(session: AsyncSession) -> None:
-    await session.commit()
-
-
-def bind_load(session: AsyncSession):
-    async def load(run_id: str) -> RunEntity | None:
-        return await load_run_entity(session, run_id)
-
-    return load
-
-
-def bind_save(session: AsyncSession):
-    async def save(entity: RunEntity) -> None:
-        await save_run_entity(session, entity)
-
-    return save
-
-
-def bind_commit(session: AsyncSession):
-    async def commit() -> None:
-        await commit_session(session)
-
-    return commit
-
-
 def bind_try_claim(session: AsyncSession):
-    async def try_claim(run_id: str, now: datetime) -> RunEntity | None:
-        return await try_claim_queued_run(session, run_id, now)
-
-    return try_claim
+    return partial(try_claim_queued_run, session)
 
 
 def session_run_ports(session: AsyncSession) -> tuple:
-    """Single bind for load/save/commit — prefer over three bind_* call sites."""
-    return bind_load(session), bind_save(session), bind_commit(session)
+    """Bind load/save/commit run ports to one session."""
+    return (
+        partial(load_run_entity, session),
+        partial(save_run_entity, session),
+        session.commit,
+    )

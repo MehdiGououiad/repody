@@ -3,7 +3,7 @@
 #   pnpm images:build -- --only=backend
 # Role-specific targets (same layers): --target api | --target worker
 
-FROM python:3.13.14-slim AS runtime-base
+FROM python:3.13.15-slim AS runtime-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -15,9 +15,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_LINK_MODE=copy \
     PATH="/opt/venv/bin:$PATH"
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Upgrade Debian security packages, then drop the base-image pip (vendored msgpack and setuptools).
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       libpq5 libgomp1 libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 \
     && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /usr/local/lib/python3.13/site-packages/pip \
+      /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
+      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13 \
     && groupadd --system --gid 10001 repody \
     && useradd --system --uid 10001 --gid repody --home-dir /app --shell /usr/sbin/nologin repody \
     && mkdir -p /app /app/.data/storage /app/benchmark-reports /tmp/repody \
@@ -25,7 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 
 FROM runtime-base AS build
 
-COPY --from=ghcr.io/astral-sh/uv:0.11.26 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.12.17 /uv /uvx /bin/
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*

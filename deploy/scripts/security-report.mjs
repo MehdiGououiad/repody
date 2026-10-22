@@ -13,7 +13,7 @@ const outDir = resolve(root, "dist/security");
 const COMPARISON = `
 ## Scanner comparison (Trivy vs Grype)
 
-| Dimension | Trivy v0.72+ | Grype v0.110+ |
+| Dimension | Trivy v0.74+ | Grype v0.119+ |
 |-----------|--------------|---------------|
 | OS packages (Alpine/Debian) | Yes | Yes |
 | Language lockfiles (npm, pip, etc.) | Yes | Yes (via Syft SBOM) |
@@ -113,9 +113,23 @@ function pnpmFindings(doc) {
   return out;
 }
 
+function pipAuditRows(doc) {
+  if (Array.isArray(doc)) return doc;
+  if (!Array.isArray(doc?.dependencies)) return [];
+  return doc.dependencies.flatMap((dep) =>
+    (dep.vulns ?? []).map((vuln) => ({
+      id: vuln.id ?? vuln.aliases?.[0],
+      name: dep.name,
+      severity: vuln.severity,
+      description: vuln.description ?? vuln.id,
+      fix_versions: vuln.fix_versions,
+      aliases: vuln.aliases,
+    }))
+  );
+}
+
 function pipAuditFindings(doc) {
-  if (!Array.isArray(doc)) return [];
-  return doc.map((row) => ({
+  return pipAuditRows(doc).map((row) => ({
     id: row.id ?? row.aliases?.[0],
     pkg: row.name,
     severity: (row.severity ?? "UNKNOWN").toUpperCase(),

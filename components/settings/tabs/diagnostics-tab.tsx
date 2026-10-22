@@ -1,11 +1,11 @@
 "use client";
 
 import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react";
+import { ACTIVE_STATUSES, OperatorJobStatusBadge } from "@/components/settings/settings-shared";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { OperatorJob, OperatorStatus } from "@/lib/api/operator";
 import type { PlatformConfig } from "@/lib/api/platform-config";
-import { ACTIVE_STATUSES, StatusBadge } from "../settings-shared";
 
 export function DiagnosticsTab({
   platform,
@@ -94,7 +94,7 @@ export function DiagnosticsTab({
                       {new Date(job.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <StatusBadge status={job.status} />
+                  <OperatorJobStatusBadge status={job.status} />
                 </div>
                 {job.progress ? (
                   <p className="text-xs text-on-surface-variant mt-3 break-words">{job.progress}</p>

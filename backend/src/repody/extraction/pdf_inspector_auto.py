@@ -12,13 +12,8 @@ from typing import Any
 
 import structlog
 
-from repody.extraction.qwen_text import extract_fields_from_text
-from repody.extraction.schema import empty_fields_from_schema
-from repody.extraction.types import (
-    ExtractionResult,
-    SchemaFieldSpec,
-    truncate_text,
-)
+from repody.extraction.ocr_qwen import OcrPages, extract_via_ocr_then_qwen
+from repody.extraction.types import ExtractionResult, SchemaFieldSpec
 from repody.settings import get_settings
 
 log = structlog.get_logger()
@@ -150,53 +145,19 @@ async def extract_via_native_markdown(
     markdown_extraction: bool = False,
     page_count: int = 0,
 ) -> ExtractionResult:
-    """Structured extraction: native markdown → Qwen JSON (same as paddleocr:qwen)."""
-    has_schema = any(field.name.strip() for field in schema)
+    """Structured extraction: native markdown → Qwen JSON (same path as paddleocr:qwen)."""
     pages = page_count or 1
 
-    if not has_schema:
-        return ExtractionResult(
-            fields=empty_fields_from_schema(schema),
-            markdown_text=truncate_text(markdown) if markdown_extraction else None,
-            pages_rendered=pages,
-            pages_sent=pages,
-            pages_dropped=0,
-        )
+    async def native_markdown() -> OcrPages:
+        return OcrPages(markdown=markdown, rendered=pages, sent=pages, dropped=0)
 
-    settings = get_settings()
-    qwen_base = (settings.qwen35_base_url or "").rstrip("/")
-    if not qwen_base:
-        raise RuntimeError(
-            "Qwen base URL is empty. Set AUDIT_QWEN35_BASE_URL "
-            "(example: http://127.0.0.1:8084/v1 after `pnpm qwen35:serve`)."
-        )
-    model = (settings.qwen35_served_model or "").strip()
-    if not model:
-        raise RuntimeError(
-            "Qwen model id is empty. Set AUDIT_QWEN35_SERVED_MODEL (default Qwen3.5-4B)."
-        )
-
-    fields, raw_json = await extract_fields_from_text(
-        base_url=qwen_base,
-        model=model,
-        schema=schema,
-        ocr_text=markdown,
-        document_type=document_type,
+    return await extract_via_ocr_then_qwen(
+        schema,
+        document_type,
+        run_ocr=native_markdown,
+        runtime="pdf_inspector_qwen",
+        catalog_id=NATIVE_SOURCE,
+        ocr_base_url="",
         extraction_instructions=extraction_instructions,
-        timeout=float(settings.qwen35_timeout_seconds),
-    )
-    log.info(
-        "pdf_inspector_qwen_done",
-        pages=pages,
-        markdown_chars=len(markdown),
-        extracted=sum(1 for field in fields if field.extracted),
-        qwen_base_url=qwen_base,
-    )
-    return ExtractionResult(
-        fields=fields,
-        raw_text=raw_json,
-        markdown_text=truncate_text(markdown),
-        pages_rendered=pages,
-        pages_sent=pages,
-        pages_dropped=0,
+        markdown_extraction=markdown_extraction,
     )

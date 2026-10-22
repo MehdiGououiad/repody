@@ -48,7 +48,7 @@ from repody.inference.nuextract_cloud import (
 from repody.inference.nuextract_cloud import (
     extract_structured as nuextract_extract_structured,
 )
-from repody.inference.openai_compat import post_chat_completion
+from repody.inference.openai_compat import message_content, post_chat_completion
 from repody.inference.runtime import llamacpp_base_url
 from repody.settings import Settings, get_settings
 
@@ -79,7 +79,7 @@ async def _markdown(
     except Exception as exc:
         log.warning("repody_vlm_markdown_failed", error=repr(exc))
         return None
-    text = strip_thinking(str(data["choices"][0]["message"]["content"]))
+    text = strip_thinking(message_content(data))
     return text or None
 
 
@@ -174,7 +174,7 @@ async def extract_with_repody_vlm(
         ),
         settings=settings,
     )
-    raw = strip_thinking(str(data["choices"][0]["message"]["content"]))
+    raw = strip_thinking(message_content(data))
     fields = fields_from_nuextract_json(raw, schema)
 
     markdown_text = None

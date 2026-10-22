@@ -2,7 +2,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.5.1 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
@@ -10,7 +10,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 FROM node:24-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@11.7.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.5.1 --activate
 # Build-time placeholders only — runtime proxy uses INTERNAL_API_URL / BACKEND_URL
 # from the container env (Compose: http://api:8000, K8s: http://repody-api:8000).
 ARG BACKEND_URL=http://127.0.0.1:8000
@@ -29,7 +29,11 @@ FROM node:24-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache libc6-compat \
+# npm ships brace-expansion, tar, ip-address, and undici. The server only needs node.
+RUN apk upgrade --no-cache \
+  && apk add --no-cache libc6-compat \
+  && rm -rf /usr/local/lib/node_modules/npm \
+  && rm -f /usr/local/bin/npm /usr/local/bin/npx \
   && addgroup -g 10001 -S repody \
   && adduser -u 10001 -S -G repody -H -s /sbin/nologin repody
 ENV PORT=3000

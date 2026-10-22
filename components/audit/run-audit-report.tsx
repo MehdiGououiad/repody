@@ -26,8 +26,7 @@ import { LOCALE_COOKIE } from "@/i18n/config";
 import { setPreferenceCookie } from "@/lib/browser-cookie";
 import { isRuleFailure, ruleStatusLabel } from "@/lib/rule-status";
 import type { RunAuditDetail } from "@/lib/types/audit";
-import { formatDurationMs } from "@/lib/types/audit";
-import { cn } from "@/lib/utils";
+import { cn, formatDurationMs } from "@/lib/utils";
 
 // ── CSV export ────────────────────────────────────────────────────────────────
 

@@ -4,13 +4,13 @@ import { Box, HardDriveDownload, LoaderCircle, RefreshCw, Zap } from "lucide-rea
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
+import { ACTIVE_STATUSES } from "@/components/settings/settings-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type OperatorJob, warmupModel } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { cn } from "@/lib/utils";
-import { ACTIVE_STATUSES } from "../settings-shared";
 
 type ModelRow = {
   id: string;

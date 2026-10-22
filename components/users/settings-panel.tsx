@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { IamCatalog, IamMe } from "@/lib/api/iam";
-import { formatBytes, type PlatformConfig } from "@/lib/api/platform-config";
+import type { PlatformConfig } from "@/lib/api/platform-config";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
-import { cn } from "@/lib/utils";
+import { cn, formatBytes } from "@/lib/utils";
 import { ConfigTable, SettingMetric, StatusLine } from "./user-access-shared";
 
 export function SettingsPanel({

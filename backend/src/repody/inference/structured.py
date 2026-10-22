@@ -10,6 +10,7 @@ import structlog
 from pydantic import BaseModel, ValidationError
 
 from repody.inference.factory import get_chat
+from repody.inference.openai_compat import json_schema_response_format
 from repody.inference.runtime import llamacpp_base_url, openai_api_key_for_base_url
 from repody.inference.validation_model import resolve_llm_validation_model
 from repody.settings import get_settings
@@ -30,14 +31,9 @@ def openai_json_schema_format(
     strict: bool = True,
 ) -> dict[str, Any]:
     """OpenAI-compatible JSON Schema response_format for constrained decoding."""
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": name or response_model.__name__,
-            "strict": strict,
-            "schema": response_model.model_json_schema(),
-        },
-    }
+    return json_schema_response_format(
+        name or response_model.__name__, response_model.model_json_schema(), strict=strict
+    )
 
 
 def _get_instructor_client() -> Any:

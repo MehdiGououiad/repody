@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from repody.app.run.access import resolve_owner_subject, resolve_run_enqueue_source
 from repody.infra.auth.principal import Principal
-from repody.infra.auth.run_access import resolve_owner_subject, resolve_run_enqueue_source
 from repody.runtime.contracts.result import ErrorCode
 from repody.settings import Settings
 
@@ -41,7 +41,7 @@ def test_resolve_owner_subject_oidc_missing_token():
 @pytest.mark.asyncio
 async def test_resolve_run_enqueue_missing_workflow():
     session = MagicMock()
-    with patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=None)):
+    with patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=None)):
         result = await resolve_run_enqueue_source(session, "missing", None)
     assert not result.is_ok
     assert result.error is not None
@@ -53,11 +53,9 @@ async def test_resolve_run_enqueue_api_key_when_deployed():
     session = MagicMock()
     wf = _workflow(deployed=True)
     with (
-        patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=wf)),
-        patch("repody.infra.auth.run_access.verify_api_key", return_value=True),
-        patch(
-            "repody.infra.auth.run_access.get_settings", return_value=_settings(oidc_enabled=True)
-        ),
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
+        patch("repody.app.run.access.verify_api_key", return_value=True),
+        patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", "Bearer secret-key")
     assert result.is_ok
@@ -70,13 +68,11 @@ async def test_resolve_run_enqueue_oidc_operator_test_run():
     wf = _workflow(deployed=False)
     principal = Principal(subject="user-1", roles=("operator",))
     with (
-        patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=wf)),
-        patch("repody.infra.auth.run_access.verify_api_key", return_value=False),
-        patch(
-            "repody.infra.auth.run_access.get_settings", return_value=_settings(oidc_enabled=True)
-        ),
-        patch("repody.infra.auth.run_access.principal_from_bearer", return_value=principal),
-        patch("repody.infra.auth.run_access.authorize", return_value=True),
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
+        patch("repody.app.run.access.verify_api_key", return_value=False),
+        patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
+        patch("repody.app.run.access.principal_from_bearer", return_value=principal),
+        patch("repody.app.run.access.authorize", return_value=True),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", "Bearer jwt")
     assert result.is_ok
@@ -89,13 +85,11 @@ async def test_resolve_run_enqueue_oidc_forbidden_without_execute():
     wf = _workflow(deployed=False)
     principal = Principal(subject="user-1", roles=("viewer",))
     with (
-        patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=wf)),
-        patch("repody.infra.auth.run_access.verify_api_key", return_value=False),
-        patch(
-            "repody.infra.auth.run_access.get_settings", return_value=_settings(oidc_enabled=True)
-        ),
-        patch("repody.infra.auth.run_access.principal_from_bearer", return_value=principal),
-        patch("repody.infra.auth.run_access.authorize", return_value=False),
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
+        patch("repody.app.run.access.verify_api_key", return_value=False),
+        patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
+        patch("repody.app.run.access.principal_from_bearer", return_value=principal),
+        patch("repody.app.run.access.authorize", return_value=False),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", "Bearer jwt")
     assert not result.is_ok
@@ -108,10 +102,8 @@ async def test_resolve_run_enqueue_oidc_missing_bearer():
     session = MagicMock()
     wf = _workflow(deployed=False)
     with (
-        patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=wf)),
-        patch(
-            "repody.infra.auth.run_access.get_settings", return_value=_settings(oidc_enabled=True)
-        ),
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
+        patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", None)
     assert not result.is_ok
@@ -124,10 +116,8 @@ async def test_resolve_run_enqueue_dev_mode_allows_test_without_token():
     session = MagicMock()
     wf = _workflow(deployed=False)
     with (
-        patch("repody.infra.auth.run_access.load_workflow", new=AsyncMock(return_value=wf)),
-        patch(
-            "repody.infra.auth.run_access.get_settings", return_value=_settings(oidc_enabled=False)
-        ),
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
+        patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=False)),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", None)
     assert result.is_ok

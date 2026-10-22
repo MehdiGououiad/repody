@@ -1,4 +1,1 @@
-"""Platform run helpers — contracts, ids, status.
-
-Prefer deep imports (``platform.run.status``, ``platform.run.ids``, …).
-"""
+"""Run contracts, ids, and status. Import submodules directly (``repody.runtime.run.status``)."""

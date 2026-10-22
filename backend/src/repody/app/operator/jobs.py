@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
 from collections import deque
 from collections.abc import Awaitable, Callable
@@ -213,10 +214,12 @@ async def run_command(
     args: list[str],
     *,
     cwd: Path | None = None,
+    env: dict[str, str] | None = None,
 ) -> None:
     process = await asyncio.create_subprocess_exec(
         *args,
         cwd=str(cwd) if cwd else None,
+        env={**os.environ, **env} if env else None,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT,
     )

@@ -25,7 +25,6 @@ def benchmark_command(
     minimum_accuracy: float,
     cache_check: bool,
     judge_quality: bool,
-    bearer_token: str | None = None,
 ) -> list[str]:
     command = [
         sys.executable,
@@ -54,8 +53,6 @@ def benchmark_command(
     ]
     for model in models:
         command.extend(["--model", model])
-    if bearer_token:
-        command.extend(["--bearer-token", bearer_token])
     return command
 
 
@@ -99,11 +96,15 @@ def create_benchmark_job(root: Path, request: BenchmarkRequest) -> OperatorJob:
             minimum_accuracy=options.minimum_accuracy,
             cache_check=options.cache_check,
             judge_quality=options.judge_quality,
-            bearer_token=bearer_token,
         )
         command_error: Exception | None = None
         try:
-            await run_command(job, command)
+            # The suite reads AUDIT_BENCHMARK_BEARER_TOKEN. Keep it off argv.
+            await run_command(
+                job,
+                command,
+                env={"AUDIT_BENCHMARK_BEARER_TOKEN": bearer_token} if bearer_token else None,
+            )
         except Exception as exc:
             command_error = exc
         _promote_latest_report(root, output_dir, job)

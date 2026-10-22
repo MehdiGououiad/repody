@@ -1,7 +1,8 @@
-import { GitBranch, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { DashboardOffline } from "@/components/dashboard/dashboard-offline";
 import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
@@ -15,24 +16,6 @@ const BusinessDashboard = dynamic(
     })),
   { loading: () => <div className="space-y-4 animate-pulse h-[480px] panel-elevated rounded-xl" /> }
 );
-
-function EmptyDashboard({ t }: { t: Awaited<ReturnType<typeof getTranslations<"dashboard">>> }) {
-  return (
-    <div className="panel-elevated rounded-xl border-dashed px-6 py-14 text-center space-y-4">
-      <div className="mx-auto size-12 rounded-full bg-accent-blue/10 flex items-center justify-center ring-1 ring-accent-blue/20">
-        <GitBranch className="h-5 w-5 text-accent-blue" />
-      </div>
-      <p className="text-sm font-semibold text-on-surface">{t("offlineTitle")}</p>
-      <p className="text-sm text-on-surface-variant max-w-md mx-auto">{t("offlineHint")}</p>
-      <Link href="/workflows/new">
-        <Button size="sm" className="gap-2 mt-2">
-          <Plus className="h-4 w-4" />
-          {t("offlineCta")}
-        </Button>
-      </Link>
-    </div>
-  );
-}
 
 export default async function DashboardPage() {
   const [t, tCommon, data] = await Promise.all([
@@ -48,7 +31,7 @@ export default async function DashboardPage() {
     return (
       <PageShell>
         <PageHeader title={t("title")} description={t("pageDescription")} />
-        <EmptyDashboard t={t} />
+        <DashboardOffline />
       </PageShell>
     );
   }
@@ -68,7 +51,7 @@ export default async function DashboardPage() {
         }
       />
 
-      <GetStartedPanel show={showGetStarted} />
+      {showGetStarted ? <GetStartedPanel /> : null}
 
       <BusinessDashboard
         initial={{

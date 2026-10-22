@@ -45,9 +45,26 @@ Biome already covers, so the two linters never disagree about the same line.
 - **No pass-through re-exports.** Import from the module that defines a symbol.
   A barrel is acceptable only for a types-only module that is erased at compile
   time, such as `lib/types/index.ts`.
-- **Errors as data at boundaries.** Domain paths return `Result[T]` with an
-  `AppError`; `api/errors.py` maps those to HTTP. Raise exceptions only at the
-  outer adapters.
+- **Errors as data at boundaries.** Use cases return `Result[T]` with an
+  `AppError`; routers turn them into HTTP with `unwrap_or_raise(result)` from
+  `api/errors.py`. A plain lookup that returns `None` may raise
+  `HTTPException(404, "...")` directly in the router. Raise exceptions only at
+  the outer adapters.
+- **Shared helpers have one home.** Display formatting (durations, bytes,
+  percentages, dates) lives in `lib/utils.ts`; clipboard copy in
+  `lib/hooks/use-copy-to-clipboard.ts`; timed fetch in `lib/api/fetch-with-timeout.ts`.
+
+## Backend Layers
+
+Dependencies point inward. `pnpm architecture:check` fails the build when they do not.
+
+| Package | May import | Must not import |
+|---------|------------|-----------------|
+| `api/` (FastAPI routers, auth dependencies) | everything below | — |
+| `app/` (use cases) | domain packages, `infra`, `schemas`, `settings`, `taskiq` (dispatch) | `fastapi`, `starlette`, `api` |
+| `infra/` (DB, storage, auth tokens, Redis, observability) | `runtime.contracts`, `settings` | `api`, `app`, `agents`, `taskiq` |
+| `settings/` | `util` | any other `repody` package |
+| `runtime/contracts`, `runtime/run` | standard library, pydantic | `api`, `app`, `agents`, `infra`, `settings`, SQLAlchemy |
 - **Suppressions must explain themselves.** Every `biome-ignore`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 

@@ -137,3 +137,42 @@ export function waitForPortRelease(port, timeoutMs = 3000) {
   }
   return !listenerInfos(port).length;
 }
+
+export function findLlamaServerExe() {
+  const probe = spawnSync("where.exe", ["llama-server"], { encoding: "utf8" });
+  if (probe.status === 0) {
+    const line = probe.stdout.split(/\r?\n/).find((l) => l.trim().endsWith("llama-server.exe"));
+    if (line?.trim()) return line.trim();
+  }
+  const which = spawnSync("which", ["llama-server"], { encoding: "utf8" });
+  if (which.status === 0 && which.stdout.trim()) return which.stdout.trim().split(/\r?\n/)[0];
+  return null;
+}
+
+/** GET `url`; body is parsed JSON when possible, else raw text. */
+export async function fetchJson(url) {
+  const res = await fetch(url);
+  const text = await res.text();
+  let body;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    body = text;
+  }
+  return { ok: res.ok, status: res.status, body };
+}
+
+/** Poll a local llama-server until `/v1/models` answers (models can take minutes to load). */
+export async function waitForLlamaServer(port, { timeoutMs = 600_000 } = {}) {
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    try {
+      const { ok } = await fetchJson(`http://127.0.0.1:${port}/v1/models`);
+      if (ok) return true;
+    } catch {
+      // retry
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+  }
+  return false;
+}

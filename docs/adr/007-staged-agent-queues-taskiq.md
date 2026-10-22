@@ -19,19 +19,12 @@ remains optional later if mid-run resume / HITL / complex retries become product
    task registered on that broker, API `broker.startup()` before `kiq`, one worker process
    per pool ([Taskiq architecture](https://taskiq-python.github.io/guide/architecture-overview.html),
    [taskiq-redis](https://github.com/taskiq-python/taskiq-redis)).
-2. **Pools:** `extract` / `fast` = IDP capacity classes (unchanged names); reserve `fraud` and
-   `computer_use` stream names (`repody:audit:{pool}`) and Helm worker templates
-   (`workerFraud` / `workerComputerUse`, values replicas 0) until real agents ship.
-3. **Staged handoff (future):** when multi-agent recipes return, each task runs **one** agent
-   stage; on success, reuse `run_dispatch_outbox` (`pool` + `agent_stage`, status `pending`)
-   and `schedule_outbox_dispatch` for the next stage. Durable dispatch stays in Postgres.
-4. **As-built (2026-08):** Recipe is **IDP-only**. Fraud / Computer Use agent packages and
-   SKIPPED stubs were removed. `AgentId.FRAUD` / `COMPUTER_USE` and pool name maps remain
-   for reserved Helm capacity; API producers start brokers for `extract` / `fast` only.
-   Env keys `AUDIT_AGENT_FRAUD_*` / `AUDIT_AGENT_COMPUTER_USE_*` are reserved/inert (not
-   consulted by `resolve_recipe`).
-5. **Workers-ready gate (future)** — when Fraud/CU agents exist, enter the recipe only when
-   both feature flag and `AUDIT_AGENT_*_WORKERS_READY=true` (Helm from Deployment replicas).
+2. **Pools:** `extract` / `fast` only. No reserved fraud or computer-use streams, env keys,
+   or Helm worker templates. See the amendment.
+3. **One stage per task.** IDP completes the Run itself. Durable dispatch stays in the
+   Postgres outbox. A second agent, if one is ever required, re-adds its own pool then.
+4. **As-built:** Recipe is **IDP-only**. API producers start brokers for `extract` / `fast` only.
+5. **No workers-ready gate** for agents that do not exist.
 6. **Stage-aware ops** — handoff updates `worker_pool` + `last_activity_at`; stale reap uses
    activity (not only `started_at`); outbox replay claims with `FOR UPDATE SKIP LOCKED`;
    later stages skip re-exec when `agentOutcomes` already recorded.
@@ -49,7 +42,11 @@ The reservation is withdrawn. Removed: `AgentId.FRAUD` / `AgentId.COMPUTER_USE`,
 `AUDIT_AGENT_COMPUTER_USE_*`, the `workerFraud` / `workerComputerUse` chart
 values and templates, the matching Compose services, `app/run/handoff.py`, and
 `next_agent_after` with the `next_agent` / `finalize_pending` fields on
-`PlatformStageResult`.
+`PlatformStageResult`, and the unread `pendingCompletion` resume
+(`store_pending_completion` / `finalize_pending_completion`). IDP completes
+the Run inside `persist_idp_outcome` before `record_agent_outcome`. A retry
+that already has `agentOutcomes` skips re-extraction and does not look for a
+deferred completion payload.
 
 `schedule_next_agent_stage` was already dead: its `_LIVE_HANDOFF_TARGETS` set
 was empty, so every call raised.
@@ -65,7 +62,7 @@ worker and handoff step at that time, against real requirements.
 
 **Positive**
 
-- Helm keeps `worker-fraud` / `worker-computer-use` chart templates (values replicas 0) for future scale-out
+- No reserved worker chart for an agent that does not exist
 - No new control plane (Temporal/Hatchet)
 - Outbox replay still covers transient Redis failures
 - Multi-stage runs will not be killed by a single-stage stale timeout during handoff
@@ -75,7 +72,7 @@ worker and handoff step at that time, against real requirements.
 - Recipe is a stage dispatcher, not an in-process loop
 - Outbox remains one row per run (reuse on handoff); multi-row outbox deferred
 - Intermediate agent outcomes stored in `run_metadata.agentOutcomes`
-- Enabling Fraud/CU later requires real agent packages, recipe wiring, flags, and workers-ready
+- A future agent is a new requirement with a named owner, not a reserved slot
 
 ## Non-goals
 

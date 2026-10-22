@@ -4,7 +4,7 @@ import { Filter, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { AuditStatusBadge } from "@/components/shared/audit-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/table";
 import { useQueryParam } from "@/lib/hooks/use-query-param";
 import type { Audit, AuditStatus } from "@/lib/types";
-import { formatNumber } from "@/lib/utils";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 
 function AuditSearchInput({
   id,
@@ -118,16 +118,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
       clear: () => setEntity(null),
     },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
-
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
 
   const searchId = "audit-list-search";
 
@@ -257,12 +247,12 @@ export function AuditList({ audits }: { audits: Audit[] }) {
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={a.status} failedCount={a.failedRules} />
+                  <AuditStatusBadge status={a.status} failedCount={a.failedRules} />
                 </TableCell>
                 <TableCell className="text-sm">{a.workflowName}</TableCell>
                 <TableCell className="text-sm">{a.entity}</TableCell>
                 <TableCell className="text-sm text-on-surface-variant tabular-nums">
-                  {fmtDate(a.timestamp)}
+                  {formatDateTime(a.timestamp, locale, { withYear: true })}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
                   {a.rows === null ? "—" : formatNumber(a.rows, locale)}

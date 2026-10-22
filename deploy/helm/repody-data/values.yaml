@@ -8,7 +8,7 @@ postgresql:
   image:
     registry: docker.io
     repository: postgres
-    tag: "17.10-alpine"
+    tag: "17.11-alpine"
   auth:
     username: audit
     database: repody
@@ -26,7 +26,7 @@ redis:
   image:
     registry: docker.io
     repository: redis
-    tag: "8.8.0-alpine"
+    tag: "8.8.3-alpine"
   auth:
     # Require auth + existingSecret whenever redis.enabled=true (bundled overlay sets both).
     enabled: true
@@ -43,11 +43,11 @@ minio:
   image:
     registry: docker.io
     repository: pgsty/minio
-    tag: RELEASE.2026-06-18T00-00-00Z
+    tag: RELEASE.2026-08-04T00-00-00Z
   mcImage:
     registry: docker.io
     repository: pgsty/mc
-    tag: RELEASE.2026-04-17T00-00-00Z
+    tag: RELEASE.2026-09-16T00-00-00Z
   auth:
     existingSecret: ""
     rootUserKey: rootUser

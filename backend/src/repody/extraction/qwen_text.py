@@ -21,7 +21,11 @@ from repody.extraction.nuextract import (
 )
 from repody.extraction.schema import iter_extraction_leaves
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from repody.inference.openai_compat import post_chat_completion
+from repody.inference.openai_compat import (
+    json_schema_response_format,
+    message_content,
+    post_chat_completion,
+)
 
 log = structlog.get_logger()
 
@@ -100,18 +104,6 @@ def leaf_response_json_schema(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
     }
 
 
-def openai_leaf_response_format(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
-    """OpenAI Structured Outputs ``response_format`` for leaf JSON."""
-    return {
-        "type": "json_schema",
-        "json_schema": {
-            "name": "document_fields",
-            "strict": True,
-            "schema": leaf_response_json_schema(schema),
-        },
-    }
-
-
 def text_to_json_chat_payload(
     *,
     model: str,
@@ -157,8 +149,9 @@ def text_to_json_chat_payload(
         ],
     }
     if use_json_schema and leaves:
-        # Official OpenAI Structured Outputs; llama.cpp / LM Studio accept the same.
-        payload["response_format"] = openai_leaf_response_format(schema)
+        payload["response_format"] = json_schema_response_format(
+            "document_fields", leaf_response_json_schema(schema)
+        )
     return payload
 
 
@@ -221,7 +214,7 @@ async def extract_fields_from_text(
             use_json_schema=False,
         )
         data = await post_chat_completion(base_url, payload, timeout=timeout)
-    raw = str(data["choices"][0]["message"]["content"])
+    raw = message_content(data)
     json_text = parse_flat_json_response(raw)
     fields = fields_from_leaf_json(json_text, schema)
     return fields, json_text or raw

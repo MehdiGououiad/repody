@@ -53,4 +53,4 @@ Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH
 
 ## Pinned versions
 
-Canonical images: [`deploy/pinned-images.env`](../deploy/pinned-images.env). Runtimes: Python 3.13 · Node 24 · pnpm 11.7.0. Production never uses `latest`.
+Canonical images: [`deploy/pinned-images.env`](../deploy/pinned-images.env). Runtimes: Python 3.13 · Node 24 · pnpm 12.5.1. Production never uses `latest`.

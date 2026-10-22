@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import structlog
@@ -30,7 +31,6 @@ from repody.agents.idp.contracts import (
     ExtractionOutput,
     IdpInput,
     IdpOutcome,
-    RuleSpec,
     StoredDocument,
     ValidationOutput,
 )
@@ -49,11 +49,7 @@ from repody.app.run.progress import (
     mark_step_done,
     set_run_progress,
 )
-from repody.app.run.snapshot import (
-    resolve_run_documents,
-    resolve_run_rules,
-    resolve_workflow_display_name,
-)
+from repody.app.run.snapshot import MaterializedRunConfig, materialize_run_config
 from repody.extraction.modes import ValidationMode, resolve_run_validation_mode
 from repody.extraction.schema import icl_examples_from_document
 from repody.infra.db.base import async_session_factory
@@ -110,7 +106,7 @@ def build_idp_run_ports(
     totals: IdpRunTotals,
     session_factory: async_sessionmaker[AsyncSession],
     validation_mode: ValidationMode,
-    rules: tuple[RuleSpec, ...],
+    rules: Sequence[dict],
     labels: dict[str, str],
     multi_document: bool,
     fetch_bytes: FetchBytes,
@@ -187,15 +183,13 @@ def _docs_with_files(run: Run) -> set[str]:
     return {rd.document_id for rd in run.documents if rd.document_id and rd.storage_key}
 
 
-def _load_idp_input(run: Run) -> IdpInput:
+def _load_idp_input(run: Run, config: MaterializedRunConfig) -> IdpInput:
     workflow = run.workflow
     if workflow is None:
         raise ValueError(f"Run {run.id} has no workflow")
-    snapshot_docs = resolve_run_documents(run)
-    rules = resolve_run_rules(run, workflow)
     stored = []
     by_id = {rd.document_id: rd for rd in run.documents if rd.document_id}
-    for doc in snapshot_docs:
+    for doc in config.documents:
         rd = by_id.get(doc.id)
         if rd is None or not rd.storage_key:
             continue
@@ -210,19 +204,17 @@ def _load_idp_input(run: Run) -> IdpInput:
     return build_idp_input(
         run_id=run.id,
         workflow_id=workflow.id,
-        documents=snapshot_docs,
-        rules=rules,
+        documents=config.documents,
+        rules=config.rules,
         stored=stored,
-        workflow_name=resolve_workflow_display_name(run, workflow),
+        workflow_name=config.workflow_name,
     )
 
 
-def _initial_progress_steps(run: Run) -> list[dict]:
-    snapshot_docs = resolve_run_documents(run)
-    rules = resolve_run_rules(run, run.workflow)
+def _initial_progress_steps(run: Run, config: MaterializedRunConfig) -> list[dict]:
     steps = build_run_progress_plan(
-        workflow_docs=snapshot_docs,
-        rules=rules,
+        workflow_docs=config.documents,
+        rules=config.rules,
         docs_with_files=_docs_with_files(run),
     )
     mark_step_done(steps, "queue", detail="Taskiq worker picked up job")
@@ -235,12 +227,12 @@ async def execute_idp_run(
 ) -> Result[AgentOutcome]:
     """Load → compose (extract+validate) → persist and complete the platform run."""
     run_id = run.id
-    inp = _load_idp_input(run)
-    snapshot_docs = resolve_run_documents(run)
-    snap_by_id = {d.id: d for d in snapshot_docs}
-    progress_steps = _initial_progress_steps(run)
+    config = materialize_run_config(run)
+    inp = _load_idp_input(run, config)
+    snap_by_id = {d.id: d for d in config.documents}
+    progress_steps = _initial_progress_steps(run, config)
     files = _docs_with_files(run)
-    validation_mode = resolve_run_validation_mode(resolve_run_rules(run, run.workflow))
+    validation_mode = resolve_run_validation_mode(config.rules)
     labels = {d.id: d.label for d in inp.workflow.documents}
     multi_document = sum(1 for d in inp.workflow.documents if d.schema_fields) > 1
 
@@ -265,7 +257,7 @@ async def execute_idp_run(
         totals=totals,
         session_factory=async_session_factory,
         validation_mode=validation_mode,
-        rules=inp.workflow.rules,
+        rules=config.rules,
         labels=labels,
         multi_document=multi_document,
         fetch_bytes=fetch_bytes,

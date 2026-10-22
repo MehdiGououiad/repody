@@ -3,14 +3,21 @@ from __future__ import annotations
 import time
 from typing import Any, Literal
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from repody.app.run.helpers import attr_or_key
+from repody.app.run.sse import publish_run_progress, publish_run_terminal
 from repody.extraction.branding import normalize_public_catalog_id
 from repody.extraction.modes import (
     document_needs_extraction,
+    is_serverless_inference,
     parse_read_path,
     plan_extraction_detail,
     resolve_run_validation_mode,
 )
+from repody.infra.db import base as db_base
 from repody.infra.db.models import Run
+from repody.rules.conditions import logic_check_entries
 from repody.rules.types import rule_kind
 from repody.settings import get_settings
 
@@ -22,16 +29,13 @@ _MAX_PROGRESS_CACHE = 512
 
 __all__ = [
     "StepStatus",
-    "_last_progress_commit",
-    "_queue_wait_detail",
-    "_read_path_for_doc",
-    "_step",
     "build_run_progress_plan",
     "clear_progress_commit_cache",
     "fail_run_progress",
     "init_queued_progress",
     "mark_step_done",
     "progress_snapshot",
+    "progress_step",
     "set_run_progress",
     "step_index_for",
 ]
@@ -45,16 +49,7 @@ def step_index_for(steps: list[dict[str, Any]], step_id: str) -> int | None:
     return None
 
 
-def _value(item: Any, key: str, default: Any = None) -> Any:
-    value = getattr(item, key, None)
-    if value is not None:
-        return value
-    if isinstance(item, dict):
-        return item.get(key, default)
-    return default
-
-
-def _step(
+def progress_step(
     step_id: str,
     label: str,
     *,
@@ -89,8 +84,6 @@ def _step(
 
 
 def _queue_wait_detail() -> str:
-    from repody.extraction.modes import is_serverless_inference
-
     if is_serverless_inference():
         return (
             "Waiting for a worker slot. Serverless GPU extraction can take 1-2 minutes "
@@ -105,9 +98,9 @@ def _queue_wait_detail() -> str:
 def _read_path_for_doc(doc: Any, *, has_file: bool) -> tuple[str, str, str | None]:
     if not has_file:
         return "schema", "schema", None
-    ext_mode = _value(doc, "extraction_mode", "document_model")
+    ext_mode = attr_or_key(doc, "extraction_mode", "document_model")
     path = parse_read_path(ext_mode)
-    document_model_id = _value(doc, "document_model_id")
+    document_model_id = attr_or_key(doc, "document_model_id")
     return "document_model", path.id, document_model_id
 
 
@@ -118,7 +111,7 @@ def build_run_progress_plan(
     docs_with_files: set[str],
 ) -> list[dict[str, Any]]:
     steps: list[dict[str, Any]] = [
-        _step(
+        progress_step(
             "queue",
             "Queued for worker",
             detail=_queue_wait_detail(),
@@ -126,14 +119,14 @@ def build_run_progress_plan(
     ]
     run_validation_mode = resolve_run_validation_mode(rules)
     for doc in workflow_docs:
-        doc_id = _value(doc, "id", "")
+        doc_id = attr_or_key(doc, "id", "")
         has_file = doc_id in docs_with_files
         if not document_needs_extraction(doc, has_file=has_file):
             continue
-        doc_type = _value(doc, "document_type", "Document")
+        doc_type = attr_or_key(doc, "document_type", "Document")
         mode, read_path, document_model_id = _read_path_for_doc(doc, has_file=has_file)
         steps.append(
-            _step(
+            progress_step(
                 f"extract-{doc_id}",
                 f"Extract \u00b7 {doc_type}",
                 mode=mode,
@@ -151,7 +144,7 @@ def build_run_progress_plan(
             rule_id = rule.get("id") or "rule"
             name = rule.get("name") or "Rule"
             steps.append(
-                _step(
+                progress_step(
                     f"rule-{rule_id}",
                     f"Validate \u00b7 {name}",
                     kind=kind,
@@ -160,14 +153,12 @@ def build_run_progress_plan(
             )
             continue
 
-        from repody.rules.conditions import logic_check_entries
-
         checks = logic_check_entries(rule)
         if not checks:
             rule_id = rule.get("id") or "rule"
             name = rule.get("name") or "Rule"
             steps.append(
-                _step(
+                progress_step(
                     f"rule-{rule_id}",
                     f"Validate \u00b7 {name}",
                     kind="logic",
@@ -180,14 +171,16 @@ def build_run_progress_plan(
             name = check.get("name") or "Check"
             expr = (check.get("body") or "").strip()
             steps.append(
-                _step(
+                progress_step(
                     f"rule-{check_id}",
                     f"Validate \u00b7 {name}",
                     kind="logic",
                     detail=f"Expression: {expr}" if expr else "Logic check on extracted fields",
                 )
             )
-    steps.append(_step("finalize", "Build audit report", detail="Persist fields and rule results"))
+    steps.append(
+        progress_step("finalize", "Build audit report", detail="Persist fields and rule results")
+    )
     return steps
 
 
@@ -257,14 +250,10 @@ async def set_run_progress(
     event_type: str | None = None,
 ) -> None:
     """Publish live progress over SSE; persist to DB on an interval (or when forced)."""
-    from sqlalchemy.ext.asyncio import AsyncSession
-
     progress = progress_snapshot(steps, current_index, label)
     if event_type:
         progress["lastEvent"] = event_type
         progress["eventVersion"] = 1
-
-    from repody.app.run.sse import publish_run_progress
 
     await publish_run_progress(run_id, progress)
 
@@ -282,9 +271,7 @@ async def set_run_progress(
         _touch_progress_cache(run_id, now)
         return
 
-    from repody.infra.db.base import async_session_factory
-
-    async with async_session_factory() as progress_session:
+    async with db_base.async_session_factory() as progress_session:
         run = await progress_session.get(Run, run_id)
         if not run:
             return
@@ -295,7 +282,7 @@ async def set_run_progress(
 
 async def init_queued_progress(session: object, run_id: str) -> None:
     steps = [
-        _step(
+        progress_step(
             "queue",
             "Queued for worker",
             detail=_queue_wait_detail(),
@@ -308,7 +295,7 @@ async def fail_run_progress(run_id: str, error: str) -> None:
     """Publish a terminal failed progress snapshot (queue step failed)."""
     detail = error[:500]
     steps = [
-        _step(
+        progress_step(
             "queue",
             "Run failed",
             status="done",
@@ -322,17 +309,11 @@ async def fail_run_progress(run_id: str, error: str) -> None:
         "failed": True,
     }
 
-    from repody.app.run.sse import publish_run_progress
-
     await publish_run_progress(run_id, progress)
-
-    from repody.app.run.sse import publish_run_terminal
 
     await publish_run_terminal(run_id, status="failed")
 
-    from repody.infra.db.base import async_session_factory
-
-    async with async_session_factory() as session:
+    async with db_base.async_session_factory() as session:
         run = await session.get(Run, run_id)
         if run:
             run.progress = progress

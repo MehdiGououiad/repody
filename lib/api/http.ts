@@ -1,5 +1,6 @@
 import { formatApiError } from "@/lib/api/api-error";
 import { resolveAuthCredential, workflowAuthHeaders } from "@/lib/api/auth-policy";
+import { fetchWithTimeout, type TimedRequestInit } from "@/lib/api/fetch-with-timeout";
 
 let sessionSignOutInFlight = false;
 
@@ -32,54 +33,34 @@ export async function readApiError(res: Response, label: string): Promise<never>
 /** Browser — Next.js `/api/v1` runtime proxy (credential per auth policy). */
 export async function browserFetch(
   path: string,
-  init?: RequestInit & { timeoutMs?: number; workflowApiKey?: string }
+  init?: TimedRequestInit & { workflowApiKey?: string }
 ): Promise<Response> {
-  const { timeoutMs, workflowApiKey, ...rest } = init ?? {};
-  const controller = timeoutMs ? new AbortController() : null;
-  const timer = controller && timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  const { workflowApiKey, ...rest } = init ?? {};
   const normalized = path.startsWith("/api") ? path : `/api${apiPath(path)}`;
   const credential = resolveAuthCredential(normalized);
   const authHeaders: HeadersInit =
     credential === "workflow" && workflowApiKey ? workflowAuthHeaders(workflowApiKey) : {};
-  try {
-    const res = await fetch(normalized, {
-      ...rest,
-      signal: controller?.signal ?? rest.signal,
-      headers: {
-        ...(rest.body instanceof FormData ? {} : { "content-type": "application/json" }),
-        ...authHeaders,
-        ...rest.headers,
-      },
-    });
-    if (
-      typeof window !== "undefined" &&
-      res.status === 401 &&
-      credential === "session" &&
-      !window.location.pathname.startsWith("/login")
-    ) {
-      void redirectToLoginAfterUnauthorized();
-    }
-    if (typeof window !== "undefined" && res.status === 403 && credential === "session") {
-      const body = await res.clone().text();
-      if (body.toLowerCase().includes("forbidden") || body.toLowerCase().includes("permission")) {
+  const res = await fetchWithTimeout(normalized, {
+    ...rest,
+    headers: {
+      ...(rest.body instanceof FormData ? {} : { "content-type": "application/json" }),
+      ...authHeaders,
+      ...rest.headers,
+    },
+  });
+  if (typeof window !== "undefined" && credential === "session") {
+    if (res.status === 401) void redirectToLoginAfterUnauthorized();
+    if (res.status === 403) {
+      const body = (await res.clone().text()).toLowerCase();
+      if (body.includes("forbidden") || body.includes("permission")) {
         window.location.assign(new URL("/unauthorized", window.location.origin).href);
       }
     }
-    return res;
-  } catch (err) {
-    if (timeoutMs && err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
-    }
-    throw err;
-  } finally {
-    if (timer) clearTimeout(timer);
   }
+  return res;
 }
 
-export async function browserJson<T>(
-  path: string,
-  init?: RequestInit & { timeoutMs?: number }
-): Promise<T> {
+export async function browserJson<T>(path: string, init?: TimedRequestInit): Promise<T> {
   const res = await browserFetch(path, init);
   if (!res.ok) await readApiError(res, `API ${path}`);
   if (res.status === 204) return undefined as T;

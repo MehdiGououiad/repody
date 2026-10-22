@@ -12,13 +12,13 @@ const variantMap: Record<AuditStatus, "success" | "danger" | "warning" | "info">
   running: "info",
 };
 
-interface StatusBadgeProps {
+interface AuditStatusBadgeProps {
   status: AuditStatus;
   failedCount?: number;
   className?: string;
 }
 
-export function StatusBadge({ status, failedCount, className }: StatusBadgeProps) {
+export function AuditStatusBadge({ status, failedCount, className }: AuditStatusBadgeProps) {
   const t = useTranslations("audits.status");
   const label =
     status === "failed" && failedCount ? t("failedWithRules", { count: failedCount }) : t(status);

@@ -7,6 +7,7 @@ from enum import StrEnum
 
 
 class ErrorCode(StrEnum):
+    BAD_REQUEST = "bad_request"
     VALIDATION = "validation"
     NOT_FOUND = "not_found"
     EXTRACTION = "extraction"
@@ -59,6 +60,7 @@ class Result[T]:
 def http_status_for(error: AppError) -> int:
     """Map AppError codes to HTTP status for thin API adapters."""
     mapping: dict[ErrorCode, int] = {
+        ErrorCode.BAD_REQUEST: 400,
         ErrorCode.NOT_FOUND: 404,
         ErrorCode.UNAUTHORIZED: 401,
         ErrorCode.FORBIDDEN: 403,

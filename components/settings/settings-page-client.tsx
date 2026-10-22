@@ -5,6 +5,15 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
+import {
+  ACTIVE_STATUSES,
+  SETTINGS_TABS,
+  type SettingsTab,
+} from "@/components/settings/settings-shared";
+import { BenchmarksTab } from "@/components/settings/tabs/benchmarks-tab";
+import { DiagnosticsTab } from "@/components/settings/tabs/diagnostics-tab";
+import { ModelsTab } from "@/components/settings/tabs/models-tab";
+import { OverviewTab } from "@/components/settings/tabs/overview-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   fetchOperatorJobs,
@@ -14,11 +23,19 @@ import {
 } from "@/lib/api/operator";
 import type { PlatformConfig } from "@/lib/api/platform-config";
 import { useQueryParam } from "@/lib/hooks/use-query-param";
-import { ACTIVE_STATUSES, SETTINGS_TABS, type SettingsTab } from "./settings-shared";
-import { BenchmarksTab } from "./tabs/benchmarks-tab";
-import { DiagnosticsTab } from "./tabs/diagnostics-tab";
-import { ModelsTab } from "./tabs/models-tab";
-import { OverviewTab } from "./tabs/overview-tab";
+
+async function loadOperatorState(): Promise<{
+  status: OperatorStatus;
+  jobs: OperatorJob[];
+} | null> {
+  try {
+    const [status, jobs] = await Promise.all([fetchOperatorStatus(), fetchOperatorJobs()]);
+    return { status, jobs };
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Operator API unavailable");
+    return null;
+  }
+}
 
 export function SettingsPageClient({
   platformConfig,
@@ -33,28 +50,25 @@ export function SettingsPageClient({
     : "overview";
   const [operator, setOperator] = useState<OperatorStatus | null>(null);
   const [jobs, setJobs] = useState<OperatorJob[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = useCallback(async () => {
-    try {
-      const [status, nextJobs] = await Promise.all([fetchOperatorStatus(), fetchOperatorJobs()]);
-      setOperator(status);
-      setJobs(nextJobs);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Operator API unavailable");
-    }
+    const state = await loadOperatorState();
+    if (!state) return;
+    setOperator(state.status);
+    setJobs(state.jobs);
   }, []);
 
   useEffect(() => {
-    void Promise.all([fetchOperatorStatus(), fetchOperatorJobs()])
-      .then(([status, nextJobs]) => {
-        setOperator(status);
-        setJobs(nextJobs);
-      })
-      .catch((error) => {
-        toast.error(error instanceof Error ? error.message : "Operator API unavailable");
-      });
-  }, [refreshKey]);
+    let cancelled = false;
+    void loadOperatorState().then((state) => {
+      if (cancelled || !state) return;
+      setOperator(state.status);
+      setJobs(state.jobs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!jobs.some((job) => ACTIVE_STATUSES.has(job.status))) return;
@@ -153,7 +167,7 @@ export function SettingsPageClient({
             platform={platformConfig}
             operator={operator}
             jobs={jobs}
-            onRefresh={() => setRefreshKey((value) => value + 1)}
+            onRefresh={() => void refresh()}
           />
         </TabsContent>
       </Tabs>

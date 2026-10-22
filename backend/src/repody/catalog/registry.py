@@ -17,6 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
+from repody.catalog.adapters import get_document_model_adapter
 from repody.extraction.branding import (
     GLM_OCR_QWEN_CATALOG_ID,
     GLM_OCR_QWEN_DESCRIPTION,
@@ -180,8 +181,6 @@ async def extract_with_document_model(
     markdown_extraction: bool = False,
     extraction_icl_examples: list | None = None,
 ) -> ExtractionResult:
-    from repody.catalog.adapters import get_document_model_adapter
-
     adapter = get_document_model_adapter(spec.id)
     if adapter is not None:
         return await adapter(

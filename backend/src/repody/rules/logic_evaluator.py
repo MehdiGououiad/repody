@@ -6,42 +6,9 @@ from typing import Any
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
 from repody.rules.amounts import parse_numeric_value
-from repody.rules.table_aggregates import (
-    LOGIC_TABLE_FUNCTIONS,
-    count_rows_where,
-    sum_rows,
-    sum_rows_where,
-)
+from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers, normalize_field_key
 from repody.rules.types import RuleEvalResult, collect_affected_fields
 from repody.rules.value_coercion import is_iso_date_like
-
-_IDENTIFIER = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
-_RESERVED = {
-    "and",
-    "or",
-    "not",
-    "True",
-    "False",
-    "None",
-    "if",
-    "else",
-    "in",
-    "is",
-    "str",
-    *LOGIC_TABLE_FUNCTIONS,
-}
-
-
-def _logic_functions() -> dict[str, Any]:
-    return {
-        "sum_rows": sum_rows,
-        "sum_rows_where": sum_rows_where,
-        "count_rows_where": count_rows_where,
-    }
-
-
-def _normalize_key(name: str) -> str:
-    return name.strip().lower().replace(" ", "_")
 
 
 def _strip_string_literals(expression: str) -> str:
@@ -51,20 +18,12 @@ def _strip_string_literals(expression: str) -> str:
 
 
 def _identifiers_in_expression(expression: str) -> list[str]:
-    seen: set[str] = set()
-    out: list[str] = []
-    for token in _IDENTIFIER.findall(_strip_string_literals(expression)):
-        if token in _RESERVED:
-            continue
-        if token not in seen:
-            seen.add(token)
-            out.append(token)
-    return out
+    return list(dict.fromkeys(field_identifiers(_strip_string_literals(expression))))
 
 
 def _lookup_field(names: dict[str, Any], ident: str) -> tuple[bool, Any]:
     """Return (present, value) for a field token used in an expression."""
-    norm = _normalize_key(ident)
+    norm = normalize_field_key(ident)
     if ident in names:
         return True, names[ident]
     if norm in names:
@@ -90,14 +49,14 @@ def coerce_field_value(raw: str) -> Any:
 def build_field_namespace(field_values: dict[str, str]) -> dict[str, Any]:
     namespace: dict[str, Any] = {}
     for key, value in field_values.items():
-        norm = _normalize_key(key)
+        norm = normalize_field_key(key)
         coerced = coerce_field_value(value)
         namespace[norm] = coerced
         namespace[key] = coerced
         if "." in key:
             alias = key.replace(".", "__")
             namespace[alias] = coerced
-            namespace[_normalize_key(alias)] = coerced
+            namespace[normalize_field_key(alias)] = coerced
     return namespace
 
 
@@ -115,8 +74,6 @@ def evaluate_logic_expression(
     missing: list[str] = []
     empty: list[str] = []
     for ident in referenced:
-        if ident in LOGIC_TABLE_FUNCTIONS:
-            continue
         present, value = _lookup_field(names, ident)
         if not present:
             missing.append(ident)
@@ -138,11 +95,11 @@ def evaluate_logic_expression(
             empty,
         )
 
-    affected = [k for k, v in names.items() if v is not None and k == _normalize_key(k)]
+    affected = [k for k, v in names.items() if v is not None and k == normalize_field_key(k)]
 
     try:
         evaluator = EvalWithCompoundTypes()
-        functions = {**evaluator.functions, **_logic_functions()}
+        functions = {**evaluator.functions, **LOGIC_FUNCTIONS}
         result = bool(simple_eval(expression, names=names, functions=functions))
         if result:
             return True, "All conditions satisfied on the extracted values.", affected

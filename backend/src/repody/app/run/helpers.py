@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from repody.extraction.branding import normalize_public_catalog_id
 from repody.extraction.modes import (
     parse_read_path,
@@ -14,6 +16,7 @@ from repody.rules.conditions import resolve_rule_body
 from repody.util.json_shape import normalize_keys_to_snake
 
 __all__ = [
+    "attr_or_key",
     "extract_label",
     "meta_to_dict",
     "progress_mode",
@@ -21,6 +24,16 @@ __all__ = [
     "rule_dict_from_row",
     "rules_payload",
 ]
+
+
+def attr_or_key(item: Any, key: str, default: Any = None) -> Any:
+    """Read ``key`` from an ORM row / dataclass attribute, or from a dict."""
+    value = getattr(item, key, None)
+    if value is not None:
+        return value
+    if isinstance(item, dict):
+        return item.get(key, default)
+    return default
 
 
 def resolve_upload_mime(declared_mime: str | None, document_bytes: bytes | None) -> str:

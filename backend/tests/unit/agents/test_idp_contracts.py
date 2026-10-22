@@ -246,18 +246,16 @@ async def test_validate_extraction_consumes_rule_spec():
         )
     )
     rules = (
-        rule_spec_from_dict(
-            {
-                "id": "r1",
-                "name": "Total positive",
-                "kind": "logic",
-                "scope": "intra",
-                "severity": "reject",
-                "applies_to": [],
-                "body": "total > 0",
-                "conditions": [],
-            }
-        ),
+        {
+            "id": "r1",
+            "name": "Total positive",
+            "kind": "logic",
+            "scope": "intra",
+            "severity": "reject",
+            "applies_to": [],
+            "body": "total > 0",
+            "conditions": [],
+        },
     )
     out = await validate_extraction(
         extraction,

@@ -19,6 +19,38 @@ export function formatPercent(n: number, fractionDigits = 1, locale: LocaleArg =
   }).format(n);
 }
 
+export function formatDurationMs(ms: number | null | undefined): string {
+  if (ms == null) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  const s = ms / 1000;
+  if (s < 60) return `${s.toFixed(1)}s`;
+  const m = Math.floor(s / 60);
+  const rem = Math.round(s % 60);
+  return `${m}m ${rem}s`;
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Short 24h timestamp for tables, e.g. "Oct 24, 14:32" (optionally with the year). */
+export function formatDateTime(
+  iso: string,
+  locale: LocaleArg = "en-US",
+  { withYear = false }: { withYear?: boolean } = {}
+): string {
+  return new Date(iso).toLocaleString(locale, {
+    ...(withYear ? { year: "numeric" } : {}),
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export function shortId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID().slice(0, 8);

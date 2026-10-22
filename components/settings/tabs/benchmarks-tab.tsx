@@ -4,6 +4,7 @@ import { Download, LoaderCircle, Play, Upload } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DocumentTextPreviewPanel } from "@/components/documents/document-markdown-preview";
+import { ACTIVE_STATUSES } from "@/components/settings/settings-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,16 +29,20 @@ import {
   benchmarkModelsFromCatalog,
   useUnifiedModelsCatalog,
 } from "@/lib/hooks/use-catalog-queries";
-import { ACTIVE_STATUSES, formatDuration, formatPercent } from "../settings-shared";
+import { formatDurationMs, formatPercent } from "@/lib/utils";
 
 const SUPPORTED_DOCUMENT_ACCEPT =
   ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp";
+
+function formatAccuracy(value?: number | null): string {
+  return value == null ? "—" : formatPercent(value, 0);
+}
 
 function scoreLabel(row: BenchmarkResult): string {
   if (row.judgeQuality) {
     return row.rawTextChars != null ? `${row.rawTextChars} chars` : "—";
   }
-  return formatPercent(row.fieldAccuracy);
+  return formatAccuracy(row.fieldAccuracy);
 }
 
 function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string }) {
@@ -68,8 +73,8 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
           ["Passed", report.summary.passed],
           ["Failed", report.summary.failed],
           ["Skipped", report.summary.skipped],
-          ["Field accuracy", formatPercent(report.summary.fieldAccuracy)],
-          ["Median wall", formatDuration(report.summary.medianWallMs)],
+          ["Field accuracy", formatAccuracy(report.summary.fieldAccuracy)],
+          ["Median wall", formatDurationMs(report.summary.medianWallMs)],
         ].map(([label, value]) => (
           <div key={label} className="px-5 py-4 border-r border-border last:border-0">
             <p className="text-[11px] uppercase tracking-wider text-on-surface-variant">{label}</p>
@@ -110,10 +115,10 @@ function ReportView({ report, jobId }: { report: BenchmarkReport; jobId?: string
                       {row.status}
                     </Badge>
                   </td>
-                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.wallMs)}</td>
-                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.queueMs)}</td>
-                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.extractionMs)}</td>
-                  <td className="px-4 py-3 tabular-nums">{formatDuration(row.validationMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDurationMs(row.wallMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDurationMs(row.queueMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDurationMs(row.extractionMs)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDurationMs(row.validationMs)}</td>
                   <td className="px-4 py-3 tabular-nums">{scoreLabel(row)}</td>
                 </tr>
                 {row.error ? (

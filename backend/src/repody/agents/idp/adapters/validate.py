@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Sequence
 
-from repody.agents.idp.adapters.mapping import rule_dict_from_spec, rule_result_from_eval
+from repody.agents.idp.adapters.mapping import rule_result_from_eval
 from repody.agents.idp.contracts import (
     ExtractionOutput,
     RuleResult,
-    RuleSpec,
     ValidationOutput,
 )
 from repody.extraction.modes import ValidationMode
@@ -60,7 +59,7 @@ def summarize_validation(results: tuple[RuleResult, ...] | list[RuleResult]) -> 
 async def validate_extraction(
     extraction: ExtractionOutput,
     *,
-    rules: Sequence[RuleSpec],
+    rules: Sequence[dict],
     labels: dict[str, str],
     multi_document: bool,
     validation_mode: ValidationMode,
@@ -68,10 +67,9 @@ async def validate_extraction(
     llm_model: str | None = None,
 ) -> ValidationOutput:
     """Turn frozen extraction into summarized validation (one rules-engine path)."""
-    rule_dicts = [rule_dict_from_spec(rule) for rule in rules]
     rows = field_rows_from_extraction(extraction, labels)
     field_values = field_values_from_extractions(rows, multi_document=multi_document)
-    active_rules, skipped_rules = rules_for_validation(rule_dicts, validation_mode)
+    active_rules, skipped_rules = rules_for_validation(list(rules), validation_mode)
     rule_evals = await evaluate_rules(
         active_rules,
         field_values,

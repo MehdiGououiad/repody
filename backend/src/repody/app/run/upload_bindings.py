@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import json
-import uuid
 from collections.abc import Sequence
 from typing import Any, cast
 
-from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.uploads.document_slots import resolve_document_slot_keys
+from repody.app.uploads.service import IncomingFile, new_storage_key
 from repody.app.uploads.validation import (
     UploadValidationError,
     validate_upload_batch,
@@ -28,7 +27,7 @@ def _validation_error(message: str) -> AppError:
 
 
 async def bindings_from_uploads(
-    files: list[UploadFile],
+    files: Sequence[IncomingFile],
     document_ids: list[str] | None,
 ) -> Result[list[FileBinding]]:
     settings = get_settings()
@@ -40,20 +39,18 @@ async def bindings_from_uploads(
     storage = get_storage()
     bindings: list[FileBinding] = []
     for idx, upload in enumerate(files):
-        data = await upload.read()
         try:
             safe_name, verified_mime = validate_upload_file(
                 filename=upload.filename,
                 declared_mime=upload.content_type,
-                data=data,
+                data=upload.data,
                 settings=settings,
             )
         except UploadValidationError as exc:
             return Result.fail(_validation_error(str(exc)))
 
-        upload_id = uuid.uuid4().hex
-        key = f"runs/{upload_id}/{safe_name}"
-        await storage.put_bytes(key, data, verified_mime)
+        _upload_id, key = new_storage_key(safe_name)
+        await storage.put_bytes(key, upload.data, verified_mime)
         doc_id = document_ids[idx] if document_ids and idx < len(document_ids) else None
         bindings.append(
             FileBinding(
@@ -92,7 +89,7 @@ def parse_slot_list_form(value: str | None, field_name: str) -> Result[list[str]
 async def bindings_from_multipart(
     session: AsyncSession,
     workflow_id: str,
-    files: list[UploadFile],
+    files: Sequence[IncomingFile],
     *,
     document_ids: str | None,
     document_types: str | None,

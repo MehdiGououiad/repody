@@ -2,30 +2,17 @@
 
 import { Check, Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard";
 import { cn } from "@/lib/utils";
-
-function useCopy(timeout = 1800) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), timeout);
-    });
-  };
-
-  return { copied, copy };
-}
 
 export function CopyButton({ text, className }: { text: string; className?: string }) {
   const tCommon = useTranslations("common");
-  const { copied, copy } = useCopy();
+  const { copied, copy } = useCopyToClipboard(1800);
 
   return (
     <button
       type="button"
-      onClick={() => copy(text)}
+      onClick={() => void copy(text)}
       aria-label={copied ? tCommon("copied") : tCommon("copy")}
       className={cn(
         "inline-flex items-center gap-1 text-[10px] font-mono transition-colors shrink-0",

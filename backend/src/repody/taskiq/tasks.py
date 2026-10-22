@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
+from repody.app.run.commands import PUBLIC_RUN_FAILURE_MESSAGE, fail_run_terminal
+from repody.app.run.processor import execute_run_with_timeout
+from repody.infra.db import base as db_base
+from repody.infra.db.models import Run
+from repody.infra.observability.context import bind_log_context, log_context
+from repody.infra.observability.tracing import start_span
 from repody.settings import get_settings
 from repody.taskiq.broker import get_broker
 from repody.taskiq.models import AuditRunInput
@@ -35,10 +41,6 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
         timeout_minutes=settings.worker_task_timeout_minutes,
     )
     try:
-        from repody.app.run.processor import execute_run_with_timeout
-        from repody.infra.observability.context import bind_log_context, log_context
-        from repody.infra.observability.tracing import start_span
-
         async with start_span(
             "process_audit_run",
             {
@@ -57,10 +59,7 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
                 worker_pool=input.extract_pool,
             ):
                 if workflow_id is None:
-                    from repody.infra.db.base import async_session_factory
-                    from repody.infra.db.models import Run
-
-                    async with async_session_factory() as session:
+                    async with db_base.async_session_factory() as session:
                         run = await session.get(Run, run_id)
                         workflow_id = run.workflow_id if run else None
                         if workflow_id:
@@ -72,11 +71,6 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
                     request_id=request_id,
                 )
     except Exception as exc:
-        from repody.app.run.commands import (
-            PUBLIC_RUN_FAILURE_MESSAGE,
-            fail_run_terminal,
-        )
-
         if isinstance(exc, TimeoutError):
             log.warning(
                 "taskiq_run_timed_out",

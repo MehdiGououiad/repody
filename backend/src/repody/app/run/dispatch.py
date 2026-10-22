@@ -10,10 +10,11 @@ from repody.app.run.commands import (
     fail_run_terminal,
 )
 from repody.app.run.pool import resolve_worker_pool
+from repody.infra.db import base as db_base
 from repody.infra.db.models import RunStatus
 from repody.runtime.pools import agent_for_pool
 from repody.settings import get_settings
-from repody.taskiq.broker import startup_taskiq_brokers
+from repody.taskiq.broker import shutdown_taskiq_brokers, startup_taskiq_brokers
 from repody.taskiq.models import AuditRunInput
 from repody.taskiq.tasks import get_process_audit_run_task
 
@@ -49,9 +50,7 @@ async def dispatch_audit_run(
     settings = get_settings()
     if pool is None:
         if session is None:
-            from repody.infra.db.base import async_session_factory
-
-            async with async_session_factory() as owned:
+            async with db_base.async_session_factory() as owned:
                 pool = await resolve_worker_pool(owned, run_id)
         else:
             pool = await resolve_worker_pool(session, run_id)
@@ -83,6 +82,4 @@ async def dispatch_audit_run(
 
 
 async def close_taskiq_brokers() -> None:
-    from repody.taskiq.broker import shutdown_taskiq_brokers
-
     await shutdown_taskiq_brokers()

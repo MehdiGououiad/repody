@@ -6,9 +6,9 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from repody.extraction.branding import public_document_model_label
-from repody.inference.runtime import is_remote_inference_url
 from repody.rules.types import rule_kind
 from repody.settings import Settings, get_settings
+from repody.util.urls import is_remote_inference_url
 
 ValidationMode = Literal["logic_only", "logic_and_llm"]
 LOGIC_VALIDATION: ValidationMode = "logic_only"
@@ -185,6 +185,7 @@ def extraction_is_needed(
 
 def document_needs_extraction(doc: object, *, has_file: bool) -> bool:
     """True when a run should invoke the extraction pipeline for this document."""
+    # Deferred: catalog.registry imports this module at load time.
     from repody.catalog.registry import is_markdown_only_model
 
     model_id = _read_doc_value(doc, "document_model_id", None)

@@ -12,9 +12,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildSecurityReport } from "./security-report.mjs";
 
-export const TRIVY_VERSION = "0.72.0";
-export const GRYPE_IMAGE = "anchore/grype:v0.110.0";
-export const SYFT_IMAGE = "anchore/syft:v1.40.0";
+export const TRIVY_VERSION = "0.74.0";
+export const GRYPE_IMAGE = "anchore/grype:v0.119.0";
+export const SYFT_IMAGE = "anchore/syft:v1.52.0";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const outDir = resolve(root, "dist/security");
@@ -26,7 +26,11 @@ const skipImages =
 const FS_TARGETS = ["backend", "pnpm-lock.yaml", "deploy"];
 
 function run(cmd, args, opts = {}) {
-  const result = spawnSync(cmd, args, {
+  // pnpm is a .cmd shim. Node cannot spawn it directly (ENOENT / EINVAL).
+  const windowsCmd = process.platform === "win32" && cmd === "pnpm";
+  const spawnCmd = windowsCmd ? process.env.ComSpec || "cmd.exe" : cmd;
+  const spawnArgs = windowsCmd ? ["/d", "/s", "/c", "pnpm.cmd", ...args] : args;
+  const result = spawnSync(spawnCmd, spawnArgs, {
     cwd: opts.cwd ?? root,
     encoding: "utf8",
     env: { ...process.env, ...opts.env },
@@ -40,6 +44,22 @@ function run(cmd, args, opts = {}) {
     process.exit(result.status ?? 1);
   }
   return result;
+}
+
+function writeAuditJson(path, stdout, label, shape) {
+  const raw = stdout?.trim() ?? "";
+  if (!raw) {
+    throw new Error(`${label} produced no JSON`);
+  }
+  const doc = JSON.parse(raw);
+  const ok =
+    shape === "array"
+      ? Array.isArray(doc)
+      : doc != null && typeof doc === "object" && !Array.isArray(doc);
+  if (!ok) {
+    throw new Error(`${label} JSON has the wrong shape`);
+  }
+  writeFileSync(path, `${raw}\n`, "utf8");
 }
 
 function dockerMountSrc() {
@@ -61,6 +81,7 @@ function dockerTrivy(args, allowFail = false) {
       dockerMountSrc(),
       "-v",
       "repody-trivy-cache:/root/.cache/trivy",
+      ...(args[0] === "image" ? ["-v", "/var/run/docker.sock:/var/run/docker.sock"] : []),
       "-w",
       "/src",
       `aquasec/trivy:${TRIVY_VERSION}`,
@@ -134,20 +155,36 @@ async function main() {
 
   console.log(`\n[${++step}/${totalSteps}] pnpm audit`);
   const pnpm = run("pnpm", ["audit", "--json"], { capture: true, allowFail: true });
-  if (pnpm.stdout) {
-    writeFileSync(resolve(outDir, "pnpm-audit.json"), pnpm.stdout, "utf8");
-  }
+  writeAuditJson(resolve(outDir, "pnpm-audit.json"), pnpm.stdout, "pnpm audit", "object");
 
   console.log(`\n[${++step}/${totalSteps}] pip-audit`);
-  const pip = run("uvx", ["pip-audit", "--locked", "--project", "backend", "-f", "json"], {
-    capture: true,
-    allowFail: true,
-  });
-  if (pip.stdout?.trim()) {
-    writeFileSync(resolve(outDir, "pip-audit.json"), pip.stdout, "utf8");
-  } else {
-    writeFileSync(resolve(outDir, "pip-audit.json"), "[]", "utf8");
+  // pip-audit 2.10 does not read uv.lock. Export the lock, then audit that file.
+  const requirementsPath = resolve(outDir, "backend-requirements.txt");
+  const exported = run(
+    "uv",
+    [
+      "export",
+      "--frozen",
+      "--directory",
+      "backend",
+      "--no-emit-project",
+      "--format",
+      "requirements-txt",
+      "-o",
+      requirementsPath,
+    ],
+    { capture: true, allowFail: true }
+  );
+  if (exported.status !== 0) {
+    console.error(exported.stderr || exported.stdout || "uv export failed");
+    process.exit(exported.status ?? 1);
   }
+  const pip = run(
+    "uvx",
+    ["pip-audit", "-r", requirementsPath, "-f", "json", "--progress-spinner", "off"],
+    { capture: true, allowFail: true }
+  );
+  writeAuditJson(resolve(outDir, "pip-audit.json"), pip.stdout, "pip-audit", "object");
 
   console.log(`\n[${++step}/${totalSteps}] Trivy filesystem`);
   for (const target of FS_TARGETS) {
@@ -216,8 +253,8 @@ async function main() {
       console.log(`\n[${++step}/${totalSteps}] Build + Trivy image + Syft + Grype`);
       run("node", ["deploy/scripts/build-images.mjs"], {
         env: {
-          REPODY_BACKEND_TAG: "security-scan",
-          REPODY_WEB_TAG: "security-scan",
+          REPODY_BACKEND_IMAGE_TAG: "security-scan",
+          REPODY_WEB_IMAGE_TAG: "security-scan",
         },
       });
 

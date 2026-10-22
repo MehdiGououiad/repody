@@ -21,10 +21,14 @@ from repody.api import (
     uploads,
     workflows,
 )
+from repody.api.auth import require_permission
 from repody.api.openapi_config import install_openapi
+from repody.app.operator.jobs import hydrate_operator_jobs_from_redis
+from repody.app.ops.maintenance import maintenance_loop, run_maintenance_cycle
 from repody.app.run.dispatch import close_taskiq_brokers
+from repody.app.run.dispatch_outbox import drain_dispatch_tasks
 from repody.inference.openai_compat import close_openai_clients
-from repody.infra.auth.dependencies import require_permission
+from repody.infra.auth.jwt_validator import warm_jwks_cache
 from repody.infra.db.base import async_session_factory, engine
 from repody.infra.db.seed import seed_database
 from repody.infra.http import close_http_clients
@@ -35,6 +39,7 @@ from repody.infra.rate_limit import GlobalRateLimitMiddleware
 from repody.infra.redis.pool import close_redis_pool
 from repody.infra.storage.factory import init_storage
 from repody.settings import get_settings
+from repody.taskiq.broker import startup_taskiq_brokers
 
 log = structlog.get_logger(__name__)
 
@@ -49,18 +54,12 @@ async def lifespan(_app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    from repody.app.operator.jobs import hydrate_operator_jobs_from_redis
-    from repody.taskiq.broker import startup_taskiq_brokers
-
-    # Independent startup work — FastAPI lifespan guidance: keep critical path short.
     await asyncio.gather(
         init_storage(),
         hydrate_operator_jobs_from_redis(),
         startup_taskiq_brokers(),
     )
     if settings.oidc_enabled:
-        from repody.infra.auth.jwt_validator import warm_jwks_cache
-
         try:
             await warm_jwks_cache(settings)
         except Exception as exc:
@@ -70,8 +69,6 @@ async def lifespan(_app: FastAPI):
                 error=str(exc),
             )
     maintenance_stop = asyncio.Event()
-    from repody.app.ops.maintenance import maintenance_loop, run_maintenance_cycle
-
     await run_maintenance_cycle()
     maintenance_task = asyncio.create_task(maintenance_loop(maintenance_stop))
     if settings.seed_on_startup:
@@ -83,8 +80,6 @@ async def lifespan(_app: FastAPI):
     log.info("application_shutting_down", event_domain="platform")
     maintenance_stop.set()
     await maintenance_task
-    from repody.app.run.dispatch_outbox import drain_dispatch_tasks
-
     await drain_dispatch_tasks()
     await close_taskiq_brokers()
     await close_redis_pool()

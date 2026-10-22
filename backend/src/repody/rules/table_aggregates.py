@@ -7,8 +7,6 @@ from typing import Any
 
 from repody.rules.amounts import parse_numeric_value
 
-LOGIC_TABLE_FUNCTIONS = frozenset({"sum_rows", "sum_rows_where", "count_rows_where"})
-
 
 def parse_table_rows(raw: Any) -> list[dict[str, Any]]:
     if isinstance(raw, list):

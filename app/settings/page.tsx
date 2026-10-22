@@ -1,7 +1,7 @@
 import { Suspense } from "react";
+import { SettingsPageClient } from "@/components/settings/settings-page-client";
 import type { PlatformConfig } from "@/lib/api/platform-config";
 import { fetchPlatformConfigServer } from "@/lib/api/platform-config-server";
-import { SettingsPageClient } from "./settings-client";
 
 export default async function SettingsPage() {
   let platformConfig: PlatformConfig | null = null;

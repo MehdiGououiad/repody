@@ -1,4 +1,4 @@
-"""Handoff metadata round-trip — real IdpOutcome fields, no hollow reconstruction."""
+"""agentOutcomes is written for operators and read back only as a status."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from repody.agents.idp.contracts import (
     RuleResult,
     ValidationOutput,
 )
-from repody.runtime.agent_metadata import idp_outcome_from_run, record_agent_outcome
+from repody.runtime.agent_metadata import agent_status_recorded, record_agent_outcome
 from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 
 
-def test_idp_outcome_round_trip_preserves_extraction_fields() -> None:
+def test_record_agent_outcome_stores_status_and_extraction() -> None:
     outcome = IdpOutcome(
         run_id="run-1",
         workflow_id="wf-1",
@@ -68,34 +68,18 @@ def test_idp_outcome_round_trip_preserves_extraction_fields() -> None:
         run,  # type: ignore[arg-type]
         AgentOutcome(agent=AgentId.IDP, status=AgentStatus.PASSED, payload=outcome),
     )
-    restored = idp_outcome_from_run(run)  # type: ignore[arg-type]
-    assert restored is not None
-    assert restored.workflow_id == "wf-1"
-    assert len(restored.extraction.by_document) == 1
-    doc = restored.extraction.by_document[0]
-    assert doc.document_id == "doc-1"
-    assert doc.fields[0].key == "invoice_number"
-    assert doc.fields[0].value == "F-42"
-    assert doc.fields[0].confidence == 0.91
-    assert doc.markdown_text == "# Invoice"
-    assert doc.meta.document_model_id == "repody:vlm"
-    assert restored.validation.summary_passed == 1
-    assert restored.validation.rule_results[0].rule_id == "r1"
+    row = run.run_metadata["agentOutcomes"]["idp"]
+    assert row["status"] == "passed"
+    assert row["workflowId"] == "wf-1"
+    assert row["extraction"]["byDocument"][0]["fields"][0]["key"] == "invoice_number"
+    assert row["validation"]["summaryPassed"] == 1
+    assert agent_status_recorded(run, AgentId.IDP) is AgentStatus.PASSED  # type: ignore[arg-type]
 
 
-def test_idp_outcome_from_run_rejects_incomplete_legacy_rows() -> None:
+def test_agent_status_recorded_reads_lightweight_rows() -> None:
     run = SimpleNamespace(
         id="run-1",
         workflow_id="wf-1",
-        run_metadata={
-            "agentOutcomes": {
-                "idp": {
-                    "status": "passed",
-                    "overallStatus": "passed",
-                    "summaryPassed": 1,
-                    "summaryFailed": 0,
-                }
-            }
-        },
+        run_metadata={"agentOutcomes": {"idp": {"status": "passed"}}},
     )
-    assert idp_outcome_from_run(run) is None  # type: ignore[arg-type]
+    assert agent_status_recorded(run, AgentId.IDP) is AgentStatus.PASSED  # type: ignore[arg-type]

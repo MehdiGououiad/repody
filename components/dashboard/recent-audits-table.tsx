@@ -3,7 +3,7 @@
 import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { AuditStatusBadge } from "@/components/shared/audit-status-badge";
 import {
   Table,
   TableBody,
@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Audit } from "@/lib/types";
-import { formatNumber } from "@/lib/utils";
+import { formatDateTime, formatNumber } from "@/lib/utils";
 
 interface RecentAuditsTableProps {
   audits: Audit[];
@@ -28,14 +28,7 @@ export function RecentAuditsTable({ audits, title, limit, actions }: RecentAudit
   const t = useTranslations("audits.table");
   const tDashboard = useTranslations("dashboard.recent");
   const heading = title ?? tDashboard("title");
-  const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleString(locale, {
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+
   const rows = limit ? audits.slice(0, limit) : audits;
 
   return (
@@ -73,11 +66,11 @@ export function RecentAuditsTable({ audits, title, limit, actions }: RecentAudit
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <StatusBadge status={a.status} failedCount={a.failedRules} />
+                  <AuditStatusBadge status={a.status} failedCount={a.failedRules} />
                 </TableCell>
                 <TableCell className="text-on-surface-variant text-sm">{a.workflowName}</TableCell>
                 <TableCell className="text-on-surface-variant text-sm tabular-nums">
-                  {fmtDate(a.timestamp)}
+                  {formatDateTime(a.timestamp, locale)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
                   {a.rows === null ? "—" : formatNumber(a.rows, locale)}

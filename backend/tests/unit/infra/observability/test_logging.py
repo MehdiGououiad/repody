@@ -31,6 +31,45 @@ def test_configure_logging_json_smoke() -> None:
     get_logger("test").info("logging_smoke", event_domain="test")
 
 
+def test_error_log_keeps_exc_info_for_sentry() -> None:
+    import logging
+
+    import structlog
+
+    from repody.infra.observability.logging import configure_logging
+
+    settings = Settings(log_json=True, otel_service_name="test-service")
+    configure_logging(settings)
+    records: list[logging.LogRecord] = []
+
+    class _Capture(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    root = logging.getLogger()
+    capture = _Capture()
+    capture.setLevel(logging.ERROR)
+    root.addHandler(capture)
+    try:
+        raise RuntimeError("probe-exc")
+    except RuntimeError:
+        structlog.get_logger("probe-exc-info").error("probe_failed", exc_info=True)
+    finally:
+        root.removeHandler(capture)
+
+    matched = [
+        record
+        for record in records
+        if isinstance(record.msg, dict) and record.msg.get("event") == "probe_failed"
+    ]
+    assert matched
+    assert matched[-1].exc_info is not None
+    assert matched[-1].exc_info[0] is RuntimeError
+    formatted = root.handlers[0].format(matched[-1])
+    assert "probe_failed" in formatted
+    assert "probe-exc" in formatted
+
+
 def test_configure_logging_writes_log_file(tmp_path) -> None:
     from repody.infra.observability.logging import configure_logging
 

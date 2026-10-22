@@ -10,6 +10,17 @@ datasources:
     jsonData:
       maxLines: 1000
 
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    jsonData:
+      httpMethod: POST
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
   - name: Tempo
     uid: tempo
     type: tempo
@@ -18,11 +29,14 @@ datasources:
     jsonData:
       tracesToLogsV2:
         datasourceUid: loki
-        filterByTraceID: true
+        filterByTraceID: false
         filterBySpanID: false
         customQuery: true
-        query: '{compose_service=~"repody-api|worker.*"} | json | trace_id="$${__trace.traceId}"'
+        # Docker labels the API container compose_service=api. The host log file uses repody-api.
+        query: '{compose_service=~"api|repody-api|worker-.+"} | json | trace_id="$${__trace.traceId}"'
       serviceMap:
-        datasourceUid: tempo
+        datasourceUid: prometheus
       nodeGraph:
         enabled: true
+      lokiSearch:
+        datasourceUid: loki

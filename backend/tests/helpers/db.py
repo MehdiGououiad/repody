@@ -147,13 +147,11 @@ def bind_test_database(
     engine: AsyncEngine,
     session_factory: async_sessionmaker,
 ) -> None:
-    import repody.api.deps as deps
     import repody.infra.db.base as db_base
     import repody.main as main_mod
 
     db_base.engine = engine
     db_base.async_session_factory = session_factory
-    deps.async_session_factory = session_factory
     main_mod.engine = engine
 
 
@@ -161,8 +159,6 @@ def patch_session_factory(
     monkeypatch,
     session_factory: async_sessionmaker,
 ) -> None:
-    import repody.api.deps as deps
     import repody.infra.db.base as db_base
 
     monkeypatch.setattr(db_base, "async_session_factory", session_factory)
-    monkeypatch.setattr(deps, "async_session_factory", session_factory)

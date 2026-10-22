@@ -18,6 +18,7 @@ from repody.app.workflow.stats import (
 )
 from repody.app.workflow.validation import validate_workflow_rules, validate_workflow_schema
 from repody.infra.db.models import Document, Workflow, WorkflowStatus
+from repody.infra.db.seed import SEED_WORKFLOW_ID
 from repody.schemas.workflow import WorkflowSchema
 
 
@@ -119,9 +120,6 @@ async def upsert_workflow(session: AsyncSession, payload: WorkflowSchema) -> Wor
     return workflow_to_schema(wf_loaded, total_runs=total, success_rate=rate, last_run=last)
 
 
-SEED_WORKFLOW_ID = "wf-invoice-audit"
-
-
 async def archive_workflow(session: AsyncSession, workflow_id: str) -> bool:
     if workflow_id == SEED_WORKFLOW_ID:
         return False
@@ -141,7 +139,6 @@ async def bulk_archive_workflows(session: AsyncSession, workflow_ids: list[str])
 
 
 __all__ = [
-    "SEED_WORKFLOW_ID",
     "archive_workflow",
     "bulk_archive_workflows",
     "create_workflow",

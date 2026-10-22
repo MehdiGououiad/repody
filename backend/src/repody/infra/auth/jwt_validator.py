@@ -107,6 +107,17 @@ def _decode_with_jwks(token: str, settings: Settings) -> dict[str, Any]:
     )
 
 
+def extract_bearer(authorization: str | None) -> str | None:
+    """Return the token from an ``Authorization: Bearer <token>`` header, else None."""
+    if not authorization:
+        return None
+    scheme, separator, token = authorization.strip().partition(" ")
+    if not separator or scheme.lower() != "bearer":
+        return None
+    token = token.strip()
+    return token or None
+
+
 def principal_from_bearer(token: str | None, settings: Settings | None = None) -> Principal:
     settings = settings or get_settings()
     if not token:

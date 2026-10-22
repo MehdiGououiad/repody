@@ -1,6 +1,7 @@
 import { raiseRunError } from "@/lib/api/api-error";
 import type { ClientProgressStepId, ClientStepLabels } from "@/lib/api/client-run-progress";
 import { buildClientProgress, buildClientProgressThrough } from "@/lib/api/client-run-progress";
+import { fetchWithTimeout, type TimedRequestInit } from "@/lib/api/fetch-with-timeout";
 import { browserFetch } from "@/lib/api/http";
 import type { RunProgress } from "@/lib/api/run-poll";
 
@@ -105,26 +106,13 @@ function fileFingerprint(file: File): string {
   return `${file.name}:${file.size}:${file.lastModified}`;
 }
 
-export async function fetchWithTimeout(
-  input: string,
-  init: RequestInit & { timeoutMs?: number } = {}
-): Promise<Response> {
+/** Run-step request: `/api/*` goes through the auth-aware proxy, other URLs (presigned PUT) directly. */
+export function stepFetch(input: string, init: TimedRequestInit = {}): Promise<Response> {
   const { timeoutMs = 120_000, ...rest } = init;
   if (input.startsWith("/api")) {
     return browserFetch(input.slice(4) || "/", { timeoutMs, ...rest });
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(input, { ...rest, signal: controller.signal });
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") {
-      throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)}s`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
+  return fetchWithTimeout(input, { timeoutMs, ...rest });
 }
 
 export function raiseStepError(step: string, raw: string, status?: number): never {
@@ -184,7 +172,7 @@ function rememberUploads(
 
 export async function getUploadCapabilities(): Promise<UploadCapabilities> {
   try {
-    const res = await fetchWithTimeout("/api/uploads/capabilities", { timeoutMs: 15_000 });
+    const res = await stepFetch("/api/uploads/capabilities", { timeoutMs: 15_000 });
     if (!res.ok) return { uploadMode: "api" };
     return (await res.json()) as UploadCapabilities;
   } catch {
@@ -236,7 +224,7 @@ export async function uploadViaPresign(
     })
   );
 
-  const presignRes = await fetchWithTimeout("/api/uploads/presign", {
+  const presignRes = await stepFetch("/api/uploads/presign", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ files: filesPayload }),
@@ -264,7 +252,7 @@ export async function uploadViaPresign(
       raiseStepError("Upload file", `Missing upload URL for document ${docId}`);
     }
     reportClientStep(reporter, "upload-transfer", file.name);
-    const putRes = await fetchWithTimeout(item.uploadUrl, {
+    const putRes = await stepFetch(item.uploadUrl, {
       method: item.method ?? "PUT",
       headers: item.headers ?? { "Content-Type": item.mimeType },
       body: file,
@@ -281,7 +269,7 @@ export async function uploadViaPresign(
 
   reportClientStep(reporter, "upload-confirm");
 
-  const confirmRes = await fetchWithTimeout("/api/uploads/confirm", {
+  const confirmRes = await stepFetch("/api/uploads/confirm", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({

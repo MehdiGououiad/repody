@@ -8,7 +8,7 @@ from sqlalchemy.orm import load_only, selectinload
 
 from repody.app.mappers import run_to_audit_list_item
 from repody.infra.db.models import Run, RunStatus, Workflow
-from repody.schemas.audit import AuditListItem
+from repody.schemas.audit import AuditListItem, AuditListResponse
 
 _DEFAULT_LIST_LIMIT = 50
 _MAX_LIST_LIMIT = 200
@@ -27,14 +27,12 @@ async def list_completed_audits(
     limit: int = _DEFAULT_LIST_LIMIT,
     offset: int = 0,
 ) -> list[AuditListItem]:
-    bounded_limit = max(1, min(limit, _MAX_LIST_LIMIT))
-    bounded_offset = max(0, offset)
     result = await session.execute(
         select(Run)
         .where(Run.status == RunStatus.done.value)
         .order_by(Run.created_at.desc())
-        .offset(bounded_offset)
-        .limit(bounded_limit)
+        .offset(offset)
+        .limit(limit)
         .options(
             load_only(
                 Run.id,
@@ -52,3 +50,20 @@ async def list_completed_audits(
         run_to_audit_list_item(run, run.workflow.name if run.workflow else "Workflow")
         for run in runs
     ]
+
+
+async def list_audit_page(
+    session: AsyncSession,
+    *,
+    limit: int = _DEFAULT_LIST_LIMIT,
+    offset: int = 0,
+) -> AuditListResponse:
+    """One page of completed audits; ``limit`` is clamped to 1..200."""
+    limit = max(1, min(limit, _MAX_LIST_LIMIT))
+    offset = max(0, offset)
+    return AuditListResponse(
+        audits=await list_completed_audits(session, limit=limit, offset=offset),
+        total=await count_completed_audits(session),
+        limit=limit,
+        offset=offset,
+    )

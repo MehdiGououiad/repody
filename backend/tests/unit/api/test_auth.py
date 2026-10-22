@@ -3,11 +3,8 @@ from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from tests.helpers.oidc_tokens import TEST_ISSUER, jwks_json_for_tests, mint_access_token
 
-from repody.infra.auth.dependencies import (
-    extract_bearer,
-    get_current_principal,
-    require_permission,
-)
+from repody.api.auth import get_current_principal, require_permission
+from repody.infra.auth.jwt_validator import extract_bearer
 from repody.settings import clear_settings_cache
 
 

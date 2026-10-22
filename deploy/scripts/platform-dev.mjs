@@ -272,14 +272,16 @@ function checkToolchain() {
             shell: isWin,
           });
           const ver = (v.stdout || "").trim();
-          return ver ? `pnpm/${ver} node/${process.versions.node}` : process.env.npm_config_user_agent;
+          return ver
+            ? `pnpm/${ver} node/${process.versions.node}`
+            : process.env.npm_config_user_agent;
         })(),
     },
   });
   if (result.status === 0) {
     return { ok: true, detail: (result.stdout || "").trim() || "ok" };
   }
-  const detail = ((result.stderr || result.stdout || "Node/pnpm mismatch").trim()).split(/\r?\n/)[0];
+  const detail = (result.stderr || result.stdout || "Node/pnpm mismatch").trim().split(/\r?\n/)[0];
   return { ok: false, detail };
 }
 
@@ -356,7 +358,7 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     ok: toolchain.ok,
     state: toolchain.ok ? toolchain.detail.replace(/^ok:\s*/i, "") : toolchain.detail,
     required: true,
-    fix: "Install Node 24 + corepack enable (pnpm 11.7.0)",
+    fix: "Install Node 24 + corepack enable (pnpm 12.5.1)",
   });
 
   const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
@@ -379,7 +381,10 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
   });
 
   const llama = whichBin("llama-server");
-  const llamaRun = needLlama && llama ? llamaServerRuns() : { ok: Boolean(llama), detail: llama || `missing — ${llamaInstallHint()}` };
+  const llamaRun =
+    needLlama && llama
+      ? llamaServerRuns()
+      : { ok: Boolean(llama), detail: llama || `missing — ${llamaInstallHint()}` };
   rows.push({
     name: "llama-server",
     ok: needLlama ? llamaRun.ok : Boolean(llama),

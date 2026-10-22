@@ -14,7 +14,6 @@ from repody.app.run.commands import (
     ClaimRunRequest,
     claim_run,
     fail_run_terminal,
-    finalize_pending_completion,
     publish_run_domain_events,
 )
 from repody.app.run.persistence import bind_try_claim
@@ -209,20 +208,9 @@ async def _resume_after_recorded_stage(
         event_domain="audit_run",
         run_id=run.id,
         agent_stage=stage.value,
+        run_status=run.status,
     )
     await _touch_run_activity(session, run)
-    if run.status == RunStatus.running.value:
-        # Stage recorded but complete_run may have been interrupted.
-        try:
-            await finalize_pending_completion(session, run)
-        except Exception:
-            log.exception(
-                "run_stage_resume_finalize_failed",
-                event_domain="audit_run",
-                run_id=run.id,
-                agent_stage=stage.value,
-            )
-            raise
     return True
 
 

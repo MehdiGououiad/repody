@@ -28,4 +28,4 @@ CI: [`.github/workflows/security.yml`](../../.github/workflows/security.yml)
 
 ## Pinned scanner versions
 
-Pinned scanner versions: Trivy `0.72.0`, Grype `v0.110.0`, Syft `v1.40.0` (see `deploy/scripts/security-scan.mjs`).
+Pinned scanner versions: Trivy `0.74.0`, Grype `v0.119.0`, Syft `v1.52.0` (see `deploy/scripts/security-scan.mjs`).

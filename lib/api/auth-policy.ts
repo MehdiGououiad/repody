@@ -7,13 +7,13 @@
 
 export type AuthCredentialKind = "session" | "workflow" | "none";
 
-export type AuthPolicyRow = {
+type AuthPolicyRow = {
   pattern: RegExp;
   credential: AuthCredentialKind;
   description: string;
 };
 
-export const AUTH_POLICY: AuthPolicyRow[] = [
+const AUTH_POLICY: AuthPolicyRow[] = [
   {
     pattern: /^\/api\/v1\/healthz/,
     credential: "none",

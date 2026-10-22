@@ -126,9 +126,7 @@ const apiLive =
 if (apiLive) {
   console.error(`ok: API live probe: ${apiLive}\n`);
 } else {
-  console.error(
-    "warn: API not reachable — start Compose (docs/LOCAL.md) or K8s stack\n"
-  );
+  console.error("warn: API not reachable — start Compose (docs/LOCAL.md) or K8s stack\n");
 }
 
 if (live && apiLive) {

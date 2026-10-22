@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
-import type { ModelsCatalogResponse, PlatformConfigResponse } from "@/lib/api/schema-types";
+import { fetchPlatformConfig } from "@/lib/api/platform-config";
+import type { ModelsCatalogResponse, Schema } from "@/lib/api/schema-types";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import type { RuleTemplate } from "@/lib/types";
 
@@ -53,57 +54,22 @@ export function usePlatformConfig(enabled = true) {
   return useQuery({
     queryKey: queryKeys.catalog.platformConfig,
     enabled,
-    queryFn: async (): Promise<PlatformConfigResponse> => {
-      const { data, error, response } = await browserApi.GET("/v1/platform/config");
-      if (error || !response.ok || !data) throwOnApiError(error, response);
-      return data;
-    },
+    queryFn: fetchPlatformConfig,
     staleTime: CATALOG_STALE_MS,
   });
 }
 
-export type ModelRuntimeConfigResponse = {
-  models: Array<{
-    modelId: string;
-    label: string;
-    runtime: string;
-    runtimeModel: string;
-    enabled: boolean;
-    inferenceUrl?: string | null;
-    renderPolicy?: string;
-    fields: Array<{
-      key: string;
-      envVar: string;
-      label: string;
-      description: string;
-      scope: "platform" | "worker_runtime" | "inference_server";
-      restart: string;
-      value?: string | number | boolean | null;
-      configured?: boolean;
-      source?: string;
-    }>;
-  }>;
-  shared: Array<{
-    key: string;
-    envVar: string;
-    label: string;
-    description: string;
-    scope: "platform" | "worker_runtime" | "inference_server";
-    restart: string;
-    value?: string | number | boolean | null;
-  }>;
-  deploymentNotes: Array<{
-    changeKind: string;
-    action: string;
-    detail: string;
-  }>;
+/** Model runtime config with optional wire arrays normalized to empty lists. */
+export type ModelRuntimeConfig = {
+  models: Array<Schema["ModelRuntimeProfile"] & { fields: Schema["ModelConfigField"][] }>;
+  shared: Schema["ModelConfigField"][];
+  deploymentNotes: Schema["DeploymentNote"][];
 };
-
 export function useModelRuntimeConfig(enabled = true) {
   return useQuery({
     queryKey: queryKeys.catalog.modelRuntimeConfig,
     enabled,
-    queryFn: async (): Promise<ModelRuntimeConfigResponse> => {
+    queryFn: async (): Promise<ModelRuntimeConfig> => {
       const { data, error, response } = await browserApi.GET("/v1/platform/model-runtime-config");
       if (error || !response.ok || !data) throwOnApiError(error, response);
       return {

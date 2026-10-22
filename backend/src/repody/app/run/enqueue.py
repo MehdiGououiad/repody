@@ -9,12 +9,12 @@ from asgi_correlation_id import correlation_id
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.queue.progress import refresh_single_queued_run
+from repody.app.run.access import resolve_run_enqueue_source
 from repody.app.run.admission import check_admission
 from repody.app.run.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
 from repody.app.run.intake import create_run
 from repody.app.run.pool import predict_worker_pool
-from repody.infra.auth.dependencies import extract_bearer
-from repody.infra.auth.run_access import resolve_run_enqueue_source
+from repody.infra.auth.jwt_validator import extract_bearer
 from repody.infra.rate_limit import check_run_rate_limits
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.contracts import EnqueueRunRequest

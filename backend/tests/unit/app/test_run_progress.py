@@ -3,19 +3,21 @@ from __future__ import annotations
 import pytest
 
 from repody.app.run.progress import (
-    _last_progress_commit,
-    _step,
     build_run_progress_plan,
+    clear_progress_commit_cache,
+    progress_snapshot,
+    progress_step,
     set_run_progress,
+    step_index_for,
 )
 from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
 @pytest.fixture(autouse=True)
 def _clear_progress_throttle():
-    _last_progress_commit.clear()
+    clear_progress_commit_cache()
     yield
-    _last_progress_commit.clear()
+    clear_progress_commit_cache()
 
 
 class _ThrottleSettings:
@@ -54,8 +56,6 @@ def test_progress_plan_supports_snapshot_documents():
 
 
 def test_step_index_for_resolves_by_id():
-    from repody.app.run.progress import step_index_for
-
     steps = [
         {"id": "queue"},
         {"id": "extract-doc-1"},
@@ -68,8 +68,6 @@ def test_step_index_for_resolves_by_id():
 
 
 def test_progress_snapshot_marks_only_current_active():
-    from repody.app.run.progress import progress_snapshot
-
     steps = [
         {"id": "queue", "label": "Q"},
         {"id": "extract-doc-1", "label": "E"},
@@ -133,14 +131,14 @@ async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
     def _session_factory():
         return _Session()
 
-    monkeypatch.setattr("repody.app.run.sse.publish_run_progress", _publish)
+    monkeypatch.setattr("repody.app.run.progress.publish_run_progress", _publish)
     monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
     monkeypatch.setattr(
         "repody.app.run.progress.get_settings",
         lambda: _ThrottleSettings(),
     )
 
-    steps = [_step("queue", "Queued")]
+    steps = [progress_step("queue", "Queued")]
     await set_run_progress(None, "run-1", steps, 0, "Primed", force=True)
     published.clear()
     db_opened = False
@@ -180,14 +178,14 @@ async def test_progress_db_written_when_forced(monkeypatch):
     def _session_factory():
         return _Session()
 
-    monkeypatch.setattr("repody.app.run.sse.publish_run_progress", _publish)
+    monkeypatch.setattr("repody.app.run.progress.publish_run_progress", _publish)
     monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
     monkeypatch.setattr(
         "repody.app.run.progress.get_settings",
         lambda: _ThrottleSettings(),
     )
 
-    steps = [_step("queue", "Queued")]
+    steps = [progress_step("queue", "Queued")]
     await set_run_progress(None, "run-2", steps, 0, "Done", force=True)
 
     assert len(published) == 1

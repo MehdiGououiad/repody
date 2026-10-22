@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from repody.app.run.helpers import attr_or_key
 from repody.extraction.modes import DEFAULT_READ_PATH_ID, parse_read_path
 from repody.infra.db.models import Run, Workflow
 
@@ -24,26 +25,25 @@ def needs_extract_pool(extraction_mode: str | None) -> bool:
     return parse_read_path(extraction_mode).read in _EXTRACT_READ_KINDS
 
 
+def _pool_for_documents(workflow_docs: list[Any], document_ids: list[str | None]) -> WorkerPool:
+    """``extract`` when any uploaded file targets a document that needs the model."""
+    wf_doc_by_id = {attr_or_key(doc, "id"): doc for doc in workflow_docs}
+    for doc_id in document_ids:
+        wf_doc = wf_doc_by_id.get(doc_id) if doc_id else None
+        mode = attr_or_key(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID)
+        if needs_extract_pool(mode):
+            return "extract"
+    return "fast"
+
+
 def classify_bindings_for_workflow(
     workflow_docs: list[Any],
     file_bindings: list[FileBindingLike] | None,
 ) -> WorkerPool:
     """Predict pool from workflow document modes and upload bindings."""
-    if not file_bindings:
-        return "fast"
-
-    wf_doc_by_id = {_value(doc, "id"): doc for doc in workflow_docs}
-    for binding in file_bindings:
-        doc_id = getattr(binding, "document_id", None)
-        wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = (
-            _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID)
-            if wf_doc
-            else DEFAULT_READ_PATH_ID
-        )
-        if needs_extract_pool(mode):
-            return "extract"
-    return "fast"
+    return _pool_for_documents(
+        workflow_docs, [binding.document_id for binding in file_bindings or []]
+    )
 
 
 def classify_run_documents(
@@ -51,31 +51,10 @@ def classify_run_documents(
     run_documents: list[Any],
 ) -> WorkerPool:
     """Classify an existing run from persisted run documents."""
-    uploaded = [rd for rd in run_documents if _value(rd, "storage_key")]
-    if not uploaded:
-        return "fast"
-
-    wf_doc_by_id = {_value(doc, "id"): doc for doc in workflow_docs}
-    for rd in uploaded:
-        doc_id = _value(rd, "document_id")
-        wf_doc = wf_doc_by_id.get(doc_id or "") if doc_id else None
-        mode = (
-            _value(wf_doc, "extraction_mode", DEFAULT_READ_PATH_ID)
-            if wf_doc
-            else DEFAULT_READ_PATH_ID
-        )
-        if needs_extract_pool(mode):
-            return "extract"
-    return "fast"
-
-
-def _value(item: Any, key: str, default: Any = None) -> Any:
-    value = getattr(item, key, None)
-    if value is not None:
-        return value
-    if isinstance(item, dict):
-        return item.get(key, default)
-    return default
+    return _pool_for_documents(
+        workflow_docs,
+        [attr_or_key(rd, "document_id") for rd in run_documents if attr_or_key(rd, "storage_key")],
+    )
 
 
 async def predict_worker_pool(

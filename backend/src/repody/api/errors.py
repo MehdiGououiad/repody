@@ -1,4 +1,4 @@
-"""HTTP mapping for AppError — preferred raise path for AppError from routers."""
+"""Translate application ``AppError`` / ``Result`` values into HTTP errors."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from typing import NoReturn
 
 from fastapi import HTTPException
 
-from repody.runtime.contracts.result import AppError, http_status_for
+from repody.runtime.contracts.result import AppError, Result, http_status_for
 
 
 def http_exception_for(error: AppError) -> HTTPException:
@@ -20,3 +20,10 @@ def http_exception_for(error: AppError) -> HTTPException:
 
 def raise_app_error(error: AppError) -> NoReturn:
     raise http_exception_for(error)
+
+
+def unwrap_or_raise[T](result: Result[T]) -> T:
+    """Return the success value, or raise the matching HTTPException."""
+    if result.error:
+        raise_app_error(result.error)
+    return result.unwrap()

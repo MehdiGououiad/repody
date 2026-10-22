@@ -61,7 +61,7 @@ minio:
   mode: standalone
   image:
     repository: pgsty/minio
-    tag: RELEASE.2026-06-18T00-00-00Z
+    tag: RELEASE.2026-08-04T00-00-00Z
   console:
     enabled: false
   auth:
@@ -239,7 +239,7 @@ web:
 # ── In-cluster Keycloak (staging/local; production usually uses external IdP) ─
 keycloak:
   enabled: false
-  image: quay.io/keycloak/keycloak:26.6.4
+  image: quay.io/keycloak/keycloak:26.7.4
   realm: repody
   hostname: auth.example.com
   # Busybox image for web pod init that maps gatewayApi.authHost → in-cluster Keycloak.

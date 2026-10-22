@@ -19,8 +19,3 @@ export async function fetchPlatformConfig(): Promise<PlatformConfig> {
   if (error || !response.ok || !data) throwOnApiError(error, response);
   return normalizePlatformConfig(data);
 }
-
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}

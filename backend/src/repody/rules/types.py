@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from repody.rules.llm_fields import referenced_fields
+
 
 @dataclass
 class RuleEvalResult:
@@ -38,7 +40,5 @@ def collect_affected_fields(rule: dict) -> list[str]:
             if op and op.get("kind") == "field" and op.get("value"):
                 affected.append(op["value"])
     if rule_kind(rule) == "llm":
-        from repody.rules.llm_fields import referenced_fields
-
         affected.extend(referenced_fields(rule.get("body") or ""))
     return list(dict.fromkeys(affected))

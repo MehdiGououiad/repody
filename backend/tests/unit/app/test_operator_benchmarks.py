@@ -57,6 +57,7 @@ def test_benchmark_command_uses_cache_flag_and_models(tmp_path) -> None:
 
     assert "--no-cache-check" in command
     assert "--cache-check" not in command
+    assert "--bearer-token" not in command
     assert command.count("--model") == 2
     assert command[-2:] == ["--model", "vendor/model"]
 

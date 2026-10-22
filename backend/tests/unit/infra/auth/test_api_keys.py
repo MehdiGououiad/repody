@@ -1,4 +1,4 @@
-from repody.app.api_keys import api_key_hint, hash_api_key, verify_api_key
+from repody.infra.auth.api_keys import api_key_hint, hash_api_key, verify_api_key
 
 
 def test_hash_and_verify_roundtrip() -> None:

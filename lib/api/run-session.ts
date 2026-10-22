@@ -7,12 +7,12 @@ import {
 import { browserFetch } from "@/lib/api/http";
 import { type RunProgress, waitForRunUntilDone } from "@/lib/api/run-poll";
 import {
-  fetchWithTimeout,
   getUploadCapabilities,
   type ProgressReporter,
   raiseStepError,
   reportClientStep,
   type StoredUploadBinding,
+  stepFetch,
   uploadViaPresign,
 } from "@/lib/api/run-upload";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
@@ -92,7 +92,7 @@ async function postRunJson(
         timeoutMs: 60_000,
         workflowApiKey: credential.apiKey,
       })
-    : await fetchWithTimeout(path, {
+    : await stepFetch(path, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(payload),

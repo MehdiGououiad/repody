@@ -9,8 +9,7 @@ import type {
   RunAuditMetadata,
   RunDocumentExtractionMeta,
 } from "@/lib/types/audit";
-import { formatDurationMs } from "@/lib/types/audit";
-import { cn, formatExtractedFieldValue } from "@/lib/utils";
+import { cn, formatDurationMs, formatExtractedFieldValue } from "@/lib/utils";
 
 function MetaChip({
   label,

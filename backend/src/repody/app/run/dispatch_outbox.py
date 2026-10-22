@@ -11,7 +11,8 @@ import structlog
 from sqlalchemy import CursorResult, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.run.dispatch import mark_run_dispatch_failed
+from repody.app.run.dispatch import dispatch_audit_run, mark_run_dispatch_failed
+from repody.infra.db import base as db_base
 from repody.infra.db.models import RunDispatchOutbox
 from repody.settings import get_settings
 
@@ -102,9 +103,7 @@ async def _claim_outbox_row(
 
 
 async def _finalize_dispatch_success(run_id: str) -> None:
-    from repody.infra.db.base import async_session_factory
-
-    async with async_session_factory() as session:
+    async with db_base.async_session_factory() as session:
         row = await session.get(RunDispatchOutbox, run_id)
         if row is None:
             return
@@ -116,11 +115,9 @@ async def _finalize_dispatch_success(run_id: str) -> None:
 
 async def _finalize_dispatch_failure(claimed: _ClaimedDispatch, exc: Exception) -> bool:
     """Persist retry/fail. Returns False (not successfully dispatched)."""
-    from repody.infra.db.base import async_session_factory
-
     settings = get_settings()
     transient = _is_transient_dispatch_error(exc)
-    async with async_session_factory() as session:
+    async with db_base.async_session_factory() as session:
         row = await session.get(RunDispatchOutbox, claimed.run_id)
         if row is None:
             return False
@@ -153,8 +150,6 @@ async def _finalize_dispatch_failure(claimed: _ClaimedDispatch, exc: Exception) 
 
 async def _kiq_claimed(claimed: _ClaimedDispatch) -> bool:
     """Dispatch outside any DB lock/transaction."""
-    from repody.app.run.dispatch import dispatch_audit_run
-
     try:
         await dispatch_audit_run(
             claimed.run_id,
@@ -186,10 +181,8 @@ async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> 
 
 async def dispatch_outbox_run(run_id: str) -> bool:
     """Claim one outbox row, commit (release lock), then Taskiq kiq."""
-    from repody.infra.db.base import async_session_factory
-
     claimed: _ClaimedDispatch | None = None
-    async with async_session_factory() as session:
+    async with db_base.async_session_factory() as session:
         stmt = select(RunDispatchOutbox).where(RunDispatchOutbox.run_id == run_id)
         if _supports_skip_locked(session):
             stmt = stmt.with_for_update(skip_locked=True)

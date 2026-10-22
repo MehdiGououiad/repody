@@ -73,9 +73,7 @@
       "enabled": true,
       "emailVerified": true,
       "requiredActions": [],
-      "credentials": [
-        { "type": "password", "value": "repody-dev", "temporary": false }
-      ],
+      "credentials": [{ "type": "password", "value": "repody-dev", "temporary": false }],
       "realmRoles": ["platform_admin"]
     },
     {
@@ -86,9 +84,7 @@
       "enabled": true,
       "emailVerified": true,
       "requiredActions": [],
-      "credentials": [
-        { "type": "password", "value": "repody-dev", "temporary": false }
-      ],
+      "credentials": [{ "type": "password", "value": "repody-dev", "temporary": false }],
       "realmRoles": ["operator"]
     },
     {
@@ -99,9 +95,7 @@
       "enabled": true,
       "emailVerified": true,
       "requiredActions": [],
-      "credentials": [
-        { "type": "password", "value": "repody-dev", "temporary": false }
-      ],
+      "credentials": [{ "type": "password", "value": "repody-dev", "temporary": false }],
       "realmRoles": ["viewer"]
     }
   ]

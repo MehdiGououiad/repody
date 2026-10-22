@@ -32,7 +32,7 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 
 ### Git path (Windows · macOS · Linux)
 
-Prerequisites: Docker Desktop, Node 24.x, Corepack pnpm 11.7.0, `llama-server` on PATH
+Prerequisites: Docker Desktop, Node 24.x, Corepack pnpm 12.5.1, `llama-server` on PATH
 (`winget install ggml.llamacpp` / `brew install llama.cpp`).
 
 ```bash

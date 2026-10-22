@@ -16,7 +16,14 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { killListenerPort, parseEnvFile, resolveExecutable } from "./runtime-env.mjs";
+import {
+  fetchJson,
+  findLlamaServerExe,
+  killListenerPort,
+  parseEnvFile,
+  resolveExecutable,
+  waitForLlamaServer,
+} from "./runtime-env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const GLM_DIR = path.join(ROOT, "deploy/glmocr");
@@ -26,17 +33,6 @@ const HF_REPO = "ggml-org/GLM-OCR-GGUF";
 /** Official llama.cpp tip: F16 > Q8_0 for OCR quality (https://huggingface.co/blog/ggml-org/using-ocr-models-with-llama-cpp). */
 const DEFAULT_HF_QUANT = "F16";
 const DEFAULT_ALIAS = "GLM-OCR";
-
-function findLlamaServerExe() {
-  const probe = spawnSync("where.exe", ["llama-server"], { encoding: "utf8" });
-  if (probe.status === 0) {
-    const line = probe.stdout.split(/\r?\n/).find((l) => l.trim().endsWith("llama-server.exe"));
-    if (line?.trim()) return line.trim();
-  }
-  const which = spawnSync("which", ["llama-server"], { encoding: "utf8" });
-  if (which.status === 0 && which.stdout.trim()) return which.stdout.trim().split(/\r?\n/)[0];
-  return null;
-}
 
 function resolvePaths() {
   const fileEnv = parseEnvFile(PATHS_FILE);
@@ -95,32 +91,6 @@ function resolvePaths() {
     useHf,
     missing,
   };
-}
-
-async function fetchJson(url) {
-  const res = await fetch(url);
-  const text = await res.text();
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = text;
-  }
-  return { ok: res.ok, status: res.status, body };
-}
-
-async function waitForServer(port, { timeoutMs = 600_000 } = {}) {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    try {
-      const { ok } = await fetchJson(`http://127.0.0.1:${port}/v1/models`);
-      if (ok) return true;
-    } catch {
-      // retry
-    }
-    await new Promise((r) => setTimeout(r, 3000));
-  }
-  return false;
 }
 
 function buildArgs(paths) {
@@ -284,7 +254,7 @@ async function serve() {
   });
   child.unref();
 
-  const ready = await waitForServer(paths.port);
+  const ready = await waitForLlamaServer(paths.port);
   if (!ready) {
     console.error("Timed out waiting for GLM-OCR llama-server. Check logs in", LOG_DIR);
     process.exit(1);

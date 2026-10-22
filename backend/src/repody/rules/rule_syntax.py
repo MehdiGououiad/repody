@@ -2,68 +2,21 @@
 
 from __future__ import annotations
 
-import re
-
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
-from repody.rules.table_aggregates import (
-    LOGIC_TABLE_FUNCTIONS,
-    count_rows_where,
-    sum_rows,
-    sum_rows_where,
-)
+from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers
 from repody.rules.types import rule_kind
 
-_IDENTIFIER = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\b")
-_RESERVED = {
-    "and",
-    "or",
-    "not",
-    "True",
-    "False",
-    "None",
-    "if",
-    "else",
-    "in",
-    "is",
-    *LOGIC_TABLE_FUNCTIONS,
-}
+# Sample values tried in order until the expression type-checks.
+_SAMPLE_VALUES: tuple[object, ...] = (
+    '[{"amount": 10.0, "category": "type-a"}]',
+    1.0,
+    "2000-01-01",
+)
 
 
-def _logic_functions() -> dict:
-    return {
-        "sum_rows": sum_rows,
-        "sum_rows_where": sum_rows_where,
-        "count_rows_where": count_rows_where,
-    }
-
-
-def _dummy_namespace_float(body: str) -> dict[str, float]:
-    names: dict[str, float] = {}
-    for token in _IDENTIFIER.findall(body):
-        if token in _RESERVED:
-            continue
-        names.setdefault(token, 1.0)
-    return names
-
-
-def _dummy_namespace_str(body: str) -> dict[str, str]:
-    names: dict[str, str] = {}
-    for token in _IDENTIFIER.findall(body):
-        if token in _RESERVED:
-            continue
-        names.setdefault(token, "2000-01-01")
-    return names
-
-
-def _dummy_namespace_table(body: str) -> dict[str, str]:
-    names: dict[str, str] = {}
-    sample = '[{"amount": 10.0, "category": "type-a"}]'
-    for token in _IDENTIFIER.findall(body):
-        if token in _RESERVED:
-            continue
-        names.setdefault(token, sample)
-    return names
+def _sample_namespace(body: str, value: object) -> dict[str, object]:
+    return dict.fromkeys(field_identifiers(body), value)
 
 
 def validate_logic_rule_body(body: str) -> str | None:
@@ -71,13 +24,13 @@ def validate_logic_rule_body(body: str) -> str | None:
     if not expression:
         return "Logic rule body is empty."
     evaluator = EvalWithCompoundTypes()
-    functions = {**evaluator.functions, **_logic_functions()}
+    functions = {**evaluator.functions, **LOGIC_FUNCTIONS}
     last_type_error: Exception | None = None
-    for namespace_factory in (_dummy_namespace_table, _dummy_namespace_float, _dummy_namespace_str):
+    for sample in _SAMPLE_VALUES:
         try:
             simple_eval(
                 expression,
-                names=namespace_factory(expression),
+                names=_sample_namespace(expression, sample),
                 functions=functions,
             )
             return None

@@ -13,22 +13,20 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { killListenerPort, parseEnvFile, resolveExecutable } from "./runtime-env.mjs";
+import {
+  fetchJson,
+  findLlamaServerExe,
+  killListenerPort,
+  parseEnvFile,
+  resolveExecutable,
+  waitForLlamaServer,
+} from "./runtime-env.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const LLAMA_DIR = path.join(ROOT, "deploy/llamacpp");
 const PATHS_FILE = path.join(LLAMA_DIR, "paths.local.env");
 const LOG_DIR = path.join(LLAMA_DIR, "logs");
 const WARMUP_MARKER = path.join(LOG_DIR, ".warmup-complete");
-
-function findLlamaServerExe() {
-  const probe = spawnSync("where.exe", ["llama-server"], { encoding: "utf8" });
-  if (probe.status === 0) {
-    const line = probe.stdout.split(/\r?\n/).find((l) => l.trim().endsWith("llama-server.exe"));
-    if (line?.trim()) return line.trim();
-  }
-  return null;
-}
 
 function inferModelAlias(modelPath, explicitAlias) {
   // Local default is Q8_0 (deep-bench winner); HF “small local” pack is Q4_K_M.
@@ -127,32 +125,6 @@ function logLaunchFlags(paths) {
   console.log(`  ${parts.join(", ")}`);
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url);
-  const text = await res.text();
-  let body;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    body = text;
-  }
-  return { ok: res.ok, status: res.status, body };
-}
-
-async function waitForServer(port, { timeoutMs = 300_000 } = {}) {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    try {
-      const { ok } = await fetchJson(`http://127.0.0.1:${port}/v1/models`);
-      if (ok) return true;
-    } catch {
-      // retry
-    }
-    await new Promise((r) => setTimeout(r, 3000));
-  }
-  return false;
-}
-
 function buildArgs(paths) {
   // Official multimodal serve + Qwen-VL vision budget + flash-attn.
   const args = [
@@ -236,7 +208,7 @@ async function serve() {
   });
   child.unref();
 
-  const ready = await waitForServer(paths.port);
+  const ready = await waitForLlamaServer(paths.port, { timeoutMs: 300_000 });
   if (!ready) {
     console.error("Timed out waiting for llama-server. Check logs in", LOG_DIR);
     process.exit(1);

@@ -1,3 +1,5 @@
+"""Run entity, domain events, and lifecycle transitions as pure functions."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -60,10 +62,6 @@ class RunFailed(RunDomainEvent):
     error: str
     previous_status: str
 
-
-RunDomainEventUnion = RunStarted | RunCompleted | RunFailed
-
-"""Run lifecycle transitions as pure functions (no aggregate class)."""
 
 _TERMINAL = frozenset({RunStatus.done, RunStatus.failed})
 

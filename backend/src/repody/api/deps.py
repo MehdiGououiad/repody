@@ -21,8 +21,4 @@ async def get_session() -> AsyncGenerator[AsyncSession]:
             raise
 
 
-# Alias for older call sites / docs that still say get_db.
-get_db = get_session
-
-# FastAPI preferred form: Annotated[..., Depends(...)] on parameters.
 SessionDep = Annotated[AsyncSession, Depends(get_session)]

@@ -15,7 +15,7 @@ gatewayConsumerNamespace: repody
 
 keycloak:
   enabled: false
-  image: quay.io/keycloak/keycloak:26.6.4
+  image: quay.io/keycloak/keycloak:26.7.4
   realm: repody
   # Public hostname (host only). When ingress TLS is enabled, KC_HOSTNAME becomes https://<hostname>.
   hostname: auth.example.com
@@ -35,7 +35,7 @@ keycloak:
     port: 5432
     name: keycloak
     username: keycloak
-    initImage: postgres:17.10-alpine
+    initImage: postgres:17.11-alpine
     adminUsername: audit
     adminExistingSecret: repody-data-postgresql
     adminPasswordKey: password

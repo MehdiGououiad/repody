@@ -17,25 +17,26 @@ from fastapi import (
 )
 from sse_starlette.sse import EventSourceResponse
 
+from repody.api.auth import require_admin_or_workflow_run, require_run_create_access
 from repody.api.deps import SessionDep
-from repody.api.errors import raise_app_error
-from repody.api.runs_enqueue import enqueue_run_http
-from repody.api.runs_handlers import (
-    bindings_from_stored,
-    snapshot_from_body,
-    snapshot_from_form_payload,
-)
-from repody.app.run.intake import poll_run, poll_run_status
+from repody.api.errors import unwrap_or_raise
+from repody.api.uploads import read_upload_capped
+from repody.app.run.access import resolve_owner_subject
+from repody.app.run.enqueue import enqueue_run
+from repody.app.run.intake import initial_run_progress, poll_run, poll_run_status
 from repody.app.run.sse import subscribe_run_progress
-from repody.app.run.upload_bindings import bindings_from_multipart
-from repody.infra.auth.dependencies import (
-    require_admin_or_workflow_run,
-    require_run_create_access,
-)
-from repody.infra.db.models import Run
-from repody.runtime.run.contracts import EnqueueRunRequest, FileBinding
+from repody.app.run.upload_bindings import bindings_from_multipart, parse_json_form
+from repody.app.uploads.intents import bindings_from_confirmed_uploads
+from repody.runtime.run.contracts import EnqueueRunRequest, FileBinding, RunSnapshot
 from repody.schemas.run_requests import CreateRunJsonBody
-from repody.schemas.workflow import RunCreatedResponse, RunPollResponse
+from repody.schemas.workflow import (
+    DocumentDefSchema,
+    RunCreatedResponse,
+    RunPollResponse,
+    WorkflowRuleSchema,
+)
+from repody.settings import get_settings
+from repody.util.json_shape import normalize_keys_to_snake
 
 router = APIRouter(tags=["runs"])
 log = structlog.get_logger(__name__)
@@ -55,15 +56,26 @@ _RUN_EVENTS_OPENAPI: dict[int | str, dict[str, Any]] = {
 }
 
 
+def _snapshot_from_form_payload(payload: str | None) -> RunSnapshot | None:
+    data = unwrap_or_raise(parse_json_form(payload, "payload"))
+    if data is None:
+        return None
+    if not isinstance(data, dict):
+        raise HTTPException(400, "Invalid JSON in payload — expected an object.")
+    data = normalize_keys_to_snake(data)
+    return RunSnapshot(
+        documents=[DocumentDefSchema.model_validate(d) for d in data.get("documents", [])],
+        rules=[WorkflowRuleSchema.model_validate(r) for r in data.get("rules", [])],
+        workflow_name=data.get("workflow_name"),
+    )
+
+
 @router.get(
     "/runs/{run_id}/status",
     response_model=RunPollResponse,
     dependencies=[Depends(require_admin_or_workflow_run)],
 )
-async def get_run_status(
-    run_id: str,
-    session: SessionDep,
-) -> RunPollResponse:
+async def get_run_status(run_id: str, session: SessionDep) -> RunPollResponse:
     """Lightweight poll — status and progress only (no full audit payload)."""
     body = await poll_run_status(session, run_id)
     return RunPollResponse(
@@ -85,13 +97,7 @@ async def get_run(
     full: bool = Query(True, description="If false, same as /status (lightweight)."),
 ) -> RunPollResponse:
     if not full:
-        body = await poll_run_status(session, run_id)
-        return RunPollResponse(
-            status=body.status,
-            progress=body.progress,
-            result=None,
-            error=body.error,
-        )
+        return await get_run_status(run_id, session)
     return await poll_run(session, run_id)
 
 
@@ -100,17 +106,9 @@ async def get_run(
     responses=_RUN_EVENTS_OPENAPI,
     dependencies=[Depends(require_admin_or_workflow_run)],
 )
-async def stream_run_events(
-    run_id: str,
-):
+async def stream_run_events(run_id: str):
     """Server-Sent Events stream for live run progress (Redis pub/sub)."""
-    from repody.infra.db import base as db_base
-
-    async with db_base.async_session_factory() as session:
-        run = await session.get(Run, run_id)
-        if not run:
-            raise HTTPException(404, "Run not found")
-        initial_progress = run.progress
+    initial_progress = unwrap_or_raise(await initial_run_progress(run_id))
 
     async def event_generator():
         if initial_progress:
@@ -123,11 +121,7 @@ async def stream_run_events(
         async for payload in subscribe_run_progress(run_id):
             yield {"data": json.dumps(payload, ensure_ascii=False)}
 
-    log.info(
-        "run_events_stream_started",
-        event_domain="run_events",
-        run_id=run_id,
-    )
+    log.info("run_events_stream_started", event_domain="run_events", run_id=run_id)
     return EventSourceResponse(
         event_generator(),
         ping=30,
@@ -149,27 +143,24 @@ async def create_run_json(
     authorization: str | None = Header(None),
 ):
     """Create a run with files already uploaded to storage (presigned PUT flow)."""
-    bindings = (
-        await bindings_from_stored(
-            session,
-            body.file_bindings,
-            authorization=authorization,
+    bindings: list[FileBinding] | None = None
+    if body.file_bindings:
+        bindings = unwrap_or_raise(
+            await bindings_from_confirmed_uploads(
+                session,
+                [item.to_binding() for item in body.file_bindings],
+                owner_subject=resolve_owner_subject(authorization),
+            )
         )
-        if body.file_bindings
-        else None
+    request_body = EnqueueRunRequest(
+        workflow_id=workflow_id,
+        authorization=authorization,
+        file_bindings=bindings,
+        snapshot=body.snapshot.to_snapshot() if body.snapshot else None,
+        client_host=request.client.host if request.client else None,
+        production_api_shape=False,
     )
-    snapshot = snapshot_from_body(body.snapshot)
-    return await enqueue_run_http(
-        session,
-        EnqueueRunRequest(
-            workflow_id=workflow_id,
-            authorization=authorization,
-            file_bindings=bindings,
-            snapshot=snapshot,
-            client_host=request.client.host if request.client else None,
-            production_api_shape=False,
-        ),
-    )
+    return unwrap_or_raise(await enqueue_run(session, request_body))
 
 
 @router.post(
@@ -192,28 +183,26 @@ async def create_run(
     payload: str | None = Form(None),
 ):
     """Multipart fallback when presigned upload is unavailable."""
+    snapshot = _snapshot_from_form_payload(payload)
     bindings: list[FileBinding] | None = None
-    snapshot = snapshot_from_form_payload(payload)
     if files:
-        bindings_r = await bindings_from_multipart(
-            session,
-            workflow_id,
-            files,
-            document_ids=document_ids,
-            document_types=document_types,
+        max_bytes = get_settings().max_upload_bytes
+        incoming = [await read_upload_capped(upload, max_bytes=max_bytes) for upload in files]
+        bindings = unwrap_or_raise(
+            await bindings_from_multipart(
+                session,
+                workflow_id,
+                incoming,
+                document_ids=document_ids,
+                document_types=document_types,
+            )
         )
-        if not bindings_r.is_ok:
-            assert bindings_r.error is not None
-            raise_app_error(bindings_r.error)
-        bindings = bindings_r.unwrap()
-    return await enqueue_run_http(
-        session,
-        EnqueueRunRequest(
-            workflow_id=workflow_id,
-            authorization=authorization,
-            file_bindings=bindings,
-            snapshot=snapshot,
-            client_host=request.client.host if request.client else None,
-            production_api_shape=snapshot is None,
-        ),
+    request_body = EnqueueRunRequest(
+        workflow_id=workflow_id,
+        authorization=authorization,
+        file_bindings=bindings,
+        snapshot=snapshot,
+        client_host=request.client.host if request.client else None,
+        production_api_shape=snapshot is None,
     )
+    return unwrap_or_raise(await enqueue_run(session, request_body))

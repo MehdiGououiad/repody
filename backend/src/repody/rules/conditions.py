@@ -5,15 +5,12 @@ from __future__ import annotations
 import json
 import re
 
+from repody.rules.expression import normalize_field_key
 from repody.rules.types import rule_kind
 from repody.rules.value_coercion import is_iso_date_like
 from repody.util.json_shape import normalize_keys_to_snake
 
 NO_RIGHT = frozenset({"EXISTS", "IS_EMPTY"})
-
-
-def _normalize_field_token(name: str) -> str:
-    return name.strip().lower().replace(" ", "_")
 
 
 def _field_ref(token: str) -> str | None:
@@ -23,10 +20,10 @@ def _field_ref(token: str) -> str | None:
     if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", t):
         return t
     if "." in t:
-        parts = [_normalize_field_token(part) for part in t.split(".")]
+        parts = [normalize_field_key(part) for part in t.split(".")]
         if all(re.match(r"^[a-z_][a-z0-9_]*$", part) for part in parts):
             return "__".join(parts) if len(parts) > 1 else parts[0]
-    normalized = _normalize_field_token(t)
+    normalized = normalize_field_key(t)
     if re.match(r"^[a-z_][a-z0-9_]*$", normalized):
         return normalized
     return None
