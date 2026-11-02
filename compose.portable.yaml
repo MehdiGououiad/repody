@@ -26,6 +26,9 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      # One-shot bucket init; this condition also lets `compose up --wait` accept its exit 0.
+      minio-init:
+        condition: service_completed_successfully
       keycloak:
         condition: service_started
     ports:

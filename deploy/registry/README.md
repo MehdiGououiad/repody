@@ -190,8 +190,8 @@ Built-in benchmark fixtures are excluded from release images unless
 Build one image when iterating:
 
 ```powershell
-pnpm images:build -- --only=backend
-pnpm images:build -- --only=web
+docker buildx bake -f docker-bake.hcl backend --load
+docker buildx bake -f docker-bake.hcl web --load
 ```
 
-Use `pnpm images:push` only after `pnpm images:build` when you want to push an already-built registry-tagged image without rebuilding.
+`pnpm images:release` rebuilds from the build cache and pushes, so there is no separate push-only step.

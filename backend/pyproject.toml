@@ -53,6 +53,7 @@ dev = [
   "pytest-html>=4.1.0",
   "pytest-cov>=6.0.0",
   "respx>=0.22.0",
+  "import-linter>=2.15",
 ]
 otel = [
   "opentelemetry-sdk>=1.44.0",
@@ -159,6 +160,88 @@ ban-relative-imports = "all"
 # Pydantic deep-copies field defaults per instance, so a list/dict default is
 # safe here. Annotating these as ClassVar would drop them from the model.
 "src/repody/schemas/*.py" = ["RUF012"]
+
+# Layer contracts (import-linter): `uv run lint-imports`, run by `pnpm architecture:check`.
+[tool.importlinter]
+root_package = "repody"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Runtime contracts are framework- and IO-free"
+type = "forbidden"
+source_modules = ["repody.runtime.contracts"]
+forbidden_modules = [
+  "sqlalchemy", "fastapi", "redis", "structlog",
+  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.settings",
+  "repody.taskiq", "repody.extraction", "repody.rules",
+]
+
+[[tool.importlinter.contracts]]
+name = "Application layer is framework-free"
+type = "forbidden"
+source_modules = ["repody.app"]
+forbidden_modules = ["fastapi", "starlette", "repody.api"]
+# Known indirect path: app.run.enqueue -> infra.rate_limit -> starlette.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Infrastructure has no use cases or HTTP routes"
+type = "forbidden"
+source_modules = ["repody.infra"]
+forbidden_modules = ["repody.api", "repody.app", "repody.agents", "repody.taskiq"]
+
+[[tool.importlinter.contracts]]
+name = "Settings is a leaf"
+type = "forbidden"
+source_modules = ["repody.settings"]
+forbidden_modules = [
+  "repody.api", "repody.app", "repody.agents", "repody.catalog", "repody.extraction",
+  "repody.inference", "repody.infra", "repody.rules", "repody.runtime", "repody.taskiq",
+]
+
+[[tool.importlinter.contracts]]
+name = "Runtime metrics build is IO-free"
+type = "forbidden"
+source_modules = ["repody.runtime.metrics"]
+forbidden_modules = [
+  "sqlalchemy", "fastapi", "redis",
+  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.taskiq",
+]
+
+[[tool.importlinter.contracts]]
+name = "Runtime run is pure + contracts"
+type = "forbidden"
+source_modules = ["repody.runtime.run"]
+forbidden_modules = [
+  "sqlalchemy", "fastapi", "redis", "structlog",
+  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.settings", "repody.taskiq",
+]
+
+[[tool.importlinter.contracts]]
+name = "Runtime operator is IO-free"
+type = "forbidden"
+source_modules = ["repody.runtime.operator"]
+forbidden_modules = [
+  "sqlalchemy", "fastapi", "redis", "structlog",
+  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.taskiq",
+]
+
+[[tool.importlinter.contracts]]
+name = "IDP contracts and compose are port-injected"
+type = "forbidden"
+source_modules = ["repody.agents.idp.contracts", "repody.agents.idp.compose"]
+forbidden_modules = [
+  "sqlalchemy", "fastapi", "redis", "structlog",
+  "repody.api", "repody.app", "repody.infra", "repody.settings", "repody.taskiq",
+]
+# Known indirect path: idp.compose -> extraction.modes -> settings.
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "IDP compose does not reach into adapters"
+type = "forbidden"
+source_modules = ["repody.agents.idp.compose"]
+forbidden_modules = ["repody.agents.idp.adapters"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]

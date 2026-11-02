@@ -190,8 +190,6 @@ pnpm platform stop
 pnpm platform help
 ```
 
-Aliases: `pnpm dev:all` -> start · `pnpm dev:setup` / `dev:status` / `dev:stop` -> same CLI.
-
 ---
 
 ## Flags
@@ -241,7 +239,8 @@ Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option - only used ins
 
 ```bash
 pnpm dev:src:all    # local-dev: host API/UI + local worker build
-pnpm dev:app        # foreground API + UI only
+pnpm dev:src:app    # foreground API + UI only
+pnpm dev:src:stop   # stop the source lane
 ```
 
 Engineering reference: [DEVELOPMENT.md](./DEVELOPMENT.md).

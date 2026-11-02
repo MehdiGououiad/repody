@@ -15,7 +15,7 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 | `edge` | `repody-web` | Next.js UI |
 | `data` | Postgres, Redis, object storage | Durable state and Taskiq broker (bundled locally; external in production) |
 | `auth` | Keycloak | OIDC (bundled locally; external IdP in production) |
-| `obs` | Grafana, Loki, Promtail | Logs (local addons) |
+| `obs` | Grafana, Loki, Alloy | Logs (local addons) |
 | `traces` | Tempo, OTEL | Traces (local addons) |
 | `bugsink` | Bugsink | Error tracking (local addons) |
 
@@ -23,7 +23,7 @@ Platform workloads are grouped into **modules** that map to Kubernetes Deploymen
 
 **Local dev:** Docker Compose for fast iteration. Production cluster: Helm on OpenShift / K8s ([docs/CLUSTER.md](../CLUSTER.md)).
 
-**Recipes:** `pnpm platform` · `pnpm dev:api` · `pnpm ui` · `pnpm platform stop`
+**Recipes:** `pnpm platform` · `pnpm dev:src:api` · `pnpm ui` · `pnpm platform stop`
 
 Production entrypoint: Helm (`deploy/helm/repody`).
 

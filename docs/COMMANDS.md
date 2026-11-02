@@ -35,8 +35,6 @@ Pull Hub images, start the platform, and (by default) **host NuExtract** (`repod
 | `pnpm doctor` | Toolchain only (Node/pnpm) - prefer `pnpm platform doctor` |
 | `pnpm db:migrate` | Apply Alembic migrations |
 
-Aliases: `pnpm dev:all` -> `platform up` · `pnpm dev:setup` / `dev:status` / `dev:stop` -> same CLI.
-
 Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.md) (docs hub).
 
 ### Document models
@@ -64,9 +62,12 @@ Hub path above is the product runtime. For hacking API/UI from source:
 
 | Command | When |
 |---------|------|
-| `pnpm dev:src:all` | Source-dev stack (local-dev) |
-| `pnpm dev:app` | Foreground API + UI |
-| `pnpm dev:api` | API only |
+| `pnpm dev:src:setup` | Once - Compose data plane + migrations |
+| `pnpm dev:src:all` | Source-dev stack (local-dev) + API + UI |
+| `pnpm dev:src:app` | Foreground API + UI |
+| `pnpm dev:src:api` | API only |
+| `pnpm dev:src:status` | Health of the source lane |
+| `pnpm dev:src:stop` | Stop host API/UI, host models and Compose |
 | `pnpm ui` | Next.js only |
 
 ### Code quality
@@ -102,8 +103,8 @@ Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
 | Command | When |
 |---------|------|
-| `pnpm images:build` | Build locally |
-| `pnpm images:release` | Build + push (multi-arch via `REPODY_IMAGE_PLATFORMS`) |
+| `pnpm images:build` | Build locally (`docker buildx bake --load`) |
+| `pnpm images:release` | Build + push (`docker buildx bake --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
 | `pnpm release:all` | Push + attest + promote staging |
 
 Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).

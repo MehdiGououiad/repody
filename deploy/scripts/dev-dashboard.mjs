@@ -164,7 +164,7 @@ export function buildDevDashboardSections(ctx) {
           role: "OpenTelemetry ingest — API/workers → Tempo; enables trace_id in logs",
         },
         {
-          name: "Promtail",
+          name: "Alloy",
           role: "Agent — tails Docker stdout and host API log file into Loki",
         },
         {
@@ -180,17 +180,20 @@ export function buildDevDashboardSections(ctx) {
   sections.push({
     title: "CLI (this repo)",
     rows: [
-      { name: "pnpm dev:status", role: "Probe every URL above and list Compose containers" },
+      { name: "pnpm dev:src:status", role: "Probe every URL above and list Compose containers" },
       { name: "pnpm models:warmup", role: "Warm NuExtract + PP-OCRv6 + Qwen (first inference)" },
       {
-        name: "pnpm dev:stop",
+        name: "pnpm dev:src:stop",
         role: "Stop API, UI, NuExtract, PP-OCRv6, Qwen, GLM-OCR, and full Compose stack",
       },
       {
-        name: "pnpm dev:restart",
+        name: "pnpm dev:src:restart",
         role: "Restart NuExtract + PP-OCRv6 + Qwen + GLM-OCR + workers after GPU resets",
       },
-      { name: "pnpm dev:observability", role: "Start or refresh Grafana/Loki/Tempo/Bugsink only" },
+      {
+        name: "pnpm dev:src:observability",
+        role: "Start or refresh Grafana/Loki/Tempo/Bugsink only",
+      },
       { name: "pnpm db:migrate", role: "Apply Alembic migrations" },
       { name: "pnpm test:api", role: "Backend pytest suite" },
     ],
@@ -234,7 +237,7 @@ export async function printDevDashboard(opts) {
   console.log("╚══════════════════════════════════════════════════════════════════╝");
 
   if (!appRunning) {
-    console.log("\n  Host app not started — run: pnpm dev:app  or  pnpm dev:all\n");
+    console.log("\n  Host app not started — run: pnpm dev:src:app  or  pnpm dev:src:all\n");
   }
 
   for (const section of sections) {

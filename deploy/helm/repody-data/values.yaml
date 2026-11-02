@@ -2,7 +2,7 @@ global:
   imagePullSecrets: []
   deploymentEnvironment: production
 
-# Official Docker Library + pgsty MinIO fork (see deploy/pinned-images.env, compose.yaml).
+# Official Docker Library + pgsty MinIO fork (same pins as compose.yaml).
 postgresql:
   enabled: false
   image:

@@ -117,32 +117,33 @@ workerExtract:
 
 ## Image Build
 
+Images are defined in [`docker-bake.hcl`](../docker-bake.hcl) (Docker Buildx Bake). Each variable below is read from the environment of the same name; `docker buildx bake -f docker-bake.hcl --print` shows the resolved config.
+
 | Variable | Purpose |
 |----------|---------|
-| `REPODY_IMAGE_REGISTRY` | e.g. `ghcr.io/org`; required for `pnpm images:release` and `pnpm images:push` |
-| `REPODY_IMAGE_TAG` | Image tag (`latest` default) |
+| `REPODY_IMAGE_REGISTRY` | e.g. `ghcr.io/org`; required for `pnpm images:release` |
+| `REPODY_IMAGE_TAG` | Image tag (`dev` default; `latest` is rejected) |
 | `REPODY_BACKEND_IMAGE_TAG` | Backend image tag override |
 | `REPODY_WEB_IMAGE_TAG` | Web image tag override |
-| `REPODY_WEB_BACKEND_URL` | Optional build-arg placeholder only (rewrites removed; runtime uses `INTERNAL_API_URL`) |
+| `REPODY_IMAGE_PLATFORMS` | e.g. `linux/amd64,linux/arm64` (push only; empty = host platform) |
+| `NEXT_PUBLIC_BUGSINK_DSN` | Browser Bugsink DSN inlined into the web bundle |
 | `INTERNAL_API_URL` | Runtime web -> API origin (Compose: `http://api:8000`, K8s: `http://repody-api:8000`) |
 | `BACKEND_URL` | Fallback origin if `INTERNAL_API_URL` unset |
 | `AUTH_KEYCLOAK_INTERNAL_ISSUER` | In-cluster Keycloak issuer for Auth.js server calls (Compose: `http://keycloak:8080/realms/repody`) |
 | `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel,glmocr`). `glmocr` pulls torch/torchvision from the **PyTorch CPU index** (see `backend/pyproject.toml` `tool.uv.sources`) so images match `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`. Use `otel` only to slim. |
 | `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
-| `REPODY_BUILDKIT_BACKEND_CACHE_FROM` / `REPODY_BUILDKIT_BACKEND_CACHE_TO` | Backend BuildKit cache refs |
-| `REPODY_BUILDKIT_WEB_CACHE_FROM` / `REPODY_BUILDKIT_WEB_CACHE_TO` | Web BuildKit cache refs |
 
-Used by `pnpm images:build`, `pnpm images:push`, and `pnpm images:release`.
+Build cache: local builds reuse Docker's build cache; CI passes `--set <target>.cache-from/cache-to` (see `.github/workflows/images-ghcr.yml`).
 
 ## Local Compose
 
-`pnpm dev:setup` copies `deploy/env/compose.env.example` to `backend/.env`.
+`pnpm platform setup` (or `pnpm dev:src:setup`) copies `deploy/env/compose.env.example` to `backend/.env`.
 
 Use these runtime overrides for local API/UI work:
 
 | Variable | Description |
 |----------|-------------|
-| `REPODY_API_PORT` | Host API port for `pnpm dev:api` / `pnpm dev:app` (`8000` default) |
+| `REPODY_API_PORT` | Host API port for `pnpm dev:src:api` / `pnpm dev:src:app` (`8000` default) |
 | `REPODY_DEV_API_RELOAD` | Set `1` to opt into Uvicorn reload on Windows |
 | `AUDIT_LLAMACPP_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |

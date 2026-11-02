@@ -2,16 +2,16 @@
 /**
  * Unified Compose local development - setup, stack, app, status, stop.
  *
- *   pnpm dev:setup   first-time env + migrate
- *   pnpm dev         background stack (Compose + workers + NuExtract + PP-OCRv6 + GLM-OCR)
- *   pnpm dev:api     foreground API only
- *   pnpm dev:app     foreground API + UI
- *   pnpm dev:all     stack (all three models + observability) then API + UI
- *   pnpm dev:status  health summary
- *   pnpm dev:stop    stop API, UI, all three models, and full Compose stack
- *   pnpm dev:restart restart NuExtract + PP-OCRv6 + GLM-OCR + worker containers
- *   pnpm models:warmup  warm NuExtract + PP-OCRv6 + GLM-OCR
- *   pnpm dev:observability  Grafana + Loki + Tempo + OTEL + Bugsink (also on by default for dev:all)
+ *   pnpm dev:src:setup    first-time env + migrate
+ *   pnpm dev:src          background stack (Compose + workers + NuExtract + PP-OCRv6 + GLM-OCR)
+ *   pnpm dev:src:api      foreground API only
+ *   pnpm dev:src:app      foreground API + UI
+ *   pnpm dev:src:all      stack (all three models + observability) then API + UI
+ *   pnpm dev:src:status   health summary
+ *   pnpm dev:src:stop     stop API, UI, all three models, and full Compose stack
+ *   pnpm dev:src:restart  restart NuExtract + PP-OCRv6 + GLM-OCR + worker containers
+ *   pnpm models:warmup    warm NuExtract + PP-OCRv6 + GLM-OCR
+ *   pnpm dev:src:observability  Grafana + Loki + Tempo + OTEL + Bugsink (on by default for dev:src:all)
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -154,7 +154,7 @@ async function waitForDevAppReady(timeoutMs = 120_000) {
 function wantsObservability() {
   if (flags.has("--no-observability") || flags.has("--no-obs")) return false;
   if (flags.has("--observability") || flags.has("--obs")) return true;
-  // Daily driver: `pnpm dev:all` always brings up Grafana/Loki/Tempo/Bugsink.
+  // Daily driver: `pnpm dev:src:all` always brings up Grafana/Loki/Tempo/Bugsink.
   return command === "all";
 }
 
@@ -224,8 +224,8 @@ function describeExitCode(code) {
   if (code === 3221226505 || code === -1073740791) {
     return (
       "Windows crash 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN) — usually memory pressure " +
-      "(NuExtract/llama-server + Next.js). Try: pnpm dev:all:no-nuextract  or  pnpm dev:all:no-glmocr  " +
-      "or close other apps, then pnpm dev:app"
+      "(NuExtract/llama-server + Next.js). Try: pnpm dev:src:all -- --no-nuextract  or  --no-glmocr  " +
+      "or close other apps, then pnpm dev:src:app"
     );
   }
   if (code == null) return "unknown";
@@ -321,7 +321,9 @@ function observabilityStack() {
   if (flags.has("--recreate-workers") || wantsWorkerRebuild()) {
     recreateWorkersForObservability();
   } else {
-    console.log("observability env enabled — restart workers later if needed: pnpm dev:restart");
+    console.log(
+      "observability env enabled — restart workers later if needed: pnpm dev:src:restart"
+    );
   }
 }
 
@@ -355,7 +357,7 @@ async function setup() {
 async function stack(options = {}) {
   const { suppressDashboard = false } = options;
   if (!fs.existsSync(BACKEND_ENV)) {
-    console.error("backend/.env missing — run: pnpm dev:setup");
+    console.error("backend/.env missing — run: pnpm dev:src:setup");
     process.exit(1);
   }
 
@@ -742,7 +744,7 @@ async function waitForForeground(children) {
         }
         if (label === "api" && othersAlive) {
           console.error(
-            "UI may still be up. Restart API with: pnpm dev:api\n" +
+            "UI may still be up. Restart API with: pnpm dev:src:api\n" +
               "Or press Ctrl+C to stop remaining app processes.\n"
           );
           return;
@@ -817,7 +819,7 @@ async function app(options = {}) {
     if (ready) {
       await showDevDashboard({ appRunning: true });
     } else {
-      console.warn("warn: API or UI did not become ready in time — run: pnpm dev:status");
+      console.warn("warn: API or UI did not become ready in time — run: pnpm dev:src:status");
     }
   });
 

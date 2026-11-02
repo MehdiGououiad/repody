@@ -591,7 +591,6 @@ async function up() {
       "postgres",
       "redis",
       "minio",
-      "minio-init",
       "keycloak",
       "api",
       "web",

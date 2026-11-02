@@ -1,0 +1,75 @@
+// Local dev - ship Docker container logs + host-run API log file to Loki.
+// Grafana Alloy replaces Promtail (EOL). Docs: https://grafana.com/docs/alloy/latest/
+// Requires the Docker socket mount (Docker Desktop on Windows/macOS/Linux).
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "5s"
+}
+
+discovery.relabel "containers" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "compose_project"
+  }
+}
+
+loki.source.docker "containers" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  relabel_rules = discovery.relabel.containers.rules
+  forward_to    = [loki.process.json.receiver]
+}
+
+local.file_match "host_api" {
+  path_targets = [{
+    __path__        = "/var/log/repody/repody-api.log",
+    job             = "repody-api",
+    compose_service = "repody-api",
+  }]
+}
+
+loki.source.file "host_api" {
+  targets    = local.file_match.host_api.targets
+  forward_to = [loki.process.json.receiver]
+}
+
+// structlog JSON lines: promote level + service.name to labels, keep trace_id/event extracted.
+loki.process "json" {
+  stage.json {
+    expressions = {
+      trace_id     = "trace_id",
+      level        = "level",
+      service_name = "\"service.name\"",
+      event        = "event",
+    }
+  }
+  stage.labels {
+    values = {
+      level        = "",
+      service_name = "",
+    }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

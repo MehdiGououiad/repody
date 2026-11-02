@@ -76,7 +76,7 @@ function parsePlaywrightSummary(output) {
 const results = [];
 const stamp = new Date().toISOString();
 
-/** Local stack defaults when running live/UI against `pnpm dev:all`. */
+/** Local stack defaults when running live/UI against `pnpm platform`. */
 const e2eEnv = {
   E2E_STACK: process.env.E2E_STACK ?? "1",
   E2E_API_URL: process.env.E2E_API_URL ?? "http://127.0.0.1:8000",
@@ -173,7 +173,7 @@ const infraNotes = rows
   .filter((r) => r.infraDown)
   .map(
     (r) =>
-      `- **${r.label}**: Postgres/Redis not reachable — start stack with \`pnpm dev\` then re-run.`
+      `- **${r.label}**: Postgres/Redis not reachable — start stack with \`pnpm platform\` then re-run.`
   );
 
 const md = `# Platform test report

@@ -130,7 +130,7 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs
 
 | Lane | Command |
 |------|---------|
-| App development | `pnpm platform` / `pnpm dev:all` |
+| App development | `pnpm platform` / `pnpm dev:src:all` |
 | Source contribute | `pnpm dev:src:all` |
 | OpenShift production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
 | Release to client | `pnpm images:release` |

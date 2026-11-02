@@ -46,7 +46,7 @@ class CoreSettingsFields:
     log_json: bool = Field(default=True)
     log_file: str | None = Field(
         default=None,
-        description="Optional path for JSON log lines (Promtail → Loki in local dev).",
+        description="Optional path for JSON log lines (Alloy → Loki in local dev).",
     )
 
     otel_enabled: bool = Field(default=False)

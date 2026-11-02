@@ -251,11 +251,8 @@ async function main() {
       );
     } else {
       console.log(`\n[${++step}/${totalSteps}] Build + Trivy image + Syft + Grype`);
-      run("node", ["deploy/scripts/build-images.mjs"], {
-        env: {
-          REPODY_BACKEND_IMAGE_TAG: "security-scan",
-          REPODY_WEB_IMAGE_TAG: "security-scan",
-        },
+      run("docker", ["buildx", "bake", "-f", "docker-bake.hcl", "--load"], {
+        env: { REPODY_IMAGE_TAG: "security-scan" },
       });
 
       const backendImg = "repody-backend:security-scan";

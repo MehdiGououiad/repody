@@ -339,7 +339,7 @@ docker login ghcr.io -u <github-user>
 pnpm images:release
 ```
 
-Pushes `…/repody-backend:1.0.0` and `…/repody-web:1.0.0`. Implementation: [`deploy/scripts/build-images.mjs`](../deploy/scripts/build-images.mjs). Tag workflow: [images-ghcr.yml](../.github/workflows/images-ghcr.yml).
+Pushes `…/repody-backend:1.0.0` and `…/repody-web:1.0.0`. Implementation: [`docker-bake.hcl`](../docker-bake.hcl) (Docker Buildx Bake). Tag workflow: [images-ghcr.yml](../.github/workflows/images-ghcr.yml).
 
 Docker Hub multi-arch (portable Mac + Intel):
 
@@ -526,7 +526,7 @@ pnpm extract:soak -- --api-url https://api.staging.example.com --token $TOKEN --
 | `deploy/client/secrets/` | ExternalSecret examples |
 | `deploy/client/namespace.example.yaml` | Namespace + PSA labels |
 | `deploy/client/argocd.application.yaml` | Argo CD Application skeleton |
-| `deploy/scripts/build-images.mjs` | Vendor image build/push |
+| `docker-bake.hcl` | Vendor image build/push (Buildx Bake) |
 | `deploy/scripts/release-supply-chain.mjs` | SBOM, cosign, promotion |
 | `deploy/registry/README.md` | Hub / GHCR / Harbor |
 | `deploy/ENV.md` | Runtime env keys |

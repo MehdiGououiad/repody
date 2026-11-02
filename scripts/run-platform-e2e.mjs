@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Run full platform E2E: live API journey (pytest) + browser tests (Playwright).
- * Prerequisites: local dev stack (pnpm dev) or Kubernetes lab with hosts entries.
+ * Prerequisites: local platform (pnpm platform) or Kubernetes lab with hosts entries.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -29,8 +29,8 @@ async function waitForOk(url, label, attempts = 90) {
   }
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
-      `  Start the stack: pnpm dev:setup && pnpm dev:all\n` +
-      `  Check status: pnpm dev:status`
+      `  Start the stack: pnpm platform setup && pnpm platform\n` +
+      `  Check status: pnpm platform status`
   );
   process.exit(1);
 }

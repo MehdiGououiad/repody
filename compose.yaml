@@ -1,17 +1,11 @@
-# Local/dev data plane (see deploy/pinned-images.env)
+# Local/dev data plane. This file is the source of truth for local image pins.
 # MinIO: pgsty community fork - upstream minio/minio no longer publishes images.
 # Redis/Postgres: official Docker Library pins.
 # Docs: docs/LOCAL.md
 #
-#   docker compose up -d
-#   pnpm db:migrate
-#   copy deploy\env\compose.env.example backend\.env
-#   copy deploy\env.auth.example .env.local
-#   pnpm dev:setup        # once - env files + migrate
-#   pnpm dev:all          # daily - stack + API + UI (one terminal)
-#   pnpm dev              # background only (Compose + workers + NuExtract)
-#   pnpm dev:app          # foreground API + UI
-#   pnpm dev:stop         # stop everything
+#   pnpm platform          # Hub images: + compose.portable.yaml (see deploy/scripts/platform-dev.mjs)
+#   pnpm dev:src:all       # source lane: this file + workers + host API/UI
+#   pnpm dev:src:stop      # stop the source lane
 
 name: repody
 
@@ -215,7 +209,7 @@ services:
     restart: unless-stopped
 
   # Observability (optional: docker compose --profile observability up -d)
-  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:observability
+  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
   bugsink-db:
     profiles: [observability]
     image: postgres:17.11-alpine
@@ -296,14 +290,14 @@ services:
       tempo:
         condition: service_started
 
-  promtail:
+  # Log collector (Grafana Alloy - successor to the EOL Promtail).
+  alloy:
     profiles: [observability]
-    image: grafana/promtail:3.6.11
-    command: -config.file=/etc/promtail/config.yaml
+    image: grafana/alloy:v1.21.3
+    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
     volumes:
-      - ./deploy/observability/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - ./deploy/observability/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - ./.logs:/var/log/repody:ro
     depends_on:
       loki:

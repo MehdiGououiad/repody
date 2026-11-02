@@ -1,0 +1,94 @@
+# Repody images - Docker Buildx Bake (https://docs.docker.com/build/bake/).
+#
+#   pnpm images:build                      # docker buildx bake --load   (host platform)
+#   pnpm images:release                    # docker buildx bake --push
+#   docker buildx bake --print             # resolved config
+#   docker buildx bake backend --load      # one target
+#
+# Every variable can be set from the environment of the same name:
+#   REPODY_IMAGE_REGISTRY=ghcr.io/org REPODY_IMAGE_TAG=v1.2.3 \
+#   REPODY_IMAGE_PLATFORMS=linux/amd64,linux/arm64 pnpm images:release
+
+variable "REPODY_IMAGE_REGISTRY" {
+  default = ""
+}
+
+variable "REPODY_IMAGE_TAG" {
+  default = "dev"
+  validation {
+    condition     = REPODY_IMAGE_TAG != "" && REPODY_IMAGE_TAG != "latest"
+    error_message = "REPODY_IMAGE_TAG must be an immutable tag such as a semver or git SHA (not empty or \"latest\")."
+  }
+}
+
+variable "REPODY_BACKEND_IMAGE_TAG" {
+  default = REPODY_IMAGE_TAG
+}
+
+variable "REPODY_WEB_IMAGE_TAG" {
+  default = REPODY_IMAGE_TAG
+}
+
+# Comma-separated, e.g. linux/amd64,linux/arm64. Empty = builder's host platform.
+variable "REPODY_IMAGE_PLATFORMS" {
+  default = ""
+}
+
+# Python extras baked into the backend image. glmocr pulls CPU torch (backend/pyproject.toml).
+variable "REPODY_BACKEND_EXTRAS" {
+  default = "otel,glmocr"
+  validation {
+    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._-]*(,[A-Za-z0-9][A-Za-z0-9._-]*)*$", REPODY_BACKEND_EXTRAS))
+    error_message = "REPODY_BACKEND_EXTRAS must be comma-separated Python extra names, e.g. \"otel,glmocr\"."
+  }
+}
+
+# Ship the Facture benchmark fixture inside the backend image (off for client images).
+variable "REPODY_INCLUDE_BENCHMARK_FIXTURES" {
+  type    = bool
+  default = false
+}
+
+variable "NEXT_PUBLIC_BUGSINK_DSN" {
+  default = ""
+}
+
+function "image" {
+  params = [name, tag]
+  result = REPODY_IMAGE_REGISTRY != "" ? "${REPODY_IMAGE_REGISTRY}/${name}:${tag}" : "${name}:${tag}"
+}
+
+group "default" {
+  targets = ["backend", "web"]
+}
+
+# Filled by docker/metadata-action in CI (OCI labels); empty locally.
+target "docker-metadata-action" {}
+
+target "_common" {
+  inherits  = ["docker-metadata-action"]
+  platforms = REPODY_IMAGE_PLATFORMS != "" ? split(",", REPODY_IMAGE_PLATFORMS) : []
+}
+
+# One image for api + workers; the role is chosen by the container command.
+target "backend" {
+  inherits = ["_common"]
+  context  = "backend"
+  target   = "backend"
+  args = {
+    BACKEND_EXTRAS             = REPODY_BACKEND_EXTRAS
+    INCLUDE_BENCHMARK_FIXTURES = REPODY_INCLUDE_BENCHMARK_FIXTURES
+  }
+  contexts = REPODY_INCLUDE_BENCHMARK_FIXTURES ? { benchmark-fixtures = "e2e/fixtures/documents" } : {}
+  tags     = [image("repody-backend", REPODY_BACKEND_IMAGE_TAG)]
+}
+
+target "web" {
+  inherits   = ["_common"]
+  context    = "."
+  dockerfile = "Dockerfile.web"
+  args = {
+    NEXT_PUBLIC_BUGSINK_DSN = NEXT_PUBLIC_BUGSINK_DSN
+  }
+  tags = [image("repody-web", REPODY_WEB_IMAGE_TAG)]
+}

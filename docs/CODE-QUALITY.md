@@ -121,7 +121,7 @@ During day-to-day work, run the smallest command that covers the change:
 | Anything, before pushing | `pnpm verify` |
 | Backend logic | `pnpm test:api` or `pnpm test:platform:report` |
 | Run lifecycle or queue behavior | `pnpm test:unit` then `pnpm test:integration` |
-| Architecture dependency rules | `pnpm architecture:check` |
+| Architecture dependency rules | `pnpm architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
 | Frontend code | `pnpm lint` and `pnpm typecheck` |
 | Unused files, exports or dependencies | `pnpm deadcode` |
 | API contract changes | `pnpm codegen:api` then `pnpm typecheck` |

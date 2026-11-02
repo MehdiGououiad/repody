@@ -1,6 +1,6 @@
-# syntax=docker/dockerfile:1.7
-# One backend image for api + workers (role chosen by Kubernetes command).
-#   pnpm images:build -- --only=backend
+# syntax=docker/dockerfile:1
+# One backend image for api + workers (role chosen by the container command).
+#   docker buildx bake backend --load      (see docker-bake.hcl)
 # Role-specific targets (same layers): --target api | --target worker
 
 FROM python:3.13.15-slim AS runtime-base
@@ -38,10 +38,9 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
 WORKDIR /app
 
 ARG BACKEND_EXTRAS=otel
-# Compose / images:build pass otel,glmocr by default (official GLM-OCR SDK).
+# Compose and docker-bake.hcl pass otel,glmocr by default (official GLM-OCR SDK).
 # torch/torchvision resolve from the PyTorch CPU index (pyproject tool.uv.sources)
 # so extract images stay lean with AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu.
-ARG INCLUDE_BENCHMARK_FIXTURES=false
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     set -eux; \
@@ -57,7 +56,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     for extra in $(echo "$BACKEND_EXTRAS" | tr "," " "); do extras="$extras --extra $extra"; done; \
     uv sync --locked --no-dev --no-editable $extras
 
-# Empty default; `pnpm images:build` may override via --build-context benchmark-fixtures=...
+# Empty default; docker-bake.hcl points this at e2e/fixtures/documents when
+# REPODY_INCLUDE_BENCHMARK_FIXTURES=true.
 FROM scratch AS benchmark-fixtures
 
 FROM runtime-base AS app-runtime
@@ -73,15 +73,14 @@ COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/do
 COPY --chown=repody:repody scripts/bootstrap_migrations.py ./scripts/bootstrap_migrations.py
 COPY --chown=repody:repody scripts/benchmark_suite.py ./scripts/benchmark_suite.py
 COPY --chown=repody:repody scripts/benchmarking/ ./scripts/benchmarking/
-COPY --from=benchmark-fixtures --chown=repody:repody / /tmp/benchmark-fixtures/
 
-RUN set -eux; \
-    mkdir -p /app/e2e/fixtures/documents; \
+RUN --mount=type=bind,from=benchmark-fixtures,target=/fixtures \
+    set -eux; \
+    install -d -o repody -g repody /app/e2e /app/e2e/fixtures /app/e2e/fixtures/documents; \
     if [ "$INCLUDE_BENCHMARK_FIXTURES" = "true" ]; then \
-      cp -a /tmp/benchmark-fixtures/. /app/e2e/fixtures/documents/; \
-    fi; \
-    rm -rf /tmp/benchmark-fixtures; \
-    chmod +x /app/scripts/docker-entrypoint.sh
+      install -o repody -g repody -m 0644 /fixtures/Facture.pdf /fixtures/Facture.benchmark.json \
+        /app/e2e/fixtures/documents/; \
+    fi
 
 USER repody
 

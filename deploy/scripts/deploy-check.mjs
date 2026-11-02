@@ -6,7 +6,6 @@ const verbose = /^(1|true|yes)$/i.test(process.env.REPODY_DEPLOY_CHECK_VERBOSE ?
 const steps = [
   ["helm-deps", "node", ["scripts/helm-deps.mjs", "--check"]],
   ["toolchain", "node", ["scripts/check-toolchain.mjs"]],
-  ["node-check-build-images", "node", ["--check", "deploy/scripts/build-images.mjs"]],
   ["node-check-runtime-env", "node", ["--check", "deploy/scripts/runtime-env.mjs"]],
   ["node-check-local-dev", "node", ["--check", "deploy/scripts/local-dev.mjs"]],
   [
@@ -18,7 +17,6 @@ const steps = [
   ["node-check-extract-soak", "node", ["--check", "deploy/scripts/extract-soak.mjs"]],
   ["node-check-package-scripts", "node", ["--check", "deploy/scripts/check-package-scripts.mjs"]],
   ["node-check-command-docs", "node", ["--check", "deploy/scripts/check-command-docs.mjs"]],
-  ["node-check-architecture", "node", ["--check", "deploy/scripts/check-architecture.mjs"]],
   [
     "node-check-release-supply-chain",
     "node",
@@ -30,7 +28,6 @@ const steps = [
   ["node-check-run-platform-e2e", "node", ["--check", "scripts/run-platform-e2e.mjs"]],
   ["package-scripts", "node", ["deploy/scripts/check-package-scripts.mjs"]],
   ["command-docs", "node", ["deploy/scripts/check-command-docs.mjs"]],
-  ["architecture", "node", ["deploy/scripts/check-architecture.mjs"]],
   ["release-scripts", "node", ["deploy/scripts/check-release-scripts.mjs"]],
   ["helm-lint-repody", "helm", ["lint", "deploy/helm/repody"]],
   ["helm-lint-repody-data", "helm", ["lint", "deploy/helm/repody-data"]],

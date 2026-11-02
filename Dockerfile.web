@@ -1,4 +1,6 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1
+# Built by docker-bake.hcl (`pnpm images:build`). Backend origin and Bugsink server DSN are
+# runtime env (INTERNAL_API_URL / BACKEND_URL / BUGSINK_DSN), never build args.
 FROM node:24-alpine AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
@@ -11,15 +13,9 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@12.5.1 --activate
-# Build-time placeholders only - runtime proxy uses INTERNAL_API_URL / BACKEND_URL
-# from the container env (Compose: http://api:8000, K8s: http://repody-api:8000).
-ARG BACKEND_URL=http://127.0.0.1:8000
+# NEXT_PUBLIC_* values are inlined into the client bundle at build time.
 ARG NEXT_PUBLIC_BUGSINK_DSN=
-ARG BUGSINK_DSN=
-ENV BACKEND_URL=${BACKEND_URL}
-ENV INTERNAL_API_URL=${BACKEND_URL}
 ENV NEXT_PUBLIC_BUGSINK_DSN=${NEXT_PUBLIC_BUGSINK_DSN}
-ENV BUGSINK_DSN=${BUGSINK_DSN}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
