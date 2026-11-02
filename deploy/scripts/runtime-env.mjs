@@ -103,14 +103,39 @@ export function envFlag(filePath, key, fallback) {
   return raw !== "false" && raw !== "0" && raw !== "no";
 }
 
-/** Cheap listen check (netstat / lsof) for preflight tables. */
-export function portFree(port) {
+/**
+ * PowerShell pipeline yielding PIDs bound to `port` with no remote end (listeners).
+ * Not `-State Listen`: Windows reports some detached listeners (e.g. llama-server) with
+ * state 0, which that filter and netstat both miss. PIDs 0/4 are Idle/System (TIME_WAIT).
+ */
+function winListeners(ports, property) {
+  return `Get-NetTCPConnection -LocalPort ${[ports].flat().join(",")} -ErrorAction SilentlyContinue | Where-Object { $_.RemoteAddress -in '0.0.0.0','::' -and $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty ${property} -Unique`;
+}
+
+function winListenerPids(port) {
+  return winListeners(port, "OwningProcess");
+}
+
+/** Ports from `ports` that have a listener (one PowerShell call on Windows). */
+export function busyPorts(ports) {
   if (process.platform === "win32") {
-    const r = spawnSync("netstat", ["-ano"], { encoding: "utf8", shell: false });
-    return !new RegExp(`:${port}\\s+.*?LISTENING`, "i").test(r.stdout || "");
+    const r = spawnSync(
+      "powershell",
+      ["-NoProfile", "-Command", winListeners(ports, "LocalPort")],
+      {
+        encoding: "utf8",
+        shell: false,
+      }
+    );
+    return new Set((r.stdout || "").split(/\r?\n/).filter(Boolean).map(Number));
   }
   // lsof exit 1 = nothing listening
-  return spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], { shell: false }).status !== 0;
+  return new Set(
+    ports.filter(
+      (port) =>
+        spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], { shell: false }).status === 0
+    )
+  );
 }
 
 export function commandFor(name) {
@@ -185,7 +210,7 @@ export function listenerInfos(port) {
   }
 
   const commandText = [
-    `$ids = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique;`,
+    `$ids = ${winListenerPids(port)};`,
     "if ($ids) { foreach ($id in $ids) {",
     '$p = Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue;',
     'if ($p) { Write-Output ("{0}`t{1}`t{2}" -f $id, $p.Name, $p.CommandLine) }',
@@ -219,7 +244,7 @@ export function killListenerPort(port) {
       [
         "-NoProfile",
         "-Command",
-        `$ids = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($id in $ids) { if ($id -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200; if (Get-Process -Id $id -ErrorAction SilentlyContinue) { taskkill /PID $id /F /T | Out-Null } } }`,
+        `$ids = ${winListenerPids(port)}; foreach ($id in $ids) { if ($id -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200; if (Get-Process -Id $id -ErrorAction SilentlyContinue) { taskkill /PID $id /F /T | Out-Null } } }`,
       ],
       { encoding: "utf8", shell: false }
     );

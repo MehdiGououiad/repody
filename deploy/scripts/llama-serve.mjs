@@ -312,7 +312,7 @@ async function serve(spec, cfg) {
   console.log(`Starting ${spec.label} on :${cfg.port}...`);
   console.log(`  args: ${args.join(" ")}`);
   console.log(`  logs: ${cfg.logDir}`);
-  spawn(cfg.exe, args, {
+  const child = spawn(cfg.exe, args, {
     cwd: cfg.dir,
     detached: true,
     stdio: [
@@ -321,7 +321,9 @@ async function serve(spec, cfg) {
       fs.openSync(path.join(cfg.logDir, `${spec.logName}.err.log`), "a"),
     ],
     env: spec.serverEnv ? spec.serverEnv({ ...process.env }) : process.env,
-  }).unref();
+  });
+  child.unref();
+  fs.writeFileSync(pidFile(spec, cfg), String(child.pid));
 
   if (!(await waitForLlamaServer(cfg.port, { timeoutMs: spec.readyTimeoutMs }))) {
     console.error(`Timed out waiting for ${spec.label} llama-server. Check logs in`, cfg.logDir);
@@ -338,8 +340,36 @@ async function serve(spec, cfg) {
   for (const line of spec.envHint(cfg.port, cfg.src.alias)) console.log(`  ${line}`);
 }
 
+function pidFile(spec, cfg) {
+  return path.join(cfg.logDir, `${spec.logName}.pid`);
+}
+
+/** Guards against a stale PID file whose PID the OS has since reused. */
+function isLlamaServer(pid) {
+  const r =
+    process.platform === "win32"
+      ? spawnSync("tasklist", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], { encoding: "utf8" })
+      : spawnSync("ps", ["-p", String(pid), "-o", "comm="], { encoding: "utf8" });
+  return /llama-server/i.test(r.stdout || "");
+}
+
+/** Kill the server we started (PID file), then anything still bound to the port. */
 function stop(spec, cfg) {
   spec.onStop?.();
+  const file = pidFile(spec, cfg);
+  const pid = fs.existsSync(file) ? Number(fs.readFileSync(file, "utf8").trim()) : 0;
+  if (pid > 0 && isLlamaServer(pid)) {
+    if (process.platform === "win32") {
+      spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+    } else {
+      try {
+        process.kill(pid, "SIGTERM");
+      } catch {
+        // already gone
+      }
+    }
+  }
+  fs.rmSync(file, { force: true });
   killListenerPort(cfg.port);
   console.log(`Stopped ${spec.label} on :${cfg.port} (if it was running).`);
 }

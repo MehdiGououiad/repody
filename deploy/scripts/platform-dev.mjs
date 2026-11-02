@@ -15,13 +15,13 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   BACKEND_ENV,
+  busyPorts,
   composeArgs as composeArgsFor,
   copyIfMissing,
   fetchProbe,
   findExecutable,
   llamaServe,
   parseEnvFile,
-  portFree,
   ROOT,
   run,
   setEnvKeys,
@@ -379,8 +379,9 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     [8080, "Keycloak"],
     [8081, "NuExtract"],
   ];
+  const busy = busyPorts(ports.map(([port]) => port));
   for (const [port, label] of ports) {
-    const free = portFree(port);
+    const free = !busy.has(port);
     rows.push({
       name: `Port ${port}`,
       ok: free,
