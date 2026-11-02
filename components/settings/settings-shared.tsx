@@ -3,13 +3,13 @@
 import { LoaderCircle, type LucideIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { OperatorJob } from "@/lib/api/operator";
+import { ACTIVE_JOB_STATUSES } from "@/lib/api/operator";
 
-export const ACTIVE_STATUSES = new Set(["queued", "running"]);
 export const SETTINGS_TABS = ["overview", "models", "benchmarks", "diagnostics"] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
 export function OperatorJobStatusBadge({ status }: { status: OperatorJob["status"] }) {
-  const active = ACTIVE_STATUSES.has(status);
+  const active = ACTIVE_JOB_STATUSES.has(status);
   return (
     <Badge
       variant={status === "completed" ? "success" : status === "failed" ? "danger" : "outline"}

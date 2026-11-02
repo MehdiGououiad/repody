@@ -15,17 +15,17 @@ class CatalogModelEntry(CamelModel):
     runtime: str = ""
     description: str = ""
     available: bool = True
-    availability_note: str | None = Field(default=None, serialization_alias="availabilityNote")
-    is_default: bool = Field(default=False, serialization_alias="isDefault")
-    markdown_only: bool = Field(default=False, serialization_alias="markdownOnly")
+    availability_note: str | None = None
+    is_default: bool = False
+    markdown_only: bool = False
 
 
 class ReadPathOption(CamelModel):
     id: str
     label: str
     description: str
-    read_kind: str = Field(serialization_alias="readKind")
-    show_document_model: bool = Field(serialization_alias="showDocumentModel")
+    read_kind: str
+    show_document_model: bool
 
 
 class ValidationModeOption(CamelModel):
@@ -36,19 +36,10 @@ class ValidationModeOption(CamelModel):
 
 class ModelsCatalogResponse(CamelModel):
     models: list[CatalogModelEntry]
-    default_document_model: str = Field(serialization_alias="defaultDocumentModel")
-    default_validation_model: str | None = Field(
-        default=None,
-        serialization_alias="defaultValidationModel",
-    )
-    inference_mode: str = Field(serialization_alias="inferenceMode")
+    default_document_model: str
+    default_validation_model: str | None = None
+    inference_mode: str
     paths: list[ReadPathOption] = Field(default_factory=list)
-    validation_modes: list[ValidationModeOption] = Field(
-        default_factory=list,
-        serialization_alias="validationModes",
-    )
-    default_path: str = Field(default="document_model", serialization_alias="defaultPath")
-    default_validation_mode: str = Field(
-        default="logic_only",
-        serialization_alias="defaultValidationMode",
-    )
+    validation_modes: list[ValidationModeOption] = Field(default_factory=list)
+    default_path: str = "document_model"
+    default_validation_mode: str = "logic_only"

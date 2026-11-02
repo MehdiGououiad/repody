@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import re
 
+# Stored for a schema field the model did not extract; rules treat it as absent.
+MISSING = "—"
+
 _ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 _ISO_DATETIME = re.compile(r"^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2})?")
 _ISO_TIME = re.compile(r"^\d{2}:\d{2}(:\d{2})?$")

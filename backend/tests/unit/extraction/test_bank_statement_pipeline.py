@@ -41,7 +41,7 @@ from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
 
 from repody.catalog.registry import parse_document_model
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.extraction.fields import MISSING, fields_from_nuextract_json
+from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import build_nuextract_template
 from repody.extraction.pipeline import extract_document
 from repody.extraction.render import prepare_nuextract_pages
@@ -49,6 +49,7 @@ from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec, load_
 from repody.extraction.vlm import extract_with_repody_vlm
 from repody.inference.factory import get_chat
 from repody.rules.amounts import normalize_amount, parse_numeric_value
+from repody.rules.value_coercion import MISSING
 from repody.settings import get_settings
 
 LIVE_LIST_LEN_TOLERANCE = 1

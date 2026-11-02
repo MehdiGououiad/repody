@@ -107,8 +107,3 @@ class OpsSettingsFields:
         ge=1,
         description="Retry-After hint when admission returns CAPACITY.",
     )
-
-    agent_idp_enabled: bool = Field(
-        default=True,
-        description="When false, IDP is omitted from the platform agent recipe.",
-    )

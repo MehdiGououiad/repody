@@ -1,23 +1,15 @@
 import { cache } from "react";
 import { throwOnApiError } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
-import type {
-  AuditListResponse,
-  WorkflowListResponse,
-  WorkflowResponse,
-} from "@/lib/api/schema-types";
-import type { Audit, RuleTemplate, Workflow } from "@/lib/types";
+import type { AuditListResponse } from "@/lib/api/schema-types";
+import { workflowFromWire } from "@/lib/api/workflow-wire";
+import type { RuleTemplate, Workflow } from "@/lib/types";
 import type { RunAuditDetail } from "@/lib/types/audit";
-
-export type AuditListResult = Omit<AuditListResponse, "audits"> & {
-  audits: Audit[];
-};
 
 export const fetchWorkflows = cache(async (): Promise<Workflow[]> => {
   const { data, error, response } = await serverApi.GET("/v1/workflows");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  const body = data as WorkflowListResponse;
-  return body.workflows as Workflow[];
+  return data.workflows.map(workflowFromWire);
 });
 
 export async function fetchWorkflow(id: string): Promise<Workflow | null> {
@@ -26,24 +18,18 @@ export async function fetchWorkflow(id: string): Promise<Workflow | null> {
       params: { path: { workflow_id: id } },
     });
     if (error || !response.ok || !data) throwOnApiError(error, response);
-    const body = data as WorkflowResponse;
-    return body.workflow as Workflow;
+    return workflowFromWire(data.workflow);
   } catch {
     return null;
   }
 }
 
-export const fetchAudits = cache(async (limit = 200, offset = 0): Promise<AuditListResult> => {
+export const fetchAudits = cache(async (limit = 200, offset = 0): Promise<AuditListResponse> => {
   const { data, error, response } = await serverApi.GET("/v1/audits", {
     params: { query: { limit, offset } },
   });
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return {
-    total: data.total,
-    limit: data.limit,
-    offset: data.offset,
-    audits: data.audits as Audit[],
-  };
+  return data;
 });
 
 export async function fetchAuditDetail(id: string): Promise<RunAuditDetail | null> {
@@ -52,7 +38,7 @@ export async function fetchAuditDetail(id: string): Promise<RunAuditDetail | nul
       params: { path: { audit_id: id } },
     });
     if (error || !response.ok || !data) throwOnApiError(error, response);
-    return data as RunAuditDetail;
+    return data;
   } catch {
     return null;
   }

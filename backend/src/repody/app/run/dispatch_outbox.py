@@ -32,7 +32,6 @@ class _ClaimedDispatch:
     pool: str
     workflow_id: str
     request_id: str | None
-    agent_stage: str
     attempts: int
 
 
@@ -66,13 +65,11 @@ async def enqueue_dispatch(
     pool: str,
     workflow_id: str,
     request_id: str | None,
-    agent_stage: str = "idp",
 ) -> None:
     session.add(
         RunDispatchOutbox(
             run_id=run_id,
             pool=pool,
-            agent_stage=agent_stage,
             workflow_id=workflow_id,
             request_id=request_id,
             status=_STATUS_PENDING,
@@ -97,7 +94,6 @@ async def _claim_outbox_row(
         pool=row.pool,
         workflow_id=row.workflow_id,
         request_id=row.request_id,
-        agent_stage=getattr(row, "agent_stage", None) or "idp",
         attempts=row.dispatch_attempts,
     )
 
@@ -156,27 +152,12 @@ async def _kiq_claimed(claimed: _ClaimedDispatch) -> bool:
             pool=claimed.pool,
             workflow_id=claimed.workflow_id,
             request_id=claimed.request_id,
-            agent_stage=claimed.agent_stage,
         )
     except Exception as exc:
         return await _finalize_dispatch_failure(claimed, exc)
 
     await _finalize_dispatch_success(claimed.run_id)
     return True
-
-
-async def dispatch_outbox_row(session: AsyncSession, row: RunDispatchOutbox) -> bool:
-    """Claim row (caller holds lock), commit elsewhere, then kiq.
-
-    Prefer ``dispatch_outbox_run`` / ``replay_dispatch_outbox`` which commit before Redis.
-    This helper claims in ``session``; caller must ``commit`` before awaiting the returned
-    work - use ``claim_and_dispatch_outbox_row`` for the safe pattern.
-    """
-    claimed = await _claim_outbox_row(session, row)
-    if claimed is None:
-        return True
-    await session.commit()
-    return await _kiq_claimed(claimed)
 
 
 async def dispatch_outbox_run(run_id: str) -> bool:

@@ -17,6 +17,9 @@ const nextConfig: NextConfig = {
   // Next 16 blocks cross-origin HMR when UI is opened as 127.0.0.1 vs localhost.
   allowedDevOrigins,
   experimental: {
+    // Proxy buffers request bodies and truncates past this size (default 10mb). Multipart
+    // run submissions carry several documents of up to AUDIT_MAX_UPLOAD_BYTES (25mb) each.
+    proxyClientMaxBodySize: "100mb",
     // lucide-react + recharts are already in Next's default optimize list.
     optimizePackageImports: [
       "@radix-ui/react-dialog",

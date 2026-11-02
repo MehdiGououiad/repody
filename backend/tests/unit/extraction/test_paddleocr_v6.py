@@ -13,7 +13,7 @@ from repody.catalog.registry import is_markdown_only_model, parse_document_model
 from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID, UnknownCatalogIdError
 from repody.extraction.paddleocr_v6 import (
     build_ocr_request_payload,
-    extract_with_paddleocr_v6,
+    fetch_paddleocr_markdown,
     markdown_from_ocr_result,
 )
 from repody.extraction.types import DocumentBundle
@@ -61,7 +61,6 @@ def test_build_ocr_request_payload_supports_official_fast_path(monkeypatch: pyte
 
 def test_paddleocr_v6_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
     """Markdown-only OCR is an internal stage - not a selectable catalog model."""
-    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_ENABLED", "true")
     get_settings.cache_clear()
     try:
         with pytest.raises(UnknownCatalogIdError):
@@ -73,8 +72,7 @@ def test_paddleocr_v6_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_extract_with_paddleocr_v6_http(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_ENABLED", "true")
+async def test_fetch_paddleocr_markdown_http(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUDIT_PADDLEOCR_V6_BASE_URL", "http://paddleocr-v6.test:8868")
     get_settings.cache_clear()
     try:
@@ -96,11 +94,10 @@ async def test_extract_with_paddleocr_v6_http(monkeypatch: pytest.MonkeyPatch):
             raw_bytes=b"\xff\xd8\xfffakejpeg",
             mime_type="image/jpeg",
         )
-        result = await extract_with_paddleocr_v6(bundle, [], "CNIE")
+        markdown, page_count = await fetch_paddleocr_markdown(bundle)
         assert route.called
-        assert result.markdown_text is not None
-        assert "AB123456" in result.markdown_text
-        assert result.fields == []
+        assert "AB123456" in markdown
+        assert page_count == 1
         payload = json.loads(route.calls.last.request.content.decode())
         assert payload["fileType"] == 1
         assert payload["visualize"] is False

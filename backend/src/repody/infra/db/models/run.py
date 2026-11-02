@@ -120,7 +120,6 @@ class RunDispatchOutbox(Base):
         primary_key=True,
     )
     pool: Mapped[str] = mapped_column(String(16), default="fast")
-    agent_stage: Mapped[str] = mapped_column(String(32), default="idp")
     workflow_id: Mapped[str] = mapped_column(String(64), default="")
     request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     status: Mapped[str] = mapped_column(String(16), default="pending")

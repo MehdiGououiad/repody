@@ -6,6 +6,7 @@ import json
 from typing import Any
 
 from repody.rules.amounts import parse_numeric_value
+from repody.rules.value_coercion import MISSING
 
 
 def parse_table_rows(raw: Any) -> list[dict[str, Any]]:
@@ -14,7 +15,7 @@ def parse_table_rows(raw: Any) -> list[dict[str, Any]]:
     if not isinstance(raw, str):
         return []
     text = raw.strip()
-    if not text or text == "—":
+    if not text or text == MISSING:
         return []
     try:
         data = json.loads(text)

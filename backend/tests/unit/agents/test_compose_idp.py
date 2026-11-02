@@ -14,13 +14,10 @@ from repody.agents.idp.contracts import (
     IdpInput,
     IdpWorkflowConfig,
     RuleResult,
-    RuleSpec,
     SchemaField,
     StoredDocument,
     ValidationOutput,
 )
-from repody.agents.idp.run import wrap_idp_outcome
-from repody.runtime.contracts.agent import AgentStatus
 from repody.runtime.contracts.result import ErrorCode, Result
 
 
@@ -74,17 +71,6 @@ def _input() -> IdpInput:
         workflow=IdpWorkflowConfig(
             workflow_id="wf-1",
             documents=(_spec(),),
-            rules=(
-                RuleSpec(
-                    id="r1",
-                    name="Total present",
-                    kind="logic",
-                    scope="intra",
-                    severity="reject",
-                    applies_to=(),
-                    body="total != None",
-                ),
-            ),
         ),
         documents=(_stored(),),
     )
@@ -161,7 +147,7 @@ async def test_compose_idp_soft_fails_document_load() -> None:
 
 
 @pytest.mark.asyncio
-async def test_wrap_idp_outcome_from_compose() -> None:
+async def test_compose_idp_passes_clean_validation() -> None:
     async def fetch_bytes(_key: str) -> bytes:
         return b"x"
 
@@ -183,5 +169,6 @@ async def test_wrap_idp_outcome_from_compose() -> None:
         validate=validate,
     )
     assert result.is_ok
-    agent = wrap_idp_outcome(result.unwrap())
-    assert agent.status is AgentStatus.PASSED
+    outcome = result.unwrap()
+    assert outcome.errors == ()
+    assert outcome.validation.overall_status == "passed"

@@ -1,7 +1,12 @@
 "use client";
 
 import { ArrowRight } from "lucide-react";
-import { isRuleFailure, RuleStatusIcon, ruleStatusColor, ruleStatusLabel } from "@/lib/rule-status";
+import {
+  isRuleFailure,
+  RuleStatusIcon,
+  ruleStatusColor,
+  ruleStatusLabel,
+} from "@/components/shared/rule-status";
 import type { RunAuditDetail, RunAuditRule } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
 import { mergeLabels, type RunReportLabels } from "./report-shared";

@@ -86,7 +86,7 @@ function RunDocFieldsListBody({ doc, locale }: { doc: RunAuditDocument; locale: 
             >
               {formatFieldValue(field, locale)}
             </p>
-            {field.confidence !== null && field.extracted ? (
+            {field.confidence != null && field.extracted ? (
               <div className="flex justify-end mt-1">
                 <ConfidenceBar value={field.confidence} />
               </div>

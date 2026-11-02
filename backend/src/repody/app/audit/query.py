@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 
-from repody.app.mappers import run_to_audit_list_item
+from repody.app.audit.mappers import run_to_audit_list_item
 from repody.infra.db.models import Run, RunStatus, Workflow
 from repody.schemas.audit import AuditListItem, AuditListResponse
 

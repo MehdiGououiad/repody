@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from repody.api.auth import PrincipalDep
+from repody.api.auth import PrincipalDep, require_permission
 from repody.api.deps import SessionDep
 from repody.api.errors import unwrap_or_raise
 from repody.app.uploads import service
@@ -17,7 +17,11 @@ from repody.schemas.uploads import (
 )
 from repody.settings import get_settings
 
-router = APIRouter(prefix="/uploads", tags=["uploads"])
+router = APIRouter(
+    prefix="/uploads",
+    tags=["uploads"],
+    dependencies=[Depends(require_permission("upload", "write"))],
+)
 
 _READ_CHUNK_BYTES = 1024 * 1024
 

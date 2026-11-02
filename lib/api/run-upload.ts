@@ -110,6 +110,7 @@ function fileFingerprint(file: File): string {
 export function stepFetch(input: string, init: TimedRequestInit = {}): Promise<Response> {
   const { timeoutMs = 120_000, ...rest } = init;
   if (input.startsWith("/api")) {
+    // browserFetch keeps /api paths verbatim; strip the prefix so it adds the /v1 segment.
     return browserFetch(input.slice(4) || "/", { timeoutMs, ...rest });
   }
   return fetchWithTimeout(input, { timeoutMs, ...rest });

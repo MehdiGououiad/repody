@@ -24,10 +24,22 @@ export function apiPath(path: string): string {
   return `/v1/${path}`;
 }
 
-export async function readApiError(res: Response, label: string): Promise<never> {
+async function readApiError(res: Response, label: string): Promise<never> {
   const text = await res.text();
   const detail = formatApiError(text) || `HTTP ${res.status}`;
   throw new Error(`${label}: ${detail}`);
+}
+
+/** Session-authenticated browser calls: 401 signs out, a permission 403 shows /unauthorized. */
+export async function guardSessionResponse(res: Response, apiPath: string): Promise<void> {
+  if (typeof window === "undefined" || resolveAuthCredential(apiPath) !== "session") return;
+  if (res.status === 401) void redirectToLoginAfterUnauthorized();
+  if (res.status === 403) {
+    const body = (await res.clone().text()).toLowerCase();
+    if (body.includes("forbidden") || body.includes("permission")) {
+      window.location.assign(new URL("/unauthorized", window.location.origin).href);
+    }
+  }
 }
 
 /** Browser - Next.js `/api/v1` runtime proxy (credential per auth policy). */
@@ -48,15 +60,7 @@ export async function browserFetch(
       ...rest.headers,
     },
   });
-  if (typeof window !== "undefined" && credential === "session") {
-    if (res.status === 401) void redirectToLoginAfterUnauthorized();
-    if (res.status === 403) {
-      const body = (await res.clone().text()).toLowerCase();
-      if (body.includes("forbidden") || body.includes("permission")) {
-        window.location.assign(new URL("/unauthorized", window.location.origin).href);
-      }
-    }
-  }
+  await guardSessionResponse(res, normalized);
   return res;
 }
 

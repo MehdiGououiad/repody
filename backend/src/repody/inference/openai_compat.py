@@ -20,20 +20,25 @@ _STANDARD_CHAT_KEYS = frozenset(
 )
 
 # Reuse clients per event loop - avoids TLS + connection setup on every VLM request.
-_client_cache: dict[tuple[str, float, str | None, int | None], AsyncOpenAI] = {}
+_client_cache: dict[tuple[str, float, str | None, int, int | None], AsyncOpenAI] = {}
+
+# SDK retries (backoff on 408/429/5xx and connection errors) for real work; probes fail fast.
+INFERENCE_MAX_RETRIES = 2
 
 
 def normalize_openai_model_name(name: str) -> str:
     return name.strip().lower().removesuffix(":latest")
 
 
-def _client(base_url: str, *, timeout: float, api_key: str | None = None) -> AsyncOpenAI:
+def _client(
+    base_url: str, *, timeout: float, api_key: str | None = None, max_retries: int = 0
+) -> AsyncOpenAI:
     resolved_key = api_key or openai_api_key_for_base_url(base_url)
     try:
         loop_id = id(asyncio.get_running_loop())
     except RuntimeError:
         loop_id = None
-    cache_key = (base_url.rstrip("/"), timeout, resolved_key, loop_id)
+    cache_key = (base_url.rstrip("/"), timeout, resolved_key, max_retries, loop_id)
     cached = _client_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -41,7 +46,7 @@ def _client(base_url: str, *, timeout: float, api_key: str | None = None) -> Asy
         base_url=cache_key[0],
         api_key=resolved_key,
         timeout=timeout,
-        max_retries=0,
+        max_retries=max_retries,
     )
     _client_cache[cache_key] = client
     return client
@@ -87,8 +92,9 @@ async def post_chat_completion(
     *,
     timeout: float,
     api_key: str | None = None,
+    max_retries: int = INFERENCE_MAX_RETRIES,
 ) -> dict[str, Any]:
-    client = _client(base_url, timeout=timeout, api_key=api_key)
+    client = _client(base_url, timeout=timeout, api_key=api_key, max_retries=max_retries)
     standard, extra = split_chat_payload(payload)
     response = await client.chat.completions.create(**standard, extra_body=extra or None)
     return response.model_dump()

@@ -14,20 +14,25 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import {
+  isRuleFailure,
+  RuleStatusIcon,
+  ruleStatusColor,
+  ruleStatusLabel,
+} from "@/components/shared/rule-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { TestPhase } from "@/components/workflow/builder/test-run-session";
 import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
 import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
-import { isRuleFailure, RuleStatusIcon, ruleStatusColor, ruleStatusLabel } from "@/lib/rule-status";
 import { cn } from "@/lib/utils";
 
-const statusColor = {
+const statusColor: Record<string, string> = {
   passed: "border-success/40 bg-success/5 text-success",
   failed: "border-danger/40 bg-danger/5 text-danger",
   warning: "border-warning/40 bg-warning/5 text-warning",
-} as const;
+};
 
 export function TestRunResults({
   phase,
@@ -84,7 +89,7 @@ export function TestRunResults({
             <div
               className={cn(
                 "panel-elevated rounded-xl p-4 flex flex-wrap items-center gap-3",
-                statusColor[result.status]
+                statusColor[result.status] ?? statusColor.warning
               )}
             >
               <StatusIcon className="h-5 w-5 shrink-0" />

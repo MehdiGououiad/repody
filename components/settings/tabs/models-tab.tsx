@@ -4,10 +4,9 @@ import { Box, HardDriveDownload, LoaderCircle, RefreshCw, Zap } from "lucide-rea
 import { useMemo } from "react";
 import { toast } from "sonner";
 import { ModelRuntimeConfigPanel } from "@/components/settings/model-runtime-config-panel";
-import { ACTIVE_STATUSES } from "@/components/settings/settings-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type OperatorJob, warmupModel } from "@/lib/api/operator";
+import { ACTIVE_JOB_STATUSES, type OperatorJob, warmupModel } from "@/lib/api/operator";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import { cn } from "@/lib/utils";
@@ -86,7 +85,7 @@ export function ModelsTab({
         <div className="divide-y divide-border">
           {rows.map((model) => {
             const active = jobs.find(
-              (job) => ACTIVE_STATUSES.has(job.status) && job.label.includes(model.label)
+              (job) => ACTIVE_JOB_STATUSES.has(job.status) && job.label.includes(model.label)
             );
             return (
               <div

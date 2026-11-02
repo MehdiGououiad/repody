@@ -25,18 +25,18 @@ class ModelConfigField(CamelModel):
 
 
 class ModelRuntimeProfile(CamelModel):
-    model_id: str = Field(serialization_alias="modelId")
+    model_id: str
     label: str
     runtime: str
-    runtime_model: str = Field(serialization_alias="runtimeModel")
+    runtime_model: str
     enabled: bool
-    inference_url: str | None = Field(default=None, serialization_alias="inferenceUrl")
-    render_policy: str = Field(default="", serialization_alias="renderPolicy")
+    inference_url: str | None = None
+    render_policy: str = ""
     fields: list[ModelConfigField] = Field(default_factory=list)
 
 
 class DeploymentNote(CamelModel):
-    change_kind: str = Field(serialization_alias="changeKind")
+    change_kind: str
     action: str
     detail: str
 
@@ -44,6 +44,4 @@ class DeploymentNote(CamelModel):
 class ModelRuntimeConfigResponse(CamelModel):
     models: list[ModelRuntimeProfile] = Field(default_factory=list)
     shared: list[ModelConfigField] = Field(default_factory=list)
-    deployment_notes: list[DeploymentNote] = Field(
-        default_factory=list, serialization_alias="deploymentNotes"
-    )
+    deployment_notes: list[DeploymentNote] = Field(default_factory=list)

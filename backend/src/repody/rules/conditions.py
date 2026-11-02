@@ -7,7 +7,7 @@ import re
 
 from repody.rules.expression import normalize_field_key
 from repody.rules.types import rule_kind
-from repody.rules.value_coercion import is_iso_date_like
+from repody.rules.value_coercion import MISSING, is_iso_date_like
 from repody.util.json_shape import normalize_keys_to_snake
 
 NO_RIGHT = frozenset({"EXISTS", "IS_EMPTY"})
@@ -105,8 +105,8 @@ def condition_to_string(condition: dict) -> str:
     operator = condition.get("operator") or "=="
     if operator in NO_RIGHT:
         if operator == "EXISTS":
-            return f'({left} is not None and str({left}).strip() not in ("", "—"))'
-        return f'({left} is None or str({left}).strip() in ("", "—"))'
+            return f'({left} is not None and str({left}).strip() not in ("", {MISSING!r}))'
+        return f'({left} is None or str({left}).strip() in ("", {MISSING!r}))'
 
     right_op = condition.get("right")
     if not right_op:

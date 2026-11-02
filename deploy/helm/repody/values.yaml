@@ -351,8 +351,6 @@ config:
   # For long OCR PDFs raise together, e.g. workerTaskTimeoutMinutes: 10,
   # staleRunTimeoutMinutes: 12, and matching *TimeoutSeconds <= worker*60.
   queuedStaleTimeoutMinutes: 60
-  # Platform agent recipe (ADR 007).
-  agentIdpEnabled: true
   maintenanceIntervalSeconds: 60
   dbPoolSize: 20
   dbMaxOverflow: 20
@@ -377,9 +375,7 @@ config:
   outboxRetainDispatchedDays: 7
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: false
-  # Local/dev catalog includes PP-OCRv6 by default; set base URL to a reachable OCR API in-cluster.
-  # Never use host.docker.internal - that is Compose-only (Docker Desktop).
-  paddleocrV6Enabled: false
+  # PP-OCRv6 OCR stage for paddleocr:qwen. Never use host.docker.internal - that is Compose-only.
   paddleocrV6BaseUrl: http://paddleocr-v6:8868
   paddleocrV6TimeoutSeconds: 180
   paddleocrV6UseDocOrientationClassify: true
@@ -391,7 +387,6 @@ config:
   qwen35ServedModel: Qwen3.5-4B
   qwen35TimeoutSeconds: 180
   # GLM-OCR - local Compose uses host llama-server; cluster may point at a dedicated service.
-  glmOcrEnabled: false
   glmOcrBaseUrl: http://glmocr:8083/v1
   glmOcrServedModel: glm-ocr:latest
   glmOcrTimeoutSeconds: 180

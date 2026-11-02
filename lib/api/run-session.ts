@@ -82,7 +82,7 @@ async function postRunJson(
 
   const path = runsJsonPath(workflowId, credential);
   const res = isApiCredential(credential)
-    ? await browserFetch(path.slice(4), {
+    ? await browserFetch(path, {
         method: "POST",
         headers: {
           ...workflowAuthHeaders(credential.apiKey),

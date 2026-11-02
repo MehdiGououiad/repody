@@ -1,41 +1,17 @@
 "use client";
 
 import { Activity, BrainCircuit, ServerCog, ShieldCheck, TestTube2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { PageShell } from "@/components/layout/page-shell";
-import {
-  ACTIVE_STATUSES,
-  SETTINGS_TABS,
-  type SettingsTab,
-} from "@/components/settings/settings-shared";
+import { SETTINGS_TABS, type SettingsTab } from "@/components/settings/settings-shared";
 import { BenchmarksTab } from "@/components/settings/tabs/benchmarks-tab";
 import { DiagnosticsTab } from "@/components/settings/tabs/diagnostics-tab";
 import { ModelsTab } from "@/components/settings/tabs/models-tab";
 import { OverviewTab } from "@/components/settings/tabs/overview-tab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  fetchOperatorJobs,
-  fetchOperatorStatus,
-  type OperatorJob,
-  type OperatorStatus,
-} from "@/lib/api/operator";
 import type { PlatformConfig } from "@/lib/api/platform-config";
+import { useOperatorState } from "@/lib/hooks/use-operator-state";
 import { useQueryParam } from "@/lib/hooks/use-query-param";
-
-async function loadOperatorState(): Promise<{
-  status: OperatorStatus;
-  jobs: OperatorJob[];
-} | null> {
-  try {
-    const [status, jobs] = await Promise.all([fetchOperatorStatus(), fetchOperatorJobs()]);
-    return { status, jobs };
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : "Operator API unavailable");
-    return null;
-  }
-}
 
 export function SettingsPageClient({
   platformConfig,
@@ -48,56 +24,7 @@ export function SettingsPageClient({
   const activeTab: SettingsTab = SETTINGS_TABS.includes(tabParam as SettingsTab)
     ? (tabParam as SettingsTab)
     : "overview";
-  const [operator, setOperator] = useState<OperatorStatus | null>(null);
-  const [jobs, setJobs] = useState<OperatorJob[]>([]);
-
-  const refresh = useCallback(async () => {
-    const state = await loadOperatorState();
-    if (!state) return;
-    setOperator(state.status);
-    setJobs(state.jobs);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    void loadOperatorState().then((state) => {
-      if (cancelled || !state) return;
-      setOperator(state.status);
-      setJobs(state.jobs);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!jobs.some((job) => ACTIVE_STATUSES.has(job.status))) return;
-
-    let cancelled = false;
-    let timer: number | undefined;
-
-    const tick = () => {
-      if (cancelled) return;
-      if (document.visibilityState === "hidden") {
-        timer = window.setTimeout(tick, 10_000);
-        return;
-      }
-      void refresh().finally(() => {
-        if (cancelled) return;
-        timer = window.setTimeout(tick, 5_000);
-      });
-    };
-
-    timer = window.setTimeout(tick, 5_000);
-    return () => {
-      cancelled = true;
-      if (timer !== undefined) window.clearTimeout(timer);
-    };
-  }, [jobs, refresh]);
-
-  const addJob = (job: OperatorJob) => {
-    setJobs((current) => [job, ...current.filter((item) => item.id !== job.id)]);
-  };
+  const { operator, jobs, addJob, refresh } = useOperatorState();
 
   return (
     <PageShell>
@@ -167,7 +94,7 @@ export function SettingsPageClient({
             platform={platformConfig}
             operator={operator}
             jobs={jobs}
-            onRefresh={() => void refresh()}
+            onRefresh={refresh}
           />
         </TabsContent>
       </Tabs>

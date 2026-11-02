@@ -15,7 +15,6 @@ from repody.agents.idp.contracts import (
     IdpInput,
     IdpWorkflowConfig,
     RuleResult,
-    RuleSpec,
     SchemaField,
     StoredDocument,
 )
@@ -80,53 +79,15 @@ def document_spec_from_snapshot(doc: SnapshotDocument) -> DocumentSpec:
     )
 
 
-def rule_spec_from_dict(rule: dict) -> RuleSpec:
-    applies = rule.get("applies_to") or []
-    if not isinstance(applies, list):
-        applies = []
-    conditions = rule.get("conditions") or []
-    if not isinstance(conditions, list):
-        conditions = []
-    junction = rule.get("condition_junction")
-    return RuleSpec(
-        id=str(rule.get("id") or ""),
-        name=str(rule.get("name") or "Rule"),
-        kind=str(rule.get("kind") or "logic").lower(),
-        scope=str(rule.get("scope") or "intra").lower(),
-        severity=str(rule.get("severity") or "reject"),
-        applies_to=tuple(str(a) for a in applies),
-        conditions=tuple(c for c in conditions if isinstance(c, dict)),
-        body=str(rule.get("body") or ""),
-        condition_junction=str(junction) if junction is not None else None,
-    )
-
-
-def rule_dict_from_spec(rule: RuleSpec) -> dict:
-    """RuleSpec -> rules-engine dict (single seam out of the IDP contract)."""
-    return {
-        "id": rule.id,
-        "name": rule.name,
-        "kind": rule.kind,
-        "scope": rule.scope,
-        "severity": rule.severity,
-        "applies_to": list(rule.applies_to),
-        "conditions": list(rule.conditions),
-        "body": rule.body,
-        "condition_junction": rule.condition_junction,
-    }
-
-
 def workflow_config_from_snapshot(
     *,
     workflow_id: str,
     documents: list[SnapshotDocument],
-    rules: list[dict],
     workflow_name: str | None = None,
 ) -> IdpWorkflowConfig:
     return IdpWorkflowConfig(
         workflow_id=workflow_id,
         documents=tuple(document_spec_from_snapshot(d) for d in documents),
-        rules=tuple(rule_spec_from_dict(r) for r in rules),
         workflow_name=workflow_name,
     )
 
@@ -151,7 +112,6 @@ def build_idp_input(
     run_id: str,
     workflow_id: str,
     documents: list[SnapshotDocument],
-    rules: list[dict],
     stored: list[StoredDocument],
     workflow_name: str | None = None,
 ) -> IdpInput:
@@ -160,7 +120,6 @@ def build_idp_input(
         workflow=workflow_config_from_snapshot(
             workflow_id=workflow_id,
             documents=documents,
-            rules=rules,
             workflow_name=workflow_name,
         ),
         documents=tuple(stored),

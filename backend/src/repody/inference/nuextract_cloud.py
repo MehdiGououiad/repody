@@ -155,17 +155,6 @@ def _http_client(config: NuExtractCloudConfig) -> httpx.AsyncClient:
     )
 
 
-async def list_projects(config: NuExtractCloudConfig) -> list[dict[str, Any]]:
-    client = _http_client(config)
-    response = await client.get(
-        "/api/structured-extraction",
-        timeout=config.timeout_seconds,
-    )
-    _raise_for_api_error(response, action="list projects")
-    data = response.json()
-    return data if isinstance(data, list) else []
-
-
 async def create_project(
     config: NuExtractCloudConfig,
     *,

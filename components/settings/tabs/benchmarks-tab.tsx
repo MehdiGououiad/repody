@@ -1,10 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Download, LoaderCircle, Play, Upload } from "lucide-react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DocumentTextPreviewPanel } from "@/components/documents/document-markdown-preview";
-import { ACTIVE_STATUSES } from "@/components/settings/settings-shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ACTIVE_JOB_STATUSES,
   artifactUrl,
   type BenchmarkReport,
   type BenchmarkResult,
@@ -25,6 +26,7 @@ import {
   type OperatorJob,
   startBenchmark,
 } from "@/lib/api/operator";
+import { queryKeys } from "@/lib/hooks/query-keys";
 import {
   benchmarkModelsFromCatalog,
   useUnifiedModelsCatalog,
@@ -173,9 +175,9 @@ export function BenchmarksTab({
   const [selected, setSelected] = useState<string[]>([]);
   const [customDataset, setCustomDataset] = useState(false);
   const [document, setDocument] = useState<File | null>(null);
-  const [report, setReport] = useState<BenchmarkReport | null>(null);
-  const [reportJobId, setReportJobId] = useState<string>();
-  const active = jobs.find((job) => job.kind === "benchmark" && ACTIVE_STATUSES.has(job.status));
+  const active = jobs.find(
+    (job) => job.kind === "benchmark" && ACTIVE_JOB_STATUSES.has(job.status)
+  );
 
   useEffect(() => {
     if (!catalogQuery.data || modelsInitialized.current) return;
@@ -183,20 +185,20 @@ export function BenchmarksTab({
     setSelected(models.map((model) => model.id));
   }, [catalogQuery.data, models]);
 
-  useEffect(() => {
-    void fetchLatestBenchmark().then(setReport);
-  }, []);
-
-  useEffect(() => {
-    const completed = jobs.find(
-      (job) => job.kind === "benchmark" && job.hasReport && !ACTIVE_STATUSES.has(job.status)
-    );
-    if (!completed || completed.id === reportJobId) return;
-    void fetchJobReport(completed.id).then((next) => {
-      setReport(next);
-      setReportJobId(completed.id);
-    });
-  }, [jobs, reportJobId]);
+  const reportJobId = jobs.find(
+    (job) => job.kind === "benchmark" && job.hasReport && !ACTIVE_JOB_STATUSES.has(job.status)
+  )?.id;
+  const latestReport = useQuery({
+    queryKey: queryKeys.operator.latestBenchmark,
+    queryFn: fetchLatestBenchmark,
+  });
+  const jobReport = useQuery({
+    queryKey: queryKeys.operator.jobReport(reportJobId ?? ""),
+    queryFn: () => fetchJobReport(reportJobId ?? ""),
+    enabled: reportJobId !== undefined,
+  });
+  const report = jobReport.data ?? latestReport.data ?? null;
+  const reportArtifactsJobId = jobReport.data ? reportJobId : undefined;
 
   const toggleModel = (id: string) => {
     setSelected((current) =>
@@ -221,7 +223,6 @@ export function BenchmarksTab({
         document: customDataset ? document : null,
       });
       onJobCreated(job);
-      setReportJobId(undefined);
       toast.success("Benchmark started");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Benchmark failed to start");
@@ -395,7 +396,7 @@ export function BenchmarksTab({
           </Button>
         </div>
       </section>
-      {report ? <ReportView report={report} jobId={reportJobId} /> : null}
+      {report ? <ReportView report={report} jobId={reportArtifactsJobId} /> : null}
     </div>
   );
 }

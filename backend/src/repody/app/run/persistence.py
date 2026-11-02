@@ -11,15 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.run.lifecycle import RunEntity, RunStatus, start_field_updates
 from repody.infra.db.models import Run
-from repody.infra.db.models.enums import RunStatus as OrmRunStatus
-
-
-def _to_domain_status(value: str) -> RunStatus:
-    return RunStatus(value)
-
-
-def _to_orm_status(status: RunStatus) -> str:
-    return status.value
 
 
 def entity_from_orm(run: Run) -> RunEntity:
@@ -27,7 +18,7 @@ def entity_from_orm(run: Run) -> RunEntity:
         id=run.id,
         workflow_id=run.workflow_id,
         source=run.source,
-        status=_to_domain_status(run.status),
+        status=RunStatus(run.status),
         worker_pool=run.worker_pool,
         overall_status=run.overall_status,
         error=run.error,
@@ -44,7 +35,7 @@ def entity_from_orm(run: Run) -> RunEntity:
 
 
 def apply_entity_to_orm(entity: RunEntity, run: Run) -> None:
-    run.status = _to_orm_status(entity.status)
+    run.status = entity.status.value
     run.overall_status = entity.overall_status
     run.error = entity.error
     run.summary_total = entity.summary_total
@@ -61,7 +52,7 @@ def apply_entity_to_orm(entity: RunEntity, run: Run) -> None:
 def _start_claim_orm_values(now: datetime) -> dict[str, object]:
     updates = start_field_updates(now)
     values = asdict(updates)
-    values["status"] = _to_orm_status(updates.status)
+    values["status"] = updates.status.value
     return values
 
 
@@ -86,7 +77,7 @@ async def try_claim_queued_run(
 ) -> RunEntity | None:
     claim = await session.execute(
         update(Run)
-        .where(Run.id == run_id, Run.status == OrmRunStatus.queued.value)
+        .where(Run.id == run_id, Run.status == RunStatus.queued.value)
         .values(**_start_claim_orm_values(now))
         .returning(Run.id, Run.workflow_id)
     )

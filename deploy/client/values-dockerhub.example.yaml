@@ -22,12 +22,6 @@ images:
     repository: mehdigououiad/repody-web
     tag: "0.1.0"
     pullPolicy: IfNotPresent
-  workerExtract:
-    repository: mehdigououiad/repody-backend
-    tag: "0.1.0"
-  workerFast:
-    repository: mehdigououiad/repody-backend
-    tag: "0.1.0"
 
 # Public Hub images need no pull secret. Private Hub:
 # global:

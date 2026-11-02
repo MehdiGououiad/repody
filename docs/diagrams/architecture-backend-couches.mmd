@@ -13,8 +13,7 @@ flowchart TB
     RunEnq["app/run/enqueue.py<br/>admission · create Run"]
     Outbox["app/run/dispatch_outbox.py<br/>Postgres outbox"]
     Dispatch["app/run/dispatch.py<br/>Taskiq kiq"]
-    RunProc["app/run/processor.py<br/>claim · recipe"]
-    PlatformOrch["runtime/recipe.py<br/>execute_platform_run"]
+    RunProc["app/run/processor.py<br/>claim · execute"]
     IdpRun["agents/idp/run.py<br/>execute_idp_run"]
     IdpCompose["agents/idp/compose.py<br/>compose_idp"]
     OpSvc["app/operator/<br/>diagnostics · warmup"]
@@ -47,7 +46,7 @@ flowchart TB
   RunEnq --> Outbox --> Dispatch --> Taskiq
   Taskiq --> RunProc
   RunProc --> Domain
-  RunProc --> PlatformOrch --> IdpRun --> IdpCompose
+  RunProc --> IdpRun --> IdpCompose
   IdpRun --> Pipe --> Catalog --> VLM --> InfClient
   IdpRun --> Rules
   RunProc --> Events
@@ -63,7 +62,7 @@ flowchart TB
   classDef ext fill:#fff4e0,stroke:#8a6d3b,color:#111
   classDef inf fill:#f0f0f0,stroke:#555,color:#111
   class Next,Proxy,APIRouters ui
-  class WFSvc,RunEnq,Outbox,Dispatch,RunProc,PlatformOrch,IdpRun,IdpCompose,OpSvc svc
+  class WFSvc,RunEnq,Outbox,Dispatch,RunProc,IdpRun,IdpCompose,OpSvc svc
   class Domain,Events dom
   class Pipe,Catalog,VLM,Rules ext
   class DB,Storage,Taskiq,InfClient,Auth inf

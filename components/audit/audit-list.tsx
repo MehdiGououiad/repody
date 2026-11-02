@@ -255,7 +255,7 @@ export function AuditList({ audits }: { audits: Audit[] }) {
                   {formatDateTime(a.timestamp, locale, { withYear: true })}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {a.rows === null ? "—" : formatNumber(a.rows, locale)}
+                  {a.rows == null ? "—" : formatNumber(a.rows, locale)}
                 </TableCell>
               </TableRow>
             ))

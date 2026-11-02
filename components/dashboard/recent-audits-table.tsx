@@ -73,7 +73,7 @@ export function RecentAuditsTable({ audits, title, limit, actions }: RecentAudit
                   {formatDateTime(a.timestamp, locale)}
                 </TableCell>
                 <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {a.rows === null ? "—" : formatNumber(a.rows, locale)}
+                  {a.rows == null ? "—" : formatNumber(a.rows, locale)}
                 </TableCell>
               </TableRow>
             ))}

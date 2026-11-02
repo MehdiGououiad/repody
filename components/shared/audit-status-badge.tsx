@@ -14,7 +14,7 @@ const variantMap: Record<AuditStatus, "success" | "danger" | "warning" | "info">
 
 interface AuditStatusBadgeProps {
   status: AuditStatus;
-  failedCount?: number;
+  failedCount?: number | null;
   className?: string;
 }
 

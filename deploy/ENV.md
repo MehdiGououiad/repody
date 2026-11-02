@@ -45,7 +45,7 @@ Store the API key in secrets only - never commit it.
 
 | Variable | Purpose |
 |----------|---------|
-| `AUDIT_PADDLEOCR_V6_ENABLED` | Register `paddleocr:v6` in the catalog (markdown-only) |
+| `AUDIT_PADDLEOCR_V6_ENABLED` | Local launchers only: start the host PP-OCRv6 service (`pnpm dev:src:all`) |
 | `AUDIT_PADDLEOCR_V6_BASE_URL` | PP-OCRv6 HTTP root, e.g. `http://127.0.0.1:8868` |
 | `AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS` | Request timeout (default 180) |
 | `AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY` | Official `/ocr` override (default `true`; set `false` for already-oriented inputs) |
@@ -55,7 +55,7 @@ Store the API key in secrets only - never commit it.
 | `AUDIT_QWEN35_BASE_URL` | Qwen OpenAI API root, e.g. `http://127.0.0.1:8084/v1` |
 | `AUDIT_QWEN35_SERVED_MODEL` | Qwen model alias (default `Qwen3.5-4B`) |
 | `AUDIT_QWEN35_TIMEOUT_SECONDS` | Qwen text -> JSON timeout (default 180) |
-| `AUDIT_GLM_OCR_ENABLED` | Register `glm:ocr` in the catalog (markdown-only) |
+| `AUDIT_GLM_OCR_ENABLED` | Local launchers only: start the host GLM-OCR service (`pnpm dev:src:all`) |
 | `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
 | `AUDIT_GLM_OCR_SERVED_MODEL` | Model id / alias (default `GLM-OCR`) |
 | `AUDIT_GLM_OCR_TIMEOUT_SECONDS` | Request timeout (default 180) |
@@ -72,14 +72,6 @@ Compose extract defaults: worker **10** min, model timeouts **600** s, stale **1
 
 Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm platform -- --with-paddle` / `--with-glm`). See [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
-## Platform agents
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `AUDIT_AGENT_IDP_ENABLED` | `true` | Run the IDP extract+validate stage; the recipe is empty without it |
-
-IDP is the only agent ([ADR 007](../docs/adr/007-staged-agent-queues-taskiq.md)).
-
 Helm values:
 
 ```yaml
@@ -87,9 +79,6 @@ config:
   inferenceMode: llamacpp
   llamacppBaseUrl: https://vlm.example.com/v1
   llamacppServedModel: numind/NuExtract3
-  agentIdpEnabled: true
-  paddleocrV6Enabled: false
-  glmOcrEnabled: false
 
 workerExtract:
   warmupOnStart: false

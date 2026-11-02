@@ -180,57 +180,6 @@
       "description": "Follow the same three steps as the workflow builder — define fields, add rules, then test and deploy.",
       "stepLabel": "Step {number}",
       "footerHint": "Completed audits and pass rates will appear on this dashboard."
-    },
-    "platform": {
-      "title": "Platform pulse",
-      "hint": "Queue, workers, extraction runtime, and operator mode.",
-      "openConsole": "Operator console",
-      "queue": "Runs in pipeline",
-      "queueDetail": "{queued} queued · {inflight} running",
-      "queueIdle": "No runs waiting or in progress",
-      "workers": "Workers",
-      "workersReady": "Ready",
-      "workersAttention": "Check queue",
-      "extraction": "Extraction",
-      "operator": "Operator",
-      "operatorOn": "Actions on",
-      "operatorReadOnly": "Read only",
-      "cacheOn": "Cache on · {backend}",
-      "cacheOff": "Extraction cache disabled",
-      "statusOk": "healthy",
-      "statusUnknown": "unknown",
-      "llmOn": "LLM validation on",
-      "llmOff": "Logic only",
-      "runsInPipeline": "{count} in pipeline"
-    },
-    "fleet": {
-      "title": "Workflow fleet",
-      "hint": "Deployed APIs with live stats, plus drafts ready to finish.",
-      "manageAll": "All workflows",
-      "liveApis": "{count, plural, one {# live API} other {# live APIs}}",
-      "drafts": "{count, plural, one {# draft} other {# drafts}}"
-    },
-    "extraction": {
-      "title": "Document model health",
-      "hint": "Repody VLM / inference runtime reachability.",
-      "manageModels": "Model settings",
-      "unknownModel": "Default model",
-      "runtimeUp": "Runtime reachable",
-      "runtimeDown": "Runtime unreachable",
-      "modelLoaded": "Model loaded",
-      "modelNotLoaded": "Model not loaded"
-    },
-    "operator": {
-      "title": "Operator & benchmarks",
-      "hint": "Background jobs for model pull, warmup, and quality benchmarks.",
-      "openBenchmarks": "Benchmarks",
-      "latestBenchmark": "Latest benchmark",
-      "passed": "Passed",
-      "failed": "Failed",
-      "fieldAccuracy": "Field accuracy",
-      "profile": "Profile",
-      "recentJobs": "Recent operator jobs",
-      "noJobs": "No operator jobs yet — run a benchmark from Settings."
     }
   },
   "audits": {
@@ -308,34 +257,6 @@
       "warning": "Warning",
       "running": "Running",
       "failedWithRules": "Failed ({count, plural, one {# rule} other {# rules}})"
-    },
-    "detail": {
-      "auditId": "Audit ID",
-      "title": "Financial Reconciliation Report",
-      "processed": "Processed",
-      "entity": "Entity",
-      "workflow": "Workflow",
-      "panels": {
-        "document": "Source document",
-        "extracted": "Extracted structured data",
-        "rules": "Compliance rules"
-      },
-      "fields": {
-        "key": "Data key",
-        "value": "Extracted value",
-        "type": "Type"
-      },
-      "rule": {
-        "passed": "Passed",
-        "failed": "Failed",
-        "warning": "Warning",
-        "rejectOnFail": "Reject on fail",
-        "flagForReview": "Flag for review",
-        "expected": "Expected",
-        "extracted": "Extracted",
-        "overrideWithCalculated": "Override with calculated",
-        "flagForManualReview": "Flag for manual review"
-      }
     }
   },
   "users": {
@@ -346,21 +267,6 @@
   "workflows": {
     "title": "Workflows",
     "description": "Your data extraction and validation pipelines.",
-    "tile": {
-      "callsToday": "Calls today",
-      "avgLatency": "Avg latency",
-      "avgSuccessRate": "Success rate",
-      "topFailures": "Top failures",
-      "extracted": "{done} / {total} extracted",
-      "lastRun": "Last run {date}",
-      "neverRun": "Never run",
-      "docTypes": "{count} document type",
-      "docTypesPlural": "{count} document types",
-      "fields": "{count} field",
-      "fieldsPlural": "{count} fields",
-      "rules": "{count} rule",
-      "rulesPlural": "{count} rules"
-    },
     "status": {
       "active": "Active",
       "paused": "Paused",
@@ -983,20 +889,6 @@
       "languageHint": "Affects new sessions. Users can override per-session in the top bar.",
       "timezone": "Timezone",
       "timezoneHint": "All timestamps are displayed in this timezone."
-    },
-    "platform": {
-      "banner": "Runtime settings are loaded from environment configuration (AUDIT_* vars). The General tab shows live values from the API; other tabs are placeholders.",
-      "title": "Platform runtime",
-      "desc": "Read-only snapshot of server configuration.",
-      "loading": "Loading platform config…",
-      "readOnlyHint": "To change these values, update Docker Compose or AUDIT_* environment variables and restart the API.",
-      "extractor": "Extractor",
-      "inference": "Inference",
-      "queue": "Job queue",
-      "storage": "Storage",
-      "documentModelId": "Default document model",
-      "maxUpload": "Max upload size",
-      "workerPools": "Worker pools"
     },
     "integrations": {
       "connected": "Connected",

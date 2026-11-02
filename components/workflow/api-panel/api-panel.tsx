@@ -2,9 +2,12 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { ApiInfoScreen } from "@/components/workflow/api-panel-info";
-import { ApiRunLoadingScreen } from "@/components/workflow/api-panel-loading";
-import { type ApiRunReport, ApiRunReportScreen } from "@/components/workflow/api-panel-report";
+import { ApiInfoScreen } from "@/components/workflow/api-panel/api-panel-info";
+import { ApiRunLoadingScreen } from "@/components/workflow/api-panel/api-panel-loading";
+import {
+  type ApiRunReport,
+  ApiRunReportScreen,
+} from "@/components/workflow/api-panel/api-panel-report";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
 import { type RunProgress, runWorkflowApi } from "@/lib/api/workflow-run";

@@ -12,6 +12,9 @@ from repody.extraction.warmup import warmup_repody_vlm
 from repody.runtime.operator.job import OperatorJob
 from repody.runtime.operator.validate import parse_model_identifier
 
+# Image layout from backend/Dockerfile; running from here puts the scripts package on sys.path.
+APP_ROOT = Path("/app")
+
 
 def benchmark_command(
     *,
@@ -28,7 +31,8 @@ def benchmark_command(
 ) -> list[str]:
     command = [
         sys.executable,
-        "/app/scripts/benchmark_suite.py",
+        "-m",
+        "scripts.benchmark_suite",
         "--api",
         "http://127.0.0.1:8000",
         "--document",
@@ -103,6 +107,7 @@ def create_benchmark_job(root: Path, request: BenchmarkRequest) -> OperatorJob:
             await run_command(
                 job,
                 command,
+                cwd=APP_ROOT,
                 env={"AUDIT_BENCHMARK_BEARER_TOKEN": bearer_token} if bearer_token else None,
             )
         except Exception as exc:

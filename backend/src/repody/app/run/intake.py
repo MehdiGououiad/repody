@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.app.mappers import run_to_audit_detail
+from repody.app.audit.mappers import run_to_audit_detail
 from repody.app.queue.progress import (
     enrich_progress_for_poll,
     init_queued_progress_with_position,

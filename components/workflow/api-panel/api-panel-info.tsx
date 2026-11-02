@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { CopyButton } from "@/components/workflow/api-panel-copy";
+import { CopyButton } from "@/components/workflow/api-panel/api-panel-copy";
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import { buildWorkflowRunSnippets, workflowDocumentSlots } from "@/lib/api/workflow-run-snippets";

@@ -6,6 +6,7 @@ import asyncio
 from functools import lru_cache
 
 import structlog
+from taskiq.middlewares.opentelemetry_middleware import OpenTelemetryMiddleware
 from taskiq_redis import RedisStreamBroker
 
 from repody.settings import get_settings
@@ -28,10 +29,12 @@ def _producer_pools(settings) -> tuple[str, ...]:
 @lru_cache
 def get_broker(pool: str) -> RedisStreamBroker:
     settings = get_settings()
-    return RedisStreamBroker(
+    broker = RedisStreamBroker(
         url=settings.redis_url,
         queue_name=f"{QUEUE_PREFIX}{pool}",
     )
+    # One span per task, with trace context carried from the API's kiq to the worker.
+    return broker.with_middlewares(OpenTelemetryMiddleware())
 
 
 async def startup_taskiq_brokers() -> None:

@@ -8,7 +8,7 @@ from simpleeval import EvalWithCompoundTypes, simple_eval
 from repody.rules.amounts import parse_numeric_value
 from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers, normalize_field_key
 from repody.rules.types import RuleEvalResult, collect_affected_fields
-from repody.rules.value_coercion import is_iso_date_like
+from repody.rules.value_coercion import MISSING, is_iso_date_like
 
 
 def _strip_string_literals(expression: str) -> str:
@@ -33,7 +33,7 @@ def _lookup_field(names: dict[str, Any], ident: str) -> tuple[bool, Any]:
 
 def coerce_field_value(raw: str) -> Any:
     text = (raw or "").strip()
-    if not text or text == "—":
+    if not text or text == MISSING:
         return None
     if is_iso_date_like(text):
         return text

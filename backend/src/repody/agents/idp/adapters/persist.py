@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from repody.agents.idp.contracts import DocumentExtraction, ValidationOutput
-from repody.app.mappers import duration_ms_between
+from repody.app.audit.mappers import duration_ms_between
 from repody.app.run.commands import (
     CompleteRunRequest,
     complete_run,

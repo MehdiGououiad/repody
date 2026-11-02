@@ -55,29 +55,9 @@ from repody.extraction.schema import icl_examples_from_document
 from repody.infra.db.base import async_session_factory
 from repody.infra.db.models import Run
 from repody.infra.storage.factory import get_storage
-from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 
 log = structlog.get_logger()
-
-
-def agent_status_from_idp(outcome: IdpOutcome) -> AgentStatus:
-    if outcome.errors:
-        return AgentStatus.PARTIAL
-    if outcome.validation.overall_status == "passed":
-        return AgentStatus.PASSED
-    if outcome.validation.overall_status == "warning":
-        return AgentStatus.PARTIAL
-    return AgentStatus.FAILED
-
-
-def wrap_idp_outcome(outcome: IdpOutcome) -> AgentOutcome:
-    return AgentOutcome(
-        agent=AgentId.IDP,
-        status=agent_status_from_idp(outcome),
-        payload=outcome,
-        errors=outcome.errors,
-    )
 
 
 @dataclass
@@ -205,7 +185,6 @@ def _load_idp_input(run: Run, config: MaterializedRunConfig) -> IdpInput:
         run_id=run.id,
         workflow_id=workflow.id,
         documents=config.documents,
-        rules=config.rules,
         stored=stored,
         workflow_name=config.workflow_name,
     )
@@ -224,8 +203,8 @@ def _initial_progress_steps(run: Run, config: MaterializedRunConfig) -> list[dic
 async def execute_idp_run(
     session: AsyncSession,
     run: Run,
-) -> Result[AgentOutcome]:
-    """Load -> compose (extract+validate) -> persist and complete the platform run."""
+) -> Result[IdpOutcome]:
+    """Load -> compose (extract+validate) -> persist and complete the run."""
     run_id = run.id
     config = materialize_run_config(run)
     inp = _load_idp_input(run, config)
@@ -307,4 +286,4 @@ async def execute_idp_run(
             1 for row in idp_outcome.validation.rule_results if row.status in ("failed", "error")
         ),
     )
-    return Result.ok(wrap_idp_outcome(idp_outcome))
+    return Result.ok(idp_outcome)

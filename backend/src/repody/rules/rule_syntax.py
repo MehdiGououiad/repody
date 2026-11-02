@@ -5,7 +5,6 @@ from __future__ import annotations
 from simpleeval import EvalWithCompoundTypes, simple_eval
 
 from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers
-from repody.rules.types import rule_kind
 
 # Sample values tried in order until the expression type-checks.
 _SAMPLE_VALUES: tuple[object, ...] = (
@@ -51,11 +50,3 @@ def validate_llm_rule_body(body: str, *, max_len: int = 4000) -> str | None:
     if len(text) > max_len:
         return f"LLM rule body exceeds {max_len} characters."
     return None
-
-
-def validate_rule_dict(rule: dict) -> list[str]:
-    kind = rule_kind(rule)
-    label = (rule.get("name") or "").strip() or rule.get("id") or "Rule"
-    body = rule.get("body") or ""
-    err = validate_llm_rule_body(body) if kind == "llm" else validate_logic_rule_body(body)
-    return [f"{label}: {err}"] if err else []

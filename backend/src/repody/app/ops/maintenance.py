@@ -31,11 +31,6 @@ def _stale_queued_message(minutes: int) -> str:
     )
 
 
-def _running_activity_at(run: Run) -> datetime | None:
-    """Prefer last_activity_at so multi-stage handoffs do not look stuck on started_at."""
-    return run.last_activity_at or run.started_at
-
-
 async def _worker_backlog_active(session: AsyncSession) -> bool:
     """True when at least one run is actively executing on a worker."""
     result = await session.execute(
@@ -114,34 +109,6 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
             timeout_minutes=minutes,
         )
     return reaped
-
-
-async def maybe_reap_stale_run(session: AsyncSession, run: Run) -> bool:
-    """Fail a single run when it exceeded queued/running stale thresholds."""
-    settings = get_settings()
-    now = datetime.now(UTC)
-    activity_at = _running_activity_at(run)
-    if run.status == RunStatus.running.value and activity_at:
-        cutoff = now - timedelta(minutes=settings.stale_run_timeout_minutes)
-        if activity_at < cutoff:
-            return await fail_run_terminal(
-                run.id,
-                _stale_running_message(settings.stale_run_timeout_minutes),
-                session=session,
-                expected_status=RunStatus.running.value,
-            )
-    if run.status == RunStatus.queued.value and run.created_at:
-        if await _worker_backlog_active(session):
-            return False
-        cutoff = now - timedelta(minutes=settings.queued_stale_timeout_minutes)
-        if run.created_at < cutoff:
-            return await fail_run_terminal(
-                run.id,
-                _stale_queued_message(settings.queued_stale_timeout_minutes),
-                session=session,
-                expected_status=RunStatus.queued.value,
-            )
-    return False
 
 
 async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:

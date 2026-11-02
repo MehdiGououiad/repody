@@ -180,63 +180,6 @@
       "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
       "stepLabel": "Étape {number}",
       "footerHint": "Les audits terminés et les taux de réussite apparaîtront sur ce tableau de bord."
-    },
-    "platform": {
-      "title": "Pouls plateforme",
-      "hint": "File d'attente, workers, runtime d'extraction et mode opérateur.",
-      "openConsole": "Console opérateur",
-      "queue": "Exécutions en cours",
-      "queueDetail": "{queued} en file · {inflight} en traitement",
-      "queueIdle": "Aucune exécution en attente ou en cours",
-      "workers": "Workers",
-      "workersReady": "Prêts",
-      "workersAttention": "Vérifier la file",
-      "extraction": "Extraction",
-      "operator": "Opérateur",
-      "operatorOn": "Actions actives",
-      "operatorReadOnly": "Lecture seule",
-      "cacheOn": "Cache actif · {backend}",
-      "cacheOff": "Cache d'extraction désactivé",
-      "statusOk": "sain",
-      "statusUnknown": "inconnu",
-      "llmOn": "Validation LLM active",
-      "llmOff": "Logique seule",
-      "runsInPipeline": "{count} en pipeline"
-    },
-    "fleet": {
-      "title": "Flotte de workflows",
-      "hint": "API déployées avec stats live, plus les brouillons à finaliser.",
-      "manageAll": "Tous les workflows",
-      "liveApis": "{count, plural, one {# API live} other {# API live}}",
-      "drafts": "{count, plural, one {# brouillon} other {# brouillons}}"
-    },
-    "extraction": {
-      "title": "Santé du modèle document",
-      "hint": "Accessibilité du runtime Repody VLM / inférence.",
-      "manageModels": "Paramètres modèles",
-      "unknownModel": "Modèle par défaut",
-      "runtimeUp": "Runtime accessible",
-      "runtimeDown": "Runtime inaccessible",
-      "modelLoaded": "Modèle chargé",
-      "modelNotLoaded": "Modèle non chargé"
-    },
-    "operator": {
-      "title": "Opérateur & benchmarks",
-      "hint": "Jobs de pull, warmup et benchmarks qualité.",
-      "openBenchmarks": "Benchmarks",
-      "latestBenchmark": "Dernier benchmark",
-      "passed": "Réussis",
-      "failed": "Échoués",
-      "fieldAccuracy": "Précision champs",
-      "profile": "Profil",
-      "recentJobs": "Jobs opérateur récents",
-      "noJobs": "Aucun job — lancez un benchmark depuis Paramètres."
-    },
-    "quickNav": {
-      "newWorkflow": "Nouveau workflow",
-      "workflows": "Workflow builder",
-      "audits": "Rapports d'audit",
-      "console": "Console opérateur"
     }
   },
   "audits": {
@@ -314,34 +257,6 @@
       "warning": "Avertissement",
       "running": "En cours",
       "failedWithRules": "Échec ({count, plural, one {# règle} other {# règles}})"
-    },
-    "detail": {
-      "auditId": "ID d'audit",
-      "title": "Rapport de réconciliation financière",
-      "processed": "Traité",
-      "entity": "Entité",
-      "workflow": "Workflow",
-      "panels": {
-        "document": "Document source",
-        "extracted": "Données structurées extraites",
-        "rules": "Règles de conformité"
-      },
-      "fields": {
-        "key": "Clé",
-        "value": "Valeur extraite",
-        "type": "Type"
-      },
-      "rule": {
-        "passed": "Validée",
-        "failed": "Échouée",
-        "warning": "Avertissement",
-        "rejectOnFail": "Rejeter en cas d'échec",
-        "flagForReview": "Signaler pour relecture",
-        "expected": "Attendu",
-        "extracted": "Extrait",
-        "overrideWithCalculated": "Remplacer par la valeur calculée",
-        "flagForManualReview": "Signaler pour vérification manuelle"
-      }
     }
   },
   "users": {
@@ -352,21 +267,6 @@
   "workflows": {
     "title": "Workflows",
     "description": "Vos pipelines d'extraction et de validation.",
-    "tile": {
-      "callsToday": "Appels aujourd'hui",
-      "avgLatency": "Latence moyenne",
-      "avgSuccessRate": "Taux de réussite",
-      "topFailures": "Principales défaillances",
-      "extracted": "{done} / {total} extrait(s)",
-      "lastRun": "Dernière exécution {date}",
-      "neverRun": "Jamais exécuté",
-      "docTypes": "{count} type de document",
-      "docTypesPlural": "{count} types de documents",
-      "fields": "{count} champ",
-      "fieldsPlural": "{count} champs",
-      "rules": "{count} règle",
-      "rulesPlural": "{count} règles"
-    },
     "status": {
       "active": "Actif",
       "paused": "En pause",
@@ -989,21 +889,6 @@
       "languageHint": "S'applique aux nouvelles sessions. Personnalisable depuis la barre supérieure.",
       "timezone": "Fuseau horaire",
       "timezoneHint": "Tous les horodatages sont affichés dans ce fuseau horaire."
-    },
-    "platform": {
-      "banner": "Les paramètres d'exécution proviennent de la configuration d'environnement (variables AUDIT_*). L'onglet Général affiche les valeurs live de l'API ; les autres onglets sont des placeholders.",
-      "title": "Runtime plateforme",
-      "desc": "Instantané en lecture seule de la configuration serveur.",
-      "loading": "Chargement de la config…",
-      "readOnlyHint": "Pour modifier ces valeurs, mettez à jour Docker Compose ou les variables AUDIT_* puis redémarrez l'API.",
-      "extractor": "Extracteur",
-      "inference": "Inférence",
-      "queue": "File de jobs",
-      "storage": "Stockage",
-      "documentModelId": "Modèle document par défaut",
-      "ocrLangs": "Langues OCR",
-      "maxUpload": "Taille max. upload",
-      "workerPools": "Pools workers"
     },
     "integrations": {
       "connected": "Connecté",

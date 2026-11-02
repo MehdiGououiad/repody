@@ -64,7 +64,7 @@ def extract_label(doc_type: str, *, mode: str, detail: str | None = None) -> str
 def meta_to_dict(meta) -> dict:
     """Canonical HTTP/wire shape (camelCase) for extraction meta.
 
-    Used by run_documents.extraction_meta and agentOutcomes handoff payloads.
+    Used by run_documents.extraction_meta.
     Display labels are derived at the edge when absent from the meta object.
     """
     stored_read_label = getattr(meta, "read_path_label", None)

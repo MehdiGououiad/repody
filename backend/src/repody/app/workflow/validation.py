@@ -55,19 +55,6 @@ def validate_workflow_schema(payload: WorkflowSchema) -> None:
             raise ValueError(f"{doc_label}: {exc}") from exc
 
 
-def validate_document_schema(doc: DocumentDefSchema) -> list[str]:
-    """Return user-facing errors for a single document schema."""
-    dupes = duplicate_field_names(doc.schema_fields)
-    if not dupes:
-        return []
-    joined = ", ".join(f'"{name}"' for name in dupes)
-    doc_label = (doc.document_type or "").strip() or "Document"
-    return [
-        f"{doc_label}: duplicate field name(s) {joined}. "
-        "Each field name must be unique (case-insensitive)."
-    ]
-
-
 def validate_workflow_rules(payload: WorkflowSchema) -> None:
     """Raise ValueError when any rule fails validation."""
     for rule in payload.rules:

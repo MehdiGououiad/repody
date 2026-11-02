@@ -35,7 +35,7 @@ export function HealthStrip({ alerts }: { alerts: HealthAlert[] }) {
   return (
     <div className="flex flex-col gap-2">
       {visible.map((a) => {
-        const cfg = sevConfig[a.severity];
+        const cfg = sevConfig[a.severity as keyof typeof sevConfig] ?? sevConfig.info;
         const Inner = (
           <>
             <cfg.Icon className={cn("h-4 w-4 shrink-0", cfg.iconClass)} />

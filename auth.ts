@@ -1,8 +1,6 @@
-import { NextResponse } from "next/server";
 import NextAuth from "next-auth";
 import Keycloak from "next-auth/providers/keycloak";
 import { realmRolesFromAccessToken } from "@/lib/auth/jwt-claims";
-import { isPublicPage } from "@/lib/auth/public-paths";
 import { refreshKeycloakAccessToken } from "@/lib/auth/refresh-keycloak-token";
 
 const keycloakPublicIssuer = process.env.AUTH_KEYCLOAK_ISSUER;
@@ -47,29 +45,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         ]
       : [],
   callbacks: {
-    authorized({ auth: session, request }) {
-      if (!keycloakConfigured) {
-        return true;
-      }
-
-      const path = request.nextUrl.pathname;
-
-      if (path.startsWith("/api/")) {
-        return true;
-      }
-
-      if (isPublicPage(path)) {
-        if (path === "/login" && session?.user && !session.error) {
-          const callback = request.nextUrl.searchParams.get("callbackUrl");
-          const dest =
-            callback?.startsWith("/") && !callback.startsWith("//") ? callback : "/dashboard";
-          return NextResponse.redirect(new URL(dest, request.url));
-        }
-        return true;
-      }
-
-      return Boolean(session?.user && !session.error);
-    },
     async jwt({ token, account }) {
       if (account?.access_token) {
         token.accessToken = account.access_token;

@@ -5,9 +5,7 @@ from repody.util.urls import is_remote_inference_url
 
 DOCUMENT_RUNTIME = "llamacpp"
 NUEXTRACT_CLOUD_RUNTIME = "nuextract_cloud"
-PADDLEOCR_V6_RUNTIME = "paddleocr_v6"
 PADDLEOCR_QWEN_RUNTIME = "paddleocr_qwen"
-GLM_OCR_RUNTIME = "glm_ocr"
 GLM_OCR_QWEN_RUNTIME = "glm_ocr_qwen"
 
 

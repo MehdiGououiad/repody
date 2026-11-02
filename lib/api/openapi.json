@@ -521,6 +521,7 @@
           "workflows"
         ],
         "summary": "Dry Run",
+        "description": "Evaluate the posted draft only; ``workflow_id`` scopes the route, not the data.",
         "operationId": "dry_run_v1_workflows__workflow_id__dry_run_post",
         "parameters": [
           {
@@ -589,7 +590,7 @@
           "runs"
         ],
         "summary": "Get Run Status",
-        "description": "Lightweight poll \u2014 status and progress only (no full audit payload).",
+        "description": "Lightweight poll - status and progress only (no full audit payload).",
         "operationId": "get_run_status_v1_runs__run_id__status_get",
         "parameters": [
           {
@@ -926,7 +927,7 @@
             "required": false,
             "schema": {
               "type": "integer",
-              "default": 200,
+              "default": 50,
               "title": "Limit"
             }
           },
@@ -1594,6 +1595,24 @@
         "summary": "Get Models Catalog",
         "description": "Document and validation model catalog with live availability.",
         "operationId": "get_models_catalog_v1_models_catalog_get",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1601,6 +1620,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ModelsCatalogResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2463,7 +2492,9 @@
           "workflowId",
           "workflowName",
           "entity",
-          "timestamp"
+          "timestamp",
+          "rows",
+          "failedRules"
         ],
         "title": "AuditListItem"
       },
@@ -2532,6 +2563,14 @@
           }
         },
         "type": "object",
+        "required": [
+          "generatedAt",
+          "profile",
+          "suiteId",
+          "summary",
+          "results",
+          "environment"
+        ],
         "title": "BenchmarkReportSchema"
       },
       "BenchmarkResultSchema": {
@@ -2695,6 +2734,25 @@
           }
         },
         "type": "object",
+        "required": [
+          "case",
+          "model",
+          "phase",
+          "status",
+          "passed",
+          "skipped",
+          "wallMs",
+          "queueMs",
+          "extractionMs",
+          "validationMs",
+          "fieldAccuracy",
+          "ruleAccuracy",
+          "judgeQuality",
+          "rawTextChars",
+          "textPreview",
+          "cacheHit",
+          "error"
+        ],
         "title": "BenchmarkResultSchema"
       },
       "BenchmarkSummarySchema": {
@@ -2748,6 +2806,15 @@
           }
         },
         "type": "object",
+        "required": [
+          "passed",
+          "failed",
+          "skipped",
+          "fieldAccuracy",
+          "ruleAccuracy",
+          "medianWallMs",
+          "medianRawTextChars"
+        ],
         "title": "BenchmarkSummarySchema"
       },
       "Body_create_run_v1_workflows__workflow_id__runs_post": {
@@ -2986,7 +3053,14 @@
         "required": [
           "id",
           "label",
-          "kind"
+          "kind",
+          "engine",
+          "runtime",
+          "description",
+          "available",
+          "availabilityNote",
+          "isDefault",
+          "markdownOnly"
         ],
         "title": "CatalogModelEntry"
       },
@@ -3264,12 +3338,12 @@
           "nativePdfAuto": {
             "type": "boolean",
             "title": "Nativepdfauto",
-            "description": "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
+            "description": "When true, try Firecrawl pdf-inspector native PDF text \u2192 Qwen JSON; if quality is weak, fall back to documentModelId.",
             "default": false
           },
           "extractionIclExamples": {
             "items": {
-              "$ref": "#/components/schemas/ExtractionIclExampleSchema"
+              "$ref": "#/components/schemas/ExtractionIclExampleSchema-Input"
             },
             "type": "array",
             "title": "Extractioniclexamples",
@@ -3338,12 +3412,12 @@
           "nativePdfAuto": {
             "type": "boolean",
             "title": "Nativepdfauto",
-            "description": "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
+            "description": "When true, try Firecrawl pdf-inspector native PDF text \u2192 Qwen JSON; if quality is weak, fall back to documentModelId.",
             "default": false
           },
           "extractionIclExamples": {
             "items": {
-              "$ref": "#/components/schemas/ExtractionIclExampleSchema"
+              "$ref": "#/components/schemas/ExtractionIclExampleSchema-Output"
             },
             "type": "array",
             "title": "Extractioniclexamples",
@@ -3352,7 +3426,16 @@
         },
         "type": "object",
         "required": [
-          "id"
+          "id",
+          "documentType",
+          "extractionMode",
+          "validationMode",
+          "documentModelId",
+          "schema",
+          "extractionInstructions",
+          "markdownExtraction",
+          "nativePdfAuto",
+          "extractionIclExamples"
         ],
         "title": "DocumentDefSchema"
       },
@@ -3429,7 +3512,18 @@
         "type": "object",
         "required": [
           "ok",
-          "model"
+          "model",
+          "runtime",
+          "inferenceReachable",
+          "modelInRegistry",
+          "modelLoaded",
+          "extractor",
+          "inferenceMode",
+          "inferMs",
+          "sampleExtracted",
+          "detail",
+          "hint",
+          "settings"
         ],
         "title": "DocumentModelDiagnosticResponse"
       },
@@ -3473,6 +3567,14 @@
           }
         },
         "type": "object",
+        "required": [
+          "extractor",
+          "inferenceMode",
+          "runtime",
+          "documentModelPdfDpi",
+          "documentModelMaxEdgePx",
+          "llmValidationEnabled"
+        ],
         "title": "DocumentModelDiagnosticSettingsSchema"
       },
       "DocumentModelSummary": {
@@ -3539,7 +3641,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/WorkflowRuleSchema"
+                  "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
                 },
                 "type": "array"
               },
@@ -3731,7 +3833,7 @@
         ],
         "title": "DryRunRuleResult"
       },
-      "ExtractionIclExampleSchema": {
+      "ExtractionIclExampleSchema-Input": {
         "properties": {
           "input": {
             "type": "string",
@@ -3745,6 +3847,26 @@
           }
         },
         "type": "object",
+        "title": "ExtractionIclExampleSchema"
+      },
+      "ExtractionIclExampleSchema-Output": {
+        "properties": {
+          "input": {
+            "type": "string",
+            "title": "Input",
+            "default": ""
+          },
+          "output": {
+            "type": "string",
+            "title": "Output",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "input",
+          "output"
+        ],
         "title": "ExtractionIclExampleSchema"
       },
       "HTTPValidationError": {
@@ -3795,7 +3917,8 @@
           "id",
           "severity",
           "titleKey",
-          "detailKey"
+          "detailKey",
+          "href"
         ],
         "title": "HealthAlert"
       },
@@ -3908,6 +4031,7 @@
           "redisOk",
           "extractor",
           "inference",
+          "llamacpp",
           "storageBackend",
           "directUploadEnabled",
           "cacheEnabled",
@@ -4003,10 +4127,12 @@
         "type": "object",
         "required": [
           "subject",
+          "email",
           "roles",
           "permissions",
           "canManageUsers",
-          "oidcEnabled"
+          "oidcEnabled",
+          "keycloakAdminUrl"
         ],
         "title": "IamMeResponse"
       },
@@ -4069,7 +4195,12 @@
         "type": "object",
         "required": [
           "id",
-          "username"
+          "username",
+          "email",
+          "firstName",
+          "lastName",
+          "enabled",
+          "roles"
         ],
         "title": "IamUser"
       },
@@ -4101,7 +4232,8 @@
         "type": "object",
         "required": [
           "users",
-          "managementAvailable"
+          "managementAvailable",
+          "managementError"
         ],
         "title": "IamUsersResponse"
       },
@@ -4219,7 +4351,8 @@
         "required": [
           "kpis",
           "performanceSeries",
-          "violationBreakdown"
+          "violationBreakdown",
+          "healthAlerts"
         ],
         "title": "MetricsResponse"
       },
@@ -4314,7 +4447,10 @@
           "label",
           "description",
           "scope",
-          "restart"
+          "restart",
+          "value",
+          "configured",
+          "source"
         ],
         "title": "ModelConfigField"
       },
@@ -4343,6 +4479,11 @@
           }
         },
         "type": "object",
+        "required": [
+          "models",
+          "shared",
+          "deploymentNotes"
+        ],
         "title": "ModelRuntimeConfigResponse"
       },
       "ModelRuntimeProfile": {
@@ -4397,7 +4538,10 @@
           "label",
           "runtime",
           "runtimeModel",
-          "enabled"
+          "enabled",
+          "inferenceUrl",
+          "renderPolicy",
+          "fields"
         ],
         "title": "ModelRuntimeProfile"
       },
@@ -4458,7 +4602,12 @@
         "required": [
           "models",
           "defaultDocumentModel",
-          "inferenceMode"
+          "defaultValidationModel",
+          "inferenceMode",
+          "paths",
+          "validationModes",
+          "defaultPath",
+          "defaultValidationMode"
         ],
         "title": "ModelsCatalogResponse"
       },
@@ -4554,7 +4703,13 @@
           "kind",
           "label",
           "status",
-          "createdAt"
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "progress",
+          "output",
+          "error",
+          "hasReport"
         ],
         "title": "OperatorJobSchema"
       },
@@ -4581,9 +4736,15 @@
             "title": "Maxuploadbytes"
           },
           "nuextractMaxPagesPerRequest": {
-            "type": "integer",
-            "title": "Nuextractmaxpagesperrequest",
-            "default": 6
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nuextractmaxpagesperrequest"
           },
           "taskTimeoutMinutes": {
             "type": "integer",
@@ -4593,6 +4754,7 @@
         "type": "object",
         "required": [
           "maxUploadBytes",
+          "nuextractMaxPagesPerRequest",
           "taskTimeoutMinutes"
         ],
         "title": "OperatorLimitsSchema"
@@ -4731,9 +4893,15 @@
             "title": "Documentmodels"
           },
           "nuextractMaxPagesPerRequest": {
-            "type": "integer",
-            "title": "Nuextractmaxpagesperrequest",
-            "default": 6
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nuextractmaxpagesperrequest"
           },
           "llamacppBaseUrl": {
             "type": "string",
@@ -4805,13 +4973,19 @@
           "defaultDocumentModelId",
           "defaultReadPath",
           "documentModels",
+          "nuextractMaxPagesPerRequest",
           "llamacppBaseUrl",
           "maxUploadBytes",
           "maxUploadFiles",
           "staleRunTimeoutMinutes",
           "queuedStaleTimeoutMinutes",
           "workerTaskTimeoutMinutes",
-          "maintenanceIntervalSeconds"
+          "maintenanceIntervalSeconds",
+          "workerPools",
+          "taskiqConfigured",
+          "llmValidationEnabled",
+          "gpuLiveProbe",
+          "healthzProbeInference"
         ],
         "title": "PlatformConfigResponse"
       },
@@ -4951,7 +5125,11 @@
           "storageKey",
           "fileName",
           "mimeType",
-          "size"
+          "size",
+          "documentId",
+          "uploadUrl",
+          "method",
+          "headers"
         ],
         "title": "PresignedUploadItem"
       },
@@ -5053,6 +5231,9 @@
           }
         },
         "type": "object",
+        "required": [
+          "rules"
+        ],
         "title": "RuleLibraryResponse"
       },
       "RuleTemplateSchema": {
@@ -5183,7 +5364,8 @@
           "createdAt",
           "documents",
           "ruleResults",
-          "summary"
+          "summary",
+          "metadata"
         ],
         "title": "RunAuditDetail"
       },
@@ -5230,7 +5412,9 @@
         "required": [
           "id",
           "documentType",
-          "fields"
+          "fileName",
+          "fields",
+          "extraction"
         ],
         "title": "RunAuditDocument"
       },
@@ -5279,7 +5463,13 @@
         },
         "type": "object",
         "required": [
-          "key"
+          "key",
+          "description",
+          "value",
+          "type",
+          "confidence",
+          "extracted",
+          "flagged"
         ],
         "title": "RunAuditField"
       },
@@ -5345,6 +5535,16 @@
           }
         },
         "type": "object",
+        "required": [
+          "startedAt",
+          "finishedAt",
+          "durationMs",
+          "extractionMs",
+          "validationMs",
+          "validationMode",
+          "validationLabel",
+          "llmModel"
+        ],
         "title": "RunAuditMetadata"
       },
       "RunAuditRule": {
@@ -5420,8 +5620,14 @@
           "id",
           "name",
           "kind",
+          "scope",
           "status",
-          "severity"
+          "severity",
+          "expression",
+          "affectedFields",
+          "detail",
+          "expectedValue",
+          "actualValue"
         ],
         "title": "RunAuditRule"
       },
@@ -5450,7 +5656,9 @@
         },
         "type": "object",
         "required": [
-          "runId"
+          "runId",
+          "jobId",
+          "status"
         ],
         "title": "RunCreatedResponse"
       },
@@ -5566,6 +5774,18 @@
               }
             ],
             "title": "Pagesdropped"
+          },
+          "nativePdf": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nativepdf"
           }
         },
         "type": "object",
@@ -5574,7 +5794,19 @@
           "readPathUsed",
           "readPathLabel",
           "validationMode",
-          "validationLabel"
+          "validationLabel",
+          "documentModelId",
+          "extractionMs",
+          "cacheHit",
+          "gpuColdStartLikely",
+          "fieldsExtracted",
+          "markdownText",
+          "rawText",
+          "markdownExtraction",
+          "pagesRendered",
+          "pagesSent",
+          "pagesDropped",
+          "nativePdf"
         ],
         "title": "RunDocumentExtractionMeta"
       },
@@ -5618,7 +5850,10 @@
         },
         "type": "object",
         "required": [
-          "status"
+          "status",
+          "progress",
+          "result",
+          "error"
         ],
         "title": "RunPollResponse"
       },
@@ -5666,7 +5901,9 @@
         "required": [
           "currentIndex",
           "steps",
-          "label"
+          "label",
+          "queuePosition",
+          "queueDepth"
         ],
         "title": "RunProgressSchema"
       },
@@ -5776,7 +6013,16 @@
         "required": [
           "id",
           "label",
-          "status"
+          "status",
+          "mode",
+          "kind",
+          "detail",
+          "readPath",
+          "validationMode",
+          "documentModelId",
+          "durationMs",
+          "cacheHit",
+          "gpuColdStartHint"
         ],
         "title": "RunProgressStepSchema"
       },
@@ -5792,7 +6038,7 @@
           },
           "rules": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema"
+              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
             },
             "type": "array",
             "title": "Rules",
@@ -5812,7 +6058,7 @@
         },
         "type": "object",
         "title": "RunSnapshotBody",
-        "description": "Ephemeral workflow config for a single run \u2014 does not mutate the saved workflow."
+        "description": "Ephemeral workflow config for a single run - does not mutate the saved workflow."
       },
       "RunSummary": {
         "properties": {
@@ -5922,7 +6168,11 @@
         "type": "object",
         "required": [
           "id",
-          "name"
+          "name",
+          "description",
+          "templateType",
+          "enumValues",
+          "children"
         ],
         "title": "SchemaFieldSchema"
       },
@@ -6154,7 +6404,7 @@
           },
           "rules": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema"
+              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
             },
             "type": "array",
             "title": "Rules"
@@ -6354,7 +6604,7 @@
         ],
         "title": "WorkflowResponse"
       },
-      "WorkflowRuleSchema": {
+      "WorkflowRuleSchema-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -6426,6 +6676,85 @@
         ],
         "title": "WorkflowRuleSchema"
       },
+      "WorkflowRuleSchema-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "logic"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": "intra"
+          },
+          "appliesTo": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Appliesto",
+            "default": []
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditions"
+          },
+          "conditionJunction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conditionjunction"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body",
+            "default": ""
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity",
+            "default": "reject"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "scope",
+          "appliesTo",
+          "conditions",
+          "conditionJunction",
+          "body",
+          "severity"
+        ],
+        "title": "WorkflowRuleSchema"
+      },
       "WorkflowSchema-Input": {
         "properties": {
           "id": {
@@ -6482,7 +6811,7 @@
           },
           "rules": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema"
+              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
             },
             "type": "array",
             "title": "Rules",
@@ -6597,7 +6926,7 @@
           },
           "rules": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema"
+              "$ref": "#/components/schemas/WorkflowRuleSchema-Output"
             },
             "type": "array",
             "title": "Rules",
@@ -6652,7 +6981,19 @@
         "type": "object",
         "required": [
           "id",
-          "name"
+          "name",
+          "description",
+          "status",
+          "owner",
+          "lastRun",
+          "successRate",
+          "totalRuns",
+          "documents",
+          "rules",
+          "deployedAt",
+          "apiKey",
+          "apiKeyHint",
+          "apiStats"
         ],
         "title": "WorkflowSchema"
       }

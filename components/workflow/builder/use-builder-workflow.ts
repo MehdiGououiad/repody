@@ -10,6 +10,7 @@ import {
 } from "@/components/workflow/builder/test-run-session";
 import { browserApi } from "@/lib/api/openapi-client";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { workflowFromWire } from "@/lib/api/workflow-wire";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
@@ -139,7 +140,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       if (error || !response.ok || !data) {
         throw new Error(`Deploy failed: HTTP ${response.status}`);
       }
-      const res = data as { workflow: Workflow };
+      const res = { workflow: workflowFromWire(data.workflow) };
       setDeployed(true);
       const revealed = res.workflow.apiKey ?? apiKey;
       setApiKey(revealed);

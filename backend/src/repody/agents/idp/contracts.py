@@ -30,23 +30,9 @@ class DocumentSpec:
 
 
 @dataclass(frozen=True, slots=True)
-class RuleSpec:
-    id: str
-    name: str
-    kind: str
-    scope: str
-    severity: str
-    applies_to: tuple[str, ...]
-    conditions: tuple[dict, ...] = ()
-    body: str = ""
-    condition_junction: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
 class IdpWorkflowConfig:
     workflow_id: str
     documents: tuple[DocumentSpec, ...]
-    rules: tuple[RuleSpec, ...]
     workflow_name: str | None = None
 
 

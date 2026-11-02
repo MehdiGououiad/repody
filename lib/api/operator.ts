@@ -1,86 +1,31 @@
 import { browserFetch } from "@/lib/api/http";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
+import type { Schema } from "@/lib/api/schema-types";
 
-export type OperatorJob = {
-  id: string;
-  kind: "benchmark" | "model_warmup";
-  label: string;
-  status: "queued" | "running" | "completed" | "failed" | "cancelled";
-  createdAt: string;
-  startedAt?: string | null;
-  completedAt?: string | null;
-  progress: string;
-  output: string;
-  error?: string | null;
-  hasReport: boolean;
-};
+export type OperatorJob = Schema["OperatorJobSchema"];
 
-export type OperatorStatus = {
-  actionsEnabled: boolean;
-  reportDirectory: string;
-  warmup: {
-    documentModelOnStart: boolean;
-  };
-  limits: {
-    maxUploadBytes: number;
-    nuextractMaxPagesPerRequest: number;
-    taskTimeoutMinutes: number;
-  };
-};
-
-export type BenchmarkResult = {
-  case: string;
-  model: string;
-  phase: string;
-  status: string;
-  passed: boolean;
-  skipped?: boolean;
-  wallMs?: number | null;
-  queueMs?: number | null;
-  extractionMs?: number | null;
-  validationMs?: number | null;
-  fieldAccuracy?: number | null;
-  ruleAccuracy?: number | null;
-  judgeQuality?: boolean;
-  rawTextChars?: number | null;
-  textPreview?: string | null;
-  cacheHit?: boolean | null;
-  error?: string | null;
-};
-
-export type BenchmarkReport = {
-  generatedAt: string;
-  profile: string;
-  suiteId: string;
-  summary: {
-    passed: number;
-    failed: number;
-    skipped: number;
-    fieldAccuracy: number;
-    ruleAccuracy: number;
-    medianWallMs?: number | null;
-    medianRawTextChars?: number | null;
-  };
-  results: BenchmarkResult[];
-};
+export const ACTIVE_JOB_STATUSES: ReadonlySet<string> = new Set(["queued", "running"]);
+export type OperatorStatus = Schema["OperatorStatusResponse"];
+export type BenchmarkResult = Schema["BenchmarkResultSchema"];
+export type BenchmarkReport = Schema["BenchmarkReportSchema"];
 
 export async function fetchOperatorStatus(): Promise<OperatorStatus> {
   const { data, error, response } = await browserApi.GET("/v1/operator/status");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as OperatorStatus;
+  return data;
 }
 
 export async function fetchOperatorJobs(): Promise<OperatorJob[]> {
   const { data, error, response } = await browserApi.GET("/v1/operator/jobs");
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return (data as { jobs: OperatorJob[] }).jobs;
+  return data.jobs;
 }
 
 export async function fetchLatestBenchmark(): Promise<BenchmarkReport | null> {
   try {
     const { data, error, response } = await browserApi.GET("/v1/operator/benchmarks/latest");
     if (error || !response.ok || !data) throwOnApiError(error, response);
-    return data as BenchmarkReport;
+    return data;
   } catch {
     return null;
   }
@@ -91,7 +36,7 @@ export async function fetchJobReport(jobId: string): Promise<BenchmarkReport> {
     params: { path: { job_id: jobId } },
   });
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return data as BenchmarkReport;
+  return data;
 }
 
 export async function warmupModel(model: string): Promise<OperatorJob> {
@@ -99,7 +44,7 @@ export async function warmupModel(model: string): Promise<OperatorJob> {
     body: { model },
   });
   if (error || !response.ok || !data) throwOnApiError(error, response);
-  return (data as { job: OperatorJob }).job;
+  return data.job;
 }
 
 export async function startBenchmark(options: {

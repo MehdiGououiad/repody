@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from functools import lru_cache
 
-from repody.inference.base import ChatFn, EnsureAvailableFn
 from repody.inference.stub import chat_stub, ensure_stub_available
 from repody.inference.validation_client import (
     chat_validation,
     ensure_validation_available,
 )
 from repody.settings import get_settings
+
+ChatFn = Callable[..., Awaitable[str]]
+EnsureAvailableFn = Callable[[], Awaitable[bool]]
 
 
 @lru_cache

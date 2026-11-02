@@ -9,11 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ConditionFieldOption } from "@/components/workflow/condition-builder-model";
+import type { ConditionFieldOption } from "@/components/workflow/rules/condition-builder-model";
 import {
   LiteralValueInput,
   literalPlaceholderForKind,
-} from "@/components/workflow/condition-literal-value-input";
+} from "@/components/workflow/rules/condition-literal-value-input";
 import type { LiteralInputKind } from "@/lib/rules/condition-input-kind";
 import type { ConditionOperand } from "@/lib/types";
 

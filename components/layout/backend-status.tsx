@@ -1,29 +1,21 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Circle, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { type BackendHealth, checkBackendHealth } from "@/lib/api/health";
+import { queryKeys } from "@/lib/hooks/query-keys";
 import { cn } from "@/lib/utils";
 
 export function BackendStatus() {
   const t = useTranslations("common");
-  const [health, setHealth] = useState<BackendHealth>({ status: "checking" });
-
-  useEffect(() => {
-    let mounted = true;
-    const run = async () => {
-      const h = await checkBackendHealth();
-      if (mounted) setHealth(h);
-    };
-    run();
-    const id = setInterval(run, 30_000);
-    return () => {
-      mounted = false;
-      clearInterval(id);
-    };
-  }, []);
+  const { data } = useQuery({
+    queryKey: queryKeys.backendHealth,
+    queryFn: checkBackendHealth,
+    refetchInterval: 30_000,
+  });
+  const health: BackendHealth = data ?? { status: "checking" };
 
   const label =
     health.status === "ok"

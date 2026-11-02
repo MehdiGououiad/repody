@@ -8,7 +8,6 @@ from repody.extraction.modes import (
     RUN_VALIDATION_LLM,
     ValidationMode,
 )
-from repody.extraction.types import ExtractionResult
 from repody.rules.conditions import expand_rules_for_evaluation, resolve_rule_body
 from repody.rules.field_namespace import (
     field_values_for_rule,
@@ -58,41 +57,33 @@ def skipped_llm_results(skipped: list[dict]) -> list[RuleEvalResult]:
     return out
 
 
-async def validate_extractions(
-    *,
-    extractions: list[tuple[str, ExtractionResult]],
+async def validate_field_rows(
+    rows: list[tuple[str, str, str | None]],
     rules: list[dict],
+    *,
+    doc_types_by_id: dict[str, str],
     multi_document: bool,
     validation_mode: ValidationMode = RUN_VALIDATION_LLM,
     on_rule_start: Callable[[dict], Awaitable[None]] | None = None,
     llm_model: str | None = None,
-    precomputed_llm: dict[str, tuple[str, str]] | None = None,
-    doc_types_by_id: dict[str, str] | None = None,
-) -> tuple[dict[str, str], list[RuleEvalResult]]:
-    """Validate extracted fields against workflow rules."""
-    rows: list[tuple[str, str, str | None]] = []
-    for doc_type, result in extractions:
-        for field in result.fields:
-            if not field.key:
-                continue
-            value = field.value if field.extracted and field.value else "—"
-            rows.append((field.key, value, doc_type))
+) -> list[RuleEvalResult]:
+    """Evaluate workflow rules over extracted ``(key, value, document type)`` rows.
 
+    LLM rules on a logic-only validation path come back as ``skipped`` results.
+    """
     field_values = field_values_from_extractions(rows, multi_document=multi_document)
     active_rules, skipped_rules = rules_for_validation(rules, validation_mode)
-
-    rule_results = await evaluate_rules(
+    results = await evaluate_rules(
         active_rules,
         field_values,
         extraction_rows=rows,
-        doc_types_by_id=doc_types_by_id or {},
+        doc_types_by_id=doc_types_by_id,
         multi_document=multi_document,
         on_rule_start=on_rule_start,
         llm_model=llm_model,
-        precomputed_llm=precomputed_llm,
     )
-    rule_results.extend(skipped_llm_results(skipped_rules))
-    return field_values, rule_results
+    results.extend(skipped_llm_results(skipped_rules))
+    return results
 
 
 async def evaluate_rules(
@@ -104,17 +95,14 @@ async def evaluate_rules(
     multi_document: bool = False,
     on_rule_start: Callable[[dict], Awaitable[None]] | None = None,
     llm_model: str | None = None,
-    precomputed_llm: dict[str, tuple[RuleStatus, str]] | None = None,
 ) -> list[RuleEvalResult]:
     expanded = expand_rules_for_evaluation(rules)
     llm_rules = [r for r in rules if rule_kind(r) == "llm"]
-    precomputed = precomputed_llm or {}
-    remaining_llm = [r for r in llm_rules if (r.get("id") or "") not in precomputed]
 
     llm_task: asyncio.Task[dict[str, tuple[RuleStatus, str]]] | None = None
-    if remaining_llm:
+    if llm_rules:
         llm_task = asyncio.create_task(
-            evaluate_llm_rules_batch(remaining_llm, field_values, llm_model=llm_model)
+            evaluate_llm_rules_batch(llm_rules, field_values, llm_model=llm_model)
         )
 
     results: list[RuleEvalResult] = []
@@ -127,9 +115,7 @@ async def evaluate_rules(
         if kind == "llm":
             body = (rule.get("body") or "").strip()
             name = rule.get("name") or "Rule"
-            if rule_id in precomputed:
-                status, detail = precomputed[rule_id]
-            elif llm_task is not None:
+            if llm_task is not None:
                 llm_results = await llm_task
                 if rule_id in llm_results:
                     status, detail = llm_results[rule_id]

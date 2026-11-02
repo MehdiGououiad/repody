@@ -7,7 +7,8 @@ import pytest
 from repody.extraction.types import ExtractedFieldResult, ExtractionResult
 from repody.rules.conditions import resolve_rule_body
 from repody.rules.field_namespace import field_values_for_rule, field_values_from_extractions
-from repody.rules.runner import evaluate_rules, validate_extractions
+from repody.rules.runner import evaluate_rules, validate_field_rows
+from repody.rules.value_coercion import MISSING
 
 
 def _field(key: str, value: str, *, extracted: bool = True) -> ExtractedFieldResult:
@@ -342,11 +343,19 @@ async def test_cross_rule_skipped_when_field_not_in_schema():
     assert status == "skipped"
 
 
-# --- End-to-end validate_extractions ---
+# --- End-to-end validate_field_rows ---
+
+
+def _rows(extractions: list[tuple[str, ExtractionResult]]) -> list[tuple[str, str, str | None]]:
+    return [
+        (f.key, f.value if f.extracted and f.value else MISSING, doc_type)
+        for doc_type, result in extractions
+        for f in result.fields
+    ]
 
 
 @pytest.mark.asyncio
-async def test_validate_extractions_multi_document_cross_rules():
+async def test_validate_field_rows_multi_document_cross_rules():
     extractions = [
         (
             "Invoice",
@@ -370,11 +379,8 @@ async def test_validate_extractions_multi_document_cross_rules():
         ),
     ]
     doc_types = {DOC_INVOICE: "Invoice", DOC_PO: "Purchase Order"}
-    _values, results = await validate_extractions(
-        extractions=extractions,
-        rules=rules,
-        multi_document=True,
-        doc_types_by_id=doc_types,
+    results = await validate_field_rows(
+        _rows(extractions), rules, multi_document=True, doc_types_by_id=doc_types
     )
     by_id = {row.id: row.status for row in results}
     assert by_id["r-po"] == "passed"
@@ -382,7 +388,7 @@ async def test_validate_extractions_multi_document_cross_rules():
 
 
 @pytest.mark.asyncio
-async def test_validate_extractions_flags_math_and_cross_failures():
+async def test_validate_field_rows_flags_math_and_cross_failures():
     """Realistic audit: invoice math wrong AND PO mismatch."""
     extractions = [
         (
@@ -420,11 +426,8 @@ async def test_validate_extractions_flags_math_and_cross_failures():
         ),
     ]
     doc_types = {DOC_INVOICE: "Invoice", DOC_PO: "Purchase Order"}
-    _values, results = await validate_extractions(
-        extractions=extractions,
-        rules=rules,
-        multi_document=True,
-        doc_types_by_id=doc_types,
+    results = await validate_field_rows(
+        _rows(extractions), rules, multi_document=True, doc_types_by_id=doc_types
     )
     by_id = {row.id: row.status for row in results}
     assert by_id["r-math"] == "failed"

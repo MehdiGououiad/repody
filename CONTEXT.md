@@ -62,7 +62,7 @@ backend/src/repody/
 ├── api/                 HTTP routers → app use cases
 ├── app/                 Application use cases (run, workflow, operator, …)
 ├── agents/idp/          contracts · compose · run · adapters/
-├── runtime/             contracts · recipe · pools · run status
+├── runtime/             Result contract · run status · metrics · operator jobs
 ├── extraction/          pipeline · nuextract · paddleocr · glm · render
 ├── inference/           OpenAI-compat clients
 ├── rules/               Logic + LLM evaluators
@@ -73,7 +73,7 @@ backend/src/repody/
 └── settings/            AUDIT_* settings
 ```
 
-**Hot path:** `process_run` -> `execute_platform_run`(IDP) -> `compose_idp` -> `complete_run`.
+**Hot path:** `process_run` -> `execute_idp_run` -> `compose_idp` -> `persist_idp_outcome` (completes the Run).
 
 ### Bounded contexts
 
@@ -82,7 +82,7 @@ backend/src/repody/
 | **Workflow configuration** | Templates, rules, deployment | `app/workflow/` |
 | **Audit execution** | Claim/complete, queue, worker | `app/run/`, `taskiq/` |
 | **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
-| **Platform / catalog** | Recipe, envelopes, registry, operator | `runtime/`, `catalog/`, `app/operator/` |
+| **Platform / catalog** | Result contract, document-model registry, operator | `runtime/`, `catalog/`, `app/operator/` |
 
 ### Platform agents
 

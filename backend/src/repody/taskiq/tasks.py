@@ -11,7 +11,6 @@ from repody.app.run.processor import execute_run_with_timeout
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run
 from repody.infra.observability.context import bind_log_context, log_context
-from repody.infra.observability.tracing import start_span
 from repody.settings import get_settings
 from repody.taskiq.broker import get_broker
 from repody.taskiq.models import AuditRunInput
@@ -37,39 +36,24 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
         workflow_id=workflow_id,
         request_id=request_id,
         pool=input.extract_pool,
-        agent_stage=input.agent_stage,
         timeout_minutes=settings.worker_task_timeout_minutes,
     )
     try:
-        async with start_span(
-            "process_audit_run",
-            {
-                "run.id": run_id,
-                "workflow.id": workflow_id or "",
-                "request.id": request_id or "",
-                "worker.pool": input.extract_pool,
-                "agent.stage": input.agent_stage,
-            },
+        with log_context(
+            run_id=run_id,
+            workflow_id=workflow_id,
+            request_id=request_id,
+            correlation_id=request_id,
+            worker_pool=input.extract_pool,
         ):
-            with log_context(
-                run_id=run_id,
-                workflow_id=workflow_id,
-                request_id=request_id,
-                correlation_id=request_id,
-                worker_pool=input.extract_pool,
-            ):
-                if workflow_id is None:
-                    async with db_base.async_session_factory() as session:
-                        run = await session.get(Run, run_id)
-                        workflow_id = run.workflow_id if run else None
-                        if workflow_id:
-                            bind_log_context(workflow_id=workflow_id)
-                # No long-lived session across extract HTTP - process_run manages phases.
-                await execute_run_with_timeout(
-                    run_id,
-                    agent_stage=input.agent_stage,
-                    request_id=request_id,
-                )
+            if workflow_id is None:
+                async with db_base.async_session_factory() as session:
+                    run = await session.get(Run, run_id)
+                    workflow_id = run.workflow_id if run else None
+                    if workflow_id:
+                        bind_log_context(workflow_id=workflow_id)
+            # No long-lived session across extract HTTP - process_run manages phases.
+            await execute_run_with_timeout(run_id, request_id=request_id)
     except Exception as exc:
         if isinstance(exc, TimeoutError):
             log.warning(
@@ -92,14 +76,11 @@ def get_process_audit_run_task(pool: str) -> AsyncTaskiqDecoratedTask[Any, Any]:
 
     settings = get_settings()
     broker = get_broker(pool)
-    timeout_seconds = max(60, settings.worker_task_timeout_minutes * 60)
+    # execute_run_with_timeout owns the run deadline and marks the run failed; Taskiq's
+    # timeout cancels from outside without that handling, so it only backs it up.
+    backstop_seconds = max(60, settings.worker_task_timeout_minutes * 60) + 60
 
-    @broker.task(
-        task_name="process-audit-run",
-        retry_on_error=True,
-        max_retries=1,
-        timeout=timeout_seconds,
-    )
+    @broker.task(task_name="process-audit-run", timeout=backstop_seconds)
     async def process_audit_run_task(input: AuditRunInput) -> dict[str, str]:
         return await _execute_audit_run(input)
 

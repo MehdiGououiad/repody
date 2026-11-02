@@ -9,6 +9,7 @@ from sqlalchemy import delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from repody.agents.idp.run import execute_idp_run
 from repody.app.run.commands import (
     PUBLIC_RUN_FAILURE_MESSAGE,
     ClaimRunRequest,
@@ -26,12 +27,6 @@ from repody.infra.db.models import (
     RunStatus,
     Workflow,
 )
-from repody.runtime.agent_metadata import agent_status_recorded
-from repody.runtime.contracts.agent import AgentId
-from repody.runtime.pools import parse_agent_stage
-from repody.runtime.recipe import (
-    execute_platform_run,
-)
 from repody.settings import get_settings
 
 log = structlog.get_logger()
@@ -46,11 +41,10 @@ def advisory_lock_key(run_id: str) -> int:
 async def execute_run_with_timeout(
     run_id: str,
     *,
-    agent_stage: str = "idp",
     request_id: str | None = None,
     session: AsyncSession | None = None,
 ) -> None:
-    """Run one platform agent stage with a hard ceiling from AUDIT_WORKER_TASK_TIMEOUT_MINUTES.
+    """Process one run with a hard ceiling from AUDIT_WORKER_TASK_TIMEOUT_MINUTES.
 
     When ``session`` is omitted (workers), process_run opens a managed session and
     commits after claim so IDP extract ports can use separate short-lived connections.
@@ -60,12 +54,7 @@ async def execute_run_with_timeout(
     timeout_seconds = settings.worker_task_timeout_minutes * 60
     try:
         await asyncio.wait_for(
-            process_run(
-                session,
-                run_id,
-                agent_stage=agent_stage,
-                request_id=request_id,
-            ),
+            process_run(session, run_id, request_id=request_id),
             timeout=timeout_seconds,
         )
     except TimeoutError:
@@ -156,29 +145,6 @@ async def _claim_run(session: AsyncSession, run_id: str) -> Run | None:
     return await _load_run_graph(session, run_id)
 
 
-async def _load_running_run(session: AsyncSession, run_id: str) -> Run | None:
-    """Later agent stages: require an already-running run (no re-claim)."""
-    if not await _try_advisory_lock(session, run_id):
-        log.info(
-            "run_stage_lock_busy",
-            event_domain="audit_run",
-            run_id=run_id,
-        )
-        return None
-    run = await _load_run_graph(session, run_id)
-    if run is None:
-        return None
-    if run.status != RunStatus.running.value:
-        log.info(
-            "run_stage_skipped_not_running",
-            event_domain="audit_run",
-            run_id=run_id,
-            run_status=run.status,
-        )
-        return None
-    return run
-
-
 async def _persist_run_failure(run_id: str, exc: Exception) -> None:
     await fail_run_terminal(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
     log.error(
@@ -191,93 +157,47 @@ async def _persist_run_failure(run_id: str, exc: Exception) -> None:
     )
 
 
-async def _resume_after_recorded_stage(
-    session: AsyncSession,
-    run: Run,
-    stage: AgentId,
-) -> bool:
-    """If this stage already recorded an outcome, finalize it without re-running.
-
-    Returns True when the caller should exit (idempotent path handled).
-    """
-    if agent_status_recorded(run, stage) is None:
-        return False
-
-    log.info(
-        "run_stage_already_recorded",
-        event_domain="audit_run",
-        run_id=run.id,
-        agent_stage=stage.value,
-        run_status=run.status,
-    )
-    await _touch_run_activity(session, run)
-    return True
-
-
 async def process_run(
     session: AsyncSession | None,
     run_id: str,
     *,
-    agent_stage: str = "idp",
     request_id: str | None = None,
 ) -> None:
-    """Platform entry: claim the run and execute its agent stage.
+    """Claim the run and execute it through the IDP agent.
 
     Workers pass ``session=None``; a short-lived session is opened and committed after
     claim so IDP extract ports can use separate connections without row-lock deadlocks.
+    Tests may pass a shared ``session``.
     """
     if session is not None:
-        await _process_run_with_session(
-            session, run_id, agent_stage=agent_stage, request_id=request_id
-        )
+        await _process_run_with_session(session, run_id, request_id=request_id)
         return
 
     from repody.infra.db.base import async_session_factory
 
     async with async_session_factory() as managed:
-        await _process_run_with_session(
-            managed, run_id, agent_stage=agent_stage, request_id=request_id
-        )
+        await _process_run_with_session(managed, run_id, request_id=request_id)
 
 
 async def _process_run_with_session(
     session: AsyncSession,
     run_id: str,
     *,
-    agent_stage: str,
     request_id: str | None,
 ) -> None:
-    """Single-session path for integration tests that share a postgres_session.
-
-    Commits after claim so short-lived IDP extract sessions are not blocked by
-    an open transaction holding the run row.
-    """
-    stage = parse_agent_stage(agent_stage)
     log.info(
         "run_processing_started",
         event_domain="audit_run",
         run_id=run_id,
-        agent_stage=stage.value,
         # Workers run outside the ASGI correlation-id middleware, so the
         # originating request is carried on the task and logged here.
         request_id=request_id,
     )
-
-    if stage is AgentId.IDP:
-        run = await _claim_run(session, run_id)
-        if not run:
-            run = await _load_running_run(session, run_id)
-            if run and await _resume_after_recorded_stage(session, run, stage):
-                return
-            return
-    else:
-        run = await _load_running_run(session, run_id)
-    if not run:
+    run = await _claim_run(session, run_id)
+    if run is None:
         return
 
     try:
-        if await _resume_after_recorded_stage(session, run, stage):
-            return
         await _touch_run_activity(session, run)
         await session.commit()
 
@@ -285,16 +205,10 @@ async def _process_run_with_session(
         if run is None:
             return
 
-        stage_r = await execute_platform_run(
-            session,
-            run,
-            agent_stage=stage,
-        )
-        if not stage_r.is_ok or stage_r.value is None:
-            err = stage_r.error
-            raise RuntimeError(err.message if err else f"agent stage {stage.value} failed")
-        # execute_idp_run completes the platform run itself, so there is nothing
-        # left to finalize or hand off here.
+        # execute_idp_run persists results and completes the run itself.
+        result = await execute_idp_run(session, run)
+        if not result.is_ok:
+            raise RuntimeError(result.error.message if result.error else "IDP run failed")
     except Exception as exc:
         await session.rollback()
         await _persist_run_failure(run_id, exc)

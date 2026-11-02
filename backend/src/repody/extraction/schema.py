@@ -12,6 +12,7 @@ from repody.extraction.nuextract import (
     resolve_template_type,
 )
 from repody.extraction.types import ExtractedFieldResult, ExtractionIclExample, SchemaFieldSpec
+from repody.rules.value_coercion import MISSING
 from repody.util.json_shape import normalize_keys_to_snake
 
 
@@ -123,26 +124,6 @@ def schema_field_spec_from_row(
     )
 
 
-def schema_field_spec_from_orm(field: Any) -> SchemaFieldSpec:
-    config = getattr(field, "field_config", None) or {}
-    return schema_field_spec_from_row(
-        name=field.name,
-        description=field.description or "",
-        template_type=getattr(field, "template_type", None),
-        field_config=config if isinstance(config, dict) else {},
-    )
-
-
-def schema_specs_from_document(doc: Any) -> list[SchemaFieldSpec]:
-    fields = sorted(getattr(doc, "schema_fields", None) or [], key=lambda item: item.position)
-    specs: list[SchemaFieldSpec] = []
-    for field in fields:
-        if not field.name.strip():
-            continue
-        specs.append(schema_field_spec_from_orm(field))
-    return specs
-
-
 def icl_examples_from_document(doc: Any) -> list[ExtractionIclExample]:
     raw = getattr(doc, "extraction_icl_examples", None)
     if raw is None and isinstance(doc, dict):
@@ -225,7 +206,7 @@ def empty_fields_from_schema(schema: list[SchemaFieldSpec]) -> list[ExtractedFie
             ExtractedFieldResult(
                 key=key,
                 description=field.description,
-                value="—",
+                value=MISSING,
                 type=_schema_type(field),
                 confidence=None,
                 extracted=False,
@@ -242,15 +223,15 @@ def fields_from_sample_values(
     results: list[ExtractedFieldResult] = []
     for key, field in iter_extraction_leaves(schema):
         raw = samples.get(key) or samples.get(field.name) or ""
-        value = raw.strip() or "—"
+        value = raw.strip() or MISSING
         results.append(
             ExtractedFieldResult(
                 key=key,
                 description=field.description,
                 value=value,
                 type=_schema_type(field),
-                confidence=0.9 if value != "—" else None,
-                extracted=value != "—",
+                confidence=0.9 if value != MISSING else None,
+                extracted=value != MISSING,
             )
         )
     return results

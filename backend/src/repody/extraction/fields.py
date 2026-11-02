@@ -17,8 +17,7 @@ from repody.extraction.schema import (
     iter_extraction_leaves,
 )
 from repody.extraction.types import ExtractedFieldResult
-
-MISSING = "—"
+from repody.rules.value_coercion import MISSING
 
 
 def fields_from_nuextract_json(

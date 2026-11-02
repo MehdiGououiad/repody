@@ -1,10 +1,18 @@
 import createClient from "openapi-fetch";
 import { formatApiError } from "@/lib/api/api-error";
 import type { paths } from "@/lib/api/generated/schema";
+import { guardSessionResponse } from "@/lib/api/http";
 
 /** Browser client: hits the Next.js `/api` rewrite, where Proxy adds the session token. */
-export function createBrowserOpenApiClient() {
-  return createClient<paths>({ baseUrl: "/api" });
+function createBrowserOpenApiClient() {
+  const client = createClient<paths>({ baseUrl: "/api" });
+  client.use({
+    async onResponse({ request, response }) {
+      await guardSessionResponse(response, new URL(request.url).pathname);
+      return response;
+    },
+  });
+  return client;
 }
 
 export const browserApi = createBrowserOpenApiClient();

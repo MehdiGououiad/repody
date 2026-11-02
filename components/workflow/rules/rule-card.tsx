@@ -24,7 +24,7 @@ import type {
   WorkflowRule,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { ConditionBuilder } from "../condition-builder";
+import { ConditionBuilder } from "./condition-builder";
 import { KindToggle, ScopeToggle } from "./kind-scope-toggles";
 import { LlmPromptEditor } from "./llm-prompt-editor";
 

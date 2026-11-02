@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CopyButton } from "@/components/workflow/api-panel-copy";
+import { CopyButton } from "@/components/workflow/api-panel/api-panel-copy";
 
 export function RunErrorAlert({
   title,

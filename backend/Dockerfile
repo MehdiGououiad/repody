@@ -72,6 +72,7 @@ COPY --chown=repody:repody alembic/ ./alembic/
 COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 COPY --chown=repody:repody scripts/bootstrap_migrations.py ./scripts/bootstrap_migrations.py
 COPY --chown=repody:repody scripts/benchmark_suite.py ./scripts/benchmark_suite.py
+COPY --chown=repody:repody scripts/benchmarking/ ./scripts/benchmarking/
 COPY --from=benchmark-fixtures --chown=repody:repody / /tmp/benchmark-fixtures/
 
 RUN set -eux; \

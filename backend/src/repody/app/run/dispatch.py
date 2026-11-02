@@ -12,7 +12,6 @@ from repody.app.run.commands import (
 from repody.app.run.pool import resolve_worker_pool
 from repody.infra.db import base as db_base
 from repody.infra.db.models import RunStatus
-from repody.runtime.pools import agent_for_pool
 from repody.settings import get_settings
 from repody.taskiq.broker import shutdown_taskiq_brokers, startup_taskiq_brokers
 from repody.taskiq.models import AuditRunInput
@@ -44,7 +43,6 @@ async def dispatch_audit_run(
     pool: str | None = None,
     workflow_id: str | None = None,
     request_id: str | None = None,
-    agent_stage: str | None = None,
 ) -> str:
     """Enqueue the audit-run task after the API transaction commits."""
     settings = get_settings()
@@ -55,14 +53,12 @@ async def dispatch_audit_run(
         else:
             pool = await resolve_worker_pool(session, run_id)
 
-    stage = agent_stage or agent_for_pool(pool).value
     await startup_taskiq_brokers()
     task = get_process_audit_run_task(pool)
     await task.kiq(
         AuditRunInput(
             run_id=run_id,
             extract_pool=pool,
-            agent_stage=stage,
             workflow_id=workflow_id,
             request_id=request_id,
         )
@@ -74,7 +70,6 @@ async def dispatch_audit_run(
         workflow_id=workflow_id,
         request_id=request_id,
         pool=pool,
-        agent_stage=stage,
         queue_name=f"repody:audit:{pool}",
         redis_url=settings.redis_url.split("@")[-1],
     )

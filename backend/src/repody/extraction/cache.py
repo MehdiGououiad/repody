@@ -12,6 +12,7 @@ from repody.extraction.types import (
     truncate_text,
 )
 from repody.infra.redis.pool import get_redis
+from repody.rules.value_coercion import MISSING
 from repody.settings import get_settings
 
 log = structlog.get_logger()
@@ -132,7 +133,7 @@ def _deserialize_result(raw: str) -> ExtractionResult:
         ExtractedFieldResult(
             key=row["key"],
             description=row.get("description") or "",
-            value=row.get("value") or "—",
+            value=row.get("value") or MISSING,
             type=row.get("type") or "string",
             confidence=row.get("confidence"),
             extracted=bool(row.get("extracted")),

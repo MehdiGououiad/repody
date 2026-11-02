@@ -32,7 +32,6 @@ data:
   AUDIT_WORKER_TASK_TIMEOUT_MINUTES: {{ .Values.config.workerTaskTimeoutMinutes | quote }}
   AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}
   AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: {{ .Values.config.queuedStaleTimeoutMinutes | quote }}
-  AUDIT_AGENT_IDP_ENABLED: {{ .Values.config.agentIdpEnabled | quote }}
 
   AUDIT_MAINTENANCE_INTERVAL_SECONDS: {{ .Values.config.maintenanceIntervalSeconds | quote }}
   AUDIT_DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
@@ -64,7 +63,6 @@ data:
   AUDIT_KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
   {{- end }}
   AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT: {{ .Values.config.repodyVlmMarkdownOnExtract | quote }}
-  AUDIT_PADDLEOCR_V6_ENABLED: {{ .Values.config.paddleocrV6Enabled | quote }}
   AUDIT_PADDLEOCR_V6_BASE_URL: {{ .Values.config.paddleocrV6BaseUrl | quote }}
   AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS: {{ .Values.config.paddleocrV6TimeoutSeconds | quote }}
   AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY: {{ .Values.config.paddleocrV6UseDocOrientationClassify | quote }}
@@ -74,7 +72,6 @@ data:
   AUDIT_QWEN35_BASE_URL: {{ .Values.config.qwen35BaseUrl | quote }}
   AUDIT_QWEN35_SERVED_MODEL: {{ .Values.config.qwen35ServedModel | quote }}
   AUDIT_QWEN35_TIMEOUT_SECONDS: {{ .Values.config.qwen35TimeoutSeconds | quote }}
-  AUDIT_GLM_OCR_ENABLED: {{ .Values.config.glmOcrEnabled | quote }}
   AUDIT_GLM_OCR_BASE_URL: {{ .Values.config.glmOcrBaseUrl | quote }}
   AUDIT_GLM_OCR_SERVED_MODEL: {{ .Values.config.glmOcrServedModel | quote }}
   AUDIT_GLM_OCR_TIMEOUT_SECONDS: {{ .Values.config.glmOcrTimeoutSeconds | quote }}

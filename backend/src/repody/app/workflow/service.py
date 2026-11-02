@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.mappers import workflow_to_list_schema, workflow_to_schema
 from repody.app.workflow.deployment import deploy_workflow
+from repody.app.workflow.mappers import workflow_to_list_schema, workflow_to_schema
 from repody.app.workflow.repository import (
     list_workflow_cards,
     load_workflow,

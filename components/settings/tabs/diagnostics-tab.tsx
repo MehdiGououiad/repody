@@ -1,10 +1,10 @@
 "use client";
 
 import { CheckCircle2, CircleAlert, RefreshCw } from "lucide-react";
-import { ACTIVE_STATUSES, OperatorJobStatusBadge } from "@/components/settings/settings-shared";
+import { OperatorJobStatusBadge } from "@/components/settings/settings-shared";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import type { OperatorJob, OperatorStatus } from "@/lib/api/operator";
+import { ACTIVE_JOB_STATUSES, type OperatorJob, type OperatorStatus } from "@/lib/api/operator";
 import type { PlatformConfig } from "@/lib/api/platform-config";
 
 export function DiagnosticsTab({
@@ -100,7 +100,7 @@ export function DiagnosticsTab({
                   <p className="text-xs text-on-surface-variant mt-3 break-words">{job.progress}</p>
                 ) : null}
                 {job.error ? <p className="text-xs text-danger mt-2">{job.error}</p> : null}
-                {ACTIVE_STATUSES.has(job.status) ? (
+                {ACTIVE_JOB_STATUSES.has(job.status) ? (
                   <Progress value={job.status === "queued" ? 15 : 55} className="mt-3 h-1.5" />
                 ) : null}
               </div>

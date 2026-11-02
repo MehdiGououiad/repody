@@ -9,10 +9,6 @@ class AuditRunInput(BaseModel):
         default="extract",
         description="Taskiq queue suffix (extract|fast).",
     )
-    agent_stage: str = Field(
-        default="idp",
-        description="Agent stage for this task.",
-    )
     workflow_id: str | None = Field(default=None, description="Workflow that owns the run.")
     request_id: str | None = Field(
         default=None,

@@ -11,12 +11,8 @@ from repody.agents.idp.contracts import (
     ValidationOutput,
 )
 from repody.extraction.modes import ValidationMode
-from repody.rules.field_namespace import field_values_from_extractions
-from repody.rules.runner import (
-    evaluate_rules,
-    rules_for_validation,
-    skipped_llm_results,
-)
+from repody.rules.runner import validate_field_rows
+from repody.rules.value_coercion import MISSING
 
 _PASS = frozenset({"pass", "passed"})
 _FAIL = frozenset({"fail", "failed", "error"})
@@ -32,7 +28,7 @@ def field_rows_from_extraction(
         for field in doc.fields:
             if not field.key:
                 continue
-            value = field.value if field.extracted and field.value else "—"
+            value = field.value if field.extracted and field.value else MISSING
             rows.append((field.key, value, doc_type))
     return rows
 
@@ -67,17 +63,13 @@ async def validate_extraction(
     llm_model: str | None = None,
 ) -> ValidationOutput:
     """Turn frozen extraction into summarized validation (one rules-engine path)."""
-    rows = field_rows_from_extraction(extraction, labels)
-    field_values = field_values_from_extractions(rows, multi_document=multi_document)
-    active_rules, skipped_rules = rules_for_validation(list(rules), validation_mode)
-    rule_evals = await evaluate_rules(
-        active_rules,
-        field_values,
-        extraction_rows=rows,
+    rule_evals = await validate_field_rows(
+        field_rows_from_extraction(extraction, labels),
+        list(rules),
         doc_types_by_id=labels,
         multi_document=multi_document,
+        validation_mode=validation_mode,
         on_rule_start=on_rule_start,
         llm_model=llm_model,
     )
-    rule_evals.extend(skipped_llm_results(skipped_rules))
     return summarize_validation(tuple(rule_result_from_eval(row) for row in rule_evals))

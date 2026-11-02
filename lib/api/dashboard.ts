@@ -1,4 +1,5 @@
 import type { DashboardResponse, QueueSnapshot } from "@/lib/api/schema-types";
+import { workflowFromWire } from "@/lib/api/workflow-wire";
 import type {
   Audit,
   HealthAlert,
@@ -33,12 +34,12 @@ export const EMPTY_DASHBOARD_QUEUE: QueueSnapshot = {
 export function dashboardSnapshotFromResponse(body: DashboardResponse): DashboardSnapshot {
   const metrics = body.metrics;
   return {
-    kpis: metrics.kpis as KpiMetric[],
-    performanceSeries: metrics.performanceSeries as PerformancePoint[],
-    violationBreakdown: metrics.violationBreakdown as ViolationBreakdown[],
-    healthAlerts: (metrics.healthAlerts ?? []) as HealthAlert[],
-    audits: body.audits as Audit[],
-    workflows: body.workflows as Workflow[],
+    kpis: metrics.kpis,
+    performanceSeries: metrics.performanceSeries,
+    violationBreakdown: metrics.violationBreakdown,
+    healthAlerts: metrics.healthAlerts ?? [],
+    audits: body.audits,
+    workflows: body.workflows.map(workflowFromWire),
     queue: body.queue ?? EMPTY_DASHBOARD_QUEUE,
   };
 }

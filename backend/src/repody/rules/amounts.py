@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from repody.rules.value_coercion import is_iso_date_like
+from repody.rules.value_coercion import MISSING, is_iso_date_like
 
 _NUMERIC_RUN = re.compile(r"[+-]?[\d][\d\s.,]*")
 
@@ -30,7 +30,7 @@ def _locale_normalize_numeric(token: str) -> str:
 def normalize_amount(value: str) -> str:
     """Locale amount parse for rules comparison only - not extraction storage."""
     s = value.strip()
-    if not s or s == "—":
+    if not s or s == MISSING:
         return s
     match = _NUMERIC_RUN.search(s.replace("\u00a0", " "))
     if not match:
@@ -41,7 +41,7 @@ def normalize_amount(value: str) -> str:
 def parse_numeric_value(value: str) -> float | None:
     """Parse a numeric field value, ignoring trailing currency labels."""
     s = value.strip()
-    if not s or s == "—":
+    if not s or s == MISSING:
         return None
     if is_iso_date_like(s):
         return None
@@ -54,7 +54,7 @@ def parse_numeric_value(value: str) -> float | None:
     if prefix and re.search(r"[A-Za-z]", prefix):
         return None
     normalized = normalize_amount(s)
-    if not normalized or normalized == "—":
+    if not normalized or normalized == MISSING:
         return None
     try:
         if re.match(r"^-?\d+(\.\d+)?$", normalized):

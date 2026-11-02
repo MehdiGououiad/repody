@@ -36,14 +36,25 @@ export function ViolationsBreakdown({ items }: { items: ViolationBreakdown[] }) 
         {items.map((it) => (
           <div key={it.type} className="space-y-1.5">
             <div className="flex items-center gap-3">
-              <div className={cn("w-2.5 h-2.5 rounded-full", colorMap[it.color])} />
+              <div
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full",
+                  colorMap[it.color as keyof typeof colorMap] ?? colorMap.neutral
+                )}
+              />
               <span className="text-sm text-on-surface flex-1">
                 {violationTypeLabel(t, it.type)}
               </span>
               <span className="text-xs font-semibold tabular-nums">{it.share}%</span>
             </div>
             <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-              <div className={cn("h-full", colorMap[it.color])} style={{ width: `${it.share}%` }} />
+              <div
+                className={cn(
+                  "h-full",
+                  colorMap[it.color as keyof typeof colorMap] ?? colorMap.neutral
+                )}
+                style={{ width: `${it.share}%` }}
+              />
             </div>
           </div>
         ))}

@@ -10,7 +10,7 @@ import pytest
 
 from repody.catalog.registry import is_markdown_only_model, parse_document_model
 from repody.extraction.branding import GLM_OCR_CATALOG_ID, UnknownCatalogIdError
-from repody.extraction.glm_ocr import extract_with_glm_ocr
+from repody.extraction.glm_ocr import fetch_glm_ocr_markdown
 from repody.extraction.glm_ocr_sdk import (
     GlmOcrSdkSettings,
     openai_host_port,
@@ -31,7 +31,6 @@ def test_openai_host_port_from_v1_base():
 
 def test_glm_ocr_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
     """Markdown-only GLM-OCR is an internal stage - not a selectable catalog model."""
-    monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
     monkeypatch.setenv("AUDIT_GLM_OCR_SERVED_MODEL", "GLM-OCR")
     get_settings.cache_clear()
     try:
@@ -44,7 +43,6 @@ def test_glm_ocr_not_in_workflow_catalog(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.mark.asyncio
 async def test_extract_requires_sdk_package(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
     get_settings.cache_clear()
     monkeypatch.setattr(
         "repody.extraction.glm_ocr.sdk_importable",
@@ -55,18 +53,13 @@ async def test_extract_requires_sdk_package(monkeypatch: pytest.MonkeyPatch):
     )
     try:
         with pytest.raises(RuntimeError, match="official glmocr SDK"):
-            await extract_with_glm_ocr(
-                DocumentBundle(raw_bytes=png, mime_type="image/png"),
-                [],
-                "CNIE",
-            )
+            await fetch_glm_ocr_markdown(DocumentBundle(raw_bytes=png, mime_type="image/png"))
     finally:
         get_settings.cache_clear()
 
 
 @pytest.mark.asyncio
-async def test_extract_with_glm_ocr_sdk(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("AUDIT_GLM_OCR_ENABLED", "true")
+async def test_fetch_glm_ocr_markdown_sdk(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("AUDIT_GLM_OCR_BASE_URL", "http://127.0.0.1:8083/v1")
     monkeypatch.setenv("AUDIT_GLM_OCR_SERVED_MODEL", "GLM-OCR")
     monkeypatch.setenv("AUDIT_GLM_OCR_LAYOUT_DEVICE", "cpu")
@@ -94,10 +87,8 @@ async def test_extract_with_glm_ocr_sdk(monkeypatch: pytest.MonkeyPatch):
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
         )
         bundle = DocumentBundle(raw_bytes=png, mime_type="image/png")
-        result = await extract_with_glm_ocr(bundle, [], "DEVIS")
-        assert result.markdown_text is not None
-        assert "497550" in result.markdown_text
-        assert result.fields == []
+        markdown, *_ = await fetch_glm_ocr_markdown(bundle)
+        assert "497550" in markdown
     finally:
         reset_glm_ocr_sdk_client()
         get_settings.cache_clear()

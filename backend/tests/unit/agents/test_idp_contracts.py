@@ -7,8 +7,6 @@ import pytest
 from repody.agents.idp.adapters.mapping import (
     build_idp_input,
     document_spec_from_snapshot,
-    rule_dict_from_spec,
-    rule_spec_from_dict,
     stored_document,
 )
 from repody.agents.idp.adapters.validate import summarize_validation, validate_extraction
@@ -19,14 +17,11 @@ from repody.agents.idp.contracts import (
     ExtractedField,
     ExtractionOutput,
     IdpExtractionMeta,
-    IdpOutcome,
     RuleResult,
     SchemaField,
 )
-from repody.agents.idp.run import agent_status_from_idp
 from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 from repody.extraction.modes import LOGIC_VALIDATION, extraction_is_needed
-from repody.runtime.contracts.agent import AgentId, AgentOutcome, AgentStatus
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 
 
@@ -41,17 +36,6 @@ def test_result_ok_and_fail():
     assert not err.is_ok
     assert err.error is not None
     assert err.error.code is ErrorCode.EXTRACTION
-
-
-def test_agent_outcome_envelope():
-    outcome = AgentOutcome(
-        agent=AgentId.IDP,
-        status=AgentStatus.PASSED,
-        payload={"run_id": "r1"},
-        errors=(),
-    )
-    assert outcome.agent is AgentId.IDP
-    assert outcome.status is AgentStatus.PASSED
 
 
 def test_extraction_is_needed_requires_file_and_schema_or_markdown():
@@ -106,65 +90,6 @@ def test_summarize_validation_partial():
     assert out.summary_failed == 1
 
 
-def test_agent_status_from_idp_outcome():
-    results = (
-        RuleResult(
-            rule_id="r1",
-            name="always",
-            status="passed",
-            severity="reject",
-            detail="ok",
-            affected_fields=(),
-            kind="logic",
-        ),
-    )
-    summary = summarize_validation(results)
-    outcome = IdpOutcome(
-        run_id="r",
-        workflow_id="w",
-        extraction=ExtractionOutput(by_document=()),
-        validation=summary,
-        errors=(),
-    )
-    assert agent_status_from_idp(outcome) in {
-        AgentStatus.PASSED,
-        AgentStatus.FAILED,
-        AgentStatus.PARTIAL,
-    }
-
-
-def test_rule_spec_round_trip_preserves_junction():
-    rule = rule_spec_from_dict(
-        {
-            "id": "r1",
-            "name": "Total positive",
-            "kind": "logic",
-            "scope": "intra",
-            "severity": "reject",
-            "applies_to": ["total"],
-            "body": "total > 0",
-            "conditions": [
-                {
-                    "left": {"kind": "field", "value": "total"},
-                    "operator": ">",
-                    "right": {"kind": "literal", "value": "0"},
-                }
-            ],
-            "condition_junction": "OR",
-        }
-    )
-    assert rule.kind == "logic"
-    assert rule.applies_to == ("total",)
-    assert rule.condition_junction == "OR"
-    assert len(rule.conditions) == 1
-
-    as_dict = rule_dict_from_spec(rule)
-    assert as_dict["condition_junction"] == "OR"
-    assert as_dict["applies_to"] == ["total"]
-    assert as_dict["body"] == "total > 0"
-    assert as_dict["conditions"] == list(rule.conditions)
-
-
 def test_mappers_build_idp_input():
     snap = SnapshotDocument(
         id="doc-1",
@@ -191,15 +116,6 @@ def test_mappers_build_idp_input():
         run_id="run-1",
         workflow_id="wf-1",
         documents=[snap],
-        rules=[
-            {
-                "id": "r1",
-                "name": "r",
-                "kind": "logic",
-                "body": "true",
-                "condition_junction": "AND",
-            }
-        ],
         stored=[
             stored_document(
                 document_id="doc-1",
@@ -214,8 +130,6 @@ def test_mappers_build_idp_input():
     assert inp.workflow.workflow_name == "Demo"
     assert len(inp.documents) == 1
     assert len(inp.workflow.documents) == 1
-    assert len(inp.workflow.rules) == 1
-    assert inp.workflow.rules[0].condition_junction == "AND"
 
 
 @pytest.mark.asyncio

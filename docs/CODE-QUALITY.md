@@ -77,7 +77,7 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 | Run persistence | `app/run/persistence.py` + `events.py` | Infrastructure mapping; no business transitions |
 | IDP agent | `agents/idp/compose.py` pure; I/O in `adapters/` + `run.py` | Do not put DB/HTTP inside `compose_idp` |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `taskiq/` and `run/processor.py` are delivery adapters | Worker claims work, runs recipe, records terminal failure |
+| Worker layer | `taskiq/` and `run/processor.py` are delivery adapters | Worker claims the run, executes IDP, records terminal failure |
 | Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
 | Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 

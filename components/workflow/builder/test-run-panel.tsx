@@ -4,7 +4,7 @@ import { CheckCircle2, Loader2, Play, Rocket } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { Button } from "@/components/ui/button";
-import { ApiPanel } from "@/components/workflow/api-panel";
+import { ApiPanel } from "@/components/workflow/api-panel/api-panel";
 import { TestRunResults } from "@/components/workflow/builder/test-run-results";
 import {
   formatUploadSize,

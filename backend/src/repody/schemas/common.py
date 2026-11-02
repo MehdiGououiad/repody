@@ -7,4 +7,5 @@ class CamelModel(BaseModel):
         alias_generator=to_camel,
         populate_by_name=True,
         from_attributes=True,
+        json_schema_serialization_defaults_required=True,
     )

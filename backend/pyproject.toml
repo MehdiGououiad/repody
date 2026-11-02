@@ -17,7 +17,7 @@ dependencies = [
   "asyncpg>=0.30.0",
   "alembic>=1.15.0",
   # Queue + cache
-  "taskiq>=0.12.6",
+  "taskiq[opentelemetry]>=0.12.6",
   "taskiq-redis>=1.2.0",
   "redis>=8.1.0",
   "limits[async-redis]>=4.4.1",

@@ -17,25 +17,17 @@ Install: ``uv sync --extra glmocr`` (workers: ``REPODY_BACKEND_EXTRAS=otel,glmoc
 from __future__ import annotations
 
 import asyncio
-import time
 
 import structlog
 
-from repody.catalog.registry import DocumentModelSpec
-from repody.extraction.branding import GLM_OCR_CATALOG_ID
 from repody.extraction.glm_ocr_sdk import (
     DEFAULT_LAYOUT_MODEL,
     GlmOcrSdkSettings,
     parse_markdown,
     sdk_importable,
 )
-from repody.extraction.schema import empty_fields_from_schema
 from repody.extraction.types import (
     DocumentBundle,
-    ExtractionIclExample,
-    ExtractionResult,
-    SchemaFieldSpec,
-    truncate_text,
 )
 from repody.settings import get_settings
 
@@ -107,51 +99,3 @@ async def fetch_glm_ocr_markdown(
         cfg=cfg,
     )
     return markdown, page_count, pages_sent, pages_dropped
-
-
-async def extract_with_glm_ocr(
-    bundle: DocumentBundle,
-    schema: list[SchemaFieldSpec],
-    document_type: str,
-    *,
-    spec: DocumentModelSpec | None = None,
-    extraction_instructions: str = "",
-    markdown_extraction: bool = False,
-    extraction_icl_examples: list[ExtractionIclExample] | None = None,
-) -> ExtractionResult:
-    """Markdown-only extraction via official GlmOcr selfhosted SDK."""
-    _ = document_type
-    _ = extraction_instructions
-    _ = extraction_icl_examples
-    _ = markdown_extraction
-    settings = get_settings()
-    catalog_id = spec.id if spec else GLM_OCR_CATALOG_ID
-    started = time.perf_counter()
-    markdown, page_count, pages_sent, pages_dropped = await fetch_glm_ocr_markdown(bundle)
-    elapsed_ms = int((time.perf_counter() - started) * 1000)
-    base = (settings.glm_ocr_base_url or "").rstrip("/")
-    log.info(
-        "glm_ocr_sdk_done",
-        catalog_id=catalog_id,
-        runtime="glm_ocr",
-        pipeline="sdk",
-        markdown_chars=len(markdown),
-        elapsed_ms=elapsed_ms,
-        base_url=base,
-        model=(settings.glm_ocr_served_model or "GLM-OCR").strip(),
-        layout_enabled=bool(settings.glm_ocr_layout_enabled),
-        layout_device=(settings.glm_ocr_layout_device or "cpu").strip() or "cpu",
-        pages_total=page_count,
-        pages_sent=pages_sent,
-        pages_dropped=pages_dropped,
-        pdf_max_pages=settings.glm_ocr_pdf_max_pages,
-        id_card_profile=settings.glm_ocr_id_card_profile,
-    )
-    return ExtractionResult(
-        fields=empty_fields_from_schema(schema),
-        raw_text=None,
-        markdown_text=truncate_text(markdown),
-        pages_rendered=page_count,
-        pages_sent=pages_sent,
-        pages_dropped=pages_dropped if pages_dropped else None,
-    )

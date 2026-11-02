@@ -17,8 +17,8 @@ import {
   ARITH_OPS,
   type ConditionFieldOption,
   NO_RIGHT,
-} from "@/components/workflow/condition-builder-model";
-import { OperandPicker } from "@/components/workflow/condition-operand-picker";
+} from "@/components/workflow/rules/condition-builder-model";
+import { OperandPicker } from "@/components/workflow/rules/condition-operand-picker";
 import {
   comparisonOpsForTemplateType,
   literalInputKindForTemplateType,

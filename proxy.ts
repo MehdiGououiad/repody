@@ -1,15 +1,9 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { auth, isOidcConfigured } from "@/auth";
+import { resolveAuthCredential } from "@/lib/api/auth-policy";
 import { getRequestAccessToken } from "@/lib/auth/access-token";
 import { isPublicApi, isPublicPage } from "@/lib/auth/public-paths";
-
-/** Workflow run API: caller Bearer means workflow API key; otherwise use the UI session JWT for builder test runs. */
-const WORKFLOW_RUN_API = /^\/api\/v1\/workflows\/[^/]+\/runs(?:\/json)?$/;
-
-function isWorkflowRunApi(path: string): boolean {
-  return WORKFLOW_RUN_API.test(path);
-}
 
 function hasCallerBearer(request: { headers: Headers }): boolean {
   return Boolean(request.headers.get("authorization")?.trim());
@@ -61,7 +55,14 @@ export default auth(async (request) => {
   const path = request.nextUrl.pathname;
 
   if (!path.startsWith("/api/")) {
-    if (!isPublicPage(path) && !hasValidSession(request.auth)) {
+    const signedIn = hasValidSession(request.auth);
+    if (path === "/login" && signedIn) {
+      const callback = request.nextUrl.searchParams.get("callbackUrl");
+      const dest =
+        callback?.startsWith("/") && !callback.startsWith("//") ? callback : "/dashboard";
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
+    if (!isPublicPage(path) && !signedIn) {
       return redirectToLogin(request);
     }
     return NextResponse.next();
@@ -72,7 +73,8 @@ export default auth(async (request) => {
   }
 
   if (path.startsWith("/api/v1/")) {
-    if (isWorkflowRunApi(path) && hasCallerBearer(request)) {
+    // Workflow run API: a caller Bearer is the workflow API key; otherwise use the session JWT.
+    if (resolveAuthCredential(path) === "workflow" && hasCallerBearer(request)) {
       return NextResponse.next();
     }
     return forwardWithSessionBearer(request);

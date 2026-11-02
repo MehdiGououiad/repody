@@ -8,10 +8,9 @@ from typing import Any
 
 from tests.fixtures.bank_statement import StatementGroundTruth
 
-from repody.extraction.fields import MISSING
 from repody.extraction.types import ExtractedFieldResult
 from repody.rules.amounts import parse_numeric_value
-from repody.rules.value_coercion import is_iso_date_like
+from repody.rules.value_coercion import MISSING, is_iso_date_like
 
 _DATE_DD_MM = re.compile(r"^\d{2}/\d{2}$")
 _DATE_DD_MM_YYYY = re.compile(r"^\d{2}/\d{2}/\d{4}$")

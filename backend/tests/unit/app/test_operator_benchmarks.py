@@ -55,6 +55,7 @@ def test_benchmark_command_uses_cache_flag_and_models(tmp_path) -> None:
         judge_quality=False,
     )
 
+    assert command[1:3] == ["-m", "scripts.benchmark_suite"]
     assert "--no-cache-check" in command
     assert "--cache-check" not in command
     assert "--bearer-token" not in command

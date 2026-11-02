@@ -239,7 +239,7 @@ L'API n'exécute **jamais** l'extraction : elle valide, persiste, met en file, p
 
 ### 3.5 Runtime et agent IDP
 
-**Runtime** (`runtime/`) : `resolve_recipe` détermine les agents actifs (IDP par défaut) ; `execute_platform_run` délègue l'étape à l'agent. `pools.py` maintient la correspondance pool ↔ agent. `RunStatus` (`queued`, `running`, `done`, `failed`) est défini dans `runtime/run/status.py`.
+**Runtime** (`runtime/`) : contrat `Result`/`AppError`, métriques et jobs opérateur. Le worker (`app/run/processor.py`) réclame le run puis appelle directement `execute_idp_run`. `RunStatus` (`queued`, `running`, `done`, `failed`) est défini dans `runtime/run/status.py`.
 
 **Agent IDP** (`agents/idp/`) : seul agent fonctionnel de la plateforme ([ADR 006](./adr/006-three-agent-functional-idp.md)).
 
@@ -290,7 +290,7 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 ### 3.8 Traitement asynchrone (`backend/src/repody/taskiq/`)
 
 - **Broker** : `RedisStreamBroker`, préfixe de file `repody:audit:{pool}`.
-- **Tâche unique** : `process-audit-run`, charge utile `AuditRunInput` (`run_id`, `extract_pool`, `agent_stage`, `workflow_id`, `request_id`).
+- **Tâche unique** : `process-audit-run`, charge utile `AuditRunInput` (`run_id`, `extract_pool`, `workflow_id`, `request_id`).
 - **Garde-fous** : délai maximal configurable (`AUDIT_WORKER_TASK_TIMEOUT_MINUTES`), une nouvelle tentative.
 - **Entrée worker** : `python -m repody.taskiq.worker`, initialisation de l'observabilité et warmup si pool `extract`.
 - **Sonde** : `python -m repody.taskiq.healthcheck` (PING Redis + inspection du stream).
@@ -488,7 +488,7 @@ Même chaîne applicative que la production, avec les services de données en co
 
 Source : [`diagrams/architecture-backend-couches.mmd`](./diagrams/architecture-backend-couches.mmd)
 
-Présentation -> application -> domaine -> extraction et catalogue -> infrastructure, avec le chemin critique `processor -> recipe -> agent IDP -> persistance`.
+Présentation -> application -> domaine -> extraction et catalogue -> infrastructure, avec le chemin critique `processor -> agent IDP -> persistance`.
 
 ### 6.6 Processus BPMN
 

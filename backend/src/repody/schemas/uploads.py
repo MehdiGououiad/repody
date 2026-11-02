@@ -63,8 +63,8 @@ class ConfirmUploadResponse(CamelModel):
 
 
 class UploadCapabilitiesResponse(CamelModel):
-    storage_backend: str = Field(serialization_alias="storageBackend")
-    direct_upload_enabled: bool = Field(serialization_alias="directUploadEnabled")
-    upload_mode: str = Field(serialization_alias="uploadMode")
-    max_upload_bytes: int = Field(serialization_alias="maxUploadBytes")
-    max_upload_files: int = Field(serialization_alias="maxUploadFiles")
+    storage_backend: str
+    direct_upload_enabled: bool
+    upload_mode: str
+    max_upload_bytes: int
+    max_upload_files: int

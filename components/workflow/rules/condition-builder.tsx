@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import {
   type ConditionFieldOption,
   newCondition,
-} from "@/components/workflow/condition-builder-model";
-import { ConditionPreview } from "@/components/workflow/condition-builder-preview";
-import { ConditionRow } from "@/components/workflow/condition-builder-row";
+} from "@/components/workflow/rules/condition-builder-model";
+import { ConditionPreview } from "@/components/workflow/rules/condition-builder-preview";
+import { ConditionRow } from "@/components/workflow/rules/condition-builder-row";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
 import type { RuleCondition } from "@/lib/types";
 

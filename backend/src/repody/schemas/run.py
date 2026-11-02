@@ -1,5 +1,3 @@
-from pydantic import Field
-
 from repody.schemas.common import CamelModel
 
 
@@ -14,29 +12,29 @@ class RunAuditField(CamelModel):
 
 
 class RunDocumentExtractionMeta(CamelModel):
-    read_path_config: str = Field(serialization_alias="readPathConfig")
-    read_path_used: str = Field(serialization_alias="readPathUsed")
-    read_path_label: str = Field(serialization_alias="readPathLabel")
-    validation_mode: str = Field(serialization_alias="validationMode")
-    validation_label: str = Field(serialization_alias="validationLabel")
-    document_model_id: str | None = Field(default=None, serialization_alias="documentModelId")
-    extraction_ms: int = Field(default=0, serialization_alias="extractionMs")
-    cache_hit: bool = Field(default=False, serialization_alias="cacheHit")
-    gpu_cold_start_likely: bool = Field(default=False, serialization_alias="gpuColdStartLikely")
-    fields_extracted: int = Field(default=0, serialization_alias="fieldsExtracted")
-    markdown_text: str | None = Field(default=None, serialization_alias="markdownText")
-    raw_text: str | None = Field(default=None, serialization_alias="rawText")
-    markdown_extraction: bool = Field(default=False, serialization_alias="markdownExtraction")
-    pages_rendered: int | None = Field(default=None, serialization_alias="pagesRendered")
-    pages_sent: int | None = Field(default=None, serialization_alias="pagesSent")
-    pages_dropped: int | None = Field(default=None, serialization_alias="pagesDropped")
-    native_pdf: dict | None = Field(default=None, serialization_alias="nativePdf")
+    read_path_config: str
+    read_path_used: str
+    read_path_label: str
+    validation_mode: str
+    validation_label: str
+    document_model_id: str | None = None
+    extraction_ms: int = 0
+    cache_hit: bool = False
+    gpu_cold_start_likely: bool = False
+    fields_extracted: int = 0
+    markdown_text: str | None = None
+    raw_text: str | None = None
+    markdown_extraction: bool = False
+    pages_rendered: int | None = None
+    pages_sent: int | None = None
+    pages_dropped: int | None = None
+    native_pdf: dict | None = None
 
 
 class RunAuditDocument(CamelModel):
     id: str
     document_type: str
-    file_name: str | None = Field(default=None, serialization_alias="fileName")
+    file_name: str | None = None
     fields: list[RunAuditField]
     extraction: RunDocumentExtractionMeta | None = None
 
@@ -63,14 +61,14 @@ class RunSummary(CamelModel):
 
 
 class RunAuditMetadata(CamelModel):
-    started_at: str | None = Field(default=None, serialization_alias="startedAt")
-    finished_at: str | None = Field(default=None, serialization_alias="finishedAt")
-    duration_ms: int = Field(default=0, serialization_alias="durationMs")
-    extraction_ms: int = Field(default=0, serialization_alias="extractionMs")
-    validation_ms: int = Field(default=0, serialization_alias="validationMs")
-    validation_mode: str = Field(default="logic_only", serialization_alias="validationMode")
-    validation_label: str = Field(default="", serialization_alias="validationLabel")
-    llm_model: str | None = Field(default=None, serialization_alias="llmModel")
+    started_at: str | None = None
+    finished_at: str | None = None
+    duration_ms: int = 0
+    extraction_ms: int = 0
+    validation_ms: int = 0
+    validation_mode: str = "logic_only"
+    validation_label: str = ""
+    llm_model: str | None = None
 
 
 class RunAuditDetail(CamelModel):

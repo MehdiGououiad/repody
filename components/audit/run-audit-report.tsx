@@ -19,12 +19,12 @@ import {
   formatFieldValue,
   type RunReportLabels,
 } from "@/components/audit/run-report/report-shared";
+import { isRuleFailure, ruleStatusLabel } from "@/components/shared/rule-status";
 import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { setPreferenceCookie } from "@/lib/browser-cookie";
-import { isRuleFailure, ruleStatusLabel } from "@/lib/rule-status";
 import type { RunAuditDetail } from "@/lib/types/audit";
 import { cn, formatDurationMs } from "@/lib/utils";
 
@@ -71,7 +71,7 @@ function buildCsv(
           f.key,
           formatFieldValue(f, locale),
           f.type,
-          f.confidence !== null ? `${Math.round(f.confidence * 100)}%` : "",
+          f.confidence != null ? `${Math.round(f.confidence * 100)}%` : "",
           f.flagged ? t("failed") : t("passed"),
         ]
           .map(esc)
@@ -244,7 +244,7 @@ function DocExtractionCard({
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {field.confidence !== null && field.extracted ? (
+                  {field.confidence != null && field.extracted ? (
                     <ConfidenceBar value={field.confidence} />
                   ) : (
                     <span className="text-[11px] text-on-surface-variant">—</span>

@@ -13,11 +13,8 @@ class SchemaFieldSchema(CamelModel):
     id: str
     name: str
     description: str = ""
-    template_type: str = Field(
-        default="verbatim-string",
-        serialization_alias="templateType",
-    )
-    enum_values: list[str] = Field(default_factory=list, serialization_alias="enumValues")
+    template_type: str = "verbatim-string"
+    enum_values: list[str] = Field(default_factory=list)
     children: list["SchemaFieldSchema"] = Field(default_factory=list)
 
 
@@ -29,46 +26,26 @@ class DocumentDefSchema(CamelModel):
     document_type: str = ""
     extraction_mode: str = Field(
         default="document_model",
-        serialization_alias="extractionMode",
         description="Read path id from GET /processing-paths (document_model).",
     )
-    validation_mode: str = Field(
-        default="logic_only",
-        serialization_alias="validationMode",
-        description="logic_only",
-    )
-    document_model_id: str | None = Field(
-        default="repody:vlm",
-        serialization_alias="documentModelId",
-    )
+    validation_mode: str = Field(default="logic_only", description="logic_only")
+    document_model_id: str | None = "repody:vlm"
     schema_fields: list[SchemaFieldSchema] = Field(
         default_factory=list,
         validation_alias="schema",
         serialization_alias="schema",
     )
-    extraction_instructions: str = Field(
-        default="",
-        serialization_alias="extractionInstructions",
-    )
+    extraction_instructions: str = ""
     markdown_extraction: bool = Field(
         default=False,
-        serialization_alias="markdownExtraction",
-        description=(
-            "When the document has no schema fields, run NuExtract document-to-Markdown "
-            "instead of structured extraction (not in parallel with fields)."
-        ),
+        description="When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
     )
     native_pdf_auto: bool = Field(
         default=False,
-        serialization_alias="nativePdfAuto",
-        description=(
-            "When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; "
-            "if quality is weak, fall back to documentModelId."
-        ),
+        description="When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
     )
     extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
         default_factory=list,
-        serialization_alias="extractionIclExamples",
         description="NuExtract in-context extraction examples (developer message pairs).",
     )
 
@@ -121,9 +98,7 @@ class WorkflowSchema(CamelModel):
         description="Plaintext key — returned only once on deploy.",
     )
     api_key_hint: str | None = Field(
-        default=None,
-        serialization_alias="apiKeyHint",
-        description="Masked hint for deployed workflows.",
+        default=None, description="Masked hint for deployed workflows."
     )
     api_stats: WorkflowApiStatsSchema | None = None
 
@@ -154,8 +129,8 @@ class DryRunFieldInput(CamelModel):
     id: str
     name: str
     description: str = ""
-    template_type: str = Field(default="verbatim-string", serialization_alias="templateType")
-    sample_value: str | None = Field(default=None, serialization_alias="sampleValue")
+    template_type: str = "verbatim-string"
+    sample_value: str | None = None
 
 
 class DryRunRuleInput(CamelModel):
@@ -191,7 +166,7 @@ class DryRunRuleResult(CamelModel):
 
 class DryRunResponse(CamelModel):
     extracted: list[DryRunExtracted]
-    rule_results: list[DryRunRuleResult] = Field(serialization_alias="ruleResults")
+    rule_results: list[DryRunRuleResult]
 
 
 class ValidateRulesBody(CamelModel):
@@ -200,7 +175,7 @@ class ValidateRulesBody(CamelModel):
 
 
 class RuleValidationItem(CamelModel):
-    rule_id: str = Field(serialization_alias="ruleId")
+    rule_id: str
     issues: list[str]
 
 
@@ -209,8 +184,8 @@ class ValidateRulesResponse(CamelModel):
 
 
 class RunCreatedResponse(CamelModel):
-    run_id: str = Field(serialization_alias="runId")
-    job_id: str | None = Field(default=None, serialization_alias="jobId")
+    run_id: str
+    job_id: str | None = None
     status: str = "queued"
 
 
@@ -221,20 +196,20 @@ class RunProgressStepSchema(CamelModel):
     mode: str | None = None
     kind: str | None = None
     detail: str | None = None
-    read_path: str | None = Field(default=None, serialization_alias="readPath")
-    validation_mode: str | None = Field(default=None, serialization_alias="validationMode")
-    document_model_id: str | None = Field(default=None, serialization_alias="documentModelId")
-    duration_ms: int | None = Field(default=None, serialization_alias="durationMs")
-    cache_hit: bool = Field(default=False, serialization_alias="cacheHit")
-    gpu_cold_start_hint: bool = Field(default=False, serialization_alias="gpuColdStartHint")
+    read_path: str | None = None
+    validation_mode: str | None = None
+    document_model_id: str | None = None
+    duration_ms: int | None = None
+    cache_hit: bool = False
+    gpu_cold_start_hint: bool = False
 
 
 class RunProgressSchema(CamelModel):
-    current_index: int = Field(serialization_alias="currentIndex")
+    current_index: int
     steps: list[RunProgressStepSchema]
     label: str
-    queue_position: int | None = Field(default=None, serialization_alias="queuePosition")
-    queue_depth: int | None = Field(default=None, serialization_alias="queueDepth")
+    queue_position: int | None = None
+    queue_depth: int | None = None
 
 
 class RunPollResponse(CamelModel):

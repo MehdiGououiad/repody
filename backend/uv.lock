@@ -2674,7 +2674,7 @@ dependencies = [
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sse-starlette" },
     { name = "structlog" },
-    { name = "taskiq" },
+    { name = "taskiq", extra = ["opentelemetry"] },
     { name = "taskiq-redis" },
     { name = "uvicorn", extra = ["standard"] },
 ]
@@ -2746,7 +2746,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.52" },
     { name = "sse-starlette", specifier = ">=3.4.11" },
     { name = "structlog", specifier = ">=25.1.0" },
-    { name = "taskiq", specifier = ">=0.12.6" },
+    { name = "taskiq", extras = ["opentelemetry"], specifier = ">=0.12.6" },
     { name = "taskiq-redis", specifier = ">=1.2.0" },
     { name = "torch", marker = "extra == 'glmocr'", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", marker = "extra == 'glmocr'", index = "https://download.pytorch.org/whl/cpu" },
@@ -3069,6 +3069,14 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/dd/6b/a7df3a5d1e7bbfe75a41f378f71c16e89ac19fbab931f8e8d76a8e339357/taskiq-0.12.6.tar.gz", hash = "sha256:4667db6366cfda24d23f0e34151b118d71b0907229f8ff00db9dbc2465f7baf8", size = 408574, upload-time = "2026-08-29T08:07:44.052Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/68/89/949d2d26ae24a5282b37d39e7e05b714f960840166458c7bc78cfade83b5/taskiq-0.12.6-py3-none-any.whl", hash = "sha256:fa8c5071ecafc6a1891e5ede1dc580093d99bccaf0d258b1848d2e5f35d22250", size = 94895, upload-time = "2026-08-29T08:07:42.591Z" },
+]
+
+[package.optional-dependencies]
+opentelemetry = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "psutil" },
 ]
 
 [[package]]

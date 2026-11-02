@@ -144,7 +144,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dry Run */
+        /**
+         * Dry Run
+         * @description Evaluate the posted draft only; ``workflow_id`` scopes the route, not the data.
+         */
         post: operations["dry_run_v1_workflows__workflow_id__dry_run_post"];
         delete?: never;
         options?: never;
@@ -726,9 +729,9 @@ export interface components {
             /** Timestamp */
             timestamp: string;
             /** Rows */
-            rows?: number | null;
+            rows: number | null;
             /** Failedrules */
-            failedRules?: number | null;
+            failedRules: number | null;
         };
         /** AuditListResponse */
         AuditListResponse: {
@@ -758,11 +761,11 @@ export interface components {
              * @default
              */
             suiteId: string;
-            summary?: components["schemas"]["BenchmarkSummarySchema"];
+            summary: components["schemas"]["BenchmarkSummarySchema"];
             /** Results */
-            results?: components["schemas"]["BenchmarkResultSchema"][];
+            results: components["schemas"]["BenchmarkResultSchema"][];
             /** Environment */
-            environment?: {
+            environment: {
                 [key: string]: unknown;
             };
         };
@@ -794,29 +797,29 @@ export interface components {
              */
             passed: boolean;
             /** Skipped */
-            skipped?: boolean | null;
+            skipped: boolean | null;
             /** Wallms */
-            wallMs?: number | null;
+            wallMs: number | null;
             /** Queuems */
-            queueMs?: number | null;
+            queueMs: number | null;
             /** Extractionms */
-            extractionMs?: number | null;
+            extractionMs: number | null;
             /** Validationms */
-            validationMs?: number | null;
+            validationMs: number | null;
             /** Fieldaccuracy */
-            fieldAccuracy?: number | null;
+            fieldAccuracy: number | null;
             /** Ruleaccuracy */
-            ruleAccuracy?: number | null;
+            ruleAccuracy: number | null;
             /** Judgequality */
-            judgeQuality?: boolean | null;
+            judgeQuality: boolean | null;
             /** Rawtextchars */
-            rawTextChars?: number | null;
+            rawTextChars: number | null;
             /** Textpreview */
-            textPreview?: string | null;
+            textPreview: string | null;
             /** Cachehit */
-            cacheHit?: boolean | null;
+            cacheHit: boolean | null;
             /** Error */
-            error?: string | null;
+            error: string | null;
         };
         /** BenchmarkSummarySchema */
         BenchmarkSummarySchema: {
@@ -846,9 +849,9 @@ export interface components {
              */
             ruleAccuracy: number;
             /** Medianwallms */
-            medianWallMs?: number | null;
+            medianWallMs: number | null;
             /** Medianrawtextchars */
-            medianRawTextChars?: number | null;
+            medianRawTextChars: number | null;
         };
         /** Body_create_run_v1_workflows__workflow_id__runs_post */
         Body_create_run_v1_workflows__workflow_id__runs_post: {
@@ -952,7 +955,7 @@ export interface components {
              */
             available: boolean;
             /** Availabilitynote */
-            availabilityNote?: string | null;
+            availabilityNote: string | null;
             /**
              * Isdefault
              * @default false
@@ -1100,7 +1103,7 @@ export interface components {
             markdownExtraction: boolean;
             /**
              * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text -> Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
              * @default false
              */
             nativePdfAuto: boolean;
@@ -1108,7 +1111,7 @@ export interface components {
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).
              */
-            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema"][];
+            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema-Input"][];
         };
         /** DocumentDefSchema */
         "DocumentDefSchema-Output": {
@@ -1137,7 +1140,7 @@ export interface components {
              */
             documentModelId: string | null;
             /** Schema */
-            schema?: components["schemas"]["SchemaFieldSchema-Output"][];
+            schema: components["schemas"]["SchemaFieldSchema-Output"][];
             /**
              * Extractioninstructions
              * @default
@@ -1151,7 +1154,7 @@ export interface components {
             markdownExtraction: boolean;
             /**
              * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text -> Qwen JSON; if quality is weak, fall back to documentModelId.
+             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
              * @default false
              */
             nativePdfAuto: boolean;
@@ -1159,7 +1162,7 @@ export interface components {
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).
              */
-            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema"][];
+            extractionIclExamples: components["schemas"]["ExtractionIclExampleSchema-Output"][];
         };
         /** DocumentModelDiagnosticResponse */
         DocumentModelDiagnosticResponse: {
@@ -1198,7 +1201,7 @@ export interface components {
              */
             inferenceMode: string;
             /** Inferms */
-            inferMs?: number | null;
+            inferMs: number | null;
             /**
              * Sampleextracted
              * @default false
@@ -1214,7 +1217,7 @@ export interface components {
              * @default
              */
             hint: string;
-            settings?: components["schemas"]["DocumentModelDiagnosticSettingsSchema"];
+            settings: components["schemas"]["DocumentModelDiagnosticSettingsSchema"];
         };
         /** DocumentModelDiagnosticSettingsSchema */
         DocumentModelDiagnosticSettingsSchema: {
@@ -1239,7 +1242,7 @@ export interface components {
              */
             documentModelPdfDpi: number;
             /** Documentmodelmaxedgepx */
-            documentModelMaxEdgePx?: number | null;
+            documentModelMaxEdgePx: number | null;
             /**
              * Llmvalidationenabled
              * @default false
@@ -1272,7 +1275,7 @@ export interface components {
             /** Documents */
             documents?: components["schemas"]["DocumentDefSchema-Input"][] | null;
             /** Rulesfull */
-            rulesFull?: components["schemas"]["WorkflowRuleSchema"][] | null;
+            rulesFull?: components["schemas"]["WorkflowRuleSchema-Input"][] | null;
         };
         /** DryRunExtracted */
         DryRunExtracted: {
@@ -1348,7 +1351,20 @@ export interface components {
             detail: string;
         };
         /** ExtractionIclExampleSchema */
-        ExtractionIclExampleSchema: {
+        "ExtractionIclExampleSchema-Input": {
+            /**
+             * Input
+             * @default
+             */
+            input: string;
+            /**
+             * Output
+             * @default
+             */
+            output: string;
+        };
+        /** ExtractionIclExampleSchema */
+        "ExtractionIclExampleSchema-Output": {
             /**
              * Input
              * @default
@@ -1376,7 +1392,7 @@ export interface components {
             /** Detailkey */
             detailKey: string;
             /** Href */
-            href?: string | null;
+            href: string | null;
         };
         /** HealthLiveResponse */
         HealthLiveResponse: {
@@ -1400,7 +1416,7 @@ export interface components {
             /** Inference */
             inference: string;
             /** Llamacpp */
-            llamacpp?: boolean | null;
+            llamacpp: boolean | null;
             /** Storagebackend */
             storageBackend: string;
             /** Directuploadenabled */
@@ -1441,7 +1457,7 @@ export interface components {
             /** Subject */
             subject: string;
             /** Email */
-            email?: string | null;
+            email: string | null;
             /** Roles */
             roles: string[];
             /** Permissions */
@@ -1451,7 +1467,7 @@ export interface components {
             /** Oidcenabled */
             oidcEnabled: boolean;
             /** Keycloakadminurl */
-            keycloakAdminUrl?: string | null;
+            keycloakAdminUrl: string | null;
         };
         /** IamUser */
         IamUser: {
@@ -1460,18 +1476,18 @@ export interface components {
             /** Username */
             username: string;
             /** Email */
-            email?: string | null;
+            email: string | null;
             /** Firstname */
-            firstName?: string | null;
+            firstName: string | null;
             /** Lastname */
-            lastName?: string | null;
+            lastName: string | null;
             /**
              * Enabled
              * @default true
              */
             enabled: boolean;
             /** Roles */
-            roles?: string[];
+            roles: string[];
         };
         /** IamUsersResponse */
         IamUsersResponse: {
@@ -1480,7 +1496,7 @@ export interface components {
             /** Managementavailable */
             managementAvailable: boolean;
             /** Managementerror */
-            managementError?: string | null;
+            managementError: string | null;
         };
         /** KpiMetric */
         KpiMetric: {
@@ -1521,7 +1537,7 @@ export interface components {
             /** Violationbreakdown */
             violationBreakdown: components["schemas"]["ViolationBreakdown"][];
             /** Healthalerts */
-            healthAlerts?: components["schemas"]["HealthAlert"][];
+            healthAlerts: components["schemas"]["HealthAlert"][];
         };
         /** ModelActionRequest */
         ModelActionRequest: {
@@ -1549,7 +1565,7 @@ export interface components {
              */
             restart: "worker" | "api" | "inference" | "helm" | "none";
             /** Value */
-            value?: string | number | boolean | null;
+            value: string | number | boolean | null;
             /**
              * Configured
              * @default true
@@ -1564,11 +1580,11 @@ export interface components {
         /** ModelRuntimeConfigResponse */
         ModelRuntimeConfigResponse: {
             /** Models */
-            models?: components["schemas"]["ModelRuntimeProfile"][];
+            models: components["schemas"]["ModelRuntimeProfile"][];
             /** Shared */
-            shared?: components["schemas"]["ModelConfigField"][];
+            shared: components["schemas"]["ModelConfigField"][];
             /** Deploymentnotes */
-            deploymentNotes?: components["schemas"]["DeploymentNote"][];
+            deploymentNotes: components["schemas"]["DeploymentNote"][];
         };
         /** ModelRuntimeProfile */
         ModelRuntimeProfile: {
@@ -1583,14 +1599,14 @@ export interface components {
             /** Enabled */
             enabled: boolean;
             /** Inferenceurl */
-            inferenceUrl?: string | null;
+            inferenceUrl: string | null;
             /**
              * Renderpolicy
              * @default
              */
             renderPolicy: string;
             /** Fields */
-            fields?: components["schemas"]["ModelConfigField"][];
+            fields: components["schemas"]["ModelConfigField"][];
         };
         /** ModelsCatalogResponse */
         ModelsCatalogResponse: {
@@ -1599,13 +1615,13 @@ export interface components {
             /** Defaultdocumentmodel */
             defaultDocumentModel: string;
             /** Defaultvalidationmodel */
-            defaultValidationModel?: string | null;
+            defaultValidationModel: string | null;
             /** Inferencemode */
             inferenceMode: string;
             /** Paths */
-            paths?: components["schemas"]["ReadPathOption"][];
+            paths: components["schemas"]["ReadPathOption"][];
             /** Validationmodes */
-            validationModes?: components["schemas"]["ValidationModeOption"][];
+            validationModes: components["schemas"]["ValidationModeOption"][];
             /**
              * Defaultpath
              * @default document_model
@@ -1637,9 +1653,9 @@ export interface components {
              */
             createdAt: string;
             /** Startedat */
-            startedAt?: string | null;
+            startedAt: string | null;
             /** Completedat */
-            completedAt?: string | null;
+            completedAt: string | null;
             /**
              * Progress
              * @default
@@ -1651,7 +1667,7 @@ export interface components {
              */
             output: string;
             /** Error */
-            error?: string | null;
+            error: string | null;
             /**
              * Hasreport
              * @default false
@@ -1667,11 +1683,8 @@ export interface components {
         OperatorLimitsSchema: {
             /** Maxuploadbytes */
             maxUploadBytes: number;
-            /**
-             * Nuextractmaxpagesperrequest
-             * @default 6
-             */
-            nuextractMaxPagesPerRequest: number;
+            /** Nuextractmaxpagesperrequest */
+            nuextractMaxPagesPerRequest: number | null;
             /** Tasktimeoutminutes */
             taskTimeoutMinutes: number;
         };
@@ -1731,11 +1744,8 @@ export interface components {
             defaultReadPath: string;
             /** Documentmodels */
             documentModels: components["schemas"]["DocumentModelSummary"][];
-            /**
-             * Nuextractmaxpagesperrequest
-             * @default 6
-             */
-            nuextractMaxPagesPerRequest: number;
+            /** Nuextractmaxpagesperrequest */
+            nuextractMaxPagesPerRequest: number | null;
             /** Llamacppbaseurl */
             llamacppBaseUrl: string;
             /** Maxuploadbytes */
@@ -1751,7 +1761,7 @@ export interface components {
             /** Maintenanceintervalseconds */
             maintenanceIntervalSeconds: number;
             /** Workerpools */
-            workerPools?: {
+            workerPools: {
                 [key: string]: string;
             };
             /**
@@ -1814,16 +1824,16 @@ export interface components {
             /** Size */
             size: number;
             /** Documentid */
-            documentId?: string | null;
+            documentId: string | null;
             /** Uploadurl */
-            uploadUrl?: string | null;
+            uploadUrl: string | null;
             /**
              * Method
              * @default PUT
              */
             method: string;
             /** Headers */
-            headers?: {
+            headers: {
                 [key: string]: string;
             };
         };
@@ -1863,7 +1873,7 @@ export interface components {
         /** RuleLibraryResponse */
         RuleLibraryResponse: {
             /** Rules */
-            rules?: components["schemas"]["RuleTemplateSchema"][];
+            rules: components["schemas"]["RuleTemplateSchema"][];
         };
         /** RuleTemplateSchema */
         RuleTemplateSchema: {
@@ -1908,7 +1918,7 @@ export interface components {
             /** Ruleresults */
             ruleResults: components["schemas"]["RunAuditRule"][];
             summary: components["schemas"]["RunSummary"];
-            metadata?: components["schemas"]["RunAuditMetadata"] | null;
+            metadata: components["schemas"]["RunAuditMetadata"] | null;
         };
         /** RunAuditDocument */
         RunAuditDocument: {
@@ -1917,10 +1927,10 @@ export interface components {
             /** Documenttype */
             documentType: string;
             /** Filename */
-            fileName?: string | null;
+            fileName: string | null;
             /** Fields */
             fields: components["schemas"]["RunAuditField"][];
-            extraction?: components["schemas"]["RunDocumentExtractionMeta"] | null;
+            extraction: components["schemas"]["RunDocumentExtractionMeta"] | null;
         };
         /** RunAuditField */
         RunAuditField: {
@@ -1942,7 +1952,7 @@ export interface components {
              */
             type: string;
             /** Confidence */
-            confidence?: number | null;
+            confidence: number | null;
             /**
              * Extracted
              * @default true
@@ -1957,9 +1967,9 @@ export interface components {
         /** RunAuditMetadata */
         RunAuditMetadata: {
             /** Startedat */
-            startedAt?: string | null;
+            startedAt: string | null;
             /** Finishedat */
-            finishedAt?: string | null;
+            finishedAt: string | null;
             /**
              * Durationms
              * @default 0
@@ -1986,7 +1996,7 @@ export interface components {
              */
             validationLabel: string;
             /** Llmmodel */
-            llmModel?: string | null;
+            llmModel: string | null;
         };
         /** RunAuditRule */
         RunAuditRule: {
@@ -2021,16 +2031,16 @@ export interface components {
              */
             detail: string;
             /** Expectedvalue */
-            expectedValue?: string | null;
+            expectedValue: string | null;
             /** Actualvalue */
-            actualValue?: string | null;
+            actualValue: string | null;
         };
         /** RunCreatedResponse */
         RunCreatedResponse: {
             /** Runid */
             runId: string;
             /** Jobid */
-            jobId?: string | null;
+            jobId: string | null;
             /**
              * Status
              * @default queued
@@ -2050,7 +2060,7 @@ export interface components {
             /** Validationlabel */
             validationLabel: string;
             /** Documentmodelid */
-            documentModelId?: string | null;
+            documentModelId: string | null;
             /**
              * Extractionms
              * @default 0
@@ -2072,29 +2082,33 @@ export interface components {
              */
             fieldsExtracted: number;
             /** Markdowntext */
-            markdownText?: string | null;
+            markdownText: string | null;
             /** Rawtext */
-            rawText?: string | null;
+            rawText: string | null;
             /**
              * Markdownextraction
              * @default false
              */
             markdownExtraction: boolean;
             /** Pagesrendered */
-            pagesRendered?: number | null;
+            pagesRendered: number | null;
             /** Pagessent */
-            pagesSent?: number | null;
+            pagesSent: number | null;
             /** Pagesdropped */
-            pagesDropped?: number | null;
+            pagesDropped: number | null;
+            /** Nativepdf */
+            nativePdf: {
+                [key: string]: unknown;
+            } | null;
         };
         /** RunPollResponse */
         RunPollResponse: {
             /** Status */
             status: string;
-            progress?: components["schemas"]["RunProgressSchema"] | null;
-            result?: components["schemas"]["RunAuditDetail"] | null;
+            progress: components["schemas"]["RunProgressSchema"] | null;
+            result: components["schemas"]["RunAuditDetail"] | null;
             /** Error */
-            error?: string | null;
+            error: string | null;
         };
         /** RunProgressSchema */
         RunProgressSchema: {
@@ -2105,9 +2119,9 @@ export interface components {
             /** Label */
             label: string;
             /** Queueposition */
-            queuePosition?: number | null;
+            queuePosition: number | null;
             /** Queuedepth */
-            queueDepth?: number | null;
+            queueDepth: number | null;
         };
         /** RunProgressStepSchema */
         RunProgressStepSchema: {
@@ -2118,19 +2132,19 @@ export interface components {
             /** Status */
             status: string;
             /** Mode */
-            mode?: string | null;
+            mode: string | null;
             /** Kind */
-            kind?: string | null;
+            kind: string | null;
             /** Detail */
-            detail?: string | null;
+            detail: string | null;
             /** Readpath */
-            readPath?: string | null;
+            readPath: string | null;
             /** Validationmode */
-            validationMode?: string | null;
+            validationMode: string | null;
             /** Documentmodelid */
-            documentModelId?: string | null;
+            documentModelId: string | null;
             /** Durationms */
-            durationMs?: number | null;
+            durationMs: number | null;
             /**
              * Cachehit
              * @default false
@@ -2156,7 +2170,7 @@ export interface components {
              * Rules
              * @default []
              */
-            rules: components["schemas"]["WorkflowRuleSchema"][];
+            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
             /** Workflowname */
             workflowName?: string | null;
         };
@@ -2209,9 +2223,9 @@ export interface components {
              */
             templateType: string;
             /** Enumvalues */
-            enumValues?: string[];
+            enumValues: string[];
             /** Children */
-            children?: components["schemas"]["SchemaFieldSchema-Output"][];
+            children: components["schemas"]["SchemaFieldSchema-Output"][];
         };
         /** StoredFileBinding */
         StoredFileBinding: {
@@ -2287,7 +2301,7 @@ export interface components {
             /** Documents */
             documents: components["schemas"]["DocumentDefSchema-Input"][];
             /** Rules */
-            rules: components["schemas"]["WorkflowRuleSchema"][];
+            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
         };
         /** ValidateRulesResponse */
         ValidateRulesResponse: {
@@ -2355,7 +2369,7 @@ export interface components {
             workflow: components["schemas"]["WorkflowSchema-Output"];
         };
         /** WorkflowRuleSchema */
-        WorkflowRuleSchema: {
+        "WorkflowRuleSchema-Input": {
             /** Id */
             id: string;
             /** Name */
@@ -2381,6 +2395,44 @@ export interface components {
             }[] | null;
             /** Conditionjunction */
             conditionJunction?: string | null;
+            /**
+             * Body
+             * @default
+             */
+            body: string;
+            /**
+             * Severity
+             * @default reject
+             */
+            severity: string;
+        };
+        /** WorkflowRuleSchema */
+        "WorkflowRuleSchema-Output": {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @default logic
+             */
+            kind: string;
+            /**
+             * Scope
+             * @default intra
+             */
+            scope: string;
+            /**
+             * Appliesto
+             * @default []
+             */
+            appliesTo: string[];
+            /** Conditions */
+            conditions: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Conditionjunction */
+            conditionJunction: string | null;
             /**
              * Body
              * @default
@@ -2434,12 +2486,12 @@ export interface components {
              * Rules
              * @default []
              */
-            rules: components["schemas"]["WorkflowRuleSchema"][];
+            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
             /** Deployedat */
             deployedAt?: string | null;
             /**
              * Apikey
-             * @description Plaintext key - returned only once on deploy.
+             * @description Plaintext key — returned only once on deploy.
              */
             apiKey?: string | null;
             /**
@@ -2471,7 +2523,7 @@ export interface components {
              */
             owner: string;
             /** Lastrun */
-            lastRun?: string | null;
+            lastRun: string | null;
             /**
              * Successrate
              * @default 0
@@ -2491,20 +2543,20 @@ export interface components {
              * Rules
              * @default []
              */
-            rules: components["schemas"]["WorkflowRuleSchema"][];
+            rules: components["schemas"]["WorkflowRuleSchema-Output"][];
             /** Deployedat */
-            deployedAt?: string | null;
+            deployedAt: string | null;
             /**
              * Apikey
-             * @description Plaintext key - returned only once on deploy.
+             * @description Plaintext key — returned only once on deploy.
              */
-            apiKey?: string | null;
+            apiKey: string | null;
             /**
              * Apikeyhint
              * @description Masked hint for deployed workflows.
              */
-            apiKeyHint?: string | null;
-            apiStats?: components["schemas"]["WorkflowApiStatsSchema"] | null;
+            apiKeyHint: string | null;
+            apiStats: components["schemas"]["WorkflowApiStatsSchema"] | null;
         };
     };
     responses: never;
@@ -3438,7 +3490,9 @@ export interface operations {
     get_models_catalog_v1_models_catalog_get: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                authorization?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3451,6 +3505,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelsCatalogResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

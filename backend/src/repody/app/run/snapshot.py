@@ -188,15 +188,6 @@ def materialize_run_config(run: Run) -> MaterializedRunConfig:
     )
 
 
-def resolve_run_documents(run: Run) -> list[SnapshotDocument]:
-    return materialize_run_config(run).documents
-
-
-def resolve_run_rules(run: Run, workflow: Workflow) -> list[dict]:
-    snapshot = normalize_keys_to_snake(run.run_snapshot or {})
-    return _rules_from(snapshot, workflow)
-
-
 def resolve_workflow_display_name(run: Run, workflow: Workflow) -> str:
     snapshot = normalize_keys_to_snake(run.run_snapshot or {})
     return _workflow_name_from(snapshot, workflow)

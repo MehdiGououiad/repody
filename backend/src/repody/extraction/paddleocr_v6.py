@@ -18,20 +18,12 @@ Docs:
 from __future__ import annotations
 
 import base64
-import time
 from typing import Any
 
 import structlog
 
-from repody.catalog.registry import DocumentModelSpec
-from repody.extraction.branding import PADDLEOCR_V6_CATALOG_ID
-from repody.extraction.schema import empty_fields_from_schema
 from repody.extraction.types import (
     DocumentBundle,
-    ExtractionIclExample,
-    ExtractionResult,
-    SchemaFieldSpec,
-    truncate_text,
 )
 from repody.infra.http import get_http_client
 from repody.settings import get_settings
@@ -151,40 +143,3 @@ async def fetch_paddleocr_markdown(bundle: DocumentBundle) -> tuple[str, int]:
         )
     page_count = len((body.get("result") or {}).get("ocrResults") or [])
     return markdown, page_count
-
-
-async def extract_with_paddleocr_v6(
-    bundle: DocumentBundle,
-    schema: list[SchemaFieldSpec],
-    document_type: str,
-    *,
-    spec: DocumentModelSpec | None = None,
-    extraction_instructions: str = "",
-    markdown_extraction: bool = False,
-    extraction_icl_examples: list[ExtractionIclExample] | None = None,
-) -> ExtractionResult:
-    """Markdown-only extraction via official ``POST /ocr`` Basic Serving."""
-    _ = document_type
-    _ = extraction_instructions
-    _ = extraction_icl_examples
-    _ = markdown_extraction
-    started = time.perf_counter()
-    markdown, page_count = await fetch_paddleocr_markdown(bundle)
-    elapsed_ms = int((time.perf_counter() - started) * 1000)
-    base = (get_settings().paddleocr_v6_base_url or "").rstrip("/")
-    log.info(
-        "paddleocr_v6_done",
-        catalog_id=(spec.id if spec else PADDLEOCR_V6_CATALOG_ID),
-        runtime="paddleocr_v6",
-        pages=page_count or 1,
-        markdown_chars=len(markdown),
-        elapsed_ms=elapsed_ms,
-        base_url=base,
-    )
-    return ExtractionResult(
-        fields=empty_fields_from_schema(schema),
-        markdown_text=truncate_text(markdown),
-        pages_rendered=page_count,
-        pages_sent=page_count,
-        pages_dropped=0,
-    )

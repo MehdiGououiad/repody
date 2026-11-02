@@ -1,26 +1,4 @@
-from repody.app.run.snapshot import materialize_run_config, resolve_run_rules
-
-
-def test_resolve_run_rules_preserves_applies_to_from_snapshot():
-    run = type(
-        "Run",
-        (),
-        {
-            "run_snapshot": {
-                "rules": [
-                    {
-                        "id": "r1",
-                        "scope": "intra",
-                        "appliesTo": ["doc-a"],
-                        "body": "total > 1",
-                    }
-                ]
-            },
-            "workflow": None,
-        },
-    )()
-    rules = resolve_run_rules(run, workflow=type("Workflow", (), {})())
-    assert rules[0]["applies_to"] == ["doc-a"]
+from repody.app.run.snapshot import materialize_run_config
 
 
 def test_materialize_run_config_reads_documents_and_rules_together():

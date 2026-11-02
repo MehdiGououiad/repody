@@ -11,7 +11,7 @@ Backend layout, tests, and script ownership. Laptop start: [LOCAL.md](./LOCAL.md
 | `api/` | Thin HTTP routers |
 | `app/` | Use cases (run, workflow, operator, uploads, …) |
 | `agents/idp/` | IDP extract + validate ([ADR 006](./adr/006-three-agent-functional-idp.md)) |
-| `runtime/` | Contracts, recipe, pools, run status |
+| `runtime/` | Result contract, run status, metrics, operator jobs |
 | `catalog/` | Document-model registry + probes |
 | `extraction/` | Pipeline + model adapters |
 | `inference/` | OpenAI-compat clients |
@@ -20,7 +20,7 @@ Backend layout, tests, and script ownership. Laptop start: [LOCAL.md](./LOCAL.md
 | `infra/` | DB, auth, storage, observability |
 | `schemas/`, `settings/` | DTOs · `AUDIT_*` settings |
 
-Hot path: `process_run` -> `execute_platform_run` -> `compose_idp` -> `complete_run`.
+Hot path: `process_run` -> `execute_idp_run` -> `compose_idp` -> `persist_idp_outcome`.
 
 Python ops scripts: [backend/scripts/README.md](../backend/scripts/README.md).
 

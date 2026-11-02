@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from repody.api.auth import require_permission
 from repody.api.deps import SessionDep
 from repody.app.audit.query import list_audit_page
 from repody.app.run.intake import get_run_detail
 from repody.schemas.audit import AuditListResponse
 from repody.schemas.run import RunAuditDetail
 
-router = APIRouter(prefix="/audits", tags=["audits"])
+router = APIRouter(
+    prefix="/audits",
+    tags=["audits"],
+    dependencies=[Depends(require_permission("audit", "read"))],
+)
 
 
 @router.get("", response_model=AuditListResponse)

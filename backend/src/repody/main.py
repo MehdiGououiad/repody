@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from asgi_correlation_id import CorrelationIdMiddleware
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from repody.api import (
@@ -21,7 +21,6 @@ from repody.api import (
     uploads,
     workflows,
 )
-from repody.api.auth import require_permission
 from repody.api.openapi_config import install_openapi
 from repody.app.operator.jobs import hydrate_operator_jobs_from_redis
 from repody.app.ops.maintenance import maintenance_loop, run_maintenance_cycle
@@ -106,31 +105,11 @@ def create_app() -> FastAPI:
     app.include_router(health.router, prefix="/v1")
     app.include_router(workflows.router, prefix="/v1")
     app.include_router(runs.router, prefix="/v1")
-    app.include_router(
-        audits.router,
-        prefix="/v1",
-        dependencies=[Depends(require_permission("audit", "read"))],
-    )
-    app.include_router(
-        metrics.router,
-        prefix="/v1",
-        dependencies=[Depends(require_permission("metrics", "read"))],
-    )
-    app.include_router(
-        dashboard.router,
-        prefix="/v1",
-        dependencies=[Depends(require_permission("metrics", "read"))],
-    )
-    app.include_router(
-        rules_library.router,
-        prefix="/v1",
-        dependencies=[Depends(require_permission("rules", "read"))],
-    )
-    app.include_router(
-        uploads.router,
-        prefix="/v1",
-        dependencies=[Depends(require_permission("upload", "write"))],
-    )
+    app.include_router(audits.router, prefix="/v1")
+    app.include_router(metrics.router, prefix="/v1")
+    app.include_router(dashboard.router, prefix="/v1")
+    app.include_router(rules_library.router, prefix="/v1")
+    app.include_router(uploads.router, prefix="/v1")
     app.include_router(config.router, prefix="/v1")
     app.include_router(operator.router, prefix="/v1")
     app.include_router(iam.router, prefix="/v1")

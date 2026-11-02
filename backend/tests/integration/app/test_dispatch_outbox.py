@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from repody.app.run.dispatch_outbox import (
-    dispatch_outbox_row,
+    dispatch_outbox_run,
     enqueue_dispatch,
     replay_dispatch_outbox,
 )
@@ -56,12 +56,12 @@ async def test_dispatch_outbox_retries_transient_errors(outbox_session, monkeypa
         )(),
     )
 
-    assert await dispatch_outbox_row(session, row) is False
+    assert await dispatch_outbox_run("run-outbox") is False
     await session.refresh(row)
     assert row.status == "pending"
     assert row.dispatch_attempts == 1
 
-    assert await dispatch_outbox_row(session, row) is True
+    assert await dispatch_outbox_run("run-outbox") is True
     await session.refresh(row)
     assert row.status == "dispatched"
     assert row.dispatch_attempts == 2

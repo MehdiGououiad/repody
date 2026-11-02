@@ -1,7 +1,7 @@
-from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
+from tests.support.fixtures import resolve_facture_pdf
 
 from repody.extraction.pipeline import extract_document
 from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
@@ -40,9 +40,7 @@ def mock_document_model(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_document_model_path_returns_fields(mock_document_model):
-    pdf = Path(__file__).resolve().parents[3] / "e2e" / "fixtures" / "documents" / "Facture.pdf"
-    if not pdf.is_file():
-        pytest.skip("Facture.pdf fixture missing")
+    pdf = resolve_facture_pdf()
 
     schema = [SchemaFieldSpec(name="total_amount", description="TTC")]
     result = await extract_document(
