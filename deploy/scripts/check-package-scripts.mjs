@@ -58,19 +58,21 @@ function checkNodeEntrypoint(scriptName, cwd, tokens) {
   }
 }
 
+/** `uv run --directory backend …` - local paths resolve against backend/. */
 function checkBackendRunner(scriptName, tokens) {
-  const entryIndex = tokens.indexOf("scripts/backend-run.mjs");
-  if (entryIndex === -1) return false;
+  if (tokens[0] !== "uv" || tokens[1] !== "run" || tokens[2] !== "--directory") return false;
+  if (tokens[3] !== "backend") {
+    failures.push(`${scriptName}: backend commands must use "uv run --directory backend"`);
+    return true;
+  }
   const backendCwd = resolve(root, "backend");
-  for (const token of tokens.slice(entryIndex + 1)) {
+  for (const token of tokens.slice(4)) {
     if (looksLocal(token)) {
       checkPath(scriptName, backendCwd, token);
     }
   }
-  if (tokens.includes("pytest") && !tokens.includes("--dev")) {
-    failures.push(
-      `${scriptName}: backend pytest commands must pass --dev to scripts/backend-run.mjs`
-    );
+  if (tokens.includes("pytest") && !tokens.join(" ").includes("--extra dev")) {
+    failures.push(`${scriptName}: backend pytest commands must pass --extra dev`);
   }
   return true;
 }
@@ -97,8 +99,9 @@ function checkSegment(scriptName, cwd, segment) {
 
   if (tokens[0] === "node") {
     checkNodeEntrypoint(scriptName, cwd, tokens);
-    if (checkBackendRunner(scriptName, tokens)) return cwd;
   }
+
+  if (checkBackendRunner(scriptName, tokens)) return cwd;
 
   if (tokens[0] === "python") {
     checkPythonEntrypoint(scriptName, cwd, tokens);
@@ -158,27 +161,7 @@ function checkPnpmScriptReference(scriptName, tokens) {
 
 function checkBackendToolchain(scriptName, command) {
   if (!/\bcd\s+backend\b/.test(command)) return;
-  if (/\buv\s+run\b/.test(command)) {
-    failures.push(
-      `${scriptName}: use "node scripts/backend-run.mjs" instead of repeating "cd backend && uv run"`
-    );
-  }
-  if (/\bcd\s+backend\s*&&\s*(python|pytest|alembic|uvicorn)\b/.test(command)) {
-    failures.push(`${scriptName}: backend commands must use "node scripts/backend-run.mjs"`);
-  }
-  if (/\bpytest\b/.test(command) && !/\buv\s+run\s+--extra\s+dev\s+pytest\b/.test(command)) {
-    failures.push(
-      `${scriptName}: backend pytest commands must use "node scripts/backend-run.mjs --dev pytest"`
-    );
-  }
-  if (
-    /\bscripts\/platform_integration_suite\.py\b/.test(command) &&
-    !/\buv\s+run\s+--extra\s+dev\s+python\b/.test(command)
-  ) {
-    failures.push(
-      `${scriptName}: backend integration test commands must use "node scripts/backend-run.mjs --dev python"`
-    );
-  }
+  failures.push(`${scriptName}: use "uv run --directory backend …" instead of "cd backend && …"`);
 }
 
 for (const [scriptName, command] of Object.entries(packageJson.scripts ?? {})) {

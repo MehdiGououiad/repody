@@ -44,7 +44,7 @@ Command reference: [../../docs/COMMANDS.md](../../docs/COMMANDS.md).
 
 ### Server flags (aligned with NuExtract + llama.cpp docs)
 
-The launcher (`deploy/scripts/llamacpp-nuextract3.mjs`) starts llama-server with the official
+The launcher (`deploy/scripts/llama-serve.mjs nuextract`) starts llama-server with the official
 minimal multimodal command plus accuracy / GPU knobs from upstream docs:
 
 | Setting | Value | Source |

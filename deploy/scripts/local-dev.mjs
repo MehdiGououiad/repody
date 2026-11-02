@@ -17,23 +17,28 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
 import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
 import { printDevDashboard } from "./dev-dashboard.mjs";
 import {
+  BACKEND_ENV,
+  composeArgs,
+  copyIfMissing,
+  envFlag,
   fetchOk,
   fetchProbe,
   killListenerPort,
   listenerDetails,
   listenerInfos,
+  llamaServe,
   parseEnvFile,
+  ROOT,
   resolveExecutable,
+  run,
   runtimeEnv,
+  setEnvKeys,
   waitForPortRelease,
 } from "./runtime-env.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const BACKEND_ENV = path.join(ROOT, "backend/.env");
 const AUTH_ENV = path.join(ROOT, ".env.local");
 const COMPOSE_ENV_EXAMPLE = path.join(ROOT, "deploy/env/compose.env.example");
 const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
@@ -54,34 +59,6 @@ const rawArgs = process.argv.slice(2);
 const command = rawArgs.find((a) => !a.startsWith("-")) || "stack";
 /** Accept flags anywhere: `all --no-glmocr` or `--no-glmocr all`. */
 const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
-
-function run(cmd, cmdArgs, opts = {}) {
-  const result = spawnSync(cmd, cmdArgs, {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: opts.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
-    shell: false,
-    ...opts,
-  });
-  if (result.status !== 0 && !opts.allowFail) {
-    if (!opts.inherit) {
-      if (result.stdout?.trim()) process.stderr.write(result.stdout);
-      if (result.stderr?.trim()) process.stderr.write(result.stderr);
-    }
-    process.exit(result.status ?? 1);
-  }
-  return result;
-}
-
-/** Prefer backend/.env for Compose variable interpolation (NuExtract Cloud keys, etc.). */
-function composeArgs(...parts) {
-  const args = ["compose"];
-  if (fs.existsSync(BACKEND_ENV)) {
-    args.push("--env-file", "backend/.env");
-  }
-  args.push(...parts);
-  return args;
-}
 
 function apiEnv() {
   // Prefer backend/.env over inherited shell env. Otherwise a prior pytest
@@ -130,18 +107,6 @@ function syncVlmServedModel() {
   console.log(`added backend/.env AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
 }
 
-function copyIfMissing(src, dest, label) {
-  if (fs.existsSync(dest)) return false;
-  if (!fs.existsSync(src)) {
-    console.warn(`warn: missing template ${path.relative(ROOT, src)} — skip ${label}`);
-    return false;
-  }
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
-  console.log(`created ${path.relative(ROOT, dest)}`);
-  return true;
-}
-
 function llamaConfigured() {
   if (!fs.existsSync(LLAMA_PATHS)) return false;
   const body = fs.readFileSync(LLAMA_PATHS, "utf8");
@@ -149,7 +114,7 @@ function llamaConfigured() {
 }
 
 function isObservabilityRunning() {
-  const result = run("docker", composeArgs("--profile", "observability", "ps", "-q", "loki"), {
+  const result = run("docker", composeArgs([], "--profile", "observability", "ps", "-q", "loki"), {
     allowFail: true,
   });
   return Boolean(result.stdout?.trim());
@@ -211,10 +176,7 @@ function wantsPaddleocr() {
 }
 
 function paddleocrEnabledInEnv() {
-  if (!fs.existsSync(BACKEND_ENV)) return true;
-  const env = parseEnvFile(BACKEND_ENV);
-  const raw = (env.AUDIT_PADDLEOCR_V6_ENABLED || "true").trim().toLowerCase();
-  return raw !== "false" && raw !== "0" && raw !== "no";
+  return envFlag(BACKEND_ENV, "AUDIT_PADDLEOCR_V6_ENABLED", true);
 }
 
 function wantsGlmocr() {
@@ -224,17 +186,11 @@ function wantsGlmocr() {
 }
 
 function glmocrEnabledInEnv() {
-  if (!fs.existsSync(BACKEND_ENV)) return false;
-  const env = parseEnvFile(BACKEND_ENV);
-  const raw = (env.AUDIT_GLM_OCR_ENABLED || "false").trim().toLowerCase();
-  return raw !== "false" && raw !== "0" && raw !== "no";
+  return envFlag(BACKEND_ENV, "AUDIT_GLM_OCR_ENABLED", false);
 }
 
 function paddleocrQwenEnabledInEnv() {
-  if (!fs.existsSync(BACKEND_ENV)) return true;
-  const env = parseEnvFile(BACKEND_ENV);
-  const raw = (env.AUDIT_PADDLEOCR_QWEN_ENABLED || "true").trim().toLowerCase();
-  return raw !== "false" && raw !== "0" && raw !== "no";
+  return envFlag(BACKEND_ENV, "AUDIT_PADDLEOCR_QWEN_ENABLED", true);
 }
 
 function wantsQwen35() {
@@ -308,26 +264,13 @@ function removeObservabilityWorkerEnv() {
   if (fs.existsSync(OBS_ENV_FILE)) fs.unlinkSync(OBS_ENV_FILE);
 }
 
-function upsertEnvLines(filePath, updates) {
-  if (!fs.existsSync(filePath)) return;
-  let body = fs.readFileSync(filePath, "utf8");
-  for (const [key, value] of Object.entries(updates)) {
-    if (new RegExp(`^${key}=`, "m").test(body)) {
-      body = body.replace(new RegExp(`^${key}=.*$`, "m"), `${key}=${value}`);
-    } else {
-      body += `\n${key}=${value}\n`;
-    }
-  }
-  fs.writeFileSync(filePath, body);
-}
-
 /** Enable JSON logs, OTLP traces, Loki file tail, and worker OTEL when stack is up. */
 function enableObservabilityInBackendEnv() {
   fs.mkdirSync(LOG_DIR, { recursive: true });
   writeObservabilityWorkerEnv();
 
   if (fs.existsSync(BACKEND_ENV)) {
-    upsertEnvLines(BACKEND_ENV, {
+    setEnvKeys(BACKEND_ENV, {
       AUDIT_LOG_JSON: "true",
       AUDIT_OTEL_ENABLED: "true",
       AUDIT_OTEL_EXPORTER_ENDPOINT: `${OTEL_HTTP_ORIGIN}/v1/traces`,
@@ -343,7 +286,7 @@ function enableObservabilityInBackendEnv() {
 function disableObservabilityInBackendEnv() {
   removeObservabilityWorkerEnv();
   if (!fs.existsSync(BACKEND_ENV)) return;
-  upsertEnvLines(BACKEND_ENV, {
+  setEnvKeys(BACKEND_ENV, {
     AUDIT_OTEL_ENABLED: "false",
   });
   // Comment active Bugsink DSN so Sentry SDK does not retry a down :8090.
@@ -358,6 +301,7 @@ function recreateWorkersForObservability() {
   run(
     "docker",
     composeArgs(
+      [],
       "--profile",
       "workers",
       "up",
@@ -371,7 +315,7 @@ function recreateWorkersForObservability() {
 }
 
 function observabilityStack() {
-  run("docker", composeArgs("--profile", "observability", "up", "-d"));
+  run("docker", composeArgs([], "--profile", "observability", "up", "-d"));
   enableObservabilityInBackendEnv();
   // Recreate only when explicitly requested - default path just enables OTEL env.
   if (flags.has("--recreate-workers") || wantsWorkerRebuild()) {
@@ -383,6 +327,7 @@ function observabilityStack() {
 
 function composeDownArgs() {
   const args = composeArgs(
+    [],
     "--profile",
     "workers",
     "--profile",
@@ -395,11 +340,11 @@ function composeDownArgs() {
 }
 
 async function setup() {
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
-  copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS, "paths.local.env");
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
+  copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS);
 
-  run("docker", composeArgs("up", "-d"));
+  run("docker", composeArgs([], "up", "-d"));
   syncVlmServedModel();
   run("pnpm", ["db:migrate"], { inherit: true });
 
@@ -418,7 +363,7 @@ async function stack(options = {}) {
   logModelPlan();
 
   let t = Date.now();
-  run("docker", composeArgs("up", "-d"));
+  run("docker", composeArgs([], "up", "-d"));
   syncVlmServedModel();
   phaseMs("compose base", t);
 
@@ -426,7 +371,7 @@ async function stack(options = {}) {
   if (wantsNuextract()) {
     if (llamaConfigured()) {
       t = Date.now();
-      run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "serve"], { inherit: true });
+      llamaServe("nuextract", "serve");
       phaseMs("nuextract serve+warmup", t);
     } else {
       console.warn(
@@ -455,10 +400,7 @@ async function stack(options = {}) {
   if (wantsGlmocr()) {
     if (glmocrEnabledInEnv()) {
       t = Date.now();
-      run("node", ["deploy/scripts/glmocr-serve.mjs", "serve"], {
-        inherit: true,
-        allowFail: true,
-      });
+      llamaServe("glmocr", "serve", { allowFail: true });
       phaseMs("glmocr serve", t);
     } else {
       console.warn("warn: GLM-OCR skipped — AUDIT_GLM_OCR_ENABLED=false in backend/.env");
@@ -468,7 +410,7 @@ async function stack(options = {}) {
   }
 
   t = Date.now();
-  const workerArgs = composeArgs("--profile", "workers", "up", "-d");
+  const workerArgs = composeArgs([], "--profile", "workers", "up", "-d");
   if (wantsWorkerRebuild()) workerArgs.push("--build");
   if (flags.has("--extract-only")) {
     workerArgs.push("worker-extract");
@@ -531,7 +473,7 @@ async function status() {
     console.log(`\nAPI port ${API_PORT} listeners:\n${apiPort}`);
   }
 
-  const compose = run("docker", composeArgs("ps", "--format", "table {{.Name}}\t{{.Status}}"), {
+  const compose = run("docker", composeArgs([], "ps", "--format", "table {{.Name}}\t{{.Status}}"), {
     allowFail: true,
   });
   if (compose.stdout?.trim()) {
@@ -545,7 +487,7 @@ async function status() {
 
   const workers = run(
     "docker",
-    composeArgs("--profile", "workers", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
+    composeArgs([], "--profile", "workers", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
     { allowFail: true }
   );
   if (workers.stdout?.trim()) {
@@ -559,7 +501,7 @@ async function status() {
 
   const obs = run(
     "docker",
-    composeArgs("--profile", "observability", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
+    composeArgs([], "--profile", "observability", "ps", "--format", "table {{.Name}}\t{{.Status}}"),
     { allowFail: true }
   );
   if (obs.stdout?.trim()) {
@@ -625,34 +567,31 @@ async function reset() {
   console.log("=== Full platform reset (Compose volumes + DB + seed) ===\n");
   killDevUi();
   killDevApi();
-  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
+  llamaServe("nuextract", "stop", { allowFail: true });
   run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
     allowFail: true,
     inherit: true,
   });
-  run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], { allowFail: true, inherit: true });
+  llamaServe("glmocr", "stop", { allowFail: true });
 
-  run("docker", composeArgs("--profile", "workers", "down", "--remove-orphans", "-v"), {
+  run("docker", composeArgs([], "--profile", "workers", "down", "--remove-orphans", "-v"), {
     inherit: true,
   });
-  run("docker", composeArgs("--profile", "observability", "down", "--remove-orphans"), {
+  run("docker", composeArgs([], "--profile", "observability", "down", "--remove-orphans"), {
     inherit: true,
     allowFail: true,
   });
 
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
-  copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS, "paths.local.env");
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
+  copyIfMissing(LLAMA_PATHS_EXAMPLE, LLAMA_PATHS);
 
-  run("docker", composeArgs("up", "-d"), { inherit: true });
+  run("docker", composeArgs([], "up", "-d"), { inherit: true });
   console.log("Waiting for Postgres…");
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const probe = run(
       "docker",
-      composeArgs("exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "repody"),
+      composeArgs([], "exec", "-T", "postgres", "pg_isready", "-U", "audit", "-d", "repody"),
       { allowFail: true }
     );
     if (probe.status === 0) break;
@@ -666,7 +605,7 @@ async function reset() {
   run("pnpm", ["db:reset"], { inherit: true });
 
   console.log("\nRebuilding worker pools…");
-  const workerArgs = composeArgs("--profile", "workers", "up", "-d", "--build");
+  const workerArgs = composeArgs([], "--profile", "workers", "up", "-d", "--build");
   if (flags.has("--extract-only")) {
     workerArgs.push("worker-extract");
   } else {
@@ -675,7 +614,7 @@ async function reset() {
   run("docker", workerArgs, { inherit: true });
 
   if (wantsNuextract() && llamaConfigured()) {
-    run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "serve"], { inherit: true });
+    llamaServe("nuextract", "serve");
   }
   if (wantsPaddleocr() && paddleocrEnabledInEnv()) {
     run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
@@ -684,10 +623,7 @@ async function reset() {
     });
   }
   if (wantsGlmocr() && glmocrEnabledInEnv()) {
-    run("node", ["deploy/scripts/glmocr-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
+    llamaServe("glmocr", "serve", { allowFail: true });
   }
 
   console.log("\nPlatform reset complete.");
@@ -700,19 +636,13 @@ function stop() {
   );
   killDevUi();
   killDevApi();
-  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
+  llamaServe("nuextract", "stop", { allowFail: true });
   run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
     allowFail: true,
     inherit: true,
   });
-  run("node", ["deploy/scripts/qwen35-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
-  run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], { allowFail: true, inherit: true });
+  llamaServe("qwen35", "stop", { allowFail: true });
+  llamaServe("glmocr", "stop", { allowFail: true });
 
   const downArgs = composeDownArgs();
   if (flags.has("--volumes") || flags.has("-v")) {
@@ -725,7 +655,7 @@ function stop() {
 
 function restart() {
   if (wantsNuextract()) {
-    run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "restart"], { inherit: true });
+    llamaServe("nuextract", "restart");
   }
   if (wantsPaddleocr() && paddleocrEnabledInEnv()) {
     run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
@@ -738,16 +668,13 @@ function restart() {
     });
   }
   if (wantsGlmocr() && glmocrEnabledInEnv()) {
-    run("node", ["deploy/scripts/glmocr-serve.mjs", "restart"], {
-      inherit: true,
-      allowFail: true,
-    });
+    llamaServe("glmocr", "restart", { allowFail: true });
   }
-  run("docker", composeArgs("--profile", "workers", "restart", "worker-extract"), {
+  run("docker", composeArgs([], "--profile", "workers", "restart", "worker-extract"), {
     inherit: true,
   });
   if (!flags.has("--extract-only")) {
-    run("docker", composeArgs("--profile", "workers", "restart", "worker-fast"), {
+    run("docker", composeArgs([], "--profile", "workers", "restart", "worker-fast"), {
       inherit: true,
       allowFail: true,
     });

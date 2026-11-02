@@ -262,7 +262,7 @@ else if (cmd === "warmup") void warmup();
 else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/glmocr-serve.mjs serve|stop|restart|verify|warmup|download"
+    "Usage: node deploy/scripts/glmocr-ollama-serve.mjs serve|stop|restart|verify|warmup|download"
   );
   process.exit(2);
 }

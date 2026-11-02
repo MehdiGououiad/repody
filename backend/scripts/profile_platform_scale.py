@@ -2,9 +2,9 @@
 
 Usage (Postgres + Redis up; API for --live):
 
-  node scripts/backend-run.mjs --dev python scripts/profile_platform_scale.py
-  node scripts/backend-run.mjs --dev python scripts/profile_platform_scale.py --live
-  node scripts/backend-run.mjs --dev python scripts/profile_platform_scale.py --live --seed-queue 200
+  uv run --directory backend --extra dev python scripts/profile_platform_scale.py
+  uv run --directory backend --extra dev python scripts/profile_platform_scale.py --live
+  uv run --directory backend --extra dev python scripts/profile_platform_scale.py --live --seed-queue 200
 """
 
 from __future__ import annotations

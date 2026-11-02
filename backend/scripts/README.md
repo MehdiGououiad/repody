@@ -1,6 +1,6 @@
 # Backend scripts
 
-Run from repo root via `node scripts/backend-run.mjs --dev python scripts/...` (cwd = `backend/`).
+Run from repo root via `uv run --directory backend --extra dev python scripts/...` (cwd = `backend/`).
 
 ## Ops (keep at this folder root)
 

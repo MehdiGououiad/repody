@@ -286,7 +286,7 @@ function paddleocrQwenEnabledInEnv() {
 function maybeStartQwenCompanion() {
   if (!paddleocrQwenEnabledInEnv()) return;
   console.log("Starting Qwen3.5 companion for paddleocr:qwen …");
-  spawnSync(process.execPath, ["deploy/scripts/qwen35-serve.mjs", "serve"], {
+  spawnSync(process.execPath, ["deploy/scripts/llama-serve.mjs", "qwen35", "serve"], {
     cwd: ROOT,
     stdio: "inherit",
     shell: false,

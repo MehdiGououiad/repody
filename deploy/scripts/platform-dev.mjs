@@ -13,11 +13,20 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { fetchOk, fetchProbe, parseEnvFile } from "./runtime-env.mjs";
+import {
+  BACKEND_ENV,
+  composeArgs as composeArgsFor,
+  copyIfMissing,
+  fetchProbe,
+  findExecutable,
+  llamaServe,
+  parseEnvFile,
+  portFree,
+  ROOT,
+  run,
+  setEnvKeys,
+} from "./runtime-env.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const BACKEND_ENV = path.join(ROOT, "backend/.env");
 const AUTH_ENV = path.join(ROOT, ".env.local");
 const COMPOSE_ENV_EXAMPLE = path.join(ROOT, "deploy/env/compose.env.example");
 const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
@@ -110,47 +119,6 @@ Guide: docs/LOCAL.md
 `);
 }
 
-function run(cmd, args, runOpts = {}) {
-  const result = spawnSync(cmd, args, {
-    cwd: ROOT,
-    encoding: "utf8",
-    stdio: runOpts.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
-    shell: false,
-    env: { ...process.env, ...runOpts.env },
-  });
-  if (result.status !== 0 && !runOpts.allowFail) {
-    if (!runOpts.inherit) {
-      if (result.stdout?.trim()) process.stderr.write(result.stdout);
-      if (result.stderr?.trim()) process.stderr.write(result.stderr);
-    }
-    process.exit(result.status ?? 1);
-  }
-  return result;
-}
-
-function copyIfMissing(src, dest, label) {
-  if (fs.existsSync(dest)) return false;
-  if (!fs.existsSync(src)) {
-    console.warn(`warn: missing example ${src}`);
-    return false;
-  }
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
-  console.log(`Created ${label}`);
-  return true;
-}
-
-function setEnvKeys(filePath, sets) {
-  if (!fs.existsSync(filePath)) return;
-  let body = fs.readFileSync(filePath, "utf8");
-  for (const [key, value] of Object.entries(sets)) {
-    const re = new RegExp(`^${key}=.*$`, "m");
-    if (re.test(body)) body = body.replace(re, `${key}=${value}`);
-    else body += `\n${key}=${value}\n`;
-  }
-  fs.writeFileSync(filePath, body);
-}
-
 function patchBackendEnv() {
   const wantPaddle = !opts.noPaddle;
   const wantPaddleQwen = !opts.noQwen && wantPaddle;
@@ -185,22 +153,7 @@ function composeFileArgs() {
 }
 
 function composeArgs(...parts) {
-  return ["compose", ...composeFileArgs(), "--env-file", "backend/.env", ...parts];
-}
-
-function whichBin(name) {
-  if (isWin) {
-    const result = spawnSync("where.exe", [name], {
-      encoding: "utf8",
-      shell: false,
-    });
-    return (result.stdout || "").trim().split(/\r?\n/).find(Boolean) || null;
-  }
-  const result = spawnSync("which", [name], {
-    encoding: "utf8",
-    shell: false,
-  });
-  return (result.stdout || "").trim().split(/\r?\n/).find(Boolean) || null;
+  return composeArgsFor(composeFileArgs(), ...parts);
 }
 
 function llamaInstallHint() {
@@ -210,7 +163,7 @@ function llamaInstallHint() {
 }
 
 function ensureLlamaServer({ required }) {
-  const found = whichBin("llama-server");
+  const found = findExecutable("llama-server");
   if (found) {
     console.log(`llama-server: ${found}`);
     return true;
@@ -229,9 +182,9 @@ Then re-run: pnpm platform
 
 function ensureInferencePaths() {
   const qwenSrc = isDarwin && fs.existsSync(QWEN_MAC_EXAMPLE) ? QWEN_MAC_EXAMPLE : QWEN_EXAMPLE;
-  copyIfMissing(qwenSrc, QWEN_PATHS, "deploy/qwen35/paths.local.env");
+  copyIfMissing(qwenSrc, QWEN_PATHS);
   const llamaSrc = isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
-  copyIfMissing(llamaSrc, LLAMA_PATHS, "deploy/llamacpp/paths.local.env");
+  copyIfMissing(llamaSrc, LLAMA_PATHS);
 }
 
 function nuextractConfigured() {
@@ -306,23 +259,8 @@ function hubImagesPresent() {
   };
 }
 
-function portFree(port) {
-  if (isWin) {
-    const r = spawnSync("netstat", ["-ano"], { encoding: "utf8", shell: false });
-    const text = `${r.stdout || ""}\n${r.stderr || ""}`;
-    const re = new RegExp(`:${port}\\s+.*?LISTENING`, "i");
-    return !re.test(text);
-  }
-  const r = spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], {
-    encoding: "utf8",
-    shell: false,
-  });
-  // lsof exit 1 = nothing listening
-  return r.status !== 0;
-}
-
 function llamaServerRuns() {
-  const exe = whichBin("llama-server");
+  const exe = findExecutable("llama-server");
   if (!exe) return { ok: false, detail: "not on PATH" };
   const r = spawnSync(exe, ["--version"], {
     encoding: "utf8",
@@ -380,7 +318,7 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     fix: "pnpm platform setup  (docker pull mehdigououiad/repody-backend:0.1.0 + repody-web)",
   });
 
-  const llama = whichBin("llama-server");
+  const llama = findExecutable("llama-server");
   const llamaRun =
     needLlama && llama
       ? llamaServerRuns()
@@ -418,7 +356,7 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     fix: "pnpm platform setup",
   });
 
-  const uv = whichBin("uv");
+  const uv = findExecutable("uv");
   rows.push({
     name: "uv (PP-OCR)",
     ok: Boolean(uv),
@@ -525,19 +463,6 @@ function startObservabilityStack(composeEnv) {
   });
 }
 
-async function waitHttp(url, { timeoutMs = 180_000, label = url } = {}) {
-  const started = Date.now();
-  while (Date.now() - started < timeoutMs) {
-    if (await fetchOk(url)) {
-      console.log(`ok  ${label}`);
-      return true;
-    }
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-  console.error(`timeout waiting for ${label}`);
-  return false;
-}
-
 function pullHubImages() {
   const backend = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
   const web = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
@@ -550,16 +475,18 @@ function pullHubImages() {
 
 function setup() {
   console.log("── Repody platform setup (once) ───────────────────────────────\n");
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
   ensureInferencePaths();
   patchBackendEnv();
 
   const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
   const dockerOk = docker.status === 0;
   console.log(`Docker:       ${dockerOk ? "ok" : "NOT RUNNING — start Docker Desktop"}`);
-  console.log(`llama-server: ${whichBin("llama-server") || `missing — ${llamaInstallHint()}`}`);
-  console.log(`uv:           ${whichBin("uv") || "missing — https://docs.astral.sh/uv/"}`);
+  console.log(
+    `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`
+  );
+  console.log(`uv:           ${findExecutable("uv") || "missing — https://docs.astral.sh/uv/"}`);
 
   if (dockerOk && !opts.skipPull) {
     pullHubImages();
@@ -571,7 +498,7 @@ function setup() {
 
   console.log(`
 Setup done. Next:
-  ${whichBin("llama-server") ? "" : `${llamaInstallHint()}\n  `}# Download NuExtract GGUFs — see deploy/llamacpp/README.md
+  ${findExecutable("llama-server") ? "" : `${llamaInstallHint()}\n  `}# Download NuExtract GGUFs — see deploy/llamacpp/README.md
   # Set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env
   pnpm platform
 
@@ -587,8 +514,8 @@ async function doctor() {
 }
 
 async function up() {
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV, "backend/.env");
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV, ".env.local");
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
   ensureInferencePaths();
   patchBackendEnv();
 
@@ -625,33 +552,9 @@ async function up() {
     });
   }
 
-  console.log("\n── Start Hub platform ───────────────────────────────────────");
-  const upArgs = [
-    "up",
-    "-d",
-    opts.withGlm ? "--build" : "--no-build",
-    "postgres",
-    "redis",
-    "minio",
-    "minio-init",
-    "keycloak",
-    "api",
-    "web",
-    "worker-extract",
-    "worker-fast",
-  ];
-  // Images are pulled by `pnpm platform setup`. `--no-pull` forces never; otherwise refresh if missing.
-  if (opts.skipPull) upArgs.splice(2, 0, "--pull", "never");
-  else upArgs.splice(2, 0, "--pull", "missing");
-  run("docker", composeArgs(...upArgs), { inherit: true, env: composeEnv });
-
-  console.log("\n── Waiting for API ──────────────────────────────────────────");
-  if (!(await waitHttp("http://127.0.0.1:8000/v1/healthz/live", { label: "API :8000" }))) {
-    process.exit(1);
-  }
-
+  // Host models first so workers never race a cold endpoint; Compose then waits on healthchecks.
   if (!opts.noPaddle) {
-    console.log("\n── PP-OCRv6 (host; auto-installs deps if needed) ────────────");
+    console.log("\n── PP-OCRv6 (host; auto-installs deps if needed) ─────────────");
     run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
       inherit: true,
       allowFail: true,
@@ -660,49 +563,45 @@ async function up() {
 
   // Qwen is the JSON stage for paddleocr:qwen and glm:qwen.
   if (!opts.noQwen && (!opts.noPaddle || opts.withGlm)) {
-    console.log("\n── Qwen3.5 (host, OCR→JSON) ─────────────────────────────────");
-    run("node", ["deploy/scripts/qwen35-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
+    console.log("\n── Qwen3.5 (host, OCR→JSON) ──────────────────────────────────");
+    llamaServe("qwen35", "serve", { allowFail: true });
   }
 
   if (opts.withNuextract) {
-    console.log("\n── NuExtract (host) ─────────────────────────────────────────");
-    run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
+    console.log("\n── NuExtract (host) ──────────────────────────────────────────");
+    llamaServe("nuextract", "serve", { allowFail: true });
   }
 
   if (opts.withGlm) {
-    console.log("\n── GLM-OCR (host llama-server) ──────────────────────────────");
-    run("node", ["deploy/scripts/glmocr-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
+    console.log("\n── GLM-OCR (host llama-server) ───────────────────────────────");
+    llamaServe("glmocr", "serve", { allowFail: true });
   }
 
+  console.log("\n── Start Hub platform (waits for healthchecks) ───────────────");
+  // Images are pulled by `pnpm platform setup`. `--no-pull` forces never; otherwise refresh if missing.
   run(
     "docker",
     composeArgs(
       "up",
       "-d",
-      opts.withGlm ? "--build" : "--no-build",
+      "--wait",
+      "--wait-timeout",
+      "180",
       "--pull",
       opts.skipPull ? "never" : "missing",
-      "--force-recreate",
+      opts.withGlm ? "--build" : "--no-build",
+      "postgres",
+      "redis",
+      "minio",
+      "minio-init",
+      "keycloak",
       "api",
       "web",
       "worker-extract",
       "worker-fast"
     ),
-    { inherit: true, allowFail: true, env: composeEnv }
+    { inherit: true, env: composeEnv }
   );
-  await waitHttp("http://127.0.0.1:8000/v1/healthz/live", {
-    label: "API :8000",
-    timeoutMs: 120_000,
-  });
 
   await status();
   const extraction = [];
@@ -778,11 +677,7 @@ function logs() {
   console.log("Tailing API + web + workers (Ctrl+C to stop)…\n");
   run(
     "docker",
-    [
-      "compose",
-      ...composeFileArgs(),
-      "--env-file",
-      "backend/.env",
+    composeArgs(
       "--profile",
       "workers",
       "logs",
@@ -792,30 +687,21 @@ function logs() {
       "api",
       "web",
       "worker-extract",
-      "worker-fast",
-    ],
+      "worker-fast"
+    ),
     { inherit: true, allowFail: true }
   );
 }
 
 function stop() {
   console.log("Stopping host models + Hub Compose stack…");
-  run("node", ["deploy/scripts/qwen35-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
+  llamaServe("qwen35", "stop", { allowFail: true });
   run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
     allowFail: true,
     inherit: true,
   });
-  run("node", ["deploy/scripts/llamacpp-nuextract3.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
-  run("node", ["deploy/scripts/glmocr-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
+  llamaServe("nuextract", "stop", { allowFail: true });
+  llamaServe("glmocr", "stop", { allowFail: true });
   run(
     "docker",
     composeArgs("--profile", "workers", "--profile", "observability", "down", "--remove-orphans"),

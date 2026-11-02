@@ -19,5 +19,5 @@
     "@fontsource-variable/jetbrains-mono"
   ],
   "ignoreExportsUsedInFile": true,
-  "ignoreBinaries": ["helm", "kubectl", "netstat", "trivy", "where.exe"]
+  "ignoreBinaries": ["helm", "kubectl", "netstat", "trivy", "uv", "where.exe"]
 }

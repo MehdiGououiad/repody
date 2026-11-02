@@ -14,6 +14,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { uvBackend } from "../deploy/scripts/runtime-env.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const reportsDir = join(root, "reports", "platform-tests");
@@ -84,12 +85,8 @@ const e2eEnv = {
 };
 
 function backendRun(label, pytestArgs, extraEnv = {}) {
-  return run(
-    label,
-    process.execPath,
-    [join(root, "scripts", "backend-run.mjs"), "--dev", "pytest", ...pytestArgs, "--tb=short"],
-    { env: extraEnv }
-  );
+  const [uv, uvArgs] = uvBackend(["pytest", ...pytestArgs, "--tb=short"], { dev: true });
+  return run(label, uv, uvArgs, { env: extraEnv });
 }
 
 const junit = (name) => `--junitxml=${join(reportsDir, `junit-${name}.xml`)}`;
