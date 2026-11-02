@@ -49,7 +49,7 @@ Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH
 |----------|------|
 | `scripts/` | Cross-cutting Node from `package.json` |
 | `deploy/scripts/` | Platform, model serve, images, release |
-| `backend/scripts/` | Python ops via `node scripts/backend-run.mjs` |
+| `backend/scripts/` | Python ops via `uv run --directory backend …` |
 
 ## Pinned versions
 

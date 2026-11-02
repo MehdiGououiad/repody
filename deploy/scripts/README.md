@@ -9,4 +9,4 @@ See [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md#scripts-map) for how this fo
 | Daily Compose stack | `platform-dev.mjs` (`pnpm platform`) |
 | Source contribute lane | `local-dev.mjs` (`pnpm dev:src:all`) |
 | Images / supply chain | `build-images.mjs`, `release-supply-chain.mjs` |
-| Qwen text model (OCR + Qwen paths) | `qwen35-serve.mjs` (`pnpm qwen35:serve`) |
+| Host llama-server models (NuExtract, Qwen3.5, GLM-OCR) | `llama-serve.mjs <model>` (`pnpm llamacpp:serve`, `pnpm qwen35:serve`, `pnpm glmocr:serve`) |

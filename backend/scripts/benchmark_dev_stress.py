@@ -1,7 +1,7 @@
 """Platform stress test (dev burst + random traffic).
 
 Usage:
-  node scripts/backend-run.mjs --dev python scripts/benchmark_dev_stress.py --api http://127.0.0.1:8000
+  uv run --directory backend --extra dev python scripts/benchmark_dev_stress.py --api http://127.0.0.1:8000
 """
 
 from __future__ import annotations

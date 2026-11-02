@@ -1,16 +1,116 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+export const BACKEND_ENV = path.join(ROOT, "backend/.env");
+
+/** Absolute path of `name` on PATH (Windows prefers the `.exe` hit), or null. */
+export function findExecutable(name) {
+  const isWin = process.platform === "win32";
+  const result = spawnSync(isWin ? "where.exe" : "which", [name], {
+    encoding: "utf8",
+    shell: false,
+  });
+  if (result.status !== 0) return null;
+  const lines = (result.stdout || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return (isWin && lines.find((line) => line.toLowerCase().endsWith(".exe"))) || lines[0] || null;
+}
+
+/** Name usable with `spawn(…, { shell: false })` - Windows needs the full path for shims. */
 export function resolveExecutable(name) {
   if (process.platform !== "win32") return name;
-  const result = spawnSync("where.exe", [name], { encoding: "utf8" });
-  if (result.status !== 0) return name;
-  return (
-    result.stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .find(Boolean) || name
-  );
+  return findExecutable(name) || name;
+}
+
+/** `[command, args]` for `uv run --directory backend [--extra dev --extra otel] …`. */
+export function uvBackend(args, { dev = false } = {}) {
+  const extras = dev ? ["--extra", "dev", "--extra", "otel"] : [];
+  return [
+    resolveExecutable("uv"),
+    ["run", "--directory", path.join(ROOT, "backend"), ...extras, ...args],
+  ];
+}
+
+/** spawnSync from the repo root; exits with the child's status unless `allowFail`. */
+export function run(cmd, args, opts = {}) {
+  const result = spawnSync(cmd, args, {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: opts.inherit ? "inherit" : ["ignore", "pipe", "pipe"],
+    shell: false,
+    env: { ...process.env, ...opts.env },
+  });
+  if (result.status !== 0 && !opts.allowFail) {
+    if (!opts.inherit) {
+      if (result.stdout?.trim()) process.stderr.write(result.stdout);
+      if (result.stderr?.trim()) process.stderr.write(result.stderr);
+    }
+    process.exit(result.status ?? 1);
+  }
+  return result;
+}
+
+/** `node deploy/scripts/llama-serve.mjs <model> <cmd>` with inherited output. */
+export function llamaServe(model, cmd, opts = {}) {
+  return run(process.execPath, ["deploy/scripts/llama-serve.mjs", model, cmd], {
+    inherit: true,
+    ...opts,
+  });
+}
+
+/** `docker compose` args with the given -f files; backend/.env is passed only when it exists. */
+export function composeArgs(files, ...parts) {
+  const args = ["compose"];
+  for (const file of files) args.push("-f", file);
+  if (fs.existsSync(BACKEND_ENV)) args.push("--env-file", "backend/.env");
+  args.push(...parts);
+  return args;
+}
+
+export function copyIfMissing(src, dest) {
+  if (fs.existsSync(dest)) return false;
+  if (!fs.existsSync(src)) {
+    console.warn(`warn: missing template ${path.relative(ROOT, src)}`);
+    return false;
+  }
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+  console.log(`created ${path.relative(ROOT, dest)}`);
+  return true;
+}
+
+/** Set or append KEY=value lines in an existing env file. */
+export function setEnvKeys(filePath, sets) {
+  if (!fs.existsSync(filePath)) return;
+  let body = fs.readFileSync(filePath, "utf8");
+  for (const [key, value] of Object.entries(sets)) {
+    const re = new RegExp(`^${key}=.*$`, "m");
+    if (re.test(body)) body = body.replace(re, `${key}=${value}`);
+    else body += `\n${key}=${value}\n`;
+  }
+  fs.writeFileSync(filePath, body);
+}
+
+/** False when `key` in `filePath` is false/0/no; a missing file or key yields `fallback`. */
+export function envFlag(filePath, key, fallback) {
+  if (!fs.existsSync(filePath)) return fallback;
+  const raw = (parseEnvFile(filePath)[key] ?? String(fallback)).trim().toLowerCase();
+  return raw !== "false" && raw !== "0" && raw !== "no";
+}
+
+/** Cheap listen check (netstat / lsof) for preflight tables. */
+export function portFree(port) {
+  if (process.platform === "win32") {
+    const r = spawnSync("netstat", ["-ano"], { encoding: "utf8", shell: false });
+    return !new RegExp(`:${port}\\s+.*?LISTENING`, "i").test(r.stdout || "");
+  }
+  // lsof exit 1 = nothing listening
+  return spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], { shell: false }).status !== 0;
 }
 
 export function commandFor(name) {
@@ -136,17 +236,6 @@ export function waitForPortRelease(port, timeoutMs = 3000) {
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
   }
   return !listenerInfos(port).length;
-}
-
-export function findLlamaServerExe() {
-  const probe = spawnSync("where.exe", ["llama-server"], { encoding: "utf8" });
-  if (probe.status === 0) {
-    const line = probe.stdout.split(/\r?\n/).find((l) => l.trim().endsWith("llama-server.exe"));
-    if (line?.trim()) return line.trim();
-  }
-  const which = spawnSync("which", ["llama-server"], { encoding: "utf8" });
-  if (which.status === 0 && which.stdout.trim()) return which.stdout.trim().split(/\r?\n/)[0];
-  return null;
 }
 
 /** GET `url`; body is parsed JSON when possible, else raw text. */

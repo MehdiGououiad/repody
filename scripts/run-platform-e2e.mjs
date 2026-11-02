@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
+import { uvBackend } from "../deploy/scripts/runtime-env.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiURL = (process.env.E2E_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -101,22 +102,13 @@ const sharedEnv = {
 };
 
 run(
-  process.execPath,
-  [
-    "scripts/backend-run.mjs",
-    "--dev",
-    "python",
-    "scripts/platform_integration_suite.py",
-    "--api",
-    apiURL,
-  ],
+  ...uvBackend(["python", "scripts/platform_integration_suite.py", "--api", apiURL], { dev: true }),
   root,
   sharedEnv
 );
 
 run(
-  process.execPath,
-  ["scripts/backend-run.mjs", "--dev", "python", "-m", "pytest", "tests/live", "-v", "-m", "live"],
+  ...uvBackend(["python", "-m", "pytest", "tests/live", "-v", "-m", "live"], { dev: true }),
   root,
   sharedEnv
 );

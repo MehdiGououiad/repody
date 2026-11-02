@@ -9,8 +9,8 @@ Usage (stack up: API + Postgres + Redis + workers + Keycloak):
 
   $env:E2E_STACK='1'
   $env:AUDIT_DATABASE_URL='postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody'
-  node scripts/backend-run.mjs --dev python scripts/load_test_platform.py
-  node scripts/backend-run.mjs --dev python scripts/load_test_platform.py --concurrency 40 --enqueue 200
+  uv run --directory backend --extra dev python scripts/load_test_platform.py
+  uv run --directory backend --extra dev python scripts/load_test_platform.py --concurrency 40 --enqueue 200
 """
 
 from __future__ import annotations
