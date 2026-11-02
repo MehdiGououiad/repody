@@ -143,17 +143,15 @@ function patchBackendEnv() {
   });
 }
 
-function composeFileArgs() {
-  const files = ["-f", "compose.yaml", "-f", "compose.portable.yaml"];
+function composeFiles() {
+  const files = ["compose.yaml", "compose.portable.yaml"];
   // Hub backend is otel-only; GLM catalog needs the official SDK in the worker.
-  if (opts.withGlm) {
-    files.push("-f", "compose.glmocr.yaml");
-  }
+  if (opts.withGlm) files.push("compose.glmocr.yaml");
   return files;
 }
 
 function composeArgs(...parts) {
-  return composeArgsFor(composeFileArgs(), ...parts);
+  return composeArgsFor(composeFiles(), ...parts);
 }
 
 function llamaInstallHint() {
