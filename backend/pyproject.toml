@@ -35,9 +35,11 @@ dependencies = [
   # Observability + reliability
   "structlog>=25.1.0",
   "sentry-sdk[fastapi]>=2.69.1",
+  "opentelemetry-api>=1.44.0",
   # Document preprocessing
   "pillow>=11.1.0",
   "pymupdf>=1.28.2",
+  "price-parser>=0.4.0",
 ]
 
 [project.optional-dependencies]
@@ -51,8 +53,10 @@ dev = [
   "respx>=0.22.0",
   "import-linter>=2.15",
 ]
+# OpenTelemetry agent (`opentelemetry-instrument`, see scripts/docker-entrypoint.sh): the distro
+# configures the SDK from OTEL_* env and loads every installed instrumentation.
 otel = [
-  "opentelemetry-sdk>=1.44.0",
+  "opentelemetry-distro>=0.65b0",
   "opentelemetry-exporter-otlp-proto-http>=1.44.0",
   "opentelemetry-instrumentation-fastapi>=0.65b0",
   "opentelemetry-instrumentation-httpx>=0.65b0",

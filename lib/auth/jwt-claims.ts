@@ -1,23 +1,16 @@
-const APP_ROLES = new Set(["platform_admin", "admin", "operator", "viewer"]);
+import { decodeJwt } from "jose";
 
-export function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const part = token.split(".")[1];
-    if (!part) return null;
-    const b64 = part.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-    const json =
-      typeof Buffer !== "undefined" ? Buffer.from(padded, "base64").toString("utf8") : atob(padded);
-    return JSON.parse(json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
+const APP_ROLES = new Set(["platform_admin", "admin", "operator", "viewer"]);
 
 export function realmRolesFromAccessToken(token: string | undefined): string[] {
   if (!token) return [];
-  const payload = decodeJwtPayload(token);
-  const realmAccess = payload?.realm_access as { roles?: string[] } | undefined;
+  // Claims only (the API verifies the signature); jose throws on a malformed token.
+  let realmAccess: { roles?: string[] } | undefined;
+  try {
+    realmAccess = decodeJwt(token).realm_access as { roles?: string[] } | undefined;
+  } catch {
+    return [];
+  }
   const roles = realmAccess?.roles ?? [];
   return roles.filter((role) => APP_ROLES.has(role)).sort();
 }

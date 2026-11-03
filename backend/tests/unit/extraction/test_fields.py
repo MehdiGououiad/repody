@@ -158,3 +158,9 @@ def test_fields_expands_nested_objects():
     assert by_key["holder_information.full_name"].value == "Jane Doe"
     assert by_key["holder_information.last_name"].extracted is False
     assert by_key["document_details.is_valid"].value == "true"
+
+
+def test_signed_amounts_keep_their_sign():
+    assert parse_numeric_value("-1 200,00") == -1200.0
+    assert normalize_amount("-50.00 MAD") == "-50.00"
+    assert parse_numeric_value("1.234,56 EUR") == 1234.56

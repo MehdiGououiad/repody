@@ -69,10 +69,6 @@ class Settings(BaseSettings):
         description="Optional path for JSON log lines (Alloy → Loki in local dev).",
     )
 
-    otel_enabled: bool = Field(default=False)
-    otel_service_name: str = Field(default="repody-api")
-    otel_exporter_endpoint: str = Field(default="http://localhost:4318/v1/traces")
-
     run_events_enabled: bool = Field(default=True)
     # --- Workers: Taskiq pools and task timeout ---
     worker_task_timeout_minutes: int = Field(

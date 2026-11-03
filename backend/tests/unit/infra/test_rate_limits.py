@@ -29,8 +29,7 @@ async def test_rate_limit_exceeded(monkeypatch):
     monkeypatch.setenv("AUDIT_EXTRACTION_CACHE_ENABLED", "false")
     clear_settings_cache()
     rate_limit_module.clear_rate_limiter_cache()
-    rate_limit_module._storage = MemoryStorage()
-    rate_limit_module._limiter = MovingWindowRateLimiter(rate_limit_module._storage)
+    rate_limit_module._limiter = MovingWindowRateLimiter(MemoryStorage())
 
     await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
     with pytest.raises(AppError) as caught:

@@ -1,31 +1,17 @@
-"""Platform config, model catalog, and schema type suggestion."""
+"""Platform config and model catalog."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 
 from repody.api.auth import require_permission
 from repody.app.uploads.service import presign_supported
 from repody.catalog.api import fetch_models_catalog
-from repody.extraction.nuextract import suggest_template_type
 from repody.schemas.models_catalog import ModelsCatalogResponse
-from repody.schemas.platform import PlatformConfigResponse, SuggestTemplateTypeResponse
+from repody.schemas.platform import PlatformConfigResponse
 from repody.settings import get_settings
 
 router = APIRouter(tags=["platform"])
-
-
-@router.get(
-    "/schema/suggest-type",
-    response_model=SuggestTemplateTypeResponse,
-    dependencies=[Depends(require_permission("workflow", "read"))],
-)
-async def suggest_schema_template_type(
-    name: str = Query("", description="Field name"),
-    description: str = Query("", description="What to extract"),
-) -> SuggestTemplateTypeResponse:
-    """Infer a NuExtract template leaf type from field name and intent."""
-    return SuggestTemplateTypeResponse(template_type=suggest_template_type(name, description))
 
 
 @router.get(

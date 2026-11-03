@@ -27,10 +27,8 @@ from repody.inference.openai_compat import close_openai_clients
 from repody.infra.auth.jwt_validator import warm_jwks_cache
 from repody.infra.db.base import async_session_factory, engine
 from repody.infra.db.seed import seed_database
-from repody.infra.http import close_http_clients
 from repody.infra.observability.bootstrap import init_observability
 from repody.infra.observability.middleware import RequestLoggingMiddleware
-from repody.infra.observability.tracing import instrument_fastapi
 from repody.infra.rate_limit import GlobalRateLimitMiddleware
 from repody.infra.redis.pool import close_redis_pool
 from repody.infra.storage.factory import init_storage
@@ -75,7 +73,6 @@ async def lifespan(_app: FastAPI):
     await close_taskiq_brokers()
     await close_redis_pool()
     await close_openai_clients()
-    await close_http_clients()
     await engine.dispose()
 
 
@@ -106,7 +103,6 @@ def create_app() -> FastAPI:
     app.include_router(config.router, prefix="/v1")
 
     install_openapi(app)
-    instrument_fastapi(app, settings)
 
     return app
 

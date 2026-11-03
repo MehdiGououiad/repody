@@ -31,7 +31,6 @@ os.environ["AUDIT_LLAMACPP_BASE_URL"] = "http://llamacpp-mock.test/v1"
 os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
 os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
 # Force off even when backend/.env has Compose OTEL (avoids export noise / closed-file logs).
-os.environ["AUDIT_OTEL_ENABLED"] = "false"
 os.environ["OTEL_SDK_DISABLED"] = "true"
 
 import httpx
@@ -114,7 +113,6 @@ async def app(test_session_factory):
     """Real ASGI app against migrated Postgres (UI-identical routes)."""
     os.environ["AUDIT_OIDC_ENABLED"] = "false"
     os.environ["AUDIT_OIDC_AUDIENCE"] = ""
-    os.environ["AUDIT_OTEL_ENABLED"] = "false"
     get_settings.cache_clear()
     router = enable_dmr_mock(monkeypatch=None)
     _session_dmr_router["router"] = router
@@ -167,10 +165,8 @@ async def reset_inference_clients():
     """Drop cached OpenAI/httpx clients between tests (session loop reuse)."""
     yield
     from repody.inference.openai_compat import close_openai_clients
-    from repody.infra.http import close_http_clients
 
     await close_openai_clients()
-    await close_http_clients()
 
 
 @pytest.fixture

@@ -20,6 +20,9 @@ const nextConfig: NextConfig = {
     // Proxy buffers request bodies and truncates past this size (default 10mb). Multipart
     // run submissions carry several documents of up to AUDIT_MAX_UPLOAD_BYTES (25mb) each.
     proxyClientMaxBodySize: "100mb",
+    // The /api/v1 rewrite to FastAPI also carries the run progress SSE stream (backend
+    // caps a stream at one hour); the default proxy timeout would cut it at 30s.
+    proxyTimeout: 3_600_000,
     // lucide-react + recharts are already in Next's default optimize list.
     optimizePackageImports: [
       "@radix-ui/react-dialog",

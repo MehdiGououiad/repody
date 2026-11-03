@@ -103,7 +103,7 @@ Registry notes (GHCR, Docker Hub, Harbor): [deploy/registry/README.md](../deploy
 ## Observability
 
 Repody writes JSON logs (`AUDIT_LOG_JSON`) and optional OTLP traces
-(`AUDIT_OTEL_ENABLED`, `AUDIT_OTEL_EXPORTER_ENDPOINT`). Bring your own collector and backends -
+(the OpenTelemetry agent runs when `OTEL_SDK_DISABLED=false`; set `OTEL_EXPORTER_OTLP_ENDPOINT`). Bring your own collector and backends -
 for example the [OpenTelemetry Collector chart](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector)
 with Grafana, Loki and Tempo. `BUGSINK_DSN` in the Secret enables error tracking.
 

@@ -5,8 +5,7 @@ from __future__ import annotations
 import os
 
 import httpx
-
-from repody.infra.auth.keycloak_token import fetch_password_grant_token_sync
+from tests.support.keycloak_token import fetch_password_grant_token_sync
 
 DEFAULT_API_URL = "http://localhost:8000"
 DEFAULT_AUTH_URL = "http://localhost:8080"

@@ -1573,6 +1573,20 @@ wheels = [
 ]
 
 [[package]]
+name = "opentelemetry-distro"
+version = "0.65b0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-sdk" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5f/61/29e94c78299b173486e6e3b10d63e89cbe340745743c6ed6ae2055433743/opentelemetry_distro-0.65b0.tar.gz", hash = "sha256:e2fef26fdf72978ab172530c13338aff367edae41ae8d90b7f6133efedde10ab", size = 2334, upload-time = "2026-07-16T15:25:47.917Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/25/d5/603a29962542152331c6e37a121129a26e24917daa4298ca00bea97571bb/opentelemetry_distro-0.65b0-py3-none-any.whl", hash = "sha256:0e15bb1a54c638e6c361bc66bc43e9de9ead442e1ae06f8099a2c1d27b6ef845", size = 2775, upload-time = "2026-07-16T15:24:47.562Z" },
+]
+
+[[package]]
 name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.44.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1830,6 +1844,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/f9/e2/3e91f31a7d2b083fe6ef3fa267035b518369d9511ffab804f839851d2779/pluggy-1.6.0.tar.gz", hash = "sha256:7dcc130b76258d33b90f61b658791dede3486c3e6bfb003ee5c9bfb396dd22f3", size = 69412, upload-time = "2025-05-15T12:30:07.975Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl", hash = "sha256:e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746", size = 20538, upload-time = "2025-05-15T12:30:06.134Z" },
+]
+
+[[package]]
+name = "price-parser"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/54/c7/217521864c88b4ee862fea2fbf49b0eb64be43fe9e4ca696362ea1b4ecef/price_parser-0.5.1.tar.gz", hash = "sha256:6861919270cba24a21c70f30e1444338eb2b03ca2bf2d2ddaaa3287176cfab4c", size = 34441, upload-time = "2026-03-19T11:33:24.102Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9d/99/734dd8b0a0ae187aeeb4d7b35bf6aa85bc755842aff7a2b146885c293811/price_parser-0.5.1-py3-none-any.whl", hash = "sha256:d401fb2a866e86103a19383396bee5ac7f72408a9db6bf3c6edf3210e4212910", size = 14800, upload-time = "2026-03-19T11:33:22.722Z" },
 ]
 
 [[package]]
@@ -2362,7 +2388,9 @@ dependencies = [
     { name = "httpx" },
     { name = "limits", extra = ["async-redis"] },
     { name = "openai" },
+    { name = "opentelemetry-api" },
     { name = "pillow" },
+    { name = "price-parser" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt", extra = ["crypto"] },
@@ -2391,12 +2419,12 @@ dev = [
     { name = "ruff" },
 ]
 otel = [
+    { name = "opentelemetry-distro" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-instrumentation-httpx" },
     { name = "opentelemetry-instrumentation-logging" },
     { name = "opentelemetry-instrumentation-sqlalchemy" },
-    { name = "opentelemetry-sdk" },
 ]
 
 [package.metadata]
@@ -2412,13 +2440,15 @@ requires-dist = [
     { name = "import-linter", marker = "extra == 'dev'", specifier = ">=2.15" },
     { name = "limits", extras = ["async-redis"], specifier = ">=4.4.1" },
     { name = "openai", specifier = ">=2.54.0" },
+    { name = "opentelemetry-api", specifier = ">=1.44.0" },
+    { name = "opentelemetry-distro", marker = "extra == 'otel'", specifier = ">=0.65b0" },
     { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'otel'", specifier = ">=1.44.0" },
     { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'otel'", specifier = ">=0.65b0" },
     { name = "opentelemetry-instrumentation-httpx", marker = "extra == 'otel'", specifier = ">=0.65b0" },
     { name = "opentelemetry-instrumentation-logging", marker = "extra == 'otel'", specifier = ">=0.65b0" },
     { name = "opentelemetry-instrumentation-sqlalchemy", marker = "extra == 'otel'", specifier = ">=0.65b0" },
-    { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.44.0" },
     { name = "pillow", specifier = ">=11.1.0" },
+    { name = "price-parser", specifier = ">=0.4.0" },
     { name = "pydantic", specifier = ">=2.13.5" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.0" },

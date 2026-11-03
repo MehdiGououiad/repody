@@ -63,9 +63,9 @@ services:
       AUDIT_LOG_JSON: "true"
       # Host backend/.env often sets ../.logs - not writable in-container.
       AUDIT_LOG_FILE: /tmp/repody/api.log
-      AUDIT_OTEL_ENABLED: ${AUDIT_OTEL_ENABLED:-false}
-      AUDIT_OTEL_EXPORTER_ENDPOINT: ${AUDIT_OTEL_EXPORTER_ENDPOINT:-http://otel-collector:4318/v1/traces}
-      AUDIT_OTEL_SERVICE_NAME: repody-api
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: repody-api
       BUGSINK_DSN: ${BUGSINK_DSN:-}
       # Host inference (Docker Desktop Mac/Windows/Linux)
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1

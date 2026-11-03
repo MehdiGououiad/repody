@@ -120,12 +120,9 @@ function patchBackendEnv() {
       (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
       process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
       "nuextract3-q4_k_m",
-    AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
-    ...(opts.withObs && {
-      AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
-      AUDIT_OTEL_SERVICE_NAME: "repody-api",
-      AUDIT_LOG_JSON: "true",
-    }),
+    // OpenTelemetry agent for containers (Compose reads this file for interpolation).
+    OTEL_SDK_DISABLED: opts.withObs ? "false" : "true",
+    ...(opts.withObs && { AUDIT_LOG_JSON: "true" }),
   });
 }
 
@@ -449,7 +446,19 @@ async function dev() {
 
   // backend/.env wins over the shell so a leftover AUDIT_DATABASE_URL (pytest) cannot leak in.
   const apiEnv = { ...process.env, ...parseEnvFile(BACKEND_ENV) };
-  const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", "8000"];
+  // With observability, run the API under the OpenTelemetry agent like the containers do.
+  const apiArgs = ["run", "--extra", "otel"];
+  if (opts.withObs) {
+    apiArgs.push("opentelemetry-instrument");
+    Object.assign(apiEnv, {
+      OTEL_SERVICE_NAME: "repody-api",
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://127.0.0.1:4318",
+      OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf",
+      OTEL_METRICS_EXPORTER: "none",
+      OTEL_LOGS_EXPORTER: "none",
+    });
+  }
+  apiArgs.push("uvicorn", "repody.main:app", "--port", "8000");
   // Uvicorn's reloader is unreliable on Windows; opt in with REPODY_DEV_API_RELOAD=1.
   if (!isWin || process.env.REPODY_DEV_API_RELOAD === "1") apiArgs.push("--reload");
   const children = [

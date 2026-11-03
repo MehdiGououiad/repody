@@ -2,7 +2,7 @@
 
 import { FileJson2, GripVertical, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,7 +19,6 @@ import {
   SchemaFieldExtraConfig,
   schemaFieldNeedsExtra,
 } from "@/components/workflow/documents/schema-field-extra";
-import { fetchSuggestedTemplateType } from "@/lib/api/suggest-template-type";
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
   getSelectableTemplateTypes,
@@ -152,29 +151,10 @@ function SchemaFieldRow({
   t: ReturnType<typeof useTranslations>;
   tCommon: ReturnType<typeof useTranslations>;
 }) {
-  const { label } = useTypeLabels(t);
   const currentType = field.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
   const listMode = isListTemplateType(currentType);
-  const [suggestedType, setSuggestedType] = useState<string | null>(null);
   const normName = normalizeSchemaFieldName(field.name);
   const isDuplicate = normName.length > 0 && duplicateNames.has(normName);
-  const hasIntent = field.name.trim().length > 0 || field.description.trim().length > 0;
-  const suggestion =
-    hasIntent && suggestedType !== null && suggestedType !== currentType ? suggestedType : null;
-
-  useEffect(() => {
-    if (!hasIntent) return;
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      void fetchSuggestedTemplateType(field.name, field.description).then((value) => {
-        if (!cancelled) setSuggestedType(value);
-      });
-    }, 300);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [field.name, field.description, hasIntent]);
 
   return (
     <div className="border-b border-border last:border-b-0 md:border-b-0">
@@ -211,16 +191,6 @@ function SchemaFieldRow({
             onChange={(templateType) => onUpdate({ templateType })}
             t={t}
           />
-          {suggestion ? (
-            <button
-              type="button"
-              onClick={() => onUpdate({ templateType: suggestion })}
-              className="text-left text-[10px] text-primary hover:underline truncate max-w-full"
-              title={t("schema.applySuggestedType")}
-            >
-              {t("schema.suggestedType", { label: label(suggestion) })}
-            </button>
-          ) : null}
         </div>
         <div className="flex flex-col gap-1 min-w-0 md:flex-row md:items-center md:px-2 md:border-r md:border-border">
           <span className={FIELD_LABEL_CLASS}>{t("schema.intent")}</span>

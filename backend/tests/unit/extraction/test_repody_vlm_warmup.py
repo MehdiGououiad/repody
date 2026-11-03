@@ -1,45 +1,32 @@
-from pathlib import Path
+from unittest.mock import AsyncMock
 
-from repody.extraction.warmup import (
-    _mime_type_for_path,
-    _resolve_warmup_document,
-    _warmup_bundle,
-)
-from repody.settings import Settings
+import pytest
+
+from repody.extraction import warmup
+from repody.settings import clear_settings_cache
 
 
-def test_repody_vlm_warmup_defaults_to_disabled(monkeypatch):
-    monkeypatch.delenv("AUDIT_REPODY_VLM_WARMUP_ON_START", raising=False)
-    settings = Settings(_env_file=None)
-    assert settings.repody_vlm_warmup_on_start is False
+@pytest.mark.asyncio
+async def test_warmup_skips_when_the_document_is_missing(monkeypatch, tmp_path):
+    monkeypatch.setenv("AUDIT_REPODY_VLM_WARMUP_DOCUMENT", str(tmp_path / "missing.pdf"))
+    clear_settings_cache()
+    assert await warmup.warmup_repody_vlm() == "skipped"
 
 
-def test_resolve_warmup_document_defaults_to_none():
-    settings = Settings(repody_vlm_warmup_document=None)
-    assert _resolve_warmup_document(settings) is None
+@pytest.mark.asyncio
+async def test_warmup_sends_one_request_with_the_synthetic_page(monkeypatch):
+    monkeypatch.delenv("AUDIT_REPODY_VLM_WARMUP_DOCUMENT", raising=False)
+    clear_settings_cache()
+    post = AsyncMock(return_value={})
+    monkeypatch.setattr(warmup, "post_chat_completion", post)
+    assert await warmup.warmup_repody_vlm() == "ok"
+    payload = post.await_args.args[1]
+    assert payload["messages"][-1]["content"][0]["type"] == "image_url"
 
 
-def test_warmup_bundle_uses_synthetic_png_when_unset():
-    settings = Settings(repody_vlm_warmup_document=None)
-    bundle, label = _warmup_bundle(settings)
-    assert bundle is not None
-    assert bundle.mime_type == "image/png"
-    assert label == "synthetic:1x1.png"
-
-
-def test_resolve_warmup_document_resolves_relative_against_cwd(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    settings = Settings(repody_vlm_warmup_document="docs/sample.pdf")
-    path = _resolve_warmup_document(settings)
-    assert path == tmp_path.resolve() / "docs" / "sample.pdf"
-
-
-def test_resolve_warmup_document_keeps_absolute_override(tmp_path):
-    absolute = tmp_path / "sample.pdf"
-    settings = Settings(repody_vlm_warmup_document=str(absolute))
-    assert _resolve_warmup_document(settings) == absolute.resolve()
-
-
-def test_mime_type_for_path():
-    assert _mime_type_for_path(Path("document.pdf")) == "application/pdf"
-    assert _mime_type_for_path(Path("scan.png")) == "image/png"
+@pytest.mark.asyncio
+async def test_warmup_reports_failure(monkeypatch):
+    monkeypatch.delenv("AUDIT_REPODY_VLM_WARMUP_DOCUMENT", raising=False)
+    clear_settings_cache()
+    monkeypatch.setattr(warmup, "post_chat_completion", AsyncMock(side_effect=RuntimeError("down")))
+    assert await warmup.warmup_repody_vlm() == "failed"

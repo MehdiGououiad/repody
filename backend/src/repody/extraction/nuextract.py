@@ -11,7 +11,7 @@ import json
 from collections.abc import Iterator
 from typing import Any
 
-from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
+from repody.extraction.types import DEFAULT_TEMPLATE_TYPE, ExtractionIclExample, SchemaFieldSpec
 from repody.settings import get_settings
 
 # https://huggingface.co/numind/NuExtract3-GGUF
@@ -26,202 +26,52 @@ NUEXTRACT_MARKDOWN_THINKING_TEMPERATURE = 0.7
 NUEXTRACT_FIELD_NOTES_HEADING = "Field guidance:"
 
 
-_LIST_SUFFIX = "-list"
-
-NUEXTRACT_SCALAR_TEMPLATE_TYPES = {
-    "integer",
-    "number",
-    "string",
-    "verbatim-string",
-    "date",
-    "time",
-    "date-time",
-    "duration",
-    "boolean",
-    "country",
-    "currency",
-    "language",
-    "language-tag",
-    "script",
-    "url",
-    "email-address",
-    "phone-number",
-    "iban",
-    "bic",
-    "unit-code",
-    "region:US",
-    "region:FR",
-    "region:IE",
-    "region:GB",
-    "region:IT",
-    "region:ES",
-    "region:DE",
-    "region:PT",
-    "region:CA",
-    "region:MX",
-    "region:BR",
-    "region:AU",
-    "region:JP",
-    "region:KR",
-}
-
-NUEXTRACT_STRUCTURE_TEMPLATE_TYPES = {
-    "enum",
-    "multi-enum",
-    "object",
-    "object-array",
-}
-
-DEFAULT_NUEXTRACT_TEMPLATE_TYPE = "verbatim-string"
-
-
-def canonical_nuextract_leaf_type(value: str | None) -> str:
-    """Pass through official TYPES.md leaf names (no platform aliases)."""
-    raw = (value or "").strip()
-    if not raw:
-        return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
-    return raw
-
-
-def is_list_template_type(value: str | None) -> bool:
-    raw = (value or "").strip()
-    if not raw.endswith(_LIST_SUFFIX) or is_structure_template_type(raw):
-        return False
-    # Platform encoding of official ["type"] arrays - allow catalogued and passthrough scalars.
-    return bool(raw[: -len(_LIST_SUFFIX)])
-
-
-def is_enum_template_type(value: str | None) -> bool:
-    return (value or "").strip() == "enum"
-
-
-def is_multi_enum_template_type(value: str | None) -> bool:
-    return (value or "").strip() == "multi-enum"
-
-
-def is_object_array_template_type(value: str | None) -> bool:
-    return (value or "").strip() == "object-array"
-
-
-def is_object_template_type(value: str | None) -> bool:
-    return (value or "").strip() == "object"
-
-
-def is_structure_template_type(value: str | None) -> bool:
-    raw = (value or "").strip()
-    return raw in NUEXTRACT_STRUCTURE_TEMPLATE_TYPES
-
-
-def list_template_scalar_type(value: str) -> str:
-    """Map `number-list` -> `number` for NuExtract array leaf types."""
-    if not is_list_template_type(value):
-        return value
-    return value[: -len(_LIST_SUFFIX)]
-
-
-def template_type_to_nuextract_leaf(value: str) -> str:
-    """NuExtract3 scalar leaf type string."""
-    normalized = normalize_template_type(value)
-    if is_structure_template_type(normalized) or is_list_template_type(normalized):
-        raise ValueError(f"Use build_field_template_node for structure type {normalized!r}")
-    return normalized
+# Platform encoding of an official list type: `number-list` stands for `["number"]`.
+LIST_SUFFIX = "-list"
 
 
 def normalize_template_type(value: str | None) -> str:
-    """Normalize platform template types; pass through unknown official leaf strings."""
-    raw = canonical_nuextract_leaf_type(value)
-    if raw in NUEXTRACT_STRUCTURE_TEMPLATE_TYPES:
-        return raw
-    if raw in NUEXTRACT_SCALAR_TEMPLATE_TYPES:
-        return raw
-    if is_list_template_type(raw):
-        scalar = raw[: -len(_LIST_SUFFIX)]
-        canonical_scalar = canonical_nuextract_leaf_type(scalar)
-        if canonical_scalar != scalar:
-            return f"{canonical_scalar}{_LIST_SUFFIX}"
-        return raw
-    # Keep unknown leaf type strings (official templates may introduce new types).
-    return raw
+    """Official TYPES.md leaf name, structure type or `<leaf>-list`; unknown leaves pass through."""
+    return (value or "").strip() or DEFAULT_TEMPLATE_TYPE
 
 
-def suggest_template_type(name: str, description: str = "") -> str:
-    """Official default leaf type (no name/description heuristics)."""
-    del name, description
-    return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+def is_list_template_type(value: str | None) -> bool:
+    raw = normalize_template_type(value)
+    return raw.endswith(LIST_SUFFIX) and len(raw) > len(LIST_SUFFIX)
 
 
-def resolve_template_type(
-    field_name: str, description: str = "", template_type: str | None = None
-) -> str:
-    """Use explicit template type when set, otherwise the NuExtract default."""
-    del field_name, description
-    explicit = (template_type or "").strip()
-    if explicit:
-        return normalize_template_type(explicit)
-    return DEFAULT_NUEXTRACT_TEMPLATE_TYPE
+def _choices(field: SchemaFieldSpec) -> list[str]:
+    """Official enum / multi-enum need at least two choices."""
+    values = field.enum_values or []
+    if len(values) < 2:
+        raise ValueError(
+            f"{field.template_type} field {field.name!r} requires at least 2 choices "
+            f"(got {len(values)})"
+        )
+    return values
 
 
 def build_field_template_node(field: SchemaFieldSpec) -> Any:
-    """Recursive NuExtract template node for one schema field."""
-    resolved = resolve_template_type(field.name, field.description, field.template_type)
-    children = [c for c in (field.children or []) if c.name.strip()]
-
-    if is_object_template_type(resolved) or is_object_array_template_type(resolved):
-        row: dict[str, Any] = {}
-        for child in children:
-            row[child.name.strip()] = build_field_template_node(child)
-        # Official empty object is {}; object-array prototype is a one-element list.
-        if is_object_array_template_type(resolved):
-            return [row]
-        return row
-
-    if is_multi_enum_template_type(resolved):
-        values = _clean_enum_values(field.enum_values)
-        # Official multi-enum: [["A", "B", ...]] with ≥2 choices.
-        if len(values) < 2:
-            raise ValueError(
-                f"multi-enum field {field.name!r} requires at least 2 choices (got {len(values)})"
-            )
-        return [values]
-
-    if is_enum_template_type(resolved):
-        values = _clean_enum_values(field.enum_values)
-        # Official enum: ["a", "b", ...] with ≥2 choices.
-        if len(values) < 2:
-            raise ValueError(
-                f"enum field {field.name!r} requires at least 2 choices (got {len(values)})"
-            )
-        return values
-
-    if is_list_template_type(resolved):
-        return [list_template_scalar_type(resolved)]
-
-    return template_type_to_nuextract_leaf(resolved)
+    """Official NuExtract template node for one schema field (recursive)."""
+    template_type = field.template_type
+    match template_type:
+        case "object" | "object-array":
+            row = {child.name: build_field_template_node(child) for child in field.children or []}
+            # Official empty object is {}; an object-array prototype is a one-element list.
+            return [row] if template_type == "object-array" else row
+        case "multi-enum":
+            return [_choices(field)]
+        case "enum":
+            return _choices(field)
+        case _ if is_list_template_type(template_type):
+            return [template_type.removesuffix(LIST_SUFFIX)]
+        case _:
+            return template_type
 
 
 def build_nuextract_template(schema: list[SchemaFieldSpec]) -> dict[str, Any]:
     """Official NuExtract JSON template object from schema fields."""
-    template: dict[str, Any] = {}
-    for field in schema:
-        name = field.name.strip()
-        if not name:
-            continue
-        template[name] = build_field_template_node(field)
-    return template
-
-
-def _clean_enum_values(values: list[str] | None) -> list[str]:
-    if not values:
-        return []
-    seen: set[str] = set()
-    cleaned: list[str] = []
-    for raw in values:
-        token = raw.strip()
-        if not token or token in seen:
-            continue
-        seen.add(token)
-        cleaned.append(token)
-    return cleaned
+    return {field.name: build_field_template_node(field) for field in schema if field.name}
 
 
 # --- Chat completions (official NuExtract multimodal / markdown) ---

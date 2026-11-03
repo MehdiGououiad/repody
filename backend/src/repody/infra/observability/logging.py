@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -41,13 +42,18 @@ def _redact_sensitive_fields(
     return event_dict
 
 
+def service_name() -> str:
+    """OpenTelemetry service name (OTEL_SERVICE_NAME), shared by logs, traces and errors."""
+    return os.getenv("OTEL_SERVICE_NAME") or "repody"
+
+
 def _add_service_context(settings: Settings) -> structlog.types.Processor:
     def processor(
         _logger: object,
         _method: str,
         event_dict: structlog.types.EventDict,
     ) -> structlog.types.EventDict:
-        event_dict.setdefault("service.name", settings.otel_service_name)
+        event_dict.setdefault("service.name", service_name())
         event_dict.setdefault("deployment.environment", settings.deployment_environment)
         return event_dict
 

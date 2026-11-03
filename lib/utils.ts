@@ -29,10 +29,19 @@ export function formatDurationMs(ms: number | null | undefined): string {
   return `${m}m ${rem}s`;
 }
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+/** Byte size with Intl unit formatting, e.g. "512 byte", "300 kB", "25 MB". */
+export function formatBytes(bytes: number, locale: LocaleArg = "en-US"): string {
+  const [value, unit] =
+    bytes < 1024
+      ? [bytes, "byte"]
+      : bytes < 1024 ** 2
+        ? [bytes / 1024, "kilobyte"]
+        : [bytes / 1024 ** 2, "megabyte"];
+  return new Intl.NumberFormat(locale, {
+    style: "unit",
+    unit,
+    maximumFractionDigits: unit === "megabyte" ? 1 : 0,
+  }).format(value);
 }
 
 /** Short 24h timestamp for tables, e.g. "Oct 24, 14:32" (optionally with the year). */
@@ -52,10 +61,7 @@ export function formatDateTime(
 }
 
 export function shortId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID().slice(0, 8);
-  }
-  return Math.random().toString(36).slice(2, 10);
+  return crypto.randomUUID().slice(0, 8);
 }
 
 /** Parse extraction/LLM amounts: `6000.00`, `6 000,00`, `1.234,56`, `1,234.56`, etc. */

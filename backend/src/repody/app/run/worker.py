@@ -29,8 +29,12 @@ from repody.app.run.progress import (
 from repody.app.run.snapshot import SnapshotDocument, materialize_run_config
 from repody.app.run.state import PUBLIC_RUN_FAILURE_MESSAGE, claim_run, complete_run, fail_run
 from repody.extraction.pipeline import extract_document
-from repody.extraction.schema import icl_examples_from_document, schema_field_spec_from_row
-from repody.extraction.types import ExtractionMetadata, ExtractionResult
+from repody.extraction.types import (
+    ExtractionIclExample,
+    ExtractionMetadata,
+    ExtractionResult,
+    SchemaFieldSpec,
+)
 from repody.inference.runtime import is_serverless_inference
 from repody.infra.db import base as db_base
 from repody.infra.db.models import (
@@ -186,14 +190,21 @@ def _label(doc: SnapshotDocument) -> str:
 async def _extract(doc: SnapshotDocument, run_doc: RunDocument) -> ExtractionResult:
     blob = await get_storage().get_bytes(run_doc.storage_key or "")
     schema = [
-        schema_field_spec_from_row(
-            name=f.name,
-            description=f.description or "",
-            template_type=f.template_type,
-            field_config=f.field_config,
+        SchemaFieldSpec.model_validate(
+            {
+                "name": f.name,
+                "description": f.description,
+                "template_type": f.template_type,
+                "field_config": f.field_config,
+            }
         )
         for f in doc.schema_fields
         if f.name.strip()
+    ]
+    examples = [
+        ExtractionIclExample(input=str(row["input"]).strip(), output=str(row["output"]).strip())
+        for row in doc.extraction_icl_examples or []
+        if str(row.get("input") or "").strip() and str(row.get("output") or "").strip()
     ]
     return await extract_document(
         blob,
@@ -202,7 +213,7 @@ async def _extract(doc: SnapshotDocument, run_doc: RunDocument) -> ExtractionRes
         schema,
         extraction_instructions=doc.extraction_instructions or "",
         markdown_extraction=bool(doc.markdown_extraction),
-        extraction_icl_examples=icl_examples_from_document(doc) or None,
+        extraction_icl_examples=examples or None,
     )
 
 

@@ -20,11 +20,7 @@ from repody.extraction.nuextract import (
     strip_thinking,
     structured_chat_payload,
 )
-from repody.extraction.render import (
-    encode_pages_as_image_urls,
-    pages_dropped,
-    prepare_nuextract_pages,
-)
+from repody.extraction.render import encode_pages_as_image_urls, prepare_nuextract_pages
 from repody.extraction.schema import empty_fields_from_schema
 from repody.extraction.types import (
     DocumentBundle,
@@ -81,7 +77,7 @@ async def extract_with_repody_vlm(
     max_pages = settings.repody_vlm_max_pages_per_request
 
     pages, pages_rendered = prepare_nuextract_pages(bundle, max_pages=max_pages)
-    dropped = pages_dropped(rendered=pages_rendered, sent=len(pages))
+    dropped = pages_rendered - len(pages)
     if dropped:
         log.warning(
             "repody_vlm_pages_capped",

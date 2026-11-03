@@ -25,7 +25,3 @@ class PlatformConfigResponse(CamelModel):
     worker_pools: dict[str, str] = Field(default_factory=dict)
     taskiq_configured: bool = False
     healthz_probe_inference: bool = False
-
-
-class SuggestTemplateTypeResponse(CamelModel):
-    template_type: str

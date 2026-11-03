@@ -425,8 +425,6 @@
         "rowColumnIndex": "Colonne {index}",
         "addRowColumn": "Ajouter une colonne",
         "removeRowColumn": "Retirer la colonne",
-        "suggestedType": "Suggestion : {label}",
-        "applySuggestedType": "Utiliser la suggestion",
         "duplicateName": "Le nom doit être unique",
         "listModeLabel": "Tableau JSON",
         "listModeHint": "Renvoyer plusieurs valeurs sous forme de liste (une par ligne ou élément)",

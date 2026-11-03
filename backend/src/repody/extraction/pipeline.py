@@ -10,38 +10,27 @@ import structlog
 from repody.extraction.cache import cache_key, get_cached, hash_bytes, set_cached
 from repody.extraction.schema import empty_fields_from_schema, fields_from_sample_values
 from repody.extraction.types import (
+    DocumentBundle,
     ExtractionIclExample,
     ExtractionMetadata,
     ExtractionResult,
     SchemaFieldSpec,
-    load_document_bundle,
     truncate_text,
 )
 from repody.extraction.vlm import extract_with_repody_vlm
 from repody.inference.runtime import gpu_cold_start_likely
-from repody.infra.observability.tracing import start_span
+from repody.infra.observability.tracing import tracer
 from repody.settings import get_settings
-from repody.util.json_shape import normalize_keys_to_snake
 
 log = structlog.get_logger()
 
 
 def extract_document_fields(
-    schema: list[dict],
-    *,
-    sample_values: dict[str, str] | None = None,
+    schema: list[dict], *, sample_values: dict[str, str] | None = None
 ) -> list:
-    """Sync helper for dry-run callers - never injects hardcoded demo data."""
-    specs = [
-        SchemaFieldSpec(
-            name=(row.get("name") or "").strip(),
-            description=row.get("description") or "",
-            template_type=row.get("template_type"),
-        )
-        for f in schema
-        for row in [normalize_keys_to_snake(f) if isinstance(f, dict) else f]
-        if isinstance(row, dict) and (row.get("name") or "").strip()
-    ]
+    """Dry run: schema placeholders, or caller-provided sample values (never invented data)."""
+    specs = [SchemaFieldSpec.model_validate(row) for row in schema if isinstance(row, dict)]
+    specs = [spec for spec in specs if spec.name]
     if sample_values:
         return fields_from_sample_values(specs, sample_values)
     return empty_fields_from_schema(specs)
@@ -100,12 +89,11 @@ async def extract_document(
         return cached
 
     started = time.perf_counter()
-    async with start_span("extraction.pipeline", {"document_type": document_type}):
-        bundle = await asyncio.to_thread(
-            load_document_bundle, document_bytes, mime_type, settings=settings
-        )
+    with tracer.start_as_current_span(
+        "extraction.pipeline", attributes={"document_type": document_type}
+    ):
         result = await extract_with_repody_vlm(
-            bundle,
+            DocumentBundle(raw_bytes=document_bytes, mime_type=mime_type),
             schema,
             extraction_instructions=extraction_instructions,
             markdown_extraction=markdown_extraction,

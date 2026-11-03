@@ -217,13 +217,6 @@ def test_repody_vlm_template_uses_explicit_nuextract_type():
     }
 
 
-def test_pages_dropped_uses_document_page_count():
-    from repody.extraction.render import pages_dropped
-
-    assert pages_dropped(rendered=20, sent=6) == 14
-    assert pages_dropped(rendered=3, sent=3) == 0
-
-
 def test_repody_vlm_rejects_unsupported_mime_type():
     bundle = DocumentBundle(raw_bytes=b"plain text", mime_type="text/plain")
 
@@ -238,25 +231,24 @@ def test_repody_vlm_preserves_png_upload_bytes():
 
     assert pages == [(bundle.raw_bytes, "image/png")]
     assert pages_rendered == 1
-    assert bundle.page_count == 1
 
 
-def test_repody_vlm_renders_pdf_pages_as_png(monkeypatch):
-    def fake_render_nuextract_pdf_pages(document_bytes, *, max_pages=None):
-        assert document_bytes == b"%PDF-1.7"
-        _ = max_pages
-        return [b"rendered-page"], 1
+def test_repody_vlm_renders_pdf_pages_as_png():
+    import pymupdf
 
-    monkeypatch.setattr(
-        "repody.extraction.render.render_nuextract_pdf_pages",
-        fake_render_nuextract_pdf_pages,
+    with pymupdf.open() as pdf:
+        pdf.new_page()
+        pdf.new_page()
+        data = pdf.tobytes()
+
+    pages, pages_rendered = prepare_nuextract_pages(
+        DocumentBundle(raw_bytes=data, mime_type="application/pdf"), max_pages=1
     )
-    bundle = DocumentBundle(raw_bytes=b"%PDF-1.7", mime_type="application/pdf")
 
-    pages, pages_rendered = prepare_nuextract_pages(bundle)
-
-    assert pages == [(b"rendered-page", "image/png")]
-    assert pages_rendered == 1
+    assert pages_rendered == 2
+    assert len(pages) == 1
+    assert pages[0][1] == "image/png"
+    assert pages[0][0].startswith(b"\x89PNG")
 
 
 def test_repody_vlm_encodes_page_mime_type_in_data_url():
@@ -388,10 +380,7 @@ async def test_pipeline_calls_document_model_catalog(monkeypatch):
         raw_bytes=b"image",
         mime_type="image/jpeg",
     )
-    monkeypatch.setattr(
-        "repody.extraction.pipeline.load_document_bundle",
-        lambda *a, **k: bundle,
-    )
+    _ = bundle
 
     result = await extract_document(
         b"image",

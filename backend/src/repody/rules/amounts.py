@@ -1,64 +1,46 @@
-"""Amount parsing helpers for rules comparison (not extraction storage)."""
+"""Amount parsing for rule comparisons, via price-parser (not extraction storage)."""
 
 from __future__ import annotations
 
 import re
+from decimal import Decimal
+
+from price_parser import Price
 
 from repody.rules.value_coercion import MISSING, is_iso_date_like
 
-_NUMERIC_RUN = re.compile(r"[+-]?[\d][\d\s.,]*")
+_FIRST_DIGIT = re.compile(r"\d")
 
 
-def _locale_normalize_numeric(token: str) -> str:
-    s = token.strip().replace("\u00a0", " ").replace(" ", "")
-    if not s:
-        return s
-    if "," in s and "." in s:
-        if s.rfind(",") > s.rfind("."):
-            s = s.replace(".", "").replace(",", ".")
-        else:
-            s = s.replace(",", "")
-    elif "," in s:
-        parts = s.split(",")
-        if len(parts) == 2 and len(parts[1]) <= 2:
-            s = f"{parts[0]}.{parts[1]}"
-        else:
-            s = s.replace(",", ".")
-    return s
+def _amount(value: str) -> Decimal | None:
+    """Signed amount from text like ``6 000,00 Dh``, ``1.234,56`` or ``-50.00 MAD``.
+
+    Text with letters before the first digit is an identifier (``PO-2024-991``,
+    ``FAC-42``), not an amount. price-parser handles separators and currency
+    labels but drops the sign, so a leading ``-`` is applied here.
+    """
+    s = value.strip().replace("\u2212", "-")
+    if not s or s == MISSING or is_iso_date_like(s):
+        return None
+    first_digit = _FIRST_DIGIT.search(s)
+    if first_digit is None:
+        return None
+    prefix = s[: first_digit.start()]
+    if re.search(r"[A-Za-z]", prefix):
+        return None
+    amount = Price.fromstring(s).amount
+    if amount is None:
+        return None
+    return -amount if "-" in prefix else amount
 
 
 def normalize_amount(value: str) -> str:
-    """Locale amount parse for rules comparison only - not extraction storage."""
-    s = value.strip()
-    if not s or s == MISSING:
-        return s
-    match = _NUMERIC_RUN.search(s.replace("\u00a0", " "))
-    if not match:
-        return s
-    return _locale_normalize_numeric(match.group(0))
+    """Canonical decimal string (``6 000,00`` -> ``6000.00``); unparsable text is returned as-is."""
+    amount = _amount(value)
+    return str(amount) if amount is not None else value.strip()
 
 
 def parse_numeric_value(value: str) -> float | None:
-    """Parse a numeric field value, ignoring trailing currency labels."""
-    s = value.strip()
-    if not s or s == MISSING:
-        return None
-    if is_iso_date_like(s):
-        return None
-    match = _NUMERIC_RUN.search(s.replace("\u00a0", " "))
-    if not match:
-        return None
-    start, _end = match.span()
-    prefix = s[:start].strip()
-    # Reject alphanumeric IDs like PO-2024-991 where digits sit inside a token.
-    if prefix and re.search(r"[A-Za-z]", prefix):
-        return None
-    normalized = normalize_amount(s)
-    if not normalized or normalized == MISSING:
-        return None
-    try:
-        if re.match(r"^-?\d+(\.\d+)?$", normalized):
-            return float(normalized)
-    except ValueError:
-        pass
-    return None
+    """Numeric value of a field, ignoring currency labels; None for identifiers and dates."""
+    amount = _amount(value)
+    return float(amount) if amount is not None else None

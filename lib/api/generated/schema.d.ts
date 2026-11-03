@@ -405,26 +405,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/schema/suggest-type": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Suggest Schema Template Type
-         * @description Infer a NuExtract template leaf type from field name and intent.
-         */
-        get: operations["suggest_schema_template_type_v1_schema_suggest_type_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/platform/config": {
         parameters: {
             query?: never;
@@ -1343,11 +1323,6 @@ export interface components {
             mimeType: string;
             /** Filename */
             fileName: string;
-        };
-        /** SuggestTemplateTypeResponse */
-        SuggestTemplateTypeResponse: {
-            /** Templatetype */
-            templateType: string;
         };
         /** TopFailingRuleSchema */
         TopFailingRuleSchema: {
@@ -2458,42 +2433,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    suggest_schema_template_type_v1_schema_suggest_type_get: {
-        parameters: {
-            query?: {
-                /** @description Field name */
-                name?: string;
-                /** @description What to extract */
-                description?: string;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SuggestTemplateTypeResponse"];
                 };
             };
             /** @description Validation Error */

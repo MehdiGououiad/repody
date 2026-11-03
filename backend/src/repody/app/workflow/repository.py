@@ -8,14 +8,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, noload, selectinload
 
-from repody.extraction.nuextract import (
-    is_object_array_template_type,
-    is_object_template_type,
-    normalize_template_type,
-)
+from repody.extraction.types import SchemaFieldSpec
 from repody.infra.db.models import Document, SchemaField, Workflow, WorkflowRule, WorkflowStatus
 from repody.rules.conditions import resolve_rule_body
-from repody.schemas.workflow import WorkflowSchema
+from repody.schemas.workflow import SchemaFieldSchema, WorkflowSchema
 from repody.util.json_shape import normalize_keys_to_snake
 
 
@@ -76,43 +72,14 @@ async def upsert_workflow_aggregate(
     await session.flush()
 
 
-def _resolved_template_type(field) -> str:
-    """Persist structure types explicitly when nested children are present."""
-    resolved = normalize_template_type(getattr(field, "template_type", None))
-    children = getattr(field, "children", None) or []
-    has_children = any((getattr(child, "name", None) or "").strip() for child in children)
-    if (
-        has_children
-        and not is_object_array_template_type(resolved)
-        and not is_object_template_type(resolved)
-    ):
-        return "object"
-    return resolved
-
-
-def _field_config_payload(field) -> dict | None:
-    config: dict = {}
-    enum_values = getattr(field, "enum_values", None) or []
-    if enum_values:
-        config["enum_values"] = [str(v).strip() for v in enum_values if str(v).strip()]
-    children = getattr(field, "children", None) or []
-    child_rows: list[dict] = []
-    for child in children:
-        name = (getattr(child, "name", None) or "").strip()
-        if not name:
-            continue
-        row = {
-            "name": name,
-            "description": getattr(child, "description", None) or "",
-            "template_type": normalize_template_type(getattr(child, "template_type", None)),
-        }
-        child_enum = getattr(child, "enum_values", None) or []
-        if child_enum:
-            row["enum_values"] = [str(v).strip() for v in child_enum if str(v).strip()]
-        child_rows.append(row)
-    if child_rows:
-        config["children"] = child_rows
-    return config or None
+def _schema_field_columns(field: SchemaFieldSchema) -> tuple[str, dict | None]:
+    """`(template_type, field_config)` columns; children at any depth go in field_config."""
+    spec = SchemaFieldSpec.model_validate(field.model_dump())
+    template_type = spec.template_type
+    if spec.children and template_type not in ("object", "object-array"):
+        template_type = "object"
+    config = spec.model_dump(include={"enum_values", "children"}, exclude_none=True)
+    return template_type, config or None
 
 
 async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: WorkflowSchema) -> None:
@@ -151,6 +118,7 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
             await session.flush()
         for fi, field in enumerate(doc.schema_fields):
             field_id = field.id or f"f-{short_id()}"
+            template_type, field_config = _schema_field_columns(field)
             existing_field = await session.get(SchemaField, field_id)
             if existing_field is not None and existing_field.document_id != doc_id:
                 field_id = f"f-{short_id()}"
@@ -160,8 +128,8 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                     document_id=doc_id,
                     name=field.name,
                     description=field.description,
-                    template_type=_resolved_template_type(field),
-                    field_config=_field_config_payload(field),
+                    template_type=template_type,
+                    field_config=field_config,
                     position=fi,
                 )
             )

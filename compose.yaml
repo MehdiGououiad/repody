@@ -97,9 +97,6 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
-    env_file:
-      - path: deploy/env/observability.enabled.env
-        required: false
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
@@ -111,8 +108,9 @@ services:
       AUDIT_OIDC_ENABLED: "false"
       AUDIT_LOG_JSON: "true"
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_OTEL_EXPORTER_ENDPOINT: http://otel-collector:4318/v1/traces
-      AUDIT_OTEL_SERVICE_NAME: repody-worker-extract
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: repody-worker-extract
       BUGSINK_DSN: ${BUGSINK_DSN:-}
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q8_0}
@@ -150,9 +148,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    env_file:
-      - path: deploy/env/observability.enabled.env
-        required: false
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
@@ -164,8 +159,9 @@ services:
       AUDIT_OIDC_ENABLED: "false"
       AUDIT_LOG_JSON: "true"
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_OTEL_EXPORTER_ENDPOINT: http://otel-collector:4318/v1/traces
-      AUDIT_OTEL_SERVICE_NAME: repody-worker-fast
+      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_SERVICE_NAME: repody-worker-fast
       BUGSINK_DSN: ${BUGSINK_DSN:-}
       AUDIT_WORKER_POOL: fast
       AUDIT_DB_POOL_SIZE: ${AUDIT_DB_POOL_SIZE:-20}

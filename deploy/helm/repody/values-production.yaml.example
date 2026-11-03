@@ -41,8 +41,9 @@ config:
   AUDIT_CORS_ORIGINS: '["https://app.example.com"]'
   AUDIT_RATE_LIMIT_FAIL_CLOSED: "true"
   AUDIT_LOG_JSON: "true"
-  # AUDIT_OTEL_ENABLED: "true"
-  # AUDIT_OTEL_EXPORTER_ENDPOINT: http://otel-collector.observability.svc:4318/v1/traces
+  # OpenTelemetry agent (standard OTEL_* variables):
+  # OTEL_SDK_DISABLED: "false"
+  # OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector.observability.svc:4318
 
 web:
   keycloakClientId: repody-web

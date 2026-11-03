@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from repody.extraction.types import SchemaFieldSpec
 from repody.infra.db.models import Workflow
 from repody.schemas.workflow import (
     DocumentDefSchema,
@@ -16,32 +17,30 @@ from repody.schemas.workflow import (
 from repody.util.json_shape import normalize_keys_to_snake
 
 
-def _schema_field_from_orm(field) -> SchemaFieldSchema:
-    config = normalize_keys_to_snake(getattr(field, "field_config", None) or {})
-    children: list[SchemaFieldSchema] = []
-    for idx, raw_child in enumerate(config.get("children") or []):
-        if not isinstance(raw_child, dict):
-            continue
-        child = normalize_keys_to_snake(raw_child)
-        if not str(child.get("name") or "").strip():
-            continue
-        children.append(
-            SchemaFieldSchema(
-                id=f"{field.id}-c{idx}",
-                name=str(child.get("name") or ""),
-                description=str(child.get("description") or ""),
-                template_type=str(child.get("template_type") or "verbatim-string"),
-                enum_values=list(child.get("enum_values") or []),
-            )
-        )
+def _schema_field_schema(spec: SchemaFieldSpec, field_id: str) -> SchemaFieldSchema:
     return SchemaFieldSchema(
-        id=field.id,
-        name=field.name,
-        description=field.description,
-        template_type=getattr(field, "template_type", None) or "verbatim-string",
-        enum_values=list(config.get("enum_values") or []),
-        children=children,
+        id=field_id,
+        name=spec.name,
+        description=spec.description,
+        template_type=spec.template_type,
+        enum_values=spec.enum_values or [],
+        children=[
+            _schema_field_schema(child, f"{field_id}-c{i}")
+            for i, child in enumerate(spec.children or [])
+        ],
     )
+
+
+def _schema_field_from_orm(field) -> SchemaFieldSchema:
+    spec = SchemaFieldSpec.model_validate(
+        {
+            "name": field.name,
+            "description": field.description,
+            "template_type": field.template_type,
+            "field_config": field.field_config,
+        }
+    )
+    return _schema_field_schema(spec, field.id)
 
 
 def _fmt_dt(dt: datetime | None) -> str | None:

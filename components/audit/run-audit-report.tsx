@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import Papa from "papaparse";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
 import {
@@ -33,53 +34,46 @@ function buildCsv(
   t: ReturnType<typeof useTranslations>,
   locale: string
 ): string {
-  const esc = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  const rows: string[] = [];
-
-  rows.push(`${t("printTitle")} — ${audit.id}`);
-  rows.push(`${t("runOn")}: ${new Date(audit.createdAt).toLocaleString(locale)}`);
-  rows.push(`${t("source")}: ${audit.workflowName}`);
+  const rows: string[][] = [
+    [`${t("printTitle")} — ${audit.id}`],
+    [`${t("runOn")}: ${new Date(audit.createdAt).toLocaleString(locale)}`],
+    [`${t("source")}: ${audit.workflowName}`],
+  ];
   if (audit.metadata) {
-    rows.push(`${t("totalDuration")}: ${formatDurationMs(audit.metadata.durationMs)}`);
-    rows.push(`${t("extractionTime")}: ${formatDurationMs(audit.metadata.extractionMs)}`);
-    rows.push(`${t("validationTime")}: ${formatDurationMs(audit.metadata.validationMs)}`);
-  }
-  rows.push("");
-
-  rows.push(t("extractedData"));
-  rows.push([t("field"), t("value"), "Type", t("confidence"), t("status")].map(esc).join(","));
-  for (const doc of audit.documents) {
-    rows.push(`--- ${doc.documentType} ---`);
-    if (doc.extraction) {
-      rows.push(["Ms", String(doc.extraction.extractionMs)].map(esc).join(","));
-    }
-    for (const f of doc.fields) {
-      rows.push(
-        [
-          f.key,
-          formatFieldValue(f, locale),
-          f.type,
-          f.confidence != null ? `${Math.round(f.confidence * 100)}%` : "",
-          f.flagged ? t("failed") : t("passed"),
-        ]
-          .map(esc)
-          .join(",")
-      );
-    }
-  }
-  rows.push("");
-
-  rows.push(t("validationRules"));
-  rows.push(["ID", t("field"), "Kind", "Scope", t("status"), t("source")].map(esc).join(","));
-  for (const r of audit.ruleResults) {
     rows.push(
-      [r.name, r.expression, r.kind, r.scope, ruleStatusLabel(r.status), r.detail]
-        .map(esc)
-        .join(",")
+      [`${t("totalDuration")}: ${formatDurationMs(audit.metadata.durationMs)}`],
+      [`${t("extractionTime")}: ${formatDurationMs(audit.metadata.extractionMs)}`],
+      [`${t("validationTime")}: ${formatDurationMs(audit.metadata.validationMs)}`]
     );
   }
-
-  return rows.join("\r\n");
+  rows.push(
+    [],
+    [t("extractedData")],
+    [t("field"), t("value"), "Type", t("confidence"), t("status")]
+  );
+  for (const doc of audit.documents) {
+    rows.push([`--- ${doc.documentType} ---`]);
+    if (doc.extraction) rows.push(["Ms", String(doc.extraction.extractionMs)]);
+    for (const f of doc.fields) {
+      rows.push([
+        f.key,
+        formatFieldValue(f, locale),
+        f.type,
+        f.confidence != null ? `${Math.round(f.confidence * 100)}%` : "",
+        f.flagged ? t("failed") : t("passed"),
+      ]);
+    }
+  }
+  rows.push(
+    [],
+    [t("validationRules")],
+    ["ID", t("field"), "Kind", "Scope", t("status"), t("source")]
+  );
+  for (const r of audit.ruleResults) {
+    rows.push([r.name, r.expression, r.kind, r.scope, ruleStatusLabel(r.status), r.detail]);
+  }
+  // escapeFormulae: cells starting with = + - @ cannot run as spreadsheet formulas.
+  return Papa.unparse(rows, { quotes: true, escapeFormulae: true });
 }
 
 function downloadCsv(content: string, filename: string) {

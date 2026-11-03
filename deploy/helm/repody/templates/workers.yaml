@@ -30,7 +30,8 @@ spec:
         - name: worker
           image: {{ include "repody.image" (dict "image" $.Values.images.backend "root" $) | quote }}
           imagePullPolicy: {{ $.Values.images.backend.pullPolicy }}
-          command: [python, -m, repody.taskiq.worker]
+          # args (not command) so the image entrypoint can start the OTEL agent.
+          args: [python, -m, repody.taskiq.worker]
           securityContext:
             {{- include "repody.containerSecurityContext" $ | nindent 12 }}
           {{- include "repody.backendEnvFrom" $ | nindent 10 }}
@@ -40,7 +41,7 @@ spec:
               value: {{ $pool | quote }}
             - name: AUDIT_WORKER_{{ upper $pool }}_MAX_JOBS
               value: {{ $worker.maxJobs | quote }}
-            - name: AUDIT_OTEL_SERVICE_NAME
+            - name: OTEL_SERVICE_NAME
               value: repody-{{ $component }}
           readinessProbe:
             exec:

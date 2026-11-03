@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseEnv } from "node:util";
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const BACKEND_ENV = path.join(ROOT, "backend/.env");
@@ -131,22 +132,9 @@ export function busyPorts(ports) {
   );
 }
 
-export function commandFor(name) {
-  if (process.platform !== "win32") return name;
-  return name === "pnpm" ? "pnpm.cmd" : name;
-}
-
+/** Parse a .env file with Node's built-in dotenv parser (util.parseEnv); {} when missing. */
 export function parseEnvFile(filePath) {
-  if (!fs.existsSync(filePath)) return {};
-  const out = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const idx = trimmed.indexOf("=");
-    if (idx === -1) continue;
-    out[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim();
-  }
-  return out;
+  return fs.existsSync(filePath) ? parseEnv(fs.readFileSync(filePath, "utf8")) : {};
 }
 
 export function runtimeEnv(...files) {
@@ -179,10 +167,6 @@ export async function fetchProbe(url, timeoutMs = 5000, init = {}) {
       detail: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-export async function fetchOk(url, timeoutMs = 5000, init = {}) {
-  return (await fetchProbe(url, timeoutMs, init)).ok;
 }
 
 export function listenerInfos(port) {
@@ -222,12 +206,6 @@ export function listenerInfos(port) {
       const [pid = "", name = "", commandLine = ""] = line.split("\t");
       return { pid, name, commandLine, missing: name === "<missing process>" };
     });
-}
-
-export function listenerDetails(port) {
-  return listenerInfos(port)
-    .map((info) => [info.pid, info.name, info.commandLine].filter(Boolean).join("\t"))
-    .join("\n");
 }
 
 export function killListenerPort(port) {

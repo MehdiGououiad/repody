@@ -1,9 +1,5 @@
+import Papa from "papaparse";
 import { fetchAudits } from "@/lib/api/client";
-
-function csvCell(value: string | number | null | undefined): string {
-  const text = value == null ? "" : String(value);
-  return `"${text.replaceAll('"', '""')}"`;
-}
 
 export async function GET() {
   const { audits } = await fetchAudits();
@@ -19,7 +15,8 @@ export async function GET() {
       audit.failedRules,
     ]),
   ];
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\r\n");
+  // escapeFormulae: cells starting with = + - @ cannot run as spreadsheet formulas.
+  const csv = Papa.unparse(rows, { quotes: true, escapeFormulae: true });
   const filename = `audit-runs-${new Date().toISOString().slice(0, 10)}.csv`;
 
   return new Response(`\uFEFF${csv}`, {

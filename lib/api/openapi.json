@@ -1413,80 +1413,6 @@
         }
       }
     },
-    "/v1/schema/suggest-type": {
-      "get": {
-        "tags": [
-          "platform"
-        ],
-        "summary": "Suggest Schema Template Type",
-        "description": "Infer a NuExtract template leaf type from field name and intent.",
-        "operationId": "suggest_schema_template_type_v1_schema_suggest_type_get",
-        "parameters": [
-          {
-            "name": "name",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "Field name",
-              "default": "",
-              "title": "Name"
-            },
-            "description": "Field name"
-          },
-          {
-            "name": "description",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "description": "What to extract",
-              "default": "",
-              "title": "Description"
-            },
-            "description": "What to extract"
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SuggestTemplateTypeResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/platform/config": {
       "get": {
         "tags": [
@@ -3818,19 +3744,6 @@
           "fileName"
         ],
         "title": "StoredFileBinding"
-      },
-      "SuggestTemplateTypeResponse": {
-        "properties": {
-          "templateType": {
-            "type": "string",
-            "title": "Templatetype"
-          }
-        },
-        "type": "object",
-        "required": [
-          "templateType"
-        ],
-        "title": "SuggestTemplateTypeResponse"
       },
       "TopFailingRuleSchema": {
         "properties": {

@@ -425,8 +425,6 @@
         "rowColumnIndex": "Column {index}",
         "addRowColumn": "Add column",
         "removeRowColumn": "Remove column",
-        "suggestedType": "Suggested: {label}",
-        "applySuggestedType": "Use suggestion",
         "duplicateName": "Name must be unique",
         "listModeLabel": "JSON array",
         "listModeHint": "Return multiple values as a list (one per row or item)",

@@ -1,70 +1,43 @@
-"""Redis-backed rate limiting via the `limits` library (moving window)."""
+"""Redis-backed rate limiting with the `limits` library (moving window)."""
 
 from __future__ import annotations
 
 import structlog
-from limits import RateLimitItem, parse
-from limits.aio.storage import MemoryStorage, RedisStorage
+from limits import parse
+from limits.aio.storage import RedisStorage
 from limits.aio.strategies import MovingWindowRateLimiter
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from repody.runtime.contracts.result import AppError, ErrorCode
-from repody.settings import Settings, get_settings
+from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 
 _limiter: MovingWindowRateLimiter | None = None
-_storage: MemoryStorage | RedisStorage | None = None
-_http_limit_cache: tuple[int, RateLimitItem] | None = None
 
 
 def clear_rate_limiter_cache() -> None:
-    """Reset cached limiter (tests)."""
-    global _limiter, _storage, _http_limit_cache
+    """Reset the cached limiter (tests)."""
+    global _limiter
     _limiter = None
-    _storage = None
-    _http_limit_cache = None
 
 
-def _window_limit(settings: Settings, max_runs: int) -> RateLimitItem:
-    window = max(1, settings.rate_limit_window_seconds)
-    return parse(f"{max_runs} per {window} second")
-
-
-def _global_http_limit(settings: Settings) -> RateLimitItem:
-    global _http_limit_cache
-    per_min = max(1, int(settings.rate_limit_http_per_minute))
-    if _http_limit_cache is not None and _http_limit_cache[0] == per_min:
-        return _http_limit_cache[1]
-    item = parse(f"{per_min} per minute")
-    _http_limit_cache = (per_min, item)
-    return item
-
-
-async def _get_limiter() -> MovingWindowRateLimiter:
-    global _limiter, _storage
-    if _limiter is not None:
-        return _limiter
-    settings = get_settings()
-    try:
-        _storage = RedisStorage(settings.redis_url)
-    except Exception as exc:
-        log.warning(
-            "rate_limit_redis_storage_failed",
-            event_domain="rate_limit",
-            error_type=type(exc).__name__,
-            error_message=repr(exc),
-        )
-        _storage = MemoryStorage()
-    _limiter = MovingWindowRateLimiter(_storage)
+def _get_limiter() -> MovingWindowRateLimiter:
+    global _limiter
+    if _limiter is None:
+        _limiter = MovingWindowRateLimiter(RedisStorage(get_settings().redis_url))
     return _limiter
 
 
-def _allow_on_redis_error(settings: Settings) -> bool:
-    """Return True to allow the request when Redis rate-limit storage fails."""
-    return not settings.rate_limit_fail_closed
+async def _allowed(limit: str, key: str) -> bool:
+    """Record one hit; when Redis is down, allow unless AUDIT_RATE_LIMIT_FAIL_CLOSED."""
+    try:
+        return await _get_limiter().hit(parse(limit), key)
+    except Exception as exc:
+        log.warning("rate_limit_redis_unavailable", event_domain="rate_limit", error=repr(exc))
+        return not get_settings().rate_limit_fail_closed
 
 
 async def check_run_rate_limits(
@@ -73,127 +46,46 @@ async def check_run_rate_limits(
     source: str,
     client_key: str | None = None,
 ) -> None:
-    """
-    Enforce per-workflow and per-client run creation limits.
-
-    client_key should be API key hash or client IP for deployed runs.
-    """
+    """Per-workflow and per-client run creation limits (client_key: API key hash or IP)."""
     settings = get_settings()
     if not settings.rate_limit_enabled:
         return
-
-    limiter = await _get_limiter()
     window = max(1, settings.rate_limit_window_seconds)
-    wf_key = f"audit:rl:wf:{workflow_id}:{source}"
-    wf_limit = _window_limit(settings, settings.rate_limit_runs_per_workflow)
-
-    try:
-        allowed = await limiter.hit(wf_limit, wf_key)
-    except Exception as exc:
-        log.warning(
-            "rate_limit_redis_unavailable",
-            event_domain="rate_limit",
-            error_type=type(exc).__name__,
-            error_message=repr(exc),
+    checks = [
+        (
+            f"workflow:{workflow_id}",
+            settings.rate_limit_runs_per_workflow,
+            f"wf:{workflow_id}:{source}",
         )
-        if not _allow_on_redis_error(settings):
+    ]
+    if client_key:
+        checks.append(("client", settings.rate_limit_runs_per_client, f"client:{client_key}"))
+    for scope, max_runs, key in checks:
+        if not await _allowed(f"{max_runs} per {window} second", f"audit:rl:{key}"):
+            log.warning("rate_limit_exceeded", event_domain="rate_limit", scope=scope)
             raise AppError(
                 code=ErrorCode.RATE_LIMIT,
-                message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
-            ) from exc
-        return
-
-    if not allowed:
-        log.warning(
-            "rate_limit_workflow_exceeded",
-            event_domain="rate_limit",
-            workflow_id=workflow_id,
-            source=source,
-            limit=settings.rate_limit_runs_per_workflow,
-        )
-        raise AppError(
-            code=ErrorCode.RATE_LIMIT,
-            message=(
-                f"Rate limit exceeded (workflow:{workflow_id}): "
-                f"max {settings.rate_limit_runs_per_workflow} runs per {window}s."
-            ),
-        )
-
-    if not client_key:
-        return
-
-    client_redis_key = f"audit:rl:client:{client_key}"
-    client_limit = _window_limit(settings, settings.rate_limit_runs_per_client)
-    try:
-        allowed = await limiter.hit(client_limit, client_redis_key)
-    except Exception as exc:
-        log.warning(
-            "rate_limit_redis_unavailable",
-            event_domain="rate_limit",
-            error_type=type(exc).__name__,
-            error_message=repr(exc),
-        )
-        if not _allow_on_redis_error(settings):
-            raise AppError(
-                code=ErrorCode.RATE_LIMIT,
-                message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
-            ) from exc
-        return
-
-    if not allowed:
-        log.warning(
-            "rate_limit_client_exceeded",
-            event_domain="rate_limit",
-            client_key=client_key,
-            limit=settings.rate_limit_runs_per_client,
-        )
-        raise AppError(
-            code=ErrorCode.RATE_LIMIT,
-            message=(
-                f"Rate limit exceeded (client): "
-                f"max {settings.rate_limit_runs_per_client} runs per {window}s."
-            ),
-        )
-    return
-
-
-async def check_global_http_rate_limit(client_ip: str) -> bool:
-    """Return True when the request is allowed under the global HTTP limit."""
-    settings = get_settings()
-    limiter = await _get_limiter()
-    try:
-        return await limiter.hit(_global_http_limit(settings), f"audit:rl:http:{client_ip}")
-    except Exception as exc:
-        log.warning(
-            "rate_limit_redis_unavailable",
-            event_domain="rate_limit",
-            error_type=type(exc).__name__,
-            error_message=repr(exc),
-        )
-        return _allow_on_redis_error(settings)
+                message=f"Rate limit exceeded ({scope}): max {max_runs} runs per {window}s.",
+            )
 
 
 class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
-    """Per-IP rate limit for mutating requests (POST/PUT/PATCH/DELETE).
+    """Per-IP limit for mutating requests (POST/PUT/PATCH/DELETE).
 
-    Browse and poll GETs are excluded so UI refresh / status polling do not
-    compete with enqueue for the global budget. Run creation still has
-    dedicated per-workflow / per-client limits.
+    Browse and poll GETs are excluded so UI refresh and status polling do not compete
+    with enqueue; run creation also has its own per-workflow / per-client limits.
     """
 
     _MUTATING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if not get_settings().rate_limit_enabled:
-            return await call_next(request)
-        if request.method not in self._MUTATING:
-            return await call_next(request)
-        if request.url.path == "/v1/healthz":
+        settings = get_settings()
+        if not settings.rate_limit_enabled or request.method not in self._MUTATING:
             return await call_next(request)
         client_ip = request.client.host if request.client else "unknown"
-        if not await check_global_http_rate_limit(client_ip):
+        limit = f"{max(1, settings.rate_limit_http_per_minute)} per minute"
+        if not await _allowed(limit, f"audit:rl:http:{client_ip}"):
             return JSONResponse(
-                status_code=429,
-                content={"detail": "Rate limit exceeded. Try again later."},
+                status_code=429, content={"detail": "Rate limit exceeded. Try again later."}
             )
         return await call_next(request)

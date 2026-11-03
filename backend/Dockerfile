@@ -70,17 +70,22 @@ USER repody
 
 FROM app-runtime AS backend
 
-ENV AUDIT_RUN_MIGRATIONS_ON_STARTUP=false
+ENV AUDIT_RUN_MIGRATIONS_ON_STARTUP=false \
+    OTEL_SDK_DISABLED=true \
+    OTEL_TRACES_EXPORTER=otlp \
+    OTEL_METRICS_EXPORTER=none \
+    OTEL_LOGS_EXPORTER=none \
+    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 
 FROM backend AS worker
 
-ENV AUDIT_OTEL_SERVICE_NAME=repody-worker
+ENV OTEL_SERVICE_NAME=repody-worker
 CMD ["python", "-m", "repody.taskiq.worker"]
 
 FROM backend AS api
 
-ENV AUDIT_OTEL_SERVICE_NAME=repody-api
+ENV OTEL_SERVICE_NAME=repody-api
 EXPOSE 8000
 CMD ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]

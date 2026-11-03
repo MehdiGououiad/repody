@@ -17,24 +17,6 @@ from repody.settings import get_settings
 log = structlog.get_logger(__name__)
 
 
-def _otel_trace_fields() -> dict[str, str]:
-    try:
-        from opentelemetry import trace
-
-        span = trace.get_current_span()
-        if not span.is_recording():
-            return {}
-        ctx = span.get_span_context()
-        if not ctx.is_valid:
-            return {}
-        return {
-            "trace_id": format(ctx.trace_id, "032x"),
-            "span_id": format(ctx.span_id, "016x"),
-        }
-    except ImportError:
-        return {}
-
-
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """Emit one structured log per HTTP request."""
 
@@ -50,9 +32,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             http_request_method=request.method,
             url_path=request.url.path,
             client_address=client_host,
-            service_name=settings.otel_service_name,
             deployment_environment=settings.deployment_environment,
-            **_otel_trace_fields(),
         )
 
         started = time.perf_counter()

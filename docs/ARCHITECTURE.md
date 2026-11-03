@@ -343,7 +343,7 @@ L'ensemble des paramètres serveur utilise le préfixe **`AUDIT_`**.
 | Workers | `AUDIT_WORKER_POOL`, `AUDIT_WORKER_EXTRACT_MAX_JOBS`, `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` |
 | Inférence | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL`, `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` |
 | Exploitation | `AUDIT_STALE_RUN_*`, `AUDIT_ADMISSION_*`, `AUDIT_RATE_LIMIT_*`, `AUDIT_MAINTENANCE_INTERVAL_SECONDS` |
-| Observabilité | `AUDIT_LOG_JSON`, `AUDIT_OTEL_ENABLED`, `AUDIT_OTEL_EXPORTER_ENDPOINT`, `AUDIT_DEPLOYMENT_ENVIRONMENT` |
+| Observabilité | `AUDIT_LOG_JSON`, `AUDIT_DEPLOYMENT_ENVIRONMENT` ; traces : agent OpenTelemetry (`OTEL_SDK_DISABLED=false`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) |
 
 Des validateurs refusent au démarrage les configurations incohérentes en production (OIDC désactivé, extracteur factice, délais d'expiration mal alignés). Référence des clés : [`deploy/ENV.md`](../deploy/ENV.md).
 

@@ -1,105 +1,79 @@
-"""Extraction result types (data only - no extractor ABC)."""
+"""Extraction data types."""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import Any
 
-__all__ = [
-    "MARKDOWN_TEXT_MAX_CHARS",
-    "DocumentBundle",
-    "ExtractedFieldResult",
-    "ExtractionIclExample",
-    "ExtractionMetadata",
-    "ExtractionResult",
-    "SchemaFieldLike",
-    "SchemaFieldSpec",
-    "load_document_bundle",
-    "schema_specs_from_fields",
-    "truncate_text",
-]
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+from repody.util.json_shape import normalize_keys_to_snake
+
+DEFAULT_TEMPLATE_TYPE = "verbatim-string"
 
 
-@runtime_checkable
-class SchemaFieldLike(Protocol):
-    """Port for agent/schema rows -> SchemaFieldSpec (anti-corruption at extract edge).
+class SchemaFieldSpec(BaseModel):
+    """One workflow schema field, validated from any stored shape.
 
-    Members are read-only properties so frozen dataclasses satisfy the protocol;
-    declaring them as plain attributes would demand mutability we never use.
+    Accepts ORM rows (``field_config`` holding ``enum_values`` / ``children``), snapshot
+    JSON and API payloads, in camelCase or snake_case. ``template_type`` is a NuExtract
+    TYPES.md leaf, a structure type (enum, multi-enum, object, object-array) or
+    ``<leaf>-list``; it defaults to ``verbatim-string``.
     """
 
-    @property
-    def name(self) -> str: ...
+    model_config = ConfigDict(extra="ignore")
 
-    @property
-    def description(self) -> str: ...
+    name: str
+    description: str = ""
+    template_type: str = DEFAULT_TEMPLATE_TYPE
+    enum_values: list[str] | None = None
+    children: list[SchemaFieldSpec] | None = None
 
-    @property
-    def template_type(self) -> str | None: ...
+    @model_validator(mode="before")
+    @classmethod
+    def _flatten_field_config(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        data = normalize_keys_to_snake(data)
+        config = data.pop("field_config", None) or {}
+        for key in ("enum_values", "children"):
+            if data.get(key) is None and config.get(key) is not None:
+                data[key] = config[key]
+        return data
 
-    @property
-    def enum_values(self) -> Sequence[str] | None: ...
+    @field_validator("name", "description", mode="before")
+    @classmethod
+    def _strip_text(cls, value: Any) -> str:
+        return str(value or "").strip()
 
-    @property
-    def children(self) -> Sequence[SchemaFieldLike]: ...
+    @field_validator("template_type", mode="before")
+    @classmethod
+    def _default_type(cls, value: Any) -> str:
+        return str(value or "").strip() or DEFAULT_TEMPLATE_TYPE
+
+    @field_validator("enum_values", mode="before")
+    @classmethod
+    def _clean_enum_values(cls, value: Any) -> list[str] | None:
+        if not isinstance(value, list):
+            return None
+        cleaned = list(dict.fromkeys(str(v).strip() for v in value if str(v).strip()))
+        return cleaned or None
+
+    @field_validator("children", mode="before")
+    @classmethod
+    def _named_children(cls, value: Any) -> list[Any] | None:
+        if not isinstance(value, list):
+            return None
+        named = [c for c in value if (c.get("name") if isinstance(c, dict) else c.name)]
+        return named or None
 
 
 @dataclass
 class DocumentBundle:
-    """In-memory document bytes for NuExtract vision extraction."""
+    """Uploaded document bytes with their MIME type."""
 
     raw_bytes: bytes
     mime_type: str
-    page_count: int = 0
-
-
-def load_document_bundle(
-    document_bytes: bytes,
-    mime_type: str,
-    *,
-    settings: object | None = None,
-) -> DocumentBundle:
-    """Wrap uploaded bytes; page count is set when pages are rendered for VLM."""
-    _ = settings
-    mime = (mime_type or "").lower()
-    return DocumentBundle(raw_bytes=document_bytes, mime_type=mime_type or mime)
-
-
-@dataclass
-class SchemaFieldSpec:
-    name: str
-    description: str = ""
-    template_type: str | None = None
-    enum_values: list[str] | None = None
-    children: list[SchemaFieldSpec] | None = None
-
-
-def schema_specs_from_fields(
-    fields: Sequence[SchemaFieldLike],
-    *,
-    normalize_template_type: Callable[[str | None], str | None] | None = None,
-) -> list[SchemaFieldSpec]:
-    """Map agent SchemaField (or any SchemaFieldLike) -> extraction SchemaFieldSpec once."""
-
-    def one(field: SchemaFieldLike) -> SchemaFieldSpec | None:
-        name = (field.name or "").strip()
-        if not name:
-            return None
-        tt = field.template_type
-        if normalize_template_type is not None:
-            tt = normalize_template_type(tt)
-        enums = list(field.enum_values) if field.enum_values else None
-        kids = [c for c in (one(child) for child in field.children or ()) if c is not None]
-        return SchemaFieldSpec(
-            name=name,
-            description=field.description or "",
-            template_type=tt,
-            enum_values=enums,
-            children=kids or None,
-        )
-
-    return [spec for field in fields if (spec := one(field)) is not None]
 
 
 @dataclass

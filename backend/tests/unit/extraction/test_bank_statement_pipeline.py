@@ -43,7 +43,7 @@ from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import build_nuextract_template
 from repody.extraction.pipeline import extract_document
 from repody.extraction.render import prepare_nuextract_pages
-from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec, load_document_bundle
+from repody.extraction.types import DocumentBundle, ExtractedFieldResult, SchemaFieldSpec
 from repody.extraction.vlm import extract_with_repody_vlm
 from repody.rules.amounts import normalize_amount, parse_numeric_value
 from repody.rules.value_coercion import MISSING
@@ -90,9 +90,7 @@ def test_ground_truth_matches_statement_footer():
 
 
 def test_pdf_renders_two_png_pages(ground_truth):
-    bundle = load_document_bundle(
-        load_bank_statement_bytes(), "application/pdf", settings=get_settings()
-    )
+    bundle = DocumentBundle(raw_bytes=load_bank_statement_bytes(), mime_type="application/pdf")
     pages, rendered = prepare_nuextract_pages(bundle)
     assert rendered == ground_truth.page_count == 2
     assert len(pages) == 2
@@ -293,9 +291,7 @@ async def test_pipeline_mocked_per_schema(
 
 @pytest.mark.asyncio
 async def test_repody_vlm_extract_list_fields_via_mock(statement_model_router, ground_truth):
-    bundle = load_document_bundle(
-        load_bank_statement_bytes(), "application/pdf", settings=get_settings()
-    )
+    bundle = DocumentBundle(raw_bytes=load_bank_statement_bytes(), mime_type="application/pdf")
     result = await extract_with_repody_vlm(
         bundle,
         list_fields_schema(),

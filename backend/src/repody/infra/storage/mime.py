@@ -10,23 +10,10 @@ PNG = "image/png"
 WEBP = "image/webp"
 OCTET = "application/octet-stream"
 
-_FILETYPE_TO_MIME = {
-    "pdf": PDF,
-    "png": PNG,
-    "jpg": JPEG,
-    "jpeg": JPEG,
-    "webp": WEBP,
-}
-
 
 def sniff_mime(data: bytes) -> str | None:
-    """Magic-byte detection via the filetype library."""
-    if not data:
-        return None
-    kind = filetype.guess(data)
-    if kind is None:
-        return None
-    return _FILETYPE_TO_MIME.get(kind.extension)
+    """MIME type from magic bytes (filetype library); None when unknown."""
+    return filetype.guess_mime(data) if data else None
 
 
 def normalize_declared_mime(mime: str | None) -> str:
