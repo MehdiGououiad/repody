@@ -57,13 +57,9 @@ Hub path above is the product runtime. For hacking API/UI from source:
 
 | Command | When |
 |---------|------|
-| `pnpm dev:src:setup` | Once - Compose data plane + migrations |
-| `pnpm dev:src:all` | Source-dev stack (local-dev) + API + UI |
-| `pnpm dev:src:app` | Foreground API + UI |
-| `pnpm dev:src:api` | API only |
-| `pnpm dev:src:status` | Health of the source lane |
-| `pnpm dev:src:stop` | Stop host API/UI, host models and Compose |
-| `pnpm ui` | Next.js only |
+| `pnpm platform dev` | Data plane + workers built from source; API (uvicorn) and UI (next dev) on the host with reload |
+| `pnpm platform stop` | Stop host NuExtract and every container |
+| `pnpm ui` | Next.js only (API already running) |
 
 ### Code quality
 

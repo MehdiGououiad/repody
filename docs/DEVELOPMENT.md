@@ -27,8 +27,7 @@ Python ops scripts: [backend/scripts/README.md](../backend/scripts/README.md).
 
 ```text
 backend/tests/unit|integration|live/
-e2e/tests/                 # Playwright
-reports/platform-tests/    # pnpm test:platform:report
+e2e/tests/                 # Playwright (defaults to the local stack on localhost)
 ```
 
 | Command | What |
@@ -37,7 +36,7 @@ reports/platform-tests/    # pnpm test:platform:report
 | `pnpm test:api` | Unit + integration (CI default) |
 | `pnpm test:live` | Needs running stack |
 | `pnpm test:e2e:smoke` | Playwright smoke |
-| `pnpm test:platform:report` | Report under `reports/platform-tests/` |
+| `pnpm test:e2e` | All Playwright specs against `pnpm platform` |
 | `pnpm review:check` | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
 
 Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH_URL`, then `pnpm test:platform`. Use **localhost** for the web URL (OIDC cookies).

@@ -1,10 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
-import { AUTH_STORAGE_PATH } from "./e2e/helpers/env";
+import { API_URL, AUTH_STORAGE_PATH, WEB_URL } from "./e2e/helpers/env";
 
-const baseURL = process.env.E2E_WEB_URL ?? "http://app.repody.local";
-const apiURL = process.env.E2E_API_URL ?? "http://api.repody.local";
+// Defaults target the local Compose stack (pnpm platform); set E2E_* for a cluster.
+const baseURL = WEB_URL;
+const apiURL = API_URL;
 const ignoreHTTPSErrors = process.env.E2E_IGNORE_TLS === "1" || baseURL.startsWith("https://");
 const storageStatePath = path.join(process.cwd(), AUTH_STORAGE_PATH);
 const storageState = existsSync(storageStatePath) ? storageStatePath : undefined;

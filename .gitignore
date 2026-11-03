@@ -12,7 +12,6 @@
 
 # testing
 /coverage
-/reports/platform-tests/
 /e2e/report/
 /e2e/.auth/
 /playwright-report/

@@ -87,14 +87,13 @@ Build cache: local builds reuse Docker's build cache; CI passes `--set <target>.
 
 ## Local Compose
 
-`pnpm platform setup` (or `pnpm dev:src:setup`) copies `deploy/env/compose.env.example` to `backend/.env`.
+`pnpm platform setup` (and `pnpm platform dev`) copies `deploy/env/compose.env.example` to `backend/.env`.
 
 Use these runtime overrides for local API/UI work:
 
 | Variable | Description |
 |----------|-------------|
-| `REPODY_API_PORT` | Host API port for `pnpm dev:src:api` / `pnpm dev:src:app` (`8000` default) |
-| `REPODY_DEV_API_RELOAD` | Set `1` to opt into Uvicorn reload on Windows |
+| `REPODY_DEV_API_RELOAD` | Set `1` to opt into Uvicorn reload on Windows (`pnpm platform dev`) |
 | `AUDIT_LLAMACPP_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |
 

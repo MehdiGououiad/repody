@@ -4,14 +4,16 @@
  *
  *   pnpm platform setup     # once
  *   pnpm platform           # pull images + start stack + host NuExtract
+ *   pnpm platform dev       # contributors: API + UI from source with reload
  *   pnpm platform status | stop | doctor | logs | help
  *
- * Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64)
- * Overlay: compose.yaml + compose.portable.yaml
+ * up:  Hub images (linux/amd64 + linux/arm64), compose.yaml + compose.portable.yaml
+ * dev: compose.yaml data plane + workers built from source; API and UI on the host
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
 import {
   BACKEND_ENV,
   busyPorts,
@@ -22,8 +24,11 @@ import {
   llamaServe,
   parseEnvFile,
   ROOT,
+  resolveExecutable,
   run,
+  runtimeEnv,
   setEnvKeys,
+  uvBackend,
 } from "./runtime-env.mjs";
 
 const AUTH_ENV = path.join(ROOT, ".env.local");
@@ -69,6 +74,7 @@ Flow (new PC):
 
 Commands:
   up         Start Hub platform + host NuExtract   [default]
+  dev        Contributors: data plane + workers from source, API + UI on the host (reload)
   setup      Once: env / paths + pull Hub images
   bootstrap  setup + up (new machine after git clone / pnpm install)
   doctor     Check everything needed before start (Node, Docker, llama-server, GGUFs, env)
@@ -398,6 +404,84 @@ ${
 `);
 }
 
+/**
+ * Contributor mode: Compose runs the data plane and builds the workers from source; the API
+ * (uvicorn) and UI (next dev) run on the host so edits reload. Ctrl+C stops API + UI only.
+ */
+async function dev() {
+  copyEnvFiles();
+  patchBackendEnv();
+  if (opts.withObs) {
+    run("docker", composeArgsFor(["compose.yaml"], "--profile", "observability", "up", "-d"), {
+      inherit: true,
+      allowFail: true,
+    });
+  }
+  if (opts.withNuextract) llamaServe("serve", { allowFail: true });
+
+  console.log("\n── Data plane + workers (built from source) ──────────────────");
+  // Build first: --wait-timeout would otherwise also count the image build.
+  run("docker", composeArgsFor(["compose.yaml"], "--profile", "workers", "build"), {
+    inherit: true,
+  });
+  run(
+    "docker",
+    composeArgsFor(
+      ["compose.yaml"],
+      "--profile",
+      "workers",
+      "up",
+      "-d",
+      "--wait",
+      "--wait-timeout",
+      "300",
+      // Named services only: --wait treats the one-shot minio-init exit as a failure.
+      "postgres",
+      "redis",
+      "minio",
+      "keycloak",
+      "worker-extract",
+      "worker-fast"
+    ),
+    { inherit: true }
+  );
+  run(...uvBackend(["alembic", "upgrade", "head"]), { inherit: true });
+
+  // backend/.env wins over the shell so a leftover AUDIT_DATABASE_URL (pytest) cannot leak in.
+  const apiEnv = { ...process.env, ...parseEnvFile(BACKEND_ENV) };
+  const apiArgs = ["run", "--extra", "otel", "uvicorn", "repody.main:app", "--port", "8000"];
+  // Uvicorn's reloader is unreliable on Windows; opt in with REPODY_DEV_API_RELOAD=1.
+  if (!isWin || process.env.REPODY_DEV_API_RELOAD === "1") apiArgs.push("--reload");
+  const children = [
+    spawnPrefixed("api", resolveExecutable("uv"), apiArgs, {
+      cwd: path.join(ROOT, "backend"),
+      env: apiEnv,
+    }),
+    spawnPrefixed(
+      "ui",
+      process.execPath,
+      [path.join(ROOT, "node_modules/next/dist/bin/next"), "dev"],
+      { cwd: ROOT, env: runtimeEnv(path.join(ROOT, ".env"), AUTH_ENV) }
+    ),
+  ];
+  console.log(`
+  UI   http://localhost:3000   (operator@repody.local / repody-dev)
+  API  http://localhost:8000/docs
+
+  Ctrl+C stops API + UI; \`pnpm platform stop\` stops the containers.
+`);
+  const stopChildren = () => {
+    for (const child of children) child.kill("SIGTERM");
+  };
+  process.on("SIGINT", stopChildren);
+  process.on("SIGTERM", stopChildren);
+  const code = await Promise.race(
+    children.map((child) => new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0))))
+  );
+  stopChildren();
+  process.exit(code);
+}
+
 async function status() {
   const checks = [
     ["API", "http://127.0.0.1:8000/v1/healthz"],
@@ -456,6 +540,7 @@ const commands = {
   },
   doctor: () => preflight(),
   up,
+  dev,
   status,
   logs,
   stop,

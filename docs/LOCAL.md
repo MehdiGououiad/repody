@@ -172,7 +172,7 @@ Observability is **on by default** (`--no-obs` to skip):
 
 JSON logs go to Loki; traces to Tempo (`trace_id` links them in Grafana). Config: `deploy/observability/`.
 
-**Bugsink (optional):** create a project -> set `BUGSINK_DSN` / `NEXT_PUBLIC_BUGSINK_DSN` in `backend/.env` and `.env.local`. For Compose workers, use `host.docker.internal` in the DSN and recreate `api` / workers. Stack-only: `pnpm dev:src:observability`.
+**Bugsink (optional):** create a project -> set `BUGSINK_DSN` / `NEXT_PUBLIC_BUGSINK_DSN` in `backend/.env` and `.env.local`. For Compose workers, use `host.docker.internal` in the DSN and recreate `api` / workers. Observability starts with `pnpm platform` and `pnpm platform dev` unless you pass `--no-obs`.
 
 ---
 
@@ -227,10 +227,12 @@ pnpm platform setup -- --no-pull
 ## Develop from source (contributors)
 
 ```bash
-pnpm dev:src:all    # local-dev: host API/UI + local worker build
-pnpm dev:src:app    # foreground API + UI only
-pnpm dev:src:stop   # stop the source lane
+pnpm platform dev
 ```
+
+Compose runs Postgres, Redis, MinIO and Keycloak and builds the workers from source; the API
+(uvicorn) and UI (next dev) run on the host and reload on edits. Ctrl+C stops API + UI;
+`pnpm platform stop` stops everything. Flags: `--no-nuextract`, `--no-obs`.
 
 Engineering reference: [DEVELOPMENT.md](./DEVELOPMENT.md).
 
