@@ -116,5 +116,7 @@ networkPolicy:
   # Default-deny for the release; allows DNS, traffic inside the release, ingress to web/api,
   # and egress to the CIDRs below (database, Redis, S3, OIDC, inference).
   enabled: false
+  # Namespaces running cluster DNS (kube-system on Kubernetes, openshift-dns on OpenShift).
+  dnsNamespaces: [kube-system, openshift-dns]
   egressCidrs: []
   egressPorts: [443, 5432, 6379, 8080, 8081, 9000]

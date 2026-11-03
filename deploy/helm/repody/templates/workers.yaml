@@ -35,6 +35,7 @@ spec:
             {{- include "repody.containerSecurityContext" $ | nindent 12 }}
           {{- include "repody.backendEnvFrom" $ | nindent 10 }}
           env:
+            {{- include "repody.backendSecretEnv" $ | nindent 12 }}
             - name: AUDIT_WORKER_POOL
               value: {{ $pool | quote }}
             - name: AUDIT_WORKER_{{ upper $pool }}_MAX_JOBS

@@ -35,10 +35,13 @@ spec:
           command: [python, /app/scripts/bootstrap_migrations.py]
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
-          # A pre-install hook runs before the chart's ConfigMap exists: only the Secret is used.
-          envFrom:
-            - secretRef:
-                name: {{ required "existingSecret is required" .Values.existingSecret }}
+          # A pre-install hook runs before the chart's ConfigMap exists; it only needs the database.
+          env:
+            - name: AUDIT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "existingSecret is required" .Values.existingSecret }}
+                  key: AUDIT_DATABASE_URL
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
 {{- end }}

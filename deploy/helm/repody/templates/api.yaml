@@ -33,6 +33,7 @@ spec:
               containerPort: 8000
           {{- include "repody.backendEnvFrom" . | nindent 10 }}
           env:
+            {{- include "repody.backendSecretEnv" . | nindent 12 }}
             - name: AUDIT_OTEL_SERVICE_NAME
               value: repody-api
           readinessProbe:

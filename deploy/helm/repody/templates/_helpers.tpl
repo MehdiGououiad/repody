@@ -64,11 +64,24 @@ seccompProfile:
   type: RuntimeDefault
 {{- end }}
 
-{{/* Backend containers: ConfigMap + runtime Secret; the Job runs migrations, not the pods. */}}
+{{/* Backend containers: settings from the ConfigMap. */}}
 {{- define "repody.backendEnvFrom" -}}
 envFrom:
   - configMapRef:
       name: {{ include "repody.fullname" . }}-config
-  - secretRef:
-      name: {{ required "existingSecret is required" .Values.existingSecret }}
+{{- end }}
+
+{{/* Only the Secret keys the API and workers read (not the web's Auth.js secrets). */}}
+{{- define "repody.backendSecretEnv" -}}
+{{- $secret := required "existingSecret is required" .Values.existingSecret -}}
+{{- range $key := list "AUDIT_DATABASE_URL" "AUDIT_REDIS_URL" "AUDIT_MINIO_ACCESS_KEY" "AUDIT_MINIO_SECRET_KEY" }}
+- name: {{ $key }}
+  valueFrom:
+    secretKeyRef: { name: {{ $secret }}, key: {{ $key }} }
+{{- end }}
+{{- range $key := list "AUDIT_LLAMACPP_API_KEY" "BUGSINK_DSN" }}
+- name: {{ $key }}
+  valueFrom:
+    secretKeyRef: { name: {{ $secret }}, key: {{ $key }}, optional: true }
+{{- end }}
 {{- end }}

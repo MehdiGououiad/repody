@@ -1,0 +1,19 @@
+{{- /*
+Install-time guardrails (renders nothing). `config` becomes a plaintext ConfigMap, so
+credentials must never be put there; production also needs OIDC and immutable images.
+*/ -}}
+{{- range $key, $_ := .Values.config }}
+{{- if regexMatch "(?i)(PASSWORD|SECRET|TOKEN|DSN|_KEY$|DATABASE_URL|REDIS_URL)" $key }}
+{{- fail (printf "config.%s is a credential: put it in the %q Secret, not in config (rendered as a plaintext ConfigMap)" $key $.Values.existingSecret) }}
+{{- end }}
+{{- end }}
+{{- if eq (toString (index .Values.config "AUDIT_DEPLOYMENT_ENVIRONMENT")) "production" }}
+{{- if ne (toString (index .Values.config "AUDIT_OIDC_ENABLED")) "true" }}
+{{- fail "production requires config.AUDIT_OIDC_ENABLED=\"true\"" }}
+{{- end }}
+{{- range $name, $image := .Values.images }}
+{{- if and (not $image.digest) (has (toString $image.tag) (list "" "latest")) }}
+{{- fail (printf "production images.%s needs an immutable tag or a digest (not empty or latest)" $name) }}
+{{- end }}
+{{- end }}
+{{- end }}

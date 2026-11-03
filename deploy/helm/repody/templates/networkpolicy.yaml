@@ -27,8 +27,14 @@ spec:
         - podSelector:
             matchLabels:
               app.kubernetes.io/instance: {{ .Release.Name }}
-    # DNS
-    - ports:
+    # DNS, only to the cluster DNS namespaces.
+    - to:
+        {{- range .Values.networkPolicy.dnsNamespaces }}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ . | quote }}
+        {{- end }}
+      ports:
         - { protocol: UDP, port: 53 }
         - { protocol: TCP, port: 53 }
         - { protocol: UDP, port: 5353 }

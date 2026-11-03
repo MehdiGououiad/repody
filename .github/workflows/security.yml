@@ -39,7 +39,8 @@ jobs:
           scan-type: fs
           scan-ref: .
           trivy-config: deploy/security/trivy.yaml
-          scanners: vuln,secret,misconfig
+          # License findings are reported for review; only vuln/secret/misconfig gate below.
+          scanners: vuln,secret,misconfig,license
           format: sarif
           output: trivy-repository.sarif
           exit-code: "0"
