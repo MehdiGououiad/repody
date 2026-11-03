@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from simpleeval import EvalWithCompoundTypes, simple_eval
+from repody.rules.expression import evaluate, referenced_names
 
-from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers
-
-# Sample values tried in order until the expression type-checks.
+# Field values are unknown when a rule is written: try each kind a field can hold
+# (a table, a number, a date) until the expression type-checks.
 _SAMPLE_VALUES: tuple[object, ...] = (
     '[{"amount": 10.0, "category": "type-a"}]',
     1.0,
@@ -14,30 +13,22 @@ _SAMPLE_VALUES: tuple[object, ...] = (
 )
 
 
-def _sample_namespace(body: str, value: object) -> dict[str, object]:
-    return dict.fromkeys(field_identifiers(body), value)
-
-
 def validate_logic_rule_body(body: str) -> str | None:
+    """None when the expression parses and type-checks for some field kind, else the error."""
     expression = (body or "").strip()
     if not expression:
         return "Logic rule body is empty."
-    evaluator = EvalWithCompoundTypes()
-    functions = {**evaluator.functions, **LOGIC_FUNCTIONS}
-    last_type_error: Exception | None = None
+    try:
+        names = referenced_names(expression)
+    except SyntaxError as exc:
+        return f"Invalid logic expression: {exc.msg}"
+    error: Exception | None = None
     for sample in _SAMPLE_VALUES:
         try:
-            simple_eval(
-                expression,
-                names=_sample_namespace(expression, sample),
-                functions=functions,
-            )
+            evaluate(expression, dict.fromkeys(names, sample))
             return None
         except TypeError as exc:
-            last_type_error = exc
-            continue
+            error = exc
         except Exception as exc:
             return f"Invalid logic expression: {exc}"
-    if last_type_error is not None:
-        return f"Invalid logic expression: {last_type_error}"
-    return "Invalid logic expression: incompatible operand types"
+    return f"Invalid logic expression: {error}"

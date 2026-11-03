@@ -1,37 +1,17 @@
+"""Evaluate one logic rule against extracted field values."""
+
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from simpleeval import EvalWithCompoundTypes, simple_eval
-
 from repody.rules.amounts import parse_numeric_value
-from repody.rules.expression import LOGIC_FUNCTIONS, field_identifiers, normalize_field_key
+from repody.rules.expression import evaluate, field_key, referenced_names
 from repody.rules.types import RuleEvalResult, collect_affected_fields
 from repody.rules.value_coercion import MISSING, is_iso_date_like
 
 
-def _strip_string_literals(expression: str) -> str:
-    """Remove quoted literals so comparison values are not treated as field names."""
-    without_double = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', ' "" ', expression)
-    return re.sub(r"'[^'\\]*(?:\\.[^'\\]*)*'", " '' ", without_double)
-
-
-def _identifiers_in_expression(expression: str) -> list[str]:
-    return list(dict.fromkeys(field_identifiers(_strip_string_literals(expression))))
-
-
-def _lookup_field(names: dict[str, Any], ident: str) -> tuple[bool, Any]:
-    """Return (present, value) for a field token used in an expression."""
-    norm = normalize_field_key(ident)
-    if ident in names:
-        return True, names[ident]
-    if norm in names:
-        return True, names[norm]
-    return False, None
-
-
 def coerce_field_value(raw: str) -> Any:
+    """Extracted text as the rule sees it: None (missing), ISO date text, number, bool or text."""
     text = (raw or "").strip()
     if not text or text == MISSING:
         return None
@@ -40,117 +20,65 @@ def coerce_field_value(raw: str) -> Any:
     numeric = parse_numeric_value(text)
     if numeric is not None:
         return numeric
-    lowered = text.lower()
-    if lowered in ("true", "false"):
-        return lowered == "true"
+    if text.lower() in ("true", "false"):
+        return text.lower() == "true"
     return text
-
-
-def build_field_namespace(field_values: dict[str, str]) -> dict[str, Any]:
-    namespace: dict[str, Any] = {}
-    for key, value in field_values.items():
-        norm = normalize_field_key(key)
-        coerced = coerce_field_value(value)
-        namespace[norm] = coerced
-        namespace[key] = coerced
-        if "." in key:
-            alias = key.replace(".", "__")
-            namespace[alias] = coerced
-            namespace[normalize_field_key(alias)] = coerced
-    return namespace
 
 
 def evaluate_logic_expression(
     body: str, field_values: dict[str, str]
 ) -> tuple[bool | None, str, list[str]]:
-    """Evaluate a logic rule. Returns (passed, detail, affected). passed=None means skipped."""
+    """``(passed, detail, fields_used)``; ``passed`` is None when the rule is skipped."""
     expression = (body or "").strip()
     if not expression:
         return None, "Rule has no expression — skipped.", []
-
-    names = build_field_namespace(field_values)
-    referenced = _identifiers_in_expression(expression)
-
-    missing: list[str] = []
-    empty: list[str] = []
-    for ident in referenced:
-        present, value = _lookup_field(names, ident)
-        if not present:
-            missing.append(ident)
-        elif value is None:
-            empty.append(ident)
-
-    if missing:
-        label = ", ".join(missing)
-        return (
-            None,
-            f"Field(s) not found: {label}. Check the name matches your schema fields.",
-            missing,
-        )
-    if empty:
-        label = ", ".join(empty)
-        return (
-            None,
-            f"No value yet for {label}. Run a test extraction or enter a sample value in dry-run.",
-            empty,
-        )
-
-    affected = [k for k, v in names.items() if v is not None and k == normalize_field_key(k)]
-
     try:
-        evaluator = EvalWithCompoundTypes()
-        functions = {**evaluator.functions, **LOGIC_FUNCTIONS}
-        result = bool(simple_eval(expression, names=names, functions=functions))
-        if result:
-            return True, "All conditions satisfied on the extracted values.", affected
-        return False, f"Expression evaluated to false: {expression}", affected
+        used = referenced_names(expression)
+    except SyntaxError as exc:
+        return False, f"Could not evaluate expression: {exc.msg}", []
+
+    values = {field_key(key): coerce_field_value(value) for key, value in field_values.items()}
+    affected = [field_key(name) for name in used]
+    missing = [name for name in used if field_key(name) not in values]
+    if missing:
+        return (
+            None,
+            f"Field(s) not found: {', '.join(missing)}. Check the name matches your schema fields.",
+            affected,
+        )
+    empty = [name for name in used if values[field_key(name)] is None]
+    if empty:
+        return (
+            None,
+            f"No value yet for {', '.join(empty)}. Run a test extraction or enter a sample "
+            "value in dry-run.",
+            affected,
+        )
+    try:
+        passed = bool(evaluate(expression, {name: values[field_key(name)] for name in used}))
     except Exception as exc:
         return False, f"Could not evaluate expression: {exc}", affected
+    if passed:
+        return True, "All conditions satisfied on the extracted values.", affected
+    return False, f"Expression evaluated to false: {expression}", affected
 
 
 def evaluate_logic_rule(rule: dict, field_values: dict[str, str]) -> RuleEvalResult:
     body = (rule.get("body") or "").strip()
-    rule_id = rule.get("id") or ""
-    name = rule.get("name") or "Rule"
-    severity = rule.get("severity") or "reject"
-    scope = rule.get("scope") or "intra"
-    affected = collect_affected_fields(rule)
-
-    if not body:
-        return RuleEvalResult(
-            id=rule_id,
-            name=name,
-            kind="logic",
-            scope=scope,
-            status="skipped",
-            severity=severity,
-            expression=body,
-            affected_fields=affected,
-            detail="Rule has no expression — configure conditions or a logic body.",
-            expected_value=None,
-            actual_value=None,
-        )
-
-    passed, detail, logic_affected = evaluate_logic_expression(body, field_values)
-    if logic_affected:
-        affected = list(dict.fromkeys(affected + logic_affected))
-    if passed is None:
-        status = "skipped"
-    elif passed:
-        status = "passed"
+    if body:
+        passed, detail, used = evaluate_logic_expression(body, field_values)
+        status = "skipped" if passed is None else "passed" if passed else "failed"
     else:
-        status = "failed"
-
+        used, status = [], "skipped"
+        detail = "Rule has no expression — configure conditions or a logic body."
     return RuleEvalResult(
-        id=rule_id,
-        name=name,
+        id=rule.get("id") or "",
+        name=rule.get("name") or "Rule",
         kind="logic",
-        scope=scope,
+        scope=rule.get("scope") or "intra",
         status=status,
-        severity=severity,
+        severity=rule.get("severity") or "reject",
         expression=body,
-        affected_fields=affected,
+        affected_fields=list(dict.fromkeys([*collect_affected_fields(rule), *used])),
         detail=detail,
-        expected_value=None,
-        actual_value=None,
     )

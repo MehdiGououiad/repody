@@ -85,10 +85,10 @@ def test_cross_doc_prefixed_keys_for_invoice_and_po():
         ("approved_total", "6500.00", "Purchase Order"),
     ]
     values = field_values_from_extractions(rows, multi_document=True)
-    assert values["invoice.po_number"] == "PO-2024-991"
-    assert values["purchase_order.po_number"] == "PO-2024-991"
-    assert values["invoice.total_amount"] == "6200.00"
-    assert values["purchase_order.approved_total"] == "6500.00"
+    assert values["invoice__po_number"] == "PO-2024-991"
+    assert values["purchase_order__po_number"] == "PO-2024-991"
+    assert values["invoice__total_amount"] == "6200.00"
+    assert values["purchase_order__approved_total"] == "6500.00"
 
 
 def test_cross_scope_limits_fields_to_applies_to_documents():
@@ -113,9 +113,9 @@ def test_cross_scope_limits_fields_to_applies_to_documents():
         doc_types_by_id=doc_types,
         multi_document=True,
     )
-    assert "delivery_note.po_number" not in scoped
-    assert scoped["invoice.po_number"] == "PO-111"
-    assert scoped["purchase_order.po_number"] == "PO-222"
+    assert "delivery_note__po_number" not in scoped
+    assert scoped["invoice__po_number"] == "PO-111"
+    assert scoped["purchase_order__po_number"] == "PO-222"
 
 
 # --- Cross field == field (matching values) ---

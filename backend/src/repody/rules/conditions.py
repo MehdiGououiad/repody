@@ -5,44 +5,34 @@ from __future__ import annotations
 import json
 import re
 
-from repody.rules.expression import normalize_field_key
-from repody.rules.value_coercion import MISSING, is_iso_date_like
+from repody.rules.amounts import parse_numeric_value
+from repody.rules.expression import field_key
+from repody.rules.value_coercion import MISSING
 from repody.util.json_shape import normalize_keys_to_snake
 
 NO_RIGHT = frozenset({"EXISTS", "IS_EMPTY"})
 
 
+_IDENTIFIER = re.compile(r"^[a-z_][a-z0-9_]*$")
+_NUMBER_TEXT = re.compile(r"^[-+]?[\d\s.,]+$")
+
+
 def _field_ref(token: str) -> str | None:
-    t = (token or "").strip()
-    if not t:
-        return None
-    if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", t):
-        return t
-    if "." in t:
-        parts = [normalize_field_key(part) for part in t.split(".")]
-        if all(re.match(r"^[a-z_][a-z0-9_]*$", part) for part in parts):
-            return "__".join(parts) if len(parts) > 1 else parts[0]
-    normalized = normalize_field_key(t)
-    if re.match(r"^[a-z_][a-z0-9_]*$", normalized):
-        return normalized
-    return None
+    """Field operand as an expression name (`invoice.total` -> `invoice__total`)."""
+    key = field_key(token or "")
+    return key if _IDENTIFIER.match(key) else None
 
 
 def _literal_to_py(value: str) -> str | None:
-    v = (value or "").strip()
-    if not v:
+    """Literal operand as Python source: a number when the text is purely numeric, else a string."""
+    text = (value or "").strip()
+    if not text:
         return None
-    if is_iso_date_like(v):
-        return json.dumps(v)
-    cleaned = v.replace(" ", "").replace(",", ".")
-    try:
-        if cleaned.replace(".", "", 1).replace("-", "", 1).isdigit() or re.match(
-            r"^-?\d+\.?\d*$", cleaned
-        ):
-            return str(float(cleaned))
-    except ValueError:
-        pass
-    return json.dumps(v)
+    if _NUMBER_TEXT.match(text):
+        number = parse_numeric_value(text)
+        if number is not None:
+            return repr(number)
+    return json.dumps(text)
 
 
 def _operand_to_py(op: dict | None) -> str | None:

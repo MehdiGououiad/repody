@@ -84,3 +84,20 @@ def test_iso_date_value_not_coerced_to_year_number():
     fields = {"invoice_date": "2025-01-01"}
     passed, detail, _ = evaluate_logic_expression('invoice_date <= "2025-12-31"', fields)
     assert passed is True, detail
+
+
+def test_failed_rule_only_flags_the_fields_it_uses():
+    from repody.rules.logic_evaluator import evaluate_logic_rule
+
+    result = evaluate_logic_rule(
+        {"id": "r1", "name": "Total", "body": "total > 100"},
+        {"total": "50", "vendor": "Acme", "date": "2024-01-02"},
+    )
+    assert result.status == "failed"
+    assert result.affected_fields == ["total"]
+
+
+def test_comprehension_variables_are_not_fields():
+    from repody.rules.expression import referenced_names
+
+    assert referenced_names("all(x > 0 for x in amounts) and str(total)") == ["amounts", "total"]

@@ -47,6 +47,7 @@ from repody.infra.db.models import (
     Workflow,
 )
 from repody.infra.storage.factory import get_storage
+from repody.rules.expression import field_key
 from repody.rules.runner import validate_field_rows
 from repody.rules.types import RuleEvalResult
 from repody.rules.value_coercion import MISSING
@@ -315,21 +316,18 @@ async def _execute(session: AsyncSession, run_id: str) -> None:
     progress.rules_done(results)
     await progress.show("finalize", "Saving audit report…")
 
+    # Flag the fields a failed rule used, by bare name or `<document_type>__<field>`.
     failed_keys = {
-        key
-        for row in results
-        if row.status in _FAIL
-        for raw in row.affected_fields
-        for key in (raw, raw.lower())
+        field_key(name) for row in results if row.status in _FAIL for name in row.affected_fields
     }
     saved_fields = await session.execute(
-        select(ExtractedField)
+        select(ExtractedField, RunDocument.document_type)
         .join(RunDocument, ExtractedField.run_document_id == RunDocument.id)
         .where(RunDocument.run_id == run_id)
     )
-    for field in saved_fields.scalars():
-        field.flagged = (
-            field.key in failed_keys or field.key.strip().lower().replace(" ", "_") in failed_keys
+    for field, document_type in saved_fields.tuples():
+        field.flagged = bool(
+            {field_key(field.key), field_key(f"{document_type or ''}.{field.key}")} & failed_keys
         )
     for row in results:
         session.add(
