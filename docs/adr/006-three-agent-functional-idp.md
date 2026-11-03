@@ -1,6 +1,6 @@
 # ADR 006: Three-agent platform with functional IDP slice
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR 008](./008-flat-run-pipeline.md) (2026-11)  
 **Date:** 2026-07-15  
 **Context:** [CONTEXT.md](../../CONTEXT.md) · Queues: [ADR 007](./007-staged-agent-queues-taskiq.md)
 

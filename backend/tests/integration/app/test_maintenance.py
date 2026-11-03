@@ -7,7 +7,6 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from repody.app.ops.maintenance import reap_stale_runs
-from repody.app.run.dispatch import mark_run_dispatch_failed
 from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
 from repody.settings import clear_settings_cache
 
@@ -129,22 +128,3 @@ async def test_reap_stale_queued_runs_skipped_when_worker_busy(maintenance_sessi
 
     await session.refresh(stale_queued)
     assert stale_queued.status == RunStatus.queued.value
-
-
-@pytest.mark.asyncio
-async def test_mark_run_dispatch_failed(maintenance_session):
-    session = maintenance_session
-    run = Run(
-        id="run-dispatch-fail",
-        workflow_id="wf-maint",
-        status=RunStatus.queued.value,
-    )
-    session.add(run)
-    await session.commit()
-
-    await mark_run_dispatch_failed("run-dispatch-fail", RuntimeError("taskiq down"))
-
-    await session.refresh(run)
-    assert run.status == RunStatus.failed.value
-    assert "dispatch failed" in (run.error or "").lower()
-    assert run.finished_at is not None

@@ -35,15 +35,6 @@ def fields_from_nuextract_json(
     return out
 
 
-def fields_from_leaf_json(raw: str, schema: list[SchemaFieldSpec]) -> list[ExtractedFieldResult]:
-    """Map JSON onto schema leaves; accepts flat dotted keys or nested objects."""
-    data = _parse_json_object(raw)
-    out: list[ExtractedFieldResult] = []
-    for key, spec in iter_extraction_leaves(schema):
-        out.append(_leaf_result(key, spec, _lookup_leaf_value(data, key)))
-    return out
-
-
 def _lookup_leaf_value(data: dict[str, Any], leaf_key: str) -> Any:
     """Read a leaf from flat ``parent.child`` keys or nested ``{parent:{child:…}}``."""
     if leaf_key in data:

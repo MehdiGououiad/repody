@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import Settings, get_settings
 
 log = structlog.get_logger(__name__)
@@ -72,7 +72,7 @@ async def check_run_rate_limits(
     workflow_id: str,
     source: str,
     client_key: str | None = None,
-) -> Result[None]:
+) -> None:
     """
     Enforce per-workflow and per-client run creation limits.
 
@@ -80,7 +80,7 @@ async def check_run_rate_limits(
     """
     settings = get_settings()
     if not settings.rate_limit_enabled:
-        return Result.ok(None)
+        return
 
     limiter = await _get_limiter()
     window = max(1, settings.rate_limit_window_seconds)
@@ -97,13 +97,13 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            return Result.fail(
+            raise (
                 AppError(
                     code=ErrorCode.RATE_LIMIT,
                     message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
                 )
-            )
-        return Result.ok(None)
+            ) from exc
+        return
 
     if not allowed:
         log.warning(
@@ -113,7 +113,7 @@ async def check_run_rate_limits(
             source=source,
             limit=settings.rate_limit_runs_per_workflow,
         )
-        return Result.fail(
+        raise (
             AppError(
                 code=ErrorCode.RATE_LIMIT,
                 message=(
@@ -124,7 +124,7 @@ async def check_run_rate_limits(
         )
 
     if not client_key:
-        return Result.ok(None)
+        return
 
     client_redis_key = f"audit:rl:client:{client_key}"
     client_limit = _window_limit(settings, settings.rate_limit_runs_per_client)
@@ -138,13 +138,13 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            return Result.fail(
+            raise (
                 AppError(
                     code=ErrorCode.RATE_LIMIT,
                     message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
                 )
-            )
-        return Result.ok(None)
+            ) from exc
+        return
 
     if not allowed:
         log.warning(
@@ -153,7 +153,7 @@ async def check_run_rate_limits(
             client_key=client_key,
             limit=settings.rate_limit_runs_per_client,
         )
-        return Result.fail(
+        raise (
             AppError(
                 code=ErrorCode.RATE_LIMIT,
                 message=(
@@ -162,7 +162,7 @@ async def check_run_rate_limits(
                 ),
             )
         )
-    return Result.ok(None)
+    return
 
 
 async def check_global_http_rate_limit(client_ip: str) -> bool:

@@ -72,20 +72,6 @@ async def list_openai_models(
         return set()
 
 
-async def ping_openai_compat(
-    base_url: str,
-    *,
-    timeout: float = 5.0,
-    api_key: str | None = None,
-) -> bool:
-    try:
-        client = _client(base_url, timeout=timeout, api_key=api_key)
-        await client.models.list()
-        return True
-    except Exception:
-        return False
-
-
 async def post_chat_completion(
     base_url: str,
     payload: dict[str, Any],
@@ -103,16 +89,6 @@ async def post_chat_completion(
 def message_content(completion: dict[str, Any]) -> str:
     """Text of the first choice in a ``chat.completions`` response dict."""
     return str(completion["choices"][0]["message"]["content"])
-
-
-def json_schema_response_format(
-    name: str, schema: dict[str, Any], *, strict: bool = True
-) -> dict[str, Any]:
-    """OpenAI Structured Outputs ``response_format`` (also accepted by llama.cpp)."""
-    return {
-        "type": "json_schema",
-        "json_schema": {"name": name, "strict": strict, "schema": schema},
-    }
 
 
 def split_chat_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:

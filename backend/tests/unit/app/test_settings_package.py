@@ -26,7 +26,6 @@ def test_settings_required_fields_present():
         "default_document_model_id",
         "repody_vlm_enabled",
         "rate_limit_enabled",
-        "dispatch_max_attempts",
         "otel_enabled",
     }
     missing = expected - set(Settings.model_fields)

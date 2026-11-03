@@ -18,7 +18,7 @@ from repody.app.run.snapshot import (
 from repody.app.workflow.repository import load_workflow
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run, RunDocument, RunStatus
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.runtime.run.contracts import FileBinding
 from repody.runtime.run.ids import document_row_id, new_run_id
 from repody.schemas.run import RunAuditDetail
@@ -56,10 +56,10 @@ async def create_run(
     snapshot_rules: list[WorkflowRuleSchema] | None = None,
     snapshot_workflow_name: str | None = None,
     worker_pool: str | None = None,
-) -> Result[Run]:
+) -> Run:
     wf = await load_workflow(session, workflow_id)
     if not wf:
-        return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found"))
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found")
 
     snapshot = _snapshot_from_payload(
         documents=snapshot_documents,
@@ -95,7 +95,7 @@ async def create_run(
     await init_queued_progress_with_position(session, run.id)
     await session.flush()
 
-    return Result.ok(run)
+    return run
 
 
 async def get_run_detail(session: AsyncSession, run_id: str) -> RunAuditDetail | None:
@@ -121,13 +121,13 @@ def progress_from_run(run: Run) -> RunProgressSchema | None:
     return RunProgressSchema.model_validate(run.progress)
 
 
-async def initial_run_progress(run_id: str) -> Result[dict | None]:
+async def initial_run_progress(run_id: str) -> dict | None:
     """Read current progress in a short-lived session (SSE streams must not hold one open)."""
     async with db_base.async_session_factory() as session:
         run = await session.get(Run, run_id)
         if not run:
-            return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Run not found"))
-        return Result.ok(run.progress)
+            raise AppError(code=ErrorCode.NOT_FOUND, message="Run not found")
+        return run.progress
 
 
 async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:

@@ -19,10 +19,10 @@ from repody.api import (
     uploads,
     workflows,
 )
+from repody.api.errors import app_error_handler
 from repody.api.openapi_config import install_openapi
 from repody.app.ops.maintenance import maintenance_loop, run_maintenance_cycle
 from repody.app.run.dispatch import close_taskiq_brokers
-from repody.app.run.dispatch_outbox import drain_dispatch_tasks
 from repody.inference.openai_compat import close_openai_clients
 from repody.infra.auth.jwt_validator import warm_jwks_cache
 from repody.infra.db.base import async_session_factory, engine
@@ -34,6 +34,7 @@ from repody.infra.observability.tracing import instrument_fastapi
 from repody.infra.rate_limit import GlobalRateLimitMiddleware
 from repody.infra.redis.pool import close_redis_pool
 from repody.infra.storage.factory import init_storage
+from repody.runtime.contracts.result import AppError
 from repody.settings import get_settings
 from repody.taskiq.broker import startup_taskiq_brokers
 
@@ -72,7 +73,6 @@ async def lifespan(_app: FastAPI):
     log.info("application_shutting_down", event_domain="platform")
     maintenance_stop.set()
     await maintenance_task
-    await drain_dispatch_tasks()
     await close_taskiq_brokers()
     await close_redis_pool()
     await close_openai_clients()
@@ -95,6 +95,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.add_exception_handler(AppError, app_error_handler)
     app.include_router(health.router, prefix="/v1")
     app.include_router(workflows.router, prefix="/v1")
     app.include_router(runs.router, prefix="/v1")

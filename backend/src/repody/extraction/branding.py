@@ -10,10 +10,6 @@ REPODY_VLM_DESCRIPTION = (
 )
 
 
-class UnknownCatalogIdError(ValueError):
-    """Raised when a document model catalog id is not registered."""
-
-
 def normalize_public_catalog_id(model_id: str | None) -> str:
     """Every stored id (including retired engines) resolves to the one model."""
     _ = model_id
@@ -22,11 +18,6 @@ def normalize_public_catalog_id(model_id: str | None) -> str:
 
 def public_runtime_name(runtime: str) -> str:
     _ = runtime
-    return REPODY_VLM_LABEL
-
-
-def public_runtime_model_name(runtime_model: str) -> str:
-    _ = runtime_model
     return REPODY_VLM_LABEL
 
 

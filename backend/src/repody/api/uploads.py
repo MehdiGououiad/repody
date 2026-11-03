@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from repody.api.auth import PrincipalDep, require_permission
 from repody.api.deps import SessionDep
-from repody.api.errors import unwrap_or_raise
 from repody.app.uploads import service
 from repody.app.uploads.service import IncomingFile
 from repody.schemas.uploads import (
@@ -46,7 +45,7 @@ async def read_upload_capped(upload: UploadFile, *, max_bytes: int) -> IncomingF
 
 
 async def read_uploads(files: list[UploadFile]) -> list[IncomingFile]:
-    unwrap_or_raise(service.check_batch_size(len(files)))
+    service.check_batch_size(len(files))
     max_bytes = get_settings().max_upload_bytes
     return [await read_upload_capped(upload, max_bytes=max_bytes) for upload in files]
 
@@ -62,8 +61,7 @@ async def presign_uploads(
     session: SessionDep,
     principal: PrincipalDep,
 ) -> PresignResponse:
-    result = await service.presign_uploads(session, body.files, owner_subject=principal.subject)
-    return unwrap_or_raise(result)
+    return await service.presign_uploads(session, body.files, owner_subject=principal.subject)
 
 
 @router.post("/confirm", response_model=ConfirmUploadResponse)
@@ -72,12 +70,11 @@ async def confirm_uploads(
     session: SessionDep,
     principal: PrincipalDep,
 ) -> ConfirmUploadResponse:
-    result = await service.confirm_uploads(
+    return await service.confirm_uploads(
         session, body.storage_keys, owner_subject=principal.subject
     )
-    return unwrap_or_raise(result)
 
 
 @router.post("", response_model=UploadResponse, status_code=201)
 async def upload_files(files: list[UploadFile] = File(...)) -> UploadResponse:
-    return unwrap_or_raise(await service.store_uploads(await read_uploads(files)))
+    return await service.store_uploads(await read_uploads(files))

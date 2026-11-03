@@ -41,15 +41,13 @@ Biome already covers, so the two linters never disagree about the same line.
   third-party framework demands (Starlette middleware, SDK adapters). Behaviour
   lives in module-level functions that take their state explicitly, or in
   closures bundled into a frozen record of callables - see
-  `infra/storage/base.py` and `agents/idp/run.py`.
+  `infra/storage/base.py`.
 - **No pass-through re-exports.** Import from the module that defines a symbol.
   A barrel is acceptable only for a types-only module that is erased at compile
   time, such as `lib/types/index.ts`.
-- **Errors as data at boundaries.** Use cases return `Result[T]` with an
-  `AppError`; routers turn them into HTTP with `unwrap_or_raise(result)` from
-  `api/errors.py`. A plain lookup that returns `None` may raise
-  `HTTPException(404, "...")` directly in the router. Raise exceptions only at
-  the outer adapters.
+- **Raise `AppError` for application failures.** Services raise
+  `AppError(ErrorCode.X, message)`; one exception handler in `api/errors.py` maps it to the
+  HTTP status, `detail` and `Retry-After`. Inside `except`, raise `... from exc`.
 - **Shared helpers have one home.** Display formatting (durations, bytes,
   percentages, dates) lives in `lib/utils.ts`; clipboard copy in
   `lib/hooks/use-copy-to-clipboard.ts`; timed fetch in `lib/api/fetch-with-timeout.ts`.
@@ -62,9 +60,9 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 |---------|------------|-----------------|
 | `api/` (FastAPI routers, auth dependencies) | everything below | - |
 | `app/` (use cases) | domain packages, `infra`, `schemas`, `settings`, `taskiq` (dispatch) | `fastapi`, `starlette`, `api` |
-| `infra/` (DB, storage, auth tokens, Redis, observability) | `runtime.contracts`, `settings` | `api`, `app`, `agents`, `taskiq` |
+| `infra/` (DB, storage, auth tokens, Redis, observability) | `runtime.contracts`, `settings` | `api`, `app`, `taskiq` |
 | `settings/` | `util` | any other `repody` package |
-| `runtime/contracts`, `runtime/run` | standard library, pydantic | `api`, `app`, `agents`, `infra`, `settings`, SQLAlchemy |
+| `runtime/contracts`, `runtime/run` | standard library, pydantic | `api`, `app`, `infra`, `settings`, SQLAlchemy |
 - **Suppressions must explain themselves.** Every `biome-ignore`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 
@@ -72,22 +70,18 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 | Area | Expected shape | Review signal |
 |------|----------------|---------------|
-| Run lifecycle | `app/run/lifecycle.py` owns status transitions and events | Tests can exercise lifecycle without FastAPI, SQLAlchemy, Redis, or Taskiq |
-| Run use cases | `app/run/commands.py` orchestrates lifecycle plus injected ports | Use cases receive load/save/commit/publish callables; SQLAlchemy stays in `persistence.py` |
-| Run persistence | `app/run/persistence.py` + `events.py` | Infrastructure mapping; no business transitions |
-| IDP agent | `agents/idp/compose.py` pure; I/O in `adapters/` + `run.py` | Do not put DB/HTTP inside `compose_idp` |
+| Run state | `app/run/state.py`: claim / complete / fail as conditional UPDATEs | A transition that does not match the current status changes nothing and returns False |
+| Run processing | `app/run/worker.py` calls typed functions directly | No untyped `Callable[...]` indirection between the worker and the extractor |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `taskiq/` and `run/processor.py` are delivery adapters | Worker claims the run, executes IDP, records terminal failure |
+| Worker layer | `taskiq/` delivers; `run/worker.py` processes | Worker claims the run, processes it, records terminal failure |
 | Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
 | Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 
 ## Current Strong Modules
 
-- `app/run/lifecycle.py`: deep module for audit Run state changes.
-- `app/run/persistence.py`: SQLAlchemy gateway that maps ORM rows to `RunEntity` and back.
-- `agents/idp/compose.py`: pure extract+validate composition behind injected ports.
+- `app/run/state.py` + `worker.py`: the whole run lifecycle in two modules ([ADR 008](./adr/008-flat-run-pipeline.md)).
 - `app/workflow/`: workflow orchestration and persistence are separated.
-- `catalog/`: model catalog and live probes are centralized instead of scattered across routers.
+- `catalog/`: the document model and its llama-server status in one place.
 - `docs/COMMANDS.md`: single command reference for development, release, and client checks.
 
 ## Smells To Reject In Review

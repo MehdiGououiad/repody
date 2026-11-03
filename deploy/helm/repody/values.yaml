@@ -368,11 +368,8 @@ config:
   admissionMaxInflight: 100
   admissionMaxExtractInflight: 20
   admissionRetryAfterSeconds: 15
-  dispatchReplayBatchSize: 100
-  dispatchKiqConcurrency: 16
   queueRefreshSseLimit: 32
   queueRefreshDbLimit: 128
-  outboxRetainDispatchedDays: 7
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: false
   healthzProbeInference: false

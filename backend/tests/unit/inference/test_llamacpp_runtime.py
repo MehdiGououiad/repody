@@ -28,9 +28,8 @@ def test_llamacpp_base_url():
         inference_mode="llamacpp",
         llamacpp_base_url="http://127.0.0.1:8081/v1",
     )
-    from repody.inference.runtime import DOCUMENT_RUNTIME, llamacpp_base_url
+    from repody.inference.runtime import llamacpp_base_url
 
-    assert DOCUMENT_RUNTIME == "llamacpp"
     assert llamacpp_base_url(settings) == "http://127.0.0.1:8081/v1"
 
 

@@ -70,28 +70,6 @@ def _document_type(doc: DocumentDefSchema | dict) -> str:
     return doc.document_type or ""
 
 
-def resolve_document_field_tokens(
-    documents: list[DocumentDefSchema],
-    applies_to: list[str],
-) -> list[str]:
-    """Field tokens available to LLM rules - matches the workflow builder UI."""
-    targets = [doc for doc in documents if doc.id in applies_to] if applies_to else list(documents)
-    multi = len(documents) > 1
-    tokens: list[str] = []
-    for doc in targets:
-        doc_token = normalize_schema_field_name(_document_type(doc))
-        for field in _schema_fields(doc):
-            raw_name = getattr(field, "name", None) or (
-                field.get("name") if isinstance(field, dict) else ""
-            )
-            name = str(raw_name or "").strip()
-            if not name:
-                continue
-            field_token = normalize_schema_field_name(name)
-            tokens.append(f"{doc_token}.{field_token}" if multi else field_token)
-    return tokens
-
-
 def _condition_incomplete(condition: dict) -> bool:
     left = condition.get("left") or {}
     if not str(left.get("value") or "").strip():

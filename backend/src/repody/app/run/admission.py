@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.infra.db.models import Run, RunStatus
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import get_settings
 
 _INFLIGHT = (RunStatus.queued.value, RunStatus.running.value)
@@ -84,7 +84,7 @@ async def check_admission(
     session: AsyncSession,
     *,
     predicted_pool: str,
-) -> Result[None]:
+) -> None:
     """Fail closed with CAPACITY when queue/inflight caps are exceeded (0 = disabled)."""
     settings = get_settings()
     retry_after = max(1, int(settings.admission_retry_after_seconds))
@@ -95,12 +95,12 @@ async def check_admission(
     need_extract = max_extract > 0 and predicted_pool == "extract"
 
     if max_queued <= 0 and max_inflight <= 0 and not need_extract:
-        return Result.ok(None)
+        return
 
     queued, inflight, extract_n = await _admission_counts(session)
 
     if max_queued > 0 and queued >= max_queued:
-        return Result.fail(
+        raise (
             AppError(
                 code=ErrorCode.CAPACITY,
                 message=(
@@ -111,7 +111,7 @@ async def check_admission(
         )
 
     if max_inflight > 0 and inflight >= max_inflight:
-        return Result.fail(
+        raise (
             AppError(
                 code=ErrorCode.CAPACITY,
                 message=(
@@ -123,7 +123,7 @@ async def check_admission(
         )
 
     if need_extract and extract_n >= max_extract:
-        return Result.fail(
+        raise (
             AppError(
                 code=ErrorCode.CAPACITY,
                 message=(
@@ -134,4 +134,4 @@ async def check_admission(
             )
         )
 
-    return Result.ok(None)
+    return

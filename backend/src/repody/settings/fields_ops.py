@@ -15,11 +15,6 @@ class OpsSettingsFields:
     maintenance_interval_seconds: int = Field(
         default=60,
     )
-    dispatch_max_attempts: int = Field(
-        default=8,
-        ge=1,
-        description="Max Taskiq dispatch attempts per run (outbox replay).",
-    )
 
     rate_limit_enabled: bool = Field(default=True)
     rate_limit_fail_closed: bool = Field(
@@ -47,18 +42,6 @@ class OpsSettingsFields:
         ),
     )
 
-    dispatch_replay_batch_size: int = Field(
-        default=100,
-        ge=1,
-        le=500,
-        description="Max outbox rows claimed per maintenance/replay drain.",
-    )
-    dispatch_kiq_concurrency: int = Field(
-        default=16,
-        ge=1,
-        le=64,
-        description="Parallel Taskiq kiq calls after an outbox claim batch.",
-    )
     queue_refresh_sse_limit: int = Field(
         default=32,
         ge=0,
@@ -74,11 +57,6 @@ class OpsSettingsFields:
             "Max queued rows loaded/updated per maintenance tick "
             "(0 disables maintenance queue refresh)."
         ),
-    )
-    outbox_retain_dispatched_days: int = Field(
-        default=7,
-        ge=1,
-        description="Delete dispatched outbox rows older than this many days.",
     )
 
     admission_max_queued: int = Field(

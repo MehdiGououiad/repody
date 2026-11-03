@@ -17,7 +17,6 @@ from repody.settings import Settings, get_settings
 # https://huggingface.co/numind/NuExtract3-GGUF
 # https://github.com/numindai/nuextract - non-thinking / markdown examples
 NUEXTRACT_PDF_DPI = 170
-NUEXTRACT_ENABLE_THINKING = False
 NUEXTRACT_STRUCTURED_TEMPERATURE = 0.2
 NUEXTRACT_MARKDOWN_TEMPERATURE = 0.0
 NUEXTRACT_THINKING_TEMPERATURE = 0.6
@@ -69,10 +68,6 @@ NUEXTRACT_SCALAR_TEMPLATE_TYPES = {
     "region:AU",
     "region:JP",
     "region:KR",
-}
-
-NUEXTRACT_LIST_TEMPLATE_TYPES = {
-    f"{scalar}{_LIST_SUFFIX}" for scalar in NUEXTRACT_SCALAR_TEMPLATE_TYPES
 }
 
 NUEXTRACT_STRUCTURE_TEMPLATE_TYPES = {

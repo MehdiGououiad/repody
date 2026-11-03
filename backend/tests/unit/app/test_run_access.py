@@ -9,7 +9,7 @@ import pytest
 
 from repody.app.run.access import resolve_owner_subject, resolve_run_enqueue_source
 from repody.infra.auth.principal import Principal
-from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import Settings
 
 
@@ -41,11 +41,12 @@ def test_resolve_owner_subject_oidc_missing_token():
 @pytest.mark.asyncio
 async def test_resolve_run_enqueue_missing_workflow():
     session = MagicMock()
-    with patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=None)):
-        result = await resolve_run_enqueue_source(session, "missing", None)
-    assert not result.is_ok
-    assert result.error is not None
-    assert result.error.code == ErrorCode.NOT_FOUND
+    with (
+        patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=None)),
+        pytest.raises(AppError) as caught,
+    ):
+        await resolve_run_enqueue_source(session, "missing", None)
+    assert caught.value.code == ErrorCode.NOT_FOUND
 
 
 @pytest.mark.asyncio
@@ -58,8 +59,7 @@ async def test_resolve_run_enqueue_api_key_when_deployed():
         patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", "Bearer secret-key")
-    assert result.is_ok
-    assert result.unwrap()[0] == "api"
+    assert result[0] == "api"
 
 
 @pytest.mark.asyncio
@@ -75,8 +75,7 @@ async def test_resolve_run_enqueue_oidc_operator_test_run():
         patch("repody.app.run.access.authorize", return_value=True),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", "Bearer jwt")
-    assert result.is_ok
-    assert result.unwrap()[0] == "test"
+    assert result[0] == "test"
 
 
 @pytest.mark.asyncio
@@ -90,11 +89,10 @@ async def test_resolve_run_enqueue_oidc_forbidden_without_execute():
         patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
         patch("repody.app.run.access.principal_from_bearer", return_value=principal),
         patch("repody.app.run.access.authorize", return_value=False),
+        pytest.raises(AppError) as caught,
     ):
-        result = await resolve_run_enqueue_source(session, "wf1", "Bearer jwt")
-    assert not result.is_ok
-    assert result.error is not None
-    assert result.error.code == ErrorCode.FORBIDDEN
+        await resolve_run_enqueue_source(session, "wf1", "Bearer jwt")
+    assert caught.value.code == ErrorCode.FORBIDDEN
 
 
 @pytest.mark.asyncio
@@ -104,11 +102,10 @@ async def test_resolve_run_enqueue_oidc_missing_bearer():
     with (
         patch("repody.app.run.access.load_workflow", new=AsyncMock(return_value=wf)),
         patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=True)),
+        pytest.raises(AppError) as caught,
     ):
-        result = await resolve_run_enqueue_source(session, "wf1", None)
-    assert not result.is_ok
-    assert result.error is not None
-    assert result.error.code == ErrorCode.UNAUTHORIZED
+        await resolve_run_enqueue_source(session, "wf1", None)
+    assert caught.value.code == ErrorCode.UNAUTHORIZED
 
 
 @pytest.mark.asyncio
@@ -120,5 +117,4 @@ async def test_resolve_run_enqueue_dev_mode_allows_test_without_token():
         patch("repody.app.run.access.get_settings", return_value=_settings(oidc_enabled=False)),
     ):
         result = await resolve_run_enqueue_source(session, "wf1", None)
-    assert result.is_ok
-    assert result.unwrap()[0] == "test"
+    assert result[0] == "test"

@@ -37,6 +37,8 @@ class Run(Base):
     run_snapshot: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     run_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     worker_pool: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Set once Taskiq accepted the task; NULL + queued = maintenance re-sends it.
+    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_activity_at: Mapped[datetime | None] = mapped_column(
@@ -108,22 +110,3 @@ class RuleResult(Base):
     actual_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     run: Mapped[Run] = relationship(back_populates="rule_results")
-
-
-class RunDispatchOutbox(Base):
-    __tablename__ = "run_dispatch_outbox"
-    __table_args__ = (Index("ix_run_dispatch_outbox_status_created", "status", "created_at"),)
-
-    run_id: Mapped[str] = mapped_column(
-        String(64),
-        ForeignKey("runs.id", ondelete="CASCADE"),
-        primary_key=True,
-    )
-    pool: Mapped[str] = mapped_column(String(16), default="fast")
-    workflow_id: Mapped[str] = mapped_column(String(64), default="")
-    request_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
-    status: Mapped[str] = mapped_column(String(16), default="pending")
-    dispatch_attempts: Mapped[int] = mapped_column(default=0)
-    error: Mapped[str | None] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

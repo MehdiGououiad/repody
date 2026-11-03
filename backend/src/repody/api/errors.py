@@ -1,29 +1,21 @@
-"""Translate application ``AppError`` / ``Result`` values into HTTP errors."""
+"""Translate ``AppError`` into HTTP responses (registered as a FastAPI exception handler)."""
 
 from __future__ import annotations
 
-from typing import NoReturn
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
-from fastapi import HTTPException
-
-from repody.runtime.contracts.result import AppError, Result, http_status_for
+from repody.runtime.contracts.result import AppError, http_status_for
 
 
-def http_exception_for(error: AppError) -> HTTPException:
-    """Build HTTPException from AppError (Retry-After + optional numeric cause)."""
-    status = int(error.cause) if error.cause and error.cause.isdigit() else http_status_for(error)
+def status_for(error: AppError) -> int:
+    """HTTP status for an AppError; a numeric ``cause`` (e.g. "413") overrides the code map."""
+    return int(error.cause) if error.cause and error.cause.isdigit() else http_status_for(error)
+
+
+async def app_error_handler(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, AppError)
     headers = None
-    if error.retry_after_seconds is not None:
-        headers = {"Retry-After": str(error.retry_after_seconds)}
-    return HTTPException(status_code=status, detail=error.message, headers=headers)
-
-
-def raise_app_error(error: AppError) -> NoReturn:
-    raise http_exception_for(error)
-
-
-def unwrap_or_raise[T](result: Result[T]) -> T:
-    """Return the success value, or raise the matching HTTPException."""
-    if result.error:
-        raise_app_error(result.error)
-    return result.unwrap()
+    if exc.retry_after_seconds is not None:
+        headers = {"Retry-After": str(exc.retry_after_seconds)}
+    return JSONResponse({"detail": exc.message}, status_code=status_for(exc), headers=headers)

@@ -148,7 +148,7 @@ type = "forbidden"
 source_modules = ["repody.runtime.contracts"]
 forbidden_modules = [
   "sqlalchemy", "fastapi", "redis", "structlog",
-  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.settings",
+  "repody.api", "repody.app", "repody.infra", "repody.settings",
   "repody.taskiq", "repody.extraction", "repody.rules",
 ]
 
@@ -164,14 +164,14 @@ allow_indirect_imports = true
 name = "Infrastructure has no use cases or HTTP routes"
 type = "forbidden"
 source_modules = ["repody.infra"]
-forbidden_modules = ["repody.api", "repody.app", "repody.agents", "repody.taskiq"]
+forbidden_modules = ["repody.api", "repody.app", "repody.taskiq"]
 
 [[tool.importlinter.contracts]]
 name = "Settings is a leaf"
 type = "forbidden"
 source_modules = ["repody.settings"]
 forbidden_modules = [
-  "repody.api", "repody.app", "repody.agents", "repody.catalog", "repody.extraction",
+  "repody.api", "repody.app", "repody.catalog", "repody.extraction",
   "repody.inference", "repody.infra", "repody.rules", "repody.runtime", "repody.taskiq",
 ]
 
@@ -181,7 +181,7 @@ type = "forbidden"
 source_modules = ["repody.runtime.metrics"]
 forbidden_modules = [
   "sqlalchemy", "fastapi", "redis",
-  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.taskiq",
+  "repody.api", "repody.app", "repody.infra", "repody.taskiq",
 ]
 
 [[tool.importlinter.contracts]]
@@ -190,25 +190,8 @@ type = "forbidden"
 source_modules = ["repody.runtime.run"]
 forbidden_modules = [
   "sqlalchemy", "fastapi", "redis", "structlog",
-  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.settings", "repody.taskiq",
-]
-
-[[tool.importlinter.contracts]]
-name = "IDP contracts and compose are port-injected"
-type = "forbidden"
-source_modules = ["repody.agents.idp.contracts", "repody.agents.idp.compose"]
-forbidden_modules = [
-  "sqlalchemy", "fastapi", "redis", "structlog",
   "repody.api", "repody.app", "repody.infra", "repody.settings", "repody.taskiq",
 ]
-# Known indirect path: idp.compose -> extraction.modes -> settings.
-allow_indirect_imports = true
-
-[[tool.importlinter.contracts]]
-name = "IDP compose does not reach into adapters"
-type = "forbidden"
-source_modules = ["repody.agents.idp.compose"]
-forbidden_modules = ["repody.agents.idp.adapters"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]

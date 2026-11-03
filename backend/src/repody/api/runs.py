@@ -19,7 +19,6 @@ from sse_starlette.sse import EventSourceResponse
 
 from repody.api.auth import require_admin_or_workflow_run, require_run_create_access
 from repody.api.deps import SessionDep
-from repody.api.errors import unwrap_or_raise
 from repody.api.uploads import read_upload_capped
 from repody.app.run.access import resolve_owner_subject
 from repody.app.run.enqueue import enqueue_run
@@ -57,7 +56,7 @@ _RUN_EVENTS_OPENAPI: dict[int | str, dict[str, Any]] = {
 
 
 def _snapshot_from_form_payload(payload: str | None) -> RunSnapshot | None:
-    data = unwrap_or_raise(parse_json_form(payload, "payload"))
+    data = parse_json_form(payload, "payload")
     if data is None:
         return None
     if not isinstance(data, dict):
@@ -108,7 +107,7 @@ async def get_run(
 )
 async def stream_run_events(run_id: str):
     """Server-Sent Events stream for live run progress (Redis pub/sub)."""
-    initial_progress = unwrap_or_raise(await initial_run_progress(run_id))
+    initial_progress = await initial_run_progress(run_id)
 
     async def event_generator():
         if initial_progress:
@@ -145,12 +144,10 @@ async def create_run_json(
     """Create a run with files already uploaded to storage (presigned PUT flow)."""
     bindings: list[FileBinding] | None = None
     if body.file_bindings:
-        bindings = unwrap_or_raise(
-            await bindings_from_confirmed_uploads(
-                session,
-                [item.to_binding() for item in body.file_bindings],
-                owner_subject=resolve_owner_subject(authorization),
-            )
+        bindings = await bindings_from_confirmed_uploads(
+            session,
+            [item.to_binding() for item in body.file_bindings],
+            owner_subject=resolve_owner_subject(authorization),
         )
     request_body = EnqueueRunRequest(
         workflow_id=workflow_id,
@@ -160,7 +157,7 @@ async def create_run_json(
         client_host=request.client.host if request.client else None,
         production_api_shape=False,
     )
-    return unwrap_or_raise(await enqueue_run(session, request_body))
+    return await enqueue_run(session, request_body)
 
 
 @router.post(
@@ -188,14 +185,12 @@ async def create_run(
     if files:
         max_bytes = get_settings().max_upload_bytes
         incoming = [await read_upload_capped(upload, max_bytes=max_bytes) for upload in files]
-        bindings = unwrap_or_raise(
-            await bindings_from_multipart(
-                session,
-                workflow_id,
-                incoming,
-                document_ids=document_ids,
-                document_types=document_types,
-            )
+        bindings = await bindings_from_multipart(
+            session,
+            workflow_id,
+            incoming,
+            document_ids=document_ids,
+            document_types=document_types,
         )
     request_body = EnqueueRunRequest(
         workflow_id=workflow_id,
@@ -205,4 +200,4 @@ async def create_run(
         client_host=request.client.host if request.client else None,
         production_api_shape=snapshot is None,
     )
-    return unwrap_or_raise(await enqueue_run(session, request_body))
+    return await enqueue_run(session, request_body)

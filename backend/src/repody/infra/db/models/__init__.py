@@ -5,7 +5,6 @@ from repody.infra.db.models.run import (
     ExtractedField,
     RuleResult,
     Run,
-    RunDispatchOutbox,
     RunDocument,
 )
 from repody.infra.db.models.upload import UploadIntent
@@ -24,7 +23,6 @@ __all__ = [
     "RuleResult",
     "RuleTemplate",
     "Run",
-    "RunDispatchOutbox",
     "RunDocument",
     "RunStatus",
     "SchemaField",

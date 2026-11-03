@@ -50,11 +50,8 @@ data:
   AUDIT_ADMISSION_MAX_INFLIGHT: {{ .Values.config.admissionMaxInflight | quote }}
   AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT: {{ .Values.config.admissionMaxExtractInflight | quote }}
   AUDIT_ADMISSION_RETRY_AFTER_SECONDS: {{ .Values.config.admissionRetryAfterSeconds | quote }}
-  AUDIT_DISPATCH_REPLAY_BATCH_SIZE: {{ .Values.config.dispatchReplayBatchSize | quote }}
-  AUDIT_DISPATCH_KIQ_CONCURRENCY: {{ .Values.config.dispatchKiqConcurrency | quote }}
   AUDIT_QUEUE_REFRESH_SSE_LIMIT: {{ .Values.config.queueRefreshSseLimit | quote }}
   AUDIT_QUEUE_REFRESH_DB_LIMIT: {{ .Values.config.queueRefreshDbLimit | quote }}
-  AUDIT_OUTBOX_RETAIN_DISPATCHED_DAYS: {{ .Values.config.outboxRetainDispatchedDays | quote }}
   AUDIT_OPERATOR_ACTIONS_ENABLED: {{ .Values.config.operatorActionsEnabled | quote }}
   {{- if .Values.config.operatorBenchmarkUser }}
   AUDIT_OPERATOR_BENCHMARK_USER: {{ .Values.config.operatorBenchmarkUser | quote }}

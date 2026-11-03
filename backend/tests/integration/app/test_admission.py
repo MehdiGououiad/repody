@@ -13,7 +13,7 @@ from repody.app.run.admission import (
 )
 from repody.app.run.intake import create_run
 from repody.infra.db.models import Run, RunStatus, Workflow, WorkflowStatus
-from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import clear_settings_cache
 
 
@@ -64,9 +64,7 @@ async def test_queue_position_for_waiting_run(admission_session):
 @pytest.mark.asyncio
 async def test_create_run_progress_includes_queue_fields(admission_session):
     session, workflow_id = admission_session
-    created = await create_run(session, workflow_id, source="test")
-    assert created.is_ok
-    run = created.unwrap()
+    run = await create_run(session, workflow_id, source="test")
     await session.refresh(run)
     assert run.progress is not None
     assert run.progress.get("queuePosition") == 1
@@ -149,8 +147,7 @@ async def test_check_admission_rejects_when_queued_at_cap(admission_session, mon
             )
         )
     await session.flush()
-    result = await check_admission(session, predicted_pool="fast")
-    assert not result.is_ok
-    assert result.error is not None
-    assert result.error.code is ErrorCode.CAPACITY
-    assert result.error.retry_after_seconds is not None
+    with pytest.raises(AppError) as caught:
+        await check_admission(session, predicted_pool="fast")
+    assert caught.value.code is ErrorCode.CAPACITY
+    assert caught.value.retry_after_seconds is not None

@@ -59,35 +59,31 @@ sequenceDiagram
 ```
 backend/src/repody/
 ├── api/                 HTTP routers → app use cases
-├── app/                 Application use cases (run, workflow, operator, …)
-├── agents/idp/          contracts · compose · run · adapters/
-├── runtime/             Result contract · run status · metrics · operator jobs
+├── app/                 Application use cases (run, workflow, uploads, …)
+├── runtime/             AppError · run status · metrics
 ├── extraction/          pipeline · vlm · nuextract · render
 ├── inference/           OpenAI-compat clients
-├── rules/               Logic + LLM evaluators
-├── catalog/             Document-model registry + probes
+├── rules/               Logic rule evaluator
+├── catalog/             Document model + llama-server status
 ├── taskiq/              Worker entrypoint + async tasks
 ├── infra/               db · storage · auth · observability
 ├── schemas/             HTTP Pydantic DTOs
 └── settings/            AUDIT_* settings
 ```
 
-**Hot path:** `process_run` -> `execute_idp_run` -> `compose_idp` -> `persist_idp_outcome` (completes the Run).
+**Hot path:** `app/run/worker.py` `process_run`: claim (conditional UPDATE) -> extract each document -> evaluate rules -> `complete_run` ([ADR 008](./docs/adr/008-flat-run-pipeline.md)).
 
 ### Bounded contexts
 
 | Context | Responsibility | Key modules |
 |---------|----------------|-------------|
 | **Workflow configuration** | Templates, rules, deployment | `app/workflow/` |
-| **Audit execution** | Claim/complete, queue, worker | `app/run/`, `taskiq/` |
-| **IDP agent** | Extract + validate for a claimed Run | `agents/idp/` |
-| **Platform / catalog** | Result contract, document-model registry, operator | `runtime/`, `catalog/`, `app/operator/` |
+| **Audit execution** | Claim/complete, queue, worker | `app/run/` (`state`, `worker`, `dispatch`), `taskiq/` |
+| **Platform / catalog** | AppError, document model status | `runtime/`, `catalog/` |
 
-### Platform agents
+### Run pipeline
 
-**IDP** under `agents/idp/` is the only agent. Capacity pools: `extract` / `fast`. Decisions: [ADR 006](./docs/adr/006-three-agent-functional-idp.md) · [ADR 007](./docs/adr/007-staged-agent-queues-taskiq.md).
-
-Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh and SSE. `RunStatus` lives in `runtime/run/status.py`. Lifecycle: `app/run/lifecycle.py` · `commands.py` · `persistence.py`. Worker entry: `app/run/processor.py`.
+Capacity pools: `extract` / `fast`. State transitions live in `app/run/state.py` (single conditional UPDATEs; terminal states publish over SSE). `RunStatus` lives in `runtime/run/status.py`. Worker entry: `app/run/worker.py`. Dispatch: `app/run/dispatch.py` (send after commit, `runs.dispatched_at`, maintenance re-sends). Decision: [ADR 008](./docs/adr/008-flat-run-pipeline.md).
 
 ## Three registries (do not merge)
 

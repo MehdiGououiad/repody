@@ -1,4 +1,4 @@
-"""Run access policy - credential -> principal/source as Result."""
+"""Run access policy - credential -> principal/source (raises AppError when refused)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from repody.infra.auth.jwt_validator import (
 )
 from repody.infra.auth.permissions import authorize
 from repody.infra.db.models import Workflow
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import Settings, get_settings
 
 RunSource = str  # "test" | "api"
@@ -44,28 +44,26 @@ async def resolve_run_enqueue_source(
     *,
     has_snapshot: bool = False,
     production_api_shape: bool = False,
-) -> Result[tuple[RunSource, Workflow]]:
+) -> tuple[RunSource, Workflow]:
     """Infer test vs production API run from bearer credential and request shape."""
     settings = get_settings()
     token = extract_bearer(authorization)
 
     wf = await load_workflow(session, workflow_id)
     if not wf:
-        return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found"))
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found")
 
     if token and wf.deployed_at and verify_api_key(token, wf.api_key):
-        return Result.ok(("api", wf))
+        return ("api", wf)
 
     if token and settings.oidc_enabled:
         try:
             principal = principal_from_bearer(token, settings)
         except JwtValidationError as exc:
-            return Result.fail(
-                AppError(code=ErrorCode.UNAUTHORIZED, message=f"Unauthorized — {exc}")
-            )
+            raise (AppError(code=ErrorCode.UNAUTHORIZED, message=f"Unauthorized — {exc}")) from exc
 
         if not principal.has_app_role():
-            return Result.fail(
+            raise (
                 AppError(
                     code=ErrorCode.FORBIDDEN,
                     message="No application role assigned in Keycloak.",
@@ -73,22 +71,22 @@ async def resolve_run_enqueue_source(
             )
 
         if not authorize(principal, "run", "execute"):
-            return Result.fail(
+            raise (
                 AppError(
                     code=ErrorCode.FORBIDDEN,
                     message="Forbidden — operator role required for test runs.",
                 )
             )
 
-        return Result.ok(("test", wf))
+        return ("test", wf)
 
     if token and not settings.oidc_enabled:
-        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key."))
+        raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key.")
 
     if settings.oidc_enabled:
-        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Missing bearer token."))
+        raise AppError(code=ErrorCode.UNAUTHORIZED, message="Missing bearer token.")
 
     if production_api_shape or (wf.deployed_at and not has_snapshot):
-        return Result.fail(AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key."))
+        raise AppError(code=ErrorCode.UNAUTHORIZED, message="Invalid API key.")
 
-    return Result.ok(("test", wf))
+    return ("test", wf)

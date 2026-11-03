@@ -1,6 +1,6 @@
 # ADR 001: Taskiq for async audit runs
 
-**Status:** Accepted (supersedes Hatchet)  
+**Status:** Accepted (supersedes Hatchet); dispatch outbox replaced by `runs.dispatched_at` in [ADR 008](./008-flat-run-pipeline.md)  
 **Date:** 2026-07-03  
 **Context:** [CONTEXT.md](../../CONTEXT.md)
 

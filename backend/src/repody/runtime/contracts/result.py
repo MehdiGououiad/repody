@@ -1,8 +1,7 @@
-"""Result and AppError - errors as data at pipeline boundaries."""
+"""AppError - the one application exception, mapped to HTTP status at the API edge."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from enum import StrEnum
 
 
@@ -22,39 +21,24 @@ class ErrorCode(StrEnum):
     PAYLOAD_TOO_LARGE = "payload_too_large"
 
 
-@dataclass(frozen=True, slots=True)
-class AppError:
-    code: ErrorCode
-    message: str
-    document_id: str | None = None
-    cause: str | None = None
-    retry_after_seconds: int | None = None
+class AppError(Exception):
+    """Application failure with an HTTP-mappable code; raised by services, handled at the API edge."""
 
-
-@dataclass(frozen=True, slots=True)
-class Result[T]:
-    """Success value or AppError as data - an immutable record, not a hierarchy."""
-
-    value: T | None = None
-    error: AppError | None = None
-
-    @staticmethod
-    def ok(value: T) -> Result[T]:
-        return Result(value=value)
-
-    @staticmethod
-    def fail(error: AppError) -> Result[T]:
-        return Result(error=error)
-
-    @property
-    def is_ok(self) -> bool:
-        return self.error is None
-
-    def unwrap(self) -> T:
-        # None is a valid success value (e.g. Result[list[str] | None]).
-        if self.error is not None:
-            raise ValueError(self.error.message)
-        return self.value  # type: ignore[return-value]
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        *,
+        document_id: str | None = None,
+        cause: str | None = None,
+        retry_after_seconds: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.document_id = document_id
+        self.cause = cause
+        self.retry_after_seconds = retry_after_seconds
 
 
 def http_status_for(error: AppError) -> int:

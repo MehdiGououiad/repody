@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.infra.db.models import UploadIntent
 from repody.infra.storage.mime import mimes_match_for_confirm, normalize_declared_mime
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.runtime.run.contracts import FileBinding
 
 
@@ -75,24 +75,24 @@ async def confirm_upload_intent(
     size: int,
     verified_mime: str,
     owner_subject: str | None = None,
-) -> Result[UploadIntent]:
+) -> UploadIntent:
     row = await load_upload_intent(session, storage_key)
     if row is None:
-        return Result.fail(_validation("Upload was not prepared by this API."))
+        raise _validation("Upload was not prepared by this API.")
     owner_err = _check_owner(row, owner_subject)
     if owner_err is not None:
-        return Result.fail(owner_err)
+        raise owner_err
     if size != row.size:
-        return Result.fail(_validation("Upload size does not match the prepared upload."))
+        raise _validation("Upload size does not match the prepared upload.")
     if not mimes_match_for_confirm(prepared=row.mime_type, verified=verified_mime):
-        return Result.fail(_validation("Upload MIME type does not match the prepared upload."))
+        raise _validation("Upload MIME type does not match the prepared upload.")
     # Prefer sniffed type when prepare only had a generic browser fallback.
     verified_norm = normalize_declared_mime(verified_mime)
     if normalize_declared_mime(row.mime_type) != verified_norm:
         row.mime_type = verified_norm
     row.confirmed_at = datetime.now(UTC)
     await session.flush()
-    return Result.ok(row)
+    return row
 
 
 async def bindings_from_confirmed_uploads(
@@ -100,21 +100,17 @@ async def bindings_from_confirmed_uploads(
     bindings: list[FileBinding],
     *,
     owner_subject: str | None = None,
-) -> Result[list[FileBinding]]:
+) -> list[FileBinding]:
     out: list[FileBinding] = []
     for binding in bindings:
         row = await load_upload_intent(session, binding.storage_key)
         if row is None or row.confirmed_at is None:
-            return Result.fail(
-                _validation("Run file binding was not confirmed through uploads/confirm.")
-            )
+            raise (_validation("Run file binding was not confirmed through uploads/confirm."))
         owner_err = _check_owner(row, owner_subject)
         if owner_err is not None:
-            return Result.fail(owner_err)
+            raise owner_err
         if binding.document_id and row.document_id and binding.document_id != row.document_id:
-            return Result.fail(
-                _validation("Run file binding document does not match the upload intent.")
-            )
+            raise (_validation("Run file binding document does not match the upload intent."))
         out.append(
             FileBinding(
                 document_id=binding.document_id or row.document_id,
@@ -123,4 +119,4 @@ async def bindings_from_confirmed_uploads(
                 file_name=row.file_name,
             )
         )
-    return Result.ok(out)
+    return out

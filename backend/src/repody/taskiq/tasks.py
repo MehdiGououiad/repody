@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import structlog
 
-from repody.app.run.commands import PUBLIC_RUN_FAILURE_MESSAGE, fail_run_terminal
-from repody.app.run.processor import execute_run_with_timeout
+from repody.app.run.state import PUBLIC_RUN_FAILURE_MESSAGE, fail_run
+from repody.app.run.worker import execute_run_with_timeout
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run
 from repody.infra.observability.context import bind_log_context, log_context
@@ -63,7 +63,7 @@ async def _execute_audit_run(input: AuditRunInput) -> dict[str, str]:
             )
         else:
             log.exception("taskiq_run_failed", run_id=run_id, error=repr(exc))
-        await fail_run_terminal(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
+        await fail_run(run_id, PUBLIC_RUN_FAILURE_MESSAGE)
         raise
     log.info("taskiq_run_completed", run_id=run_id, pool=input.extract_pool)
     return {"run_id": run_id, "phase": "done"}

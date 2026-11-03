@@ -134,15 +134,6 @@ async def postgres_session(monkeypatch, test_session_factory):
 
 
 @pytest.fixture(autouse=True)
-async def drain_background_tasks():
-    """Let fire-and-forget Taskiq dispatch tasks finish before the next test."""
-    yield
-    from repody.app.run.dispatch_outbox import drain_dispatch_tasks
-
-    await drain_dispatch_tasks()
-
-
-@pytest.fixture(autouse=True)
 def respx_visible_openai_transport(request, monkeypatch):
     """Route OpenAI SDK traffic through a plain ``httpx`` client so ``respx`` can mock it.
 

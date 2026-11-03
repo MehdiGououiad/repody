@@ -474,7 +474,7 @@ Example: 2+2+2 -> up to 90 Postgres connections at peak overflow.
 |-------|-------------|-----------|
 | Run failures | `run_failed`, `run_failed_terminal` | >5% of runs / 15m |
 | Stuck runs reaped | `stale_run_reaped` | any in prod |
-| Dispatch failure | `taskiq_dispatch_failed_terminal`, outbox `failed` | any |
+| Dispatch failure | `taskiq_dispatch_failed` (run stays queued; maintenance re-sends) | sustained |
 | Queue pressure | readiness `queuedRuns` / admission cap | >80% sustained 10m |
 | VLM slow | `run_metadata.extractionMs` | p99 > 80% of worker timeout |
 | Worker unhealthy | `worker-extract` restart loop | >3 restarts / 15m |
@@ -508,7 +508,7 @@ pnpm extract:soak -- --api-url https://api.staging.example.com --token $TOKEN --
 | API crash `Invalid endpoint: http://` | Set `externalObjectStorage.endpoint` |
 | DB `relation does not exist` | Enable `migrations.enabled: true` or run migrations job |
 | Run stuck `running` | Extract worker logs; VLM; stale reap |
-| Run stuck `queued` | Redis; outbox; admission 503; worker replicas |
+| Run stuck `queued` | Redis; `runs.dispatched_at` NULL = not yet sent; admission 503; worker replicas |
 | SSE silent | Redis; `redisOk` on healthz |
 | `syft not found` / cosign fail | Install tools or run attest in CI; on-prem use `COSIGN_KEY` |
 

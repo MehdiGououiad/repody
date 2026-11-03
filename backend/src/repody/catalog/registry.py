@@ -30,7 +30,6 @@ class DocumentModelSpec:
     runtime_model: str
     read_path_id: str = DEFAULT_READ_PATH_ID
     description: str = ""
-    workflow_selectable: bool = True
     markdown_only: bool = False
 
 

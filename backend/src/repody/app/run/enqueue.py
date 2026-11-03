@@ -1,4 +1,4 @@
-"""Enqueue run - Result-only application boundary."""
+"""Enqueue a run: access, limits, admission, insert, then send to Taskiq."""
 
 from __future__ import annotations
 
@@ -11,12 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repody.app.queue.progress import refresh_single_queued_run
 from repody.app.run.access import resolve_run_enqueue_source
 from repody.app.run.admission import check_admission
-from repody.app.run.dispatch_outbox import enqueue_dispatch, schedule_outbox_dispatch
+from repody.app.run.dispatch import dispatch_audit_run
 from repody.app.run.intake import create_run
 from repody.app.run.pool import predict_worker_pool
 from repody.infra.auth.jwt_validator import extract_bearer
 from repody.infra.rate_limit import check_run_rate_limits
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.runtime.run.contracts import EnqueueRunRequest
 from repody.schemas.workflow import RunCreatedResponse
 
@@ -36,33 +36,25 @@ def client_key_from_request(
 async def enqueue_run(
     session: AsyncSession,
     req: EnqueueRunRequest,
-) -> Result[RunCreatedResponse]:
-    """Create and queue a Run - errors as data."""
-    access = await resolve_run_enqueue_source(
+) -> RunCreatedResponse:
+    """Create and queue a run; raises AppError when it is refused."""
+    source, wf = await resolve_run_enqueue_source(
         session,
         req.workflow_id,
         req.authorization,
         has_snapshot=req.snapshot is not None,
         production_api_shape=req.production_api_shape,
     )
-    if not access.is_ok:
-        return Result.fail(access.error or AppError(code=ErrorCode.INFRA, message="Access failed"))
-
-    source, wf = access.unwrap()
     client_key = client_key_from_request(source, req.authorization, req.client_host)
 
     if source == "api" and not wf.deployed_at:
-        return Result.fail(AppError(code=ErrorCode.CONFLICT, message="Workflow is not deployed."))
+        raise AppError(ErrorCode.CONFLICT, "Workflow is not deployed.")
 
-    rate = await check_run_rate_limits(
+    await check_run_rate_limits(
         workflow_id=req.workflow_id,
         source=source,
         client_key=client_key,
     )
-    if not rate.is_ok:
-        return Result.fail(
-            rate.error or AppError(code=ErrorCode.RATE_LIMIT, message="Rate limited")
-        )
 
     # Reuse workflow already loaded for access - avoid a second documents query.
     predicted_pool = await predict_worker_pool(
@@ -72,14 +64,10 @@ async def enqueue_run(
         workflow=wf,
     )
 
-    admitted = await check_admission(session, predicted_pool=predicted_pool)
-    if not admitted.is_ok:
-        return Result.fail(
-            admitted.error or AppError(code=ErrorCode.CAPACITY, message="At capacity")
-        )
+    await check_admission(session, predicted_pool=predicted_pool)
 
     snapshot = req.snapshot if source == "test" else None
-    created = await create_run(
+    run = await create_run(
         session,
         req.workflow_id,
         source=source,
@@ -89,21 +77,13 @@ async def enqueue_run(
         snapshot_workflow_name=snapshot.workflow_name if snapshot else None,
         worker_pool=predicted_pool,
     )
-    if not created.is_ok:
-        return Result.fail(created.error or AppError(code=ErrorCode.INFRA, message="Create failed"))
-
-    run = created.unwrap()
     request_id = correlation_id.get()
 
-    await enqueue_dispatch(
-        session,
-        run_id=run.id,
-        pool=predicted_pool,
-        workflow_id=req.workflow_id,
-        request_id=request_id,
-    )
     # O(1) position for the new run only - full queue refresh happens on claim.
     await refresh_single_queued_run(session, run.id)
     await session.commit()
-    schedule_outbox_dispatch(run.id)
-    return Result.ok(RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status))
+    # After commit: a failed send leaves the run undispatched for maintenance to re-send.
+    await dispatch_audit_run(
+        run.id, pool=predicted_pool, workflow_id=req.workflow_id, request_id=request_id
+    )
+    return RunCreatedResponse(run_id=run.id, job_id=run.id, status=run.status)

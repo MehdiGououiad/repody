@@ -16,7 +16,7 @@ from repody.app.uploads.validation import (
 )
 from repody.infra.storage.factory import get_storage
 from repody.infra.storage.mime import is_allowed_mime, sanitize_filename
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.schemas.uploads import (
     ConfirmUploadItem,
     ConfirmUploadResponse,
@@ -62,12 +62,12 @@ def presign_supported(settings: Settings | None = None) -> bool:
     return settings.storage_backend == "s3" and settings.direct_upload_enabled
 
 
-def check_batch_size(file_count: int) -> Result[None]:
+def check_batch_size(file_count: int) -> None:
     try:
         validate_upload_batch(file_count=file_count, settings=get_settings())
     except UploadValidationError as exc:
-        return Result.fail(_bad_request(str(exc)))
-    return Result.ok(None)
+        raise _bad_request(str(exc)) from exc
+    return
 
 
 def upload_capabilities() -> UploadCapabilitiesResponse:
@@ -87,29 +87,25 @@ async def presign_uploads(
     files: Sequence[PresignFileRequest],
     *,
     owner_subject: str,
-) -> Result[PresignResponse]:
+) -> PresignResponse:
     """Record upload intents and return presigned PUT URLs (or ``api`` mode fallback)."""
-    batch_r = check_batch_size(len(files))
-    if batch_r.error:
-        return Result.fail(batch_r.error)
+    check_batch_size(len(files))
 
     settings = get_settings()
     if not presign_supported(settings):
-        return Result.ok(
-            PresignResponse(
-                upload_mode="api",
-                uploads=[
-                    PresignedUploadItem(
-                        id=uuid.uuid4().hex,
-                        storage_key="",
-                        file_name=f.file_name,
-                        mime_type=f.mime_type,
-                        size=f.size,
-                        document_id=f.document_id,
-                    )
-                    for f in files
-                ],
-            )
+        return PresignResponse(
+            upload_mode="api",
+            uploads=[
+                PresignedUploadItem(
+                    id=uuid.uuid4().hex,
+                    storage_key="",
+                    file_name=f.file_name,
+                    mime_type=f.mime_type,
+                    size=f.size,
+                    document_id=f.document_id,
+                )
+                for f in files
+            ],
         )
 
     allowed = set(settings.upload_allowed_mime_types)
@@ -117,9 +113,9 @@ async def presign_uploads(
     items: list[PresignedUploadItem] = []
     for file_req in files:
         if file_req.size > settings.max_upload_bytes:
-            return Result.fail(_too_large(file_req.file_name, settings))
+            raise _too_large(file_req.file_name, settings)
         if not is_allowed_mime(file_req.mime_type, allowed):
-            return Result.fail(_bad_request(f"Unsupported file type: {file_req.mime_type}."))
+            raise _bad_request(f"Unsupported file type: {file_req.mime_type}.")
 
         safe_name = sanitize_filename(file_req.file_name)
         upload_id, key = new_storage_key(safe_name)
@@ -152,7 +148,7 @@ async def presign_uploads(
         )
 
     await session.commit()
-    return Result.ok(PresignResponse(upload_mode="presigned", uploads=items))
+    return PresignResponse(upload_mode="presigned", uploads=items)
 
 
 async def confirm_uploads(
@@ -160,7 +156,7 @@ async def confirm_uploads(
     storage_keys: Sequence[str],
     *,
     owner_subject: str,
-) -> Result[ConfirmUploadResponse]:
+) -> ConfirmUploadResponse:
     """Verify presigned objects exist, match their intent, and have an allowed MIME type."""
     settings = get_settings()
     storage = get_storage()
@@ -172,16 +168,14 @@ async def confirm_uploads(
             size, _content_type = await storage.stat_object(key)
             sample = await storage.head_bytes(key, max_bytes=_MIME_SNIFF_BYTES)
         except FileNotFoundError:
-            return Result.fail(
-                AppError(code=ErrorCode.NOT_FOUND, message=f"Upload not found: {key}")
-            )
+            raise (AppError(code=ErrorCode.NOT_FOUND, message=f"Upload not found: {key}")) from None
         except Exception:
-            return Result.fail(AppError(code=ErrorCode.INFRA, message="Storage unavailable"))
+            raise AppError(code=ErrorCode.INFRA, message="Storage unavailable") from None
 
         if size == 0:
-            return Result.fail(_bad_request(f"Upload empty: {key}"))
+            raise _bad_request(f"Upload empty: {key}")
         if size > settings.max_upload_bytes:
-            return Result.fail(_too_large(file_name, settings))
+            raise _too_large(file_name, settings)
         try:
             _safe_name, verified_mime = validate_upload_file(
                 filename=file_name,
@@ -190,18 +184,15 @@ async def confirm_uploads(
                 settings=settings,
             )
         except UploadValidationError as exc:
-            return Result.fail(_bad_request(str(exc)))
+            raise _bad_request(str(exc)) from exc
 
-        intent_r = await confirm_upload_intent(
+        intent = await confirm_upload_intent(
             session,
             storage_key=key,
             size=size,
             verified_mime=verified_mime,
             owner_subject=owner_subject,
         )
-        if intent_r.error:
-            return Result.fail(intent_r.error)
-        intent = intent_r.unwrap()
         confirmed.append(
             ConfirmUploadItem(
                 storage_key=key,
@@ -212,14 +203,12 @@ async def confirm_uploads(
         )
 
     await session.commit()
-    return Result.ok(ConfirmUploadResponse(uploads=confirmed))
+    return ConfirmUploadResponse(uploads=confirmed)
 
 
-async def store_uploads(files: Sequence[IncomingFile]) -> Result[UploadResponse]:
+async def store_uploads(files: Sequence[IncomingFile]) -> UploadResponse:
     """Validate and store files sent through the API (non-presigned mode)."""
-    batch_r = check_batch_size(len(files))
-    if batch_r.error:
-        return Result.fail(batch_r.error)
+    check_batch_size(len(files))
 
     settings = get_settings()
     storage = get_storage()
@@ -233,7 +222,7 @@ async def store_uploads(files: Sequence[IncomingFile]) -> Result[UploadResponse]
                 settings=settings,
             )
         except UploadValidationError as exc:
-            return Result.fail(_bad_request(str(exc)))
+            raise _bad_request(str(exc)) from exc
 
         upload_id, key = new_storage_key(safe_name)
         await storage.put_bytes(key, upload.data, verified_mime)
@@ -246,4 +235,4 @@ async def store_uploads(files: Sequence[IncomingFile]) -> Result[UploadResponse]
                 size=len(upload.data),
             )
         )
-    return Result.ok(UploadResponse(uploads=items))
+    return UploadResponse(uploads=items)

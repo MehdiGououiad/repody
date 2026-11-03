@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from repody.app.run.helpers import attr_or_key
 from repody.extraction.modes import DEFAULT_READ_PATH_ID, parse_read_path
-from repody.infra.db.models import Run, Workflow
+from repody.infra.db.models import Workflow
 
 WorkerPool = str  # "extract" | "fast"
 
@@ -81,27 +81,3 @@ async def predict_worker_pool(
         return "extract"
     docs = list(getattr(wf, "documents", None) or [])
     return classify_bindings_for_workflow(docs, file_bindings)
-
-
-async def resolve_worker_pool(session: AsyncSession, run_id: str) -> WorkerPool:
-    """Resolve pool for a persisted run (dispatch fallback)."""
-    run = (
-        await session.execute(
-            select(Run).where(Run.id == run_id).options(selectinload(Run.documents))
-        )
-    ).scalar_one_or_none()
-    if not run:
-        return "fast"
-    if run.worker_pool:
-        return run.worker_pool
-
-    wf = (
-        await session.execute(
-            select(Workflow)
-            .where(Workflow.id == run.workflow_id)
-            .options(selectinload(Workflow.documents))
-        )
-    ).scalar_one_or_none()
-    if not wf:
-        return "extract"
-    return classify_run_documents(wf.documents, run.documents)

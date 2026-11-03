@@ -1,6 +1,6 @@
 # ADR 007: Staged agent queues on Taskiq
 
-**Status:** Accepted  
+**Status:** Superseded by [ADR 008](./008-flat-run-pipeline.md) (2026-11)  
 **Date:** 2026-07-22  
 **Context:** [CONTEXT.md](../../CONTEXT.md) · Supersedes in-process recipe loop in [ADR 006](./006-three-agent-functional-idp.md) · Keeps [ADR 001](./001-taskiq-async-runs.md)
 

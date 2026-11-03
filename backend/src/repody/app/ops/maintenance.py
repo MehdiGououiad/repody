@@ -1,4 +1,4 @@
-"""Background maintenance: stale run recovery, outbox replay, and queue refresh."""
+"""Background maintenance: stale run recovery, re-sending undispatched runs, queue refresh."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.queue.progress import refresh_queued_positions
-from repody.app.run.commands import fail_run_terminal
-from repody.app.run.dispatch_outbox import purge_dispatched_outbox, replay_dispatch_outbox
+from repody.app.run.dispatch import redispatch_undispatched
+from repody.app.run.state import fail_run
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run, RunStatus
 from repody.settings import get_settings
@@ -58,7 +58,7 @@ async def _reap_stale_running_runs(session: AsyncSession, *, minutes: int) -> in
     )
     reaped = 0
     for run_id in stale_ids:
-        if await fail_run_terminal(
+        if await fail_run(
             run_id,
             _stale_running_message(minutes),
             session=session,
@@ -94,7 +94,7 @@ async def _reap_stale_queued_runs(session: AsyncSession, *, minutes: int) -> int
     )
     reaped = 0
     for run_id in stale_ids:
-        if await fail_run_terminal(
+        if await fail_run(
             run_id,
             _stale_queued_message(minutes),
             session=session,
@@ -129,19 +129,17 @@ async def reap_stale_runs(*, session: AsyncSession | None = None) -> int:
 
 
 async def run_maintenance_cycle() -> None:
-    """One pass: stale runs, outbox replay, queue head refresh, outbox purge."""
+    """One pass: stale runs, re-send undispatched runs, queue head refresh."""
     reaped = await reap_stale_runs()
     async with db_base.async_session_factory() as session:
-        replayed = await replay_dispatch_outbox(session)
+        redispatched = await redispatch_undispatched(session)
         await refresh_queued_positions(session)
-        purged = await purge_dispatched_outbox(session)
         await session.commit()
-    if reaped or replayed or purged:
+    if reaped or redispatched:
         log.info(
             "maintenance_cycle_done",
             stale_runs_reaped=reaped,
-            dispatches_replayed=replayed,
-            outbox_purged=purged,
+            runs_redispatched=redispatched,
         )
 
 

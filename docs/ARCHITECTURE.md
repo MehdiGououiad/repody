@@ -37,7 +37,7 @@ Repody permet à une organisation de **configurer un audit documentaire sans éc
 |---|---|
 | **Séparation synchrone / asynchrone** | L'API répond en `202` et délègue le traitement lourd à des workers Taskiq. |
 | **Inférence externalisée** | Aucun poids de modèle n'est embarqué dans les images applicatives ; le moteur d'IA est un endpoint OpenAI-compatible ([ADR 005](./adr/005-kubernetes-only-external-inference.md)). |
-| **Fiabilité de la mise en file** | Motif *outbox* en base : le job n'est publié qu'après commit de la transaction. |
+| **Fiabilité de la mise en file** | Le job est publié après commit ; `runs.dispatched_at` trace l'envoi et la maintenance renvoie les runs non distribués ([ADR 008](./adr/008-flat-run-pipeline.md)). |
 | **Modularité de déploiement** | Quatre modules déployables indépendamment : edge, control, workers, data ([ADR 003](./adr/003-modular-platform-modules.md)). |
 | **Portabilité** | Même chaîne applicative en local (Compose) et en production (Helm) ; seul le *placement* change ([ADR 004](./adr/004-cloud-kubernetes-packaging.md)). |
 | **Sécurité par défaut** | OIDC obligatoire en production, autorisation par rôle sur chaque route, secrets hors Git. |
@@ -181,10 +181,10 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 | 3 | **Autorisation** | `ROLE_PERMISSIONS` (Python) | Décision d'accès `(ressource, action)` sur chaque route. |
 | 4 | **Bus de jobs / événements** | Redis Streams + pub/sub | Transport Taskiq et diffusion de la progression. |
 | 5 | **Workers** | Taskiq (pools `extract`, `fast`) | Exécution asynchrone des runs. |
-| 6 | **Agent IDP** | Python (`agents/idp/`) | Orchestration extraction -> validation -> persistance. |
+| 6 | **Traitement des runs** | Python (`app/run/worker.py`) | Orchestration extraction -> validation -> persistance. |
 | 7 | **Pipeline d'extraction** | Python (`extraction/`) | Rendu, appel modèle, projection des champs, cache. |
 | 8 | **Moteur de règles** | `simpleeval` | Évaluation des contrôles déterministes. |
-| 9 | **Base de données** | PostgreSQL | Source de vérité (workflows, runs, champs, résultats, outbox). |
+| 9 | **Base de données** | PostgreSQL | Source de vérité (workflows, runs, champs, résultats). |
 | 10 | **Stockage objet** | MinIO / S3 | Fichiers déposés (`audit-documents`). |
 | 11 | **Identité** | OIDC (Keycloak ou IdP client) | Authentification, rôles, JWKS. |
 | 12 | **Inférence** | Endpoint OpenAI-compatible | Extraction documentaire (NuExtract3). |
@@ -221,27 +221,24 @@ L'API n'exécute **jamais** l'extraction : elle valide, persiste, met en file, p
 | Module | Responsabilité |
 |---|---|
 | `workflow/` | Service, persistance de l'agrégat (documents + règles), validation, déploiement et clés API, statistiques. |
-| `run/` | Admission et mise en file (`enqueue`), outbox (`dispatch_outbox`), dispatch Taskiq, traitement worker (`processor`), cycle de vie (`lifecycle`, `commands`), classification de pool, instantané de configuration (`snapshot`), progression et SSE. |
+| `run/` | Admission et mise en file (`enqueue`), envoi Taskiq (`dispatch`), transitions d'état (`state`), traitement worker (`worker`), classification de pool, instantané de configuration (`snapshot`), progression et SSE. |
 | `uploads/` | Intentions de dépôt, validation MIME et taille, association aux emplacements documentaires. |
 | `audit/` | Requêtes de restitution des runs terminés. |
-| `queue/`, `ops/` | Position de file, rafraîchissement, maintenance (runs bloqués, rejeu outbox). |
+| `queue/`, `ops/` | Position de file, rafraîchissement, maintenance (runs bloqués, renvoi des runs non distribués). |
 
-### 3.5 Runtime et agent IDP
+### 3.5 Traitement des runs
 
-**Runtime** (`runtime/`) : contrat `Result`/`AppError`, métriques et jobs opérateur. Le worker (`app/run/processor.py`) réclame le run puis appelle directement `execute_idp_run`. `RunStatus` (`queued`, `running`, `done`, `failed`) est défini dans `runtime/run/status.py`.
+**Transitions d'état** (`app/run/state.py`) : chaque transition est un `UPDATE` conditionnel - `claim_run` (`queued -> running`), `complete_run` (`running -> done`), `fail_run` (état non terminal `-> failed`). La base garantit la machine à états ; une transition qui ne correspond pas à l'état courant ne modifie rien. `RunStatus` (`queued`, `running`, `done`, `failed`) est défini dans `runtime/run/status.py`.
 
-**Agent IDP** (`agents/idp/`) : seul agent fonctionnel de la plateforme ([ADR 006](./adr/006-three-agent-functional-idp.md)).
+**Worker** (`app/run/worker.py`) :
 
 ```
-run.py          charge le run réclamé, construit l'entrée IDP, injecte les ports
-  └─ compose.py  plan d'extraction → pour chaque document : fetch → extract
-                 puis agrégation → validate → IdpOutcome
-       ├─ adapters/extract.py   → pipeline d'extraction
-       ├─ adapters/validate.py  → moteur de règles
-       └─ adapters/persist.py   → écriture SQL + clôture du run
+process_run     réclame le run (UPDATE conditionnel), efface les résultats d'un essai précédent
+  └─ _execute    pour chaque document : lecture de l'objet -> extract_document -> champs persistés
+                 puis règles (validate_field_rows) -> résultats -> complete_run
 ```
 
-Les contrats (`contracts.py`) isolent l'agent de l'ORM : `DocumentSpec`, `RuleSpec`, `StoredDocument`, `DocumentExtraction`, `ValidationOutput`, `IdpOutcome`. Une erreur sur un document est traitée en échec *souple* sans interrompre les autres.
+Une erreur d'extraction sur un document est journalisée et ce document est ignoré ; toute autre erreur fait échouer le run. Les services lèvent `AppError` (`runtime/contracts/result.py`), traduit en réponse HTTP par un gestionnaire d'exceptions unique ([ADR 008](./adr/008-flat-run-pipeline.md)).
 
 ### 3.6 Pipeline d'extraction (`backend/src/repody/extraction/`)
 
@@ -293,7 +290,7 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 
 ### 3.10 Persistance et stockage
 
-**PostgreSQL** - entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `run_dispatch_outbox`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
+**PostgreSQL** - entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
 
 **Stockage objet** (`infra/storage/`) - deux implémentations du contrat `ObjectStore` :
 
@@ -312,7 +309,7 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 |---|---|---|
 | **edge** | `repody-web` | Interface Next.js et proxy applicatif. |
 | **control** | `repody-api` | API FastAPI, autorisation, SSE, dispatch. |
-| **workers** | `repody-worker-extract`, `repody-worker-fast` | Agent IDP, pools séparés. |
+| **workers** | `repody-worker-extract`, `repody-worker-fast` | Traitement des runs, pools séparés. |
 | **data** | Postgres, Redis, stockage objet | Profil embarqué ou services managés du client. |
 
 Deux images seulement sont livrées : `repody-backend` (API + workers, rôle défini par la commande) et `repody-web`.
@@ -375,8 +372,8 @@ Les workers initialisent la même pile d'observabilité que l'API.
 
 | Risque | Parade |
 |---|---|
-| Perte du message après commit | **Outbox** `run_dispatch_outbox` : publication après commit, rejeu des entrées non distribuées. |
-| Double traitement d'un run | Réclamation atomique (verrou consultatif + transition conditionnelle `queued -> running`). |
+| Perte du message après commit | Publication après commit ; `runs.dispatched_at` reste NULL si l'envoi échoue et la maintenance renvoie le run. Après envoi, Taskiq (Redis Streams) acquitte et redistribue. |
+| Double traitement d'un run | Réclamation atomique (transition conditionnelle `queued -> running`). |
 | Run bloqué | Détection des runs périmés et passage en échec contrôlé. |
 | Saturation | Plafonds d'admission et limitation de débit à l'entrée. |
 | Traitement trop long | Délai maximal par tâche, aligné avec les délais des modèles. |
@@ -415,7 +412,7 @@ Source : [`diagrams/sequence-upload-et-run.mmd`](./diagrams/sequence-upload-et-r
 Points saillants :
 
 1. **Dépôt présigné** - `presign` -> `PUT` direct vers le stockage -> `confirm` avec vérification `HeadObject` et du type MIME réel.
-2. **Mise en file** - résolution de la source (JWT de test ou clé API), limitation de débit, admission, classification de pool, insertion du run et de l'entrée outbox, réponse `202`, puis publication Taskiq.
+2. **Mise en file** - résolution de la source (JWT de test ou clé API), limitation de débit, admission, classification de pool, insertion du run, commit, publication Taskiq et horodatage `dispatched_at`, réponse `202`.
 3. **Extraction** - réclamation atomique, récupération de l'objet, rendu des pages, appel du modèle documentaire, persistance des champs.
 4. **Validation** - règles logic ; écriture des résultats et clôture du run.
 5. **Suivi** - publication des événements de progression consommés par le flux SSE.
@@ -472,7 +469,7 @@ Même chaîne applicative que la production, avec les services de données en co
 
 Source : [`diagrams/architecture-backend-couches.mmd`](./diagrams/architecture-backend-couches.mmd)
 
-Présentation -> application -> domaine -> extraction et catalogue -> infrastructure, avec le chemin critique `processor -> agent IDP -> persistance`.
+Présentation -> application -> domaine -> extraction et catalogue -> infrastructure, avec le chemin critique `worker -> extraction -> règles -> persistance`.
 
 ### 6.6 Processus BPMN
 
@@ -512,11 +509,10 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 | `schema_fields` | Nom, description, type de template, configuration, position | N -> 1 document |
 | `workflow_rules` | Nom, nature, portée, corps, sévérité, conditions | N -> 1 workflow |
 | `rule_templates` | Bibliothèque de règles réutilisables | - |
-| `runs` | Source, statut, statut global, erreur, résumés, progression, instantané, pool | N -> 1 workflow ; 1 -> N documents et résultats |
+| `runs` | Source, statut, statut global, erreur, résumés, progression, instantané, pool, date d'envoi (`dispatched_at`) | N -> 1 workflow ; 1 -> N documents et résultats |
 | `run_documents` | Clé de stockage, type MIME, nom de fichier, métadonnées d'extraction | N -> 1 run ; 1 -> N champs extraits |
 | `extracted_fields` | Clé, valeur, type, confiance, indicateurs, boîte englobante | N -> 1 document de run |
 | `rule_results` | Statut, sévérité, expression, champs concernés, valeurs attendue et constatée | N -> 1 run |
-| `run_dispatch_outbox` | Pool, étape, tentatives, statut, erreur | N -> 1 run (suppression en cascade) |
 | `upload_intents` | Clé de stockage unique, fichier, taille, propriétaire, date de confirmation | - |
 
 ### 7.3 Matrice d'habilitations

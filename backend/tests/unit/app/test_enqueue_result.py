@@ -1,9 +1,9 @@
-"""Enqueue + auth Result boundary (unit - no HTTP)."""
+"""Enqueue client keys and AppError (unit - no HTTP)."""
 
 from __future__ import annotations
 
 from repody.app.run.enqueue import client_key_from_request
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 
 
 def test_client_key_from_api_bearer_hashes_token() -> None:
@@ -21,13 +21,12 @@ def test_client_key_from_test_source_uses_host() -> None:
     assert client_key_from_request("test", None, "9.9.9.9") == "9.9.9.9"
 
 
-def test_result_fail_preserves_capacity_retry() -> None:
+def test_app_error_preserves_capacity_retry() -> None:
     err = AppError(
         code=ErrorCode.CAPACITY,
         message="queue full",
         retry_after_seconds=60,
     )
-    result: Result[str] = Result.fail(err)
-    assert not result.is_ok
-    assert result.error is not None
-    assert result.error.retry_after_seconds == 60
+    assert isinstance(err, Exception)
+    assert err.retry_after_seconds == 60
+    assert str(err) == "queue full"

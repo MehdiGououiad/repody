@@ -9,7 +9,7 @@ from limits.aio.strategies import MovingWindowRateLimiter
 from repody.infra import rate_limit as rate_limit_module
 from repody.infra.rate_limit import check_run_rate_limits
 from repody.rules.logic_evaluator import evaluate_logic_rule
-from repody.runtime.contracts.result import ErrorCode
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.settings import Settings, clear_settings_cache
 
 
@@ -32,11 +32,9 @@ async def test_rate_limit_exceeded(monkeypatch):
     rate_limit_module._storage = MemoryStorage()
     rate_limit_module._limiter = MovingWindowRateLimiter(rate_limit_module._storage)
 
-    first = await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
-    assert first.is_ok
-    second = await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
-    assert not second.is_ok
-    assert second.error is not None
-    assert second.error.code is ErrorCode.RATE_LIMIT
+    await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
+    with pytest.raises(AppError) as caught:
+        await check_run_rate_limits(workflow_id="wf-1", source="test", client_key=None)
+    assert caught.value.code is ErrorCode.RATE_LIMIT
 
     _ = Settings()

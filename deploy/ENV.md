@@ -70,11 +70,8 @@ workerExtract:
 | `AUDIT_DB_POOL_SIZE` | `20` | SQLAlchemy pool size per process |
 | `AUDIT_DB_MAX_OVERFLOW` | `20` | Extra DB connections beyond pool size |
 | `AUDIT_REDIS_MAX_CONNECTIONS` | `64` | Shared Redis pool (cache + SSE) |
-| `AUDIT_DISPATCH_REPLAY_BATCH_SIZE` | `100` | Outbox rows claimed per maintenance drain |
-| `AUDIT_DISPATCH_KIQ_CONCURRENCY` | `16` | Parallel Taskiq kiq after claim batch |
 | `AUDIT_QUEUE_REFRESH_SSE_LIMIT` | `32` | Max SSE publishes on maintenance queue refresh (`0` = DB-only) |
 | `AUDIT_QUEUE_REFRESH_DB_LIMIT` | `128` | Max queued rows loaded/updated per maintenance tick |
-| `AUDIT_OUTBOX_RETAIN_DISPATCHED_DAYS` | `7` | Purge dispatched outbox rows older than this |
 | `AUDIT_DIRECT_UPLOAD_ENABLED` | `true` | Presigned object-storage uploads |
 | `AUDIT_STORAGE_BACKEND` | `s3` | Object storage |
 | `AUDIT_LOG_JSON` | `true` | Structured logs |

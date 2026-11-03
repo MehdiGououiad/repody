@@ -1,30 +1,10 @@
 from repody.app.workflow.validation import (
-    resolve_document_field_tokens,
     validate_rules_preview,
     validate_workflow_rule,
 )
 from repody.schemas.workflow import (
-    DocumentDefSchema,
-    SchemaFieldSchema,
     WorkflowRuleSchema,
 )
-
-
-def test_resolve_document_field_tokens_multi_document():
-    documents = [
-        DocumentDefSchema(
-            id="d1",
-            document_type="Invoice",
-            schema_fields=[SchemaFieldSchema(id="f1", name="Total", description="")],
-        ),
-        DocumentDefSchema(
-            id="d2",
-            document_type="Contract",
-            schema_fields=[SchemaFieldSchema(id="f2", name="Amount", description="")],
-        ),
-    ]
-    tokens = resolve_document_field_tokens(documents, ["d1"])
-    assert tokens == ["invoice.total"]
 
 
 def test_llm_rules_are_rejected():

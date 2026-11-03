@@ -9,18 +9,17 @@ Backend layout, tests, and script ownership. Laptop start: [LOCAL.md](./LOCAL.md
 | Area | Role |
 |------|------|
 | `api/` | Thin HTTP routers |
-| `app/` | Use cases (run, workflow, operator, uploads, …) |
-| `agents/idp/` | IDP extract + validate ([ADR 006](./adr/006-three-agent-functional-idp.md)) |
-| `runtime/` | Result contract, run status, metrics, operator jobs |
-| `catalog/` | Document-model registry + probes |
-| `extraction/` | Pipeline + model adapters |
+| `app/` | Use cases (run, workflow, uploads, …) |
+| `runtime/` | AppError, run status, metrics |
+| `catalog/` | Document model + llama-server status |
+| `extraction/` | Pipeline + NuExtract adapter |
 | `inference/` | OpenAI-compat clients |
-| `rules/` | Logic + LLM evaluators |
+| `rules/` | Logic rule evaluator |
 | `taskiq/` | Worker broker + tasks |
 | `infra/` | DB, auth, storage, observability |
 | `schemas/`, `settings/` | DTOs · `AUDIT_*` settings |
 
-Hot path: `process_run` -> `execute_idp_run` -> `compose_idp` -> `persist_idp_outcome`.
+Hot path: `app/run/worker.py` `process_run` -> `extract_document` -> `validate_field_rows` -> `complete_run` ([ADR 008](./adr/008-flat-run-pipeline.md)).
 
 Python ops scripts: [backend/scripts/README.md](../backend/scripts/README.md).
 

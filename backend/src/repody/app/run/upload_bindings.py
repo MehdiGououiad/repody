@@ -1,4 +1,4 @@
-"""Upload binding helpers for Run enqueue - Result at the service boundary."""
+"""Upload binding helpers for run enqueue (multipart files -> stored FileBindings)."""
 
 from __future__ import annotations
 
@@ -17,24 +17,24 @@ from repody.app.uploads.validation import (
 )
 from repody.app.workflow.repository import load_workflow
 from repody.infra.storage.factory import get_storage
-from repody.runtime.contracts.result import AppError, ErrorCode, Result
+from repody.runtime.contracts.result import AppError, ErrorCode
 from repody.runtime.run.contracts import FileBinding
 from repody.settings import get_settings
 
 
-def _validation_error(message: str) -> AppError:
-    return AppError(code=ErrorCode.VALIDATION, message=message)
+def _invalid(message: str) -> AppError:
+    return AppError(ErrorCode.VALIDATION, message)
 
 
 async def bindings_from_uploads(
     files: Sequence[IncomingFile],
     document_ids: list[str] | None,
-) -> Result[list[FileBinding]]:
+) -> list[FileBinding]:
     settings = get_settings()
     try:
         validate_upload_batch(file_count=len(files), settings=settings)
     except UploadValidationError as exc:
-        return Result.fail(_validation_error(str(exc)))
+        raise _invalid(str(exc)) from exc
 
     storage = get_storage()
     bindings: list[FileBinding] = []
@@ -47,7 +47,7 @@ async def bindings_from_uploads(
                 settings=settings,
             )
         except UploadValidationError as exc:
-            return Result.fail(_validation_error(str(exc)))
+            raise _invalid(str(exc)) from exc
 
         _upload_id, key = new_storage_key(safe_name)
         await storage.put_bytes(key, upload.data, verified_mime)
@@ -60,30 +60,25 @@ async def bindings_from_uploads(
                 file_name=safe_name,
             )
         )
-    return Result.ok(bindings)
+    return bindings
 
 
-def parse_json_form(value: str | None, field_name: str) -> Result[list | dict | None]:
+def parse_json_form(value: str | None, field_name: str) -> list | dict | None:
     if not value:
-        return Result.ok(None)
+        return None
     try:
-        return Result.ok(json.loads(value))
-    except json.JSONDecodeError:
-        return Result.fail(_validation_error(f"Invalid JSON in {field_name}."))
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise _invalid(f"Invalid JSON in {field_name}.") from exc
 
 
-def parse_slot_list_form(value: str | None, field_name: str) -> Result[list[str] | None]:
-    parsed_r = parse_json_form(value, field_name)
-    if not parsed_r.is_ok:
-        return Result.fail(parsed_r.error or _validation_error(f"Invalid JSON in {field_name}."))
-    parsed = parsed_r.unwrap()
+def parse_slot_list_form(value: str | None, field_name: str) -> list[str] | None:
+    parsed = parse_json_form(value, field_name)
     if parsed is None:
-        return Result.ok(None)
+        return None
     if not isinstance(parsed, list) or not all(isinstance(item, str) for item in parsed):
-        return Result.fail(
-            _validation_error(f"Invalid JSON in {field_name} — expected an array of strings.")
-        )
-    return Result.ok(parsed)
+        raise _invalid(f"Invalid JSON in {field_name} — expected an array of strings.")
+    return parsed
 
 
 async def bindings_from_multipart(
@@ -93,37 +88,25 @@ async def bindings_from_multipart(
     *,
     document_ids: str | None,
     document_types: str | None,
-) -> Result[list[FileBinding]]:
-    ids_r = parse_slot_list_form(document_ids, "document_ids")
-    if not ids_r.is_ok:
-        return Result.fail(ids_r.error or _validation_error("Invalid document_ids"))
-    types_r = parse_slot_list_form(document_types, "document_types")
-    if not types_r.is_ok:
-        return Result.fail(types_r.error or _validation_error("Invalid document_types"))
-
-    parsed_ids = ids_r.unwrap()
-    parsed_types = types_r.unwrap()
+) -> list[FileBinding]:
+    parsed_ids = parse_slot_list_form(document_ids, "document_ids")
+    parsed_types = parse_slot_list_form(document_types, "document_types")
     if parsed_ids is not None and parsed_types is not None:
-        return Result.fail(_validation_error("Use document_ids or document_types, not both."))
+        raise _invalid("Use document_ids or document_types, not both.")
     slot_keys = parsed_types if parsed_types is not None else parsed_ids
 
     resolved_ids: list[str] | None = None
     if slot_keys is not None:
         wf = await load_workflow(session, workflow_id)
         if not wf:
-            return Result.fail(AppError(code=ErrorCode.NOT_FOUND, message="Workflow not found"))
+            raise AppError(ErrorCode.NOT_FOUND, "Workflow not found")
         try:
-            resolved_ids = resolve_document_slot_keys(
-                cast(Sequence[Any], wf.documents),
-                slot_keys,
-            )
+            resolved_ids = resolve_document_slot_keys(cast(Sequence[Any], wf.documents), slot_keys)
         except ValueError as exc:
-            return Result.fail(_validation_error(str(exc)))
+            raise _invalid(str(exc)) from exc
         if len(resolved_ids) != len(files):
-            return Result.fail(
-                _validation_error(
-                    "document_ids/document_types length must match the number of uploaded files."
-                )
+            raise _invalid(
+                "document_ids/document_types length must match the number of uploaded files."
             )
 
     return await bindings_from_uploads(files, resolved_ids)
