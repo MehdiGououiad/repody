@@ -23,7 +23,6 @@ class PlatformConfigResponse(CamelModel):
     direct_upload_enabled: bool
     cache_enabled: bool
     rate_limit_enabled: bool
-    structured_llm: bool
     default_document_model_id: str
     default_read_path: str
     document_models: list[DocumentModelSummary]
@@ -37,36 +36,7 @@ class PlatformConfigResponse(CamelModel):
     maintenance_interval_seconds: int
     worker_pools: dict[str, str] = Field(default_factory=dict)
     taskiq_configured: bool = False
-    llm_validation_enabled: bool = False
-    gpu_live_probe: bool = False
     healthz_probe_inference: bool = False
-
-
-class DocumentModelDiagnosticSettingsSchema(CamelModel):
-    extractor: str = ""
-    inference_mode: str = ""
-    runtime: str = ""
-    document_model_pdf_dpi: int = 0
-    document_model_max_edge_px: int | None = None
-    llm_validation_enabled: bool = False
-
-
-class DocumentModelDiagnosticResponse(CamelModel):
-    ok: bool
-    model: str
-    runtime: str = ""
-    inference_reachable: bool = False
-    model_in_registry: bool = False
-    model_loaded: bool = False
-    extractor: str = ""
-    inference_mode: str = ""
-    infer_ms: int | None = None
-    sample_extracted: bool = False
-    detail: str = ""
-    hint: str = ""
-    settings: DocumentModelDiagnosticSettingsSchema = Field(
-        default_factory=DocumentModelDiagnosticSettingsSchema
-    )
 
 
 class SuggestTemplateTypeResponse(CamelModel):

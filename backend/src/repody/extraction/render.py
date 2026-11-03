@@ -1,27 +1,14 @@
-"""Page/image/PDF preparation for document-model adapters.
-
-NuExtract: PDF -> PNG @ 170 DPI (official). Images pass through as native bytes.
-GLM-OCR: layout SDK loads PDFs itself at pdf_dpi=200.
-"""
+"""Page preparation for NuExtract: PDF -> PNG @ 170 DPI (official); images pass through."""
 
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
-from repody.extraction.branding import (
-    GLM_OCR_CATALOG_ID,
-    REPODY_VLM_CATALOG_ID,
-    REPODY_VLM_CLOUD_CATALOG_ID,
-)
 from repody.extraction.nuextract import NUEXTRACT_PDF_DPI
 from repody.extraction.types import DocumentBundle
 
 PageBytes = tuple[bytes, str]  # (bytes, mime_type)
-
-# Official glmocr/config.yaml page_loader.pdf_dpi
-GLM_OCR_PDF_DPI = 200
 
 
 def pages_to_process(doc_page_count: int, max_pages: int | None) -> int:
@@ -58,51 +45,6 @@ def render_nuextract_pdf_pages(
         return pages, total
     finally:
         doc.close()
-
-
-@dataclass(frozen=True)
-class ModelRenderPolicy:
-    """How the platform prepares bytes before calling a model adapter."""
-
-    model_id: str
-    doc_ref: str
-    image_input: Literal["native_bytes", "pil_rgb"]
-    pdf_dpi: int
-    pdf_format: Literal["png"]
-
-
-REPODY_VLM_RENDER = ModelRenderPolicy(
-    model_id=REPODY_VLM_CATALOG_ID,
-    doc_ref="numind/NuExtract3 (dpi=170 PNG)",
-    image_input="native_bytes",
-    pdf_dpi=NUEXTRACT_PDF_DPI,
-    pdf_format="png",
-)
-
-REPODY_VLM_CLOUD_RENDER = ModelRenderPolicy(
-    model_id=REPODY_VLM_CLOUD_CATALOG_ID,
-    doc_ref="nuextract.ai structured-extraction (upload original PDF/image)",
-    image_input="native_bytes",
-    pdf_dpi=NUEXTRACT_PDF_DPI,
-    pdf_format="png",
-)
-
-GLM_OCR_RENDER = ModelRenderPolicy(
-    model_id=GLM_OCR_CATALOG_ID,
-    doc_ref=(
-        "GLM-OCR official SDK (PP-DocLayoutV3 + region OCR; pdf_dpi=200; "
-        "Text/Table/Formula Recognition)"
-    ),
-    image_input="pil_rgb",
-    pdf_dpi=GLM_OCR_PDF_DPI,
-    pdf_format="png",
-)
-
-RENDER_POLICIES: dict[str, ModelRenderPolicy] = {
-    REPODY_VLM_RENDER.model_id: REPODY_VLM_RENDER,
-    REPODY_VLM_CLOUD_RENDER.model_id: REPODY_VLM_CLOUD_RENDER,
-    GLM_OCR_RENDER.model_id: GLM_OCR_RENDER,
-}
 
 
 def _is_pdf(mime_type: str, raw_bytes: bytes) -> bool:

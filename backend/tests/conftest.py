@@ -164,16 +164,11 @@ def respx_visible_openai_transport(request, monkeypatch):
 async def reset_inference_clients():
     """Drop cached OpenAI/httpx clients between tests (session loop reuse)."""
     yield
-    from repody.inference.availability import clear_availability_cache
-    from repody.inference.factory import get_chat, get_ensure_available
     from repody.inference.openai_compat import close_openai_clients
     from repody.infra.http import close_http_clients
 
     await close_openai_clients()
     await close_http_clients()
-    get_chat.cache_clear()
-    get_ensure_available.cache_clear()
-    clear_availability_cache()
 
 
 @pytest.fixture

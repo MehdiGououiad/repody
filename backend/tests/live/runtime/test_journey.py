@@ -16,7 +16,6 @@ from tests.support.live_stack import (
     create_anonymous_live_client,
     create_live_client,
     live_api_base,
-    live_oidc_enabled,
 )
 
 from repody.infra.db.seed import SEED_WORKFLOW_ID
@@ -40,9 +39,8 @@ def test_healthz(client: httpx.Client):
 
 
 def test_metrics_and_rules_library(client: httpx.Client):
-    oidc = live_oidc_enabled(client)
     metrics = client.get("/v1/metrics")
-    assert_metrics_access(metrics, oidc_enabled=oidc)
+    assert_metrics_access(metrics)
 
     rules = client.get("/v1/rules/library")
     assert rules.status_code == 200

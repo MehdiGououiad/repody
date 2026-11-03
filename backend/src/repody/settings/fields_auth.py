@@ -31,47 +31,6 @@ class AuthSettingsFields:
         description="Inline JWKS JSON for tests (skips live JWKS fetch).",
     )
 
-    keycloak_admin_url: str | None = Field(
-        default=None,
-        description="Keycloak base URL for Admin REST API (e.g. http://keycloak:8080).",
-    )
-    keycloak_admin_user: str = Field(
-        default="admin",
-        description="Keycloak admin username for Admin REST API.",
-    )
-    keycloak_admin_password: str = Field(
-        default="admin",
-        description="Keycloak admin password for Admin REST API.",
-    )
-    keycloak_realm: str = Field(
-        default="repody",
-        description="Keycloak realm name.",
-    )
-    keycloak_admin_console_url: str | None = Field(
-        default=None,
-        description="Browser URL for the Keycloak admin console.",
-    )
-    keycloak_oauth_client_id: str | None = Field(
-        default=None,
-        description="OAuth client id for operator benchmark password-grant tokens.",
-    )
-    keycloak_oauth_client_secret: str | None = Field(
-        default=None,
-        description="OAuth client secret for operator benchmark password-grant tokens.",
-    )
-    operator_benchmark_bearer_token: str | None = Field(
-        default=None,
-        description="Pre-issued bearer token for benchmark_suite.py (skips Keycloak grant).",
-    )
-    operator_benchmark_user: str | None = Field(
-        default=None,
-        description="Keycloak user for operator benchmark jobs when OIDC is enabled.",
-    )
-    operator_benchmark_password: str | None = Field(
-        default=None,
-        description="Keycloak password for operator benchmark jobs when OIDC is enabled.",
-    )
-
     def accepted_oidc_issuer_aliases(self) -> list[str]:
         return self._parse_oidc_issuer_aliases(self.oidc_issuer_aliases)
 

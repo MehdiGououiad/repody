@@ -1,123 +1,40 @@
-"""Tests for document model catalog service."""
+"""The document model catalog: one NuExtract model plus live llama-server status."""
 
 from __future__ import annotations
 
 import pytest
 
-from repody.catalog import probes as catalog_probes
-from repody.catalog.probes import (
-    availability_for_spec,
-    list_catalog_with_availability,
-)
-from repody.catalog.registry import parse_document_model
+from repody.catalog import api as catalog_api
+from repody.catalog.registry import normalize_model_id, parse_document_model
+from repody.catalog.status import ModelStatus
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 
 
-@pytest.mark.asyncio
-async def test_list_catalog_marks_model_available_when_installed(monkeypatch):
-    async def fake_installed(*args, **kwargs):
-        settings = kwargs.get("settings") or args[0] if args else None
-        from repody.settings import get_settings
-
-        settings = settings or get_settings()
-        model = settings.llamacpp_served_model.lower()
-        return {"llamacpp": {model}}
-
-    monkeypatch.setattr(
-        catalog_probes,
-        "installed_runtime_models",
-        fake_installed,
-    )
-
-    entries, default = await list_catalog_with_availability()
-    repody_vlm_entry = next(e for e in entries if e.spec.id == REPODY_VLM_CATALOG_ID)
-    assert repody_vlm_entry.available is True
-    assert default == REPODY_VLM_CATALOG_ID
+def test_every_stored_model_id_resolves_to_nuextract():
+    for stored in (None, "", REPODY_VLM_CATALOG_ID, "paddleocr:qwen", "glm:qwen"):
+        assert normalize_model_id(stored) == REPODY_VLM_CATALOG_ID
+    assert parse_document_model("repody:vlm:cloud").id == REPODY_VLM_CATALOG_ID
 
 
 @pytest.mark.asyncio
-async def test_list_catalog_skips_remote_probe(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    monkeypatch.setenv(
-        "AUDIT_LLAMACPP_BASE_URL",
-        "https://gpu.example.com/v1",
-    )
-    monkeypatch.setenv("AUDIT_GPU_LIVE_PROBE", "false")
-    from repody.settings import get_settings
+@pytest.mark.parametrize(
+    ("status", "available", "note_fragment"),
+    [
+        (ModelStatus(reachable=True, loaded=True), True, None),
+        (ModelStatus(reachable=True, loaded=False), False, "does not serve"),
+        (ModelStatus(reachable=False, loaded=False), False, "not reachable"),
+    ],
+)
+async def test_catalog_reports_model_status(monkeypatch, status, available, note_fragment):
+    async def fake_status(_settings=None):
+        return status
 
-    get_settings.cache_clear()
-
-    async def fail_if_called(*args, **kwargs):
-        raise AssertionError(
-            "installed_runtime_models should not call remote inference when probe disabled"
-        )
-
-    from repody.catalog import probes as catalog_probes
-
-    monkeypatch.setattr(
-        catalog_probes,
-        "list_openai_models",
-        fail_if_called,
-    )
-
-    entries, default = await list_catalog_with_availability()
-    repody_vlm_entry = next(e for e in entries if e.spec.id == REPODY_VLM_CATALOG_ID)
-    assert repody_vlm_entry.available is True
-    assert repody_vlm_entry.availability_note is not None
-    assert default == REPODY_VLM_CATALOG_ID
-    get_settings.cache_clear()
-
-
-def test_availability_note_for_missing_llamacpp_model(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    from repody.settings import get_settings
-
-    get_settings.cache_clear()
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    available, note = availability_for_spec(spec, installed_by_runtime={"llamacpp": set()})
-    assert available is False
-    assert note is not None
-    get_settings.cache_clear()
-
-
-def test_nuextract_cloud_available_when_api_key_set(monkeypatch):
-    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_API_KEY", "token_test")
-    get_settings.cache_clear()
-    try:
-        spec = parse_document_model(REPODY_VLM_CLOUD_CATALOG_ID)
-        available, note = availability_for_spec(
-            spec,
-            installed_by_runtime={},
-            live_probe=True,
-        )
-        assert available is True
-        assert note is not None
-        assert "Cloud" in note
-    finally:
-        get_settings.cache_clear()
-
-
-def test_nuextract_cloud_unavailable_without_api_key(monkeypatch):
-    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_API_KEY", "")
-    get_settings.cache_clear()
-    try:
-        spec = parse_document_model(REPODY_VLM_CLOUD_CATALOG_ID)
-        available, note = availability_for_spec(
-            spec,
-            installed_by_runtime={},
-            live_probe=True,
-            settings=get_settings(),
-        )
-        assert available is False
-        assert note is not None
-        assert "API_KEY" in note
-    finally:
-        get_settings.cache_clear()
+    monkeypatch.setattr(catalog_api, "model_status", fake_status)
+    catalog = await catalog_api.fetch_models_catalog()
+    (entry,) = catalog.models
+    assert entry.id == REPODY_VLM_CATALOG_ID
+    assert entry.available is available
+    if note_fragment is None:
+        assert entry.availability_note is None
+    else:
+        assert note_fragment in (entry.availability_note or "")

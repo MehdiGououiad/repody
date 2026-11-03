@@ -91,12 +91,10 @@ def create_live_async_client(**kwargs) -> httpx.AsyncClient:
     )
 
 
-def assert_metrics_access(response: httpx.Response, *, oidc_enabled: bool) -> None:
-    if oidc_enabled:
-        assert response.status_code == 403
-    else:
-        assert response.status_code == 200
-        assert "kpis" in response.json()
+def assert_metrics_access(response: httpx.Response) -> None:
+    """The default live user (operator) holds metrics:read in infra/auth/permissions.py."""
+    assert response.status_code == 200, response.text
+    assert "kpis" in response.json()
 
 
 def assert_settings_config_access(response: httpx.Response, *, oidc_enabled: bool) -> None:

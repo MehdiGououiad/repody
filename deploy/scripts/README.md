@@ -9,4 +9,4 @@ See [docs/DEVELOPMENT.md](../../docs/DEVELOPMENT.md#scripts-map) for how this fo
 | Daily Compose stack | `platform-dev.mjs` (`pnpm platform`) |
 | Source contribute lane | `local-dev.mjs` (`pnpm dev:src:all`) |
 | Images / supply chain | `../../docker-bake.hcl` (Buildx Bake), `release-supply-chain.mjs` |
-| Host llama-server models (NuExtract, Qwen3.5, GLM-OCR) | `llama-serve.mjs <model>` (`pnpm llamacpp:serve`, `pnpm qwen35:serve`, `pnpm glmocr:serve`) |
+| Host NuExtract llama-server | `llama-serve.mjs` (`pnpm llamacpp:serve`) |

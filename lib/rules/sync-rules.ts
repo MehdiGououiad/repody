@@ -4,7 +4,6 @@ import type { ConditionJunction, WorkflowRule } from "@/lib/types";
 /** Ensure logic rules have a compiled `body` from visual conditions before save/run. */
 export function syncRuleBodies(rules: WorkflowRule[]): WorkflowRule[] {
   return rules.map((rule) => {
-    if (rule.kind === "llm") return rule;
     const conditions = rule.conditions ?? [];
     if (!conditions.length) return rule;
     const body = conditionsToExpression(

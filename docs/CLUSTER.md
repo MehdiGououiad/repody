@@ -146,7 +146,7 @@ The web Deployment sets `INTERNAL_API_URL` / `BACKEND_URL` to `http://<release>-
 
 OIDC: set public `config.oidcIssuer` for browser JWTs; set `config.oidcJwksUrl` (and optionally `config.oidcInternalIssuer`) to in-cluster Keycloak Service DNS. Helm derives `AUTH_KEYCLOAK_INTERNAL_ISSUER` from `oidcJwksUrl` when `oidcInternalIssuer` is empty.
 
-Inference URLs (`llamacppBaseUrl`, `paddleocrV6BaseUrl`, `qwen35BaseUrl`) must be cluster-reachable - never `host.docker.internal`.
+The inference URL (`llamacppBaseUrl`) must be cluster-reachable - never `host.docker.internal`.
 
 ### Edge (portable Ingress)
 
@@ -206,7 +206,7 @@ helm upgrade --install repody deploy/helm/repody -n repody --create-namespace \
   --wait --timeout 25m
 ```
 
-From a worker pod, confirm VLM reachability ([EXTRACTION.md](./EXTRACTION.md#nuextract-repodyvlm)).
+From a worker pod, confirm VLM reachability ([EXTRACTION.md](./EXTRACTION.md#endpoint-check)).
 
 ### Bundled profile (in-cluster data plane)
 
@@ -267,7 +267,6 @@ secret/repody/production/
   AUDIT_MINIO_SECRET_KEY
   BUGSINK_DSN
   AUDIT_LLAMACPP_API_KEY
-  AUDIT_OPERATOR_BENCHMARK_PASSWORD  # optional; never ConfigMap / Helm config.*
   REGISTRY_DOCKERCONFIGJSON
 
 secret/repody/production/data/   # bundled data-plane only

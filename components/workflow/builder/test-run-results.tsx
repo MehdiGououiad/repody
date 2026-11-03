@@ -3,7 +3,6 @@
 import {
   AlertCircle,
   ArrowRight,
-  Brain,
   CheckCircle2,
   Code,
   ExternalLink,
@@ -118,7 +117,7 @@ export function TestRunResults({
               </div>
               <div className="divide-y divide-border">
                 {result.ruleResults.map((rule) => {
-                  const KindIcon = rule.kind === "llm" ? Brain : Code;
+                  const KindIcon = Code;
                   const failedRule = isRuleFailure(rule.status);
 
                   return (

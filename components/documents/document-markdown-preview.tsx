@@ -3,10 +3,7 @@
 import { type ReactNode, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import {
-  normalizeDocumentMarkdown,
-  splitDocumentMarkdownPages,
-} from "@/lib/document-markdown/normalize";
+import { splitDocumentMarkdownPages } from "@/lib/document-markdown/normalize";
 import { cn } from "@/lib/utils";
 
 const MARKDOWN_COMPONENTS = {
@@ -142,36 +139,5 @@ export function DocumentMarkdownPreview({
         </section>
       ))}
     </article>
-  );
-}
-
-export function DocumentTextPreviewPanel({
-  text,
-  label,
-  className,
-}: {
-  text: string;
-  label: string;
-  className?: string;
-}) {
-  const normalized = useMemo(() => normalizeDocumentMarkdown(text), [text]);
-
-  return (
-    <details
-      className={cn("group rounded-xl border border-border/70 bg-card overflow-hidden", className)}
-      open
-    >
-      <summary className="cursor-pointer list-none px-4 py-2.5 text-xs font-medium text-on-surface-variant bg-surface-container-low/60 hover:bg-surface-container-low transition-colors [&::-webkit-details-marker]:hidden">
-        <span className="inline-flex items-center gap-2">
-          <span className="text-on-surface-variant/60 group-open:rotate-90 transition-transform">
-            ▸
-          </span>
-          {label}
-        </span>
-      </summary>
-      <div className="border-t border-border p-4 max-h-[min(70vh,560px)] overflow-y-auto">
-        <DocumentMarkdownPreview text={normalized} compact />
-      </div>
-    </details>
   );
 }

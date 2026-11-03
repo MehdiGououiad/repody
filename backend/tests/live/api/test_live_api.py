@@ -25,7 +25,6 @@ from tests.support.live_stack import (
     create_live_client,
     live_api_base,
     live_inference_ready,
-    live_oidc_enabled,
 )
 
 DOCUMENT_MODEL_CASE = FACTURE_UI_PATHS[0]
@@ -57,7 +56,7 @@ def test_live_health_taskiq(client: httpx.Client):
 
 def test_live_workflows_and_metrics(client: httpx.Client):
     assert client.get("/v1/workflows").status_code == 200
-    assert_metrics_access(client.get("/v1/metrics"), oidc_enabled=live_oidc_enabled(client))
+    assert_metrics_access(client.get("/v1/metrics"))
     assert client.get("/v1/rules/library").status_code == 200
 
 

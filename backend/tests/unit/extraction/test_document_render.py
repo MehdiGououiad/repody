@@ -4,17 +4,13 @@ import io
 
 from PIL import Image
 
-from repody.extraction.render import (
-    REPODY_VLM_RENDER,
-    prepare_nuextract_pages,
-)
+from repody.extraction.nuextract import NUEXTRACT_PDF_DPI
+from repody.extraction.render import prepare_nuextract_pages
 from repody.extraction.types import DocumentBundle
 
 
-def test_render_policies_follow_upstream_docs():
-    assert REPODY_VLM_RENDER.pdf_dpi == 170
-    assert REPODY_VLM_RENDER.image_input == "native_bytes"
-    assert not hasattr(REPODY_VLM_RENDER, "max_edge_px")
+def test_pdf_dpi_follows_upstream_docs():
+    assert NUEXTRACT_PDF_DPI == 170
 
 
 def test_nuextract_native_png_unchanged():

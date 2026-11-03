@@ -22,9 +22,8 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | Catalog adapter (`repody:vlm`, `repody:vlm:cloud`, `paddleocr:qwen`, `glm:qwen` - [docs/EXTRACTION.md](./docs/EXTRACTION.md)). Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is an **internal stage**, not a UI catalog option |
+| **Document model** | `repody:vlm` — NuExtract3 on an OpenAI-compatible llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
-| **LLM rule** | Natural-language rule via a separate text model |
 | **Worker pool `extract`** | Taskiq worker for document-model extraction |
 | **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
 | **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Default catalog id (`repody:vlm`) |
@@ -63,7 +62,7 @@ backend/src/repody/
 ├── app/                 Application use cases (run, workflow, operator, …)
 ├── agents/idp/          contracts · compose · run · adapters/
 ├── runtime/             Result contract · run status · metrics · operator jobs
-├── extraction/          pipeline · nuextract · paddleocr · glm · render
+├── extraction/          pipeline · vlm · nuextract · render
 ├── inference/           OpenAI-compat clients
 ├── rules/               Logic + LLM evaluators
 ├── catalog/             Document-model registry + probes
@@ -95,17 +94,15 @@ Domain events (`RunStarted`, `RunCompleted`, `RunFailed`) drive queue refresh an
 | Module | Selects | Example ids |
 |--------|---------|-------------|
 | `extraction/pipeline.py` | Extractor callable | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `catalog/registry.py` | Document model catalog | `repody:vlm`, `paddleocr:qwen`, `glm:qwen` |
-| `catalog/probes.py` + `api.py` | Live runtime probes | `/models/catalog`, healthz |
+| `catalog/registry.py` | The document model | `repody:vlm` |
+| `catalog/status.py` + `api.py` | llama-server status | `/models/catalog`, healthz |
 
 ## Inference
 
 | Concern | Configuration |
 |---------|---------------|
 | Document extraction | `AUDIT_INFERENCE_MODE=llamacpp`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
-| LLM rule validation | `get_chat()` when `AUDIT_LLM_VALIDATION_ENABLED=true` |
 
-Separate models/endpoints for extraction vs LLM rules. Add models in `catalog/registry.py`.
 
 ## Frontend layout
 
@@ -135,15 +132,15 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs
 | OpenShift production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
 | Release to client | `pnpm images:release` |
 
-## Authorization (Casbin)
+## Authorization
 
-JWT roles -> `auth/rbac_policy.csv`. Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal.
+Keycloak realm roles -> `infra/auth/permissions.py` (`ROLE_PERMISSIONS`). Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
 
 | Role | Typical access |
 |------|----------------|
 | `viewer` | Read workflows, runs, audits, models, rules |
-| `operator` | Viewer + write workflows, execute runs, metrics, operator tools |
-| `admin` | Operator + settings, diagnostics, users |
+| `operator` | Viewer + write workflows, execute runs, upload, metrics, settings (read) |
+| `admin` | Operator + delete workflows, settings (write) |
 
 ## Tests
 

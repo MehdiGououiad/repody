@@ -1,6 +1,6 @@
 # ADR 002: Repody document models with multi-runtime inference
 
-**Status:** Accepted  
+**Status:** Superseded (2026-11) — Repody now ships one document model, `repody:vlm` (NuExtract3 on llama-server). See [docs/EXTRACTION.md](../EXTRACTION.md).  
 **Date:** 2026-06-13  
 **Updated:** 2026-09-07  
 **Context:** [CONTEXT.md](../../CONTEXT.md)
@@ -79,8 +79,8 @@ Register an adapter with `register_document_model_adapter(id, extract_fn)` and i
 Examples (workflow-selectable Document models):
 
 - `repody:vlm` / `repody:vlm:cloud` - NuExtract structured (+ optional markdown)
-- `paddleocr:qwen` - OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#pp-ocrv6))
-- `glm:qwen` - GLM-OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md#glm-ocr))
+- `paddleocr:qwen` - OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md))
+- `glm:qwen` - GLM-OCR stage + Qwen structured extraction ([docs/EXTRACTION.md](../EXTRACTION.md))
 
 Internal OCR stages (direct helpers only - not catalog entries):
 

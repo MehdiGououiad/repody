@@ -13,7 +13,6 @@ from repody.settings.fields_ops import OpsSettingsFields
 from repody.settings.fields_storage import StorageSettingsFields
 from repody.settings.fields_workers import WorkerSettingsFields
 from repody.settings.validators import (
-    apply_inference_probe_defaults,
     validate_production_guardrails,
     validate_timeout_alignment,
 )
@@ -37,11 +36,8 @@ class Settings(
 
     @model_validator(mode="after")
     def _sync_validation_options(self) -> Self:
-        if self.llm_validation_enabled and not self.structured_llm_enabled:
-            self.structured_llm_enabled = True
         if self.oidc_enabled and not self.oidc_issuer:
             raise ValueError("AUDIT_OIDC_ISSUER is required when AUDIT_OIDC_ENABLED=true.")
-        apply_inference_probe_defaults(self)
         validate_production_guardrails(self)
         validate_timeout_alignment(self)
         return self

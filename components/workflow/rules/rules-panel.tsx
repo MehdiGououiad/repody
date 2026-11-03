@@ -1,12 +1,12 @@
 "use client";
 
-import { Brain, Code, FileText, GitCompare, Plus, Sparkles } from "lucide-react";
+import { Code, FileText, GitCompare, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { usePlatformConfig, useRulesLibraryCatalog } from "@/lib/hooks/use-catalog-queries";
+import { useRulesLibraryCatalog } from "@/lib/hooks/use-catalog-queries";
 import { useRuleValidationIssues } from "@/lib/hooks/use-rule-validation";
 import type {
   ConditionJunction,
@@ -15,7 +15,7 @@ import type {
   RuleTemplate,
   WorkflowRule,
 } from "@/lib/types";
-import { cn, shortId } from "@/lib/utils";
+import { shortId } from "@/lib/utils";
 import { RuleCard } from "./rule-card";
 
 export function RulesPanel({
@@ -32,8 +32,6 @@ export function RulesPanel({
   const t = useTranslations("workflows.builder.rules");
   const shouldFetchLibrary = initialRuleLibrary === undefined;
   const { data: fetchedLibrary = [] } = useRulesLibraryCatalog(shouldFetchLibrary);
-  const { data: platform } = usePlatformConfig();
-  const llmValidationEnabled = platform?.llmValidationEnabled === true;
   const ruleLibrary = initialRuleLibrary ?? fetchedLibrary;
   const ruleIssuesById = useRuleValidationIssues(documents, rules);
 
@@ -43,27 +41,24 @@ export function RulesPanel({
 
   const remove = (id: string) => onChange(rules.filter((r) => r.id !== id));
 
-  const addRule = (kind: "logic" | "llm") =>
+  const addRule = () =>
     onChange([
       ...rules,
       {
         id: `r${shortId()}`,
         name: "",
-        kind,
+        kind: "logic",
         scope: "intra",
         appliesTo: documents[0] ? [documents[0].id] : [],
-        conditions:
-          kind === "logic"
-            ? [
-                {
-                  id: "c0",
-                  left: { kind: "field", value: "" },
-                  operator: "==" as const,
-                  right: { kind: "literal", value: "" },
-                },
-              ]
-            : undefined,
-        conditionJunction: kind === "logic" ? ("AND" as ConditionJunction) : undefined,
+        conditions: [
+          {
+            id: "c0",
+            left: { kind: "field", value: "" },
+            operator: "==" as const,
+            right: { kind: "literal", value: "" },
+          },
+        ],
+        conditionJunction: "AND" as ConditionJunction,
         body: "",
         severity: "flag",
       },
@@ -129,29 +124,15 @@ export function RulesPanel({
                 rule={r}
                 documents={documents}
                 issues={ruleIssuesById[r.id]}
-                llmValidationEnabled={llmValidationEnabled}
                 onChange={(patch) => updateRule(r.id, patch)}
                 onRemove={() => remove(r.id)}
               />
             ))
           )}
-          <div className={cn("grid gap-2", llmValidationEnabled ? "sm:grid-cols-2" : "")}>
-            <Button variant="outline" size="sm" onClick={() => addRule("logic")} className="w-full">
-              <Code className="h-3.5 w-3.5" />
-              {t("addLogic")}
-            </Button>
-            {llmValidationEnabled ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => addRule("llm")}
-                className="w-full border-accent-blue/30 hover:border-accent-blue/50 hover:bg-accent-blue/5"
-              >
-                <Brain className="h-3.5 w-3.5 text-accent-blue" />
-                {t("addLlm")}
-              </Button>
-            ) : null}
-          </div>
+          <Button variant="outline" size="sm" onClick={addRule} className="w-full">
+            <Code className="h-3.5 w-3.5" />
+            {t("addLogic")}
+          </Button>
         </TabsContent>
 
         <TabsContent value="library" className="space-y-4 mt-0">
@@ -169,32 +150,18 @@ export function RulesPanel({
                   </span>
                 </div>
                 {templates.map((tpl) => {
-                  const isLlm = tpl.kind === "llm";
-                  const Icon = isLlm ? Brain : Code;
                   const added = rules.some((r) => r.name === tpl.name);
                   const disabled = added || (scope === "cross" && documents.length < 2);
                   return (
                     <div
                       key={tpl.id}
-                      className={cn(
-                        "border rounded-lg p-3 hover:border-outline-variant transition-colors",
-                        isLlm ? "border-l-4 border-l-accent-blue border-border" : "border-border"
-                      )}
+                      className="border border-border rounded-lg p-3 hover:border-outline-variant transition-colors"
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <Icon
-                          className={cn(
-                            "h-3.5 w-3.5 shrink-0",
-                            isLlm ? "text-accent-blue" : "text-on-surface-variant"
-                          )}
-                        />
+                        <Code className="h-3.5 w-3.5 shrink-0 text-on-surface-variant" />
                         <span className="text-sm font-semibold">{tpl.name}</span>
-                        <Badge
-                          variant={isLlm ? "info" : "secondary"}
-                          className="text-[9px] gap-0.5"
-                        >
-                          {isLlm ? <Sparkles className="h-2.5 w-2.5" /> : null}
-                          {isLlm ? t("kindLlm") : t("kindLogic")}
+                        <Badge variant="secondary" className="text-[9px] gap-0.5">
+                          {t("kindLogic")}
                         </Badge>
                       </div>
                       <p className="text-xs text-on-surface-variant mb-2">{tpl.description}</p>

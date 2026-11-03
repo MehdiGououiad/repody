@@ -6,13 +6,11 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from repody.extraction.branding import public_document_model_label
-from repody.rules.types import rule_kind
 from repody.settings import Settings, get_settings
 from repody.util.urls import is_remote_inference_url
 
-ValidationMode = Literal["logic_only", "logic_and_llm"]
+ValidationMode = Literal["logic_only"]
 LOGIC_VALIDATION: ValidationMode = "logic_only"
-RUN_VALIDATION_LLM: ValidationMode = "logic_and_llm"
 
 DOCUMENT_MODEL_READ_PATH_ID = "document_model"
 DEFAULT_READ_PATH_ID = DOCUMENT_MODEL_READ_PATH_ID
@@ -40,7 +38,7 @@ READ_PATHS: tuple[ReadPathSpec, ...] = (
     ReadPathSpec(
         id=DOCUMENT_MODEL_READ_PATH_ID,
         label="Document model",
-        description="Catalog document model (repody:vlm, paddleocr:qwen, glm:qwen) — labels come from the model registry.",
+        description="NuExtract3 structured extraction (repody:vlm).",
         read="document_model",
     ),
 )
@@ -52,11 +50,6 @@ VALIDATION_MODE_OPTIONS: tuple[ValidationModeSpec, ...] = (
         id="logic_only",
         label="Logic rules",
         description="Validate extracted fields with deterministic logic expressions.",
-    ),
-    ValidationModeSpec(
-        id="logic_and_llm",
-        label="Logic + LLM rules",
-        description="Logic rules plus LLM rule validation when enabled in platform settings.",
     ),
 )
 
@@ -74,10 +67,8 @@ def normalize_validation_mode(
     mode: str | None,
     settings: Settings | None = None,
 ) -> ValidationMode:
-    cfg = settings or get_settings()
-    raw = (mode or LOGIC_VALIDATION).strip().lower()
-    if raw == RUN_VALIDATION_LLM and cfg.llm_validation_enabled:
-        return RUN_VALIDATION_LLM
+    """Stored modes, including the retired logic_and_llm, all validate with logic rules."""
+    _ = (mode, settings)
     return LOGIC_VALIDATION
 
 
@@ -115,8 +106,7 @@ def read_path_label(path_id: str) -> str:
 
 
 def validation_mode_label(mode: ValidationMode | str) -> str:
-    if mode == RUN_VALIDATION_LLM:
-        return "Logic + LLM rules"
+    _ = mode
     return "Logic rules"
 
 
@@ -125,28 +115,15 @@ def list_read_paths() -> list[ReadPathSpec]:
 
 
 def list_validation_modes(settings: Settings | None = None) -> list[ValidationModeSpec]:
-    cfg = settings or get_settings()
-    if cfg.llm_validation_enabled:
-        return list(VALIDATION_MODE_OPTIONS)
-    return [mode for mode in VALIDATION_MODE_OPTIONS if mode.id != RUN_VALIDATION_LLM]
-
-
-def run_uses_llm_validation(
-    rules: list[dict] | None,
-    settings: Settings | None = None,
-) -> bool:
-    cfg = settings or get_settings()
-    if not cfg.llm_validation_enabled:
-        return False
-    return any(rule_kind(rule) == "llm" for rule in rules or [])
+    _ = settings
+    return list(VALIDATION_MODE_OPTIONS)
 
 
 def resolve_run_validation_mode(
     rules: list[dict] | None,
     settings: Settings | None = None,
 ) -> ValidationMode:
-    if run_uses_llm_validation(rules, settings):
-        return RUN_VALIDATION_LLM
+    _ = (rules, settings)
     return LOGIC_VALIDATION
 
 

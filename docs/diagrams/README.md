@@ -18,7 +18,7 @@ Open the HTML file in a browser. Logos load from the Simple Icons CDN.
 | [sequence-architecture.mmd](./sequence-architecture.mmd) | One audit run across the same components |
 | [sequence-upload-et-run.mmd](./sequence-upload-et-run.mmd) | Presign, enqueue, extract, rules, SSE |
 | [sequence-cycle-vie-complet.mmd](./sequence-cycle-vie-complet.mmd) | Full functional lifecycle |
-| [sequence-auth-oidc.mmd](./sequence-auth-oidc.mmd) | OIDC code exchange, bearer injection, Casbin |
+| [sequence-auth-oidc.mmd](./sequence-auth-oidc.mmd) | OIDC code exchange, bearer injection, RBAC |
 
 Matching SVGs: `exports/sequence-upload-et-run.svg`, `exports/sequence-cycle-vie-complet.svg`, `exports/sequence-auth-oidc.svg`.
 

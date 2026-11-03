@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import structlog
+
 from repody.agents.idp.adapters.mapping import document_extraction_from_result
 from repody.agents.idp.contracts import (
     DocumentExtraction,
@@ -11,10 +13,12 @@ from repody.agents.idp.contracts import (
 from repody.app.run.helpers import resolve_upload_mime
 from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.extraction.nuextract import normalize_template_type
-from repody.extraction.pipeline import get_extract_document
+from repody.extraction.pipeline import extract_document
 from repody.extraction.types import ExtractionIclExample, schema_specs_from_fields
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.settings import get_settings
+
+log = structlog.get_logger(__name__)
 
 
 async def extract_one(
@@ -28,7 +32,6 @@ async def extract_one(
     """Call the document extractor; return frozen DocumentExtraction."""
     try:
         mime = resolve_upload_mime(stored.mime_type, raw_bytes if raw_bytes else None)
-        extract_document = get_extract_document()
         extracted = await extract_document(
             raw_bytes or None,
             mime,
@@ -44,7 +47,6 @@ async def extract_one(
             validation_mode=validation_mode,
             extraction_instructions=spec.extraction_instructions,
             markdown_extraction=spec.markdown_extraction,
-            native_pdf_auto=spec.native_pdf_auto,
             extraction_icl_examples=icl_examples or None,
         )
         return Result.ok(
@@ -55,6 +57,7 @@ async def extract_one(
             )
         )
     except Exception as exc:
+        log.exception("document_extraction_failed", document_id=spec.id)
         return Result.fail(
             AppError(
                 code=ErrorCode.EXTRACTION,

@@ -41,12 +41,3 @@ def validate_logic_rule_body(body: str) -> str | None:
     if last_type_error is not None:
         return f"Invalid logic expression: {last_type_error}"
     return "Invalid logic expression: incompatible operand types"
-
-
-def validate_llm_rule_body(body: str, *, max_len: int = 4000) -> str | None:
-    text = (body or "").strip()
-    if not text:
-        return "LLM rule body is empty."
-    if len(text) > max_len:
-        return f"LLM rule body exceeds {max_len} characters."
-    return None

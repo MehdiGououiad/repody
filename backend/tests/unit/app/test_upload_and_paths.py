@@ -9,7 +9,7 @@ from repody.app.uploads.validation import UploadValidationError, validate_upload
 from repody.extraction.modes import parse_read_path
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
 from repody.infra.storage.mime import JPEG, resolve_mime, sanitize_filename, sniff_mime
-from repody.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
+from repody.rules.rule_syntax import validate_logic_rule_body
 from repody.runtime.contracts.result import ErrorCode
 from repody.settings import Settings
 
@@ -128,11 +128,6 @@ def test_sniff_mime_reads_content_not_extension():
 def test_validate_logic_rule_body():
     assert validate_logic_rule_body("subtotal + tax == total_amount") is None
     assert validate_logic_rule_body("") is not None
-
-
-def test_validate_llm_rule_body():
-    assert validate_llm_rule_body("Check total matches PO.") is None
-    assert validate_llm_rule_body("") is not None
 
 
 def test_field_coverage_ratio():

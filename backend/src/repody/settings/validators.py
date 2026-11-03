@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-import os
 import warnings
 from typing import TYPE_CHECKING
-
-from repody.util.urls import is_remote_inference_url
 
 if TYPE_CHECKING:
     from repody.settings.model import Settings
@@ -12,25 +9,6 @@ if TYPE_CHECKING:
 # Hard ceiling for Taskiq audit-run cancellation. Keep high enough for long OCR
 # PDFs; defaults stay lower (see WorkerSettingsFields).
 MAX_WORKER_TASK_TIMEOUT_MINUTES = 15
-
-
-def apply_inference_probe_defaults(settings: Settings) -> None:
-    if settings.inference_mode.lower() == "llamacpp":
-        probe_env = os.getenv("AUDIT_GPU_LIVE_PROBE", "").strip().lower()
-        health_env = os.getenv("AUDIT_HEALTHZ_PROBE_INFERENCE", "").strip().lower()
-        probe_on = probe_env in ("true", "1", "yes")
-        health_on = health_env in ("true", "1", "yes")
-        if is_remote_inference_url(settings.llamacpp_base_url):
-            if not probe_on:
-                settings.gpu_live_probe = False
-            if not health_on:
-                settings.healthz_probe_inference = False
-        elif not probe_on:
-            settings.gpu_live_probe = False
-            if not health_on:
-                settings.healthz_probe_inference = False
-    elif os.getenv("AUDIT_GPU_LIVE_PROBE") is None:
-        settings.gpu_live_probe = True
 
 
 def validate_production_guardrails(settings: Settings) -> None:
@@ -59,19 +37,7 @@ def validate_timeout_alignment(settings: Settings) -> None:
     env = (settings.deployment_environment or "").strip().lower()
     is_prod = env == "production"
 
-    checks: list[tuple[str, float]] = [
-        ("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", settings.repody_vlm_timeout_seconds),
-        ("AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS", settings.paddleocr_v6_timeout_seconds),
-        ("AUDIT_QWEN35_TIMEOUT_SECONDS", settings.qwen35_timeout_seconds),
-        ("AUDIT_GLM_OCR_TIMEOUT_SECONDS", settings.glm_ocr_timeout_seconds),
-    ]
-    if settings.nuextract_cloud_enabled:
-        checks.append(
-            (
-                "AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS",
-                settings.nuextract_cloud_timeout_seconds,
-            )
-        )
+    checks = [("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", settings.repody_vlm_timeout_seconds)]
 
     for label, seconds in checks:
         if seconds > worker_seconds:

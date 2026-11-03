@@ -22,7 +22,7 @@ def _pipeline_meta(**overrides) -> ExtractionMetadata:
         "read_path_label": "Document model",
         "validation_mode": "logic_only",
         "validation_label": "Logic rules",
-        "document_model_id": "repody:vlm:cloud",
+        "document_model_id": "repody:vlm",
         "extraction_ms": 7000,
         "cache_hit": False,
         "fields_extracted": 1,
@@ -36,7 +36,7 @@ def _idp_meta(**overrides) -> IdpExtractionMeta:
         "read_path_config": "document_model",
         "read_path_used": "document_model",
         "validation_mode": "logic_only",
-        "document_model_id": "repody:vlm:cloud",
+        "document_model_id": "repody:vlm",
         "extraction_ms": 7000,
         "cache_hit": False,
         "fields_extracted": 1,
@@ -64,7 +64,7 @@ def test_extraction_meta_to_dict_matches_api_schema() -> None:
     meta = RunDocumentExtractionMeta.model_validate(raw)
     assert meta.read_path_config == "document_model"
     assert meta.validation_mode == "logic_only"
-    assert meta.document_model_id == "repody:vlm:cloud"
+    assert meta.document_model_id == "repody:vlm"
     assert meta.read_path_label == "Document model"
     assert meta.validation_label == "Logic rules"
     assert meta.fields_extracted == 1
@@ -79,7 +79,7 @@ def test_document_extraction_from_result_requires_meta() -> None:
 
 
 def test_document_extraction_from_result_maps_pipeline_meta() -> None:
-    pipeline_meta = _pipeline_meta(document_model_id="repody:vlm:cloud")
+    pipeline_meta = _pipeline_meta(document_model_id="repody:vlm")
     mapped = document_extraction_from_result(
         document_id="d1",
         result=ExtractionResult(
@@ -97,6 +97,6 @@ def test_document_extraction_from_result_maps_pipeline_meta() -> None:
         ),
     )
     assert isinstance(mapped.meta, IdpExtractionMeta)
-    assert mapped.meta.document_model_id == "repody:vlm:cloud"
+    assert mapped.meta.document_model_id == "repody:vlm"
     assert mapped.meta.read_path_config == "document_model"
     RunDocumentExtractionMeta.model_validate(extraction_meta_to_dict(mapped))

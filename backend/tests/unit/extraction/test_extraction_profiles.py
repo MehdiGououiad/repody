@@ -10,8 +10,7 @@ from repody.extraction.modes import (
     DOCUMENT_MODEL_READ_PATH_ID,
     resolve_read_path_for_document,
 )
-from repody.extraction.nuextract import structured_chat_payload
-from repody.extraction.render import REPODY_VLM_RENDER
+from repody.extraction.nuextract import NUEXTRACT_PDF_DPI, structured_chat_payload
 from repody.extraction.types import SchemaFieldSpec
 
 
@@ -28,10 +27,8 @@ def test_legacy_read_paths_rejected():
             resolve_read_path_for_document(mode)
 
 
-def test_nuextract_official_render_policy():
-    policy = REPODY_VLM_RENDER
-    assert policy.pdf_dpi == 170
-    assert policy.pdf_format == "png"
+def test_nuextract_official_pdf_dpi():
+    assert NUEXTRACT_PDF_DPI == 170
 
 
 def test_nuextract_payload_official_generation_defaults():

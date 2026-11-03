@@ -288,7 +288,7 @@
             <img src="https://cdn.simpleicons.org/auth0/EB5424" alt="Auth" />
             <div>
               <strong>Authorization</strong>
-              <div class="techname">Casbin RBAC</div>
+              <div class="techname">RBAC</div>
             </div>
           </div>
           <div class="desc">Roles: <em>viewer</em>, <em>operator</em>, <em>admin</em>. Enforced on every API call.</div>
@@ -451,7 +451,7 @@
       <h2>Value stream — how an audit runs (executive summary)</h2>
       <ol>
         <li><strong>User</strong> opens the <strong>Web UI</strong> and signs in via <strong>OIDC</strong>.</li>
-        <li><strong>API</strong> checks rights with <strong>Casbin</strong>, stores metadata in <strong>PostgreSQL</strong>, files in <strong>MinIO</strong>.</li>
+        <li><strong>API</strong> checks rights with <strong>RBAC</strong>, stores metadata in <strong>PostgreSQL</strong>, files in <strong>MinIO</strong>.</li>
         <li><strong>API</strong> places a job on <strong>Redis</strong>; a <strong>Taskiq</strong> worker picks it up.</li>
         <li>Worker calls the external <strong>Inference VLM</strong>, writes fields/rules to <strong>PostgreSQL</strong>.</li>
         <li>Progress flows <strong>Redis → SSE → Web UI</strong> so the user sees live status, then the final report.</li>

@@ -6,7 +6,7 @@
  * Prefer OpenAPI aliases when typing API payloads; keep these types for editor state.
  */
 
-export type RuleKind = "logic" | "llm";
+export type RuleKind = "logic";
 export type RuleSeverity = "reject" | "flag" | "info";
 export type RuleScope = "intra" | "cross";
 

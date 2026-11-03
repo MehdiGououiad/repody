@@ -7,19 +7,11 @@ const REPODY_LOGIN = "operator@repody.local / repody-dev (use localhost in the b
 /** @typedef {{ name: string; url?: string; probeUrl?: string; endpoint?: string; role: string; creds?: string; skip?: boolean }} DevServiceRow */
 
 /**
- * @param {{ apiPort: number; observability: boolean; llama: boolean; paddleocr?: boolean; qwen35?: boolean; glmocr?: boolean; extractOnly: boolean }} ctx
+ * @param {{ apiPort: number; observability: boolean; llama: boolean; extractOnly: boolean }} ctx
  * @returns {{ title: string; rows: DevServiceRow[] }[]}
  */
 export function buildDevDashboardSections(ctx) {
-  const {
-    apiPort,
-    observability,
-    llama,
-    paddleocr = false,
-    qwen35 = false,
-    glmocr = false,
-    extractOnly,
-  } = ctx;
+  const { apiPort, observability, llama, extractOnly } = ctx;
   /** @type {{ title: string; rows: DevServiceRow[] }[]} */
   const sections = [
     {
@@ -113,25 +105,6 @@ export function buildDevDashboardSections(ctx) {
           role: "Multimodal VLM (llama.cpp) — workers call via host.docker.internal",
           skip: !llama,
         },
-        {
-          name: "PP-OCRv6 / PaddleX",
-          url: "http://localhost:8868/ocr",
-          probeUrl: "http://localhost:8868/ocr",
-          role: "Markdown-only OCR (POST /ocr) — catalog ids paddleocr:v6, paddleocr:qwen (stage 1)",
-          skip: !paddleocr,
-        },
-        {
-          name: "Qwen3.5 / llama-server",
-          url: "http://localhost:8084/v1/models",
-          role: "Text→JSON for paddleocr:qwen (stage 2) — started with PP-OCRv6",
-          skip: !qwen35,
-        },
-        {
-          name: "GLM-OCR / llama-server",
-          url: "http://localhost:8083/v1/models",
-          role: "Markdown-only OCR (chat completions) — catalog id glm:ocr (opt-in: --glmocr)",
-          skip: !glmocr,
-        },
       ],
     },
   ];
@@ -181,14 +154,14 @@ export function buildDevDashboardSections(ctx) {
     title: "CLI (this repo)",
     rows: [
       { name: "pnpm dev:src:status", role: "Probe every URL above and list Compose containers" },
-      { name: "pnpm models:warmup", role: "Warm NuExtract + PP-OCRv6 + Qwen (first inference)" },
+      { name: "pnpm llamacpp:warmup", role: "Warm NuExtract (first inference)" },
       {
         name: "pnpm dev:src:stop",
-        role: "Stop API, UI, NuExtract, PP-OCRv6, Qwen, GLM-OCR, and full Compose stack",
+        role: "Stop API, UI, NuExtract, and full Compose stack",
       },
       {
         name: "pnpm dev:src:restart",
-        role: "Restart NuExtract + PP-OCRv6 + Qwen + GLM-OCR + workers after GPU resets",
+        role: "Restart NuExtract + workers after GPU resets",
       },
       {
         name: "pnpm dev:src:observability",
@@ -206,16 +179,13 @@ export function buildDevDashboardSections(ctx) {
 }
 
 /**
- * @param {{ apiPort: number; observability: boolean; llama: boolean; paddleocr?: boolean; qwen35?: boolean; glmocr?: boolean; extractOnly: boolean; appRunning: boolean; probe?: boolean; fetchProbe?: (url: string, ms: number) => Promise<{ ok: boolean }> }} opts
+ * @param {{ apiPort: number; observability: boolean; llama: boolean; extractOnly: boolean; appRunning: boolean; probe?: boolean; fetchProbe?: (url: string, ms: number) => Promise<{ ok: boolean }> }} opts
  */
 export async function printDevDashboard(opts) {
   const {
     apiPort,
     observability,
     llama,
-    paddleocr = false,
-    qwen35 = false,
-    glmocr = false,
     extractOnly,
     appRunning,
     probe = false,
@@ -226,9 +196,6 @@ export async function printDevDashboard(opts) {
     apiPort,
     observability,
     llama,
-    paddleocr,
-    qwen35,
-    glmocr,
     extractOnly,
   });
 

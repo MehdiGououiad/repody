@@ -3,32 +3,17 @@
 import { AlertCircle, RefreshCw } from "lucide-react";
 import type { useTranslations } from "next-intl";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  GLM_OCR_CATALOG_ID,
-  isMarkdownOnlyCatalogId,
-  PADDLEOCR_QWEN_CATALOG_ID,
-  PADDLEOCR_V6_CATALOG_ID,
-  publicDocumentModelLabel,
-  REPODY_VLM_CATALOG_ID,
-} from "@/lib/document-model-branding";
+import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import type { DocumentDef } from "@/lib/types";
 
 import type { ProcessingOptions } from "./processing-options";
 
+/** The document model is fixed (NuExtract via Repody VLM); show it and its live availability. */
 export function ProcessingSettings({
   t,
-  doc,
   options,
-  onChange,
   onRetry,
 }: {
   t: ReturnType<typeof useTranslations>;
@@ -37,18 +22,9 @@ export function ProcessingSettings({
   onChange: (patch: Partial<DocumentDef>) => void;
   onRetry: () => void;
 }) {
-  const { error, loaded, documentModelIds, defaultDocumentModel } = options;
-  const autoOn = Boolean(doc.nativePdfAuto);
-  const selected = doc.documentModelId?.trim() || defaultDocumentModel || REPODY_VLM_CATALOG_ID;
-
-  const modelHint =
-    selected === GLM_OCR_CATALOG_ID
-      ? t("extraction.profileGlmOcrHint")
-      : selected === PADDLEOCR_V6_CATALOG_ID
-        ? t("extraction.profilePaddleocrV6Hint")
-        : selected === PADDLEOCR_QWEN_CATALOG_ID
-          ? t("extraction.profilePaddleocrQwenHint")
-          : t("extraction.profileNuextractQ4Hint");
+  const { error, loaded, documentModelIds } = options;
+  const model = documentModelIds[0];
+  const offline = loaded && model?.available === false;
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
@@ -73,75 +49,20 @@ export function ProcessingSettings({
         </div>
       ) : null}
 
-      <div className="flex max-w-lg items-start gap-2.5 rounded-md border border-border/80 bg-background/60 px-3 py-2.5">
-        <input
-          id={`native-pdf-auto-${doc.id}`}
-          type="checkbox"
-          className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
-          checked={autoOn}
-          onChange={(event) => onChange({ nativePdfAuto: event.target.checked })}
-        />
-        <div className="min-w-0 space-y-0.5">
-          <Label
-            htmlFor={`native-pdf-auto-${doc.id}`}
-            className="cursor-pointer text-xs font-semibold leading-none"
-          >
-            {t("extraction.nativePdfAutoLabel")}
-          </Label>
-          <p className="text-[11px] leading-relaxed text-on-surface-variant">
-            {t("extraction.nativePdfAutoHint")}
-          </p>
+      <div className="max-w-lg space-y-1.5">
+        <p className="text-xs font-semibold">{t("extraction.documentModelLabel")}</p>
+        <div className="flex items-center gap-2 text-sm">
+          <span>{REPODY_VLM_LABEL}</span>
+          {offline ? (
+            <Badge variant="danger" className="text-[10px]">
+              {t("extraction.offlineBadge")}
+            </Badge>
+          ) : null}
         </div>
-      </div>
-
-      <div className="max-w-sm space-y-1.5">
-        <Label htmlFor={`extraction-model-${doc.id}`} className="text-xs font-semibold">
-          {autoOn ? t("extraction.fallbackDocumentModelLabel") : t("extraction.documentModelLabel")}
-        </Label>
-        <Select
-          value={selected}
-          disabled={!loaded || documentModelIds.length === 0}
-          onValueChange={(value) => {
-            const entry = documentModelIds.find((model) => model.id === value);
-            const nextMarkdownOnly = entry?.markdownOnly === true || isMarkdownOnlyCatalogId(value);
-            onChange({
-              documentModelId: value,
-              extractionMode: "document_model",
-              // Markdown-only catalog models (e.g. PP-OCRv6) always run document -> markdown.
-              markdownExtraction: nextMarkdownOnly ? true : doc.markdownExtraction,
-              ...(nextMarkdownOnly ? { schema: [] } : {}),
-            });
-          }}
-        >
-          <SelectTrigger id={`extraction-model-${doc.id}`} className="h-9">
-            <SelectValue
-              placeholder={
-                loaded
-                  ? autoOn
-                    ? t("extraction.fallbackDocumentModelPlaceholder")
-                    : t("extraction.documentModelIdPlaceholder")
-                  : t("extraction.documentModelIdLoading")
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {documentModelIds.map((model) => (
-              <SelectItem key={model.id} value={model.id} disabled={model.available === false}>
-                {publicDocumentModelLabel(model.id)}
-                {model.markdownOnly ? ` · ${t("extraction.markdownOnlyBadge")}` : ""}
-                {model.id === defaultDocumentModel ? ` · ${t("extraction.defaultBadge")}` : ""}
-                {model.available === false ? ` · ${t("extraction.offlineBadge")}` : ""}
-              </SelectItem>
-            ))}
-            {documentModelIds.length === 0 ? (
-              <SelectItem value={REPODY_VLM_CATALOG_ID}>
-                {publicDocumentModelLabel(REPODY_VLM_CATALOG_ID)}
-              </SelectItem>
-            ) : null}
-          </SelectContent>
-        </Select>
         <p className="text-[11px] leading-relaxed text-on-surface-variant">
-          {autoOn ? t("extraction.fallbackDocumentModelHint") : modelHint}
+          {offline && model?.availabilityNote
+            ? model.availabilityNote
+            : t("extraction.profileNuextractQ4Hint")}
         </p>
       </div>
     </div>

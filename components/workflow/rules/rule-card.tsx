@@ -25,8 +25,7 @@ import type {
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ConditionBuilder } from "./condition-builder";
-import { KindToggle, ScopeToggle } from "./kind-scope-toggles";
-import { LlmPromptEditor } from "./llm-prompt-editor";
+import { ScopeToggle } from "./scope-toggle";
 
 export function RuleCard({
   rule,
@@ -34,19 +33,16 @@ export function RuleCard({
   issues,
   onChange,
   onRemove,
-  llmValidationEnabled = false,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
   issues?: string[];
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
-  llmValidationEnabled?: boolean;
 }) {
   const t = useTranslations("workflows.builder.rules");
   const tCommon = useTranslations("common");
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const isLlm = rule.kind === "llm";
   const isCross = rule.scope === "cross";
   const canCross = documents.length >= 2;
   const fields = resolveDocumentFields(documents, rule.appliesTo);
@@ -98,12 +94,7 @@ export function RuleCard({
   const ruleIssues = issues ?? [];
 
   return (
-    <div
-      className={cn(
-        "panel-elevated rounded-xl p-4 group space-y-4",
-        isLlm ? "border-l-4 border-l-accent-blue border-border" : "border-border"
-      )}
-    >
+    <div className="panel-elevated rounded-xl p-4 group space-y-4 border-border">
       <div className="flex items-center gap-2">
         <Input
           value={rule.name}
@@ -136,16 +127,6 @@ export function RuleCard({
             {t("appliesTo")}
           </p>
           <ScopeToggle scope={rule.scope} onChange={switchScope} canCross={canCross} />
-        </div>
-        <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
-            {t("checkType")}
-          </p>
-          <KindToggle
-            kind={rule.kind}
-            llmEnabled={llmValidationEnabled}
-            onChange={(k) => onChange({ kind: k })}
-          />
         </div>
       </div>
 
@@ -186,23 +167,15 @@ export function RuleCard({
 
       <div className="space-y-1.5">
         <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
-          {isLlm ? t("promptLabel") : t("expressionLabel")}
+          {t("expressionLabel")}
         </p>
 
-        {isLlm ? (
-          <LlmPromptEditor
-            value={rule.body}
-            fields={fields}
-            onChange={(body) => onChange({ body })}
-          />
-        ) : (
-          <ConditionBuilder
-            conditions={conditions}
-            fields={fields}
-            tableFields={tableFields}
-            onConditionsChange={handleConditionsChange}
-          />
-        )}
+        <ConditionBuilder
+          conditions={conditions}
+          fields={fields}
+          tableFields={tableFields}
+          onConditionsChange={handleConditionsChange}
+        />
         {ruleIssues.length > 0 && (
           <ul className="text-[11px] text-danger space-y-0.5 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 list-disc pl-5">
             {ruleIssues.map((issue) => (

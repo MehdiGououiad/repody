@@ -3,9 +3,8 @@
  * Repody local platform CLI (Windows + macOS + Linux) - same Hub images everywhere.
  *
  *   pnpm platform setup     # once
- *   pnpm platform           # pull images + start stack + host NuExtract (default)
- *   pnpm platform -- --with-paddle
- *   pnpm platform status | stop | doctor | help
+ *   pnpm platform           # pull images + start stack + host NuExtract
+ *   pnpm platform status | stop | doctor | logs | help
  *
  * Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64)
  * Overlay: compose.yaml + compose.portable.yaml
@@ -30,46 +29,31 @@ import {
 const AUTH_ENV = path.join(ROOT, ".env.local");
 const COMPOSE_ENV_EXAMPLE = path.join(ROOT, "deploy/env/compose.env.example");
 const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
-const QWEN_PATHS = path.join(ROOT, "deploy/qwen35/paths.local.env");
-const QWEN_MAC_EXAMPLE = path.join(ROOT, "deploy/qwen35/paths.mac.env.example");
-const QWEN_EXAMPLE = path.join(ROOT, "deploy/qwen35/paths.local.env.example");
 const LLAMA_PATHS = path.join(ROOT, "deploy/llamacpp/paths.local.env");
 const LLAMA_MAC_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.mac.env.example");
 const LLAMA_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.local.env.example");
+const BACKEND_IMAGE = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
+const WEB_IMAGE = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
 
 const rawArgs = process.argv.slice(2);
 const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
-const positionals = rawArgs.filter((a) => !a.startsWith("-"));
-const command = positionals[0] || (flags.has("--help") || flags.has("-h") ? "help" : "up");
+const command =
+  rawArgs.find((a) => !a.startsWith("-")) ||
+  (flags.has("--help") || flags.has("-h") ? "help" : "up");
 const isDarwin = process.platform === "darwin";
 const isWin = process.platform === "win32";
 
-const wantPaddle = flags.has("--with-paddle") || flags.has("--with-paddleocr");
-const wantQwen =
-  wantPaddle || flags.has("--with-qwen") || flags.has("--with-qwen35") || flags.has("--with-glm");
-const wantGlm = flags.has("--with-glm") || flags.has("--glmocr") || flags.has("--glm");
-
 const opts = {
-  // Default host model: NuExtract (catalog repody:vlm). Opt out with --no-nuextract.
-  // --with-nuextract kept as a no-op alias for older docs/scripts.
-  withNuextract: !(flags.has("--no-nuextract") || flags.has("--no-vlm")),
-  withGlm: wantGlm,
-  // Paddle / Qwen are opt-in (--with-paddle implies Qwen for paddleocr:qwen).
-  noPaddle: flags.has("--no-paddle") || flags.has("--no-ocr") || !wantPaddle,
-  noQwen: flags.has("--no-qwen") || flags.has("--no-qwen35") || !wantQwen,
+  platformOnly: flags.has("--platform-only"),
+  withNuextract: !(
+    flags.has("--no-nuextract") ||
+    flags.has("--no-vlm") ||
+    flags.has("--platform-only")
+  ),
   // Observability (Grafana/Loki/Tempo/Bugsink) on by default for Hub platform.
   withObs: !(flags.has("--no-obs") || flags.has("--no-observability")),
-  platformOnly: flags.has("--platform-only"),
   skipPull: flags.has("--no-pull"),
-  help: flags.has("--help") || flags.has("-h"),
 };
-
-if (opts.platformOnly) {
-  opts.noPaddle = true;
-  opts.noQwen = true;
-  opts.withNuextract = false;
-  opts.withGlm = false;
-}
 
 function printHelp() {
   console.log(`
@@ -79,79 +63,33 @@ Flow (new PC):
   1) pnpm install && pnpm doctor
   2) Download NuExtract GGUFs → set deploy/llamacpp/paths.local.env
   3) pnpm platform setup     # once — env files + pull Hub images
-  4) pnpm platform           # start platform + host NuExtract (default)
+  4) pnpm platform           # start platform + host NuExtract
   5) pnpm platform status    # health
   6) pnpm platform stop      # tear down
 
 Commands:
-  up         Start Hub platform + default models   [default]
+  up         Start Hub platform + host NuExtract   [default]
   setup      Once: env / paths + pull Hub images
   bootstrap  setup + up (new machine after git clone / pnpm install)
-  doctor     Check everything needed before start (Node, Docker, llama-server, NuExtract3 GGUFs, env)
+  doctor     Check everything needed before start (Node, Docker, llama-server, GGUFs, env)
   status     Probe services + observability URLs
-  logs       Tail API/web/worker Docker logs (admin)
-  stop       Stop host models + Compose
+  logs       Tail API/web/worker Docker logs
+  stop       Stop host NuExtract + Compose
   help       This help
 
-Preflight: pnpm platform doctor — same checks run automatically at the start of pnpm platform.
-
 Options (pnpm platform -- … / pnpm platform setup -- …):
-  --no-nuextract     Skip host NuExtract (:8081) — default is ON → catalog repody:vlm
-  --with-paddle      Also start PP-OCRv6 + Qwen → catalog paddleocr:qwen
-  --with-qwen        Start Qwen only (for glm:qwen without paddle)
-  --with-glm         Also start GLM-OCR (:8083) + rebuild extract worker
-                     with official GlmOcr SDK → catalog glm:qwen / glm:ocr
-  --no-paddle        Skip PP-OCRv6 (when using --with-paddle)
-  --no-qwen          Skip Qwen
+  --no-nuextract     Skip host NuExtract (:8081)
   --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
-  --platform-only    Containers only (no host models)
+  --platform-only    Containers only (no host model)
   --no-pull          Do not docker pull (setup + up)
 
-Structured paths:
-  repody:vlm       NuExtract               (default)
-  paddleocr:qwen   PP-OCR → Qwen JSON     (--with-paddle)
-  glm:qwen         GLM-OCR SDK → Qwen JSON (--with-glm)
-
-Images: mehdigououiad/repody-backend:0.1.0 · mehdigouiad/repody-web:0.1.0
-  (--with-glm builds local worker image repody-backend:local-glmocr)
-
+Images: ${BACKEND_IMAGE} · ${WEB_IMAGE}
 Guide: docs/LOCAL.md
 `);
 }
 
-function patchBackendEnv() {
-  const wantPaddle = !opts.noPaddle;
-  const wantPaddleQwen = !opts.noQwen && wantPaddle;
-  const wantGlmQwen = !opts.noQwen && opts.withGlm;
-  const llamaEnv = fs.existsSync(LLAMA_PATHS) ? parseEnvFile(LLAMA_PATHS) : {};
-  const servedModel =
-    (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
-    process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
-    "nuextract3-q4_k_m";
-  setEnvKeys(BACKEND_ENV, {
-    AUDIT_REPODY_VLM_ENABLED: opts.withNuextract ? "true" : "false",
-    AUDIT_GLM_OCR_ENABLED: opts.withGlm ? "true" : "false",
-    AUDIT_GLM_OCR_QWEN_ENABLED: wantGlmQwen ? "true" : "false",
-    AUDIT_PADDLEOCR_V6_ENABLED: wantPaddle ? "true" : "false",
-    AUDIT_PADDLEOCR_QWEN_ENABLED: wantPaddleQwen ? "true" : "false",
-    AUDIT_QWEN35_BASE_URL: "http://127.0.0.1:8084/v1",
-    AUDIT_PADDLEOCR_V6_BASE_URL: "http://127.0.0.1:8868",
-    AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
-    AUDIT_LLAMACPP_SERVED_MODEL: servedModel,
-    AUDIT_GLM_OCR_BASE_URL: "http://127.0.0.1:8083/v1",
-    AUDIT_OTEL_ENABLED: "false",
-  });
-}
-
-function composeFiles() {
-  const files = ["compose.yaml", "compose.portable.yaml"];
-  // Hub backend is otel-only; GLM catalog needs the official SDK in the worker.
-  if (opts.withGlm) files.push("compose.glmocr.yaml");
-  return files;
-}
-
 function composeArgs(...parts) {
-  return composeArgsFor(composeFiles(), ...parts);
+  return composeArgsFor(["compose.yaml", "compose.portable.yaml"], ...parts);
 }
 
 function llamaInstallHint() {
@@ -160,33 +98,33 @@ function llamaInstallHint() {
   return "install llama.cpp so llama-server is on PATH";
 }
 
-function ensureLlamaServer({ required }) {
-  const found = findExecutable("llama-server");
-  if (found) {
-    console.log(`llama-server: ${found}`);
-    return true;
-  }
-  if (!required) return false;
-  console.error(`
-llama-server not found on PATH.
-
-Install once:
-  ${llamaInstallHint()}
-
-Then re-run: pnpm platform
-`);
-  return false;
-}
-
-function ensureInferencePaths() {
-  const qwenSrc = isDarwin && fs.existsSync(QWEN_MAC_EXAMPLE) ? QWEN_MAC_EXAMPLE : QWEN_EXAMPLE;
-  copyIfMissing(qwenSrc, QWEN_PATHS);
+function copyEnvFiles() {
+  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
+  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
   const llamaSrc = isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
   copyIfMissing(llamaSrc, LLAMA_PATHS);
 }
 
+/** Point backend/.env at the host model and toggle OTEL for this run (setup / up only). */
+function patchBackendEnv() {
+  const llamaEnv = parseEnvFile(LLAMA_PATHS);
+  setEnvKeys(BACKEND_ENV, {
+    AUDIT_REPODY_VLM_ENABLED: opts.withNuextract ? "true" : "false",
+    AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
+    AUDIT_LLAMACPP_SERVED_MODEL:
+      (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
+      process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
+      "nuextract3-q4_k_m",
+    AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
+    ...(opts.withObs && {
+      AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
+      AUDIT_OTEL_SERVICE_NAME: "repody-api",
+      AUDIT_LOG_JSON: "true",
+    }),
+  });
+}
+
 function nuextractConfigured() {
-  if (!fs.existsSync(LLAMA_PATHS)) return { ok: false, reason: "paths.local.env missing" };
   const env = parseEnvFile(LLAMA_PATHS);
   const model = (env.LLAMACPP_MODEL || "").trim();
   const mmproj = (env.LLAMACPP_MMPROJ || "").trim();
@@ -223,51 +161,29 @@ function checkToolchain() {
             shell: isWin,
           });
           const ver = (v.stdout || "").trim();
-          return ver
-            ? `pnpm/${ver} node/${process.versions.node}`
-            : process.env.npm_config_user_agent;
+          return ver ? `pnpm/${ver} node/${process.versions.node}` : undefined;
         })(),
     },
   });
-  if (result.status === 0) {
-    return { ok: true, detail: (result.stdout || "").trim() || "ok" };
-  }
+  if (result.status === 0) return { ok: true, detail: (result.stdout || "").trim() || "ok" };
   const detail = (result.stderr || result.stdout || "Node/pnpm mismatch").trim().split(/\r?\n/)[0];
   return { ok: false, detail };
 }
 
 function hubImagesPresent() {
-  const backend = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
-  const web = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
-  const missing = [];
-  for (const ref of [backend, web]) {
-    const r = spawnSync("docker", ["image", "inspect", ref], {
-      encoding: "utf8",
-      shell: false,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    if (r.status !== 0) missing.push(ref);
-  }
-  if (missing.length === 0) {
-    return { ok: true, detail: `${backend.split("/").pop()} + ${web.split("/").pop()}` };
-  }
-  return {
-    ok: false,
-    detail: `missing ${missing.join(", ")} — run: pnpm platform setup`,
-  };
+  const missing = [BACKEND_IMAGE, WEB_IMAGE].filter(
+    (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0
+  );
+  return missing.length === 0
+    ? { ok: true, detail: `${BACKEND_IMAGE.split("/").pop()} + ${WEB_IMAGE.split("/").pop()}` }
+    : { ok: false, detail: `missing ${missing.join(", ")} — run: pnpm platform setup` };
 }
 
-function llamaServerRuns() {
-  const exe = findExecutable("llama-server");
-  if (!exe) return { ok: false, detail: "not on PATH" };
-  const r = spawnSync(exe, ["--version"], {
-    encoding: "utf8",
-    shell: false,
-    timeout: 15_000,
-  });
-  if (r.status === 0 || (r.stdout || r.stderr || "").includes("version")) {
-    const line = `${r.stdout || ""}${r.stderr || ""}`.trim().split(/\r?\n/)[0] || "ok";
-    return { ok: true, detail: line.slice(0, 80) };
+function llamaServerVersion(exe) {
+  const r = spawnSync(exe, ["--version"], { encoding: "utf8", shell: false, timeout: 15_000 });
+  const text = `${r.stdout || ""}${r.stderr || ""}`;
+  if (r.status === 0 || text.includes("version")) {
+    return { ok: true, detail: (text.trim().split(/\r?\n/)[0] || "ok").slice(0, 80) };
   }
   return { ok: false, detail: "llama-server --version failed" };
 }
@@ -275,30 +191,22 @@ function llamaServerRuns() {
 /**
  * Single preflight for everything needed before starting the platform.
  * Used by `pnpm platform doctor` and automatically by `pnpm platform` / bootstrap.
- *
- * Checks hard prerequisites (tools, files, images, ports). Does NOT guarantee
- * that NuExtract loads in VRAM or that an extraction job succeeds - that is runtime.
+ * Checks prerequisites (tools, files, images, ports), not that NuExtract loads in VRAM.
  */
-function preflight({ exitOnFail = true, quietOk = false } = {}) {
+function preflight({ quietOk = false } = {}) {
   console.log("\n=== Repody platform preflight ===\n");
-
-  const needLlama = !opts.platformOnly && (opts.withNuextract || !opts.noQwen || opts.withGlm);
-  const needNuextract = opts.withNuextract && !opts.platformOnly;
-  const needPaddle = !opts.noPaddle && !opts.platformOnly;
-  const needQwenPaths = !opts.noQwen && !opts.platformOnly;
-
+  copyEnvFiles();
   const rows = [];
   const toolchain = checkToolchain();
   rows.push({
     name: "Node / pnpm",
     ok: toolchain.ok,
-    state: toolchain.ok ? toolchain.detail.replace(/^ok:\s*/i, "") : toolchain.detail,
+    state: toolchain.detail.replace(/^ok:\s*/i, ""),
     required: true,
     fix: "Install Node 24 + corepack enable (pnpm 12.5.1)",
   });
 
-  const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
-  const dockerOk = docker.status === 0;
+  const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
   rows.push({
     name: "Docker Desktop",
     ok: dockerOk,
@@ -313,66 +221,43 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     ok: hub.ok,
     state: hub.detail,
     required: true,
-    fix: "pnpm platform setup  (docker pull mehdigououiad/repody-backend:0.1.0 + repody-web)",
+    fix: "pnpm platform setup",
   });
 
   const llama = findExecutable("llama-server");
-  const llamaRun =
-    needLlama && llama
-      ? llamaServerRuns()
-      : { ok: Boolean(llama), detail: llama || `missing — ${llamaInstallHint()}` };
+  const llamaRun = llama ? llamaServerVersion(llama) : { ok: false, detail: "missing" };
   rows.push({
     name: "llama-server",
-    ok: needLlama ? llamaRun.ok : Boolean(llama),
-    state: needLlama ? llamaRun.detail : llama || `optional — ${llamaInstallHint()}`,
-    required: needLlama,
+    ok: llamaRun.ok,
+    state: llamaRun.ok ? llamaRun.detail : `${llamaRun.detail} — ${llamaInstallHint()}`,
+    required: opts.withNuextract,
     fix: llamaInstallHint(),
   });
 
-  ensureInferencePaths();
   const nue = nuextractConfigured();
   rows.push({
     name: "NuExtract3 GGUFs",
     ok: nue.ok,
-    state: nue.ok ? nue.reason : nue.reason,
-    required: needNuextract,
-    fix: "Download NuExtract3 + mmproj from https://huggingface.co/numind/NuExtract3-GGUF → set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env (see deploy/llamacpp/README.md)",
+    state: nue.reason,
+    required: opts.withNuextract,
+    fix: "Download NuExtract3 + mmproj (pnpm llamacpp:download or https://huggingface.co/numind/NuExtract3-GGUF), then set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env",
   });
 
-  rows.push({
-    name: "backend/.env",
-    ok: fs.existsSync(BACKEND_ENV),
-    state: fs.existsSync(BACKEND_ENV) ? "ok" : "missing",
-    required: true,
-    fix: "pnpm platform setup",
-  });
-  rows.push({
-    name: ".env.local",
-    ok: fs.existsSync(AUTH_ENV),
-    state: fs.existsSync(AUTH_ENV) ? "ok" : "missing",
-    required: true,
-    fix: "pnpm platform setup",
-  });
+  for (const [name, file] of [
+    ["backend/.env", BACKEND_ENV],
+    [".env.local", AUTH_ENV],
+  ]) {
+    const ok = fs.existsSync(file);
+    rows.push({
+      name,
+      ok,
+      state: ok ? "ok" : "missing",
+      required: true,
+      fix: "pnpm platform setup",
+    });
+  }
 
-  const uv = findExecutable("uv");
-  rows.push({
-    name: "uv (PP-OCR)",
-    ok: Boolean(uv),
-    state: uv || "missing — https://docs.astral.sh/uv/",
-    required: needPaddle,
-    fix: "https://docs.astral.sh/uv/ — required for --with-paddle",
-  });
-
-  rows.push({
-    name: "Qwen paths",
-    ok: fs.existsSync(QWEN_PATHS),
-    state: fs.existsSync(QWEN_PATHS) ? "ok" : "missing",
-    required: needQwenPaths,
-    fix: "pnpm platform setup (copies deploy/qwen35/paths.*.env.example)",
-  });
-
-  // Ports used by default Hub stack + NuExtract. Warn if busy (still required=false so
-  // a leftover platform can be restarted after stop - but surface clearly).
+  // Ports used by the stack + NuExtract. Not required, so a leftover stack can be restarted.
   const ports = [
     [3000, "UI"],
     [8000, "API"],
@@ -391,193 +276,78 @@ function preflight({ exitOnFail = true, quietOk = false } = {}) {
     });
   }
 
-  let failed = false;
   for (const row of rows) {
-    const skip = !row.required && !row.ok;
     const mark = row.ok ? "ok" : row.required ? "!!" : "--";
-    if (!row.ok && row.required) failed = true;
-    const label = skip ? `${row.state}` : row.state;
-    console.log(`  [${mark}] ${row.name.padEnd(18)} ${label}`);
+    console.log(`  [${mark}] ${row.name.padEnd(18)} ${row.state}`);
   }
-
-  console.log("");
   console.log(
-    "Scope: tools, Hub images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
+    "\nScope: tools, Hub images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
   );
-  if (failed) {
+
+  const failed = rows.filter((row) => !row.ok && row.required);
+  if (failed.length) {
     console.log("Fix required items, then re-run:\n");
-    for (const row of rows) {
-      if (!row.ok && row.required) console.log(`  • ${row.name}: ${row.fix}`);
-    }
-    console.log(`
-Or:
-  pnpm platform -- --platform-only     # containers only (skip host models)
-  pnpm platform -- --no-nuextract      # skip NuExtract requirement
-  pnpm platform help
-`);
-    if (exitOnFail) process.exit(1);
-    return false;
+    for (const row of failed) console.log(`  • ${row.name}: ${row.fix}`);
+    console.log("\nOr: pnpm platform -- --platform-only   # containers only (skip host model)\n");
+    process.exit(1);
   }
-
-  if (!quietOk) {
-    console.log("Preflight OK — ready to start.\n");
-  }
-  return true;
-}
-
-function logPlan() {
-  const paddle = opts.noPaddle ? "off" : "on";
-  const needQwen = !opts.noQwen && (!opts.noPaddle || opts.withGlm);
-  const qwen = needQwen ? "on (host)" : "off";
-  const nue = opts.withNuextract ? "on (host)" : "off";
-  const glm = opts.withGlm ? "on (host + local worker SDK)" : "off";
-  const obs = opts.withObs ? "on" : "off";
-  console.log(
-    `Plan: Hub images  NuExtract=${nue}  PP-OCR=${paddle}  Qwen=${qwen}  GLM=${glm}  Observability=${obs}`
-  );
-}
-
-function enableObservabilityEnv() {
-  setEnvKeys(BACKEND_ENV, {
-    AUDIT_OTEL_ENABLED: "true",
-    AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
-    AUDIT_OTEL_SERVICE_NAME: "repody-api",
-    AUDIT_LOG_JSON: "true",
-  });
-}
-
-function disableObservabilityEnv() {
-  setEnvKeys(BACKEND_ENV, {
-    AUDIT_OTEL_ENABLED: "false",
-  });
-}
-
-function startObservabilityStack(composeEnv) {
-  console.log("\n── Observability (Grafana · Loki · Tempo · Bugsink) ─────────");
-  enableObservabilityEnv();
-  run("docker", composeArgs("--profile", "observability", "up", "-d", "--no-build"), {
-    inherit: true,
-    allowFail: true,
-    env: composeEnv,
-  });
-}
-
-function pullHubImages() {
-  const backend = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
-  const web = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
-  console.log("\n── Pull Hub images ──────────────────────────────────────────");
-  console.log(`  ${backend}`);
-  console.log(`  ${web}`);
-  run("docker", ["pull", backend], { inherit: true });
-  run("docker", ["pull", web], { inherit: true });
+  if (!quietOk) console.log("Preflight OK — ready to start.\n");
 }
 
 function setup() {
   console.log("── Repody platform setup (once) ───────────────────────────────\n");
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
-  ensureInferencePaths();
+  copyEnvFiles();
   patchBackendEnv();
-
-  const docker = spawnSync("docker", ["info"], { encoding: "utf8" });
-  const dockerOk = docker.status === 0;
+  const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
   console.log(`Docker:       ${dockerOk ? "ok" : "NOT RUNNING — start Docker Desktop"}`);
   console.log(
     `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`
   );
-  console.log(`uv:           ${findExecutable("uv") || "missing — https://docs.astral.sh/uv/"}`);
 
-  if (dockerOk && !opts.skipPull) {
-    pullHubImages();
-  } else if (!dockerOk) {
+  if (!dockerOk) {
     console.warn("\nwarn: skipped image pull — start Docker Desktop, then: pnpm platform setup");
-  } else {
+  } else if (opts.skipPull) {
     console.log("\n(--no-pull) skipped Hub image pull");
+  } else {
+    console.log("\n── Pull Hub images ──────────────────────────────────────────");
+    run("docker", ["pull", BACKEND_IMAGE], { inherit: true });
+    run("docker", ["pull", WEB_IMAGE], { inherit: true });
   }
 
   console.log(`
 Setup done. Next:
-  ${findExecutable("llama-server") ? "" : `${llamaInstallHint()}\n  `}# Download NuExtract GGUFs — see deploy/llamacpp/README.md
+  # Download NuExtract GGUFs (pnpm llamacpp:download) — see deploy/llamacpp/README.md
   # Set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env
   pnpm platform
-
-Default host model: NuExtract (repody:vlm). Optional:
-  pnpm platform -- --with-paddle     # also PP-OCR + Qwen
-  pnpm platform -- --with-glm        # also GLM-OCR
 `);
 }
 
-async function doctor() {
-  // Full preflight - same gates as `pnpm platform` before start.
-  preflight({ exitOnFail: true });
-}
-
 async function up() {
-  copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
-  copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
-  ensureInferencePaths();
+  preflight({ quietOk: true });
   patchBackendEnv();
-
-  // Same comprehensive check as `pnpm platform doctor`.
-  preflight({ exitOnFail: true, quietOk: true });
-  logPlan();
-
-  const needLlama = !opts.noQwen || opts.withNuextract || opts.withGlm;
-  if (needLlama && !ensureLlamaServer({ required: true })) process.exit(1);
-
-  if (opts.withNuextract) {
-    const nue = nuextractConfigured();
-    console.log(`NuExtract: ${nue.reason}`);
-  }
+  console.log(
+    `Plan: Hub images  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`
+  );
 
   const composeEnv = {
     REPODY_PULL_POLICY: opts.skipPull ? "never" : process.env.REPODY_PULL_POLICY || "missing",
-    AUDIT_OTEL_ENABLED: opts.withObs ? "true" : "false",
-    AUDIT_OTEL_EXPORTER_ENDPOINT: "http://otel-collector:4318/v1/traces",
-    REPODY_BACKEND_EXTRAS: process.env.REPODY_BACKEND_EXTRAS || "otel,glmocr",
   };
-
   if (opts.withObs) {
-    startObservabilityStack(composeEnv);
-  } else {
-    disableObservabilityEnv();
-  }
-
-  if (opts.withGlm) {
-    console.log("\n── Build extract worker (official GlmOcr SDK extras) ─────────");
-    run("docker", composeArgs("--profile", "workers", "build", "worker-extract"), {
+    console.log("\n── Observability (Grafana · Loki · Tempo · Bugsink) ─────────");
+    run("docker", composeArgs("--profile", "observability", "up", "-d", "--no-build"), {
       inherit: true,
+      allowFail: true,
       env: composeEnv,
     });
   }
 
-  // Host models first so workers never race a cold endpoint; Compose then waits on healthchecks.
-  if (!opts.noPaddle) {
-    console.log("\n── PP-OCRv6 (host; auto-installs deps if needed) ─────────────");
-    run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
-  }
-
-  // Qwen is the JSON stage for paddleocr:qwen and glm:qwen.
-  if (!opts.noQwen && (!opts.noPaddle || opts.withGlm)) {
-    console.log("\n── Qwen3.5 (host, OCR→JSON) ──────────────────────────────────");
-    llamaServe("qwen35", "serve", { allowFail: true });
-  }
-
+  // Host model first so workers never race a cold endpoint; Compose then waits on healthchecks.
   if (opts.withNuextract) {
     console.log("\n── NuExtract (host) ──────────────────────────────────────────");
-    llamaServe("nuextract", "serve", { allowFail: true });
-  }
-
-  if (opts.withGlm) {
-    console.log("\n── GLM-OCR (host llama-server) ───────────────────────────────");
-    llamaServe("glmocr", "serve", { allowFail: true });
+    llamaServe("serve", { allowFail: true });
   }
 
   console.log("\n── Start Hub platform (waits for healthchecks) ───────────────");
-  // Images are pulled by `pnpm platform setup`. `--no-pull` forces never; otherwise refresh if missing.
   run(
     "docker",
     composeArgs(
@@ -588,7 +358,7 @@ async function up() {
       "180",
       "--pull",
       opts.skipPull ? "never" : "missing",
-      opts.withGlm ? "--build" : "--no-build",
+      "--no-build",
       "postgres",
       "redis",
       "minio",
@@ -602,13 +372,6 @@ async function up() {
   );
 
   await status();
-  const extraction = [];
-  if (opts.withNuextract) extraction.push("repody:vlm");
-  if (!opts.noPaddle && !opts.noQwen) extraction.push("paddleocr:qwen");
-  else if (!opts.noPaddle) extraction.push("paddleocr:v6");
-  if (opts.withGlm && !opts.noQwen) extraction.push("glm:qwen");
-  else if (opts.withGlm) extraction.push("glm:ocr");
-
   console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║  Repody platform — ready                                     ║
@@ -618,7 +381,7 @@ async function up() {
   API         http://localhost:8000
   Keycloak    http://localhost:8080   (admin / admin)
   Sign-in     operator@repody.local / repody-dev
-  Extraction  ${extraction.length ? extraction.join(" · ") : "(platform only)"}
+  Extraction  ${opts.withNuextract ? "repody:vlm (NuExtract)" : "(platform only)"}
 ${
   opts.withObs
     ? `
@@ -633,7 +396,6 @@ ${
   pnpm platform status
   pnpm platform logs      # tail API / web / workers
   pnpm platform stop
-  pnpm platform help
 `);
 }
 
@@ -642,33 +404,17 @@ async function status() {
     ["API", "http://127.0.0.1:8000/v1/healthz"],
     ["UI", "http://127.0.0.1:3000"],
     ["Keycloak", "http://127.0.0.1:8080"],
-    ["PP-OCRv6", "http://127.0.0.1:8868/ocr"],
-    ["Qwen3.5", "http://127.0.0.1:8084/v1/models"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
-    ["GLM-OCR", "http://127.0.0.1:8083/v1/models"],
     ["Grafana", "http://127.0.0.1:3030"],
     ["Bugsink", "http://127.0.0.1:8090"],
   ];
   console.log("\n=== Repody platform status ===\n");
   for (const [name, url] of checks) {
-    const probe =
-      name === "PP-OCRv6"
-        ? await fetchProbe(url, 2500, {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: "{}",
-          })
-        : await fetchProbe(url, 2500);
-    const ok =
-      name === "PP-OCRv6"
-        ? Boolean(probe.status && probe.status !== 404 && probe.status < 500)
-        : probe.ok;
+    const { ok } = await fetchProbe(url, 2500);
     console.log(`  [${ok ? "ok" : "--"}] ${name.padEnd(10)} ${url}`);
   }
-  console.log("");
-  console.log("  Logs:  pnpm platform logs");
-  console.log('  Grafana Explore → Loki {container=~"repody-.*"}');
-  console.log("");
+  console.log("\n  Logs:  pnpm platform logs");
+  console.log('  Grafana Explore → Loki {container=~"repody-.*"}\n');
 }
 
 function logs() {
@@ -692,14 +438,8 @@ function logs() {
 }
 
 function stop() {
-  console.log("Stopping host models + Hub Compose stack…");
-  llamaServe("qwen35", "stop", { allowFail: true });
-  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
-  llamaServe("nuextract", "stop", { allowFail: true });
-  llamaServe("glmocr", "stop", { allowFail: true });
+  console.log("Stopping host NuExtract + Hub Compose stack…");
+  llamaServe("stop", { allowFail: true });
   run(
     "docker",
     composeArgs("--profile", "workers", "--profile", "observability", "down", "--remove-orphans"),
@@ -708,19 +448,21 @@ function stop() {
   console.log("Stopped. Start again with: pnpm platform");
 }
 
-async function bootstrap() {
-  setup();
-  await up();
-}
-
-if (command === "help" || opts.help) printHelp();
-else if (command === "setup") setup();
-else if (command === "bootstrap") void bootstrap();
-else if (command === "doctor") void doctor();
-else if (command === "up") void up();
-else if (command === "status") void status();
-else if (command === "logs") logs();
-else if (command === "stop") stop();
+const commands = {
+  help: printHelp,
+  setup,
+  bootstrap: async () => {
+    setup();
+    await up();
+  },
+  doctor: () => preflight(),
+  up,
+  status,
+  logs,
+  stop,
+};
+if (flags.has("--help") || flags.has("-h")) printHelp();
+else if (commands[command]) await commands[command]();
 else {
   console.error(`Unknown command: ${command}\n`);
   printHelp();

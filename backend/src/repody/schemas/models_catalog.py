@@ -10,7 +10,7 @@ from repody.schemas.common import CamelModel
 class CatalogModelEntry(CamelModel):
     id: str
     label: str
-    kind: str  # document_model | validation
+    kind: str  # document_model
     engine: str = ""
     runtime: str = ""
     description: str = ""
@@ -37,7 +37,6 @@ class ValidationModeOption(CamelModel):
 class ModelsCatalogResponse(CamelModel):
     models: list[CatalogModelEntry]
     default_document_model: str
-    default_validation_model: str | None = None
     inference_mode: str
     paths: list[ReadPathOption] = Field(default_factory=list)
     validation_modes: list[ValidationModeOption] = Field(default_factory=list)

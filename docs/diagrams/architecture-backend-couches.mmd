@@ -36,7 +36,7 @@ flowchart TB
     Storage["infra/storage/ MinIO or S3"]
     Taskiq["taskiq/ Redis Streams<br/>queues extract | fast"]
     InfClient["inference/ OpenAI-compat clients"]
-    Auth["infra/auth/ JWT · Casbin RBAC"]
+    Auth["infra/auth/ JWT · RBAC"]
   end
 
   Next --> Proxy --> APIRouters

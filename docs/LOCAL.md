@@ -65,8 +65,6 @@ Full checkout for daily work on **Windows · macOS · Linux** (`pnpm platform`).
 | API / UI / workers | Docker Hub (`mehdigououiad/repody-backend` + `repody-web`, `linux/amd64` + `linux/arm64`) |
 | Postgres / Redis / MinIO / Keycloak | Docker Compose |
 | NuExtract `:8081` | Host (**default**) |
-| PP-OCRv6 `:8868` / Qwen `:8084` | Host (`--with-paddle`) |
-| GLM-OCR `:8083` | Off unless `--with-glm` |
 
 Images pull as public multi-arch - no Hub login required.
 
@@ -84,7 +82,7 @@ Images pull as public multi-arch - no Hub login required.
    - macOS: `brew install llama.cpp`
    - Windows: `winget install ggml.llamacpp`
 4. **NuExtract GGUFs** - download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
-5. Disk / RAM for Hub images (~2–4 GB) and GGUFs. `uv` is required only with `--with-paddle`.
+5. Disk / RAM for Hub images (~2–4 GB) and GGUFs. `uv` is used for `pnpm llamacpp:warmup`.
 
 ---
 
@@ -111,7 +109,6 @@ One-shot after clone/install: `pnpm platform bootstrap`.
 | `backend/.env` | `deploy/env/compose.env.example` | API / Compose / inference URLs |
 | `.env.local` | `deploy/env.auth.example` | Next.js / Auth.js / Keycloak browser issuer |
 | `deploy/llamacpp/paths.local.env` | Mac/Win example | **Required** NuExtract GGUF paths |
-| `deploy/qwen35/paths.local.env` | Mac example if present | Qwen paths (only with `--with-paddle`) |
 
 Trusted laptop / localhost defaults only - do not expose Compose ports to a LAN or reuse passwords outside development.
 
@@ -195,10 +192,8 @@ pnpm platform help
 ## Flags
 
 ```bash
-pnpm platform -- --with-paddle
 pnpm platform -- --platform-only
 pnpm platform -- --no-nuextract
-pnpm platform -- --with-glm
 pnpm platform -- --no-pull
 pnpm platform -- --no-obs
 pnpm platform setup -- --no-pull
@@ -207,22 +202,16 @@ pnpm platform setup -- --no-pull
 | Flag | Effect |
 |------|--------|
 | (default) | Host NuExtract `:8081` -> `repody:vlm` |
-| `--with-paddle` | Also PP-OCRv6 + Qwen -> `paddleocr:qwen` |
-| `--with-glm` | GLM-OCR `:8083` + local extract worker with official SDK -> `glm:qwen` / `glm:ocr` |
 | `--no-nuextract` | Skip NuExtract |
 | `--platform-only` | Containers only |
 | `--no-pull` | Skip `docker pull` |
 | `--no-obs` | Skip Grafana/Bugsink stack |
 
-All three structured engines: `pnpm platform -- --with-paddle --with-glm`
 
 | Catalog | Pipeline |
 |---------|----------|
 | `repody:vlm` | Official NuExtract template JSON (**default**) |
-| `paddleocr:qwen` | PP-OCR -> Qwen text -> JSON |
-| `glm:qwen` | GlmOcr SDK -> Qwen text -> JSON |
 
-Markdown-only OCR (`paddleocr:v6`, `glm:ocr`) is not a UI option - only used inside Qwen pipelines. See [EXTRACTION.md](./EXTRACTION.md).
 
 | Command | Purpose |
 |---------|---------|

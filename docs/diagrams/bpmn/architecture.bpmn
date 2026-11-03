@@ -18,7 +18,7 @@
     <participant id="P_User" name="User" processRef="Proc_User"/>
     <participant id="P_Frontend" name="Frontend — Next.js (repody-web)" processRef="Proc_Frontend"/>
     <participant id="P_API" name="API — FastAPI (repody-api)" processRef="Proc_API"/>
-    <participant id="P_Auth" name="Auth — Keycloak OIDC + Casbin roles" processRef="Proc_Auth"/>
+    <participant id="P_Auth" name="Auth — Keycloak OIDC + RBAC roles" processRef="Proc_Auth"/>
     <participant id="P_Taskiq" name="Background jobs — Taskiq workers" processRef="Proc_Taskiq"/>
     <participant id="P_SSE" name="Live updates — Redis + SSE streams" processRef="Proc_SSE"/>
     <participant id="P_Postgres" name="Database — PostgreSQL" processRef="Proc_Postgres"/>
@@ -29,7 +29,7 @@
     <messageFlow id="MF1" name="Open UI" sourceRef="T_User_Open" targetRef="T_FE_Pages"/>
     <messageFlow id="MF2" name="Login" sourceRef="T_FE_Login" targetRef="T_Auth_OIDC"/>
     <messageFlow id="MF3" name="API + JWT" sourceRef="T_FE_Proxy" targetRef="T_API_Receive"/>
-    <messageFlow id="MF4" name="Check roles" sourceRef="T_API_Receive" targetRef="T_Auth_Casbin"/>
+    <messageFlow id="MF4" name="Check roles" sourceRef="T_API_Receive" targetRef="T_Auth_RBAC"/>
     <messageFlow id="MF5" name="Validate JWT" sourceRef="T_API_Receive" targetRef="T_Auth_JWKS"/>
     <messageFlow id="MF6" name="Save data" sourceRef="T_API_Business" targetRef="T_PG_Store"/>
     <messageFlow id="MF7" name="Upload files" sourceRef="T_API_Business" targetRef="T_Minio_Store"/>
@@ -92,16 +92,16 @@
     <endEvent id="E_API" name="Response"/>
   </process>
 
-  <!-- AUTH: Keycloak + Casbin -->
+  <!-- AUTH: Keycloak + RBAC -->
   <process id="Proc_Auth" isExecutable="false">
     <startEvent id="S_Auth" name="Auth"/>
     <sequenceFlow id="H1" sourceRef="S_Auth" targetRef="T_Auth_OIDC"/>
     <task id="T_Auth_OIDC" name="Keycloak OIDC login"/>
     <sequenceFlow id="H2" sourceRef="T_Auth_OIDC" targetRef="T_Auth_JWKS"/>
     <task id="T_Auth_JWKS" name="JWT keys (JWKS)"/>
-    <sequenceFlow id="H3" sourceRef="T_Auth_JWKS" targetRef="T_Auth_Casbin"/>
-    <task id="T_Auth_Casbin" name="Casbin roles&#10;viewer · operator · admin"/>
-    <sequenceFlow id="H4" sourceRef="T_Auth_Casbin" targetRef="E_Auth"/>
+    <sequenceFlow id="H3" sourceRef="T_Auth_JWKS" targetRef="T_Auth_RBAC"/>
+    <task id="T_Auth_RBAC" name="RBAC roles&#10;viewer · operator · admin"/>
+    <sequenceFlow id="H4" sourceRef="T_Auth_RBAC" targetRef="E_Auth"/>
     <endEvent id="E_Auth" name="Allowed / denied"/>
   </process>
 
@@ -233,7 +233,7 @@
       <bpmndi:BPMNShape id="S_Auth_di" bpmnElement="S_Auth"><dc:Bounds x="180" y="452" width="36" height="36"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="T_Auth_OIDC_di" bpmnElement="T_Auth_OIDC"><dc:Bounds x="260" y="440" width="160" height="60"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="T_Auth_JWKS_di" bpmnElement="T_Auth_JWKS"><dc:Bounds x="460" y="440" width="140" height="60"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="T_Auth_Casbin_di" bpmnElement="T_Auth_Casbin"><dc:Bounds x="640" y="440" width="180" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Auth_RBAC_di" bpmnElement="T_Auth_RBAC"><dc:Bounds x="640" y="440" width="180" height="60"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="E_Auth_di" bpmnElement="E_Auth"><dc:Bounds x="860" y="452" width="36" height="36"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="H1_di" bpmnElement="H1"><di:waypoint x="216" y="470"/><di:waypoint x="260" y="470"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="H2_di" bpmnElement="H2"><di:waypoint x="420" y="470"/><di:waypoint x="460" y="470"/></bpmndi:BPMNEdge>

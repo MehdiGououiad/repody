@@ -13,16 +13,13 @@ from repody.api import (
     config,
     dashboard,
     health,
-    iam,
     metrics,
-    operator,
     rules_library,
     runs,
     uploads,
     workflows,
 )
 from repody.api.openapi_config import install_openapi
-from repody.app.operator.jobs import hydrate_operator_jobs_from_redis
 from repody.app.ops.maintenance import maintenance_loop, run_maintenance_cycle
 from repody.app.run.dispatch import close_taskiq_brokers
 from repody.app.run.dispatch_outbox import drain_dispatch_tasks
@@ -53,11 +50,7 @@ async def lifespan(_app: FastAPI):
         storage_backend=settings.storage_backend,
         inference_mode=settings.inference_mode,
     )
-    await asyncio.gather(
-        init_storage(),
-        hydrate_operator_jobs_from_redis(),
-        startup_taskiq_brokers(),
-    )
+    await asyncio.gather(init_storage(), startup_taskiq_brokers())
     if settings.oidc_enabled:
         try:
             await warm_jwks_cache(settings)
@@ -111,8 +104,6 @@ def create_app() -> FastAPI:
     app.include_router(rules_library.router, prefix="/v1")
     app.include_router(uploads.router, prefix="/v1")
     app.include_router(config.router, prefix="/v1")
-    app.include_router(operator.router, prefix="/v1")
-    app.include_router(iam.router, prefix="/v1")
 
     install_openapi(app)
     instrument_fastapi(app, settings)

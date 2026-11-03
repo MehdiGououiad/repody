@@ -23,15 +23,12 @@ Pull Hub images, start the platform, and (by default) **host NuExtract** (`repod
 | `pnpm platform setup` | **Once** - env files + pull Hub images |
 | `pnpm platform doctor` | **Preflight** - Node/pnpm, Docker, Hub images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
 | `pnpm platform` | **Daily** - preflight + start stack + NuExtract on host |
-| `pnpm platform -- --with-paddle` | Also PP-OCR + Qwen (`paddleocr:qwen`) |
 | `pnpm platform -- --platform-only` | Containers only (no host models) |
-| `pnpm platform -- --with-glm` | GLM-OCR host + local extract worker with official SDK |
 | `pnpm platform -- --no-nuextract` | Skip NuExtract |
 | `pnpm platform -- --no-pull` | Skip `docker pull` |
 | `pnpm platform status` | Health probes |
 | `pnpm platform stop` | Tear down |
 | `pnpm platform help` | Flags |
-| `pnpm models:warmup` | Re-warm configured host models |
 | `pnpm doctor` | Toolchain only (Node/pnpm) - prefer `pnpm platform doctor` |
 | `pnpm db:migrate` | Apply Alembic migrations |
 
@@ -42,14 +39,12 @@ Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.
 | Catalog id | Process | Port | Notes |
 |---|---|---|---|
 | `repody:vlm` | NuExtract | `:8081` | **Default** with `pnpm platform` |
-| `paddleocr:qwen` | PP-OCRv6 -> Qwen JSON | `:8868` + `:8084` | `--with-paddle` |
-| `glm:qwen` | GLM-OCR SDK -> Qwen JSON | `:8083` + `:8084` | `--with-glm` (builds local worker with SDK) |
 
 ```bash
 pnpm install
 pnpm doctor
 pnpm platform setup
-pnpm platform -- --with-paddle --with-glm   # NuExtract + paddle + GLM
+pnpm platform                 # Hub images + host NuExtract
 pnpm platform status
 pnpm platform stop
 ```
@@ -115,12 +110,9 @@ Usually started by `pnpm platform`. Manual:
 
 | Command | Port |
 |---------|------|
-| `pnpm paddleocr:v6:serve` | `:8868` (auto-installs deps; starts Qwen companion by default) |
-| `pnpm qwen35:serve` | `:8084` |
 | `pnpm llamacpp:serve` | `:8081` |
-| `pnpm glmocr:serve` | `:8083` |
 
-Stop: `pnpm paddleocr:v6:stop` · `qwen35:stop` · `llamacpp:stop` · `glmocr:stop`.
+Stop: `pnpm llamacpp:stop`. Warm up: `pnpm llamacpp:warmup`.
 
 ## Architecture dossier
 

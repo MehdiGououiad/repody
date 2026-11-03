@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repody.infra.db.models import RuleTemplate
 from repody.infra.db.seed import default_rule_templates
 from repody.schemas.workflow import RuleTemplateSchema
-from repody.settings import get_settings
 
 
 async def _load_or_seed_templates(session: AsyncSession) -> list[RuleTemplate]:
@@ -21,8 +20,7 @@ async def _load_or_seed_templates(session: AsyncSession) -> list[RuleTemplate]:
 
 
 async def list_rule_templates(session: AsyncSession) -> list[RuleTemplateSchema]:
-    """Return templates, seeding defaults on first use; LLM templates only when enabled."""
-    llm_enabled = get_settings().llm_validation_enabled
+    """Return logic rule templates, seeding defaults on first use."""
     return [
         RuleTemplateSchema(
             id=t.id,
@@ -34,5 +32,5 @@ async def list_rule_templates(session: AsyncSession) -> list[RuleTemplateSchema]
             severity=t.severity,
         )
         for t in await _load_or_seed_templates(session)
-        if llm_enabled or (t.kind or "logic").lower() != "llm"
+        if (t.kind or "logic").lower() == "logic"
     ]

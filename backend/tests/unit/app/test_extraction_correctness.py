@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import pytest
-
 from repody.extraction.cache import (
     CACHE_VERSION,
     cache_key_from_storage,
@@ -9,10 +7,8 @@ from repody.extraction.cache import (
     should_cache_result,
 )
 from repody.extraction.fields import fields_from_nuextract_json
-from repody.extraction.modes import resolve_run_validation_mode
 from repody.extraction.schema import empty_fields_from_schema
 from repody.extraction.types import ExtractedFieldResult, ExtractionResult, SchemaFieldSpec
-from repody.rules.runner import skipped_llm_results
 
 
 def test_empty_schema_fields_have_no_fake_values():
@@ -118,164 +114,3 @@ def test_schema_fingerprint_stable_for_identical_schema():
         SchemaFieldSpec(name="invoice_number", description="Invoice reference"),
     ]
     assert schema_fingerprint(schema) == schema_fingerprint(list(schema))
-
-
-def test_skipped_llm_rules_use_skipped_status():
-    results = skipped_llm_results(
-        [{"id": "r1", "name": "Fees", "kind": "llm", "severity": "flag", "body": "check"}]
-    )
-    assert len(results) == 1
-    assert results[0].status == "skipped"
-
-
-@pytest.mark.asyncio
-async def test_llm_unavailable_is_skipped_in_stub_mode(monkeypatch):
-    from repody.inference.factory import get_chat
-    from repody.rules.llm_evaluator import evaluate_llm_rule
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "stub")
-    get_settings.cache_clear()
-    get_chat.cache_clear()
-
-    status, detail = await evaluate_llm_rule("Check total", {"total_amount": "6000"})
-    assert status == "skipped"
-    assert "disabled" in detail.lower() or "skipped" in detail.lower()
-
-
-@pytest.mark.asyncio
-async def test_llm_unavailable_is_error_when_inference_down(monkeypatch):
-    import httpx
-    import respx
-
-    from repody.inference.factory import get_chat
-    from repody.rules.llm_evaluator import evaluate_llm_rule
-    from repody.settings import get_settings
-
-    base = "http://model-runner-down.test/v1"
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", base)
-    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_VALIDATION_MODEL", "repody/validation:test")
-    get_settings.cache_clear()
-    get_chat.cache_clear()
-
-    with respx.mock:
-        respx.get(f"{base}/models").mock(return_value=httpx.Response(503))
-
-        status, detail = await evaluate_llm_rule("Check total", {"total_amount": "6000"})
-        assert status == "error"
-        assert "unavailable" in detail.lower()
-
-    get_chat.cache_clear()
-    get_settings.cache_clear()
-
-
-@pytest.mark.asyncio
-async def test_llm_rule_rejects_unknown_field_reference_before_inference():
-    from repody.rules.llm_evaluator import evaluate_llm_rule
-
-    status, detail = await evaluate_llm_rule(
-        "Verify that @missing_total is positive.",
-        {"total_amount": "6000"},
-    )
-
-    assert status == "error"
-    assert "@missing_total" in detail
-
-
-def test_llm_field_references_are_unique_and_affected():
-    from repody.rules.llm_evaluator import referenced_fields
-    from repody.rules.types import collect_affected_fields
-
-    body = "Compare @invoice.total_amount with @invoice.tax and @invoice.total_amount."
-    assert referenced_fields(body) == ["invoice.total_amount", "invoice.tax"]
-    assert collect_affected_fields({"kind": "llm", "body": body}) == [
-        "invoice.total_amount",
-        "invoice.tax",
-    ]
-
-
-def test_llm_rule_forces_logic_and_llm_validation_mode(monkeypatch):
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    get_settings.cache_clear()
-
-    assert resolve_run_validation_mode([{"kind": "llm"}]) == "logic_and_llm"
-
-
-@pytest.mark.asyncio
-async def test_single_llm_rule_uses_single_rule_evaluator(monkeypatch):
-    from repody.rules import llm_evaluator
-
-    calls = []
-
-    async def fake_evaluate(body, field_values, **kwargs):
-        calls.append((body, field_values, kwargs))
-        return "passed", "Validated by mock LLM."
-
-    monkeypatch.setattr(llm_evaluator, "evaluate_llm_rule", fake_evaluate)
-
-    result = await llm_evaluator.evaluate_llm_rules_batch(
-        [
-            {
-                "id": "rule-1",
-                "name": "Plausible total",
-                "body": "Verify @total_amount.",
-            }
-        ],
-        {"total_amount": "42", "supplier": "Example"},
-    )
-
-    assert result == {"rule-1": ("passed", "Validated by mock LLM.")}
-    assert calls == [
-        (
-            "Verify @total_amount.",
-            {"total_amount": "42", "supplier": "Example"},
-            {"rule_name": "Plausible total", "llm_model": None},
-        )
-    ]
-
-
-def test_structured_llm_auto_enabled_when_llm_validation_on(monkeypatch):
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_STRUCTURED_LLM_ENABLED", "false")
-    get_settings.cache_clear()
-
-    settings = get_settings()
-    assert settings.structured_llm_enabled is True
-
-
-@pytest.mark.asyncio
-async def test_llm_validation_requires_dedicated_model(monkeypatch):
-    from repody.rules.llm_evaluator import evaluate_llm_rule
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_LLM_VALIDATION_ENABLED", "true")
-    monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)
-    get_settings.cache_clear()
-
-    status, detail = await evaluate_llm_rule(
-        "Verify @total_amount is positive.",
-        {"total_amount": "6000"},
-    )
-    assert status == "error"
-    assert "AUDIT_VALIDATION_MODEL" in detail
-    assert "Repody VLM" in detail
-
-
-def test_resolve_llm_validation_model_never_falls_back_to_repody_vlm(monkeypatch):
-    from repody.inference.validation_model import resolve_llm_validation_model
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "numind/NuExtract3")
-    monkeypatch.delenv("AUDIT_VALIDATION_MODEL", raising=False)
-    get_settings.cache_clear()
-
-    model, error = resolve_llm_validation_model()
-    assert model is None
-    assert error is not None
-    assert "Repody VLM" in error

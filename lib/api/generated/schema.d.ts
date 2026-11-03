@@ -445,26 +445,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/platform/model-runtime-config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Model Runtime Config
-         * @description Effective per-model runtime knobs (platform env + host inference reference).
-         */
-        get: operations["get_model_runtime_config_v1_platform_model_runtime_config_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/models/catalog": {
         parameters: {
             query?: never;
@@ -474,7 +454,7 @@ export interface paths {
         };
         /**
          * Get Models Catalog
-         * @description Document and validation model catalog with live availability.
+         * @description The document model with live availability from the llama-server.
          */
         get: operations["get_models_catalog_v1_models_catalog_get"];
         put?: never;
@@ -483,231 +463,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/v1/diagnostics/document-model": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Document Model Diagnostic
-         * @description Document model runtime status (llama-server OpenAI API).
-         */
-        get: operations["document_model_diagnostic_v1_diagnostics_document_model_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Operator Status */
-        get: operations["operator_status_v1_operator_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/jobs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Operator Jobs */
-        get: operations["operator_jobs_v1_operator_jobs_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/jobs/{job_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Operator Job */
-        get: operations["operator_job_v1_operator_jobs__job_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/jobs/{job_id}/report": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Operator Job Report */
-        get: operations["operator_job_report_v1_operator_jobs__job_id__report_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/jobs/{job_id}/artifacts/{artifact}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Operator Job Artifact */
-        get: operations["operator_job_artifact_v1_operator_jobs__job_id__artifacts__artifact__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/benchmarks/latest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Latest Benchmark */
-        get: operations["latest_benchmark_v1_operator_benchmarks_latest_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/models/warmup": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Warmup Model */
-        post: operations["warmup_model_v1_operator_models_warmup_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operator/benchmarks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Start Benchmark */
-        post: operations["start_benchmark_v1_operator_benchmarks_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/iam/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Iam Me */
-        get: operations["iam_me_v1_iam_me_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/iam/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Iam Catalog */
-        get: operations["iam_catalog_v1_iam_catalog_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/iam/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Users */
-        get: operations["list_users_v1_iam_users_get"];
-        put?: never;
-        /** Create User */
-        post: operations["create_user_v1_iam_users_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/iam/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Update User */
-        patch: operations["update_user_v1_iam_users__user_id__patch"];
         trace?: never;
     };
 }
@@ -744,115 +499,6 @@ export interface components {
             /** Offset */
             offset: number;
         };
-        /** BenchmarkReportSchema */
-        BenchmarkReportSchema: {
-            /**
-             * Generatedat
-             * @default
-             */
-            generatedAt: string;
-            /**
-             * Profile
-             * @default
-             */
-            profile: string;
-            /**
-             * Suiteid
-             * @default
-             */
-            suiteId: string;
-            summary: components["schemas"]["BenchmarkSummarySchema"];
-            /** Results */
-            results: components["schemas"]["BenchmarkResultSchema"][];
-            /** Environment */
-            environment: {
-                [key: string]: unknown;
-            };
-        };
-        /** BenchmarkResultSchema */
-        BenchmarkResultSchema: {
-            /**
-             * Case
-             * @default
-             */
-            case: string;
-            /**
-             * Model
-             * @default
-             */
-            model: string;
-            /**
-             * Phase
-             * @default
-             */
-            phase: string;
-            /**
-             * Status
-             * @default
-             */
-            status: string;
-            /**
-             * Passed
-             * @default false
-             */
-            passed: boolean;
-            /** Skipped */
-            skipped: boolean | null;
-            /** Wallms */
-            wallMs: number | null;
-            /** Queuems */
-            queueMs: number | null;
-            /** Extractionms */
-            extractionMs: number | null;
-            /** Validationms */
-            validationMs: number | null;
-            /** Fieldaccuracy */
-            fieldAccuracy: number | null;
-            /** Ruleaccuracy */
-            ruleAccuracy: number | null;
-            /** Judgequality */
-            judgeQuality: boolean | null;
-            /** Rawtextchars */
-            rawTextChars: number | null;
-            /** Textpreview */
-            textPreview: string | null;
-            /** Cachehit */
-            cacheHit: boolean | null;
-            /** Error */
-            error: string | null;
-        };
-        /** BenchmarkSummarySchema */
-        BenchmarkSummarySchema: {
-            /**
-             * Passed
-             * @default 0
-             */
-            passed: number;
-            /**
-             * Failed
-             * @default 0
-             */
-            failed: number;
-            /**
-             * Skipped
-             * @default 0
-             */
-            skipped: number;
-            /**
-             * Fieldaccuracy
-             * @default 0
-             */
-            fieldAccuracy: number;
-            /**
-             * Ruleaccuracy
-             * @default 0
-             */
-            ruleAccuracy: number;
-            /** Medianwallms */
-            medianWallMs: number | null;
-            /** Medianrawtextchars */
-            medianRawTextChars: number | null;
-        };
         /** Body_create_run_v1_workflows__workflow_id__runs_post */
         Body_create_run_v1_workflows__workflow_id__runs_post: {
             /** Files */
@@ -866,48 +512,6 @@ export interface components {
             document_types?: string | null;
             /** Payload */
             payload?: string | null;
-        };
-        /** Body_start_benchmark_v1_operator_benchmarks_post */
-        Body_start_benchmark_v1_operator_benchmarks_post: {
-            /** Document */
-            document?: string | null;
-            /** Manifest */
-            manifest?: string | null;
-            /**
-             * Profile
-             * @default models
-             */
-            profile: string;
-            /**
-             * Models
-             * @default []
-             */
-            models: string;
-            /**
-             * Validation Mode
-             * @default logic_only
-             */
-            validation_mode: string;
-            /**
-             * Warm Runs
-             * @default 1
-             */
-            warm_runs: number;
-            /**
-             * Minimum Accuracy
-             * @default 1
-             */
-            minimum_accuracy: number;
-            /**
-             * Cache Check
-             * @default true
-             */
-            cache_check: boolean;
-            /**
-             * Judge Quality
-             * @default true
-             */
-            judge_quality: boolean;
         };
         /** Body_upload_files_v1_uploads_post */
         Body_upload_files_v1_uploads_post: {
@@ -988,30 +592,6 @@ export interface components {
             /** Uploads */
             uploads: components["schemas"]["ConfirmUploadItem"][];
         };
-        /** CreateIamUserRequest */
-        CreateIamUserRequest: {
-            /** Email */
-            email: string;
-            /**
-             * Firstname
-             * @default
-             */
-            firstName: string;
-            /**
-             * Lastname
-             * @default
-             */
-            lastName: string;
-            /** Password */
-            password: string;
-            /** Roles */
-            roles?: string[];
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-        };
         /** CreateRunJsonBody */
         CreateRunJsonBody: {
             snapshot?: components["schemas"]["RunSnapshotBody"] | null;
@@ -1052,15 +632,6 @@ export interface components {
         DeployWorkflowBody: {
             /** Apikey */
             apiKey?: string | null;
-        };
-        /** DeploymentNote */
-        DeploymentNote: {
-            /** Changekind */
-            changeKind: string;
-            /** Action */
-            action: string;
-            /** Detail */
-            detail: string;
         };
         /** DocumentDefSchema */
         "DocumentDefSchema-Input": {
@@ -1163,91 +734,6 @@ export interface components {
              * @description NuExtract in-context extraction examples (developer message pairs).
              */
             extractionIclExamples: components["schemas"]["ExtractionIclExampleSchema-Output"][];
-        };
-        /** DocumentModelDiagnosticResponse */
-        DocumentModelDiagnosticResponse: {
-            /** Ok */
-            ok: boolean;
-            /** Model */
-            model: string;
-            /**
-             * Runtime
-             * @default
-             */
-            runtime: string;
-            /**
-             * Inferencereachable
-             * @default false
-             */
-            inferenceReachable: boolean;
-            /**
-             * Modelinregistry
-             * @default false
-             */
-            modelInRegistry: boolean;
-            /**
-             * Modelloaded
-             * @default false
-             */
-            modelLoaded: boolean;
-            /**
-             * Extractor
-             * @default
-             */
-            extractor: string;
-            /**
-             * Inferencemode
-             * @default
-             */
-            inferenceMode: string;
-            /** Inferms */
-            inferMs: number | null;
-            /**
-             * Sampleextracted
-             * @default false
-             */
-            sampleExtracted: boolean;
-            /**
-             * Detail
-             * @default
-             */
-            detail: string;
-            /**
-             * Hint
-             * @default
-             */
-            hint: string;
-            settings: components["schemas"]["DocumentModelDiagnosticSettingsSchema"];
-        };
-        /** DocumentModelDiagnosticSettingsSchema */
-        DocumentModelDiagnosticSettingsSchema: {
-            /**
-             * Extractor
-             * @default
-             */
-            extractor: string;
-            /**
-             * Inferencemode
-             * @default
-             */
-            inferenceMode: string;
-            /**
-             * Runtime
-             * @default
-             */
-            runtime: string;
-            /**
-             * Documentmodelpdfdpi
-             * @default 0
-             */
-            documentModelPdfDpi: number;
-            /** Documentmodelmaxedgepx */
-            documentModelMaxEdgePx: number | null;
-            /**
-             * Llmvalidationenabled
-             * @default false
-             */
-            llmValidationEnabled: boolean;
         };
         /** DocumentModelSummary */
         DocumentModelSummary: {
@@ -1427,8 +913,6 @@ export interface components {
             dbPoolSize: number;
             /** Queuebackend */
             queueBackend: string;
-            /** Structuredllm */
-            structuredLlm: boolean;
             /** Ratelimitenabled */
             rateLimitEnabled: boolean;
             /** Queuedruns */
@@ -1444,59 +928,6 @@ export interface components {
             workerPools: components["schemas"]["WorkerPoolsHealth"];
             /** Taskiqconfigured */
             taskiqConfigured: boolean;
-        };
-        /** IamCatalogResponse */
-        IamCatalogResponse: {
-            /** Roles */
-            roles: components["schemas"]["RoleDefinition"][];
-            /** Approles */
-            appRoles: string[];
-        };
-        /** IamMeResponse */
-        IamMeResponse: {
-            /** Subject */
-            subject: string;
-            /** Email */
-            email: string | null;
-            /** Roles */
-            roles: string[];
-            /** Permissions */
-            permissions: components["schemas"]["PermissionGrant"][];
-            /** Canmanageusers */
-            canManageUsers: boolean;
-            /** Oidcenabled */
-            oidcEnabled: boolean;
-            /** Keycloakadminurl */
-            keycloakAdminUrl: string | null;
-        };
-        /** IamUser */
-        IamUser: {
-            /** Id */
-            id: string;
-            /** Username */
-            username: string;
-            /** Email */
-            email: string | null;
-            /** Firstname */
-            firstName: string | null;
-            /** Lastname */
-            lastName: string | null;
-            /**
-             * Enabled
-             * @default true
-             */
-            enabled: boolean;
-            /** Roles */
-            roles: string[];
-        };
-        /** IamUsersResponse */
-        IamUsersResponse: {
-            /** Users */
-            users: components["schemas"]["IamUser"][];
-            /** Managementavailable */
-            managementAvailable: boolean;
-            /** Managementerror */
-            managementError: string | null;
         };
         /** KpiMetric */
         KpiMetric: {
@@ -1539,83 +970,12 @@ export interface components {
             /** Healthalerts */
             healthAlerts: components["schemas"]["HealthAlert"][];
         };
-        /** ModelActionRequest */
-        ModelActionRequest: {
-            /** Model */
-            model: string;
-        };
-        /** ModelConfigField */
-        ModelConfigField: {
-            /** Key */
-            key: string;
-            /** Envvar */
-            envVar: string;
-            /** Label */
-            label: string;
-            /** Description */
-            description: string;
-            /**
-             * Scope
-             * @enum {string}
-             */
-            scope: "platform" | "worker_runtime" | "inference_server";
-            /**
-             * Restart
-             * @enum {string}
-             */
-            restart: "worker" | "api" | "inference" | "helm" | "none";
-            /** Value */
-            value: string | number | boolean | null;
-            /**
-             * Configured
-             * @default true
-             */
-            configured: boolean;
-            /**
-             * Source
-             * @default platform
-             */
-            source: string;
-        };
-        /** ModelRuntimeConfigResponse */
-        ModelRuntimeConfigResponse: {
-            /** Models */
-            models: components["schemas"]["ModelRuntimeProfile"][];
-            /** Shared */
-            shared: components["schemas"]["ModelConfigField"][];
-            /** Deploymentnotes */
-            deploymentNotes: components["schemas"]["DeploymentNote"][];
-        };
-        /** ModelRuntimeProfile */
-        ModelRuntimeProfile: {
-            /** Modelid */
-            modelId: string;
-            /** Label */
-            label: string;
-            /** Runtime */
-            runtime: string;
-            /** Runtimemodel */
-            runtimeModel: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Inferenceurl */
-            inferenceUrl: string | null;
-            /**
-             * Renderpolicy
-             * @default
-             */
-            renderPolicy: string;
-            /** Fields */
-            fields: components["schemas"]["ModelConfigField"][];
-        };
         /** ModelsCatalogResponse */
         ModelsCatalogResponse: {
             /** Models */
             models: components["schemas"]["CatalogModelEntry"][];
             /** Defaultdocumentmodel */
             defaultDocumentModel: string;
-            /** Defaultvalidationmodel */
-            defaultValidationModel: string | null;
             /** Inferencemode */
             inferenceMode: string;
             /** Paths */
@@ -1633,75 +993,6 @@ export interface components {
              */
             defaultValidationMode: string;
         };
-        /** OperatorJobAcceptedResponse */
-        OperatorJobAcceptedResponse: {
-            job: components["schemas"]["OperatorJobSchema"];
-        };
-        /** OperatorJobSchema */
-        OperatorJobSchema: {
-            /** Id */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Label */
-            label: string;
-            /** Status */
-            status: string;
-            /**
-             * Createdat
-             * Format: date-time
-             */
-            createdAt: string;
-            /** Startedat */
-            startedAt: string | null;
-            /** Completedat */
-            completedAt: string | null;
-            /**
-             * Progress
-             * @default
-             */
-            progress: string;
-            /**
-             * Output
-             * @default
-             */
-            output: string;
-            /** Error */
-            error: string | null;
-            /**
-             * Hasreport
-             * @default false
-             */
-            hasReport: boolean;
-        };
-        /** OperatorJobsResponse */
-        OperatorJobsResponse: {
-            /** Jobs */
-            jobs: components["schemas"]["OperatorJobSchema"][];
-        };
-        /** OperatorLimitsSchema */
-        OperatorLimitsSchema: {
-            /** Maxuploadbytes */
-            maxUploadBytes: number;
-            /** Nuextractmaxpagesperrequest */
-            nuextractMaxPagesPerRequest: number | null;
-            /** Tasktimeoutminutes */
-            taskTimeoutMinutes: number;
-        };
-        /** OperatorStatusResponse */
-        OperatorStatusResponse: {
-            /** Actionsenabled */
-            actionsEnabled: boolean;
-            /** Reportdirectory */
-            reportDirectory: string;
-            warmup: components["schemas"]["OperatorWarmupConfig"];
-            limits: components["schemas"]["OperatorLimitsSchema"];
-        };
-        /** OperatorWarmupConfig */
-        OperatorWarmupConfig: {
-            /** Documentmodelonstart */
-            documentModelOnStart: boolean;
-        };
         /** PerformancePoint */
         PerformancePoint: {
             /** Day */
@@ -1710,13 +1001,6 @@ export interface components {
             runs: number;
             /** Prevruns */
             prevRuns: number;
-        };
-        /** PermissionGrant */
-        PermissionGrant: {
-            /** Resource */
-            resource: string;
-            /** Action */
-            action: string;
         };
         /** PlatformConfigResponse */
         PlatformConfigResponse: {
@@ -1736,8 +1020,6 @@ export interface components {
             cacheEnabled: boolean;
             /** Ratelimitenabled */
             rateLimitEnabled: boolean;
-            /** Structuredllm */
-            structuredLlm: boolean;
             /** Defaultdocumentmodelid */
             defaultDocumentModelId: string;
             /** Defaultreadpath */
@@ -1769,16 +1051,6 @@ export interface components {
              * @default false
              */
             taskiqConfigured: boolean;
-            /**
-             * Llmvalidationenabled
-             * @default false
-             */
-            llmValidationEnabled: boolean;
-            /**
-             * Gpuliveprobe
-             * @default false
-             */
-            gpuLiveProbe: boolean;
             /**
              * Healthzprobeinference
              * @default false
@@ -1858,17 +1130,6 @@ export interface components {
             readKind: string;
             /** Showdocumentmodel */
             showDocumentModel: boolean;
-        };
-        /** RoleDefinition */
-        RoleDefinition: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Description */
-            description: string;
-            /** Permissions */
-            permissions: components["schemas"]["PermissionGrant"][];
         };
         /** RuleLibraryResponse */
         RuleLibraryResponse: {
@@ -2251,19 +1512,6 @@ export interface components {
             count: number;
             /** Severity */
             severity: string;
-        };
-        /** UpdateIamUserRequest */
-        UpdateIamUserRequest: {
-            /** Firstname */
-            firstName?: string | null;
-            /** Lastname */
-            lastName?: string | null;
-            /** Enabled */
-            enabled?: boolean | null;
-            /** Roles */
-            roles?: string[] | null;
-            /** Password */
-            password?: string | null;
         };
         /** UploadCapabilitiesResponse */
         UploadCapabilitiesResponse: {
@@ -3456,37 +2704,6 @@ export interface operations {
             };
         };
     };
-    get_model_runtime_config_v1_platform_model_runtime_config_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModelRuntimeConfigResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     get_models_catalog_v1_models_catalog_get: {
         parameters: {
             query?: never;
@@ -3505,470 +2722,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ModelsCatalogResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    document_model_diagnostic_v1_diagnostics_document_model_get: {
-        parameters: {
-            query?: {
-                /** @description Run a short Repody VLM probe. */
-                run_infer?: boolean;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DocumentModelDiagnosticResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    operator_status_v1_operator_status_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorStatusResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    operator_jobs_v1_operator_jobs_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorJobsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    operator_job_v1_operator_jobs__job_id__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorJobSchema"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    operator_job_report_v1_operator_jobs__job_id__report_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                job_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BenchmarkReportSchema"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    operator_job_artifact_v1_operator_jobs__job_id__artifacts__artifact__get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                job_id: string;
-                artifact: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    latest_benchmark_v1_operator_benchmarks_latest_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["BenchmarkReportSchema"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    warmup_model_v1_operator_models_warmup_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ModelActionRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorJobAcceptedResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    start_benchmark_v1_operator_benchmarks_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_start_benchmark_v1_operator_benchmarks_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OperatorJobAcceptedResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    iam_me_v1_iam_me_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IamMeResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    iam_catalog_v1_iam_catalog_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IamCatalogResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_users_v1_iam_users_get: {
-        parameters: {
-            query?: {
-                search?: string | null;
-            };
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IamUsersResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_user_v1_iam_users_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateIamUserRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IamUser"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_user_v1_iam_users__user_id__patch: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                user_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateIamUserRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IamUser"];
                 };
             };
             /** @description Validation Error */

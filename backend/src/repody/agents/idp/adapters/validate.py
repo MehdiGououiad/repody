@@ -63,13 +63,12 @@ async def validate_extraction(
     llm_model: str | None = None,
 ) -> ValidationOutput:
     """Turn frozen extraction into summarized validation (one rules-engine path)."""
+    _ = (validation_mode, llm_model)  # removed in the run-pipeline rewrite
     rule_evals = await validate_field_rows(
         field_rows_from_extraction(extraction, labels),
         list(rules),
         doc_types_by_id=labels,
         multi_document=multi_document,
-        validation_mode=validation_mode,
         on_rule_start=on_rule_start,
-        llm_model=llm_model,
     )
     return summarize_validation(tuple(rule_result_from_eval(row) for row in rule_evals))

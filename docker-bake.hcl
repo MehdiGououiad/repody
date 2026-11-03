@@ -34,12 +34,12 @@ variable "REPODY_IMAGE_PLATFORMS" {
   default = ""
 }
 
-# Python extras baked into the backend image. glmocr pulls CPU torch (backend/pyproject.toml).
+# Python extras baked into the backend image (backend/pyproject.toml optional-dependencies).
 variable "REPODY_BACKEND_EXTRAS" {
-  default = "otel,glmocr"
+  default = "otel"
   validation {
     condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._-]*(,[A-Za-z0-9][A-Za-z0-9._-]*)*$", REPODY_BACKEND_EXTRAS))
-    error_message = "REPODY_BACKEND_EXTRAS must be comma-separated Python extra names, e.g. \"otel,glmocr\"."
+    error_message = "REPODY_BACKEND_EXTRAS must be comma-separated Python extra names, e.g. \"otel\"."
   }
 }
 

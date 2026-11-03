@@ -16,7 +16,6 @@ export type {
   ConditionOperand,
   DocumentDef,
   RuleCondition,
-  RuleKind,
   RuleScope,
   RuleSeverity,
   RuleTemplate,

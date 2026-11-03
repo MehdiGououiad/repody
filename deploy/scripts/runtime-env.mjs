@@ -55,9 +55,9 @@ export function run(cmd, args, opts = {}) {
   return result;
 }
 
-/** `node deploy/scripts/llama-serve.mjs <model> <cmd>` with inherited output. */
-export function llamaServe(model, cmd, opts = {}) {
-  return run(process.execPath, ["deploy/scripts/llama-serve.mjs", model, cmd], {
+/** `node deploy/scripts/llama-serve.mjs <cmd>` (host NuExtract) with inherited output. */
+export function llamaServe(cmd, opts = {}) {
+  return run(process.execPath, ["deploy/scripts/llama-serve.mjs", cmd], {
     inherit: true,
     ...opts,
   });
@@ -94,13 +94,6 @@ export function setEnvKeys(filePath, sets) {
     else body += `\n${key}=${value}\n`;
   }
   fs.writeFileSync(filePath, body);
-}
-
-/** False when `key` in `filePath` is false/0/no; a missing file or key yields `fallback`. */
-export function envFlag(filePath, key, fallback) {
-  if (!fs.existsSync(filePath)) return fallback;
-  const raw = (parseEnvFile(filePath)[key] ?? String(fallback)).trim().toLowerCase();
-  return raw !== "false" && raw !== "0" && raw !== "no";
 }
 
 /**

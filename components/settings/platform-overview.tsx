@@ -1,33 +1,52 @@
-"use client";
-
-import { BrainCircuit, Gauge, ShieldCheck, Zap } from "lucide-react";
-import { MetricCard } from "@/components/settings/settings-shared";
-import type { OperatorStatus } from "@/lib/api/operator";
+import { BrainCircuit, Gauge, type LucideIcon, ServerCog, Zap } from "lucide-react";
 import type { PlatformConfig } from "@/lib/api/platform-config";
+import type { ModelsCatalogResponse } from "@/lib/api/schema-types";
 import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { formatBytes } from "@/lib/utils";
 
-export function OverviewTab({
-  platform,
-  operator,
+function MetricCard({
+  label,
+  value,
+  detail,
+  Icon,
 }: {
-  platform: PlatformConfig | null;
-  operator: OperatorStatus | null;
+  label: string;
+  value: string;
+  detail: string;
+  Icon: LucideIcon;
 }) {
-  if (!platform) {
-    return <div className="panel-elevated rounded-xl h-48 animate-pulse" />;
-  }
-  const defaultModelLabel =
-    platform.documentModels.find((m) => m.id === platform.defaultDocumentModelId)?.label ??
-    REPODY_VLM_LABEL;
+  return (
+    <div className="panel-elevated rounded-xl p-5 min-w-0">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
+          {label}
+        </p>
+        <span className="size-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      <p className="mt-4 text-2xl font-display font-semibold text-on-surface truncate">{value}</p>
+      <p className="mt-1 text-xs text-on-surface-variant">{detail}</p>
+    </div>
+  );
+}
+
+/** Read-only platform configuration and document-model status (no operator actions). */
+export function PlatformOverview({
+  platform,
+  catalog,
+}: {
+  platform: PlatformConfig;
+  catalog: ModelsCatalogResponse | null;
+}) {
+  const model = catalog?.models[0];
+  const modelState = !model ? "Unknown" : model.available ? "Ready" : "Unavailable";
   const runtimeRows = [
     ["Extractor", platform.extractor],
     ["Queue", platform.queueBackend],
     ["Inference", platform.inferenceMode],
+    ["Inference endpoint", platform.llamacppBaseUrl],
     ["Storage", platform.storageBackend],
-    ["Default model", defaultModelLabel],
-    ["Read path", platform.defaultReadPath],
-    ["Document models", platform.documentModels.map((m) => m.label).join(", ") || "-"],
     ["Worker pools", Object.values(platform.workerPools).join(", ")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
     ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
@@ -37,16 +56,16 @@ export function OverviewTab({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
+          label="Document model"
+          value={modelState}
+          detail={model?.availabilityNote ?? REPODY_VLM_LABEL}
+          Icon={BrainCircuit}
+        />
+        <MetricCard
           label="Execution"
           value={platform.queueBackend}
           detail={platform.taskiqConfigured ? "Queue configured" : "Queue needs attention"}
           Icon={Zap}
-        />
-        <MetricCard
-          label="Extraction"
-          value={platform.extractor}
-          detail={`${defaultModelLabel} default`}
-          Icon={BrainCircuit}
         />
         <MetricCard
           label="Cache"
@@ -55,10 +74,10 @@ export function OverviewTab({
           Icon={Gauge}
         />
         <MetricCard
-          label="Operator actions"
-          value={operator?.actionsEnabled ? "Enabled" : "Read only"}
-          detail="Model and benchmark controls"
-          Icon={ShieldCheck}
+          label="Rate limit"
+          value={platform.rateLimitEnabled ? "Enabled" : "Off"}
+          detail="API request limits"
+          Icon={ServerCog}
         />
       </div>
 

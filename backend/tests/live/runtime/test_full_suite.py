@@ -118,21 +118,19 @@ def test_live_models_catalog_and_rules(client: httpx.Client, oidc_enabled: bool)
     assert len(rules.json()["rules"]) >= 1
 
     metrics = client.get("/v1/metrics")
-    assert_metrics_access(metrics, oidc_enabled=oidc_enabled)
+    assert_metrics_access(metrics)
 
 
-def test_live_uploads_and_diagnostics(client: httpx.Client):
+def test_live_uploads_and_model_status(client: httpx.Client):
     caps = client.get("/v1/uploads/capabilities")
     assert caps.status_code == 200
     assert caps.json()["storageBackend"] in ("local", "s3")
 
-    diag = client.get("/v1/diagnostics/document-model")
-    assert diag.status_code == 200
-    assert diag.json().get("ok") is True
-
-    op = client.get("/v1/operator/status")
-    assert op.status_code == 200
-    assert "actionsEnabled" in op.json()
+    catalog = client.get("/v1/models/catalog")
+    assert catalog.status_code == 200
+    (model,) = catalog.json()["models"]
+    assert model["id"] == REPODY_VLM_CATALOG_ID
+    assert model["available"] is True, model.get("availabilityNote")
 
 
 def _unique_id(prefix: str) -> str:

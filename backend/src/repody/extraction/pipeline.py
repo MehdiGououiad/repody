@@ -5,12 +5,9 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import time
-from collections.abc import Awaitable, Callable
-from functools import lru_cache
 
 import structlog
 
-import repody.extraction.register  # noqa: F401 - catalog adapters
 from repody.catalog.registry import (
     extract_with_document_model,
     normalize_model_id,
@@ -33,15 +30,6 @@ from repody.extraction.modes import (
     validation_mode_label,
 )
 from repody.extraction.nuextract import extraction_inference_profile_key
-from repody.extraction.pdf_inspector_auto import (
-    FALLBACK_SOURCE,
-    NATIVE_SOURCE,
-    extract_via_native_markdown,
-    inspect_pdf_bytes,
-    mime_is_pdf,
-    native_pdf_meta,
-    native_quality_ok,
-)
 from repody.extraction.schema import empty_fields_from_schema, fields_from_sample_values
 from repody.extraction.types import (
     ExtractionIclExample,
@@ -56,8 +44,6 @@ from repody.settings import get_settings
 from repody.util.json_shape import normalize_keys_to_snake
 
 log = structlog.get_logger()
-
-ExtractDocumentFn = Callable[..., Awaitable[ExtractionResult]]
 
 
 def extract_document_fields(
@@ -79,41 +65,6 @@ def extract_document_fields(
     if sample_values:
         return fields_from_sample_values(specs, sample_values)
     return empty_fields_from_schema(specs)
-
-
-async def stub_extract_document(
-    document_bytes: bytes | None,
-    mime_type: str,
-    document_type: str,
-    schema: list[SchemaFieldSpec],
-    *,
-    extraction_mode: str = "document_model",
-    document_model_id: str | None = None,
-    storage_key: str | None = None,
-    file_size: int | None = None,
-    bundle: object | None = None,
-    validation_mode: str = "logic_only",
-    extraction_instructions: str = "",
-    markdown_extraction: bool = False,
-    native_pdf_auto: bool = False,
-    extraction_icl_examples: list[ExtractionIclExample] | None = None,
-) -> ExtractionResult:
-    _ = (
-        document_bytes,
-        mime_type,
-        document_type,
-        extraction_mode,
-        document_model_id,
-        storage_key,
-        file_size,
-        bundle,
-        validation_mode,
-        extraction_instructions,
-        markdown_extraction,
-        native_pdf_auto,
-        extraction_icl_examples,
-    )
-    return ExtractionResult(fields=empty_fields_from_schema(schema))
 
 
 def _icl_fingerprint(examples: list[ExtractionIclExample] | None) -> str:
@@ -143,7 +94,6 @@ def _cached_result(
     markdown_extraction: bool = False,
 ) -> ExtractionResult:
     used = cached.read_path_used or read_path_id
-    prev_meta = cached.meta
     log.info(
         "extraction_cache_hit",
         document_type=document_type,
@@ -166,7 +116,6 @@ def _cached_result(
             markdown_extraction=markdown_extraction,
         ),
         raw_text=truncate_text(cached.raw_text),
-        native_pdf=getattr(prev_meta, "native_pdf", None) if prev_meta else None,
     )
     return cached
 
@@ -185,17 +134,15 @@ async def extract_document(
     validation_mode: str = LOGIC_VALIDATION,
     extraction_instructions: str = "",
     markdown_extraction: bool = False,
-    native_pdf_auto: bool = False,
     extraction_icl_examples: list[ExtractionIclExample] | None = None,
 ) -> ExtractionResult:
     """Cache-aware extraction through the document model registry."""
     _ = bundle
+    if get_settings().extractor.lower() == "stub":
+        return ExtractionResult(fields=empty_fields_from_schema(schema))
     read_path_config = parse_read_path(extraction_mode)
-    val_mode = (
-        validation_mode
-        if validation_mode in (LOGIC_VALIDATION, "logic_and_llm")
-        else LOGIC_VALIDATION
-    )
+    _ = validation_mode
+    val_mode = LOGIC_VALIDATION
     if not document_bytes:
         return ExtractionResult(
             fields=empty_fields_from_schema(schema),
@@ -218,7 +165,6 @@ async def extract_document(
     cache_profile = extraction_inference_profile_key(settings=settings)
     cache_mode = (
         f"cfg:{read_path_config.id}:used:{read_path_used}:val:{val_mode}:md:{'1' if markdown_extraction else '0'}"
-        f":auto:{'1' if native_pdf_auto else '0'}"
         f":{cache_profile}"
         f":ins:{hashlib.sha256(extraction_instructions.encode()).hexdigest()[:8]}"
         f":icl:{_icl_fingerprint(extraction_icl_examples)}"
@@ -271,7 +217,6 @@ async def extract_document(
     t0 = time.perf_counter()
     bundle_ms = 0
     extract_ms = 0
-    native_meta: dict | None = None
     async with start_span(
         "extraction.pipeline",
         {
@@ -279,7 +224,6 @@ async def extract_document(
             "model": model_id,
             "validation": val_mode,
             "document_type": document_type,
-            "native_pdf_auto": native_pdf_auto,
         },
     ):
         tb = time.perf_counter()
@@ -292,77 +236,21 @@ async def extract_document(
         bundle_ms = int((time.perf_counter() - tb) * 1000)
         te = time.perf_counter()
 
-        # Stays None until some path produces an extraction; the native branch
-        # may fail and fall through to the document model below.
-        result: ExtractionResult | None = None
-        if native_pdf_auto and mime_is_pdf(mime_type, document_bytes):
-            inspection = await asyncio.to_thread(inspect_pdf_bytes, document_bytes)
-            ok, reason = native_quality_ok(inspection)
-            if ok and inspection.markdown:
-                try:
-                    result = await extract_via_native_markdown(
-                        markdown=inspection.markdown,
-                        schema=schema,
-                        document_type=document_type,
-                        extraction_instructions=extraction_instructions,
-                        markdown_extraction=markdown_extraction,
-                        page_count=inspection.page_count,
-                    )
-                    native_meta = native_pdf_meta(
-                        source=NATIVE_SOURCE,
-                        inspection=inspection,
-                    )
-                    log.info(
-                        "native_pdf_auto_accepted",
-                        pdf_type=inspection.pdf_type,
-                        confidence=inspection.confidence,
-                        pages=inspection.page_count,
-                    )
-                except Exception as exc:
-                    log.warning(
-                        "native_pdf_auto_qwen_failed",
-                        error=repr(exc),
-                    )
-                    native_meta = native_pdf_meta(
-                        source=FALLBACK_SOURCE,
-                        inspection=inspection,
-                        fallback_reason=f"qwen_failed:{exc!r}",
-                    )
-            else:
-                native_meta = native_pdf_meta(
-                    source=FALLBACK_SOURCE,
-                    inspection=inspection,
-                    fallback_reason=reason or "quality_gate",
-                )
-                log.info(
-                    "native_pdf_auto_fallback",
-                    reason=reason,
-                    pdf_type=inspection.pdf_type,
-                    confidence=inspection.confidence,
-                )
-        elif native_pdf_auto:
-            native_meta = native_pdf_meta(
-                source=FALLBACK_SOURCE,
-                fallback_reason="not_pdf",
-            )
-
-        if result is None:
-            result = await extract_with_document_model(
-                model_spec,
-                loaded,
-                schema,
-                document_type,
-                extraction_instructions=extraction_instructions,
-                markdown_extraction=markdown_extraction,
-                extraction_icl_examples=extraction_icl_examples,
-            )
-            log.info(
-                "document_model_extracted",
-                model_id=model_spec.id,
-                runtime=model_spec.runtime,
-                runtime_model=model_spec.runtime_model,
-                ms=int((time.perf_counter() - te) * 1000),
-            )
+        result = await extract_with_document_model(
+            model_spec,
+            loaded,
+            schema,
+            document_type,
+            extraction_instructions=extraction_instructions,
+            markdown_extraction=markdown_extraction,
+            extraction_icl_examples=extraction_icl_examples,
+        )
+        log.info(
+            "document_model_extracted",
+            model_id=model_spec.id,
+            runtime_model=model_spec.runtime_model,
+            ms=int((time.perf_counter() - te) * 1000),
+        )
         extract_ms = int((time.perf_counter() - te) * 1000)
 
     extraction_ms = int((time.perf_counter() - t0) * 1000)
@@ -387,7 +275,6 @@ async def extract_document(
         pages_rendered=result.pages_rendered,
         pages_sent=result.pages_sent,
         pages_dropped=result.pages_dropped,
-        native_pdf=native_meta,
     )
     log.info(
         "pipeline_extracted",
@@ -399,17 +286,8 @@ async def extract_document(
         bundle_ms=bundle_ms,
         extract_ms=extract_ms,
         cache_hit=False,
-        native_pdf_source=(native_meta or {}).get("source"),
     )
     await set_cached(ck, result)
     if content_ck != ck:
         await set_cached(content_ck, result)
     return result
-
-
-@lru_cache
-def get_extract_document() -> ExtractDocumentFn:
-    """Return the active extract function (stub or full pipeline)."""
-    if get_settings().extractor.lower() == "stub":
-        return stub_extract_document
-    return extract_document

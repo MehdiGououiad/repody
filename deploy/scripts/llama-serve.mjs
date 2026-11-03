@@ -1,15 +1,11 @@
 #!/usr/bin/env node
 /**
- * Host llama-server lifecycle for the Repody models (OpenAI-compatible, detached).
+ * Host llama-server for NuExtract3 (OpenAI-compatible, detached).
  *
- *   node deploy/scripts/llama-serve.mjs <model> serve|stop|restart|verify|warmup|download
+ *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|warmup|download
  *
- * Models (each reads deploy/<dir>/paths.local.env, overridable by process env):
- *   nuextract  NuExtract3 GGUF + mmproj     :8081  LLAMACPP_*   https://huggingface.co/numind/NuExtract3-GGUF
- *   qwen35     Qwen3.5-4B (text -> JSON)    :8084  QWEN35_*     https://huggingface.co/unsloth/Qwen3.5-4B-GGUF
- *   glmocr     GLM-OCR (F16 > Q8_0 for OCR) :8083  GLMOCR_*     https://huggingface.co/ggml-org/GLM-OCR-GGUF
- *
- * Flags follow the official model cards and llama.cpp docs/multimodal.md.
+ * Reads deploy/llamacpp/paths.local.env (LLAMACPP_*), overridable by process env.
+ * Flags follow https://huggingface.co/numind/NuExtract3-GGUF and llama.cpp docs/multimodal.md.
  */
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -25,25 +21,37 @@ import {
   waitForPortRelease,
 } from "./runtime-env.mjs";
 
-/** 1×1 PNG - primes the vision path without a real document. */
-const WARMUP_PNG_B64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+const DIR = path.join(ROOT, "deploy/llamacpp");
+const LOG_DIR = path.join(DIR, "logs");
+const PID_FILE = path.join(LOG_DIR, "llama-server.pid");
+const WARMUP_MARKER = path.join(LOG_DIR, ".warmup-complete");
+const HF_REPO = "numind/NuExtract3-GGUF";
+const CONTEXT = 16384;
 
-const NUEXTRACT_MARKER = path.join(ROOT, "deploy/llamacpp/logs/.warmup-complete");
+const env = { ...parseEnvFile(path.join(DIR, "paths.local.env")), ...process.env };
+const get = (key, fallback = "") => env[`LLAMACPP_${key}`]?.trim() || fallback;
+const exe = get("EXE") || findExecutable("llama-server");
+const model = get("MODEL");
+const mmproj = get("MMPROJ");
+const port = Number(get("PORT", "8081"));
+const alias = get("MODEL_ALIAS") || aliasFromFile(model);
 
-function nuextractAlias(modelPath, explicitAlias) {
+function aliasFromFile(modelPath) {
   // Local default is Q8_0 (deep-bench winner); HF "small local" pack is Q4_K_M.
-  if (explicitAlias) return explicitAlias;
   const base = modelPath ? path.basename(modelPath, ".gguf") : "";
-  if (/Q8_0/i.test(base)) return "nuextract3-q8_0";
-  if (/Q6_K/i.test(base)) return "nuextract3-q6_k";
-  if (/Q5_K_M/i.test(base)) return "nuextract3-q5_k_m";
-  if (/Q4_K_M/i.test(base)) return "nuextract3-q4_k_m";
+  for (const [pattern, name] of [
+    [/Q6_K/i, "nuextract3-q6_k"],
+    [/Q5_K_M/i, "nuextract3-q5_k_m"],
+    [/Q4_K_M/i, "nuextract3-q4_k_m"],
+  ]) {
+    if (pattern.test(base)) return name;
+  }
   return "nuextract3-q8_0";
 }
 
 /** Newer LM Studio / llama.cpp builds dropped --mtmd-batch-max-tokens; `0` force-disables. */
-function mtmdBatchArgs(exe, raw) {
+function mtmdBatchArgs() {
+  const raw = get("MTMD_BATCH_MAX_TOKENS");
   if (raw) {
     const n = Number(raw);
     return Number.isFinite(n) && n > 0 ? ["--mtmd-batch-max-tokens", String(n)] : [];
@@ -55,193 +63,34 @@ function mtmdBatchArgs(exe, raw) {
     : [];
 }
 
-/**
- * Per-model config. `get(key, fallback)` reads `<prefix>_<key>`.
- * `source` returns the model args (-m / -hf); `flags` the model-specific tuning.
- */
-const MODELS = {
-  nuextract: {
-    label: "NuExtract3",
-    dir: "deploy/llamacpp",
-    prefix: "LLAMACPP",
-    logName: "llama-server",
-    port: 8081,
-    context: 16384,
-    hfRepo: "numind/NuExtract3-GGUF",
-    readyTimeoutMs: 300_000,
-    // Local GGUF + mmproj only (no -hf mode).
-    source: (get) => ({
-      model: get("MODEL"),
-      mmproj: get("MMPROJ"),
-      useHf: false,
-      alias: nuextractAlias(get("MODEL"), get("MODEL_ALIAS")),
-      requireMmproj: true,
-    }),
-    // Qwen-VL accuracy floor: --image-min-tokens 1024 (do not lower). -rea off: no thinking.
-    flags: (get, exe) => [
-      ...["-ub", get("UBATCH_SIZE", "1024"), "-fa", get("FLASH_ATTN", "on").toLowerCase()],
-      ...["--image-min-tokens", get("IMAGE_MIN_TOKENS", "1024")],
-      ...["--image-max-tokens", get("IMAGE_MAX_TOKENS", "1024")],
-      ...mtmdBatchArgs(exe, get("MTMD_BATCH_MAX_TOKENS")),
-      ...["--mmproj-offload", "--jinja", "-rea", "off"],
-    ],
-    // Strip leftover CoopMat overrides so a stale user/system env cannot re-enable them.
-    serverEnv: (env) => {
-      delete env.GGML_VK_DISABLE_COOPMAT;
-      delete env.GGML_VK_DISABLE_COOPMAT2;
-      delete env.LLAMACPP_STABILITY;
-      return env;
-    },
-    verify: ({ body, alias, get }) => {
-      const failures = [];
-      const ids = (body?.data || []).map((m) => m.id);
-      const nCtx = body?.data?.[0]?.meta?.n_ctx;
-      const caps = body?.models?.[0]?.capabilities || [];
-      const parallel = Number(get("PARALLEL", "1"));
-      const minCtx = parallel > 1 ? Math.floor(16384 / parallel) : 16384;
-      console.log(`  n_ctx: ${nCtx}  multimodal: ${caps.includes("multimodal")}`);
-      if (!(nCtx >= minCtx)) failures.push(`n_ctx ${nCtx} < ${minCtx} (parallel=${parallel})`);
-      if (!caps.includes("multimodal"))
-        failures.push("multimodal capability missing (mmproj not loaded?)");
-      if (!ids.includes(alias)) failures.push(`served model != expected ${alias}`);
-      return failures;
-    },
-    // Opt-in (LLAMACPP_WARMUP=on) on serve, and in the background so the stack continues.
-    warmupOnServe: (get) => get("WARMUP", "off").toLowerCase() === "on" && "background",
-    warmup: ({ port, background, force }) => nuextractWarmup(port, { background, force }),
-    onStop: () => fs.rmSync(NUEXTRACT_MARKER, { force: true }),
-    envHint: (port, alias) => [
-      `AUDIT_LLAMACPP_BASE_URL=http://host.docker.internal:${port}/v1`,
-      `AUDIT_LLAMACPP_SERVED_MODEL=${alias}`,
-    ],
-  },
-  qwen35: {
-    label: "Qwen3.5-4B",
-    dir: "deploy/qwen35",
-    prefix: "QWEN35",
-    logName: "qwen35",
-    port: 8084,
-    context: 8192,
-    hfRepo: "unsloth/Qwen3.5-4B-GGUF",
-    source: (get) => ({
-      model: get("MODEL"),
-      useHf: isTrue(get("USE_HF")) || !get("MODEL"),
-      hfArgs: (repo) => ["-hf", repo, ...(get("HF_FILE") ? ["--hf-file", get("HF_FILE")] : [])],
-      alias: get("MODEL_ALIAS", "Qwen3.5-4B"),
-    }),
-    // Qwen3.5 defaults to thinking; disable for JSON extraction.
-    flags: () => ["--temp", "0.0", "--jinja", "--reasoning", "off"],
-    warmupOnServe: (get) => get("WARMUP", "on").toLowerCase() !== "off",
-    warmup: ({ port, alias }) =>
-      chatWarmup("Qwen3.5-4B", port, alias, [
-        { role: "system", content: "Reply with a single JSON object only." },
-        { role: "user", content: 'Return {"ok":true}' },
-      ]),
-    envHint: (port) => [`AUDIT_QWEN35_BASE_URL=http://127.0.0.1:${port}/v1`],
-  },
-  glmocr: {
-    label: "GLM-OCR",
-    dir: "deploy/glmocr",
-    prefix: "GLMOCR",
-    logName: "glmocr",
-    port: 8083,
-    // Region crops rarely need 8192; 4096 saves VRAM when sharing iGPU with NuExtract.
-    context: 4096,
-    hfRepo: "ggml-org/GLM-OCR-GGUF",
-    source: (get) => ({
-      model: get("MODEL"),
-      mmproj: get("MMPROJ"),
-      useHf: isTrue(get("USE_HF")) || !get("MODEL"),
-      // Official ggml blog: llama-server -hf ggml-org/GLM-OCR-GGUF:F16
-      hfArgs: (repo) => ["-hf", `${repo}:${get("HF_QUANT", "F16")}`],
-      alias: get("MODEL_ALIAS", "GLM-OCR"),
-    }),
-    // Official zai-org SDK page_loader: temperature 0.0, top_k 1 (greedy OCR).
-    flags: (get, exe) => [
-      ...["-ub", get("UBATCH_SIZE", "512"), "-fa", get("FLASH_ATTN", "on").toLowerCase()],
-      ...["--image-max-tokens", get("IMAGE_MAX_TOKENS", "1024")],
-      ...["--temp", "0.0", "--top-k", "1", "--top-p", "0.00001", "--repeat-penalty", "1.1"],
-      "--jinja",
-      ...mtmdBatchArgs(exe, get("MTMD_BATCH_MAX_TOKENS")),
-    ],
-    warmupOnServe: (get) => get("WARMUP", "off").toLowerCase() === "on",
-    warmup: ({ port, alias }) =>
-      chatWarmup("GLM-OCR", port, alias, [
-        {
-          role: "user",
-          content: [
-            { type: "image_url", image_url: { url: `data:image/png;base64,${WARMUP_PNG_B64}` } },
-            { type: "text", text: "Text Recognition:" },
-          ],
-        },
-      ]),
-    envHint: (port) => [
-      `AUDIT_GLM_OCR_BASE_URL=http://127.0.0.1:${port}/v1`,
-      `Compose workers: http://host.docker.internal:${port}/v1`,
-    ],
-  },
-};
-
-function isTrue(value) {
-  return value.toLowerCase() === "true" || value === "1";
-}
-
-function resolve(spec) {
-  const dir = path.join(ROOT, spec.dir);
-  const env = { ...parseEnvFile(path.join(dir, "paths.local.env")), ...process.env };
-  const get = (key, fallback = "") => env[`${spec.prefix}_${key}`]?.trim() || fallback;
-  const exe = get("EXE") || env.LLAMACPP_EXE?.trim() || findExecutable("llama-server");
-  const src = spec.source(get);
-  const port = Number(get("PORT", String(spec.port)));
-  const missing = [];
-  if (!exe || !fs.existsSync(exe)) missing.push(`${spec.prefix}_EXE (or llama-server on PATH)`);
-  if (!src.useHf) {
-    if (!src.model || !fs.existsSync(src.model)) missing.push(`${spec.prefix}_MODEL`);
-    if ((src.requireMmproj || src.mmproj) && !(src.mmproj && fs.existsSync(src.mmproj))) {
-      missing.push(`${spec.prefix}_MMPROJ`);
-    }
-  }
-  return { dir, logDir: path.join(dir, "logs"), get, exe, port, src, missing };
-}
-
-function buildArgs(spec, cfg) {
-  const { get, src } = cfg;
-  const args = src.useHf
-    ? src.hfArgs(spec.hfRepo)
-    : ["-m", src.model, ...(src.mmproj ? ["--mmproj", src.mmproj] : [])];
+function buildArgs() {
+  const args = ["-m", model, "--mmproj", mmproj];
   args.push(
-    ...["--host", "0.0.0.0", "--port", String(cfg.port)],
-    ...["-c", get("CONTEXT", String(spec.context)), "-np", get("PARALLEL", "1")],
-    ...["-ngl", get("GPU_LAYERS", "99"), "-a", src.alias],
-    ...spec.flags(get, cfg.exe)
+    ...["--host", "0.0.0.0", "--port", String(port)],
+    ...["-c", get("CONTEXT", String(CONTEXT)), "-np", get("PARALLEL", "1")],
+    ...["-ngl", get("GPU_LAYERS", "99"), "-a", alias],
+    ...["-ub", get("UBATCH_SIZE", "1024"), "-fa", get("FLASH_ATTN", "on").toLowerCase()],
+    // Qwen-VL accuracy floor: --image-min-tokens 1024 (do not lower). -rea off: no thinking.
+    ...["--image-min-tokens", get("IMAGE_MIN_TOKENS", "1024")],
+    ...["--image-max-tokens", get("IMAGE_MAX_TOKENS", "1024")],
+    ...mtmdBatchArgs(),
+    ...["--mmproj-offload", "--jinja", "-rea", "off"]
   );
   if (get("DEVICE")) args.push("--device", get("DEVICE"));
   return args;
 }
 
-async function chatWarmup(label, port, model, messages) {
-  const url = `http://127.0.0.1:${port}/v1/chat/completions`;
-  console.log(`Warming ${label} at ${url} (model=${model})…`);
-  const started = Date.now();
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ model, temperature: 0, max_tokens: 16, messages }),
-      signal: AbortSignal.timeout(180_000),
-    });
-    const text = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 400)}`);
-  } catch (err) {
-    console.error(`${label} warmup failed: ${err instanceof Error ? err.message : err}`);
-    process.exit(1);
-  }
-  console.log(`${label} warmup OK — ${Date.now() - started}ms`);
+function missingPaths() {
+  const missing = [];
+  if (!exe || !fs.existsSync(exe)) missing.push("LLAMACPP_EXE (or llama-server on PATH)");
+  if (!model || !fs.existsSync(model)) missing.push("LLAMACPP_MODEL");
+  if (!mmproj || !fs.existsSync(mmproj)) missing.push("LLAMACPP_MMPROJ");
+  return missing;
 }
 
 /** Facture.pdf through the real VLM adapter; the script writes the marker on success. */
-function nuextractWarmup(port, { background = false, force = false } = {}) {
-  if (!force && fs.existsSync(NUEXTRACT_MARKER)) {
+function warmup({ background = false, force = false } = {}) {
+  if (!force && fs.existsSync(WARMUP_MARKER)) {
     console.log("NuExtract warmup already completed for this server session — skipping.");
     return;
   }
@@ -267,27 +116,32 @@ function nuextractWarmup(port, { background = false, force = false } = {}) {
     console.error("NuExtract warmup failed — first extraction may be slow.");
     process.exit(result.status ?? 1);
   }
-  fs.mkdirSync(path.dirname(NUEXTRACT_MARKER), { recursive: true });
-  fs.writeFileSync(NUEXTRACT_MARKER, new Date().toISOString(), "utf8");
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  fs.writeFileSync(WARMUP_MARKER, new Date().toISOString(), "utf8");
 }
 
-async function verify(spec, cfg) {
-  const url = `http://127.0.0.1:${cfg.port}/v1/models`;
-  let res;
-  try {
-    res = await fetchJson(url);
-  } catch (err) {
-    console.error(`${spec.label} not reachable at ${url}: ${err}`);
+async function verify() {
+  const url = `http://127.0.0.1:${port}/v1/models`;
+  const res = await fetchJson(url).catch((err) => {
+    console.error(`NuExtract3 not reachable at ${url}: ${err}`);
     process.exit(1);
-  }
+  });
   if (!res.ok) {
-    console.error(`${spec.label} not ready at ${url}: HTTP ${res.status}`);
+    console.error(`NuExtract3 not ready at ${url}: HTTP ${res.status}`);
     process.exit(1);
   }
-  const ids = Array.isArray(res.body?.data) ? res.body.data.map((m) => m.id).filter(Boolean) : [];
-  console.log(`${spec.label} OK — ${url}`);
+  const ids = (res.body?.data || []).map((m) => m.id).filter(Boolean);
+  const nCtx = res.body?.data?.[0]?.meta?.n_ctx;
+  const multimodal = (res.body?.models?.[0]?.capabilities || []).includes("multimodal");
+  const parallel = Number(get("PARALLEL", "1"));
+  const minCtx = parallel > 1 ? Math.floor(CONTEXT / parallel) : CONTEXT;
+  console.log(`NuExtract3 OK — ${url}`);
   console.log(`  models: ${ids.join(", ") || "(none)"}`);
-  const failures = spec.verify?.({ body: res.body, alias: cfg.src.alias, get: cfg.get }) ?? [];
+  console.log(`  n_ctx: ${nCtx}  multimodal: ${multimodal}`);
+  const failures = [];
+  if (!(nCtx >= minCtx)) failures.push(`n_ctx ${nCtx} < ${minCtx} (parallel=${parallel})`);
+  if (!multimodal) failures.push("multimodal capability missing (mmproj not loaded?)");
+  if (!ids.includes(alias)) failures.push(`served model != expected ${alias}`);
   if (failures.length) {
     console.error("\nNOT READY:");
     for (const f of failures) console.error(`  - ${f}`);
@@ -295,53 +149,53 @@ async function verify(spec, cfg) {
   }
 }
 
-async function serve(spec, cfg) {
-  if (cfg.missing.length) {
-    console.error("Missing or invalid paths:", cfg.missing.join(", "));
-    console.error(`Copy ${path.join(cfg.dir, "paths.local.env.example")} → paths.local.env`);
+async function serve() {
+  const missing = missingPaths();
+  if (missing.length) {
+    console.error("Missing or invalid paths:", missing.join(", "));
+    console.error(`Copy ${path.join(DIR, "paths.local.env.example")} → paths.local.env`);
     process.exit(1);
   }
-  if ((await fetchJson(`http://127.0.0.1:${cfg.port}/v1/models`).catch(() => ({}))).ok) {
-    console.log(`${spec.label} llama-server already listening on :${cfg.port}`);
-    await verify(spec, cfg);
+  if ((await fetchJson(`http://127.0.0.1:${port}/v1/models`).catch(() => ({}))).ok) {
+    console.log(`NuExtract3 llama-server already listening on :${port}`);
+    await verify();
     return;
   }
 
-  fs.mkdirSync(cfg.logDir, { recursive: true });
-  const args = buildArgs(spec, cfg);
-  console.log(`Starting ${spec.label} on :${cfg.port}...`);
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  const args = buildArgs();
+  console.log(`Starting NuExtract3 on :${port}...`);
   console.log(`  args: ${args.join(" ")}`);
-  console.log(`  logs: ${cfg.logDir}`);
-  const child = spawn(cfg.exe, args, {
-    cwd: cfg.dir,
+  console.log(`  logs: ${LOG_DIR}`);
+  const serverEnv = { ...process.env };
+  // Strip leftover CoopMat overrides so a stale user/system env cannot re-enable them.
+  for (const key of ["GGML_VK_DISABLE_COOPMAT", "GGML_VK_DISABLE_COOPMAT2", "LLAMACPP_STABILITY"]) {
+    delete serverEnv[key];
+  }
+  const child = spawn(exe, args, {
+    cwd: DIR,
     detached: true,
     stdio: [
       "ignore",
-      fs.openSync(path.join(cfg.logDir, `${spec.logName}.out.log`), "a"),
-      fs.openSync(path.join(cfg.logDir, `${spec.logName}.err.log`), "a"),
+      fs.openSync(path.join(LOG_DIR, "llama-server.out.log"), "a"),
+      fs.openSync(path.join(LOG_DIR, "llama-server.err.log"), "a"),
     ],
-    env: spec.serverEnv ? spec.serverEnv({ ...process.env }) : process.env,
+    env: serverEnv,
   });
   child.unref();
-  fs.writeFileSync(pidFile(spec, cfg), String(child.pid));
+  fs.writeFileSync(PID_FILE, String(child.pid));
 
-  if (!(await waitForLlamaServer(cfg.port, { timeoutMs: spec.readyTimeoutMs }))) {
-    console.error(`Timed out waiting for ${spec.label} llama-server. Check logs in`, cfg.logDir);
+  if (!(await waitForLlamaServer(port, { timeoutMs: 300_000 }))) {
+    console.error("Timed out waiting for NuExtract3 llama-server. Check logs in", LOG_DIR);
     process.exit(1);
   }
-  console.log(`${spec.label} llama-server is up.`);
-  await verify(spec, cfg);
-  const warm = spec.warmupOnServe(cfg.get);
-  if (warm) {
-    await spec.warmup({ port: cfg.port, alias: cfg.src.alias, background: warm === "background" });
-  } else {
-    console.log(`(warmup skipped — ${spec.prefix}_WARMUP=on or: llama-serve.mjs <model> warmup)`);
-  }
-  for (const line of spec.envHint(cfg.port, cfg.src.alias)) console.log(`  ${line}`);
-}
-
-function pidFile(spec, cfg) {
-  return path.join(cfg.logDir, `${spec.logName}.pid`);
+  console.log("NuExtract3 llama-server is up.");
+  await verify();
+  // Opt-in (LLAMACPP_WARMUP=on), in the background so the stack continues.
+  if (get("WARMUP", "off").toLowerCase() === "on") warmup({ background: true });
+  else console.log("(warmup skipped — LLAMACPP_WARMUP=on or: pnpm llamacpp:warmup)");
+  console.log(`  AUDIT_LLAMACPP_BASE_URL=http://host.docker.internal:${port}/v1`);
+  console.log(`  AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
 }
 
 /** Guards against a stale PID file whose PID the OS has since reused. */
@@ -354,10 +208,9 @@ function isLlamaServer(pid) {
 }
 
 /** Kill the server we started (PID file), then anything still bound to the port. */
-function stop(spec, cfg) {
-  spec.onStop?.();
-  const file = pidFile(spec, cfg);
-  const pid = fs.existsSync(file) ? Number(fs.readFileSync(file, "utf8").trim()) : 0;
+function stop() {
+  fs.rmSync(WARMUP_MARKER, { force: true });
+  const pid = fs.existsSync(PID_FILE) ? Number(fs.readFileSync(PID_FILE, "utf8").trim()) : 0;
   if (pid > 0 && isLlamaServer(pid)) {
     if (process.platform === "win32") {
       spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
@@ -369,51 +222,41 @@ function stop(spec, cfg) {
       }
     }
   }
-  fs.rmSync(file, { force: true });
-  killListenerPort(cfg.port);
-  console.log(`Stopped ${spec.label} on :${cfg.port} (if it was running).`);
+  fs.rmSync(PID_FILE, { force: true });
+  killListenerPort(port);
+  console.log(`Stopped NuExtract3 on :${port} (if it was running).`);
 }
 
-function download(spec, cfg) {
-  const dest = path.join(cfg.dir, "models");
+function download() {
+  const dest = path.join(DIR, "models");
   fs.mkdirSync(dest, { recursive: true });
-  console.log(`Downloading ${spec.hfRepo} into ${dest} …`);
-  const result = spawnSync(
-    resolveExecutable("hf"),
-    ["download", spec.hfRepo, "--local-dir", dest],
-    {
-      stdio: "inherit",
-      shell: false,
-    }
-  );
+  console.log(`Downloading ${HF_REPO} into ${dest} …`);
+  const result = spawnSync(resolveExecutable("hf"), ["download", HF_REPO, "--local-dir", dest], {
+    stdio: "inherit",
+    shell: false,
+  });
   if (result.status !== 0) {
     console.error(
       "hf download failed. Install the Hugging Face CLI (`pip install huggingface_hub`)."
     );
     process.exit(result.status || 1);
   }
-  console.log(`Done. Point ${spec.prefix}_MODEL at a .gguf under ${path.relative(ROOT, dest)}/`);
+  console.log(`Done. Point LLAMACPP_MODEL / LLAMACPP_MMPROJ at the .gguf files under ${dest}`);
 }
 
-const USAGE = `Usage: node deploy/scripts/llama-serve.mjs <${Object.keys(MODELS).join("|")}> serve|stop|restart|verify|warmup|download`;
-const [modelName, cmd = "serve"] = process.argv.slice(2);
-const spec = MODELS[modelName];
-if (!spec) {
-  console.error(USAGE);
-  process.exit(2);
-}
-const cfg = resolve(spec);
-
-if (cmd === "serve") await serve(spec, cfg);
-else if (cmd === "stop") stop(spec, cfg);
+const cmd = process.argv[2] || "serve";
+if (cmd === "serve") await serve();
+else if (cmd === "stop") stop();
 else if (cmd === "restart") {
-  stop(spec, cfg);
-  waitForPortRelease(cfg.port, 5000);
-  await serve(spec, cfg);
-} else if (cmd === "verify") await verify(spec, cfg);
-else if (cmd === "warmup") await spec.warmup({ port: cfg.port, alias: cfg.src.alias, force: true });
-else if (cmd === "download") download(spec, cfg);
+  stop();
+  waitForPortRelease(port, 5000);
+  await serve();
+} else if (cmd === "verify") await verify();
+else if (cmd === "warmup") warmup({ force: true });
+else if (cmd === "download") download();
 else {
-  console.error(USAGE);
+  console.error(
+    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|warmup|download"
+  );
   process.exit(2);
 }

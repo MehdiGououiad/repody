@@ -1,13 +1,10 @@
-"""Catalog API assembly for platform endpoints."""
+"""Models catalog for the workflow builder: the one document model plus its live status."""
 
 from __future__ import annotations
 
-from repody.catalog.probes import list_catalog_with_availability
 from repody.catalog.registry import list_document_models
-from repody.extraction.branding import (
-    public_runtime_model_name,
-    public_runtime_name,
-)
+from repody.catalog.status import model_status
+from repody.extraction.branding import REPODY_VLM_CATALOG_ID, public_runtime_name
 from repody.extraction.modes import list_read_paths, list_validation_modes
 from repody.schemas.models_catalog import (
     CatalogModelEntry,
@@ -15,88 +12,60 @@ from repody.schemas.models_catalog import (
     ReadPathOption,
     ValidationModeOption,
 )
-from repody.settings import Settings, get_settings
+from repody.settings import get_settings
 
 
 def document_model_summaries() -> list[dict[str, str]]:
-    """Public document model rows for platform config and diagnostics."""
+    """Public document model rows for platform config."""
     return [
         {
             "id": spec.id,
             "label": spec.label,
             "runtime": public_runtime_name(spec.runtime),
-            "runtime_model": public_runtime_model_name(spec.runtime_model),
+            "runtime_model": spec.label,
         }
         for spec in list_document_models()
     ]
 
 
-def build_processing_paths(
-    settings: Settings | None = None,
-) -> tuple[list[ReadPathOption], list[ValidationModeOption], str, str]:
-    settings = settings or get_settings()
-    paths = [
-        ReadPathOption(
-            id=p.id,
-            label=p.label,
-            description=p.description,
-            read_kind=p.read,
-            show_document_model=p.show_document_model,
-        )
-        for p in list_read_paths()
-    ]
-    validation_modes = [
-        ValidationModeOption(id=v.id, label=v.label, description=v.description)
-        for v in list_validation_modes(settings)
-    ]
-    return paths, validation_modes, "document_model", "logic_only"
-
-
 async def fetch_models_catalog() -> ModelsCatalogResponse:
     settings = get_settings()
-    entries, default_doc = await list_catalog_with_availability()
-    paths, validation_modes, default_path, default_validation_mode = build_processing_paths(
-        settings
-    )
-    models: list[CatalogModelEntry] = []
-
-    for entry in entries:
-        models.append(
-            CatalogModelEntry(
-                id=entry.spec.id,
-                label=entry.spec.label,
-                kind="document_model",
-                engine=entry.spec.engine,
-                runtime=public_runtime_name(entry.spec.runtime),
-                description=entry.spec.description,
-                available=entry.available,
-                availability_note=entry.availability_note,
-                is_default=entry.spec.id == default_doc,
-                markdown_only=entry.spec.markdown_only,
-            )
+    status = await model_status(settings)
+    note = None
+    if not status.reachable:
+        note = "llama-server is not reachable — start it with `pnpm llamacpp:serve`."
+    elif not status.loaded:
+        note = f"llama-server does not serve {settings.llamacpp_served_model!r}."
+    models = [
+        CatalogModelEntry(
+            id=spec.id,
+            label=spec.label,
+            kind="document_model",
+            engine=spec.engine,
+            runtime=public_runtime_name(spec.runtime),
+            description=spec.description,
+            available=status.loaded,
+            availability_note=note,
+            is_default=True,
         )
-
-    default_validation: str | None = None
-    if settings.llm_validation_enabled and settings.validation_model:
-        default_validation = settings.validation_model
-        models.append(
-            CatalogModelEntry(
-                id=settings.validation_model,
-                label=settings.validation_model,
-                kind="validation",
-                runtime=public_runtime_name("llamacpp"),
-                available=True,
-                is_default=True,
-            )
-        )
-
+        for spec in list_document_models()
+    ]
     return ModelsCatalogResponse(
         models=models,
-        default_document_model=default_doc,
-        default_validation_model=default_validation,
+        default_document_model=REPODY_VLM_CATALOG_ID,
         inference_mode=settings.inference_mode,
-        paths=paths,
-        validation_modes=validation_modes,
-        default_path=default_path,
-        default_validation_mode=default_validation_mode,
+        paths=[
+            ReadPathOption(
+                id=p.id,
+                label=p.label,
+                description=p.description,
+                read_kind=p.read,
+                show_document_model=p.show_document_model,
+            )
+            for p in list_read_paths()
+        ],
+        validation_modes=[
+            ValidationModeOption(id=v.id, label=v.label, description=v.description)
+            for v in list_validation_modes()
+        ],
     )

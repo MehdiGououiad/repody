@@ -47,7 +47,6 @@ from repody.extraction.pipeline import extract_document
 from repody.extraction.render import prepare_nuextract_pages
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec, load_document_bundle
 from repody.extraction.vlm import extract_with_repody_vlm
-from repody.inference.factory import get_chat
 from repody.rules.amounts import normalize_amount, parse_numeric_value
 from repody.rules.value_coercion import MISSING
 from repody.settings import get_settings
@@ -325,7 +324,6 @@ def live_vlm_required(monkeypatch, disable_extraction_cache):
     monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", "http://127.0.0.1:8081/v1")
     monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "nuextract3-q4_k_m")
     get_settings.cache_clear()
-    get_chat.cache_clear()
     if not _llamacpp_live_ready():
         pytest.skip("llama.cpp / NuExtract not reachable at http://127.0.0.1:8081/v1")
 

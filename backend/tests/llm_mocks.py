@@ -9,7 +9,6 @@ from typing import Any
 import httpx
 import respx
 
-from repody.inference.factory import get_chat, get_ensure_available
 from repody.settings import get_settings
 
 DEFAULT_BASE = "http://model-runner-mock.test/v1"
@@ -150,8 +149,6 @@ def enable_dmr_mock(
         os.environ["AUDIT_LLAMACPP_BASE_URL"] = base
 
     get_settings.cache_clear()
-    get_chat.cache_clear()
-    get_ensure_available.cache_clear()
 
     router = respx.mock(assert_all_called=False)
     router.get(f"{base}/models").mock(
@@ -165,8 +162,6 @@ def enable_dmr_mock(
 def disable_dmr_mock(router: respx.MockRouter | None) -> None:
     if router is not None:
         router.stop()
-    get_chat.cache_clear()
-    get_ensure_available.cache_clear()
     get_settings.cache_clear()
 
 

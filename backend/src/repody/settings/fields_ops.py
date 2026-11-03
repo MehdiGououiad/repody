@@ -21,9 +21,6 @@ class OpsSettingsFields:
         description="Max Taskiq dispatch attempts per run (outbox replay).",
     )
 
-    operator_actions_enabled: bool = Field(default=False)
-    operator_data_path: str = Field(default="/app/benchmark-reports")
-
     rate_limit_enabled: bool = Field(default=True)
     rate_limit_fail_closed: bool = Field(
         default=False,

@@ -6,7 +6,7 @@ Standard **BPMN 2.0** - open in [bpmn.io](https://demo.bpmn.io) or [Camunda Mode
 
 | File | What it shows |
 |------|----------------|
-| **[architecture.bpmn](./architecture.bpmn)** | **Main components:** Frontend · API · Keycloak + **Casbin** · **Taskiq** · **SSE/Redis** · PostgreSQL · **MinIO** · **Inference** |
+| **[architecture.bpmn](./architecture.bpmn)** | **Main components:** Frontend · API · Keycloak + **RBAC** · **Taskiq** · **SSE/Redis** · PostgreSQL · **MinIO** · **Inference** |
 
 Short labels on purpose (readable in bpmn.io). Each horizontal band is one component; dashed arrows are calls between them.
 

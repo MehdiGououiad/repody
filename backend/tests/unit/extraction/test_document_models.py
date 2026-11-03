@@ -6,12 +6,10 @@ from unittest.mock import AsyncMock
 import pytest
 
 from repody.catalog.registry import (
-    normalize_model_id,
     parse_document_model,
 )
 from repody.extraction.branding import (
     REPODY_VLM_CATALOG_ID,
-    UnknownCatalogIdError,
 )
 from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import (
@@ -33,27 +31,6 @@ def test_catalog_routes_repody_vlm_to_llamacpp():
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     assert spec.runtime == "llamacpp"
     assert spec.engine == "document_model"
-
-
-def test_catalog_routes_repody_vlm_cloud_when_enabled(monkeypatch):
-    from repody.extraction.branding import REPODY_VLM_CLOUD_CATALOG_ID
-    from repody.settings import get_settings
-
-    monkeypatch.setenv("AUDIT_NUEXTRACT_CLOUD_ENABLED", "true")
-    get_settings.cache_clear()
-    try:
-        import repody.extraction.vlm  # noqa: F401
-
-        spec = parse_document_model(REPODY_VLM_CLOUD_CATALOG_ID)
-        assert spec.runtime == "nuextract_cloud"
-        assert spec.id == REPODY_VLM_CLOUD_CATALOG_ID
-    finally:
-        get_settings.cache_clear()
-
-
-def test_unknown_model_id_raises():
-    with pytest.raises(UnknownCatalogIdError, match="unknown-model"):
-        normalize_model_id("unknown-model")
 
 
 def test_repody_vlm_template_and_flat_json():
@@ -483,6 +460,7 @@ async def test_repody_vlm_markdown_only_without_platform_gate(monkeypatch: pytes
             bundle,
             [],
             "DOC",
+            spec=parse_document_model(None),
             markdown_extraction=True,
         )
         assert result.markdown_text == "# Document\n\nHello"

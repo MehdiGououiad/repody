@@ -5,12 +5,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from repody.catalog.registry import normalize_model_id
-from repody.extraction.branding import UnknownCatalogIdError
 from repody.rules.conditions import NO_RIGHT, resolve_rule_body
-from repody.rules.llm_fields import referenced_fields
-from repody.rules.rule_syntax import validate_llm_rule_body, validate_logic_rule_body
-from repody.rules.types import rule_applies_to, rule_kind
+from repody.rules.rule_syntax import validate_logic_rule_body
+from repody.rules.types import rule_kind
 from repody.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema, WorkflowSchema
 from repody.util.json_shape import normalize_keys_to_snake
 
@@ -49,16 +46,12 @@ def validate_workflow_schema(payload: WorkflowSchema) -> None:
                 f"{doc_label}: duplicate field name(s) {joined}. "
                 "Each field name must be unique (case-insensitive)."
             )
-        try:
-            normalize_model_id(doc.document_model_id)
-        except UnknownCatalogIdError as exc:
-            raise ValueError(f"{doc_label}: {exc}") from exc
 
 
 def validate_workflow_rules(payload: WorkflowSchema) -> None:
     """Raise ValueError when any rule fails validation."""
     for rule in payload.rules:
-        issues = validate_workflow_rule(rule, payload.documents)
+        issues = validate_workflow_rule(rule)
         if issues:
             raise ValueError("; ".join(issues))
 
@@ -132,33 +125,18 @@ def _validate_logic_rule_conditions(rule: WorkflowRuleSchema | dict) -> list[str
 
 def validate_workflow_rule(
     rule: WorkflowRuleSchema | dict,
-    documents: list[DocumentDefSchema],
 ) -> list[str]:
     """Return user-facing validation errors for one workflow rule."""
     if isinstance(rule, WorkflowRuleSchema):
         kind = (rule.kind or "logic").lower()
         label = (rule.name or "").strip() or rule.id or "Rule"
-        applies_to = rule.applies_to or []
-        body = rule.body or ""
     else:
         fields = normalize_keys_to_snake(rule)
         kind = rule_kind(fields)
         label = (fields.get("name") or "").strip() or fields.get("id") or "Rule"
-        applies_to = rule_applies_to(fields)
-        body = fields.get("body") or ""
 
-    if kind == "llm":
-        text = (body or "").strip()
-        if not text:
-            return ["LLM prompt is empty."]
-        available = set(resolve_document_field_tokens(documents, applies_to))
-        unknown = [field for field in referenced_fields(text) if field not in available]
-        if unknown:
-            refs = ", ".join(f"@{field}" for field in unknown)
-            plural = "references" if len(unknown) > 1 else "reference"
-            return [f"Unknown field {plural}: {refs}."]
-        err = validate_llm_rule_body(text)
-        return [f"{label}: {err}"] if err else []
+    if kind != "logic":
+        return [f"{label}: only logic rules are supported."]
 
     issues = _validate_logic_rule_conditions(rule)
     return [f"{label}: {issue}" if not issue.startswith(label) else issue for issue in issues]
@@ -172,12 +150,6 @@ class RulePreview:
     issues: list[str]
 
 
-def validate_rules_preview(
-    documents: list[DocumentDefSchema],
-    rules: list[WorkflowRuleSchema],
-) -> list[RulePreview]:
+def validate_rules_preview(rules: list[WorkflowRuleSchema]) -> list[RulePreview]:
     """Validate all rules for builder preview - one result per rule id."""
-    return [
-        RulePreview(rule_id=rule.id, issues=validate_workflow_rule(rule, documents))
-        for rule in rules
-    ]
+    return [RulePreview(rule_id=rule.id, issues=validate_workflow_rule(rule)) for rule in rules]

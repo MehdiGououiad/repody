@@ -21,8 +21,7 @@ dependencies = [
   "taskiq-redis>=1.2.0",
   "redis>=8.1.0",
   "limits[async-redis]>=4.4.1",
-  # Structured LLM
-  "instructor>=1.15.3",
+  # OpenAI-compatible client for llama-server
   "openai>=2.54.0",
   # HTTP + storage
   "httpx>=0.28.0",
@@ -30,18 +29,15 @@ dependencies = [
   "filetype>=1.2.0",
   # Rules
   "simpleeval>=1.0.3",
-  # Auth (Keycloak JWT + Casbin RBAC)
+  # Auth (Keycloak JWT)
   "pyjwt[crypto]>=2.10.0",
   "cryptography>=44.0.0",
-  "casbin>=1.36.0",
   # Observability + reliability
   "structlog>=25.1.0",
   "sentry-sdk[fastapi]>=2.69.1",
   # Document preprocessing
   "pillow>=11.1.0",
   "pymupdf>=1.28.2",
-  # Native PDF classify + markdown (Firecrawl); Automode OCR fallback
-  "pdf-inspector>=1.18.0",
 ]
 
 [project.optional-dependencies]
@@ -63,28 +59,8 @@ otel = [
   "opentelemetry-instrumentation-sqlalchemy>=0.65b0",
   "opentelemetry-instrumentation-logging>=0.65b0",
 ]
-# Official zai-org GLM-OCR document-parsing SDK (PP-DocLayoutV3 + region OCR).
-# https://huggingface.co/zai-org/GLM-OCR
-# Layout defaults to CPU (AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu). Declare torch/
-# torchvision so tool.uv.sources can pin the PyTorch CPU index (avoids CUDA
-# nvidia/triton wheels on Linux Docker images).
-glmocr = [
-  "glmocr[selfhosted]>=0.1.5",
-  "torch",
-  "torchvision",
-]
-
 [tool.uv]
 package = true
-
-[[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
-explicit = true
-
-[tool.uv.sources]
-torch = [{ index = "pytorch-cpu" }]
-torchvision = [{ index = "pytorch-cpu" }]
 
 [build-system]
 requires = ["hatchling"]
@@ -215,15 +191,6 @@ source_modules = ["repody.runtime.run"]
 forbidden_modules = [
   "sqlalchemy", "fastapi", "redis", "structlog",
   "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.settings", "repody.taskiq",
-]
-
-[[tool.importlinter.contracts]]
-name = "Runtime operator is IO-free"
-type = "forbidden"
-source_modules = ["repody.runtime.operator"]
-forbidden_modules = [
-  "sqlalchemy", "fastapi", "redis", "structlog",
-  "repody.api", "repody.app", "repody.agents", "repody.infra", "repody.taskiq",
 ]
 
 [[tool.importlinter.contracts]]

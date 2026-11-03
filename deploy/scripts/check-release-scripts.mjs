@@ -36,7 +36,7 @@ const checks = [
     expect: (c) =>
       c.target.backend.tags[0] === "repody-backend:dev" &&
       c.target.web.tags[0] === "repody-web:dev" &&
-      c.target.backend.args.BACKEND_EXTRAS === "otel,glmocr" &&
+      c.target.backend.args.BACKEND_EXTRAS === "otel" &&
       !c.target.backend.contexts &&
       !c.target.backend.platforms,
   },

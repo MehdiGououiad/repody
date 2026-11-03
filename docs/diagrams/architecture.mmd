@@ -17,7 +17,7 @@
 %% Repody — Production architecture
 %% Visual style adapted from layered cloud reference diagrams:
 %%   Users → Edge → API → Event bus → Logic layer → Data layer
-%% Stack: Next.js · FastAPI · Casbin · Taskiq · Redis/SSE · Postgres · MinIO · VLM
+%% Stack: Next.js · FastAPI · RBAC · Taskiq · Redis/SSE · Postgres · MinIO · VLM
 %% Docs: docs/CLUSTER.md · CONTEXT.md
 %% Preview: https://mermaid.live
 
@@ -48,9 +48,9 @@ flowchart LR
   subgraph APILAYER["API layer"]
     direction TB
     API["API<br/><b>FastAPI</b><br/><i>repody-api</i><br/>workflows · uploads · runs"]
-    Casbin["Authorization<br/><b>Casbin RBAC</b><br/><i>viewer · operator · admin</i>"]
+    RBAC["Authorization<br/><b>RBAC</b><br/><i>viewer · operator · admin</i>"]
     SSE["Live updates<br/><b>SSE streams</b><br/><i>/runs/id/events</i>"]
-    API --- Casbin
+    API --- RBAC
     API --- SSE
   end
 
@@ -95,7 +95,7 @@ flowchart LR
   FE -->|"OIDC"| IdP
   FE -->|"HTTPS + JWT<br/>commands / queries"| API
   API -->|"JWKS"| IdP
-  API -->|"authorize"| Casbin
+  API -->|"authorize"| RBAC
 
   %% Sync reads/writes from API
   API -->|"SQL sync"| PG
@@ -139,7 +139,7 @@ flowchart LR
 
   class User,Admin person
   class Ing,FE edge
-  class API,Casbin,SSE api
+  class API,RBAC,SSE api
   class Bus bus
   class WX,WF,VLM logic
   class PG,MinIO data

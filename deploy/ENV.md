@@ -26,51 +26,16 @@ When `secrets.create=false`, create `repody-runtime-secrets` with:
 | `AUDIT_LLAMACPP_API_KEY` | Optional bearer token |
 | `AUDIT_REPODY_VLM_WARMUP_ON_START=false` | Recommended for remote/serverless endpoints |
 
-## NuExtract Cloud (platform API)
-
-Catalog id: `repody:vlm:cloud`. Uses the official NuExtract REST API
-([docs](https://nuextract.ai/doc)) - not local llama-server.
+## Extraction tuning
 
 | Variable | Purpose |
 |----------|---------|
-| `AUDIT_NUEXTRACT_CLOUD_ENABLED=true` | Register NuExtract Cloud in the document model catalog |
-| `AUDIT_NUEXTRACT_CLOUD_API_KEY` | Bearer API key (`Authorization: Bearer …`) |
-| `AUDIT_NUEXTRACT_CLOUD_BASE_URL` | Default `https://nuextract.ai` |
-| `AUDIT_NUEXTRACT_CLOUD_PROJECT_ID` | Optional fixed `sprj_…`; omit to create a temp project per request |
-| `AUDIT_NUEXTRACT_CLOUD_TIMEOUT_SECONDS` | HTTP/SSE job timeout (default 180) |
-
-Store the API key in secrets only - never commit it.
-
-## Alternate document models (OCR)
-
-| Variable | Purpose |
-|----------|---------|
-| `AUDIT_PADDLEOCR_V6_ENABLED` | Local launchers only: start the host PP-OCRv6 service (`pnpm dev:src:all`) |
-| `AUDIT_PADDLEOCR_V6_BASE_URL` | PP-OCRv6 HTTP root, e.g. `http://127.0.0.1:8868` |
-| `AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS` | Request timeout (default 180) |
-| `AUDIT_PADDLEOCR_V6_USE_DOC_ORIENTATION_CLASSIFY` | Official `/ocr` override (default `true`; set `false` for already-oriented inputs) |
-| `AUDIT_PADDLEOCR_V6_USE_DOC_UNWARPING` | Official `/ocr` override (default `true`; set `false` for clean documents) |
-| `AUDIT_PADDLEOCR_V6_USE_TEXTLINE_ORIENTATION` | Official `/ocr` override (default `true`; set `false` for the documented fast path) |
-| `AUDIT_PADDLEOCR_QWEN_ENABLED` | Register `paddleocr:qwen` (PP-OCRv6 + Qwen structured extraction) |
-| `AUDIT_QWEN35_BASE_URL` | Qwen OpenAI API root, e.g. `http://127.0.0.1:8084/v1` |
-| `AUDIT_QWEN35_SERVED_MODEL` | Qwen model alias (default `Qwen3.5-4B`) |
-| `AUDIT_QWEN35_TIMEOUT_SECONDS` | Qwen text -> JSON timeout (default 180) |
-| `AUDIT_GLM_OCR_ENABLED` | Local launchers only: start the host GLM-OCR service (`pnpm dev:src:all`) |
-| `AUDIT_GLM_OCR_BASE_URL` | OpenAI-compatible root, e.g. `http://127.0.0.1:8083/v1` |
-| `AUDIT_GLM_OCR_SERVED_MODEL` | Model id / alias (default `GLM-OCR`) |
-| `AUDIT_GLM_OCR_TIMEOUT_SECONDS` | Request timeout (default 180) |
-| `AUDIT_GLM_OCR_LAYOUT_DEVICE` | PP-DocLayoutV3 device (`cpu` recommended with host llama) |
-| `AUDIT_GLM_OCR_LAYOUT_MODEL_DIR` | Layout model id/path (default `PaddlePaddle/PP-DocLayoutV3_safetensors`) |
-| `AUDIT_GLM_OCR_SDK_MAX_WORKERS` | Region OCR parallelism (default 1; keep ≤ llama-server `-np`) |
-| `AUDIT_GLM_OCR_PDF_MAX_PAGES` | Optional PDF page cap; unset = official unlimited |
-| `AUDIT_GLM_OCR_ID_CARD_PROFILE` | Optional ID-card profile (`config.idcard.yaml`); default `false` |
 | `AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT` | Dual structured+markdown pass; default `false` (markdown-only still works per document) |
 | `AUDIT_EXTRACTION_CACHE_ENABLED` | Redis extraction cache; default `false` |
 
 Model HTTP timeouts must stay ≤ `AUDIT_WORKER_TASK_TIMEOUT_MINUTES * 60` (ceiling 15 min).
 Compose extract defaults: worker **10** min, model timeouts **600** s, stale **12** min.
 
-Local: `pnpm paddleocr:v6:serve` / `pnpm qwen35:serve` / `pnpm glmocr:serve` (OCR/GLM also started by `pnpm platform -- --with-paddle` / `--with-glm`). See [docs/EXTRACTION.md](../docs/EXTRACTION.md).
 
 Helm values:
 
@@ -130,7 +95,7 @@ Images are defined in [`docker-bake.hcl`](../docker-bake.hcl) (Docker Buildx Bak
 | `INTERNAL_API_URL` | Runtime web -> API origin (Compose: `http://api:8000`, K8s: `http://repody-api:8000`) |
 | `BACKEND_URL` | Fallback origin if `INTERNAL_API_URL` unset |
 | `AUTH_KEYCLOAK_INTERNAL_ISSUER` | In-cluster Keycloak issuer for Auth.js server calls (Compose: `http://keycloak:8080/realms/repody`) |
-| `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel,glmocr`). `glmocr` pulls torch/torchvision from the **PyTorch CPU index** (see `backend/pyproject.toml` `tool.uv.sources`) so images match `AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu`. Use `otel` only to slim. |
+| `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel`; see `backend/pyproject.toml`) |
 | `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
 
 Build cache: local builds reuse Docker's build cache; CI passes `--set <target>.cache-from/cache-to` (see `.github/workflows/images-ghcr.yml`).

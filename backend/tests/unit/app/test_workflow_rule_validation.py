@@ -27,14 +27,7 @@ def test_resolve_document_field_tokens_multi_document():
     assert tokens == ["invoice.total"]
 
 
-def test_validate_llm_rule_unknown_field_reference():
-    documents = [
-        DocumentDefSchema(
-            id="d1",
-            document_type="Invoice",
-            schema_fields=[SchemaFieldSchema(id="f1", name="Total", description="")],
-        )
-    ]
+def test_llm_rules_are_rejected():
     rule = WorkflowRuleSchema(
         id="r1",
         name="Fee check",
@@ -44,8 +37,7 @@ def test_validate_llm_rule_unknown_field_reference():
         body="Compare @total with @missing_field",
         severity="flag",
     )
-    issues = validate_workflow_rule(rule, documents)
-    assert any("missing_field" in issue for issue in issues)
+    assert validate_workflow_rule(rule) == ["Fee check: only logic rules are supported."]
 
 
 def test_validate_logic_rule_requires_conditions():
@@ -59,18 +51,11 @@ def test_validate_logic_rule_requires_conditions():
         body="",
         severity="flag",
     )
-    issues = validate_workflow_rule(rule, [])
+    issues = validate_workflow_rule(rule)
     assert issues == ["Balance: Add at least one condition."]
 
 
 def test_validate_logic_rule_rejects_body_without_conditions():
-    documents = [
-        DocumentDefSchema(
-            id="d1",
-            document_type="Invoice",
-            schema_fields=[SchemaFieldSchema(id="f1", name="Total", description="")],
-        )
-    ]
     rule = WorkflowRuleSchema(
         id="r1",
         name="Balance",
@@ -81,38 +66,31 @@ def test_validate_logic_rule_rejects_body_without_conditions():
         body="total_amount > 0",
         severity="flag",
     )
-    issues = validate_workflow_rule(rule, documents)
+    issues = validate_workflow_rule(rule)
     assert issues == ["Balance: Add at least one condition."]
 
 
 def test_validate_rules_preview_returns_per_rule_rows():
-    documents = [
-        DocumentDefSchema(
-            id="d1",
-            document_type="Invoice",
-            schema_fields=[SchemaFieldSchema(id="f1", name="Total", description="")],
-        )
-    ]
+    condition = {
+        "id": "c1",
+        "left": {"kind": "field", "value": "total"},
+        "operator": ">",
+        "right": {"kind": "literal", "value": "0"},
+    }
     rules = [
         WorkflowRuleSchema(
             id="r1",
             name="Ok",
-            kind="llm",
+            kind="logic",
             scope="intra",
-            applies_to=["d1"],
-            body="Check @total",
+            body="total > 0",
+            conditions=[condition],
+            condition_junction="AND",
             severity="flag",
         ),
-        WorkflowRuleSchema(
-            id="r2",
-            name="Empty",
-            kind="llm",
-            scope="intra",
-            applies_to=["d1"],
-            body="",
-            severity="flag",
-        ),
+        WorkflowRuleSchema(id="r2", name="Empty", kind="logic", scope="intra", conditions=[]),
     ]
-    rows = validate_rules_preview(documents, rules)
+    rows = validate_rules_preview(rules)
+    assert [row.rule_id for row in rows] == ["r1", "r2"]
     assert rows[0].issues == []
-    assert rows[1].issues == ["LLM prompt is empty."]
+    assert rows[1].issues == ["Empty: Add at least one condition."]

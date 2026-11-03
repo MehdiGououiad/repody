@@ -375,28 +375,6 @@ config:
   outboxRetainDispatchedDays: 7
   operatorActionsEnabled: false
   repodyVlmMarkdownOnExtract: false
-  # PP-OCRv6 OCR stage for paddleocr:qwen. Never use host.docker.internal - that is Compose-only.
-  paddleocrV6BaseUrl: http://paddleocr-v6:8868
-  paddleocrV6TimeoutSeconds: 180
-  paddleocrV6UseDocOrientationClassify: true
-  paddleocrV6UseDocUnwarping: true
-  paddleocrV6UseTextlineOrientation: true
-  # paddleocr:qwen (PP-OCR + Qwen text -> JSON). Off until cluster URLs are set.
-  paddleocrQwenEnabled: false
-  qwen35BaseUrl: http://qwen35:8084/v1
-  qwen35ServedModel: Qwen3.5-4B
-  qwen35TimeoutSeconds: 180
-  # GLM-OCR - local Compose uses host llama-server; cluster may point at a dedicated service.
-  glmOcrBaseUrl: http://glmocr:8083/v1
-  glmOcrServedModel: glm-ocr:latest
-  glmOcrTimeoutSeconds: 180
-  # Official SDK layout (PP-DocLayoutV3) - requires backend image built with
-  # REPODY_BACKEND_EXTRAS=otel,glmocr (default for pnpm images:build).
-  glmOcrLayoutDevice: cpu
-  glmOcrLayoutModelDir: PaddlePaddle/PP-DocLayoutV3_safetensors
-  glmOcrSdkMaxWorkers: 1
-  glmOcrIdCardProfile: false
-  gpuLiveProbe: false
   healthzProbeInference: false
 
 observability:
@@ -427,7 +405,4 @@ networkPolicy:
       - 6380
       - 7070
       - 8081
-      - 8083
-      - 8084
-      - 8868
       - 9000

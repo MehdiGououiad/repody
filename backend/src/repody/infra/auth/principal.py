@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Realm roles provisioned in Keycloak and enforced via Casbin.
+# Realm roles provisioned in Keycloak and enforced by infra/auth/permissions.py.
 APP_REALM_ROLES = frozenset({"platform_admin", "admin", "operator", "viewer"})
 
 

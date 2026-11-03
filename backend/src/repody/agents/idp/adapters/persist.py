@@ -29,7 +29,6 @@ from repody.infra.db.models import (
 )
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.runtime.run.ids import new_id
-from repody.settings import get_settings
 
 
 def extraction_meta_to_dict(doc: DocumentExtraction) -> dict:
@@ -142,7 +141,6 @@ def _build_completion_outcome(
             "validationMs": validation_ms,
             "validationMode": validation_mode,
             "validationLabel": validation_mode_label(validation_mode),
-            "llmModel": get_settings().validation_model,
         },
         progress=progress,
     )

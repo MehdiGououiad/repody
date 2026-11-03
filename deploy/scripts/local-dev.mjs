@@ -3,14 +3,13 @@
  * Unified Compose local development - setup, stack, app, status, stop.
  *
  *   pnpm dev:src:setup    first-time env + migrate
- *   pnpm dev:src          background stack (Compose + workers + NuExtract + PP-OCRv6 + GLM-OCR)
+ *   pnpm dev:src          background stack (Compose + workers + NuExtract)
  *   pnpm dev:src:api      foreground API only
  *   pnpm dev:src:app      foreground API + UI
  *   pnpm dev:src:all      stack (all three models + observability) then API + UI
  *   pnpm dev:src:status   health summary
  *   pnpm dev:src:stop     stop API, UI, all three models, and full Compose stack
- *   pnpm dev:src:restart  restart NuExtract + PP-OCRv6 + GLM-OCR + worker containers
- *   pnpm models:warmup    warm NuExtract + PP-OCRv6 + GLM-OCR
+ *   pnpm dev:src:restart  restart NuExtract + worker containers
  *   pnpm dev:src:observability  Grafana + Loki + Tempo + OTEL + Bugsink (on by default for dev:src:all)
  */
 import { spawnSync } from "node:child_process";
@@ -23,7 +22,6 @@ import {
   BACKEND_ENV,
   composeArgs,
   copyIfMissing,
-  envFlag,
   fetchOk,
   fetchProbe,
   killListenerPort,
@@ -57,7 +55,7 @@ const OBS_ENV_FILE = path.join(ROOT, "deploy/env/observability.enabled.env");
 const rawArgs = process.argv.slice(2);
 /** First non-flag token is the command (`all`, `stack`, …). */
 const command = rawArgs.find((a) => !a.startsWith("-")) || "stack";
-/** Accept flags anywhere: `all --no-glmocr` or `--no-glmocr all`. */
+/** Accept flags anywhere: `all --no-nuextract` or `--no-nuextract all`. */
 const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
 
 function apiEnv() {
@@ -125,9 +123,6 @@ function dashboardContext() {
     apiPort: API_PORT,
     observability: wantsObservability() || isObservabilityRunning(),
     llama: wantsNuextract() && llamaConfigured(),
-    paddleocr: wantsPaddleocr(),
-    qwen35: wantsQwen35(),
-    glmocr: wantsGlmocr() && glmocrEnabledInEnv(),
     extractOnly: flags.has("--extract-only"),
   };
 }
@@ -168,55 +163,13 @@ function wantsNuextract() {
   return true;
 }
 
-function wantsPaddleocr() {
-  if (flags.has("--no-paddleocr") || flags.has("--no-ocr")) return false;
-  if (flags.has("--paddleocr") || flags.has("--ocr")) return true;
-  // Same default as NuExtract for stack + all.
-  return true;
-}
-
-function paddleocrEnabledInEnv() {
-  return envFlag(BACKEND_ENV, "AUDIT_PADDLEOCR_V6_ENABLED", true);
-}
-
-function wantsGlmocr() {
-  if (flags.has("--no-glmocr") || flags.has("--no-glm")) return false;
-  if (flags.has("--glmocr") || flags.has("--glm")) return true;
-  return false;
-}
-
-function glmocrEnabledInEnv() {
-  return envFlag(BACKEND_ENV, "AUDIT_GLM_OCR_ENABLED", false);
-}
-
-function paddleocrQwenEnabledInEnv() {
-  return envFlag(BACKEND_ENV, "AUDIT_PADDLEOCR_QWEN_ENABLED", true);
-}
-
-function wantsQwen35() {
-  if (flags.has("--no-qwen") || flags.has("--no-qwen35")) return false;
-  if (!wantsPaddleocr() || !paddleocrEnabledInEnv()) return false;
-  return paddleocrQwenEnabledInEnv();
-}
-
 function logModelPlan() {
   const nue = wantsNuextract()
     ? llamaConfigured()
       ? "on"
       : "skip (paths.local.env missing)"
     : "off (--no-nuextract)";
-  const pad = wantsPaddleocr()
-    ? paddleocrEnabledInEnv()
-      ? "on"
-      : "skip (AUDIT_PADDLEOCR_V6_ENABLED=false)"
-    : "off (--no-paddleocr)";
-  const qwen = wantsQwen35() ? "on (with PP-OCR serve)" : "off";
-  const glm = wantsGlmocr()
-    ? glmocrEnabledInEnv()
-      ? "on"
-      : "skip (AUDIT_GLM_OCR_ENABLED=false)"
-    : "off (opt-in: --glmocr)";
-  console.log(`Models: NuExtract=${nue}  PP-OCRv6=${pad}  Qwen=${qwen}  GLM-OCR=${glm}`);
+  console.log(`Models: NuExtract=${nue}`);
 }
 
 /** Windows 0xC0000409 - Node/Next native abort; often RAM pressure with local VLMs. */
@@ -224,7 +177,7 @@ function describeExitCode(code) {
   if (code === 3221226505 || code === -1073740791) {
     return (
       "Windows crash 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN) — usually memory pressure " +
-      "(NuExtract/llama-server + Next.js). Try: pnpm dev:src:all -- --no-nuextract  or  --no-glmocr  " +
+      "(NuExtract/llama-server + Next.js). Try: pnpm dev:src:all -- --no-nuextract  " +
       "or close other apps, then pnpm dev:src:app"
     );
   }
@@ -373,7 +326,7 @@ async function stack(options = {}) {
   if (wantsNuextract()) {
     if (llamaConfigured()) {
       t = Date.now();
-      llamaServe("nuextract", "serve");
+      llamaServe("serve");
       phaseMs("nuextract serve+warmup", t);
     } else {
       console.warn(
@@ -382,33 +335,6 @@ async function stack(options = {}) {
     }
   } else {
     console.log("skip: NuExtract (--no-nuextract / --no-llama / --no-vlm)");
-  }
-
-  if (wantsPaddleocr()) {
-    if (paddleocrEnabledInEnv()) {
-      t = Date.now();
-      run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
-        inherit: true,
-        allowFail: true,
-      });
-      phaseMs("paddleocr-v6 serve", t);
-    } else {
-      console.warn("warn: PP-OCRv6 skipped — AUDIT_PADDLEOCR_V6_ENABLED=false in backend/.env");
-    }
-  } else {
-    console.log("skip: PP-OCRv6 (--no-paddleocr / --no-ocr)");
-  }
-
-  if (wantsGlmocr()) {
-    if (glmocrEnabledInEnv()) {
-      t = Date.now();
-      llamaServe("glmocr", "serve", { allowFail: true });
-      phaseMs("glmocr serve", t);
-    } else {
-      console.warn("warn: GLM-OCR skipped — AUDIT_GLM_OCR_ENABLED=false in backend/.env");
-    }
-  } else {
-    console.log("skip: GLM-OCR (--no-glmocr / --no-glm)");
   }
 
   t = Date.now();
@@ -443,9 +369,6 @@ async function status() {
     ["UI", UI_ORIGIN],
     ["Keycloak", "http://127.0.0.1:8080"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
-    ["PP-OCRv6", "http://127.0.0.1:8868/ocr"],
-    ["Qwen3.5", "http://127.0.0.1:8084/v1/models"],
-    ["GLM-OCR", "http://127.0.0.1:8083/v1/models"],
     ["Grafana", `${GRAFANA_ORIGIN}/api/health`],
     ["Loki", "http://127.0.0.1:3100/ready"],
     ["Tempo", "http://127.0.0.1:3200/ready"],
@@ -569,12 +492,7 @@ async function reset() {
   console.log("=== Full platform reset (Compose volumes + DB + seed) ===\n");
   killDevUi();
   killDevApi();
-  llamaServe("nuextract", "stop", { allowFail: true });
-  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
-  llamaServe("glmocr", "stop", { allowFail: true });
+  llamaServe("stop", { allowFail: true });
 
   run("docker", composeArgs([], "--profile", "workers", "down", "--remove-orphans", "-v"), {
     inherit: true,
@@ -616,16 +534,7 @@ async function reset() {
   run("docker", workerArgs, { inherit: true });
 
   if (wantsNuextract() && llamaConfigured()) {
-    llamaServe("nuextract", "serve");
-  }
-  if (wantsPaddleocr() && paddleocrEnabledInEnv()) {
-    run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
-  }
-  if (wantsGlmocr() && glmocrEnabledInEnv()) {
-    llamaServe("glmocr", "serve", { allowFail: true });
+    llamaServe("serve");
   }
 
   console.log("\nPlatform reset complete.");
@@ -633,18 +542,10 @@ async function reset() {
 }
 
 function stop() {
-  console.log(
-    `Stopping host dev servers (UI :3000, API :${API_PORT}, NuExtract :8081, PP-OCRv6 :8868, GLM-OCR :8083)...`
-  );
+  console.log(`Stopping host dev servers (UI :3000, API :${API_PORT}, NuExtract :8081)...`);
   killDevUi();
   killDevApi();
-  llamaServe("nuextract", "stop", { allowFail: true });
-  run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
-    allowFail: true,
-    inherit: true,
-  });
-  llamaServe("qwen35", "stop", { allowFail: true });
-  llamaServe("glmocr", "stop", { allowFail: true });
+  llamaServe("stop", { allowFail: true });
 
   const downArgs = composeDownArgs();
   if (flags.has("--volumes") || flags.has("-v")) {
@@ -657,20 +558,7 @@ function stop() {
 
 function restart() {
   if (wantsNuextract()) {
-    llamaServe("nuextract", "restart");
-  }
-  if (wantsPaddleocr() && paddleocrEnabledInEnv()) {
-    run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "stop"], {
-      allowFail: true,
-      inherit: true,
-    });
-    run("node", ["deploy/scripts/paddleocr-v6-serve.mjs", "serve"], {
-      inherit: true,
-      allowFail: true,
-    });
-  }
-  if (wantsGlmocr() && glmocrEnabledInEnv()) {
-    llamaServe("glmocr", "restart", { allowFail: true });
+    llamaServe("restart");
   }
   run("docker", composeArgs([], "--profile", "workers", "restart", "worker-extract"), {
     inherit: true,
@@ -903,7 +791,7 @@ async function main() {
       break;
     default:
       console.error(
-        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-nuextract|--no-llama] [--no-paddleocr] [--no-glmocr] [--extract-only] [--obs|--no-obs] [--rebuild-workers]"
+        "Usage: local-dev.mjs setup|stack|api|app|all|status|stop|reset|restart|observability [--no-nuextract|--no-llama] [--extract-only] [--obs|--no-obs] [--rebuild-workers]"
       );
       process.exit(1);
   }

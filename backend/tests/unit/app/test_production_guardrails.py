@@ -45,21 +45,7 @@ def test_production_rejects_vlm_timeout_above_worker(monkeypatch):
     monkeypatch.setenv("AUDIT_OIDC_ISSUER", "https://auth.example.com/realms/repody")
     monkeypatch.setenv("AUDIT_WORKER_TASK_TIMEOUT_MINUTES", "3")
     monkeypatch.setenv("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", "600")
-    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS", "60")
-    monkeypatch.setenv("AUDIT_GLM_OCR_TIMEOUT_SECONDS", "60")
     with pytest.raises(ValueError, match="REPODY_VLM_TIMEOUT_SECONDS"):
-        _settings()
-
-
-def test_production_rejects_paddle_timeout_above_worker(monkeypatch):
-    monkeypatch.setenv("AUDIT_DEPLOYMENT_ENVIRONMENT", "production")
-    monkeypatch.setenv("AUDIT_OIDC_ENABLED", "true")
-    monkeypatch.setenv("AUDIT_OIDC_ISSUER", "https://auth.example.com/realms/repody")
-    monkeypatch.setenv("AUDIT_WORKER_TASK_TIMEOUT_MINUTES", "3")
-    monkeypatch.setenv("AUDIT_REPODY_VLM_TIMEOUT_SECONDS", "60")
-    monkeypatch.setenv("AUDIT_PADDLEOCR_V6_TIMEOUT_SECONDS", "900")
-    monkeypatch.setenv("AUDIT_GLM_OCR_TIMEOUT_SECONDS", "60")
-    with pytest.raises(ValueError, match="PADDLEOCR_V6_TIMEOUT_SECONDS"):
         _settings()
 
 

@@ -34,16 +34,6 @@ async def test_platform_config(client):
 
 
 @pytest.mark.asyncio
-async def test_model_runtime_config(client):
-    res = await client.get("/v1/platform/model-runtime-config")
-    assert res.status_code == 200
-    body = res.json()
-    assert "models" in body
-    assert "deploymentNotes" in body
-    assert any(m["modelId"] == REPODY_VLM_CATALOG_ID for m in body["models"])
-
-
-@pytest.mark.asyncio
 async def test_healthz_reports_configured_queue_backend(client):
     res = await client.get("/v1/healthz")
     assert res.status_code == 200
@@ -79,19 +69,13 @@ async def test_models_catalog_includes_processing_paths(client):
 
 @pytest.mark.asyncio
 async def test_document_model_id_catalog_reports_runtime_availability(client, monkeypatch):
-    from repody.settings import get_settings
 
-    settings = get_settings()
+    from repody.catalog.status import ModelStatus
 
-    async def fake_installed_runtime_models(_settings=None):
-        return {
-            "llamacpp": {settings.llamacpp_served_model.lower()},
-        }
+    async def fake_model_status(_settings=None):
+        return ModelStatus(reachable=True, loaded=True)
 
-    monkeypatch.setattr(
-        "repody.catalog.probes.installed_runtime_models",
-        fake_installed_runtime_models,
-    )
+    monkeypatch.setattr("repody.catalog.api.model_status", fake_model_status)
 
     response = await client.get("/v1/models/catalog")
 

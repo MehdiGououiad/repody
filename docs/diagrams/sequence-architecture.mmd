@@ -10,7 +10,7 @@ sequenceDiagram
   participant FE as Frontend<br/>(Next.js)
   participant KC as Keycloak<br/>(OIDC)
   participant API as API<br/>(FastAPI)
-  participant Casbin as Casbin<br/>(roles)
+  participant RBAC as RBAC<br/>(roles)
   participant PG as PostgreSQL
   participant MinIO as MinIO<br/>(files)
   participant Redis as Redis<br/>(Taskiq + SSE)
@@ -19,7 +19,7 @@ sequenceDiagram
 
   %% ── Auth ───────────────────────────────────────────────
   rect rgba(245, 230, 240, 0.45)
-    Note over User,Casbin: 1 — Login and authorization
+    Note over User,RBAC: 1 — Login and authorization
     User->>FE: Open UI
     FE->>KC: OIDC login (Auth.js)
     KC-->>FE: Tokens + roles
@@ -27,8 +27,8 @@ sequenceDiagram
     FE->>API: /api/v1 + Bearer JWT
     API->>KC: Validate JWT (JWKS)
     KC-->>API: OK
-    API->>Casbin: Check permission<br/>viewer / operator / admin
-    Casbin-->>API: Allow / deny
+    API->>RBAC: Check permission<br/>viewer / operator / admin
+    RBAC-->>API: Allow / deny
   end
 
   %% ── Upload ─────────────────────────────────────────────
@@ -51,8 +51,8 @@ sequenceDiagram
   rect rgba(232, 244, 252, 0.45)
     Note over FE,Redis: 3 — Start audit run (API → Taskiq via Redis)
     FE->>API: Start run (JWT or API key)
-    API->>Casbin: Can execute run?
-    Casbin-->>API: Allow
+    API->>RBAC: Can execute run?
+    RBAC-->>API: Allow
     API->>PG: Insert Run (queued) + outbox
     API-->>FE: 202 + runId
     API->>Redis: Dispatch Taskiq job<br/>queue extract | fast

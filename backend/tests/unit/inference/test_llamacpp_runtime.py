@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from repody.catalog.registry import _registered_models, parse_document_model
+from repody.catalog.registry import parse_document_model
 from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.settings import Settings, clear_settings_cache, get_settings
+from repody.settings import Settings, clear_settings_cache
 
 
 def test_registry_uses_llamacpp_when_inference_mode_llamacpp(monkeypatch):
     monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
     monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "test/repody-vlm")
     clear_settings_cache()
-    settings = get_settings()
     spec = parse_document_model(REPODY_VLM_CATALOG_ID)
     assert spec.runtime == "llamacpp"
     assert spec.runtime_model == "test/repody-vlm"
-    assert _registered_models(settings)[REPODY_VLM_CATALOG_ID].runtime == "llamacpp"
 
 
 def test_registry_uses_llamacpp_served_model(monkeypatch):

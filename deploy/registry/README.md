@@ -20,10 +20,6 @@ docker login
 $env:REPODY_IMAGE_REGISTRY="mehdigououiad"
 $env:REPODY_IMAGE_TAG="0.1.0"
 $env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
-# Lean portable Hub image — no GLM-OCR torch stack.
-# Local `pnpm platform -- --with-glm` builds a worker with otel,glmocr instead.
-# To publish GLM-ready images: $env:REPODY_BACKEND_EXTRAS="otel,glmocr"
-$env:REPODY_BACKEND_EXTRAS="otel"
 pnpm images:release
 ```
 
@@ -54,7 +50,7 @@ docker buildx imagetools inspect mehdigououiad/repody-backend:0.1.0
 **Helm:** [deploy/client/values-dockerhub.example.yaml](../client/values-dockerhub.example.yaml).
 
 **Portability boundary:** these images cover API, UI, and workers. Document-model
-inference (NuExtract / PP-OCRv6 / Qwen / GLM-OCR) is **external** by design
+inference (NuExtract on llama-server) is **external** by design
 ([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)). On a Mac
 you still run or point at an inference endpoint separately - that is what makes
 the platform portable across Windows, Linux, and macOS.

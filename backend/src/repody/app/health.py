@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from repody.app.run.admission import count_inflight, count_queued, count_running
 from repody.app.uploads.service import presign_supported
-from repody.catalog.probes import probe_active_runtime
+from repody.catalog.status import model_status
 from repody.infra.db import base as db_base
 from repody.infra.redis.health import ping_redis
 from repody.schemas.health import (
@@ -38,7 +38,7 @@ async def probe_readiness() -> HealthReadinessResponse:
     mode = settings.inference_mode.lower()
     inference_reachable = None
     if settings.healthz_probe_inference:
-        inference_reachable = await probe_active_runtime(settings)
+        inference_reachable = (await model_status(settings)).reachable
 
     ready = redis_ok
     return HealthReadinessResponse(
@@ -52,7 +52,6 @@ async def probe_readiness() -> HealthReadinessResponse:
         cache_enabled=settings.extraction_cache_enabled,
         db_pool_size=settings.db_pool_size,
         queue_backend="taskiq",
-        structured_llm=settings.structured_llm_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
         queued_runs=queued_runs,
         running_runs=running_runs,

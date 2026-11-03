@@ -27,7 +27,6 @@ class HealthReadinessResponse(CamelModel):
     cache_enabled: bool
     db_pool_size: int
     queue_backend: str
-    structured_llm: bool
     rate_limit_enabled: bool
     queued_runs: int
     running_runs: int

@@ -6,12 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.workflow.repository import load_workflow
 from repody.infra.auth.api_keys import verify_api_key
-from repody.infra.auth.casbin_authorizer import authorize
 from repody.infra.auth.jwt_validator import (
     JwtValidationError,
     extract_bearer,
     principal_from_bearer,
 )
+from repody.infra.auth.permissions import authorize
 from repody.infra.db.models import Workflow
 from repody.runtime.contracts.result import AppError, ErrorCode, Result
 from repody.settings import Settings, get_settings
