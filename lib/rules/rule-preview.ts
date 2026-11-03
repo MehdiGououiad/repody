@@ -1,4 +1,4 @@
-import { browserJson } from "@/lib/api/http";
+import { browserApi, unwrap } from "@/lib/api/openapi-client";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
 export type RuleValidationResult = {
@@ -6,25 +6,18 @@ export type RuleValidationResult = {
   issues: string[];
 };
 
-type ValidateRulesResponse = {
-  rules: Array<{ ruleId: string; issues: string[] }>;
-};
-
 /** Authoritative rule validation - backend compiler is the source of truth. */
 export async function validateRulesViaApi(
   documents: DocumentDef[],
   rules: WorkflowRule[]
 ): Promise<RuleValidationResult[]> {
-  const data = await browserJson<ValidateRulesResponse>("/v1/workflows/validate-rules", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ documents, rules }),
-    timeoutMs: 30_000,
-  });
-  return data.rules.map((row) => ({
-    ruleId: row.ruleId,
-    issues: row.issues,
-  }));
+  const data = await unwrap(
+    browserApi.POST("/v1/workflows/validate-rules", {
+      body: { documents, rules } as never,
+      signal: AbortSignal.timeout(30_000),
+    })
+  );
+  return data.rules;
 }
 
 export function issuesByRuleId(results: RuleValidationResult[]): Record<string, string[]> {

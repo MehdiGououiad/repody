@@ -13,8 +13,12 @@ import {
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
-import { buildClientProgress } from "@/lib/api/client-run-progress";
-import { type ClientStepLabels, type RunProgress, runBuilderTest } from "@/lib/api/workflow-run";
+import {
+  type ClientStepLabels,
+  clientProgress,
+  type RunProgress,
+  runWorkflow,
+} from "@/lib/api/run";
 import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
@@ -81,14 +85,14 @@ function TestRunPanel({
   const runTest = async () => {
     onSessionChange({
       phase: "running",
-      progress: buildClientProgress(stepLabels, "save-workflow"),
+      progress: clientProgress(stepLabels, "save-workflow"),
       error: null,
       errorRunId: null,
     });
 
     try {
       onSessionChange({
-        progress: buildClientProgress(stepLabels, "save-workflow"),
+        progress: clientProgress(stepLabels, "save-workflow"),
       });
       const id = onBeforeRun ? await onBeforeRun() : workflowId;
       const payload = { documents, rules: syncRuleBodies(rules), workflowName };
@@ -96,7 +100,7 @@ function TestRunPanel({
         clientLabels: stepLabels,
         onProgress: (progress: RunProgress) => onSessionChange({ progress }),
       };
-      const data = await runBuilderTest(
+      const data = await runWorkflow(
         id,
         hasFiles ? { ...payload, filesByDocId } : payload,
         reporter

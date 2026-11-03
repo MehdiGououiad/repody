@@ -10,7 +10,7 @@ import {
 } from "@/components/workflow/api-panel/api-panel-report";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
-import { type RunProgress, runWorkflowApi } from "@/lib/api/workflow-run";
+import { type RunProgress, runWorkflow } from "@/lib/api/run";
 import { reportClientError } from "@/lib/report-error";
 import type { DocumentDef } from "@/lib/types";
 
@@ -44,11 +44,10 @@ export function ApiPanel({
     setRunError(null);
     setRunErrorRunId(null);
     try {
-      const detail = await runWorkflowApi(
+      const detail = await runWorkflow(
         workflowId,
-        apiKey,
         { documents, filesByDocId },
-        (progress) => setRunProgress(progress)
+        { apiKey, onProgress: setRunProgress }
       );
       setReport({ ...detail, processedAt: detail.createdAt });
       setScreen("report");

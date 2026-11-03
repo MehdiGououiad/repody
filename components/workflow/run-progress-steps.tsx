@@ -13,7 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import type { RunProgress } from "@/lib/api/workflow-run";
+import type { RunProgress } from "@/lib/api/run";
 import { cn, formatDurationMs } from "@/lib/utils";
 
 const GPU_COLD_START_ESCALATE_MS = 12_000;

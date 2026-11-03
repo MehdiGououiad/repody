@@ -24,7 +24,8 @@ import { Button } from "@/components/ui/button";
 import type { TestPhase } from "@/components/workflow/builder/test-run-session";
 import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import type { RunProgress, WorkflowRunResult } from "@/lib/api/workflow-run";
+import type { RunProgress } from "@/lib/api/run";
+import type { RunAuditDetail } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
 
 const statusColor: Record<string, string> = {
@@ -40,7 +41,7 @@ export function TestRunResults({
 }: {
   phase: TestPhase;
   progress: RunProgress | null;
-  result: WorkflowRunResult | null;
+  result: RunAuditDetail | null;
 }) {
   const t = useTranslations("workflows.builder");
   const StatusIcon =

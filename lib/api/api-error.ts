@@ -67,37 +67,28 @@ export function humanizeRunError(raw: string, ctx?: RunErrorContext): string {
   const message = formatApiError(raw);
   const lower = message.toLowerCase();
 
-  if (
-    lower.includes("contact an operator with the run id") ||
-    lower.includes("run failed while processing")
-  ) {
-    return "The audit worker could not finish this run. Check that inference is running on the host, then retry or share the run ID below with an operator.";
+  if (lower.includes("failed during processing")) {
+    return "The audit worker could not finish this run. Check that inference is running, then retry or share the run ID below.";
+  }
+  if (lower.includes("run timed out")) {
+    return "The audit run took too long. Check the worker and inference logs.";
   }
   if (lower.includes("timed out") || lower.includes("timeout")) {
     return ctx?.step
-      ? `${ctx.step} timed out. The server or worker may be busy — check Docker logs and retry.`
+      ? `${ctx.step} timed out. The server or worker may be busy - retry in a moment.`
       : "The operation timed out. Check that the API and workers are running, then retry.";
   }
-  if (lower.includes("upload not found") || lower.includes("404")) {
-    return "Uploaded file was not found in storage. Try removing the file and uploading again.";
+  if (lower.includes("upload not found")) {
+    return "Uploaded file was not found in storage. Remove the file and upload it again.";
   }
-  if (lower.includes("403") && lower.includes("upload")) {
-    return "Direct upload to storage was rejected (HTTP 403). Retrying via API upload…";
-  }
-  if (lower.includes("audit queue at capacity") || lower.includes("queue at capacity")) {
-    return "The platform is at capacity — too many audits are queued. Wait a minute and try again.";
+  if (lower.includes("queue is full") || lower.includes("at capacity")) {
+    return "The platform is at capacity. Wait a minute and try again.";
   }
   if (lower.includes("stayed queued")) {
-    return "The audit job never left the queue. Ensure Taskiq workers are running (`kubectl -n repody get pods -l app.kubernetes.io/component=worker-fast`).";
+    return "The audit job never left the queue. Check that the Taskiq workers are running.";
   }
   if (lower.includes("stale running") || lower.includes("worker timeout")) {
-    return "The worker stopped responding. Restart workers (`kubectl rollout restart deployment -n repody -l app.kubernetes.io/component=worker-extract`) and run the test again.";
-  }
-  if (lower.includes("run timed out")) {
-    return "The audit run took too long (>5 min). Check worker and inference logs.";
-  }
-  if (lower.includes("cache") && lower.includes("fail")) {
-    return "Could not reuse a cached extraction result. Retry with a fresh upload or disable extraction cache.";
+    return "The worker stopped responding. Restart the workers and run the test again.";
   }
   if (ctx?.step) {
     return `${ctx.step} failed: ${message}`;

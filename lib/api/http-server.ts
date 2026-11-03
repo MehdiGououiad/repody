@@ -4,8 +4,12 @@ import { redirect } from "next/navigation";
 import { isOidcConfigured, signOut } from "@/auth";
 import { backendOrigin } from "@/lib/api/backend-origin";
 import { fetchWithTimeout, type TimedRequestInit } from "@/lib/api/fetch-with-timeout";
-import { apiPath } from "@/lib/api/http";
 import { getServerAccessToken } from "@/lib/auth/access-token-server";
+
+function apiPath(path: string): string {
+  if (path.startsWith("/v1/")) return path;
+  return path.startsWith("/") ? `/v1${path}` : `/v1/${path}`;
+}
 
 async function sessionAuthHeaders(): Promise<Record<string, string>> {
   if (!isOidcConfigured()) return {};

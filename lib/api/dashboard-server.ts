@@ -6,13 +6,12 @@ import {
   dashboardSnapshotFromResponse,
   EMPTY_DASHBOARD_QUEUE,
 } from "@/lib/api/dashboard";
-import { throwOnApiError } from "@/lib/api/openapi-client";
+import { unwrap } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
 
 export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => {
   try {
-    const { data, error, response } = await serverApi.GET("/v1/dashboard");
-    if (error || !response.ok || !data) throwOnApiError(error, response);
+    const data = await unwrap(serverApi.GET("/v1/dashboard"));
     return { apiLive: true, ...dashboardSnapshotFromResponse(data) };
   } catch {
     return {

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { type DashboardSnapshot, dashboardSnapshotFromResponse } from "@/lib/api/dashboard";
-import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
+import { browserApi, unwrap } from "@/lib/api/openapi-client";
 import type { DashboardResponse } from "@/lib/api/schema-types";
 import { queryKeys } from "@/lib/hooks/query-keys";
 
@@ -16,8 +16,7 @@ const REFRESH_MS = 30_000;
 type LiveSnapshot = DashboardSnapshot & { apiLive: boolean };
 
 async function fetchDashboardLive(): Promise<LiveSnapshot> {
-  const { data: body, error, response } = await browserApi.GET("/v1/dashboard");
-  if (error || !response.ok || !body) throwOnApiError(error, response);
+  const body = await unwrap(browserApi.GET("/v1/dashboard"));
   return {
     apiLive: true,
     ...dashboardSnapshotFromResponse(body as DashboardResponse),

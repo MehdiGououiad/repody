@@ -3,7 +3,7 @@
 import { Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import type { RunProgress } from "@/lib/api/workflow-run";
+import type { RunProgress } from "@/lib/api/run";
 
 export function ApiRunLoadingScreen({
   workflowName,
