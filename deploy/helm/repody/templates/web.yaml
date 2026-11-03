@@ -1,137 +1,68 @@
+{{- $ctx := dict "root" . "component" "web" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "repody.fullname" . }}-web
   labels:
     {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: edge
+    app.kubernetes.io/component: web
 spec:
+  {{- if not .Values.web.autoscaling.enabled }}
   replicas: {{ .Values.web.replicas }}
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: edge
+      {{- include "repody.selectorLabels" $ctx | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "repody.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: edge
+        {{- include "repody.selectorLabels" $ctx | nindent 8 }}
     spec:
-      automountServiceAccountToken: false
-      {{- if .Values.web.topologySpreadConstraints.enabled }}
-      topologySpreadConstraints:
-        - maxSkew: {{ .Values.web.topologySpreadConstraints.maxSkew }}
-          topologyKey: {{ .Values.web.topologySpreadConstraints.topologyKey | quote }}
-          whenUnsatisfiable: {{ .Values.web.topologySpreadConstraints.whenUnsatisfiable }}
-          labelSelector:
-            matchLabels:
-              {{- include "repody.selectorLabels" . | nindent 14 }}
-              app.kubernetes.io/component: edge
-      {{- end }}
-      securityContext:
-        {{- include "repody.podSecurityContext" . | nindent 8 }}
-      {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- $authHost := .Values.gatewayApi.authHost }}
-      {{- $authSvc := .Values.gatewayApi.authServiceName | default "keycloak" }}
-      {{- $authNs := .Values.gatewayApi.authServiceNamespace | default .Release.Namespace }}
-      {{- $authHostAliasIp := .Values.gatewayApi.authHostAliasIp }}
-      {{- $authHostInit := and .Values.gatewayApi.enabled $authHost .Values.gatewayApi.authServiceName (not $authHostAliasIp) .Values.gatewayApi.authHostAliasInitEnabled }}
-      {{- if and .Values.gatewayApi.enabled $authHost $authHostAliasIp }}
-      hostAliases:
-        - ip: {{ $authHostAliasIp | quote }}
-          hostnames:
-            - {{ $authHost | quote }}
-      {{- end }}
-      {{- if $authHostInit }}
-      initContainers:
-        - name: auth-host-alias
-          image: {{ .Values.gatewayApi.authHostAliasInitImage | default .Values.init.waitImage | quote }}
-          securityContext:
-            {{- include "repody.initContainerSecurityContext" . | nindent 12 }}
-          command:
-            - sh
-            - -ec
-            - |
-              AUTH_FQDN="{{ $authSvc }}.{{ $authNs }}.svc.cluster.local"
-              for i in $(seq 1 90); do
-                KC_IP=$(nslookup "$AUTH_FQDN" 2>/dev/null | awk '/^Address [0-9]+: / { print $3; exit }')
-                if [ -z "$KC_IP" ]; then
-                  KC_IP=$(ping -c1 -W2 "$AUTH_FQDN" 2>/dev/null | sed -n 's/.*(\([0-9.]*\)).*/\1/p' | head -1)
-                fi
-                if [ -n "$KC_IP" ]; then
-                  cp /etc/hosts /hosts-volume/hosts
-                  echo "${KC_IP} {{ $authHost }}" >> /hosts-volume/hosts
-                  exit 0
-                fi
-                sleep 2
-              done
-              echo "timed out waiting for ${AUTH_FQDN}" >&2
-              exit 1
-          volumeMounts:
-            - name: etc-hosts
-              mountPath: /hosts-volume
-      volumes:
-        - name: etc-hosts
-          emptyDir: {}
-      {{- end }}
+      {{- include "repody.podDefaults" $ctx | nindent 6 }}
       containers:
         - name: web
-          image: {{ include "repody.webImage" . | quote }}
+          image: {{ include "repody.image" (dict "image" .Values.images.web "root" .) | quote }}
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           ports:
             - name: http
               containerPort: 3000
-          {{- if $authHostInit }}
-          volumeMounts:
-            - name: etc-hosts
-              mountPath: /etc/hosts
-              subPath: hosts
-          {{- end }}
           env:
-            - name: NODE_ENV
-              value: production
             - name: HOSTNAME
               value: "0.0.0.0"
-            - name: BACKEND_URL
-              value: http://{{ include "repody.fullname" . }}-api:8000
             - name: INTERNAL_API_URL
               value: http://{{ include "repody.fullname" . }}-api:8000
-            - name: AUTH_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "repody.secretName" . }}
-                  key: AUTH_SECRET
+            - name: AUDIT_OIDC_ENABLED
+              value: {{ index .Values.config "AUDIT_OIDC_ENABLED" | toString | quote }}
             - name: AUTH_KEYCLOAK_ID
-              value: {{ .Values.config.keycloakClientId | quote }}
-            - name: AUTH_KEYCLOAK_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "repody.secretName" . }}
-                  key: AUTH_KEYCLOAK_CLIENT_SECRET
+              value: {{ .Values.web.keycloakClientId | quote }}
             - name: AUTH_KEYCLOAK_ISSUER
-              value: {{ required "config.oidcIssuer" .Values.config.oidcIssuer | quote }}
-            {{- $internalIssuer := include "repody.keycloakInternalIssuer" . }}
-            {{- if $internalIssuer }}
+              value: {{ index .Values.config "AUDIT_OIDC_ISSUER" | quote }}
+            {{- with .Values.web.internalIssuer }}
             - name: AUTH_KEYCLOAK_INTERNAL_ISSUER
-              value: {{ $internalIssuer | quote }}
+              value: {{ . | quote }}
             {{- end }}
-            {{- if .Values.config.authUrl }}
+            {{- with .Values.web.authUrl }}
             - name: AUTH_URL
-              value: {{ .Values.config.authUrl | quote }}
+              value: {{ . | quote }}
             {{- end }}
-            {{- include "repody.webBugsinkEnv" . | nindent 12 }}
+            {{- range $name, $key := dict "AUTH_SECRET" "AUTH_SECRET" "AUTH_KEYCLOAK_SECRET" "AUTH_KEYCLOAK_CLIENT_SECRET" }}
+            - name: {{ $name }}
+              valueFrom:
+                secretKeyRef: { name: {{ $.Values.existingSecret }}, key: {{ $key }} }
+            {{- end }}
+            {{- range list "BUGSINK_DSN" "NEXT_PUBLIC_BUGSINK_DSN" }}
+            - name: {{ . }}
+              valueFrom:
+                secretKeyRef: { name: {{ $.Values.existingSecret }}, key: BUGSINK_DSN, optional: true }
+            {{- end }}
           readinessProbe:
-            httpGet:
-              path: /
-              port: http
+            httpGet: { path: /, port: http }
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
-            httpGet:
-              path: /
-              port: http
+            httpGet: { path: /, port: http }
             initialDelaySeconds: 30
             periodSeconds: 20
           resources:
@@ -143,12 +74,10 @@ metadata:
   name: {{ include "repody.fullname" . }}-web
   labels:
     {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: edge
+    app.kubernetes.io/component: web
 spec:
-  type: ClusterIP
   selector:
-    {{- include "repody.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: edge
+    {{- include "repody.selectorLabels" $ctx | nindent 4 }}
   ports:
     - name: http
       port: 3000

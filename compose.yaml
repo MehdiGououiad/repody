@@ -73,7 +73,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./deploy/helm/repody-auth/files/realm-repody.json:/opt/keycloak/data/import/realm-repody.json:ro
+      - ./deploy/keycloak/realm-repody.json:/opt/keycloak/data/import/realm-repody.json:ro
     healthcheck:
       test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
       interval: 10s

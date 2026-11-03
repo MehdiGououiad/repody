@@ -1,87 +1,38 @@
-{{- if .Values.api.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "repody.fullname" . }}-api
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "repody.fullname" . }}-api
-  minReplicas: {{ .Values.api.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.api.autoscaling.maxReplicas }}
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.api.autoscaling.targetCPUUtilizationPercentage }}
-{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
+{{- $components := dict "api" .Values.api "web" .Values.web }}
+{{- range $pool, $worker := .Values.workers }}
+{{- $_ := set $components (printf "worker-%s" $pool) $worker }}
 {{- end }}
+{{- range $component, $spec := $components }}
+{{- with $spec.autoscaling }}
+{{- if .enabled }}
 ---
-{{- if .Values.workerExtract.autoscaling.enabled }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "repody.fullname" . }}-worker-extract
+  name: {{ include "repody.fullname" $ }}-{{ $component }}
+  labels:
+    {{- include "repody.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "repody.fullname" . }}-worker-extract
-  minReplicas: {{ .Values.workerExtract.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.workerExtract.autoscaling.maxReplicas }}
+    name: {{ include "repody.fullname" $ }}-{{ $component }}
+  minReplicas: {{ .minReplicas }}
+  maxReplicas: {{ .maxReplicas }}
   metrics:
     - type: Resource
       resource:
         name: cpu
         target:
           type: Utilization
-          averageUtilization: {{ .Values.workerExtract.autoscaling.targetCPUUtilizationPercentage }}
-{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
+          averageUtilization: {{ .targetCPUUtilizationPercentage }}
+  # Scale up fast, scale down slowly.
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - { type: Percent, value: 10, periodSeconds: 60 }
 {{- end }}
----
-{{- if .Values.workerFast.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "repody.fullname" . }}-worker-fast
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "repody.fullname" . }}-worker-fast
-  minReplicas: {{ .Values.workerFast.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.workerFast.autoscaling.maxReplicas }}
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.workerFast.autoscaling.targetCPUUtilizationPercentage }}
-{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}
----
-{{- if .Values.web.autoscaling.enabled }}
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: {{ include "repody.fullname" . }}-web
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: {{ include "repody.fullname" . }}-web
-  minReplicas: {{ .Values.web.autoscaling.minReplicas }}
-  maxReplicas: {{ .Values.web.autoscaling.maxReplicas }}
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.web.autoscaling.targetCPUUtilizationPercentage }}
-{{- include "repody.hpaBehavior" .Values.hpaBehavior }}
 {{- end }}

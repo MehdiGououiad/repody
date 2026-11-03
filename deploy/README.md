@@ -7,16 +7,15 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](..
 | Goal | Guide | Command |
 |------|-------|---------|
 | Local laptop | [LOCAL.md](../docs/LOCAL.md) | `pnpm platform` |
-| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#vendor-to-client-handoff) | `pnpm images:release` |
+| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#images-and-releases) | `pnpm images:release` |
 | OpenShift / client install | [CLUSTER.md](../docs/CLUSTER.md) | Helm / Argo CD |
 
 ## Layout
 
 | Path | Purpose |
 |------|---------|
-| `helm/repody` | API, web, Taskiq workers, Ingress |
-| `helm/repody-data` | PostgreSQL, Redis, MinIO (bundled profile) |
-| `helm/repody-auth` | Keycloak (optional) |
+| `helm/repody` | The one chart: API, web, Taskiq workers, migrations Job, Ingress |
+| `keycloak/` | Keycloak realm (Compose import; import it into the client's Keycloak) |
 | `client/` | Values templates, ExternalSecrets - [client/README.md](./client/README.md) |
 | `managed/` | CNPG, External Secrets examples |
 | `registry/` | GHCR and on-prem registry notes |

@@ -1,6 +1,7 @@
 name: Release promotion
 
-# Verify an already-published tag (signatures + client contract) before client handoff.
+# Verify a published tag before client handoff: both images must carry a cosign signature
+# made by the images-ghcr workflow of this repository.
 on:
   workflow_dispatch:
     inputs:
@@ -8,13 +9,6 @@ on:
         description: Published image tag (e.g. v1.2.3)
         required: true
         type: string
-      channel:
-        description: Promotion channel label recorded in the manifest
-        required: true
-        type: choice
-        options:
-          - staging
-          - production
       registry:
         description: Image registry (default ghcr.io/<owner>)
         required: false
@@ -23,44 +17,30 @@ on:
 permissions:
   contents: read
   packages: read
-  id-token: write
 
 jobs:
-  promote:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-        with:
-          ref: ${{ inputs.tag }}
-
-      - name: Resolve registry
-        id: coords
-        shell: bash
-        run: |
-          if [ -n "${{ inputs.registry }}" ]; then
-            reg="${{ inputs.registry }}"
-          else
-            reg="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
-          fi
-          echo "registry=${reg}" >> "${GITHUB_OUTPUT}"
-
       - name: Login to GHCR
-        if: startsWith(steps.coords.outputs.registry, 'ghcr.io/')
-        run: echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
 
       - name: Install cosign
         uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
-      - name: Promotion gate
+      - name: Verify signatures
+        shell: bash
         env:
-          REPODY_IMAGE_REGISTRY: ${{ steps.coords.outputs.registry }}
-          REPODY_IMAGE_TAG: ${{ inputs.tag }}
-          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
-        run: node deploy/scripts/release-supply-chain.mjs promote --channel=${{ inputs.channel }}
-
-      - name: Upload promotion manifest
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: repody-promotion-${{ inputs.tag }}-${{ inputs.channel }}
-          path: dist/release/**/*
-          retention-days: 365
+          REGISTRY: ${{ inputs.registry }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          registry="${REGISTRY:-ghcr.io/${GITHUB_REPOSITORY_OWNER,,}}"
+          for target in backend web; do
+            cosign verify "${registry}/repody-${target}:${TAG}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@"
+          done

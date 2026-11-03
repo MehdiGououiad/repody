@@ -1,5 +1,8 @@
 name: Security
 
+# Trivy only: the repository scan covers both lockfiles (pnpm-lock.yaml, backend/uv.lock),
+# secrets, and IaC (Dockerfiles, Compose, Helm); the image scan covers OS packages.
+# Results go to GitHub code scanning; CRITICAL/HIGH fixable findings fail the job.
 on:
   push:
     branches: [main, master]
@@ -16,69 +19,10 @@ permissions:
   actions: read
 
 env:
-  TRIVY_VERSION: "0.74.0"
   SCAN_TAG: security-${{ github.sha }}
 
 jobs:
-  dependency-audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-        with:
-          version: 12.5.1
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "24"
-          cache: pnpm
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-
-      - uses: astral-sh/setup-uv@f0ec1fc3b38f5e7cd731bb6ce540c5af426746bb # v6.1.0
-        with:
-          enable-cache: true
-
-      # A non-zero audit exit means findings. Keep that JSON.
-      # The report job gates CRITICAL/HIGH. Invalid or empty output fails here.
-      - name: pnpm audit
-        run: |
-          mkdir -p dist-security
-          pnpm audit --json > dist-security/pnpm-audit.json || true
-          node --input-type=module -e "
-            import { readFileSync } from 'node:fs';
-            const doc = JSON.parse(readFileSync('dist-security/pnpm-audit.json', 'utf8'));
-            if (doc == null || typeof doc !== 'object' || Array.isArray(doc)) {
-              console.error('pnpm audit did not write a JSON object');
-              process.exit(1);
-            }
-          "
-
-      - name: pip-audit
-        run: |
-          mkdir -p dist-security
-          uv export --frozen --directory backend --no-emit-project --format requirements-txt -o dist-security/backend-requirements.txt
-          uvx pip-audit -r dist-security/backend-requirements.txt -f json --progress-spinner off > dist-security/pip-audit.json || true
-          node --input-type=module -e "
-            import { readFileSync } from 'node:fs';
-            const doc = JSON.parse(readFileSync('dist-security/pip-audit.json', 'utf8'));
-            const ok = Array.isArray(doc) || (doc && Array.isArray(doc.dependencies));
-            if (!ok) {
-              console.error('pip-audit did not write a JSON array or dependencies object');
-              process.exit(1);
-            }
-          "
-
-      - name: Upload dependency audit artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: security-deps
-          path: dist-security/*.json
-          if-no-files-found: warn
-
-  trivy-repo:
+  repository:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -89,98 +33,54 @@ jobs:
           version: v0.74.0
           cache: true
 
-      # Collect full JSON for the report; CRITICAL gate runs after merge.
-      - name: Trivy filesystem (vuln + license)
+      - name: Trivy repository scan (SARIF)
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
           scan-type: fs
           scan-ref: .
           trivy-config: deploy/security/trivy.yaml
-          scanners: vuln,license
-          format: json
-          output: trivy-fs.json
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          exit-code: "0"
-
-      - name: Trivy config (Dockerfile, Compose)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          scan-type: config
-          scan-ref: .
-          trivy-config: deploy/security/trivy.yaml
-          format: json
-          output: trivy-config.json
-          severity: CRITICAL,HIGH,MEDIUM
-          exit-code: "0"
-
-      - name: Trivy secret scan
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          trivy-config: deploy/security/trivy.yaml
-          scanners: secret
-          format: json
-          output: trivy-secret.json
-          exit-code: "0"
-
-      - name: Trivy filesystem SARIF
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          trivy-config: deploy/security/trivy.yaml
-          scanners: vuln,secret
+          scanners: vuln,secret,misconfig
           format: sarif
-          output: trivy-fs.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+          output: trivy-repository.sarif
           exit-code: "0"
 
-      - name: Fail on CRITICAL filesystem findings
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          scan-type: fs
-          scan-ref: .
-          trivy-config: deploy/security/trivy.yaml
-          scanners: vuln,secret
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-
-      - name: Upload Trivy results to GitHub Security
+      - name: Upload to code scanning
         uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
         if: always()
         with:
-          sarif_file: trivy-fs.sarif
-          category: trivy-filesystem
+          sarif_file: trivy-repository.sarif
+          category: trivy-repository
 
-      - name: Upload Trivy repo artifacts
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - name: Fail on CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
-          name: security-trivy-repo
-          path: |
-            trivy-fs.json
-            trivy-config.json
-            trivy-secret.json
-            trivy-fs.sarif
+          scan-type: fs
+          scan-ref: .
+          trivy-config: deploy/security/trivy.yaml
+          scanners: vuln,secret,misconfig
+          severity: CRITICAL,HIGH
+          exit-code: "1"
 
-  container-scan:
+  images:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [backend, web]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
 
-      - name: Build scan images (docker-bake.hcl)
+      - name: Build image (docker-bake.hcl)
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         env:
           REPODY_IMAGE_TAG: ${{ env.SCAN_TAG }}
         with:
           source: .
           files: ./docker-bake.hcl
+          targets: ${{ matrix.target }}
           load: true
 
       - name: Set up Trivy
@@ -189,154 +89,26 @@ jobs:
           version: v0.74.0
           cache: true
 
-      - name: Trivy image backend
+      - name: Trivy image scan (SARIF)
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
-          image-ref: repody-backend:${{ env.SCAN_TAG }}
-          trivy-config: deploy/security/trivy.yaml
-          format: json
-          output: trivy-image-backend.json
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          exit-code: "0"
-
-      - name: Trivy image web
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: repody-web:${{ env.SCAN_TAG }}
-          trivy-config: deploy/security/trivy.yaml
-          format: json
-          output: trivy-image-web.json
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          exit-code: "0"
-
-      - name: Fail on CRITICAL image findings (backend)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: repody-backend:${{ env.SCAN_TAG }}
-          trivy-config: deploy/security/trivy.yaml
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-
-      - name: Fail on CRITICAL image findings (web)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: repody-web:${{ env.SCAN_TAG }}
-          trivy-config: deploy/security/trivy.yaml
-          severity: CRITICAL
-          ignore-unfixed: true
-          exit-code: "1"
-
-      - name: Trivy image SARIF (backend)
-        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
-        with:
-          image-ref: repody-backend:${{ env.SCAN_TAG }}
+          image-ref: repody-${{ matrix.target }}:${{ env.SCAN_TAG }}
           trivy-config: deploy/security/trivy.yaml
           format: sarif
-          output: trivy-image-backend.sarif
-          severity: CRITICAL,HIGH
-          ignore-unfixed: true
+          output: trivy-${{ matrix.target }}.sarif
           exit-code: "0"
 
-      - name: Upload Trivy image SARIF
+      - name: Upload to code scanning
         uses: github/codeql-action/upload-sarif@ff0a06e83cb2de871e5a09832bc6a81e7276941f # v3.28.18
         if: always()
         with:
-          sarif_file: trivy-image-backend.sarif
-          category: trivy-image-backend
+          sarif_file: trivy-${{ matrix.target }}.sarif
+          category: trivy-image-${{ matrix.target }}
 
-      - name: Syft SBOM backend
-        uses: anchore/sbom-action@9246b90769f852b3a8921f330c59e0b3f439d6e9 # v0.20.1
+      - name: Fail on CRITICAL/HIGH
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
-          image: repody-backend:${{ env.SCAN_TAG }}
-          format: spdx-json
-          output-file: syft-backend.spdx.json
-
-      - name: Syft SBOM web
-        uses: anchore/sbom-action@9246b90769f852b3a8921f330c59e0b3f439d6e9 # v0.20.1
-        with:
-          image: repody-web:${{ env.SCAN_TAG }}
-          format: spdx-json
-          output-file: syft-web.spdx.json
-
-      - name: Grype scan backend SBOM
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
-        id: grype-backend
-        with:
-          sbom: syft-backend.spdx.json
-          fail-build: true
-          output-format: json
-          severity-cutoff: critical
-
-      - name: Grype scan web SBOM
-        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
-        id: grype-web
-        with:
-          sbom: syft-web.spdx.json
-          fail-build: true
-          output-format: json
-          severity-cutoff: critical
-
-      - name: Persist Grype JSON
-        if: always()
-        run: |
-          cp "${{ steps.grype-backend.outputs.json }}" grype-backend.json
-          cp "${{ steps.grype-web.outputs.json }}" grype-web.json
-
-      - name: Upload container scan artifacts
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: security-containers
-          path: |
-            trivy-image-backend.json
-            trivy-image-web.json
-            syft-backend.spdx.json
-            syft-web.spdx.json
-            grype-backend.json
-            grype-web.json
-
-  report:
-    runs-on: ubuntu-latest
-    needs: [dependency-audit, trivy-repo, container-scan]
-    if: always()
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: "24"
-
-      - name: Download all scan artifacts
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          path: artifacts
-          pattern: security-*
-          merge-multiple: true
-
-      - name: Assemble dist/security
-        run: |
-          mkdir -p dist/security
-          shopt -s nullglob
-          for f in artifacts/*.json artifacts/**/*.json; do
-            [ -f "$f" ] || continue
-            base="$(basename "$f")"
-            cp "$f" "dist/security/$base"
-          done
-          ls -la dist/security || true
-
-      - name: Generate merged report and gate CRITICAL/HIGH
-        id: report
-        run: node deploy/scripts/security-report.mjs
-
-      - name: Upload complete report
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: security-report
-          path: |
-            dist/security/report.md
-            dist/security/report.json
-            dist/security/*.json
+          image-ref: repody-${{ matrix.target }}:${{ env.SCAN_TAG }}
+          trivy-config: deploy/security/trivy.yaml
+          severity: CRITICAL,HIGH
+          exit-code: "1"

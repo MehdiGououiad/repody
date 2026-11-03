@@ -2,177 +2,44 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: {{ include "repody.fullname" . }}-default-deny
+  name: {{ include "repody.fullname" . }}
   labels:
     {{- include "repody.labels" . | nindent 4 }}
 spec:
   podSelector:
     matchLabels:
       app.kubernetes.io/instance: {{ .Release.Name }}
-  policyTypes:
-    - Ingress
-    - Egress
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-dns-egress
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-  policyTypes:
-    - Egress
-  egress:
-    {{- range .Values.networkPolicy.dnsNamespaces }}
-    - to:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ . | quote }}
-    {{- end }}
-    - ports:
-        - protocol: UDP
-          port: 53
-        - protocol: TCP
-          port: 53
----
-{{- if eq (.Values.global.deploymentProfile | default "external") "bundled" }}
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-bundled-platform-egress
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-  policyTypes:
-    - Egress
-  egress:
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: repody-data
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: auth
-              app.kubernetes.io/instance: repody-auth
-      ports:
-        - protocol: TCP
-          port: 8080
----
-{{- end }}
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-edge-ingress
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchExpressions:
-      - key: app.kubernetes.io/component
-        operator: In
-        values:
-          - edge
-          - control
-          - auth
-  policyTypes:
-    - Ingress
+  policyTypes: [Ingress, Egress]
   ingress:
+    # Within the release (web -> api, migrations).
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+    # Ingress controller / route traffic to the web and API ports.
     - from:
         - namespaceSelector: {}
       ports:
-        - protocol: TCP
-          port: 3000
-        - protocol: TCP
-          port: 8000
-        - protocol: TCP
-          port: 8080
-        - protocol: TCP
-          port: 9000
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-app-internal
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-  policyTypes:
-    - Ingress
-    - Egress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/instance: {{ .Release.Name }}
+        - { protocol: TCP, port: 3000 }
+        - { protocol: TCP, port: 8000 }
   egress:
     - to:
         - podSelector:
             matchLabels:
               app.kubernetes.io/instance: {{ .Release.Name }}
----
-{{- if and .Values.networkPolicy.externalEgress.enabled (gt (len (.Values.networkPolicy.externalEgress.cidrs | default list)) 0) }}
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-external-egress
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchExpressions:
-      - key: app.kubernetes.io/component
-        operator: In
-        values:
-          - control
-          - worker-extract
-          - worker-fast
-          - edge
-          - migrations
-  policyTypes:
-    - Egress
-  egress:
-    {{- range .Values.networkPolicy.externalEgress.cidrs }}
+    # DNS
+    - ports:
+        - { protocol: UDP, port: 53 }
+        - { protocol: TCP, port: 53 }
+        - { protocol: UDP, port: 5353 }
+        - { protocol: TCP, port: 5353 }
+    {{- range .Values.networkPolicy.egressCidrs }}
     - to:
         - ipBlock:
             cidr: {{ . | quote }}
       ports:
-        {{- range $.Values.networkPolicy.externalEgress.ports }}
-        - protocol: TCP
-          port: {{ . }}
+        {{- range $.Values.networkPolicy.egressPorts }}
+        - { protocol: TCP, port: {{ . }} }
         {{- end }}
     {{- end }}
-{{- end }}
----
-{{- if .Values.minio.enabled }}
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: {{ include "repody.fullname" . }}-minio-ingress
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/instance: {{ .Release.Name }}
-      app.kubernetes.io/name: minio
-  policyTypes:
-    - Ingress
-  ingress:
-    - from:
-        - namespaceSelector: {}
-      ports:
-        - protocol: TCP
-          port: 9000
-{{- end }}
 {{- end }}

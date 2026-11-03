@@ -4,17 +4,12 @@ Single reference for secrets and `AUDIT_*` configuration.
 
 Daily local values are copied from `deploy/env/compose.env.example` into
 `backend/.env`, with Auth.js values in `.env.local` from `deploy/env.auth.example`.
-Kubernetes values are supplied through Helm values and Kubernetes Secrets (see [docs/CLUSTER.md](../docs/CLUSTER.md#secrets-and-hardening)).
+On Kubernetes, the Helm chart's `config` map is rendered into the ConfigMap as-is (keys are the `AUDIT_*` names below) and credentials come from the `repody-runtime-secrets` Secret ([docs/CLUSTER.md](../docs/CLUSTER.md#2-runtime-secret)).
 
 ## Production Secret
 
-When `secrets.create=false`, create `repody-runtime-secrets` with:
-
-| Key | Purpose |
-|-----|---------|
-| `AUTH_SECRET` | Auth.js session encryption |
-| `AUTH_KEYCLOAK_CLIENT_SECRET` | Keycloak client secret for `repody-web` |
-| `AUDIT_LLAMACPP_API_KEY` | Optional bearer token for external VLM |
+`repody-runtime-secrets` holds every credential; the full key list is in
+[docs/CLUSTER.md](../docs/CLUSTER.md#2-runtime-secret).
 
 ## External Inference
 
@@ -40,11 +35,8 @@ Helm values:
 
 ```yaml
 config:
-  llamacppBaseUrl: https://vlm.example.com/v1
-  llamacppServedModel: numind/NuExtract3
-
-workerExtract:
-  warmupOnStart: false
+  AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
+  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
 ```
 
 ## Platform Behavior
@@ -106,14 +98,4 @@ Use these runtime overrides for local API/UI work:
 | `AUDIT_LLAMACPP_BASE_URL` | External OpenAI-compatible root, e.g. `http://127.0.0.1:8081/v1` |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |
 
-## Kubernetes Lab Overrides
-
-Use Helm values for Kubernetes lab/local overrides:
-
-| Helm value | Env emitted |
-|------------|-------------|
-| `config.llamacppBaseUrl` | `AUDIT_LLAMACPP_BASE_URL` |
-| `config.llamacppServedModel` | `AUDIT_LLAMACPP_SERVED_MODEL` |
-| `workerExtract.warmupOnStart` | `AUDIT_REPODY_VLM_WARMUP_ON_START` |
-
-Observability and Bugsink DSNs are configured in Helm values (`observability.bugsinkDsn`) or the runtime Secret (`BUGSINK_DSN`, `NEXT_PUBLIC_BUGSINK_DSN` at web image build).
+Bugsink: `BUGSINK_DSN` in the runtime Secret (the web pod also exposes it as `NEXT_PUBLIC_BUGSINK_DSN`).

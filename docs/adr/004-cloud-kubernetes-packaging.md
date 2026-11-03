@@ -16,16 +16,15 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 | **Local dev** | Docker Compose (`pnpm platform`) | Fast daily iteration |
 | **Production cluster** | Helm (+ optional Argo CD) on OpenShift / K8s | Same charts clients receive - [CLUSTER.md](../CLUSTER.md) |
 | **Data plane** | External or operator-managed Postgres, Redis/Valkey, and object storage by default | Enterprise installs need independent lifecycle, backups, upgrades, and ownership |
-| **Bundled profile** | `repody-data` chart + `values-bundled.example.yaml` | Smaller tenants / air-gapped stacks |
-| **Queue** | Taskiq over Redis Streams; Redis from `repody-data` or external | Reuses existing Redis; no separate workflow engine |
+| **Queue** | Taskiq over Redis Streams on the client's Redis | Reuses existing Redis; no separate workflow engine |
 | **Service split** | Two release images: `repody-backend`, `repody-web`; backend runs API and worker roles via Kubernetes commands | Control / worker / edge scale independently without rebuilding duplicate Python images |
 | **Inference** | External vLLM (out of chart) | GPU workloads on separate node pool or managed inference |
 | **Observability** | Client-managed collectors; Bugsink via env DSN | Production observability is client-owned |
 
 ## Escape hatches
 
-- **Bundled client data**: `deploy/client/values-bundled.example.yaml` enables in-cluster Postgres, Redis, MinIO via `repody-data`.
-- **Redis URL**: production and bundled installs store `AUDIT_REDIS_URL` in the runtime Secret (Taskiq broker).
+- **No bundled data plane** (2026-11): the `repody-data` and `repody-auth` charts were removed; one app chart remains. Clients without managed services use operators (CloudNativePG examples in `deploy/managed/`).
+- **Redis URL**: `AUDIT_REDIS_URL` lives in the runtime Secret (Taskiq broker).
 - **Edge**: Standard **Ingress** (`networking.k8s.io/v1`) on all platforms; optional OpenShift Routes or Gateway API
 
 ## Consequences

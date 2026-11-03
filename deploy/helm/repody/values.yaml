@@ -1,33 +1,17 @@
-# Enterprise default: Repody owns stateless app workloads only.
-# Stateful systems, auth, secrets, observability, and inference are external/platform services.
-# Bundled data plane: use deploy/client/values-bundled.example.yaml (OpenShift or generic K8s).
+# Repody app chart: API, web, Taskiq workers, migrations job and Ingress.
+# PostgreSQL, Redis, S3/MinIO, the OIDC provider (Keycloak) and the NuExtract endpoint
+# are external services you point the chart at.
 
-global:
-  imagePullSecrets: []
-  deploymentEnvironment: production
+nameOverride: ""
+fullnameOverride: ""
 
-# Portable hardening (Kubernetes PSA restricted + OpenShift restricted-v2).
-# Same securityContext on every cluster: runAsNonRoot, no pinned UID.
-# Local / Compose may set restricted: false.
-platform:
-  compatibility:
-    restricted: true
+imagePullSecrets: []
 
 images:
   backend:
     repository: repody-backend
     tag: "0.1.0"
-    # Prefer digest in GitOps (image@sha256:…). Empty digest falls back to tag.
-    digest: ""
-    pullPolicy: IfNotPresent
-  api:
-    repository: repody-backend
-    tag: "0.1.0"
-    digest: ""
-    pullPolicy: IfNotPresent
-  worker:
-    repository: repody-backend
-    tag: "0.1.0"
+    # Prefer a digest in GitOps (sha256:…); when set it wins over the tag.
     digest: ""
     pullPolicy: IfNotPresent
   web:
@@ -36,366 +20,101 @@ images:
     digest: ""
     pullPolicy: IfNotPresent
 
-# Bundled data plane (local/dev only; disabled for enterprise)
-postgresql:
-  enabled: false
-  auth:
-    username: audit
-    database: repody
-    existingSecret: ""
-    password: ""
-  primary:
-    persistence:
-      enabled: true
-      size: 20Gi
+# Secret holding the runtime credentials (create it with External Secrets / Vault / SOPS):
+#   AUDIT_DATABASE_URL, AUDIT_REDIS_URL, AUDIT_MINIO_ACCESS_KEY, AUDIT_MINIO_SECRET_KEY,
+#   AUTH_SECRET, AUTH_KEYCLOAK_CLIENT_SECRET, and optionally AUDIT_LLAMACPP_API_KEY, BUGSINK_DSN.
+existingSecret: repody-runtime-secrets
 
-redis:
-  enabled: false
-  architecture: standalone
-  auth:
-    # Production forbids enabling this subchart; if enabled outside production, require auth.
-    enabled: true
-
-minio:
-  enabled: false
-  mode: standalone
-  image:
-    repository: pgsty/minio
-    tag: RELEASE.2026-08-04T00-00-00Z
-  console:
-    enabled: false
-  auth:
-    rootUser: minioadmin
-    rootPassword: ""
-  defaultBuckets: audit-documents
-  persistence:
-    enabled: true
-    size: 50Gi
-
-# External data plane (disable subcharts above, set URLs)
-externalDatabase:
-  enabled: true
-  url: ""
-  host: ""
-  port: 5432
-  existingSecret: repody-runtime-secrets
-  urlKey: AUDIT_DATABASE_URL
-
-externalRedis:
-  enabled: true
-  url: ""
-  existingSecret: repody-runtime-secrets
-  urlKey: AUDIT_REDIS_URL
-
-externalObjectStorage:
-  enabled: true
-  endpoint: ""
-  bucket: audit-documents
-  accessKey: ""
-  secretKey: ""
-  existingSecret: repody-runtime-secrets
-  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
-  secretKeyKey: AUDIT_MINIO_SECRET_KEY
-  secure: true
-  publicEndpoint: ""
-
-init:
-  waitImage: busybox:1.37.0
+# Non-secret settings, rendered into the ConfigMap as-is. Every key is documented in
+# deploy/ENV.md; anything not set here uses the application default.
+config:
+  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_OIDC_ENABLED: "true"
+  AUDIT_OIDC_ISSUER: https://auth.example.com/realms/repody
+  AUDIT_OIDC_AUDIENCE: repody-api
+  AUDIT_MINIO_ENDPOINT: minio.example.com:9000
+  AUDIT_MINIO_BUCKET: audit-documents
+  # Browser-reachable host for presigned uploads (the files Ingress host or your S3 endpoint).
+  AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
+  AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
+  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
+  AUDIT_CORS_ORIGINS: '["https://app.example.com"]'
+  AUDIT_RATE_LIMIT_FAIL_CLOSED: "true"
+  AUDIT_LOG_JSON: "true"
 
 migrations:
-  # Prefer a single pre-install/upgrade Job (Alembic once) over concurrent API startups.
-  # Keep enabled=true whenever api.replicas > 1. Setting enabled=false makes every API
-  # pod run migrations on startup (AUDIT_RUN_MIGRATIONS_ON_STARTUP=true in ConfigMap).
+  # Pre-install/pre-upgrade Job running `alembic upgrade head`.
   enabled: true
-  hookDeletePolicy: before-hook-creation,hook-succeeded
   backoffLimit: 3
 
-# Skaffold / local hot-reload (uvicorn --reload when files are synced into the pod)
-dev:
-  apiReload: false
-
-# HPA v2 behavior - requires metrics-server (or OpenShift cluster monitoring).
-# Scale up quickly on CPU spikes; scale down slowly to avoid flapping.
-# See https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#configurable-scaling-behavior
-hpaBehavior:
-  enabled: true
-  scaleUp:
-    stabilizationWindowSeconds: 60
-    selectPolicy: Max
-    policies:
-      - type: Percent
-        value: 100
-        periodSeconds: 60
-      - type: Pods
-        value: 4
-        periodSeconds: 60
-  scaleDown:
-    stabilizationWindowSeconds: 300
-    selectPolicy: Min
-    policies:
-      - type: Percent
-        value: 10
-        periodSeconds: 60
-
-# Control plane (api)
 api:
   replicas: 2
   resources:
-    requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      memory: 1Gi
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 6
-    targetCPUUtilizationPercentage: 70
-  podDisruptionBudget:
-    enabled: true
-    minAvailable: 1
-  topologySpreadConstraints:
-    enabled: true
-    maxSkew: 1
-    topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
+    requests: { cpu: 250m, memory: 512Mi }
+    limits: { memory: 1Gi }
+  autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
+  podDisruptionBudget: { enabled: true, minAvailable: 1 }
 
-# Worker plane (scale here first)
-workerExtract:
-  replicas: 2
-  pool: extract
-  maxJobs: 1
-  warmupOnStart: false
-  resources:
-    requests:
-      cpu: 250m
-      memory: 768Mi
-    limits:
-      memory: 2Gi
-  autoscaling:
-    enabled: true
-    minReplicas: 1
-    maxReplicas: 10
-    targetCPUUtilizationPercentage: 75
-  terminationGracePeriodSeconds: 240
-  podDisruptionBudget:
-    enabled: true
-    maxUnavailable: 1
-  topologySpreadConstraints:
-    enabled: true
-    maxSkew: 1
-    topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
+# One Deployment per Taskiq pool: `extract` calls the model, `fast` only evaluates rules.
+workers:
+  extract:
+    replicas: 2
+    # Keep 1 per replica when replicas share one GPU-backed endpoint.
+    maxJobs: 1
+    terminationGracePeriodSeconds: 240
+    resources:
+      requests: { cpu: 250m, memory: 768Mi }
+      limits: { memory: 2Gi }
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 10, targetCPUUtilizationPercentage: 75 }
+    podDisruptionBudget: { enabled: true, maxUnavailable: 1 }
+  fast:
+    replicas: 2
+    maxJobs: 8
+    terminationGracePeriodSeconds: 60
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { memory: 1Gi }
+    autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 8, targetCPUUtilizationPercentage: 70 }
+    podDisruptionBudget: { enabled: true, maxUnavailable: 1 }
 
-workerFast:
-  replicas: 2
-  pool: fast
-  maxJobs: 8
-  warmupOnStart: false
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 1Gi
-  autoscaling:
-    enabled: true
-    minReplicas: 1
-    maxReplicas: 8
-    targetCPUUtilizationPercentage: 70
-  terminationGracePeriodSeconds: 60
-  podDisruptionBudget:
-    enabled: true
-    maxUnavailable: 1
-  topologySpreadConstraints:
-    enabled: true
-    maxSkew: 1
-    topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
-
-# Edge (web)
 web:
   replicas: 2
+  # Auth.js against Keycloak. The browser uses AUDIT_OIDC_ISSUER; set internalIssuer when
+  # pods cannot reach that public URL (e.g. http://keycloak.auth.svc:8080/realms/repody).
+  keycloakClientId: repody-web
+  internalIssuer: ""
+  # Public URL of the web app when it differs from the request host (Auth.js AUTH_URL).
+  authUrl: ""
   resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 768Mi
-  autoscaling:
-    enabled: true
-    minReplicas: 2
-    maxReplicas: 6
-    targetCPUUtilizationPercentage: 70
-  podDisruptionBudget:
-    enabled: true
-    minAvailable: 1
-  topologySpreadConstraints:
-    enabled: true
-    maxSkew: 1
-    topologyKey: kubernetes.io/hostname
-    whenUnsatisfiable: ScheduleAnyway
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 768Mi }
+  autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
+  podDisruptionBudget: { enabled: true, minAvailable: 1 }
 
-# In-cluster Keycloak (staging/local; production usually uses external IdP)
-keycloak:
-  enabled: false
-  image: quay.io/keycloak/keycloak:26.7.4
-  realm: repody
-  hostname: auth.example.com
-  # Busybox image for web pod init that maps gatewayApi.authHost -> in-cluster Keycloak.
-  authHostAliasInitImage: ""
-  hostnameStrict: false
-  hostnameStrictHttps: false
-  proxyHeaders: xforwarded
-  adminUsername: admin
-  adminPassword: ""
-  existingSecret: ""
-  resources:
-    requests:
-      cpu: 250m
-      memory: 512Mi
-    limits:
-      memory: 1Gi
+# Spread every component's replicas across nodes.
+topologySpreadConstraints:
+  maxSkew: 1
+  topologyKey: kubernetes.io/hostname
+  whenUnsatisfiable: ScheduleAnyway
 
 ingress:
   enabled: true
   className: ""
-  host: app.example.com
-  apiHost: api.example.com
-  filesHost: files.example.com
-  filesServiceName: ""
-  filesServicePort: 9000
-  annotations: {}
-  controllerAnnotations:
+  annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  host: app.example.com
+  # Optional: expose the API on its own host (integrators call /v1/... directly).
+  apiHost: api.example.com
+  # Optional: route a files host to your S3/MinIO Service for browser presigned uploads.
+  filesHost: ""
+  filesService: { name: "", port: 9000 }
   tls:
     enabled: true
     secretName: repody-tls
 
-gatewayApi:
-  enabled: false
-  createGatewayClass: false
-  gatewayClassName: envoy-gateway
-  gatewayClassControllerName: gateway.envoyproxy.io/gatewayclass-controller
-  host: app.example.com
-  apiHost: api.example.com
-  filesHost: files.example.com
-  authHost: auth.example.com
-  authExternalName: ""
-  authExternalAddress: ""
-  authExternalPort: 8080
-  # In-cluster Keycloak or external IdP Service (may be in another namespace).
-  authServiceName: ""
-  authServiceNamespace: ""
-  authServicePort: 8080
-  filesServiceName: ""
-  filesServiceNamespace: ""
-  filesServicePort: 9000
-  authHostAliasInitImage: ""
-  # Dev-only: root init rewrites /etc/hosts for authHost (breaks restricted profile). Use
-  # authHostAliasIp or an external IdP URL in production instead.
-  authHostAliasInitEnabled: false
-  # Optional EnvoyProxy (gateway.envoyproxy.io) for custom Gateway service shape.
-  envoyProxyName: ""
-  kindNodePort: 0
-  # Optional static ClusterIP for web pods to resolve authHost (external IdP or legacy).
-  # When keycloak.enabled, the web Deployment init container sets this automatically.
-  authHostAliasIp: ""
-  allowedRoutes:
-    from: Same
-  tls:
-    enabled: false
-    secretName: repody-tls
-    redirectHttp: true
-
-# Platform secrets & config
-secrets:
-  authSecret: ""
-  keycloakClientSecret: ""
-  llamacppApiKey: ""
-  create: false
-  existingSecret: repody-runtime-secrets
-
-config:
-  oidcEnabled: true
-  authUrl: ""
-  # Public issuer in browser JWTs (route / ingress hostname).
-  oidcIssuer: https://auth.example.com/realms/repody
-  # Optional extra accepted JWT iss values (comma-separated list in values).
-  oidcIssuerAliases: []
-  # In-cluster JWKS fetch URL. When empty and keycloak.enabled, Helm derives
-  # http://<release>-keycloak:8080/realms/.../certs (same pattern as Compose
-  # AUDIT_OIDC_JWKS_URL=http://keycloak:8080/...).
-  oidcJwksUrl: ""
-  # Web Auth.js server-side token endpoint (in-cluster Keycloak DNS).
-  # Browser still uses oidcIssuer / AUTH_KEYCLOAK_ISSUER for redirects.
-  oidcInternalIssuer: ""
-  keycloakAdminUrl: ""
-  keycloakAdminUsername: admin
-  keycloakAdminPassword: ""
-  oidcAudience: repody-api
-  keycloakClientId: repody-web
-  # External OpenAI-compatible document-model endpoint. This chart does not run inference.
-  # Never use host.docker.internal here - that is Compose-only.
-  llamacppBaseUrl: https://vlm.example.com/v1
-  # Must match llama-server --alias / /v1/models id (local: NuExtract3-Q4_K_M).
-  llamacppServedModel: nuextract3-q4_k_m
-  repodyVlmTimeoutSeconds: 180
-  # Hard cap: audit tasks must finish within 3 minutes (see docs/CLUSTER.md#production-observability-baseline)
-  workerTaskTimeoutMinutes: 3
-  staleRunTimeoutMinutes: 5
-  # For long OCR PDFs raise together, e.g. workerTaskTimeoutMinutes: 10,
-  # staleRunTimeoutMinutes: 12, and matching *TimeoutSeconds <= worker*60.
-  queuedStaleTimeoutMinutes: 60
-  maintenanceIntervalSeconds: 60
-  dbPoolSize: 20
-  dbMaxOverflow: 20
-  redisMaxConnections: 64
-  corsOrigins: '["https://app.example.com"]'
-  logJson: true
-  directUploadEnabled: true
-  rateLimitFailClosed: true
-  rateLimitEnabled: true
-  rateLimitWindowSeconds: 60
-  rateLimitRunsPerWorkflow: 300
-  rateLimitRunsPerClient: 2000
-  rateLimitHttpPerMinute: 6000
-  admissionMaxQueued: 200
-  admissionMaxInflight: 100
-  admissionMaxExtractInflight: 20
-  admissionRetryAfterSeconds: 15
-  queueRefreshSseLimit: 32
-  queueRefreshDbLimit: 128
-  operatorActionsEnabled: false
-  repodyVlmMarkdownOnExtract: false
-  healthzProbeInference: false
-
-observability:
-  bugsinkDsn: ""
-  existingSecret: ""
-  bugsinkDsnKey: BUGSINK_DSN
-  # OTLP HTTP traces (/v1/traces). Logs stay JSON on stdout; trace_id is correlated in structlog.
-  otelEnabled: false
-  otelEndpoint: ""
-
-# Off by default - cluster / platform team owns NetworkPolicy and egress.
-# Opt in only when the chart must emit policies (generic K8s without platform NP).
-# OpenShift installs rely on this default staying disabled.
 networkPolicy:
+  # Default-deny for the release; allows DNS, traffic inside the release, ingress to web/api,
+  # and egress to the CIDRs below (database, Redis, S3, OIDC, inference).
   enabled: false
-  dnsNamespaces:
-    - openshift-dns
-    - kube-system
-  # When networkPolicy.enabled=true, set cluster-specific CIDRs (never 0.0.0.0/0).
-  externalEgress:
-    enabled: false
-    cidrs: []
-    ports:
-      - 80
-      - 443
-      - 5432
-      - 6379
-      - 6380
-      - 7070
-      - 8081
-      - 9000
+  egressCidrs: []
+  egressPorts: [443, 5432, 6379, 8080, 8081, 9000]

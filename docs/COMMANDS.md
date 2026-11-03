@@ -88,11 +88,9 @@ Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
 | Command | When |
 |---------|------|
-| `pnpm helm:deps:update` | Refresh chart dependencies before install |
 | `pnpm helm:lint` / `helm:template` | Chart checks |
-| `pnpm client:check` | Client Helm / ESO preflight |
-| `pnpm deploy:check` | Deploy contract checks |
-| `pnpm prod:readiness` | Live API readiness against a cluster URL |
+| `pnpm deploy:check` | helm lint, helm template + kubeconform, kustomize, bake --print, docs links |
+| `pnpm security:scan` | Trivy repository scan (lockfiles, secrets, misconfig) |
 
 ## Release / images
 
@@ -100,7 +98,6 @@ Deploy guide: [CLUSTER.md](./CLUSTER.md).
 |---------|------|
 | `pnpm images:build` | Build locally (`docker buildx bake --load`) |
 | `pnpm images:release` | Build + push (`docker buildx bake --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
-| `pnpm release:all` | Push + attest + promote staging |
 
 Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 

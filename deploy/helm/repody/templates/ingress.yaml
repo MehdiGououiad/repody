@@ -1,78 +1,46 @@
 {{- if .Values.ingress.enabled }}
-{{- $apiHost := .Values.ingress.apiHost | default "" }}
-{{- $filesHost := .Values.ingress.filesHost | default "" }}
-{{- $filesSvc := "" }}
-{{- $filesPort := .Values.ingress.filesServicePort | default 9000 }}
-{{- if .Values.minio.enabled }}
-{{- $filesSvc = printf "%s-minio" .Release.Name }}
-{{- else if .Values.ingress.filesServiceName }}
-{{- $filesSvc = .Values.ingress.filesServiceName }}
-{{- else if eq (.Values.global.deploymentProfile | default "external") "bundled" }}
-{{- $filesSvc = "repody-data-minio" }}
+{{- $fullname := include "repody.fullname" . }}
+{{- $files := and .Values.ingress.filesHost .Values.ingress.filesService.name }}
+{{- $routes := list (dict "host" .Values.ingress.host "service" (printf "%s-web" $fullname) "port" 3000) }}
+{{- with .Values.ingress.apiHost }}
+{{- $routes = append $routes (dict "host" . "service" (printf "%s-api" $fullname) "port" 8000) }}
 {{- end }}
-{{- $exposeFiles := and $filesHost $filesSvc }}
+{{- if $files }}
+{{- $routes = append $routes (dict "host" .Values.ingress.filesHost "service" .Values.ingress.filesService.name "port" .Values.ingress.filesService.port) }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "repody.fullname" . }}-ingress
+  name: {{ $fullname }}
   labels:
     {{- include "repody.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
   annotations:
-    {{- range $key, $value := .Values.ingress.annotations }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
-    {{- range $key, $value := .Values.ingress.controllerAnnotations }}
-    {{ $key }}: {{ $value | quote }}
-    {{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
-  {{- if .Values.ingress.className }}
-  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
   {{- end }}
   {{- if .Values.ingress.tls.enabled }}
   tls:
-    - hosts:
-        - {{ required "ingress.host is required when ingress.tls.enabled" .Values.ingress.host | quote }}
-        {{- if $apiHost }}
-        - {{ $apiHost | quote }}
+    - secretName: {{ .Values.ingress.tls.secretName | quote }}
+      hosts:
+        {{- range $routes }}
+        - {{ .host | quote }}
         {{- end }}
-        {{- if $exposeFiles }}
-        - {{ $filesHost | quote }}
-        {{- end }}
-      secretName: {{ required "ingress.tls.secretName is required when ingress.tls.enabled" .Values.ingress.tls.secretName | quote }}
   {{- end }}
   rules:
-    - host: {{ required "ingress.host is required when ingress.enabled" .Values.ingress.host | quote }}
+    {{- range $routes }}
+    - host: {{ .host | quote }}
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: {{ include "repody.fullname" . }}-web
+                name: {{ .service | quote }}
                 port:
-                  number: 3000
-    {{- if $apiHost }}
-    - host: {{ $apiHost | quote }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ include "repody.fullname" . }}-api
-                port:
-                  number: 8000
-    {{- end }}
-    {{- if $exposeFiles }}
-    - host: {{ $filesHost | quote }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: {{ $filesSvc | quote }}
-                port:
-                  number: {{ $filesPort }}
+                  number: {{ .port }}
     {{- end }}
 {{- end }}

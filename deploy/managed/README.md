@@ -1,59 +1,23 @@
-# Managed on-prem data plane
+# Managed on-prem services
 
-These manifests are for production-style on-prem services that Repody consumes as
-external dependencies.
+Examples for services Repody consumes as external dependencies when the client has no
+managed equivalent. Install guide: [docs/CLUSTER.md](../../docs/CLUSTER.md).
 
-## CloudNativePG
+## CloudNativePG (`cloudnativepg/`)
 
-`cloudnativepg/` contains:
-
-- `Cluster` with 3 Postgres instances
-- PgBouncer `Pooler`
-- `ScheduledBackup`
-- NetworkPolicies
-- example bootstrap Secrets
-
-Render:
-
-```bash
-kubectl kustomize deploy/managed/cloudnativepg
-```
-
-Apply after installing the CloudNativePG operator and replacing placeholders:
+A 3-instance Postgres `Cluster`, a PgBouncer `Pooler`, a `ScheduledBackup`, NetworkPolicies
+and example bootstrap Secrets. Install the [CloudNativePG operator](https://cloudnative-pg.io/documentation/current/installation_upgrade/),
+replace the placeholders, then:
 
 ```bash
 kubectl apply -k deploy/managed/cloudnativepg
 ```
 
-## External Secrets
+Point `AUDIT_DATABASE_URL` in `repody-runtime-secrets` at the Pooler Service.
 
-`external-secrets/` contains examples for Vault-backed External Secrets:
+## External Secrets (`external-secrets/`)
 
-- `vault-clustersecretstore.example.yaml`
-- `repody-cnpg-externalsecrets.example.yaml`
-- `repody-runtime-externalsecret.example.yaml`
-
-Adapt Vault paths, auth roles, and secret names before applying. The Repody app
-chart consumes the generated `repody-runtime-secrets` Secret and production Helm
-guardrails fail if runtime credentials are put inline in values.
-
-Validate the contract before Argo CD syncs production:
-
-```bash
-pnpm enterprise:secrets -- \
-  --values path/to/values-production.yaml \
-  --external-secret path/to/repody-runtime-externalsecret.yaml \
-  --cluster-secret-store path/to/vault-clustersecretstore.yaml
-```
-
-## Repody app chart
-
-Use:
-
-```bash
-helm upgrade --install repody deploy/helm/repody \
-  -n repody --create-namespace \
-  -f deploy/helm/repody/values-production.yaml.example \
-  -f deploy/helm/repody/values-production.onprem-managed.yaml.example \
-  -f my-values.yaml
-```
+`vault-clustersecretstore.example.yaml` connects External Secrets Operator to Vault;
+`repody-cnpg-externalsecrets.example.yaml` provides the CloudNativePG credentials. The app's
+runtime Secret is [`deploy/client/secrets/runtime.externalsecret.example.yaml`](../client/secrets/runtime.externalsecret.example.yaml).
+See [external-secrets/README.md](./external-secrets/README.md).

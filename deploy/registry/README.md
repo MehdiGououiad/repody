@@ -47,7 +47,7 @@ docker buildx imagetools inspect mehdigououiad/repody-backend:0.1.0
 
 **Daily path** (pulls these for you): `pnpm platform` - see [docs/LOCAL.md](../../docs/LOCAL.md).
 
-**Helm:** [deploy/client/values-dockerhub.example.yaml](../client/values-dockerhub.example.yaml).
+**Helm:** set `images.backend.repository` / `images.web.repository` to these names in your values.
 
 **Portability boundary:** these images cover API, UI, and workers. Document-model
 inference (NuExtract on llama-server) is **external** by design
@@ -134,24 +134,14 @@ oc -n repody create secret docker-registry registry-pull-secret \
 # Or via External Secrets — deploy/client/secrets/registry-pull.externalsecret.example.yaml
 ```
 
-Helm values: [deploy/client/values-harbor.example.yaml](../client/values-harbor.example.yaml)
-
-```bash
-helm upgrade --install repody deploy/helm/repody -n repody \
-  -f deploy/helm/repody/values.yaml \
-  -f deploy/helm/repody/values-common.yaml \
-  -f ~/repody-gitops/values.yaml \
-  -f deploy/client/values-harbor.example.yaml \
-  -f deploy/client/values-enterprise.example.yaml \
-  --wait --timeout 25m
-```
+Helm values: point `images.*.repository` at `harbor.example.com/repody/repody-backend` (and `repody-web`) and add `imagePullSecrets: [{ name: registry-pull-secret }]`.
 
 **TLS:** Production Harbor should use HTTPS. For HTTP-only registries, OpenShift must list the
 host under `image.config.openshift.io/cluster` -> `spec.registrySources.insecureRegistries`
 ([OKD docs](https://docs.okd.io/latest/openshift_images/image-configuration.html)). Prefer
 HTTPS + `additionalTrustedCA` for self-signed CAs.
 
-Full OpenShift order: [docs/CLUSTER.md](../../docs/CLUSTER.md#harbor-registry).
+Install order: [docs/CLUSTER.md](../../docs/CLUSTER.md#install).
 
 ## Other OCI registries
 
@@ -168,9 +158,8 @@ pnpm images:release
 Image push commands fail unless `REPODY_IMAGE_REGISTRY` is set, so release images
 cannot be pushed accidentally to an implicit registry namespace.
 
-Then use [deploy/client/values-external.example.yaml](../client/values-external.example.yaml)
-or [deploy/client/values-bundled.example.yaml](../client/values-bundled.example.yaml) as
-the starting point for the client's GitOps values.
+Then start the client's GitOps values from
+[values-production.yaml.example](../helm/repody/values-production.yaml.example).
 
 ## Image Options
 

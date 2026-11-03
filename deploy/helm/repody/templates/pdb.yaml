@@ -1,79 +1,27 @@
-{{- if .Values.api.podDisruptionBudget.enabled }}
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ include "repody.fullname" . }}-api
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: control
-spec:
-  {{- if hasKey .Values.api.podDisruptionBudget "minAvailable" }}
-  minAvailable: {{ .Values.api.podDisruptionBudget.minAvailable }}
-  {{- else }}
-  maxUnavailable: {{ .Values.api.podDisruptionBudget.maxUnavailable }}
-  {{- end }}
-  selector:
-    matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: control
+{{- $components := dict "api" .Values.api "web" .Values.web }}
+{{- range $pool, $worker := .Values.workers }}
+{{- $_ := set $components (printf "worker-%s" $pool) $worker }}
 {{- end }}
+{{- range $component, $spec := $components }}
+{{- with $spec.podDisruptionBudget }}
+{{- if .enabled }}
 ---
-{{- if .Values.web.podDisruptionBudget.enabled }}
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "repody.fullname" . }}-web
+  name: {{ include "repody.fullname" $ }}-{{ $component }}
   labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: edge
+    {{- include "repody.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
 spec:
-  {{- if hasKey .Values.web.podDisruptionBudget "minAvailable" }}
-  minAvailable: {{ .Values.web.podDisruptionBudget.minAvailable }}
+  {{- if hasKey . "minAvailable" }}
+  minAvailable: {{ .minAvailable }}
   {{- else }}
-  maxUnavailable: {{ .Values.web.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .maxUnavailable }}
   {{- end }}
   selector:
     matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: edge
+      {{- include "repody.selectorLabels" (dict "root" $ "component" $component) | nindent 6 }}
 {{- end }}
----
-{{- if .Values.workerExtract.podDisruptionBudget.enabled }}
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ include "repody.fullname" . }}-worker-extract
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-extract
-spec:
-  {{- if hasKey .Values.workerExtract.podDisruptionBudget "minAvailable" }}
-  minAvailable: {{ .Values.workerExtract.podDisruptionBudget.minAvailable }}
-  {{- else }}
-  maxUnavailable: {{ .Values.workerExtract.podDisruptionBudget.maxUnavailable }}
-  {{- end }}
-  selector:
-    matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-extract
 {{- end }}
----
-{{- if .Values.workerFast.podDisruptionBudget.enabled }}
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: {{ include "repody.fullname" . }}-worker-fast
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-fast
-spec:
-  {{- if hasKey .Values.workerFast.podDisruptionBudget "minAvailable" }}
-  minAvailable: {{ .Values.workerFast.podDisruptionBudget.minAvailable }}
-  {{- else }}
-  maxUnavailable: {{ .Values.workerFast.podDisruptionBudget.maxUnavailable }}
-  {{- end }}
-  selector:
-    matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-fast
 {{- end }}

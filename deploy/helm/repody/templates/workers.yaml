@@ -1,169 +1,52 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "repody.fullname" . }}-worker-extract
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-extract
-spec:
-  replicas: {{ .Values.workerExtract.replicas }}
-  selector:
-    matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-extract
-  template:
-    metadata:
-      labels:
-        {{- include "repody.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: worker-extract
-    spec:
-      automountServiceAccountToken: false
-      terminationGracePeriodSeconds: {{ .Values.workerExtract.terminationGracePeriodSeconds }}
-      {{- if .Values.workerExtract.topologySpreadConstraints.enabled }}
-      topologySpreadConstraints:
-        - maxSkew: {{ .Values.workerExtract.topologySpreadConstraints.maxSkew }}
-          topologyKey: {{ .Values.workerExtract.topologySpreadConstraints.topologyKey | quote }}
-          whenUnsatisfiable: {{ .Values.workerExtract.topologySpreadConstraints.whenUnsatisfiable }}
-          labelSelector:
-            matchLabels:
-              {{- include "repody.selectorLabels" . | nindent 14 }}
-              app.kubernetes.io/component: worker-extract
-      {{- end }}
-      securityContext:
-        {{- include "repody.podSecurityContext" . | nindent 8 }}
-      {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      containers:
-        - name: worker
-          image: {{ include "repody.backendImage" . | quote }}
-          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
-          command:
-            - python
-            - -m
-            - repody.taskiq.worker
-          securityContext:
-            {{- include "repody.containerSecurityContext" . | nindent 12 }}
-          envFrom:
-            - configMapRef:
-                name: {{ include "repody.fullname" . }}-config
-          env:
-            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
-              value: "false"
-            - name: AUDIT_WORKER_POOL
-              value: {{ .Values.workerExtract.pool | quote }}
-            - name: AUDIT_WORKER_EXTRACT_MAX_JOBS
-              value: {{ .Values.workerExtract.maxJobs | quote }}
-            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
-              value: {{ .Values.workerExtract.warmupOnStart | quote }}
-            - name: AUDIT_OTEL_SERVICE_NAME
-              value: repody-worker-extract
-            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
-            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
-            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
-            {{- include "repody.bugsinkEnv" . | nindent 12 }}
-          readinessProbe:
-            exec:
-              command:
-                - python
-                - -m
-                - repody.taskiq.healthcheck
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
-            initialDelaySeconds: 45
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          resources:
-            {{- toYaml .Values.workerExtract.resources | nindent 12 }}
+{{- range $pool, $worker := .Values.workers }}
+{{- $component := printf "worker-%s" $pool }}
+{{- $ctx := dict "root" $ "component" $component }}
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "repody.fullname" . }}-worker-fast
+  name: {{ include "repody.fullname" $ }}-{{ $component }}
   labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: worker-fast
+    {{- include "repody.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $component }}
 spec:
-  replicas: {{ .Values.workerFast.replicas }}
+  {{- if not $worker.autoscaling.enabled }}
+  replicas: {{ $worker.replicas }}
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "repody.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: worker-fast
+      {{- include "repody.selectorLabels" $ctx | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "repody.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: worker-fast
+        {{- include "repody.selectorLabels" $ctx | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
     spec:
-      automountServiceAccountToken: false
-      terminationGracePeriodSeconds: {{ .Values.workerFast.terminationGracePeriodSeconds }}
-      {{- if .Values.workerFast.topologySpreadConstraints.enabled }}
-      topologySpreadConstraints:
-        - maxSkew: {{ .Values.workerFast.topologySpreadConstraints.maxSkew }}
-          topologyKey: {{ .Values.workerFast.topologySpreadConstraints.topologyKey | quote }}
-          whenUnsatisfiable: {{ .Values.workerFast.topologySpreadConstraints.whenUnsatisfiable }}
-          labelSelector:
-            matchLabels:
-              {{- include "repody.selectorLabels" . | nindent 14 }}
-              app.kubernetes.io/component: worker-fast
-      {{- end }}
-      securityContext:
-        {{- include "repody.podSecurityContext" . | nindent 8 }}
-      {{- include "repody.imagePullSecrets" . | nindent 6 }}
+      {{- include "repody.podDefaults" $ctx | nindent 6 }}
+      # Taskiq finishes the running task on SIGTERM; give it time before SIGKILL.
+      terminationGracePeriodSeconds: {{ $worker.terminationGracePeriodSeconds }}
       containers:
         - name: worker
-          image: {{ include "repody.backendImage" . | quote }}
-          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
-          command:
-            - python
-            - -m
-            - repody.taskiq.worker
+          image: {{ include "repody.image" (dict "image" $.Values.images.backend "root" $) | quote }}
+          imagePullPolicy: {{ $.Values.images.backend.pullPolicy }}
+          command: [python, -m, repody.taskiq.worker]
           securityContext:
-            {{- include "repody.containerSecurityContext" . | nindent 12 }}
-          envFrom:
-            - configMapRef:
-                name: {{ include "repody.fullname" . }}-config
+            {{- include "repody.containerSecurityContext" $ | nindent 12 }}
+          {{- include "repody.backendEnvFrom" $ | nindent 10 }}
           env:
-            - name: AUDIT_RUN_MIGRATIONS_ON_STARTUP
-              value: "false"
             - name: AUDIT_WORKER_POOL
-              value: {{ .Values.workerFast.pool | quote }}
-            - name: AUDIT_WORKER_FAST_MAX_JOBS
-              value: {{ .Values.workerFast.maxJobs | quote }}
-            - name: AUDIT_REPODY_VLM_WARMUP_ON_START
-              value: {{ .Values.workerFast.warmupOnStart | quote }}
+              value: {{ $pool | quote }}
+            - name: AUDIT_WORKER_{{ upper $pool }}_MAX_JOBS
+              value: {{ $worker.maxJobs | quote }}
             - name: AUDIT_OTEL_SERVICE_NAME
-              value: repody-worker-fast
-            {{- include "repody.llamacppSecretEnv" . | nindent 12 }}
-            {{- include "repody.operatorBenchmarkSecretEnv" . | nindent 12 }}
-            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
-            {{- include "repody.bugsinkEnv" . | nindent 12 }}
+              value: repody-{{ $component }}
           readinessProbe:
             exec:
-              command:
-                - python
-                - -m
-                - repody.taskiq.healthcheck
+              command: [python, -m, repody.taskiq.healthcheck]
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 3
-          livenessProbe:
-            exec:
-              command:
-                - sh
-                - -c
-                - python -c "import pathlib,sys; needle='repody.taskiq.worker'; sys.exit(0 if any(needle in p.read_text(errors='ignore').replace('\\x00',' ') for p in pathlib.Path('/proc').glob('[0-9]*/cmdline')) else 1)"
-            initialDelaySeconds: 45
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
           resources:
-            {{- toYaml .Values.workerFast.resources | nindent 12 }}
+            {{- toYaml $worker.resources | nindent 12 }}
+{{- end }}

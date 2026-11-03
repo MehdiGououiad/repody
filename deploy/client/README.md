@@ -1,86 +1,20 @@
 # Client deployment kit
 
-| Delivery | Audience | Path |
-|----------|----------|------|
-| **Mac runtime zip** (no source) | Laptop demos / evaluation | [`mac-runtime/`](./mac-runtime/) · `pnpm client:pack:mac` |
-| **Helm / GitOps** | OpenShift / Kubernetes production | values below · [docs/CLUSTER.md](../../docs/CLUSTER.md) |
+Templates a client copies into a private GitOps repo. The install guide is
+[docs/CLUSTER.md](../../docs/CLUSTER.md).
 
-**Start-to-finish cluster:** [docs/CLUSTER.md](../../docs/CLUSTER.md)  
-**Mac without git:** [docs/LOCAL.md - Mac runtime](../../docs/LOCAL.md#mac-runtime-no-source)
+| File | Purpose |
+|------|---------|
+| `namespace.example.yaml` | Namespace with restricted Pod Security labels |
+| `secrets/runtime.externalsecret.example.yaml` | `repody-runtime-secrets` from Vault (database, Redis, S3, Auth.js, inference key) |
+| `secrets/registry-pull.externalsecret.example.yaml` | Image pull secret |
+| `argocd.application.yaml` | Argo CD Application: chart from the vendor tag, values from the client repo |
+| `mac-runtime/` | Single-Mac Compose runtime (`pnpm client:pack:mac` builds the zip) |
 
-## Choose a profile (Kubernetes)
-
-| Profile | When | Start here |
-|---------|------|------------|
-| **External** | Client has managed Postgres, Redis, S3 | `values-external.example.yaml` |
-| **Bundled** | In-cluster Postgres, Redis, MinIO | `values-bundled.example.yaml` + `bundled/values.data.yaml` |
-
-Both profiles merge `values-enterprise.example.yaml` for production hardening.
-On OpenShift no extra overlay is needed: the chart leaves `networkPolicy.enabled` false by default, so the cluster keeps ownership of networking.
-
-**Harbor images:** merge `values-harbor.example.yaml` (or copy its `images` / `imagePullSecrets` into GitOps values).
-See [CLUSTER.md - Harbor registry](../../docs/CLUSTER.md#harbor-registry).
-
-## Image registry
-
-`REPODY_IMAGE_REGISTRY` and Helm `images.*.repository` use the **registry project path**:
-
-```yaml
-# CHANGE_ME_REGISTRY = ghcr.io/yourorg/repody   (host + project)
-images:
-  api:
-    repository: ghcr.io/yourorg/repody/repody-backend
-    tag: "1.0.0"
-```
-
-```powershell
-$env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
-$env:REPODY_IMAGE_TAG="1.0.0"
-pnpm images:release
-```
-
-Optional: pin digests from `dist/release/<tag>/helm-images.yaml` after `pnpm release:promote`.
-
-On-prem example: `registry.example.com/repody` - see [deploy/registry/README.md](../registry/README.md).
-
-## Directory layout
-
-```
-deploy/client/
-├── values-external.example.yaml    # BYO Postgres / Redis / S3
-├── values-bundled.example.yaml     # In-cluster data plane
-├── values-enterprise.example.yaml  # Hardening overlay (required prod)
-├── values-images.example.yaml      # Optional digest pins
-├── namespace.example.yaml          # Namespace + Pod Security
-├── argocd.application.yaml         # Argo CD Application skeleton
-├── secrets/                        # ExternalSecret examples → Vault
-│   ├── registry-pull.externalsecret.example.yaml
-│   ├── data-plane.externalsecret.example.yaml
-│   ├── runtime.externalsecret.example.yaml          # external profile
-│   └── runtime-bundled.externalsecret.example.yaml  # bundled profile
-└── bundled/
-    └── values.data.yaml            # repody-data chart overlay
-```
-
-## Helm install order (bundled)
-
-1. Namespace + secrets ([CLUSTER.md](../../docs/CLUSTER.md#secrets-and-hardening))
-2. `helm upgrade --install repody-data …`
-3. Optional `repody-auth` (in-cluster Keycloak)
-4. `helm upgrade --install repody …`
-
-## Helm install order (external)
-
-1. Namespace + secrets
-2. `helm upgrade --install repody …` only
-
-## Preflight
+Values: start from [`deploy/helm/repody/values-production.yaml.example`](../helm/repody/values-production.yaml.example).
+Image digests for a release come from the `helm-images.yaml` artifact of the
+[images-ghcr](../../.github/workflows/images-ghcr.yml) workflow.
 
 ```bash
-pnpm client:check
-pnpm enterprise:secrets -- \
-  --values deploy/helm/repody/values-common.yaml \
-  --values deploy/client/values-bundled.example.yaml \
-  --values deploy/client/values-enterprise.example.yaml \
-  --external-secret deploy/client/secrets/runtime-bundled.externalsecret.example.yaml
+helm upgrade --install repody deploy/helm/repody -n repody -f values.yaml --wait --timeout 15m
 ```

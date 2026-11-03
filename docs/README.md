@@ -13,7 +13,7 @@
 | Document extraction / VLM / OCR | [EXTRACTION.md](./EXTRACTION.md) |
 | Backend, tests, scripts | [DEVELOPMENT.md](./DEVELOPMENT.md) |
 | Code quality review gate | [CODE-QUALITY.md](./CODE-QUALITY.md) |
-| Publish images (Hub / GHCR) | [../deploy/registry/README.md](../deploy/registry/README.md) · [CLUSTER.md - Release](./CLUSTER.md#release-methodology) |
+| Publish images (Hub / GHCR) | [../deploy/registry/README.md](../deploy/registry/README.md) · [CLUSTER.md - Release](./CLUSTER.md#images-and-releases) |
 | Architecture decisions | [adr/](./adr/README.md) |
 | Architecture (executives) | [diagrams/architecture-enterprise.html](./diagrams/architecture-enterprise.html) |
 | Architecture (Mermaid) | [diagrams/architecture.mmd](./diagrams/architecture.mmd) |

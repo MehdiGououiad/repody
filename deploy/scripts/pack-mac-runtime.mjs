@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const SRC = path.join(ROOT, "deploy/client/mac-runtime");
-const REALM_SRC = path.join(ROOT, "deploy/helm/repody-auth/files/realm-repody.json");
+const REALM_SRC = path.join(ROOT, "deploy/keycloak/realm-repody.json");
 const DIST = path.join(ROOT, "dist");
 const STAGE_NAME = "repody-mac-runtime";
 

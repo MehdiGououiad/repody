@@ -1,5 +1,7 @@
 name: Publish images to GHCR
 
+# Build both images with docker-bake.hcl, attach BuildKit SBOM + provenance attestations,
+# sign the digests with cosign (keyless, GitHub OIDC), and publish Helm image values.
 on:
   workflow_dispatch:
     inputs:
@@ -7,11 +9,6 @@ on:
         description: Image tag to publish. Defaults to the short git SHA.
         required: false
         type: string
-      promote:
-        description: Run promotion gate (verify + manifest) after publish.
-        required: false
-        type: boolean
-        default: true
   push:
     tags:
       - "v*"
@@ -20,7 +17,6 @@ permissions:
   contents: read
   packages: write
   id-token: write
-  attestations: write
 
 jobs:
   publish:
@@ -32,7 +28,6 @@ jobs:
         id: images
         shell: bash
         run: |
-          owner="${GITHUB_REPOSITORY_OWNER,,}"
           if [ -n "${{ inputs.tag }}" ]; then
             tag="${{ inputs.tag }}"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
@@ -40,11 +35,7 @@ jobs:
           else
             tag="${GITHUB_SHA::12}"
           fi
-          if [ -z "${tag}" ] || [ "${tag}" = "latest" ]; then
-            echo "Refusing mutable/empty image tag: '${tag}'" >&2
-            exit 1
-          fi
-          echo "registry=ghcr.io/${owner}" >> "${GITHUB_OUTPUT}"
+          echo "registry=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "${GITHUB_OUTPUT}"
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
 
       - name: Set up Docker Buildx
@@ -61,7 +52,9 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
 
+      # docker-bake.hcl rejects an empty or `latest` tag (variable validation).
       - name: Build and push images (docker-bake.hcl)
+        id: bake
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         env:
           REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
@@ -72,6 +65,8 @@ jobs:
             ./docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file-labels }}
           push: true
+          provenance: mode=max
+          sbom: true
           set: |
             backend.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
             backend.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
@@ -81,54 +76,28 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@dc72c7d5c4d10cd6bcb8cf6e3fd625a9e5e537da # v3.7.0
 
-      - name: Install syft
-        uses: anchore/sbom-action/download-syft@df80a981bc6edbc4e220a492d3cbe9f5547a6e75 # v0.17.9
-      - name: SBOM, sign, and attest (cosign keyless)
-        env:
-          REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
-          REPODY_IMAGE_TAG: ${{ steps.images.outputs.tag }}
-          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
-        run: node deploy/scripts/release-supply-chain.mjs attest
-
-      - name: Verify signatures (promotion gate)
-        if: github.event_name != 'workflow_dispatch' || inputs.promote != false
-        env:
-          REPODY_IMAGE_REGISTRY: ${{ steps.images.outputs.registry }}
-          REPODY_IMAGE_TAG: ${{ steps.images.outputs.tag }}
-          COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/images-ghcr.yml@.*
-        run: node deploy/scripts/release-supply-chain.mjs promote --channel=staging
-
-      - name: Write Helm image values
+      - name: Sign digests and write Helm image values
         shell: bash
+        env:
+          METADATA: ${{ steps.bake.outputs.metadata }}
+          REGISTRY: ${{ steps.images.outputs.registry }}
+          TAG: ${{ steps.images.outputs.tag }}
         run: |
           mkdir -p dist
-          tag="${{ steps.images.outputs.tag }}"
-          tag_safe="${tag//\//_}"
-          if [ -f "dist/release/${tag_safe}/helm-images.yaml" ]; then
-            cp "dist/release/${tag_safe}/helm-images.yaml" dist/repody-ghcr-images.yaml
-          else
-            cat > dist/repody-ghcr-images.yaml <<EOF
-          images:
-            backend:
-              repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${tag}"
-            api:
-              repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${tag}"
-            worker:
-              repository: ${{ steps.images.outputs.registry }}/repody-backend
-              tag: "${tag}"
-            web:
-              repository: ${{ steps.images.outputs.registry }}/repody-web
-              tag: "${tag}"
-          EOF
-          fi
+          {
+            echo "images:"
+            for target in backend web; do
+              digest=$(jq -r --arg t "$target" '.[$t]["containerimage.digest"]' <<<"$METADATA")
+              cosign sign --yes "${REGISTRY}/repody-${target}@${digest}"
+              printf '  %s:\n    repository: %s/repody-%s\n    tag: "%s"\n    digest: %s\n' \
+                "$target" "$REGISTRY" "$target" "$TAG" "$digest"
+            done
+          } > dist/helm-images.yaml
+          cat dist/helm-images.yaml
 
-      - name: Upload release bundle
+      - name: Upload Helm image values
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: repody-release-${{ steps.images.outputs.tag }}
-          path: |
-            dist/repody-ghcr-images.yaml
-            dist/release/**/*
+          name: repody-images-${{ steps.images.outputs.tag }}
+          path: dist/helm-images.yaml
           retention-days: 90

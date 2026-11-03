@@ -1,3 +1,6 @@
+{{- if and (eq (toString (index .Values.config "AUDIT_DEPLOYMENT_ENVIRONMENT")) "production") (ne (toString (index .Values.config "AUDIT_OIDC_ENABLED")) "true") }}
+{{- fail "production requires config.AUDIT_OIDC_ENABLED=\"true\"" }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -5,61 +8,9 @@ metadata:
   labels:
     {{- include "repody.labels" . | nindent 4 }}
 data:
-  AUDIT_DEPLOYMENT_ENVIRONMENT: {{ .Values.global.deploymentEnvironment | quote }}
-  AUDIT_OIDC_ENABLED: {{ .Values.config.oidcEnabled | quote }}
-  AUDIT_OIDC_ISSUER: {{ required "config.oidcIssuer is required when oidcEnabled" .Values.config.oidcIssuer | quote }}
-  {{- if .Values.config.oidcIssuerAliases }}
-  AUDIT_OIDC_ISSUER_ALIASES: {{ join "," .Values.config.oidcIssuerAliases | quote }}
+  {{- range $key, $value := .Values.config }}
+  {{ $key }}: {{ $value | toString | quote }}
   {{- end }}
-  AUDIT_OIDC_AUDIENCE: {{ required "config.oidcAudience is required when oidcEnabled" .Values.config.oidcAudience | quote }}
-  AUDIT_LOG_JSON: {{ .Values.config.logJson | quote }}
-  {{- if and .Values.observability.otelEnabled (not .Values.observability.otelEndpoint) }}
-  {{- fail "observability.otelEndpoint is required when observability.otelEnabled=true" }}
-  {{- end }}
-  AUDIT_OTEL_ENABLED: {{ .Values.observability.otelEnabled | quote }}
-  {{- if .Values.observability.otelEnabled }}
-  AUDIT_OTEL_EXPORTER_ENDPOINT: {{ .Values.observability.otelEndpoint | quote }}
-  {{- end }}
-  AUDIT_DIRECT_UPLOAD_ENABLED: {{ .Values.config.directUploadEnabled | quote }}
-  AUDIT_LLAMACPP_BASE_URL: {{ .Values.config.llamacppBaseUrl | quote }}
-  AUDIT_LLAMACPP_SERVED_MODEL: {{ .Values.config.llamacppServedModel | quote }}
-  AUDIT_REPODY_VLM_TIMEOUT_SECONDS: {{ .Values.config.repodyVlmTimeoutSeconds | quote }}
-  AUDIT_WORKER_TASK_TIMEOUT_MINUTES: {{ .Values.config.workerTaskTimeoutMinutes | quote }}
-  AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}
-  AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: {{ .Values.config.queuedStaleTimeoutMinutes | quote }}
-
-  AUDIT_MAINTENANCE_INTERVAL_SECONDS: {{ .Values.config.maintenanceIntervalSeconds | quote }}
-  AUDIT_DB_POOL_SIZE: {{ .Values.config.dbPoolSize | quote }}
-  AUDIT_DB_MAX_OVERFLOW: {{ .Values.config.dbMaxOverflow | quote }}
-  AUDIT_REDIS_MAX_CONNECTIONS: {{ .Values.config.redisMaxConnections | quote }}
-  AUDIT_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  # The migrations Job owns schema upgrades; pods only run them when the Job is disabled.
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
   AUDIT_SEED_ON_STARTUP: "false"
-  AUDIT_RATE_LIMIT_FAIL_CLOSED: {{ .Values.config.rateLimitFailClosed | quote }}
-  AUDIT_RATE_LIMIT_ENABLED: {{ .Values.config.rateLimitEnabled | quote }}
-  AUDIT_RATE_LIMIT_WINDOW_SECONDS: {{ .Values.config.rateLimitWindowSeconds | quote }}
-  AUDIT_RATE_LIMIT_RUNS_PER_WORKFLOW: {{ .Values.config.rateLimitRunsPerWorkflow | quote }}
-  AUDIT_RATE_LIMIT_RUNS_PER_CLIENT: {{ .Values.config.rateLimitRunsPerClient | quote }}
-  AUDIT_RATE_LIMIT_HTTP_PER_MINUTE: {{ .Values.config.rateLimitHttpPerMinute | quote }}
-  AUDIT_ADMISSION_MAX_QUEUED: {{ .Values.config.admissionMaxQueued | quote }}
-  AUDIT_ADMISSION_MAX_INFLIGHT: {{ .Values.config.admissionMaxInflight | quote }}
-  AUDIT_ADMISSION_MAX_EXTRACT_INFLIGHT: {{ .Values.config.admissionMaxExtractInflight | quote }}
-  AUDIT_ADMISSION_RETRY_AFTER_SECONDS: {{ .Values.config.admissionRetryAfterSeconds | quote }}
-  AUDIT_QUEUE_REFRESH_SSE_LIMIT: {{ .Values.config.queueRefreshSseLimit | quote }}
-  AUDIT_QUEUE_REFRESH_DB_LIMIT: {{ .Values.config.queueRefreshDbLimit | quote }}
-  AUDIT_OPERATOR_ACTIONS_ENABLED: {{ .Values.config.operatorActionsEnabled | quote }}
-  {{- if .Values.config.operatorBenchmarkUser }}
-  AUDIT_OPERATOR_BENCHMARK_USER: {{ .Values.config.operatorBenchmarkUser | quote }}
-  {{- end }}
-  {{- if .Values.config.keycloakClientId }}
-  AUDIT_KEYCLOAK_CLIENT_ID: {{ .Values.config.keycloakClientId | quote }}
-  {{- end }}
-  AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT: {{ .Values.config.repodyVlmMarkdownOnExtract | quote }}
-  AUDIT_HEALTHZ_PROBE_INFERENCE: {{ .Values.config.healthzProbeInference | quote }}
-  {{- if .Values.externalObjectStorage.publicEndpoint }}
-  AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.externalObjectStorage.publicEndpoint | quote }}
-  {{- else if .Values.ingress.enabled }}
-  AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.ingress.filesHost | quote }}
-  {{- else if and .Values.gatewayApi.enabled .Values.gatewayApi.filesHost }}
-  AUDIT_MINIO_PUBLIC_ENDPOINT: {{ .Values.gatewayApi.filesHost | quote }}
-  {{- end }}

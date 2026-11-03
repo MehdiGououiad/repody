@@ -1,32 +1,16 @@
-Repody audit platform installed.
-
-Release: {{ .Release.Name }}
-Namespace: {{ .Release.Namespace }}
-
+Repody {{ .Chart.AppVersion }} installed as release {{ .Release.Name }} in {{ .Release.Namespace }}.
 {{- if .Values.ingress.enabled }}
 {{- $scheme := ternary "https" "http" .Values.ingress.tls.enabled }}
 
-UI:    {{ $scheme }}://{{ .Values.ingress.host }}
-{{- if .Values.ingress.apiHost }}
-API:   {{ $scheme }}://{{ .Values.ingress.apiHost }}/v1/healthz/live
-{{- else }}
-API:   internal {{ include "repody.fullname" . }}-api:8000
+UI:   {{ $scheme }}://{{ .Values.ingress.host }}
+{{- with .Values.ingress.apiHost }}
+API:  {{ $scheme }}://{{ . }}/v1/healthz
 {{- end }}
-{{- if .Values.ingress.filesHost }}
-Files: {{ $scheme }}://{{ .Values.ingress.filesHost }}
-{{- end }}
-
 {{- else }}
 
-Port-forward web:  kubectl port-forward svc/{{ include "repody.fullname" . }}-web 3000:3000
-Port-forward api:  kubectl port-forward svc/{{ include "repody.fullname" . }}-api 8000:8000
-
+kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "repody.fullname" . }}-web 3000:3000
 {{- end }}
 
-Worker fast replicas: {{ .Values.workerFast.replicas }} (HPA max {{ .Values.workerFast.autoscaling.maxReplicas }})
-
-Set secrets before production:
-  AUTH_SECRET, AUTH_KEYCLOAK_CLIENT_SECRET,
-  AUDIT_DATABASE_URL, AUDIT_REDIS_URL, object-storage credentials, and optional AUDIT_LLAMACPP_API_KEY
-
-Inference runs outside this chart; point config.llamacppBaseUrl at your vLLM, llama-server, or managed GPU endpoint.
+Runtime credentials come from Secret {{ .Values.existingSecret | quote }}; settings from
+ConfigMap {{ include "repody.fullname" . }}-config. Inference runs outside this chart:
+AUDIT_LLAMACPP_BASE_URL = {{ index .Values.config "AUDIT_LLAMACPP_BASE_URL" }}

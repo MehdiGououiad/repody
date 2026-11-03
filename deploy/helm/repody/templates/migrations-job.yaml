@@ -1,4 +1,5 @@
 {{- if .Values.migrations.enabled }}
+{{- $ctx := dict "root" . "component" "migrations" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -9,36 +10,35 @@ metadata:
   annotations:
     helm.sh/hook: pre-install,pre-upgrade
     helm.sh/hook-weight: "-5"
-    helm.sh/hook-delete-policy: {{ .Values.migrations.hookDeletePolicy | quote }}
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
 spec:
   backoffLimit: {{ .Values.migrations.backoffLimit }}
   template:
     metadata:
       labels:
-        {{- include "repody.selectorLabels" . | nindent 8 }}
-        app.kubernetes.io/component: migrations
+        {{- include "repody.selectorLabels" $ctx | nindent 8 }}
     spec:
       restartPolicy: OnFailure
       automountServiceAccountToken: false
       securityContext:
-        {{- include "repody.podSecurityContext" . | nindent 8 }}
-      {{- include "repody.imagePullSecrets" . | nindent 6 }}
-      {{- $waitPostgres := include "repody.waitPostgresInit" . | trim }}
-      {{- if $waitPostgres }}
-      initContainers:
-        {{- include "repody.waitPostgresInit" . | nindent 8 }}
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
       {{- end }}
       containers:
         - name: migrations
-          image: {{ include "repody.backendImage" . | quote }}
-          imagePullPolicy: {{ include "repody.backendImagePullPolicy" . }}
-          command:
-            - python
-            - /app/scripts/bootstrap_migrations.py
+          image: {{ include "repody.image" (dict "image" .Values.images.backend "root" .) | quote }}
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
+          command: [python, /app/scripts/bootstrap_migrations.py]
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
-          env:
-            {{- include "repody.dataPlaneEnv" . | nindent 12 }}
+          # A pre-install hook runs before the chart's ConfigMap exists: only the Secret is used.
+          envFrom:
+            - secretRef:
+                name: {{ required "existingSecret is required" .Values.existingSecret }}
           resources:
             {{- toYaml .Values.api.resources | nindent 12 }}
 {{- end }}

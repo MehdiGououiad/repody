@@ -1,135 +1,67 @@
-# Production overrides. Keep this file secret-free for GitOps.
-# For Argo CD, commit a real values-production.yaml derived from this file,
-# and provide the referenced Kubernetes Secret via External Secrets, Sealed
-# Secrets, SOPS, or a manual bootstrap outside Git.
-
-global:
-  deploymentEnvironment: production
-  # Required when GHCR packages are private. Public GHCR packages can be pulled
-  # anonymously, but private enterprise installs should use an imagePullSecret.
-  imagePullSecrets:
-    - name: ghcr-pull-secret
+# Production overlay: copy, fill in, and pass with `-f`. Chart defaults live in values.yaml.
+#
+#   helm upgrade --install repody deploy/helm/repody -n repody -f values-production.yaml
+#
+# The Secret named by existingSecret must exist first (External Secrets / Vault / SOPS) with:
+#   AUDIT_DATABASE_URL       postgresql+asyncpg://repody:…@postgres-rw.db.svc:5432/repody
+#   AUDIT_REDIS_URL          redis://…@redis.cache.svc:6379/0
+#   AUDIT_MINIO_ACCESS_KEY   AUDIT_MINIO_SECRET_KEY
+#   AUTH_SECRET              (openssl rand -base64 32)
+#   AUTH_KEYCLOAK_CLIENT_SECRET
+#   AUDIT_LLAMACPP_API_KEY   (optional, when the inference endpoint needs a bearer token)
+#   BUGSINK_DSN              (optional)
 
 images:
   backend:
-    repository: ghcr.io/YOUR_ORG/repody-backend
-    tag: "0.1.0"
-    # Optional: pin digest from dist/release/<tag>/helm-images.yaml
-    digest: ""
-    pullPolicy: IfNotPresent
-  api:
-    repository: ghcr.io/YOUR_ORG/repody-backend
-    tag: "0.1.0"
-    digest: ""
-    pullPolicy: IfNotPresent
-  worker:
-    repository: ghcr.io/YOUR_ORG/repody-backend
-    tag: "0.1.0"
-    digest: ""
-    pullPolicy: IfNotPresent
+    repository: registry.example.com/repody/repody-backend
+    tag: "1.0.0"
+    digest: ""          # sha256:… from `pnpm images:release`
   web:
-    repository: ghcr.io/YOUR_ORG/repody-web
-    tag: "0.1.0"
+    repository: registry.example.com/repody/repody-web
+    tag: "1.0.0"
     digest: ""
-    pullPolicy: IfNotPresent
 
-postgresql:
-  enabled: false
-  auth:
-    password: ""
+imagePullSecrets:
+  - name: registry-pull
 
-externalDatabase:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  urlKey: AUDIT_DATABASE_URL
+existingSecret: repody-runtime-secrets
 
-redis:
-  enabled: false
+config:
+  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_OIDC_ENABLED: "true"
+  AUDIT_OIDC_ISSUER: https://auth.example.com/realms/repody
+  AUDIT_OIDC_AUDIENCE: repody-api
+  AUDIT_MINIO_ENDPOINT: minio.storage.svc:9000
+  AUDIT_MINIO_BUCKET: audit-documents
+  AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
+  AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
+  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
+  AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "180"
+  AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "3"
+  AUDIT_CORS_ORIGINS: '["https://app.example.com"]'
+  AUDIT_RATE_LIMIT_FAIL_CLOSED: "true"
+  AUDIT_LOG_JSON: "true"
+  # AUDIT_OTEL_ENABLED: "true"
+  # AUDIT_OTEL_EXPORTER_ENDPOINT: http://otel-collector.observability.svc:4318/v1/traces
 
-externalRedis:
-  enabled: true
-  existingSecret: repody-runtime-secrets
-  urlKey: AUDIT_REDIS_URL
-
-minio:
-  enabled: false
-  auth:
-    rootPassword: ""
-
-externalObjectStorage:
-  enabled: true
-  endpoint: s3.yourdomain.com
-  bucket: audit-documents
-  existingSecret: repody-runtime-secrets
-  accessKeyKey: AUDIT_MINIO_ACCESS_KEY
-  secretKeyKey: AUDIT_MINIO_SECRET_KEY
-  secure: true
-  publicEndpoint: files.yourdomain.com
+web:
+  keycloakClientId: repody-web
+  # Set when pods cannot reach the public issuer (split-horizon DNS, private Keycloak).
+  internalIssuer: ""
 
 ingress:
-  enabled: true
-  className: nginx
-  host: app.yourdomain.com
-  # Only routed by this chart when bundled minio.enabled=true.
-  # With externalObjectStorage.enabled=true, point DNS/publicEndpoint at the
-  # client object-storage service instead.
-  filesHost: files.yourdomain.com
+  className: nginx          # or openshift-default
+  host: app.example.com
+  apiHost: api.example.com
+  filesHost: files.example.com
+  filesService:
+    name: minio             # the S3/MinIO Service in this namespace
+    port: 9000
   tls:
     enabled: true
     secretName: repody-tls
 
-secrets:
-  create: false
-  existingSecret: repody-runtime-secrets
-  # Put AUDIT_LLAMACPP_API_KEY in this Secret when the external vLLM endpoint requires auth.
-
-config:
-  oidcIssuer: https://auth.yourdomain.com/realms/repody
-  oidcAudience: repody-api
-  keycloakClientId: repody-web
-  corsOrigins: '["https://app.yourdomain.com"]'
-  # External OpenAI-compatible endpoint: vLLM, llama-server, or managed GPU service.
-  llamacppBaseUrl: https://vlm.yourdomain.com/v1
-  # Must match the client's llama-server model id (official local: nuextract3-q4_k_m).
-  llamacppServedModel: nuextract3-q4_k_m
-  workerTaskTimeoutMinutes: 3
-  staleRunTimeoutMinutes: 5
-  queuedStaleTimeoutMinutes: 60
-  dbPoolSize: 20
-  dbMaxOverflow: 20
-  redisMaxConnections: 64
-
-observability:
-  existingSecret: repody-runtime-secrets
-  bugsinkDsnKey: BUGSINK_DSN
-  bugsinkDsn: ""  # Optional fallback; prefer observability.existingSecret.
-  otelEnabled: true
-  otelEndpoint: http://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
-
-migrations:
+networkPolicy:
   enabled: true
-
-workerExtract:
-  replicas: 2
-  warmupOnStart: false
-  resources:
-    requests:
-      cpu: 250m
-      memory: 768Mi
-    limits:
-      memory: 2Gi
-  autoscaling:
-    enabled: true
-    maxReplicas: 15
-
-workerFast:
-  replicas: 2
-  resources:
-    requests:
-      cpu: 100m
-      memory: 256Mi
-    limits:
-      memory: 1Gi
-  autoscaling:
-    enabled: true
-    maxReplicas: 10
+  egressCidrs:
+    - 10.0.0.0/8            # database, Redis, S3, Keycloak, inference

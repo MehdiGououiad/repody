@@ -1,15 +1,6 @@
-# Apply in the client's Argo CD (namespace argocd).
-#
-# Prerequisites:
-#   1. Client GitOps repo contains:
-#        values.yaml - from values-external.example.yaml or values-bundled.example.yaml
-#        enterprise.yaml - from values-enterprise.example.yaml
-#        images.yaml - optional digests from vendor helm-images.yaml
-#   2. ExternalSecrets created repody-runtime-secrets + registry-pull-secret
-#   3. Replace CHANGE_ME_* below
-#   4. Same Application on OpenShift and generic Kubernetes (Ingress only)
-#
-# Multi-source: chart from vendor release tag, values from client private repo.
+# Argo CD Application (namespace argocd): chart from the vendor release tag, values from the
+# client's private GitOps repo. Prerequisites: repody-runtime-secrets and the registry pull
+# secret exist (External Secrets), and CHANGE_ME_* below are replaced.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -26,10 +17,8 @@ spec:
       helm:
         releaseName: repody
         valueFiles:
-          - values-common.yaml
-          - $values/values.yaml
-          - $values/enterprise.yaml
-          # Optional: - $values/images.yaml
+          - $values/values.yaml        # from values-production.yaml.example
+          # - $values/helm-images.yaml # optional digest pins from the release
     - repoURL: CHANGE_ME_CLIENT_GITOPS_REPO_URL
       targetRevision: CHANGE_ME_CLIENT_GITOPS_BRANCH
       ref: values

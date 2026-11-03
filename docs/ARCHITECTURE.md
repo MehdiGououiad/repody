@@ -322,13 +322,13 @@ Deux modes de livraison : dépôt Git complet (`pnpm platform`) ou **kit runtime
 | Orchestration | Kubernetes ou OpenShift, namespace `repody`. |
 | Exposition | `networking.k8s.io/Ingress` uniquement - **aucune ressource `Route` propre à OpenShift** dans le chart. |
 | Sécurité des pods | `runAsNonRoot`, sans UID figé : compatible PSA *restricted* et *restricted-v2*. |
-| Chartes Helm | `repody` (applicatif), `repody-data` (données embarquées), `repody-auth` (Keycloak de laboratoire). |
-| Fusion des valeurs | `values.yaml` -> `values-common.yaml` -> valeurs client -> surcouche entreprise. |
+| Charte Helm | Une seule : `repody` (API, web, workers, migrations, Ingress). PostgreSQL, Redis, S3, Keycloak et l'inférence sont des services externes. |
+| Valeurs | `values.yaml` + valeurs client (à partir de `values-production.yaml.example`) ; `config` = variables `AUDIT_*` rendues telles quelles dans la ConfigMap. |
 | Secrets | Vault -> External Secrets Operator -> Secrets Kubernetes (`repody-runtime-secrets`, `registry-pull-secret`). |
 | Images | Registre client (GHCR, Harbor…), tags immuables, empreintes épinglables. |
 | Réseau | NetworkPolicy et egress restent à la charge de la plateforme cliente. |
 
-Deux profils de données : **embarqué** (chart `repody-data`) ou **externe** (Postgres, Redis, S3 managés). Procédure complète : [CLUSTER.md](./CLUSTER.md).
+Les données sont toujours **externes** (Postgres, Redis, S3 managés ou via opérateurs, p. ex. CloudNativePG). Procédure complète : [CLUSTER.md](./CLUSTER.md).
 
 ### 4.4 Configuration
 
@@ -380,7 +380,7 @@ Build & push images ──► SBOM / signature (option) ──► Remise au clie
 Vault/ESO ──► Secrets ──► helm upgrade --install ──► Vérifications de mise en service
 ```
 
-Commandes : `pnpm images:release`, `pnpm client:check`, `pnpm deploy:check`. Le client ne reçoit **jamais** le code source applicatif.
+Commandes : `pnpm images:release`, `pnpm deploy:check`. Le client ne reçoit **jamais** le code source applicatif.
 
 ---
 

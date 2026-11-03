@@ -119,8 +119,7 @@ During day-to-day work, run the smallest command that covers the change:
 | Frontend code | `pnpm lint` and `pnpm typecheck` |
 | Unused files, exports or dependencies | `pnpm deadcode` |
 | API contract changes | `pnpm codegen:api` then `pnpm typecheck` |
-| Helm or client packaging | `pnpm helm:lint`, `pnpm helm:template`, `pnpm client:check` |
-| Production readiness | `pnpm prod:readiness` |
+| Helm or client packaging | `pnpm deploy:check` |
 
 ## Documentation Rules
 
