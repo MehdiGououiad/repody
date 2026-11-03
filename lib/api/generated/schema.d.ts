@@ -536,23 +536,16 @@ export interface components {
             id: string;
             /** Label */
             label: string;
-            /** Kind */
-            kind: string;
-            /**
-             * Engine
-             * @default
-             */
-            engine: string;
-            /**
-             * Runtime
-             * @default
-             */
-            runtime: string;
             /**
              * Description
              * @default
              */
             description: string;
+            /**
+             * Servedmodel
+             * @default
+             */
+            servedModel: string;
             /**
              * Available
              * @default true
@@ -560,16 +553,6 @@ export interface components {
             available: boolean;
             /** Availabilitynote */
             availabilityNote: string | null;
-            /**
-             * Isdefault
-             * @default false
-             */
-            isDefault: boolean;
-            /**
-             * Markdownonly
-             * @default false
-             */
-            markdownOnly: boolean;
         };
         /** ConfirmUploadItem */
         ConfirmUploadItem: {
@@ -642,23 +625,6 @@ export interface components {
              * @default
              */
             documentType: string;
-            /**
-             * Extractionmode
-             * @description Read path id from GET /processing-paths (document_model).
-             * @default document_model
-             */
-            extractionMode: string;
-            /**
-             * Validationmode
-             * @description logic_only
-             * @default logic_only
-             */
-            validationMode: string;
-            /**
-             * Documentmodelid
-             * @default repody:vlm
-             */
-            documentModelId: string | null;
             /** Schema */
             schema?: components["schemas"]["SchemaFieldSchema-Input"][];
             /**
@@ -672,12 +638,6 @@ export interface components {
              * @default false
              */
             markdownExtraction: boolean;
-            /**
-             * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
-             * @default false
-             */
-            nativePdfAuto: boolean;
             /**
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).
@@ -693,23 +653,6 @@ export interface components {
              * @default
              */
             documentType: string;
-            /**
-             * Extractionmode
-             * @description Read path id from GET /processing-paths (document_model).
-             * @default document_model
-             */
-            extractionMode: string;
-            /**
-             * Validationmode
-             * @description logic_only
-             * @default logic_only
-             */
-            validationMode: string;
-            /**
-             * Documentmodelid
-             * @default repody:vlm
-             */
-            documentModelId: string | null;
             /** Schema */
             schema: components["schemas"]["SchemaFieldSchema-Output"][];
             /**
@@ -724,27 +667,10 @@ export interface components {
              */
             markdownExtraction: boolean;
             /**
-             * Nativepdfauto
-             * @description When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.
-             * @default false
-             */
-            nativePdfAuto: boolean;
-            /**
              * Extractioniclexamples
              * @description NuExtract in-context extraction examples (developer message pairs).
              */
             extractionIclExamples: components["schemas"]["ExtractionIclExampleSchema-Output"][];
-        };
-        /** DocumentModelSummary */
-        DocumentModelSummary: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Runtime */
-            runtime: string;
-            /** Runtimemodel */
-            runtimeModel: string;
         };
         /** DryRunBody */
         DryRunBody: {
@@ -897,14 +823,8 @@ export interface components {
             status: "ok" | "degraded";
             /** Redisok */
             redisOk: boolean;
-            /** Extractor */
-            extractor: string;
-            /** Inference */
-            inference: string;
             /** Llamacpp */
             llamacpp: boolean | null;
-            /** Storagebackend */
-            storageBackend: string;
             /** Directuploadenabled */
             directUploadEnabled: boolean;
             /** Cacheenabled */
@@ -974,24 +894,6 @@ export interface components {
         ModelsCatalogResponse: {
             /** Models */
             models: components["schemas"]["CatalogModelEntry"][];
-            /** Defaultdocumentmodel */
-            defaultDocumentModel: string;
-            /** Inferencemode */
-            inferenceMode: string;
-            /** Paths */
-            paths: components["schemas"]["ReadPathOption"][];
-            /** Validationmodes */
-            validationModes: components["schemas"]["ValidationModeOption"][];
-            /**
-             * Defaultpath
-             * @default document_model
-             */
-            defaultPath: string;
-            /**
-             * Defaultvalidationmode
-             * @default logic_only
-             */
-            defaultValidationMode: string;
         };
         /** PerformancePoint */
         PerformancePoint: {
@@ -1006,12 +908,6 @@ export interface components {
         PlatformConfigResponse: {
             /** Appname */
             appName: string;
-            /** Extractor */
-            extractor: string;
-            /** Inferencemode */
-            inferenceMode: string;
-            /** Storagebackend */
-            storageBackend: string;
             /** Queuebackend */
             queueBackend: string;
             /** Directuploadenabled */
@@ -1020,12 +916,8 @@ export interface components {
             cacheEnabled: boolean;
             /** Ratelimitenabled */
             rateLimitEnabled: boolean;
-            /** Defaultdocumentmodelid */
-            defaultDocumentModelId: string;
-            /** Defaultreadpath */
-            defaultReadPath: string;
-            /** Documentmodels */
-            documentModels: components["schemas"]["DocumentModelSummary"][];
+            /** Servedmodel */
+            servedModel: string;
             /** Nuextractmaxpagesperrequest */
             nuextractMaxPagesPerRequest: number | null;
             /** Llamacppbaseurl */
@@ -1117,19 +1009,6 @@ export interface components {
             runningRuns: number;
             /** Inflightruns */
             inflightRuns: number;
-        };
-        /** ReadPathOption */
-        ReadPathOption: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Description */
-            description: string;
-            /** Readkind */
-            readKind: string;
-            /** Showdocumentmodel */
-            showDocumentModel: boolean;
         };
         /** RuleLibraryResponse */
         RuleLibraryResponse: {
@@ -1246,18 +1125,6 @@ export interface components {
              * @default 0
              */
             validationMs: number;
-            /**
-             * Validationmode
-             * @default logic_only
-             */
-            validationMode: string;
-            /**
-             * Validationlabel
-             * @default
-             */
-            validationLabel: string;
-            /** Llmmodel */
-            llmModel: string | null;
         };
         /** RunAuditRule */
         RunAuditRule: {
@@ -1310,18 +1177,6 @@ export interface components {
         };
         /** RunDocumentExtractionMeta */
         RunDocumentExtractionMeta: {
-            /** Readpathconfig */
-            readPathConfig: string;
-            /** Readpathused */
-            readPathUsed: string;
-            /** Readpathlabel */
-            readPathLabel: string;
-            /** Validationmode */
-            validationMode: string;
-            /** Validationlabel */
-            validationLabel: string;
-            /** Documentmodelid */
-            documentModelId: string | null;
             /**
              * Extractionms
              * @default 0
@@ -1357,10 +1212,6 @@ export interface components {
             pagesSent: number | null;
             /** Pagesdropped */
             pagesDropped: number | null;
-            /** Nativepdf */
-            nativePdf: {
-                [key: string]: unknown;
-            } | null;
         };
         /** RunPollResponse */
         RunPollResponse: {
@@ -1398,12 +1249,6 @@ export interface components {
             kind: string | null;
             /** Detail */
             detail: string | null;
-            /** Readpath */
-            readPath: string | null;
-            /** Validationmode */
-            validationMode: string | null;
-            /** Documentmodelid */
-            documentModelId: string | null;
             /** Durationms */
             durationMs: number | null;
             /**
@@ -1515,8 +1360,6 @@ export interface components {
         };
         /** UploadCapabilitiesResponse */
         UploadCapabilitiesResponse: {
-            /** Storagebackend */
-            storageBackend: string;
             /** Directuploadenabled */
             directUploadEnabled: boolean;
             /** Uploadmode */
@@ -1568,15 +1411,6 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
-        };
-        /** ValidationModeOption */
-        ValidationModeOption: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Description */
-            description: string;
         };
         /** ViolationBreakdown */
         ViolationBreakdown: {

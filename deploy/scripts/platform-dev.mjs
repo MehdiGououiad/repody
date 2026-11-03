@@ -109,7 +109,6 @@ function copyEnvFiles() {
 function patchBackendEnv() {
   const llamaEnv = parseEnvFile(LLAMA_PATHS);
   setEnvKeys(BACKEND_ENV, {
-    AUDIT_REPODY_VLM_ENABLED: opts.withNuextract ? "true" : "false",
     AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
     AUDIT_LLAMACPP_SERVED_MODEL:
       (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||

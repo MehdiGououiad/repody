@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from repody.app.run.helpers import rule_dict_from_row, rules_payload
-from repody.extraction.modes import DEFAULT_READ_PATH_ID, normalize_document_modes
 from repody.extraction.schema import field_config_from_parts
 from repody.infra.db.models import Document, Run, Workflow
 from repody.util.json_shape import normalize_keys_to_snake
@@ -28,12 +27,8 @@ class SnapshotDocument:
     id: str
     document_type: str
     position: int
-    extraction_mode: str
-    validation_mode: str
-    document_model_id: str | None
     extraction_instructions: str = ""
     markdown_extraction: bool = False
-    native_pdf_auto: bool = False
     extraction_icl_examples: list[dict] | None = None
     schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
 
@@ -88,20 +83,12 @@ def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
 
 
 def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
-    read_id, val_id = normalize_document_modes(
-        doc.get("extraction_mode"),
-        doc.get("validation_mode"),
-    )
     return SnapshotDocument(
         id=str(doc.get("id") or f"doc-{position}"),
         document_type=str(doc.get("document_type") or ""),
         position=position,
-        extraction_mode=read_id,
-        validation_mode=val_id,
-        document_model_id=doc.get("document_model_id"),
         extraction_instructions=str(doc.get("extraction_instructions") or ""),
         markdown_extraction=bool(doc.get("markdown_extraction") or False),
-        native_pdf_auto=bool(doc.get("native_pdf_auto") or False),
         extraction_icl_examples=list(doc.get("extraction_icl_examples") or []),
         schema_fields=_schema_fields_from_snapshot(doc),
     )
@@ -112,13 +99,9 @@ def _document_from_orm(doc: Document) -> SnapshotDocument:
         id=doc.id,
         document_type=doc.document_type,
         position=doc.position,
-        extraction_mode=doc.extraction_mode or DEFAULT_READ_PATH_ID,
-        validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
-        document_model_id=doc.document_model_id,
-        extraction_instructions=getattr(doc, "extraction_instructions", None) or "",
-        markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
-        native_pdf_auto=bool(getattr(doc, "native_pdf_auto", False)),
-        extraction_icl_examples=list(getattr(doc, "extraction_icl_examples", None) or []),
+        extraction_instructions=doc.extraction_instructions or "",
+        markdown_extraction=doc.markdown_extraction,
+        extraction_icl_examples=list(doc.extraction_icl_examples or []),
         schema_fields=[
             SnapshotSchemaField(
                 id=f.id,

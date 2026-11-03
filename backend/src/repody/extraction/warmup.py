@@ -10,7 +10,6 @@ from pathlib import Path
 
 import structlog
 
-from repody.catalog.registry import parse_document_model
 from repody.extraction.nuextract import structured_chat_payload
 from repody.extraction.render import (
     encode_pages_as_image_urls,
@@ -89,8 +88,6 @@ async def warmup_repody_vlm() -> str:
     settings = get_settings()
     if not settings.repody_vlm_warmup_on_start:
         return "disabled"
-    if not settings.repody_vlm_enabled:
-        return "skipped"
 
     bundle, document_label = _warmup_bundle(settings)
     if bundle is None:
@@ -101,7 +98,6 @@ async def warmup_repody_vlm() -> str:
         )
         return "skipped"
 
-    spec = parse_document_model(None)
     base_url = llamacpp_base_url(settings)
     pages, pages_rendered = prepare_nuextract_pages(
         bundle,
@@ -112,7 +108,7 @@ async def warmup_repody_vlm() -> str:
 
     try:
         payload = structured_chat_payload(
-            model=spec.runtime_model,
+            model=settings.llamacpp_served_model,
             content=content,
             schema=list(_WARMUP_SCHEMA),
             extraction_instructions="",
@@ -127,8 +123,7 @@ async def warmup_repody_vlm() -> str:
         log.info(
             "repody_vlm_warmup_done",
             profile="generic",
-            runtime=spec.runtime,
-            model=spec.runtime_model,
+            model=settings.llamacpp_served_model,
             document=document_label,
             pages=len(pages),
             pages_rendered=pages_rendered,
@@ -141,7 +136,6 @@ async def warmup_repody_vlm() -> str:
     except Exception as exc:
         log.warning(
             "repody_vlm_warmup_failed",
-            runtime=spec.runtime,
             document=document_label,
             error=repr(exc),
         )

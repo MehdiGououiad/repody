@@ -16,7 +16,6 @@ def resolve_facture_pdf() -> Path:
         return Path(env)
     candidates = [
         repo_root() / "e2e" / "fixtures" / "documents" / "Facture.pdf",
-        Path("/app/e2e/fixtures/documents/Facture.pdf"),
     ]
     for path in candidates:
         resolved = path.resolve()

@@ -63,7 +63,6 @@ class ConfirmUploadResponse(CamelModel):
 
 
 class UploadCapabilitiesResponse(CamelModel):
-    storage_backend: str
     direct_upload_enabled: bool
     upload_mode: str
     max_upload_bytes: int

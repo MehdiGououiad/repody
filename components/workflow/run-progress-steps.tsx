@@ -14,7 +14,6 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import type { RunProgress } from "@/lib/api/workflow-run";
-import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
 import { cn, formatDurationMs } from "@/lib/utils";
 
 const GPU_COLD_START_ESCALATE_MS = 12_000;
@@ -35,21 +34,6 @@ function modeBadge(step: RunProgress["steps"][number]) {
       <span className="inline-flex items-center gap-1 rounded bg-accent-blue/10 px-1.5 py-0.5 text-[10px] font-medium text-accent-blue">
         <Brain className="h-3 w-3" />
         Document model
-      </span>
-    );
-  }
-  if (step.mode === "schema") {
-    return (
-      <span className="rounded bg-surface-container px-1.5 py-0.5 text-[10px] text-on-surface-variant">
-        Schema only
-      </span>
-    );
-  }
-  if (step.kind === "llm") {
-    return (
-      <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-        <Brain className="h-3 w-3" />
-        LLM rule
       </span>
     );
   }
@@ -109,8 +93,6 @@ export function RunProgressSteps({
   className?: string;
 }) {
   const t = useTranslations("runProgress");
-  const platform = usePlatformConfig();
-  const inferenceMode = platform.data?.inferenceMode?.toLowerCase();
   const doneCount = progress.steps.filter((s) => s.status === "done").length;
   const total = progress.steps.length;
   const activeStep = progress.steps.find((s) => s.status === "active");
@@ -120,16 +102,10 @@ export function RunProgressSteps({
   const isQueued =
     queueStep != null && (queueStep.status === "active" || queueStep.status === "pending");
 
-  const serverlessGpu = inferenceMode === "llamacpp";
+  // The worker flags gpuColdStartHint only when the llama-server endpoint is remote (serverless).
   const extractStepActive = activeStep?.mode === "document_model" && activeStep.status === "active";
-  const coldStartContext =
-    serverlessGpu &&
-    extractStepActive &&
-    !activeStep?.cacheHit &&
-    (activeStep.gpuColdStartHint === true || elapsedMs >= GPU_COLD_START_ESCALATE_MS);
   const showColdStartBanner =
-    coldStartContext &&
-    (activeStep?.gpuColdStartHint === true || elapsedMs >= GPU_COLD_START_ESCALATE_MS);
+    extractStepActive && activeStep?.gpuColdStartHint === true && !activeStep.cacheHit;
 
   return (
     <div className={cn("space-y-3", className)}>
@@ -144,9 +120,7 @@ export function RunProgressSteps({
               : t("queueWaiting")}
           </p>
           <p className="text-on-surface-variant mt-1 leading-snug">
-            {queueStep?.detail ??
-              activeStep?.detail ??
-              (serverlessGpu ? t("queueServerless") : t("queueOrdered"))}
+            {queueStep?.detail ?? activeStep?.detail ?? t("queueOrdered")}
           </p>
         </div>
       ) : null}

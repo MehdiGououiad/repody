@@ -6,7 +6,6 @@ import pytest
 
 from repody.app.uploads.intents import _check_owner
 from repody.app.uploads.validation import UploadValidationError, validate_upload_file
-from repody.extraction.modes import parse_read_path
 from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
 from repody.infra.storage.mime import JPEG, resolve_mime, sanitize_filename, sniff_mime
 from repody.rules.rule_syntax import validate_logic_rule_body
@@ -34,11 +33,6 @@ def test_check_owner_allows_matching_and_unowned():
     assert _check_owner(SimpleNamespace(owner_subject="user-a"), "user-a") is None
     assert _check_owner(SimpleNamespace(owner_subject=None), None) is None
     assert _check_owner(SimpleNamespace(owner_subject=None), "user-a") is None
-
-
-def test_default_read_path_is_document_model():
-    assert parse_read_path(None).id == "document_model"
-    assert parse_read_path(None).read == "document_model"
 
 
 def test_sniff_pdf_and_resolve_mime():

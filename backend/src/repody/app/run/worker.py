@@ -16,9 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from repody.app.audit.mappers import duration_ms_between
-from repody.app.run.helpers import extract_label, meta_to_dict, resolve_upload_mime
+from repody.app.run.helpers import meta_to_dict, resolve_upload_mime
 from repody.app.run.progress import (
     build_run_progress_plan,
+    completed_extraction_detail,
+    document_wants_extraction,
     mark_step_done,
     progress_snapshot,
     set_run_progress,
@@ -26,17 +28,10 @@ from repody.app.run.progress import (
 )
 from repody.app.run.snapshot import SnapshotDocument, materialize_run_config
 from repody.app.run.state import PUBLIC_RUN_FAILURE_MESSAGE, claim_run, complete_run, fail_run
-from repody.extraction.modes import (
-    LOGIC_VALIDATION,
-    completed_extraction_detail,
-    extraction_is_needed,
-    is_serverless_inference,
-    read_path_label,
-    validation_mode_label,
-)
 from repody.extraction.pipeline import extract_document
 from repody.extraction.schema import icl_examples_from_document, schema_field_spec_from_row
 from repody.extraction.types import ExtractionMetadata, ExtractionResult
+from repody.inference.runtime import is_serverless_inference
 from repody.infra.db import base as db_base
 from repody.infra.db.models import (
     Document,
@@ -142,13 +137,12 @@ class _Progress:
 
     async def extract_start(self, doc: SnapshotDocument, index: int, total: int) -> None:
         step_id = f"extract-{doc.id}"
-        detail = read_path_label(doc.extraction_mode)
+        label = f"Extracting {_label(doc)}…"
         if is_serverless_inference():
-            detail = f"{detail} · {_GPU_COLD_START_DETAIL}"
+            label = f"{label} ({_GPU_COLD_START_DETAIL})"
             for step in self.steps:
                 if step.get("id") == step_id:
                     step["gpuColdStartHint"] = True
-        label = extract_label(_label(doc), mode="document_model", detail=detail)
         # Push the first and last document eagerly; the rest ride the throttle.
         await self.show(step_id, label, force=index in (0, total - 1))
 
@@ -161,7 +155,7 @@ class _Progress:
             detail=completed_extraction_detail(meta),
             cache_hit=meta.cache_hit,
         )
-        await self.show(step_id, extract_label(_label(doc), mode="document_model"))
+        await self.show(step_id, f"Extracted {_label(doc)}")
 
     async def rule_start(self, rule: dict) -> None:
         step_id = f"rule-{rule.get('id') or 'rule'}"
@@ -189,14 +183,6 @@ def _label(doc: SnapshotDocument) -> str:
     return doc.document_type or doc.id
 
 
-def _wants_extraction(doc: SnapshotDocument) -> bool:
-    return extraction_is_needed(
-        has_file=True,
-        has_schema_fields=any(f.name.strip() for f in doc.schema_fields),
-        markdown_extraction=bool(doc.markdown_extraction),
-    )
-
-
 async def _extract(doc: SnapshotDocument, run_doc: RunDocument) -> ExtractionResult:
     blob = await get_storage().get_bytes(run_doc.storage_key or "")
     schema = [
@@ -214,8 +200,6 @@ async def _extract(doc: SnapshotDocument, run_doc: RunDocument) -> ExtractionRes
         resolve_upload_mime(run_doc.mime_type, blob),
         _label(doc),
         schema,
-        storage_key=run_doc.storage_key,
-        file_size=len(blob),
         extraction_instructions=doc.extraction_instructions or "",
         markdown_extraction=bool(doc.markdown_extraction),
         extraction_icl_examples=icl_examples_from_document(doc) or None,
@@ -276,7 +260,9 @@ async def _execute(session: AsyncSession, run_id: str) -> None:
     progress = _Progress(run_id, steps)
     await progress.show(None, "Starting audit run…")
 
-    jobs = [doc for doc in config.documents if doc.id in run_docs and _wants_extraction(doc)]
+    jobs = [
+        doc for doc in config.documents if doc.id in run_docs and document_wants_extraction(doc)
+    ]
     rows: list[tuple[str, str, str | None]] = []
     fields_extracted = 0
     extraction_ms = 0
@@ -306,9 +292,7 @@ async def _execute(session: AsyncSession, run_id: str) -> None:
         first_rule = next(
             (s["id"] for s in steps if str(s.get("id", "")).startswith("rule-")), None
         )
-        await progress.show(
-            first_rule, f"Validating rules ({validation_mode_label(LOGIC_VALIDATION)})…"
-        )
+        await progress.show(first_rule, "Validating rules…")
     results = await validate_field_rows(
         rows,
         config.rules,
@@ -371,8 +355,6 @@ async def _execute(session: AsyncSession, run_id: str) -> None:
             "durationMs": duration_ms_between(started_at, finished_at),
             "extractionMs": extraction_ms,
             "validationMs": validation_ms,
-            "validationMode": LOGIC_VALIDATION,
-            "validationLabel": validation_mode_label(LOGIC_VALIDATION),
         },
         progress=progress.final(),
     )

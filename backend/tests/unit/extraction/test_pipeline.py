@@ -25,7 +25,7 @@ def mock_document_model(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "repody.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_repody_vlm",
         AsyncMock(side_effect=fake_extract),
     )
     monkeypatch.setattr(
@@ -48,8 +48,6 @@ async def test_document_model_path_returns_fields(mock_document_model):
         "application/pdf",
         "Invoice",
         schema,
-        extraction_mode="document_model",
-        document_model_id="repody:vlm",
     )
     assert result.raw_text is not None
     assert any(f.key == "total_amount" and f.value == "6000.00" for f in result.fields)
@@ -66,7 +64,7 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         )
 
     monkeypatch.setattr(
-        "repody.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_repody_vlm",
         AsyncMock(side_effect=fake_extract),
     )
     monkeypatch.setattr(
@@ -83,8 +81,6 @@ async def test_markdown_extraction_runs_without_schema_fields(monkeypatch):
         "application/pdf",
         "Document",
         [],
-        extraction_mode="document_model",
-        document_model_id="repody:vlm",
         markdown_extraction=True,
     )
     assert result.markdown_text == "## Page 1\n\nHello"

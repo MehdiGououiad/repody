@@ -21,13 +21,8 @@ data:
   AUDIT_OTEL_EXPORTER_ENDPOINT: {{ .Values.observability.otelEndpoint | quote }}
   {{- end }}
   AUDIT_DIRECT_UPLOAD_ENABLED: {{ .Values.config.directUploadEnabled | quote }}
-  AUDIT_STORAGE_BACKEND: s3
-  AUDIT_INFERENCE_MODE: {{ .Values.config.inferenceMode | quote }}
-  AUDIT_EXTRACTOR: {{ .Values.config.extractor | quote }}
   AUDIT_LLAMACPP_BASE_URL: {{ .Values.config.llamacppBaseUrl | quote }}
   AUDIT_LLAMACPP_SERVED_MODEL: {{ .Values.config.llamacppServedModel | quote }}
-  AUDIT_DEFAULT_DOCUMENT_MODEL_ID: {{ .Values.config.defaultDocumentModelId | quote }}
-  AUDIT_REPODY_VLM_ENABLED: {{ .Values.config.repodyVlmEnabled | quote }}
   AUDIT_REPODY_VLM_TIMEOUT_SECONDS: {{ .Values.config.repodyVlmTimeoutSeconds | quote }}
   AUDIT_WORKER_TASK_TIMEOUT_MINUTES: {{ .Values.config.workerTaskTimeoutMinutes | quote }}
   AUDIT_STALE_RUN_TIMEOUT_MINUTES: {{ .Values.config.staleRunTimeoutMinutes | quote }}

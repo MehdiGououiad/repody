@@ -18,16 +18,10 @@ Used by containers, CI, and daily development. Paths are stable (`/app/scripts/.
 | `generate_facture_fixture.py` | E2E Facture PDF |
 | `generate_bank_statement_fixture.py` | Fictional two-page bank statement PDF for list and object-array extraction tests |
 
-## Perf / load (same folder - image + kubectl copy paths)
+## Load testing
 
-| Script | Purpose |
-|--------|---------|
-| `load_test_platform.py` | Control-plane + JSON enqueue mix |
-| `profile_platform_scale.py` | SQL/EXPLAIN + live enqueue profile |
-| `locust_api_load.py` | Locust HTTP mix |
-| `benchmark_suite.py` | Operator API benchmarks (also in image) |
-| `benchmark_dev_stress.py` | Dev queue stress |
-| `benchmark_ui_route.py` | Shared helpers for stress |
-| `prod_stress_test.py` | Prod-scale extraction stress (`pnpm stress:prod`) |
+`locust_api_load.py` is a [Locust](https://docs.locust.io/) file for the HTTP API:
 
-Do not move these under a subfolder without updating `Dockerfile`, operator `benchmarks.py`, and `scripts/prod-stress.mjs` pod copy paths.
+```bash
+uv run --directory backend --extra dev locust -f scripts/locust_api_load.py --host http://127.0.0.1:8000
+```

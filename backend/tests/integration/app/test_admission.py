@@ -7,7 +7,6 @@ import pytest
 from repody.app.queue.position import apply_queue_meta, queue_position
 from repody.app.run.admission import (
     check_admission,
-    count_extract_inflight,
     count_queued,
     count_running,
 )
@@ -93,41 +92,6 @@ async def test_count_running_excludes_queued(admission_session):
     await session.flush()
     assert await count_running(session) == 1
     assert await count_queued(session) == 1
-
-
-@pytest.mark.asyncio
-async def test_count_extract_inflight_uses_worker_pool_column(admission_session):
-    from repody.infra.db.models import RunDocument
-
-    session, workflow_id = admission_session
-    session.add(
-        Run(
-            id="AUD-OCR-1",
-            workflow_id=workflow_id,
-            source="test",
-            status=RunStatus.running.value,
-            worker_pool="extract",
-        )
-    )
-    session.add(
-        Run(
-            id="AUD-FAST-1",
-            workflow_id=workflow_id,
-            source="test",
-            status=RunStatus.running.value,
-            worker_pool="fast",
-        )
-    )
-    session.add(
-        RunDocument(
-            id="rdoc-1",
-            run_id="AUD-FAST-1",
-            storage_key="runs/x/file.pdf",
-            mime_type="application/pdf",
-        )
-    )
-    await session.flush()
-    assert await count_extract_inflight(session) == 1
 
 
 @pytest.mark.asyncio

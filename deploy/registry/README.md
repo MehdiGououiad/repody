@@ -180,8 +180,6 @@ Default release images are intentionally small in number:
 - `repody-web` runs Next.js.
 
 The backend image includes `otel` extras by default.
-Built-in benchmark fixtures are excluded from release images unless
-`REPODY_INCLUDE_BENCHMARK_FIXTURES=true`.
 
 Build one image when iterating:
 

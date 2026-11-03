@@ -1,7 +1,6 @@
 import { BrainCircuit, Gauge, type LucideIcon, ServerCog, Zap } from "lucide-react";
 import type { PlatformConfig } from "@/lib/api/platform-config";
 import type { ModelsCatalogResponse } from "@/lib/api/schema-types";
-import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
 import { formatBytes } from "@/lib/utils";
 
 function MetricCard({
@@ -42,11 +41,9 @@ export function PlatformOverview({
   const model = catalog?.models[0];
   const modelState = !model ? "Unknown" : model.available ? "Ready" : "Unavailable";
   const runtimeRows = [
-    ["Extractor", platform.extractor],
     ["Queue", platform.queueBackend],
-    ["Inference", platform.inferenceMode],
     ["Inference endpoint", platform.llamacppBaseUrl],
-    ["Storage", platform.storageBackend],
+    ["Served model", platform.servedModel],
     ["Worker pools", Object.values(platform.workerPools).join(", ")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
     ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
@@ -58,7 +55,7 @@ export function PlatformOverview({
         <MetricCard
           label="Document model"
           value={modelState}
-          detail={model?.availabilityNote ?? REPODY_VLM_LABEL}
+          detail={model?.availabilityNote ?? model?.label ?? platform.servedModel}
           Icon={BrainCircuit}
         />
         <MetricCard
@@ -70,7 +67,7 @@ export function PlatformOverview({
         <MetricCard
           label="Cache"
           value={platform.cacheEnabled ? "Enabled" : "Disabled"}
-          detail={platform.storageBackend}
+          detail="Redis extraction cache"
           Icon={Gauge}
         />
         <MetricCard

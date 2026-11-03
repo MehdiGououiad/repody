@@ -39,18 +39,6 @@ _RULE_TEMPLATE_DEFAULTS: tuple[dict[str, str], ...] = (
         "body": "doc_a.reference == doc_b.reference",
         "severity": "reject",
     },
-    {
-        "id": "tpl-llm-review",
-        "name": "LLM policy review",
-        "kind": "llm",
-        "scope": "intra",
-        "description": "Natural-language check against extracted fields.",
-        "body": (
-            "Review the extracted fields and fail if any required clause or value "
-            "is missing or inconsistent."
-        ),
-        "severity": "flag",
-    },
 )
 
 
@@ -138,17 +126,6 @@ async def seed_database(session: AsyncSession) -> None:
             condition_junction="AND",
             position=0,
         ),
-        WorkflowRule(
-            id="r-fees",
-            workflow_id=wf.id,
-            name="Hidden late fees",
-            kind="llm",
-            scope="intra",
-            body="Flag if the invoice contains late fees or penalty charges hidden in line item descriptions.",
-            severity="flag",
-            applies_to=["doc-invoice"],
-            position=1,
-        ),
     ]
     session.add_all(rules)
 
@@ -158,8 +135,8 @@ async def seed_database(session: AsyncSession) -> None:
         source="api",
         status=RunStatus.done.value,
         overall_status="failed",
-        summary_total=2,
-        summary_passed=1,
+        summary_total=1,
+        summary_passed=0,
         summary_failed=1,
         fields_extracted=6,
         created_at=datetime(2023, 10, 24, 14, 32, tzinfo=UTC),
@@ -209,19 +186,6 @@ async def seed_database(session: AsyncSession) -> None:
                 detail="subtotal ($5,625.00) + tax ($478.13) = $6,103.13 ≠ total_amount ($6,200.00).",
                 expected_value="$6,103.13",
                 actual_value="$6,200.00",
-            ),
-            RuleResult(
-                id="rr-fees",
-                run_id=run.id,
-                rule_id="r-fees",
-                name="Hidden late fees",
-                kind="llm",
-                scope="intra",
-                status="passed",
-                severity="flag",
-                expression="Flag hidden fees",
-                affected_fields=[],
-                detail="LLM evaluator scanned all line items and found no hidden fees.",
             ),
         ]
     )

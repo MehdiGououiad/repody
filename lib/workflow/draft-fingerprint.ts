@@ -26,12 +26,8 @@ function normalizeDocument(doc: DocumentDef): DocumentDef {
     id: doc.id,
     documentType: doc.documentType ?? "",
     schema: [...doc.schema].map(normalizeSchemaField).sort((a, b) => a.id.localeCompare(b.id)),
-    extractionMode: doc.extractionMode ?? "document_model",
-    validationMode: doc.validationMode ?? "logic_only",
-    documentModelId: doc.documentModelId ?? null,
     extractionInstructions: doc.extractionInstructions ?? "",
     markdownExtraction: doc.markdownExtraction ?? false,
-    nativePdfAuto: doc.nativePdfAuto ?? false,
     extractionIclExamples: [...(doc.extractionIclExamples ?? [])],
   };
 }

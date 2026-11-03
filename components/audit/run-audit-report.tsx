@@ -40,7 +40,6 @@ function buildCsv(
   rows.push(`${t("runOn")}: ${new Date(audit.createdAt).toLocaleString(locale)}`);
   rows.push(`${t("source")}: ${audit.workflowName}`);
   if (audit.metadata) {
-    rows.push(`${t("runDetails")}: ${audit.metadata.validationLabel}`);
     rows.push(`${t("totalDuration")}: ${formatDurationMs(audit.metadata.durationMs)}`);
     rows.push(`${t("extractionTime")}: ${formatDurationMs(audit.metadata.extractionMs)}`);
     rows.push(`${t("validationTime")}: ${formatDurationMs(audit.metadata.validationMs)}`);
@@ -52,18 +51,7 @@ function buildCsv(
   for (const doc of audit.documents) {
     rows.push(`--- ${doc.documentType} ---`);
     if (doc.extraction) {
-      rows.push(
-        [
-          "Engine",
-          doc.extraction.readPathLabel,
-          "Validation",
-          doc.extraction.validationLabel,
-          "Ms",
-          String(doc.extraction.extractionMs),
-        ]
-          .map(esc)
-          .join(",")
-      );
+      rows.push(["Ms", String(doc.extraction.extractionMs)].map(esc).join(","));
     }
     for (const f of doc.fields) {
       rows.push(

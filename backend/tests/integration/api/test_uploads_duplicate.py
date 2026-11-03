@@ -6,18 +6,14 @@ from tests.support.facture import facture_bytes
 
 
 @pytest.mark.asyncio
-async def test_confirm_upload_sniffs_jpeg_named_png(client, monkeypatch, tmp_path):
-    monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
+async def test_confirm_upload_sniffs_jpeg_named_png(client):
 
-    clear_settings_cache()
     from repody.app.uploads.intents import record_upload_intent
     from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     data = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x00\x00\x01\x00\x01\x00\x00" + b"\x00" * 64
     storage = get_storage()
-    await storage.ensure_bucket()
     key = "runs/demo/photo.png"
     await storage.put_bytes(key, data, "image/png")
     async with async_session_factory() as session:
@@ -37,17 +33,13 @@ async def test_confirm_upload_sniffs_jpeg_named_png(client, monkeypatch, tmp_pat
 
 
 @pytest.mark.asyncio
-async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path):
-    monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
+async def test_confirm_upload_uses_object_metadata(client):
 
-    clear_settings_cache()
     from repody.app.uploads.intents import record_upload_intent
     from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     storage = get_storage()
-    await storage.ensure_bucket()
     key = "runs/demo/doc.pdf"
     payload = b"%PDF-1.4\nsample"
     await storage.put_bytes(key, payload, "application/pdf")
@@ -71,15 +63,11 @@ async def test_confirm_upload_uses_object_metadata(client, monkeypatch, tmp_path
 
 
 @pytest.mark.asyncio
-async def test_confirm_upload_rejects_unprepared_storage_key(client, monkeypatch, tmp_path):
+async def test_confirm_upload_rejects_unprepared_storage_key(client):
     """VALIDATION AppError -> 422 (not legacy bare 400)."""
-    monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
     from repody.infra.storage.factory import get_storage
-    from repody.settings import clear_settings_cache
 
-    clear_settings_cache()
     storage = get_storage()
-    await storage.ensure_bucket()
     key = "runs/unprepared/doc.pdf"
     await storage.put_bytes(key, b"%PDF-1.4\nsample", "application/pdf")
 
@@ -109,18 +97,14 @@ async def test_run_json_rejects_unconfirmed_file_binding(client):
 
 
 @pytest.mark.asyncio
-async def test_confirm_upload_rejects_different_owner(client, monkeypatch, tmp_path):
+async def test_confirm_upload_rejects_different_owner(client):
     """FORBIDDEN AppError -> 403 when intent owner ≠ principal."""
-    monkeypatch.setenv("AUDIT_LOCAL_STORAGE_PATH", str(tmp_path / "storage"))
-    from repody.settings import clear_settings_cache
 
-    clear_settings_cache()
     from repody.app.uploads.intents import record_upload_intent
     from repody.infra.db.base import async_session_factory
     from repody.infra.storage.factory import get_storage
 
     storage = get_storage()
-    await storage.ensure_bucket()
     key = "runs/demo/other-owner.pdf"
     payload = b"%PDF-1.4\nsample"
     await storage.put_bytes(key, payload, "application/pdf")
@@ -155,9 +139,6 @@ async def test_duplicate_file_upload_run_completes(live_client):
                 "id": doc_id,
                 "documentType": "Invoice",
                 "schema": [{"id": "f-total", "name": "total_amount", "description": "Total"}],
-                "extractionMode": "document_model",
-                "validationMode": "logic_only",
-                "documentModelId": "repody:vlm",
             }
         ],
         "rules": [

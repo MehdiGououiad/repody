@@ -8,8 +8,6 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, noload, selectinload
 
-from repody.catalog.registry import normalize_model_id
-from repody.extraction.modes import normalize_document_modes
 from repody.extraction.nuextract import (
     is_object_array_template_type,
     is_object_template_type,
@@ -123,18 +121,12 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
     for di, doc in enumerate(payload.documents):
         doc_id = doc.id or f"doc-{short_id()}"
         keep_ids.add(doc_id)
-        read_id, val_id = normalize_document_modes(doc.extraction_mode, doc.validation_mode)
         row = existing.get(doc_id)
-        document_model_id = normalize_model_id(doc.document_model_id)
         if row:
             row.document_type = doc.document_type
             row.position = di
-            row.extraction_mode = read_id
-            row.validation_mode = val_id
-            row.document_model_id = document_model_id
             row.extraction_instructions = doc.extraction_instructions or ""
             row.markdown_extraction = doc.markdown_extraction
-            row.native_pdf_auto = bool(doc.native_pdf_auto)
             row.extraction_icl_examples = [
                 {"input": ex.input, "output": ex.output}
                 for ex in (doc.extraction_icl_examples or [])
@@ -147,12 +139,8 @@ async def _upsert_documents(session: AsyncSession, wf: Workflow, payload: Workfl
                 workflow_id=wf.id,
                 document_type=doc.document_type,
                 position=di,
-                extraction_mode=read_id,
-                validation_mode=val_id,
-                document_model_id=document_model_id,
                 extraction_instructions=doc.extraction_instructions or "",
                 markdown_extraction=doc.markdown_extraction,
-                native_pdf_auto=bool(doc.native_pdf_auto),
                 extraction_icl_examples=[
                     {"input": ex.input, "output": ex.output}
                     for ex in (doc.extraction_icl_examples or [])

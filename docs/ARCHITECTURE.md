@@ -89,7 +89,7 @@ La matrice complète figure en [annexe 7.3](#73-matrice-dhabilitations).
 | Schéma de champs | Définition nom, description, type NuExtract, configuration avancée ; **suggestion automatique de type**. |
 | Import de template | Import d'un template JSON NuExtract existant pour amorcer le schéma. |
 | Instructions d'extraction | Consignes libres transmises au modèle pour un document donné. |
-| Choix du modèle documentaire | Sélection dans le catalogue ; option **automode PDF natif** (`nativePdfAuto`). |
+| Modèle documentaire | Un seul modèle, `repody:vlm` (NuExtract3 sur llama-server) ; pas de sélection par document. |
 | Brouillon et sauvegarde auto | Le workflow reste en `draft` tant qu'il n'est pas déployé. |
 | Déploiement | Passage en `active` et génération d'une **clé API** affichée une seule fois. |
 | Suppression / archivage | Unitaire ou en masse depuis la liste. |
@@ -251,11 +251,7 @@ Une erreur d'extraction sur un document est journalisée et ce document est igno
 | Schéma | `schema.py`, `nuextract.py` | Conversion du schéma workflow en template de modèle, exemples ICL. |
 | Warmup | `warmup.py` | Préchauffage du modèle au démarrage du worker `extract`. |
 
-**Modèle documentaire** (`catalog/registry.py`) :
-
-| Identifiant | Chaîne de traitement |
-|---|---|
-| **`repody:vlm`** | NuExtract3 servi par llama-server - **seul modèle**. Les identifiants historiques (`paddleocr:qwen`, `glm:qwen`, `repody:vlm:cloud`) s'exécutent sur ce modèle. |
+**Modèle documentaire** : `repody:vlm`, NuExtract3 servi par llama-server - **seul modèle**. `extract_document` (`pipeline.py`) consulte le cache Redis puis appelle `vlm.py` directement ; il n'y a ni registre de modèles ni mode de lecture.
 
 La disponibilité réelle est sondée sur `GET /v1/models` du llama-server (`catalog/status.py`). Détail : [EXTRACTION.md](./EXTRACTION.md).
 
@@ -292,12 +288,7 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 
 **PostgreSQL** - entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
 
-**Stockage objet** (`infra/storage/`) - deux implémentations du contrat `ObjectStore` :
-
-| Backend | Usage | Présigné |
-|---|---|---|
-| `s3` | MinIO ou S3 ; client interne + client public pour les URL signées | Oui |
-| `local` | Système de fichiers, développement | Non (repli sur upload via API) |
+**Stockage objet** (`infra/storage/`) - MinIO ou S3 dans tous les environnements (`S3Store`, client interne + client public pour les URL signées). Le contrat `ObjectStore` est un `Protocol` ; les tests en processus installent un store en mémoire (`use_storage`).
 
 ---
 
@@ -347,10 +338,10 @@ L'ensemble des paramètres serveur utilise le préfixe **`AUDIT_`**.
 |---|---|
 | Base de données | `AUDIT_DATABASE_URL`, `AUDIT_DB_POOL_SIZE`, `AUDIT_RUN_MIGRATIONS_ON_STARTUP` |
 | File et événements | `AUDIT_REDIS_URL`, `AUDIT_RUN_EVENTS_ENABLED` |
-| Stockage | `AUDIT_STORAGE_BACKEND`, `AUDIT_MINIO_*`, `AUDIT_MAX_UPLOAD_*`, `AUDIT_PRESIGNED_UPLOAD_TTL_SECONDS` |
+| Stockage | `AUDIT_MINIO_*` (S3/MinIO, seul backend), `AUDIT_MAX_UPLOAD_*`, `AUDIT_PRESIGNED_UPLOAD_TTL_SECONDS` |
 | Identité | `AUDIT_OIDC_ENABLED`, `AUDIT_OIDC_ISSUER`, `AUDIT_OIDC_AUDIENCE`, `AUDIT_OIDC_JWKS_*` |
 | Workers | `AUDIT_WORKER_POOL`, `AUDIT_WORKER_EXTRACT_MAX_JOBS`, `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` |
-| Inférence | `AUDIT_INFERENCE_MODE`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL`, `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` |
+| Inférence | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL`, `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` |
 | Exploitation | `AUDIT_STALE_RUN_*`, `AUDIT_ADMISSION_*`, `AUDIT_RATE_LIMIT_*`, `AUDIT_MAINTENANCE_INTERVAL_SECONDS` |
 | Observabilité | `AUDIT_LOG_JSON`, `AUDIT_OTEL_ENABLED`, `AUDIT_OTEL_EXPORTER_ENDPOINT`, `AUDIT_DEPLOYMENT_ENVIRONMENT` |
 

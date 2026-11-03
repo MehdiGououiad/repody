@@ -13,7 +13,6 @@ from repody.app.run.access import resolve_run_enqueue_source
 from repody.app.run.admission import check_admission
 from repody.app.run.dispatch import dispatch_audit_run
 from repody.app.run.intake import create_run
-from repody.app.run.pool import predict_worker_pool
 from repody.infra.auth.jwt_validator import extract_bearer
 from repody.infra.rate_limit import check_run_rate_limits
 from repody.runtime.contracts.result import AppError, ErrorCode
@@ -56,13 +55,8 @@ async def enqueue_run(
         client_key=client_key,
     )
 
-    # Reuse workflow already loaded for access - avoid a second documents query.
-    predicted_pool = await predict_worker_pool(
-        session,
-        req.workflow_id,
-        file_bindings=req.file_bindings,
-        workflow=wf,
-    )
+    # Uploaded files go to the model (extract pool); a run without files only evaluates rules.
+    predicted_pool = "extract" if req.file_bindings else "fast"
 
     await check_admission(session, predicted_pool=predicted_pool)
 

@@ -103,7 +103,6 @@ services:
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
       AUDIT_MINIO_BUCKET: audit-documents
       AUDIT_MINIO_ACCESS_KEY: minioadmin
@@ -117,7 +116,6 @@ services:
       BUGSINK_DSN: ${BUGSINK_DSN:-}
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q8_0}
-      AUDIT_INFERENCE_MODE: llamacpp
       AUDIT_EXTRACTION_CACHE_ENABLED: "false"
       # Host `pnpm llamacpp:serve` already warms NuExtract; keep worker boot fast.
       AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
@@ -158,7 +156,6 @@ services:
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_STORAGE_BACKEND: s3
       AUDIT_MINIO_ENDPOINT: minio:9000
       AUDIT_MINIO_BUCKET: audit-documents
       AUDIT_MINIO_ACCESS_KEY: minioadmin

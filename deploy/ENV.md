@@ -20,7 +20,6 @@ When `secrets.create=false`, create `repody-runtime-secrets` with:
 
 | Variable / value | Purpose |
 |------------------|---------|
-| `AUDIT_INFERENCE_MODE=llamacpp` | Use external OpenAI-compatible document-model runtime |
 | `AUDIT_LLAMACPP_BASE_URL` | Endpoint root, e.g. `https://vlm.example.com/v1` |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | Model id from `/v1/models` |
 | `AUDIT_LLAMACPP_API_KEY` | Optional bearer token |
@@ -41,7 +40,6 @@ Helm values:
 
 ```yaml
 config:
-  inferenceMode: llamacpp
   llamacppBaseUrl: https://vlm.example.com/v1
   llamacppServedModel: numind/NuExtract3
 
@@ -73,7 +71,6 @@ workerExtract:
 | `AUDIT_QUEUE_REFRESH_SSE_LIMIT` | `32` | Max SSE publishes on maintenance queue refresh (`0` = DB-only) |
 | `AUDIT_QUEUE_REFRESH_DB_LIMIT` | `128` | Max queued rows loaded/updated per maintenance tick |
 | `AUDIT_DIRECT_UPLOAD_ENABLED` | `true` | Presigned object-storage uploads |
-| `AUDIT_STORAGE_BACKEND` | `s3` | Object storage |
 | `AUDIT_LOG_JSON` | `true` | Structured logs |
 | `AUDIT_CORS_ORIGINS` | JSON array | Browser origins |
 
@@ -93,7 +90,6 @@ Images are defined in [`docker-bake.hcl`](../docker-bake.hcl) (Docker Buildx Bak
 | `BACKEND_URL` | Fallback origin if `INTERNAL_API_URL` unset |
 | `AUTH_KEYCLOAK_INTERNAL_ISSUER` | In-cluster Keycloak issuer for Auth.js server calls (Compose: `http://keycloak:8080/realms/repody`) |
 | `REPODY_BACKEND_EXTRAS` | Backend Python extras (default `otel`; see `backend/pyproject.toml`) |
-| `REPODY_INCLUDE_BENCHMARK_FIXTURES` | Set `true` only when the backend image should include the built-in Facture benchmark fixture |
 
 Build cache: local builds reuse Docker's build cache; CI passes `--set <target>.cache-from/cache-to` (see `.github/workflows/images-ghcr.yml`).
 

@@ -29,21 +29,12 @@ export interface ExtractionIclExample {
   output: string;
 }
 
-export type ReadPathId = "document_model";
-export type ProcessingPathId = ReadPathId;
-export type ValidationModeId = "logic_only";
-
 export interface DocumentDef {
   id: string;
   documentType: string;
   schema: SchemaField[];
-  extractionMode?: ProcessingPathId | string;
-  validationMode?: ValidationModeId | string;
-  documentModelId?: string | null;
   extractionInstructions?: string;
   markdownExtraction?: boolean;
-  /** Try Firecrawl pdf-inspector first; fall back to documentModelId if quality is weak. */
-  nativePdfAuto?: boolean;
   extractionIclExamples?: ExtractionIclExample[];
 }
 

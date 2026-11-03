@@ -56,13 +56,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     for extra in $(echo "$BACKEND_EXTRAS" | tr "," " "); do extras="$extras --extra $extra"; done; \
     uv sync --locked --no-dev --no-editable $extras
 
-# Empty default; docker-bake.hcl points this at e2e/fixtures/documents when
-# REPODY_INCLUDE_BENCHMARK_FIXTURES=true.
-FROM scratch AS benchmark-fixtures
-
 FROM runtime-base AS app-runtime
-
-ARG INCLUDE_BENCHMARK_FIXTURES=false
 
 WORKDIR /app
 
@@ -71,16 +65,6 @@ COPY --chown=repody:repody alembic.ini ./
 COPY --chown=repody:repody alembic/ ./alembic/
 COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 COPY --chown=repody:repody scripts/bootstrap_migrations.py ./scripts/bootstrap_migrations.py
-COPY --chown=repody:repody scripts/benchmark_suite.py ./scripts/benchmark_suite.py
-COPY --chown=repody:repody scripts/benchmarking/ ./scripts/benchmarking/
-
-RUN --mount=type=bind,from=benchmark-fixtures,target=/fixtures \
-    set -eux; \
-    install -d -o repody -g repody /app/e2e /app/e2e/fixtures /app/e2e/fixtures/documents; \
-    if [ "$INCLUDE_BENCHMARK_FIXTURES" = "true" ]; then \
-      install -o repody -g repody -m 0644 /fixtures/Facture.pdf /fixtures/Facture.benchmark.json \
-        /app/e2e/fixtures/documents/; \
-    fi
 
 USER repody
 

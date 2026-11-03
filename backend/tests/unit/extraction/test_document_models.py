@@ -5,12 +5,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from repody.catalog.registry import (
-    parse_document_model,
-)
-from repody.extraction.branding import (
-    REPODY_VLM_CATALOG_ID,
-)
 from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import (
     build_icl_messages,
@@ -25,12 +19,7 @@ from repody.extraction.render import (
     prepare_nuextract_pages,
 )
 from repody.extraction.types import DocumentBundle, ExtractionResult, SchemaFieldSpec
-
-
-def test_catalog_routes_repody_vlm_to_llamacpp():
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    assert spec.runtime == "llamacpp"
-    assert spec.engine == "document_model"
+from repody.settings import get_settings
 
 
 def test_repody_vlm_template_and_flat_json():
@@ -107,9 +96,8 @@ def test_repody_vlm_any_scalar_list_template():
 
 
 def test_structured_chat_payload_omits_max_tokens_by_default():
-    from repody.catalog.registry import parse_document_model
 
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    model = get_settings().llamacpp_served_model
     schema = [
         SchemaFieldSpec(
             name="tags",
@@ -118,7 +106,7 @@ def test_structured_chat_payload_omits_max_tokens_by_default():
         )
     ]
     payload = structured_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
@@ -278,11 +266,10 @@ def test_repody_vlm_encodes_page_mime_type_in_data_url():
 
 
 def test_markdown_chat_payload_uses_nuextract_mode():
-    from repody.catalog.registry import parse_document_model
 
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    model = get_settings().llamacpp_served_model
     payload = markdown_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 
@@ -293,12 +280,11 @@ def test_markdown_chat_payload_uses_nuextract_mode():
 
 
 def test_structured_chat_payload_keeps_template():
-    from repody.catalog.registry import parse_document_model
 
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    model = get_settings().llamacpp_served_model
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
     payload = structured_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="Use ISO dates.",
@@ -316,18 +302,17 @@ def test_structured_chat_payload_keeps_template():
 
 
 def test_repody_vlm_payload_uses_official_non_thinking_defaults():
-    from repody.catalog.registry import parse_document_model
 
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    model = get_settings().llamacpp_served_model
     schema = [SchemaFieldSpec(name="invoice_number", description="Invoice number")]
     structured = structured_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",
     )
     markdown = markdown_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
     )
 
@@ -359,15 +344,14 @@ def test_instructions_carry_nested_field_descriptions():
 
 def test_markdown_payload_uses_official_thinking_temperature(monkeypatch):
     """Official reasoning example pairs markdown + thinking with temperature 0.7."""
-    from repody.catalog.registry import parse_document_model
     from repody.settings import get_settings
 
     monkeypatch.setenv("AUDIT_REPODY_VLM_ENABLE_THINKING", "true")
     get_settings.cache_clear()
     try:
-        spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+        model = get_settings().llamacpp_served_model
         payload = markdown_chat_payload(
-            model=spec.runtime_model,
+            model=model,
             content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         )
         assert payload["temperature"] == 0.7
@@ -387,7 +371,7 @@ async def test_pipeline_calls_document_model_catalog(monkeypatch):
     direct_result = ExtractionResult(fields=[])
     extract_mock = AsyncMock(return_value=direct_result)
     monkeypatch.setattr(
-        "repody.extraction.pipeline.extract_with_document_model",
+        "repody.extraction.pipeline.extract_with_repody_vlm",
         extract_mock,
     )
     monkeypatch.setattr(
@@ -414,9 +398,6 @@ async def test_pipeline_calls_document_model_catalog(monkeypatch):
         "image/jpeg",
         "Invoice",
         [SchemaFieldSpec(name="total_amount", description="Total TTC")],
-        extraction_mode="document_model",
-        document_model_id=REPODY_VLM_CATALOG_ID,
-        validation_mode="logic_only",
     )
 
     assert result is direct_result
@@ -428,12 +409,6 @@ def test_repody_vlm_missing_field_is_not_marked_extracted():
     fields = fields_from_nuextract_json("{}", schema)
     assert fields[0].extracted is False
     assert fields[0].value == "—"
-
-
-def test_parse_document_model_returns_registered_spec():
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    assert spec.id == REPODY_VLM_CATALOG_ID
-    assert spec.runtime == "llamacpp"
 
 
 @pytest.mark.asyncio
@@ -459,8 +434,6 @@ async def test_repody_vlm_markdown_only_without_platform_gate(monkeypatch: pytes
         result = await extract_with_repody_vlm(
             bundle,
             [],
-            "DOC",
-            spec=parse_document_model(None),
             markdown_extraction=True,
         )
         assert result.markdown_text == "# Document\n\nHello"

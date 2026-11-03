@@ -50,11 +50,15 @@ def live_oidc_enabled(client: httpx.Client | None = None) -> bool:
 
 
 def live_inference_ready(client: httpx.Client | None = None) -> bool:
-    health = live_health(client)
-    probe = health.get("llamacpp")
-    if probe is None:
-        return str(health.get("inference") or "").lower() == "llamacpp"
-    return probe is True
+    probe = live_health(client).get("llamacpp")
+    if probe is not None:
+        return probe is True
+    # healthz does not probe inference by default; the models catalog always does.
+    if client is None:
+        with create_live_client() as own:
+            return live_inference_ready(own)
+    response = client.get("/v1/models/catalog")
+    return response.status_code == 200 and all(m["available"] for m in response.json()["models"])
 
 
 def live_auth_headers() -> dict[str, str]:
@@ -102,7 +106,7 @@ def assert_settings_config_access(response: httpx.Response, *, oidc_enabled: boo
         assert response.status_code == 200
         cfg = response.json()
         assert cfg.get("maxUploadBytes", 0) > 0
-        assert cfg.get("documentModels")
+        assert cfg.get("servedModel")
     else:
         assert response.status_code == 200
         assert response.json().get("maxUploadBytes", 0) > 0

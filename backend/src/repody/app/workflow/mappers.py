@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from repody.extraction.branding import normalize_public_catalog_id
-from repody.extraction.modes import DEFAULT_READ_PATH_ID
 from repody.infra.db.models import Workflow
 from repody.schemas.workflow import (
     DocumentDefSchema,
@@ -92,12 +90,8 @@ def workflow_to_schema(
             DocumentDefSchema(
                 id=doc.id,
                 document_type=doc.document_type,
-                extraction_mode=doc.extraction_mode or DEFAULT_READ_PATH_ID,
-                validation_mode=getattr(doc, "validation_mode", None) or "logic_only",
-                document_model_id=normalize_public_catalog_id(doc.document_model_id),
                 extraction_instructions=doc.extraction_instructions or "",
-                markdown_extraction=bool(getattr(doc, "markdown_extraction", False)),
-                native_pdf_auto=bool(getattr(doc, "native_pdf_auto", False)),
+                markdown_extraction=doc.markdown_extraction,
                 extraction_icl_examples=[
                     ExtractionIclExampleSchema(
                         input=str(row.get("input") or ""),

@@ -19,10 +19,7 @@ class WorkerPoolsHealth(CamelModel):
 class HealthReadinessResponse(CamelModel):
     status: Literal["ok", "degraded"]
     redis_ok: bool
-    extractor: str
-    inference: str
     llamacpp: bool | None = None
-    storage_backend: str
     direct_upload_enabled: bool
     cache_enabled: bool
     db_pool_size: int

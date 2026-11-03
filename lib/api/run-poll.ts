@@ -7,12 +7,9 @@ export type RunProgressStep = {
   id: string;
   label: string;
   status: "pending" | "active" | "done";
-  mode?: "schema" | "document_model";
-  kind?: "logic" | "llm";
+  mode?: "document_model";
+  kind?: "logic";
   detail?: string;
-  readPath?: string;
-  validationMode?: string;
-  documentModelId?: string;
   durationMs?: number;
   cacheHit?: boolean;
   gpuColdStartHint?: boolean;

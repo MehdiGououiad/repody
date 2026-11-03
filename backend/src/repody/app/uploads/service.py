@@ -59,7 +59,7 @@ def new_storage_key(safe_name: str) -> tuple[str, str]:
 
 def presign_supported(settings: Settings | None = None) -> bool:
     settings = settings or get_settings()
-    return settings.storage_backend == "s3" and settings.direct_upload_enabled
+    return settings.direct_upload_enabled
 
 
 def check_batch_size(file_count: int) -> None:
@@ -74,7 +74,6 @@ def upload_capabilities() -> UploadCapabilitiesResponse:
     settings = get_settings()
     presigned = presign_supported(settings)
     return UploadCapabilitiesResponse(
-        storage_backend=settings.storage_backend,
         direct_upload_enabled=presigned,
         upload_mode="presigned" if presigned else "api",
         max_upload_bytes=settings.max_upload_bytes,

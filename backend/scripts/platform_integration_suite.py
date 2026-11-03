@@ -42,9 +42,7 @@ from tests.support.facture import (  # noqa: E402
 )
 from tests.support.workflow_flow import poll_run_until_done, save_workflow  # noqa: E402
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID  # noqa: E402
-
-DEFAULT_DOCUMENT_MODEL = REPODY_VLM_CATALOG_ID
+DEFAULT_DOCUMENT_MODEL = "repody:vlm"
 MAX_WAIT_MS = 900_000
 
 

@@ -6,15 +6,10 @@ from fastapi import APIRouter, Depends, Query
 
 from repody.api.auth import require_permission
 from repody.app.uploads.service import presign_supported
-from repody.catalog.api import document_model_summaries, fetch_models_catalog
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.catalog.api import fetch_models_catalog
 from repody.extraction.nuextract import suggest_template_type
 from repody.schemas.models_catalog import ModelsCatalogResponse
-from repody.schemas.platform import (
-    DocumentModelSummary,
-    PlatformConfigResponse,
-    SuggestTemplateTypeResponse,
-)
+from repody.schemas.platform import PlatformConfigResponse, SuggestTemplateTypeResponse
 from repody.settings import get_settings
 
 router = APIRouter(tags=["platform"])
@@ -43,16 +38,11 @@ async def get_platform_config() -> PlatformConfigResponse:
     settings = get_settings()
     return PlatformConfigResponse(
         app_name=settings.app_name,
-        extractor=settings.extractor,
-        inference_mode=settings.inference_mode,
-        storage_backend=settings.storage_backend,
         queue_backend="taskiq",
         direct_upload_enabled=presign_supported(settings),
         cache_enabled=settings.extraction_cache_enabled,
         rate_limit_enabled=settings.rate_limit_enabled,
-        default_document_model_id=REPODY_VLM_CATALOG_ID,
-        default_read_path="document_model",
-        document_models=[DocumentModelSummary(**row) for row in document_model_summaries()],
+        served_model=settings.llamacpp_served_model,
         nuextract_max_pages_per_request=settings.repody_vlm_max_pages_per_request,
         llamacpp_base_url=settings.llamacpp_base_url,
         max_upload_bytes=settings.max_upload_bytes,

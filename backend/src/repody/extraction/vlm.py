@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import structlog
 
@@ -35,9 +35,6 @@ from repody.extraction.types import (
 from repody.inference.openai_compat import message_content, post_chat_completion
 from repody.inference.runtime import llamacpp_base_url
 from repody.settings import Settings, get_settings
-
-if TYPE_CHECKING:
-    from repody.catalog.registry import DocumentModelSpec
 
 log = structlog.get_logger()
 
@@ -73,16 +70,14 @@ async def _markdown(
 async def extract_with_repody_vlm(
     bundle: DocumentBundle,
     schema: list[SchemaFieldSpec],
-    document_type: str,
     *,
-    spec: DocumentModelSpec,
     extraction_instructions: str = "",
     markdown_extraction: bool = False,
     extraction_icl_examples: list[ExtractionIclExample] | None = None,
 ) -> ExtractionResult:
-    _ = document_type
     settings = get_settings()
     base_url = llamacpp_base_url(settings)
+    model = settings.llamacpp_served_model
     max_pages = settings.repody_vlm_max_pages_per_request
 
     pages, pages_rendered = prepare_nuextract_pages(bundle, max_pages=max_pages)
@@ -109,7 +104,7 @@ async def extract_with_repody_vlm(
         started = time.perf_counter()
         markdown_text = await _markdown(
             base_url,
-            markdown_chat_payload(model=spec.runtime_model, content=content),
+            markdown_chat_payload(model=model, content=content),
             settings=settings,
         )
         if not (markdown_text or "").strip():
@@ -120,8 +115,7 @@ async def extract_with_repody_vlm(
             )
         log.info(
             "repody_vlm_done",
-            runtime=spec.runtime,
-            model=spec.runtime_model,
+            model=model,
             pages=len(pages),
             pages_rendered=pages_rendered,
             pages_dropped=dropped,
@@ -152,7 +146,7 @@ async def extract_with_repody_vlm(
     data = await _chat(
         base_url,
         structured_chat_payload(
-            model=spec.runtime_model,
+            model=model,
             content=content,
             schema=schema,
             extraction_instructions=extraction_instructions,
@@ -167,15 +161,14 @@ async def extract_with_repody_vlm(
     if want_dual_markdown:
         markdown_text = await _markdown(
             base_url,
-            markdown_chat_payload(model=spec.runtime_model, content=content),
+            markdown_chat_payload(model=model, content=content),
             settings=settings,
         )
 
     timings = data.get("timings") or {}
     log.info(
         "repody_vlm_done",
-        runtime=spec.runtime,
-        model=spec.runtime_model,
+        model=model,
         pages=len(pages),
         pages_rendered=pages_rendered,
         pages_dropped=dropped,

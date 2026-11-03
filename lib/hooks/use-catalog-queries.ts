@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { browserApi, throwOnApiError } from "@/lib/api/openapi-client";
-import { fetchPlatformConfig } from "@/lib/api/platform-config";
 import type { ModelsCatalogResponse } from "@/lib/api/schema-types";
 import { queryKeys } from "@/lib/hooks/query-keys";
 import type { RuleTemplate } from "@/lib/types";
@@ -13,13 +12,6 @@ async function fetchModelsCatalog(): Promise<ModelsCatalogResponse> {
   const { data, error, response } = await browserApi.GET("/v1/models/catalog");
   if (error || !response.ok || !data) throwOnApiError(error, response);
   return data;
-}
-
-export function documentModelsFromCatalog(catalog: ModelsCatalogResponse) {
-  // Structured extraction only - markdown-only OCR engines are not selectable.
-  return catalog.models.filter(
-    (model) => model.kind === "document_model" && model.markdownOnly !== true
-  );
 }
 
 export function useUnifiedModelsCatalog(enabled = true) {
@@ -41,15 +33,6 @@ export function useRulesLibraryCatalog(enabled = true) {
       const body = data as { rules: RuleTemplate[] };
       return body.rules;
     },
-    staleTime: CATALOG_STALE_MS,
-  });
-}
-
-export function usePlatformConfig(enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.catalog.platformConfig,
-    enabled,
-    queryFn: fetchPlatformConfig,
     staleTime: CATALOG_STALE_MS,
   });
 }

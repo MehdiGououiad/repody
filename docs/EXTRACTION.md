@@ -22,7 +22,6 @@ Reference: [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGU
 Only wiring and operational limits - extraction behavior follows the official NuExtract contract (`extraction/nuextract.py`, `extraction/render.py`).
 
 ```env
-AUDIT_INFERENCE_MODE=llamacpp
 AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1
 AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q4_k_m
 AUDIT_LLAMACPP_API_KEY=
@@ -37,7 +36,7 @@ AUDIT_HEALTHZ_PROBE_INFERENCE=false
 | PDF raster | PNG @ **170 DPI** |
 | Structured temperature | **0.2** non-thinking · **0.6** thinking · **0** with ICL |
 | Markdown temperature | **0** non-thinking · **0.7** thinking |
-| Read path | NuExtract vision only |
+| Input | Page images (PDF pages rendered to PNG) |
 
 Thinking mode (`AUDIT_REPODY_VLM_ENABLE_THINKING`, default `false`) and page cap (`AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST`, default: all pages) are configurable.
 
@@ -56,7 +55,6 @@ Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md). Align `LLAMACP
 
 ```yaml
 config:
-  inferenceMode: llamacpp
   llamacppBaseUrl: https://your-inference-host/v1
   llamacppServedModel: nuextract3-q4_k_m
   repodyVlmTimeoutSeconds: 180

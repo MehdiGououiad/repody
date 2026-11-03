@@ -48,8 +48,7 @@ async def lifespan(_app: FastAPI):
         "application_starting",
         event_domain="platform",
         oidc_enabled=settings.oidc_enabled,
-        storage_backend=settings.storage_backend,
-        inference_mode=settings.inference_mode,
+        llamacpp_base_url=settings.llamacpp_base_url,
     )
     await asyncio.gather(init_storage(), startup_taskiq_brokers())
     if settings.oidc_enabled:

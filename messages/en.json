@@ -7,7 +7,7 @@
     "dashboard": "Dashboard",
     "workflows": "Workflows",
     "audits": "Audit Reports",
-    "settings": "Operator Console",
+    "settings": "Settings",
     "newWorkflow": "New Workflow",
     "logout": "Sign out"
   },
@@ -92,8 +92,7 @@
     "pagesTruncated": "Only {sent} of {total} pages analyzed",
     "queuePosition": "Queue position {position} of {depth}",
     "queueWaiting": "Waiting in queue…",
-    "queueOrdered": "Runs are processed in order. Your position updates automatically.",
-    "queueServerless": "Runs are processed in order. Serverless GPU jobs may also wait 1–2 minutes on the first request after idle."
+    "queueOrdered": "Runs are processed in order. Your position updates automatically."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -126,6 +125,9 @@
     },
     "kpi": {
       "auditsWeek": "Audits this week",
+      "passRate": "Pass rate",
+      "failures": "Rule failures",
+      "pendingReview": "Pending review",
       "trendUp": "Up {delta} from prior period",
       "trendDown": "Down {delta} from prior period"
     },
@@ -268,6 +270,7 @@
         "extract": "What to extract",
         "extractHint": "Document types, fields, and extraction model",
         "rules": "Validation rules",
+        "rulesHint": "Logic checks on extracted values",
         "upload": "Test & deploy",
         "uploadHint": "Upload a sample → extract → validate in one run",
         "back": "Back",

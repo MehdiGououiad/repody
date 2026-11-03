@@ -6,7 +6,6 @@ import json
 import re
 
 from repody.rules.expression import normalize_field_key
-from repody.rules.types import rule_kind
 from repody.rules.value_coercion import MISSING, is_iso_date_like
 from repody.util.json_shape import normalize_keys_to_snake
 
@@ -148,9 +147,6 @@ def conditions_to_expression(
 def resolve_rule_body(rule: dict) -> str:
     """Compile logic rules from conditions, or use the persisted compiled expression in ``body``."""
     rule = normalize_keys_to_snake(rule)
-    if rule_kind(rule) == "llm":
-        return (rule.get("body") or "").strip()
-
     junction = rule.get("condition_junction") or "AND"
     conditions = rule.get("conditions")
     if conditions:
@@ -217,12 +213,9 @@ def logic_check_entries(rule: dict) -> list[dict]:
 
 
 def expand_rules_for_evaluation(rules: list[dict]) -> list[dict]:
-    """Logic rules with multiple conditions become one check each; LLM rules pass through."""
+    """Logic rules with multiple conditions become one check each."""
     expanded: list[dict] = []
     for rule in rules:
-        if rule_kind(rule) == "llm":
-            expanded.append(rule)
-            continue
         checks = logic_check_entries(rule)
         expanded.extend(checks if checks else [rule])
     return expanded

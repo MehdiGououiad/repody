@@ -7,6 +7,7 @@ import structlog
 
 from repody.extraction.types import (
     ExtractedFieldResult,
+    ExtractionIclExample,
     ExtractionResult,
     SchemaFieldSpec,
     truncate_text,
@@ -17,7 +18,7 @@ from repody.settings import get_settings
 
 log = structlog.get_logger()
 
-CACHE_VERSION = "v22"
+CACHE_VERSION = "v23"
 
 
 async def _redis_client():
@@ -58,35 +59,28 @@ def _field_config_fingerprint(field: SchemaFieldSpec) -> str:
 def cache_key(
     *,
     content_hash: str,
-    schema_fp: str,
-    extraction_mode: str,
-    document_model_id: str | None,
-    extractor: str,
+    schema: list[SchemaFieldSpec],
+    served_model: str,
+    markdown_extraction: bool,
+    extraction_instructions: str,
+    icl_examples: list[ExtractionIclExample] | None,
 ) -> str:
-    model_part = document_model_id or "default"
-    return (
-        f"extract:{CACHE_VERSION}:{extractor}:{extraction_mode}:"
-        f"{model_part}:{schema_fp}:{content_hash}"
+    """Same bytes + same request to the same model -> same key."""
+    icl = "\n".join(
+        f"{ex.input.strip()}\x1f{ex.output.strip()}"
+        for ex in icl_examples or []
+        if ex.input.strip()
     )
-
-
-def cache_key_from_storage(
-    *,
-    storage_key: str,
-    file_size: int,
-    content_hash: str,
-    schema_fp: str,
-    extraction_mode: str,
-    document_model_id: str | None,
-    extractor: str,
-) -> str:
-    """Cache lookup keyed by storage path, size, and content hash."""
-    model_part = document_model_id or "default"
-    safe_key = storage_key.replace(":", "_")
-    return (
-        f"extract:{CACHE_VERSION}s:{extractor}:{extraction_mode}:{model_part}:"
-        f"{schema_fp}:{content_hash}:{safe_key}:{file_size}"
+    request = "\x1e".join(
+        [
+            served_model.strip().lower(),
+            "md" if markdown_extraction else "",
+            extraction_instructions,
+            icl,
+        ]
     )
+    request_fp = hashlib.sha256(request.encode()).hexdigest()[:16]
+    return f"extract:{CACHE_VERSION}:{request_fp}:{schema_fingerprint(schema)}:{content_hash}"
 
 
 def hash_bytes(data: bytes) -> str:
@@ -102,16 +96,9 @@ def should_cache_result(result: ExtractionResult) -> bool:
 
 
 def _serialize_result(result: ExtractionResult) -> str:
-    llm_rules: dict[str, list] = {}
-    if result.llm_rule_results:
-        llm_rules = {
-            rid: [status, detail] for rid, (status, detail) in result.llm_rule_results.items()
-        }
     payload = {
         "rawText": truncate_text(result.raw_text),
         "markdownText": truncate_text(result.markdown_text),
-        "readPathUsed": result.read_path_used,
-        "llmRuleResults": llm_rules,
         "fields": [
             {
                 "key": f.key,
@@ -140,18 +127,10 @@ def _deserialize_result(raw: str) -> ExtractionResult:
         )
         for row in data.get("fields", [])
     ]
-    llm_raw = data.get("llmRuleResults") or {}
-    llm_rule_results: dict[str, tuple[str, str]] = {}
-    if isinstance(llm_raw, dict):
-        for rid, pair in llm_raw.items():
-            if isinstance(pair, (list, tuple)) and len(pair) >= 2:
-                llm_rule_results[str(rid)] = (str(pair[0]), str(pair[1]))
     return ExtractionResult(
         fields=fields,
         raw_text=data.get("rawText"),
         markdown_text=data.get("markdownText"),
-        read_path_used=data.get("readPathUsed"),
-        llm_rule_results=llm_rule_results or None,
     )
 
 

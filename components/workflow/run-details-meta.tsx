@@ -1,9 +1,8 @@
 "use client";
 
-import { Clock, FileSearch, ShieldCheck, Snowflake, Sparkles } from "lucide-react";
+import { Clock, FileSearch, Snowflake, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
-import { publicDocumentModelLabel } from "@/lib/document-model-branding";
 import type {
   RunAuditDetail,
   RunAuditMetadata,
@@ -44,17 +43,9 @@ export function RunMetadataPanel({
 }) {
   return (
     <div className={cn("grid grid-cols-2 sm:grid-cols-3 gap-2", className)}>
-      <MetaChip label="Validation" value={metadata.validationLabel || metadata.validationMode} />
       <MetaChip label="Total duration" value={formatDurationMs(metadata.durationMs)} />
       <MetaChip label="Extraction" value={formatDurationMs(metadata.extractionMs)} />
       <MetaChip label="Validation time" value={formatDurationMs(metadata.validationMs)} />
-      {metadata.llmModel && (
-        <MetaChip
-          label="LLM model"
-          value={metadata.llmModel}
-          className="col-span-2 sm:col-span-1"
-        />
-      )}
     </div>
   );
 }
@@ -74,18 +65,6 @@ export function DocumentExtractionMeta({
         <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5">
           <FileSearch className="h-3 w-3" />
           {fileName}
-        </span>
-      )}
-      <span className="inline-flex items-center gap-1 rounded-full bg-accent-blue/10 text-accent-blue px-2 py-0.5 font-medium">
-        {extraction.readPathLabel}
-      </span>
-      <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5">
-        <ShieldCheck className="h-3 w-3" />
-        {extraction.validationLabel}
-      </span>
-      {extraction.documentModelId && (
-        <span className="rounded-full bg-surface-container px-2 py-0.5">
-          Model: {publicDocumentModelLabel(extraction.documentModelId)}
         </span>
       )}
       {extraction.cacheHit && (

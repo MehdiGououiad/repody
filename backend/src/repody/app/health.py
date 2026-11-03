@@ -35,7 +35,6 @@ async def probe_readiness() -> HealthReadinessResponse:
             running_runs = 0
             inflight_runs = 0
 
-    mode = settings.inference_mode.lower()
     inference_reachable = None
     if settings.healthz_probe_inference:
         inference_reachable = (await model_status(settings)).reachable
@@ -44,10 +43,7 @@ async def probe_readiness() -> HealthReadinessResponse:
     return HealthReadinessResponse(
         status="ok" if ready else "degraded",
         redis_ok=redis_ok,
-        extractor=settings.extractor,
-        inference=settings.inference_mode,
-        llamacpp=inference_reachable if mode == "llamacpp" else None,
-        storage_backend=settings.storage_backend,
+        llamacpp=inference_reachable,
         direct_upload_enabled=presign_supported(settings),
         cache_enabled=settings.extraction_cache_enabled,
         db_pool_size=settings.db_pool_size,

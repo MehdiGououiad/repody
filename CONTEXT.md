@@ -26,7 +26,6 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 | **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
 | **Worker pool `extract`** | Taskiq worker for document-model extraction |
 | **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
-| **`AUDIT_DEFAULT_DOCUMENT_MODEL_ID`** | Default catalog id (`repody:vlm`) |
 
 ## Request lifecycle
 
@@ -36,7 +35,7 @@ Production architecture for executives (ArchiMate + logos): [docs/diagrams/archi
 sequenceDiagram
   participant UI as Next.js UI
   participant API as FastAPI /v1
-  participant Store as MinIO / local storage
+  participant Store as MinIO (S3)
   participant Q as Redis / Taskiq
   participant W as Worker (extract|fast)
   participant Inf as External VLM
@@ -85,19 +84,17 @@ backend/src/repody/
 
 Capacity pools: `extract` / `fast`. State transitions live in `app/run/state.py` (single conditional UPDATEs; terminal states publish over SSE). `RunStatus` lives in `runtime/run/status.py`. Worker entry: `app/run/worker.py`. Dispatch: `app/run/dispatch.py` (send after commit, `runs.dispatched_at`, maintenance re-sends). Decision: [ADR 008](./docs/adr/008-flat-run-pipeline.md).
 
-## Three registries (do not merge)
+## Extraction
 
-| Module | Selects | Example ids |
-|--------|---------|-------------|
-| `extraction/pipeline.py` | Extractor callable | `stub`, `pipeline` (`AUDIT_EXTRACTOR`) |
-| `catalog/registry.py` | The document model | `repody:vlm` |
-| `catalog/status.py` + `api.py` | llama-server status | `/models/catalog`, healthz |
+`extraction/pipeline.py` `extract_document` is the one entrypoint: Redis cache, then NuExtract on the
+llama-server (`extraction/vlm.py`). There is one document model (`repody:vlm`); its live status
+comes from `catalog/status.py` (`GET /v1/models` on the llama-server).
 
 ## Inference
 
 | Concern | Configuration |
 |---------|---------------|
-| Document extraction | `AUDIT_INFERENCE_MODE=llamacpp`, `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
+| Document extraction | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
 
 
 ## Frontend layout

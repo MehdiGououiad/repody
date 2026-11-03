@@ -12,12 +12,6 @@ class RunAuditField(CamelModel):
 
 
 class RunDocumentExtractionMeta(CamelModel):
-    read_path_config: str
-    read_path_used: str
-    read_path_label: str
-    validation_mode: str
-    validation_label: str
-    document_model_id: str | None = None
     extraction_ms: int = 0
     cache_hit: bool = False
     gpu_cold_start_likely: bool = False
@@ -28,7 +22,6 @@ class RunDocumentExtractionMeta(CamelModel):
     pages_rendered: int | None = None
     pages_sent: int | None = None
     pages_dropped: int | None = None
-    native_pdf: dict | None = None
 
 
 class RunAuditDocument(CamelModel):
@@ -66,9 +59,6 @@ class RunAuditMetadata(CamelModel):
     duration_ms: int = 0
     extraction_ms: int = 0
     validation_ms: int = 0
-    validation_mode: str = "logic_only"
-    validation_label: str = ""
-    llm_model: str | None = None
 
 
 class RunAuditDetail(CamelModel):

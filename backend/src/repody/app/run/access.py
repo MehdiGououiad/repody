@@ -63,19 +63,15 @@ async def resolve_run_enqueue_source(
             raise (AppError(code=ErrorCode.UNAUTHORIZED, message=f"Unauthorized — {exc}")) from exc
 
         if not principal.has_app_role():
-            raise (
-                AppError(
-                    code=ErrorCode.FORBIDDEN,
-                    message="No application role assigned in Keycloak.",
-                )
+            raise AppError(
+                code=ErrorCode.FORBIDDEN,
+                message="No application role assigned in Keycloak.",
             )
 
         if not authorize(principal, "run", "execute"):
-            raise (
-                AppError(
-                    code=ErrorCode.FORBIDDEN,
-                    message="Forbidden — operator role required for test runs.",
-                )
+            raise AppError(
+                code=ErrorCode.FORBIDDEN,
+                message="Forbidden — operator role required for test runs.",
             )
 
         return ("test", wf)

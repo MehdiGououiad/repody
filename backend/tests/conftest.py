@@ -23,11 +23,10 @@ os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
 os.environ["AUDIT_OIDC_ENABLED"] = "false"
 os.environ["AUDIT_RUN_MIGRATIONS_ON_STARTUP"] = "false"
 os.environ["AUDIT_SEED_ON_STARTUP"] = "false"
-os.environ["AUDIT_STORAGE_BACKEND"] = "local"
-os.environ["AUDIT_LOCAL_STORAGE_PATH"] = os.path.join(os.path.dirname(__file__), ".storage")
+# Uploads go through the API; the object store is an in-memory fake (see use_memory_store).
+os.environ["AUDIT_DIRECT_UPLOAD_ENABLED"] = "false"
 os.environ["AUDIT_GPU_LIVE_PROBE"] = "false"
 os.environ["AUDIT_HEALTHZ_PROBE_INFERENCE"] = "false"
-os.environ["AUDIT_INFERENCE_MODE"] = "llamacpp"
 os.environ["AUDIT_LLAMACPP_BASE_URL"] = "http://llamacpp-mock.test/v1"
 os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
 os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
@@ -51,8 +50,10 @@ from tests.helpers.db import (
     upgrade_database_to_head,
 )
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
+from tests.support.memory_store import MemoryStore
 
 from repody.inference import openai_compat
+from repody.infra.storage.factory import use_storage
 from repody.main import create_app
 from repody.settings import clear_settings_cache, get_settings
 
@@ -66,6 +67,16 @@ def fresh_settings():
     clear_settings_cache()
     yield
     clear_settings_cache()
+
+
+@pytest.fixture(autouse=True)
+def use_memory_store(request):
+    if request.node.get_closest_marker("live") is not None:
+        yield
+        return
+    use_storage(MemoryStore())
+    yield
+    use_storage(None)
 
 
 @pytest.fixture

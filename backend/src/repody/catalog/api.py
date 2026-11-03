@@ -1,31 +1,17 @@
-"""Models catalog for the workflow builder: the one document model plus its live status."""
+"""The one document model (NuExtract3 on the llama-server) and its live status."""
 
 from __future__ import annotations
 
-from repody.catalog.registry import list_document_models
 from repody.catalog.status import model_status
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID, public_runtime_name
-from repody.extraction.modes import list_read_paths, list_validation_modes
-from repody.schemas.models_catalog import (
-    CatalogModelEntry,
-    ModelsCatalogResponse,
-    ReadPathOption,
-    ValidationModeOption,
-)
+from repody.schemas.models_catalog import CatalogModelEntry, ModelsCatalogResponse
 from repody.settings import get_settings
 
-
-def document_model_summaries() -> list[dict[str, str]]:
-    """Public document model rows for platform config."""
-    return [
-        {
-            "id": spec.id,
-            "label": spec.label,
-            "runtime": public_runtime_name(spec.runtime),
-            "runtime_model": spec.label,
-        }
-        for spec in list_document_models()
-    ]
+MODEL_ID = "repody:vlm"
+MODEL_LABEL = "Repody VLM"
+MODEL_DESCRIPTION = (
+    "NuExtract3 structured extraction from page images (local llama-server, "
+    "OpenAI-compatible). Optional Markdown transcription."
+)
 
 
 async def fetch_models_catalog() -> ModelsCatalogResponse:
@@ -36,36 +22,15 @@ async def fetch_models_catalog() -> ModelsCatalogResponse:
         note = "llama-server is not reachable — start it with `pnpm llamacpp:serve`."
     elif not status.loaded:
         note = f"llama-server does not serve {settings.llamacpp_served_model!r}."
-    models = [
-        CatalogModelEntry(
-            id=spec.id,
-            label=spec.label,
-            kind="document_model",
-            engine=spec.engine,
-            runtime=public_runtime_name(spec.runtime),
-            description=spec.description,
-            available=status.loaded,
-            availability_note=note,
-            is_default=True,
-        )
-        for spec in list_document_models()
-    ]
     return ModelsCatalogResponse(
-        models=models,
-        default_document_model=REPODY_VLM_CATALOG_ID,
-        inference_mode=settings.inference_mode,
-        paths=[
-            ReadPathOption(
-                id=p.id,
-                label=p.label,
-                description=p.description,
-                read_kind=p.read,
-                show_document_model=p.show_document_model,
+        models=[
+            CatalogModelEntry(
+                id=MODEL_ID,
+                label=MODEL_LABEL,
+                description=MODEL_DESCRIPTION,
+                served_model=settings.llamacpp_served_model,
+                available=status.loaded,
+                availability_note=note,
             )
-            for p in list_read_paths()
-        ],
-        validation_modes=[
-            ValidationModeOption(id=v.id, label=v.label, description=v.description)
-            for v in list_validation_modes()
-        ],
+        ]
     )

@@ -7,10 +7,7 @@ import { API_URL } from "../helpers/env";
 import { clickExtractValidate, goToTestDeployStep } from "../helpers/workflow-builder";
 
 const OUT = path.join(process.cwd(), "benchmark-reports", "ui-queue");
-const PDF = path.resolve(
-  process.cwd(),
-  "backend/tests/.storage/audit-documents/runs/00b738853d434ed6aa2c6f4b6800bfa0/Facture.pdf"
-);
+const PDF = path.resolve(process.cwd(), "e2e/fixtures/documents/Facture.pdf");
 const WORKFLOW_ID = "wf-invoice-audit";
 
 function docker(args: string[]) {

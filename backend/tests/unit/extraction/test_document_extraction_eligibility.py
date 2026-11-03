@@ -1,48 +1,21 @@
 from __future__ import annotations
 
-from repody.app.run.snapshot import SnapshotDocument
-from repody.extraction.modes import (
-    document_has_schema_fields,
-    document_needs_extraction,
-)
+from repody.app.run.progress import document_wants_extraction
+from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
 
 
-def test_document_has_schema_fields_false_when_empty() -> None:
-    doc = SnapshotDocument(
-        id="doc-1",
-        document_type="Invoice",
-        position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm",
-        schema_fields=[],
-    )
-    assert document_has_schema_fields(doc) is False
+def _doc(**kwargs) -> SnapshotDocument:
+    return SnapshotDocument(id="doc-1", document_type="Invoice", position=0, **kwargs)
 
 
-def test_document_needs_extraction_with_markdown_only() -> None:
-    doc = SnapshotDocument(
-        id="doc-1",
-        document_type="Document",
-        position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm",
-        markdown_extraction=True,
-        schema_fields=[],
-    )
-    assert document_needs_extraction(doc, has_file=True) is True
+def test_document_without_schema_or_markdown_is_not_extracted() -> None:
+    assert document_wants_extraction(_doc()) is False
 
 
-def test_document_needs_extraction_false_without_file_or_trigger() -> None:
-    doc = SnapshotDocument(
-        id="doc-1",
-        document_type="Document",
-        position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm",
-        schema_fields=[],
-    )
-    assert document_needs_extraction(doc, has_file=False) is False
-    assert document_needs_extraction(doc, has_file=True) is False
+def test_markdown_only_document_is_extracted() -> None:
+    assert document_wants_extraction(_doc(markdown_extraction=True)) is True
+
+
+def test_document_with_schema_fields_is_extracted() -> None:
+    field = SnapshotSchemaField(id="f1", name="total", description="", position=0)
+    assert document_wants_extraction(_doc(schema_fields=[field])) is True

@@ -8,9 +8,6 @@ from typing import Any
 
 from tests.support.fixtures import resolve_facture_pdf
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.extraction.modes import LOGIC_VALIDATION, ValidationMode
-
 FACTURE_PDF = resolve_facture_pdf()
 EXPECTED_TOTAL = "6000.00"
 EXPECTED_TVA = "1000.00"
@@ -93,29 +90,16 @@ LOGIC_RULE_TVA_UNDER_500_UI_CONDITIONS = {
 @dataclass(frozen=True)
 class FacturePathCase:
     id: str
-    read_path: str
-    validation_mode: ValidationMode
-    document_model_id: str = REPODY_VLM_CATALOG_ID
     max_wait_ms: float = 900_000
 
 
-FACTURE_UI_PATHS: tuple[FacturePathCase, ...] = (
-    FacturePathCase(
-        id="document_model_logic",
-        read_path="document_model",
-        validation_mode="logic_only",
-    ),
-)
+FACTURE_UI_PATHS: tuple[FacturePathCase, ...] = (FacturePathCase(id="document_model_logic"),)
 
 
 def facture_bytes() -> bytes:
     if not FACTURE_PDF.is_file():
         raise FileNotFoundError(f"Missing fixture: {FACTURE_PDF}")
     return FACTURE_PDF.read_bytes()
-
-
-def validation_mode_for_path(_extraction_mode: str) -> ValidationMode:
-    return LOGIC_VALIDATION
 
 
 def rules_for_case(_case: FacturePathCase) -> list[dict]:
@@ -131,9 +115,6 @@ def document_def(case: FacturePathCase, *, doc_id: str) -> dict[str, Any]:
     return {
         "id": doc_id,
         "documentType": "Invoice",
-        "extractionMode": case.read_path,
-        "validationMode": case.validation_mode,
-        "documentModelId": case.document_model_id,
         "schema": [
             {
                 "id": new_field_id(),

@@ -1,23 +1,25 @@
-"""Select local vs S3 ObjectStore."""
+"""The process-wide object store."""
 
 from __future__ import annotations
 
-from functools import lru_cache
-from pathlib import Path
-
 from repody.infra.storage.base import ObjectStore
-from repody.infra.storage.local import build_local_store
-from repody.infra.storage.s3 import build_s3_store
+from repody.infra.storage.s3 import S3Store
 from repody.settings import get_settings
 
+_store: ObjectStore | None = None
 
-@lru_cache
+
 def get_storage() -> ObjectStore:
-    settings = get_settings()
-    if settings.storage_backend == "s3":
-        return build_s3_store(settings)
-    root = Path(settings.local_storage_path)
-    return build_local_store(root, settings.minio_bucket)
+    global _store
+    if _store is None:
+        _store = S3Store(get_settings())
+    return _store
+
+
+def use_storage(store: ObjectStore | None) -> None:
+    """Replace the process-wide store (tests install an in-memory one; None resets)."""
+    global _store
+    _store = store
 
 
 async def init_storage() -> None:

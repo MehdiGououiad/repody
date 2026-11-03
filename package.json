@@ -91,9 +91,7 @@
     "test:e2e:smoke": "playwright test e2e/tests/01-platform-smoke.spec.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:platform": "node scripts/run-platform-e2e.mjs",
-    "stress:prod": "node scripts/prod-stress.mjs full",
-    "stress:prod:smoke": "node scripts/prod-stress.mjs smoke"
+    "test:platform": "node scripts/run-platform-e2e.mjs"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.3.0",

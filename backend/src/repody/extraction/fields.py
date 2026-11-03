@@ -35,19 +35,6 @@ def fields_from_nuextract_json(
     return out
 
 
-def _lookup_leaf_value(data: dict[str, Any], leaf_key: str) -> Any:
-    """Read a leaf from flat ``parent.child`` keys or nested ``{parent:{child:…}}``."""
-    if leaf_key in data:
-        return data[leaf_key]
-    parts = leaf_key.split(".")
-    cur: Any = data
-    for part in parts:
-        if not isinstance(cur, dict) or part not in cur:
-            return None
-        cur = cur[part]
-    return cur
-
-
 def _parse_json_object(raw: str) -> dict[str, Any]:
     text = (raw or "").strip()
     if not text:

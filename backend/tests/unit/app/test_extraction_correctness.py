@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from repody.extraction.cache import (
     CACHE_VERSION,
-    cache_key_from_storage,
+    cache_key,
     schema_fingerprint,
     should_cache_result,
 )
@@ -64,28 +64,27 @@ def test_should_not_cache_empty_extractions():
     assert should_cache_result(good) is True
 
 
-def test_storage_cache_key_includes_content_hash():
-    key_a = cache_key_from_storage(
-        storage_key="runs/a/file.pdf",
-        file_size=100,
-        content_hash="abc123",
-        schema_fp="schema1",
-        extraction_mode="read:document_model:val:logic_only",
-        document_model_id="repody:vlm",
-        extractor="pipeline",
-    )
-    key_b = cache_key_from_storage(
-        storage_key="runs/a/file.pdf",
-        file_size=100,
-        content_hash="def456",
-        schema_fp="schema1",
-        extraction_mode="read:document_model:val:logic_only",
-        document_model_id="repody:vlm",
-        extractor="pipeline",
-    )
-    assert key_a != key_b
-    assert "abc123" in key_a
-    assert f"extract:{CACHE_VERSION}s" in key_a
+def _key(**overrides) -> str:
+    args = {
+        "content_hash": "abc123",
+        "schema": [SchemaFieldSpec(name="total", description="Total")],
+        "served_model": "nuextract3-q4_k_m",
+        "markdown_extraction": False,
+        "extraction_instructions": "",
+        "icl_examples": None,
+    }
+    return cache_key(**{**args, **overrides})
+
+
+def test_cache_key_changes_with_content_model_and_request():
+    base = _key()
+    assert base.startswith(f"extract:{CACHE_VERSION}:")
+    assert base.endswith(":abc123")
+    assert _key(content_hash="def456") != base
+    assert _key(served_model="other-model") != base
+    assert _key(markdown_extraction=True) != base
+    assert _key(extraction_instructions="Dates are DD/MM/YYYY") != base
+    assert _key() == base
 
 
 def test_schema_fingerprint_includes_descriptions():

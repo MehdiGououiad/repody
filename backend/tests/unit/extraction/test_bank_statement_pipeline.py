@@ -39,8 +39,6 @@ from tests.fixtures.extraction_assertions import (
 )
 from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
 
-from repody.catalog.registry import parse_document_model
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
 from repody.extraction.fields import fields_from_nuextract_json
 from repody.extraction.nuextract import build_nuextract_template
 from repody.extraction.pipeline import extract_document
@@ -250,8 +248,6 @@ async def test_pipeline_mocked_full_schema_all_types(
         "application/pdf",
         "Bank statement",
         full_schema(),
-        extraction_mode="document_model",
-        document_model_id=REPODY_VLM_CATALOG_ID,
         extraction_instructions="Bank statement: extract all fields exactly.",
     )
     assert result.meta is not None
@@ -278,8 +274,6 @@ async def test_pipeline_mocked_per_schema(
         "application/pdf",
         "Bank statement",
         schema_factory(),
-        extraction_mode="document_model",
-        document_model_id=REPODY_VLM_CATALOG_ID,
     )
     assert result.meta is not None
     assert result.meta.pages_sent == 2
@@ -305,8 +299,6 @@ async def test_repody_vlm_extract_list_fields_via_mock(statement_model_router, g
     result = await extract_with_repody_vlm(
         bundle,
         list_fields_schema(),
-        "Bank statement",
-        spec=parse_document_model(REPODY_VLM_CATALOG_ID),
     )
     assert_list_fields(result.fields, ground_truth)
 
@@ -334,8 +326,6 @@ async def _live_extract(schema: list[SchemaFieldSpec], instructions: str):
         "application/pdf",
         "Bank statement",
         schema,
-        extraction_mode="document_model",
-        document_model_id=REPODY_VLM_CATALOG_ID,
         extraction_instructions=instructions,
     )
     assert result.meta is not None

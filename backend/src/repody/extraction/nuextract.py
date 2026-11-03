@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from typing import Any
 
 from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
-from repody.settings import Settings, get_settings
+from repody.settings import get_settings
 
 # https://huggingface.co/numind/NuExtract3-GGUF
 # https://github.com/numindai/nuextract - non-thinking / markdown examples
@@ -24,11 +24,6 @@ NUEXTRACT_THINKING_TEMPERATURE = 0.6
 NUEXTRACT_MARKDOWN_THINKING_TEMPERATURE = 0.7
 # Heading for per-field notes inside the official free-text `instructions`.
 NUEXTRACT_FIELD_NOTES_HEADING = "Field guidance:"
-
-
-def extraction_inference_profile_key(*, settings: Settings) -> str:
-    served_model = (settings.llamacpp_served_model or "").strip().lower()
-    return f"nuextract:official:model:{served_model or 'default'}"
 
 
 _LIST_SUFFIX = "-list"

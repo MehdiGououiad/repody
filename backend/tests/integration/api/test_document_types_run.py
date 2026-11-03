@@ -18,9 +18,6 @@ async def test_multipart_run_accepts_document_types(live_client):
                 "id": "doc-invoice",
                 "documentType": "Invoice",
                 "schema": [{"id": "f-total", "name": "total_amount", "description": "Total"}],
-                "extractionMode": "document_model",
-                "validationMode": "logic_only",
-                "documentModelId": "repody:vlm",
             }
         ],
         "rules": [],

@@ -5,25 +5,24 @@ import type { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { REPODY_VLM_LABEL } from "@/lib/document-model-branding";
-import type { DocumentDef } from "@/lib/types";
+import type { CatalogModelEntry } from "@/lib/api/schema-types";
 
-import type { ProcessingOptions } from "./processing-options";
+export type ModelStatus = {
+  model: CatalogModelEntry | undefined;
+  loaded: boolean;
+  error: boolean;
+  onRetry: () => void;
+};
 
 /** The document model is fixed (NuExtract via Repody VLM); show it and its live availability. */
 export function ProcessingSettings({
   t,
-  options,
-  onRetry,
+  status,
 }: {
   t: ReturnType<typeof useTranslations>;
-  doc: DocumentDef;
-  options: ProcessingOptions;
-  onChange: (patch: Partial<DocumentDef>) => void;
-  onRetry: () => void;
+  status: ModelStatus;
 }) {
-  const { error, loaded, documentModelIds } = options;
-  const model = documentModelIds[0];
+  const { error, loaded, model, onRetry } = status;
   const offline = loaded && model?.available === false;
 
   return (
@@ -52,7 +51,7 @@ export function ProcessingSettings({
       <div className="max-w-lg space-y-1.5">
         <p className="text-xs font-semibold">{t("extraction.documentModelLabel")}</p>
         <div className="flex items-center gap-2 text-sm">
-          <span>{REPODY_VLM_LABEL}</span>
+          <span>{model?.label ?? "Repody VLM"}</span>
           {offline ? (
             <Badge variant="danger" className="text-[10px]">
               {t("extraction.offlineBadge")}

@@ -43,7 +43,7 @@ from tests.support.live_stack import (
 )
 from tests.support.workflow_flow import run_test_with_files, save_workflow
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.catalog.api import MODEL_ID
 from repody.infra.db.seed import SEED_WORKFLOW_ID
 
 BASE = live_api_base()
@@ -98,20 +98,15 @@ def test_live_health_and_config(client: httpx.Client, oidc_enabled: bool):
     if not oidc_enabled:
         cfg = config.json()
         assert cfg.get("maxUploadBytes", 0) > 0
-        assert cfg.get("documentModels")
+        assert cfg.get("servedModel")
 
 
 def test_live_models_catalog_and_rules(client: httpx.Client, oidc_enabled: bool):
     catalog = client.get("/v1/models/catalog")
     assert catalog.status_code == 200
     cat = catalog.json()
-    path_ids = {p["id"] for p in cat["paths"]}
-    assert "document_model" in path_ids
-    assert cat["defaultPath"] == "document_model"
-    val_ids = {v["id"] for v in cat["validationModes"]}
-    assert "logic_only" in val_ids
     models = {m["id"]: m for m in cat["models"]}
-    assert REPODY_VLM_CATALOG_ID in models
+    assert MODEL_ID in models
 
     rules = client.get("/v1/rules/library")
     assert rules.status_code == 200
@@ -124,12 +119,12 @@ def test_live_models_catalog_and_rules(client: httpx.Client, oidc_enabled: bool)
 def test_live_uploads_and_model_status(client: httpx.Client):
     caps = client.get("/v1/uploads/capabilities")
     assert caps.status_code == 200
-    assert caps.json()["storageBackend"] in ("local", "s3")
+    assert caps.json()["uploadMode"] in ("api", "presigned")
 
     catalog = client.get("/v1/models/catalog")
     assert catalog.status_code == 200
     (model,) = catalog.json()["models"]
-    assert model["id"] == REPODY_VLM_CATALOG_ID
+    assert model["id"] == MODEL_ID
     assert model["available"] is True, model.get("availabilityNote")
 
 

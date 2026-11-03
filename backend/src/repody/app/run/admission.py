@@ -37,21 +37,6 @@ async def count_running(session: AsyncSession) -> int:
     )
 
 
-async def count_extract_inflight(session: AsyncSession) -> int:
-    """Inflight runs classified for the document-model worker pool."""
-    return int(
-        await session.scalar(
-            select(func.count())
-            .select_from(Run)
-            .where(
-                Run.status.in_(_INFLIGHT),
-                Run.worker_pool == "extract",
-            )
-        )
-        or 0
-    )
-
-
 async def _admission_counts(session: AsyncSession) -> tuple[int, int, int]:
     """One round-trip: queued, inflight, extract-inflight (FILTER aggregates)."""
     row = (
@@ -100,38 +85,31 @@ async def check_admission(
     queued, inflight, extract_n = await _admission_counts(session)
 
     if max_queued > 0 and queued >= max_queued:
-        raise (
-            AppError(
-                code=ErrorCode.CAPACITY,
-                message=(
-                    f"Queue is full ({queued}/{max_queued} queued runs). Retry after workers drain."
-                ),
-                retry_after_seconds=retry_after,
-            )
+        raise AppError(
+            code=ErrorCode.CAPACITY,
+            message=(
+                f"Queue is full ({queued}/{max_queued} queued runs). Retry after workers drain."
+            ),
+            retry_after_seconds=retry_after,
         )
 
     if max_inflight > 0 and inflight >= max_inflight:
-        raise (
-            AppError(
-                code=ErrorCode.CAPACITY,
-                message=(
-                    f"Platform at capacity ({inflight}/{max_inflight} inflight runs). "
-                    "Retry shortly."
-                ),
-                retry_after_seconds=retry_after,
-            )
+        raise AppError(
+            code=ErrorCode.CAPACITY,
+            message=(
+                f"Platform at capacity ({inflight}/{max_inflight} inflight runs). Retry shortly."
+            ),
+            retry_after_seconds=retry_after,
         )
 
     if need_extract and extract_n >= max_extract:
-        raise (
-            AppError(
-                code=ErrorCode.CAPACITY,
-                message=(
-                    f"Extract pool at capacity ({extract_n}/{max_extract} inflight). "
-                    "Retry when document-model workers free up."
-                ),
-                retry_after_seconds=retry_after,
-            )
+        raise AppError(
+            code=ErrorCode.CAPACITY,
+            message=(
+                f"Extract pool at capacity ({extract_n}/{max_extract} inflight). "
+                "Retry when document-model workers free up."
+            ),
+            retry_after_seconds=retry_after,
         )
 
     return

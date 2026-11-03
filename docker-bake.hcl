@@ -43,12 +43,6 @@ variable "REPODY_BACKEND_EXTRAS" {
   }
 }
 
-# Ship the Facture benchmark fixture inside the backend image (off for client images).
-variable "REPODY_INCLUDE_BENCHMARK_FIXTURES" {
-  type    = bool
-  default = false
-}
-
 variable "NEXT_PUBLIC_BUGSINK_DSN" {
   default = ""
 }
@@ -76,11 +70,9 @@ target "backend" {
   context  = "backend"
   target   = "backend"
   args = {
-    BACKEND_EXTRAS             = REPODY_BACKEND_EXTRAS
-    INCLUDE_BENCHMARK_FIXTURES = REPODY_INCLUDE_BENCHMARK_FIXTURES
+    BACKEND_EXTRAS = REPODY_BACKEND_EXTRAS
   }
-  contexts = REPODY_INCLUDE_BENCHMARK_FIXTURES ? { benchmark-fixtures = "e2e/fixtures/documents" } : {}
-  tags     = [image("repody-backend", REPODY_BACKEND_IMAGE_TAG)]
+  tags = [image("repody-backend", REPODY_BACKEND_IMAGE_TAG)]
 }
 
 target "web" {

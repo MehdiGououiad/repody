@@ -335,15 +335,11 @@ config:
   keycloakAdminPassword: ""
   oidcAudience: repody-api
   keycloakClientId: repody-web
-  inferenceMode: llamacpp
   # External OpenAI-compatible document-model endpoint. This chart does not run inference.
   # Never use host.docker.internal here - that is Compose-only.
   llamacppBaseUrl: https://vlm.example.com/v1
   # Must match llama-server --alias / /v1/models id (local: NuExtract3-Q4_K_M).
   llamacppServedModel: nuextract3-q4_k_m
-  extractor: pipeline
-  defaultDocumentModelId: repody:vlm
-  repodyVlmEnabled: true
   repodyVlmTimeoutSeconds: 180
   # Hard cap: audit tasks must finish within 3 minutes (see docs/CLUSTER.md#production-observability-baseline)
   workerTaskTimeoutMinutes: 3

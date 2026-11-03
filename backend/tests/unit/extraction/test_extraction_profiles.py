@@ -2,29 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
-from repody.catalog.registry import parse_document_model
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.extraction.modes import (
-    DOCUMENT_MODEL_READ_PATH_ID,
-    resolve_read_path_for_document,
-)
 from repody.extraction.nuextract import NUEXTRACT_PDF_DPI, structured_chat_payload
 from repody.extraction.types import SchemaFieldSpec
-
-
-def test_read_paths_resolve_to_nuextract_vision():
-    _, used = resolve_read_path_for_document(DOCUMENT_MODEL_READ_PATH_ID)
-    assert used == DOCUMENT_MODEL_READ_PATH_ID
-    _, used_default = resolve_read_path_for_document(None)
-    assert used_default == DOCUMENT_MODEL_READ_PATH_ID
-
-
-def test_legacy_read_paths_rejected():
-    for mode in ("pdf_text", "auto", "vlm"):
-        with pytest.raises(ValueError, match="Unknown read path"):
-            resolve_read_path_for_document(mode)
+from repody.settings import get_settings
 
 
 def test_nuextract_official_pdf_dpi():
@@ -32,10 +12,10 @@ def test_nuextract_official_pdf_dpi():
 
 
 def test_nuextract_payload_official_generation_defaults():
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
+    model = get_settings().llamacpp_served_model
     schema = [SchemaFieldSpec(name="invoice_number", template_type="verbatim-string")]
     payload = structured_chat_payload(
-        model=spec.runtime_model,
+        model=model,
         content=[{"type": "image_url", "image_url": {"url": "data:image/png;base64,abc"}}],
         schema=schema,
         extraction_instructions="",

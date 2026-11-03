@@ -8,7 +8,6 @@ def test_presign_uses_public_endpoint_client_when_configured() -> None:
     settings = Settings(
         minio_endpoint="minio:9000",
         minio_public_endpoint="localhost:9000",
-        storage_backend="s3",
     )
 
     with patch("repody.infra.storage.s3.boto3.client") as mock_client:
@@ -27,7 +26,6 @@ def test_presign_reuses_internal_client_when_endpoints_match() -> None:
     settings = Settings(
         minio_endpoint="localhost:9000",
         minio_public_endpoint=None,
-        storage_backend="s3",
     )
 
     with patch("repody.infra.storage.s3.boto3.client") as mock_client:

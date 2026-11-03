@@ -6,10 +6,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
-from repody.extraction.modes import DEFAULT_READ_PATH_ID
-
 __all__ = [
-    "DEFAULT_READ_PATH_ID",
     "MARKDOWN_TEXT_MAX_CHARS",
     "DocumentBundle",
     "ExtractedFieldResult",
@@ -125,12 +122,6 @@ class ExtractedFieldResult:
 class ExtractionMetadata:
     """Persisted on run documents and surfaced in audit reports."""
 
-    read_path_config: str
-    read_path_used: str
-    read_path_label: str
-    validation_mode: str
-    validation_label: str
-    document_model_id: str | None = None
     extraction_ms: int = 0
     cache_hit: bool = False
     gpu_cold_start_likely: bool = False
@@ -141,8 +132,6 @@ class ExtractionMetadata:
     pages_rendered: int | None = None
     pages_sent: int | None = None
     pages_dropped: int | None = None
-    # Automode routing: {source, pdfType?, confidence?, fallbackReason?}
-    native_pdf: dict | None = None
 
 
 MARKDOWN_TEXT_MAX_CHARS = 80_000
@@ -164,8 +153,6 @@ class ExtractionResult:
     fields: list[ExtractedFieldResult]
     raw_text: str | None = None
     markdown_text: str | None = None
-    llm_rule_results: dict[str, tuple[str, str]] | None = None
-    read_path_used: str | None = None
     meta: ExtractionMetadata | None = None
     pages_rendered: int | None = None
     pages_sent: int | None = None

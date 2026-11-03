@@ -1,9 +1,9 @@
-"""Object storage contracts - frozen DTOs + callable ops bundle (no ABC)."""
+"""Object storage contract (S3/MinIO in every deployment; tests swap in a fake)."""
 
 from __future__ import annotations
 
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import Protocol
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,25 +13,21 @@ class PresignedPut:
     headers: dict[str, str] = field(default_factory=dict)
 
 
-EnsureBucketFn = Callable[[], Awaitable[None]]
-PutBytesFn = Callable[[str, bytes, str], Awaitable[str]]
-GetBytesFn = Callable[[str], Awaitable[bytes]]
-DeleteFn = Callable[[str], Awaitable[None]]
-StatObjectFn = Callable[[str], Awaitable[tuple[int, str | None]]]
-HeadBytesFn = Callable[..., Awaitable[bytes]]
-GetRangeBytesFn = Callable[..., Awaitable[bytes]]
-PresignPutFn = Callable[..., Awaitable[PresignedPut]]
+class ObjectStore(Protocol):
+    async def ensure_bucket(self) -> None: ...
 
+    async def put_bytes(self, key: str, data: bytes, content_type: str) -> str: ...
 
-@dataclass(frozen=True, slots=True)
-class ObjectStore:
-    """Injected storage operations - same attribute names as the old client API."""
+    async def get_bytes(self, key: str) -> bytes: ...
 
-    ensure_bucket: EnsureBucketFn
-    put_bytes: PutBytesFn
-    get_bytes: GetBytesFn
-    delete: DeleteFn
-    stat_object: StatObjectFn
-    head_bytes: HeadBytesFn
-    get_range_bytes: GetRangeBytesFn
-    presign_put: PresignPutFn
+    async def delete(self, key: str) -> None: ...
+
+    async def stat_object(self, key: str) -> tuple[int, str | None]:
+        """``(size, content_type)``; raises ``FileNotFoundError`` when missing."""
+        ...
+
+    async def head_bytes(self, key: str, *, max_bytes: int = 4096) -> bytes: ...
+
+    async def presign_put(
+        self, key: str, content_type: str, *, expires_seconds: int = 3600
+    ) -> PresignedPut: ...

@@ -2,18 +2,11 @@
 
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
 import { SectionHeading } from "@/components/layout/section-heading";
-import {
-  documentModelsFromCatalog,
-  useUnifiedModelsCatalog,
-} from "@/lib/hooks/use-catalog-queries";
+import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
 import type { DocumentDef } from "@/lib/types";
 import { cn, shortId } from "@/lib/utils";
 import { DocumentCard } from "./document-card";
-import { EMPTY_PROCESSING_OPTIONS, type ProcessingOptions } from "./processing-options";
-
-export type { ProcessingOptions } from "./processing-options";
 
 export function DocumentsSection({
   documents,
@@ -25,22 +18,11 @@ export function DocumentsSection({
   const t = useTranslations("workflows.builder");
   const catalogQuery = useUnifiedModelsCatalog();
 
-  const processingOptions = useMemo((): ProcessingOptions => {
-    const loaded = catalogQuery.isFetched;
-    const error = catalogQuery.isError;
-    if (!catalogQuery.data) {
-      return { ...EMPTY_PROCESSING_OPTIONS, loaded, error };
-    }
-    return {
-      documentModelIds: documentModelsFromCatalog(catalogQuery.data),
-      defaultDocumentModel: catalogQuery.data.defaultDocumentModel,
-      loaded: true,
-      error: false,
-    };
-  }, [catalogQuery.data, catalogQuery.isFetched, catalogQuery.isError]);
-
-  const retryProcessingOptions = () => {
-    void catalogQuery.refetch();
+  const modelStatus = {
+    model: catalogQuery.data?.models[0],
+    loaded: catalogQuery.isFetched,
+    error: catalogQuery.isError,
+    onRetry: () => void catalogQuery.refetch(),
   };
 
   const updateDoc = (id: string, patch: Partial<DocumentDef>) =>
@@ -53,9 +35,6 @@ export function DocumentsSection({
         id: `doc${shortId()}`,
         documentType: "",
         schema: [],
-        extractionMode: "document_model",
-        validationMode: "logic_only",
-        documentModelId: processingOptions.defaultDocumentModel,
       },
     ]);
 
@@ -76,8 +55,7 @@ export function DocumentsSection({
             canRemove={documents.length > 1}
             onChange={(patch) => updateDoc(doc.id, patch)}
             onRemove={() => removeDoc(doc.id)}
-            processingOptions={processingOptions}
-            onRetryProcessingOptions={retryProcessingOptions}
+            modelStatus={modelStatus}
           />
         ))}
       </div>

@@ -8,8 +8,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { DocumentDef } from "@/lib/types";
-import type { ProcessingOptions } from "./processing-options";
-import { ProcessingSettings } from "./processing-settings";
+import { type ModelStatus, ProcessingSettings } from "./processing-settings";
 import { SchemaTable } from "./schema-table";
 
 export function DocumentCard({
@@ -18,16 +17,14 @@ export function DocumentCard({
   canRemove,
   onChange,
   onRemove,
-  processingOptions,
-  onRetryProcessingOptions,
+  modelStatus,
 }: {
   doc: DocumentDef;
   index: number;
   canRemove: boolean;
   onChange: (patch: Partial<DocumentDef>) => void;
   onRemove: () => void;
-  processingOptions: ProcessingOptions;
-  onRetryProcessingOptions: () => void;
+  modelStatus: ModelStatus;
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
@@ -129,13 +126,7 @@ export function DocumentCard({
 
           <SchemaTable schema={doc.schema} onChange={(schema) => onChange({ schema })} t={t} />
 
-          <ProcessingSettings
-            t={t}
-            doc={doc}
-            options={processingOptions}
-            onChange={onChange}
-            onRetry={onRetryProcessingOptions}
-          />
+          <ProcessingSettings t={t} status={modelStatus} />
         </div>
       ) : null}
     </div>

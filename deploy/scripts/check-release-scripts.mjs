@@ -53,13 +53,6 @@ const checks = [
       c.target.web.tags[0] === "example.invalid/repody/repody-web:0.1.1" &&
       c.target.web.platforms?.join(",") === "linux/amd64,linux/arm64",
   },
-  {
-    name: "benchmark fixtures add the named context",
-    env: { REPODY_INCLUDE_BENCHMARK_FIXTURES: "true" },
-    expect: (c) =>
-      c.target.backend.contexts?.["benchmark-fixtures"] === "e2e/fixtures/documents" &&
-      c.target.backend.args.INCLUDE_BENCHMARK_FIXTURES === "true",
-  },
   { name: "reject mutable latest tag", env: { REPODY_IMAGE_TAG: "latest" }, fail: "immutable tag" },
   {
     name: "reject invalid backend extra",

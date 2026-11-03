@@ -7,25 +7,13 @@ from pydantic import Field
 from repody.schemas.common import CamelModel
 
 
-class DocumentModelSummary(CamelModel):
-    id: str
-    label: str
-    runtime: str
-    runtime_model: str
-
-
 class PlatformConfigResponse(CamelModel):
     app_name: str
-    extractor: str
-    inference_mode: str
-    storage_backend: str
     queue_backend: str
     direct_upload_enabled: bool
     cache_enabled: bool
     rate_limit_enabled: bool
-    default_document_model_id: str
-    default_read_path: str
-    document_models: list[DocumentModelSummary]
+    served_model: str
     nuextract_max_pages_per_request: int | None = None
     llamacpp_base_url: str
     max_upload_bytes: int

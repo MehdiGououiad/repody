@@ -140,12 +140,10 @@ def enable_dmr_mock(
 ) -> respx.MockRouter:
     """Point inference at a mocked OpenAI-compatible endpoint."""
     if monkeypatch is not None:
-        monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
         monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", base)
     else:
         import os
 
-        os.environ["AUDIT_INFERENCE_MODE"] = "llamacpp"
         os.environ["AUDIT_LLAMACPP_BASE_URL"] = base
 
     get_settings.cache_clear()

@@ -4,12 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from repody.extraction.branding import normalize_public_catalog_id
-from repody.extraction.modes import (
-    parse_read_path,
-    read_path_label,
-    validation_mode_label,
-)
 from repody.infra.db.models import Workflow
 from repody.infra.storage.mime import resolve_mime as resolve_storage_mime
 from repody.rules.conditions import resolve_rule_body
@@ -17,9 +11,7 @@ from repody.util.json_shape import normalize_keys_to_snake
 
 __all__ = [
     "attr_or_key",
-    "extract_label",
     "meta_to_dict",
-    "progress_mode",
     "resolve_upload_mime",
     "rule_dict_from_row",
     "rules_payload",
@@ -46,40 +38,9 @@ def resolve_upload_mime(declared_mime: str | None, document_bytes: bytes | None)
     return "application/octet-stream"
 
 
-def progress_mode(*, has_file: bool) -> str:
-    if not has_file:
-        return "schema"
-    return "document_model"
-
-
-def extract_label(doc_type: str, *, mode: str, detail: str | None = None) -> str:
-    labels = {
-        "schema": f"Schema placeholders for {doc_type}…",
-        "document_model": f"Document model extraction · {doc_type}…",
-    }
-    base = labels.get(mode, f"Extracting {doc_type}…")
-    return f"{base} ({detail})" if detail else base
-
-
 def meta_to_dict(meta) -> dict:
-    """Canonical HTTP/wire shape (camelCase) for extraction meta.
-
-    Used by run_documents.extraction_meta.
-    Display labels are derived at the edge when absent from the meta object.
-    """
-    stored_read_label = getattr(meta, "read_path_label", None)
-    stored_validation_label = getattr(meta, "validation_label", None)
-    read_label = stored_read_label or read_path_label(
-        parse_read_path(meta.read_path_used or meta.read_path_config).id
-    )
-    val_label = stored_validation_label or validation_mode_label(meta.validation_mode)
+    """Wire shape (camelCase) of extraction meta, stored on run_documents.extraction_meta."""
     return {
-        "readPathConfig": meta.read_path_config,
-        "readPathUsed": meta.read_path_used,
-        "readPathLabel": read_label,
-        "validationMode": meta.validation_mode,
-        "validationLabel": val_label,
-        "documentModelId": normalize_public_catalog_id(meta.document_model_id),
         "extractionMs": meta.extraction_ms,
         "cacheHit": meta.cache_hit,
         "gpuColdStartLikely": meta.gpu_cold_start_likely,
@@ -90,7 +51,6 @@ def meta_to_dict(meta) -> dict:
         "pagesRendered": meta.pages_rendered,
         "pagesSent": meta.pages_sent,
         "pagesDropped": meta.pages_dropped,
-        "nativePdf": getattr(meta, "native_pdf", None),
     }
 
 

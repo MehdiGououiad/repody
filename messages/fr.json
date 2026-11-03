@@ -7,7 +7,7 @@
     "dashboard": "Tableau de bord",
     "workflows": "Workflows",
     "audits": "Rapports d'audit",
-    "settings": "Console opérateur",
+    "settings": "Paramètres",
     "newWorkflow": "Nouveau workflow",
     "logout": "Se déconnecter"
   },
@@ -92,8 +92,7 @@
     "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
     "queuePosition": "Position dans la file {position} sur {depth}",
     "queueWaiting": "En attente dans la file…",
-    "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement.",
-    "queueServerless": "Les exécutions sont traitées dans l'ordre. Les jobs GPU serverless peuvent aussi attendre 1 à 2 minutes sur la première requête après inactivité."
+    "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement."
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -126,6 +125,9 @@
     },
     "kpi": {
       "auditsWeek": "Audits cette semaine",
+      "passRate": "Taux de conformité",
+      "failures": "Échecs de règles",
+      "pendingReview": "En attente de révision",
       "trendUp": "En hausse de {delta} par rapport à la période précédente",
       "trendDown": "En baisse de {delta} par rapport à la période précédente"
     },
@@ -268,6 +270,7 @@
         "extract": "Quoi extraire",
         "extractHint": "Types de documents, champs et modèle d'extraction",
         "rules": "Règles de validation",
+        "rulesHint": "Contrôles logiques sur les valeurs extraites",
         "upload": "Test & déploiement",
         "uploadHint": "Échantillon → extraction → validation en une passe",
         "back": "Retour",

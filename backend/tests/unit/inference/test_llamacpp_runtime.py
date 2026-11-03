@@ -1,33 +1,10 @@
 from __future__ import annotations
 
-from repody.catalog.registry import parse_document_model
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
-from repody.settings import Settings, clear_settings_cache
-
-
-def test_registry_uses_llamacpp_when_inference_mode_llamacpp(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "test/repody-vlm")
-    clear_settings_cache()
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    assert spec.runtime == "llamacpp"
-    assert spec.runtime_model == "test/repody-vlm"
-
-
-def test_registry_uses_llamacpp_served_model(monkeypatch):
-    monkeypatch.setenv("AUDIT_INFERENCE_MODE", "llamacpp")
-    monkeypatch.setenv("AUDIT_LLAMACPP_SERVED_MODEL", "test/repody-vlm")
-    clear_settings_cache()
-    spec = parse_document_model(REPODY_VLM_CATALOG_ID)
-    assert spec.runtime == "llamacpp"
-    assert spec.runtime_model == "test/repody-vlm"
+from repody.settings import Settings
 
 
 def test_llamacpp_base_url():
-    settings = Settings(
-        inference_mode="llamacpp",
-        llamacpp_base_url="http://127.0.0.1:8081/v1",
-    )
+    settings = Settings(llamacpp_base_url="http://127.0.0.1:8081/v1")
     from repody.inference.runtime import llamacpp_base_url
 
     assert llamacpp_base_url(settings) == "http://127.0.0.1:8081/v1"

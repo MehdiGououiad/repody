@@ -18,7 +18,7 @@ from tests.support.facture import (
     total_from_result,
 )
 
-from repody.extraction.branding import REPODY_VLM_CATALOG_ID
+from repody.catalog.api import MODEL_ID
 
 TEXT_LAYER_CASE = FACTURE_UI_PATHS[0]
 
@@ -28,7 +28,7 @@ async def test_platform_config(client):
     res = await client.get("/v1/platform/config")
     assert res.status_code == 200
     body = res.json()
-    assert "extractor" in body
+    assert body["servedModel"]
     assert "queueBackend" in body
     assert "maxUploadBytes" in body
 
@@ -51,20 +51,7 @@ async def test_upload_capabilities(client):
     res = await client.get("/v1/uploads/capabilities")
     assert res.status_code == 200
     body = res.json()
-    assert body["storageBackend"] in ("local", "s3")
-
-
-@pytest.mark.asyncio
-async def test_models_catalog_includes_processing_paths(client):
-    res = await client.get("/v1/models/catalog")
-    assert res.status_code == 200
-    body = res.json()
-    paths = body["paths"]
-    ids = {p["id"] for p in paths}
-    assert "document_model" in ids
-    assert body["defaultPath"] == "document_model"
-    assert any(v["id"] == "logic_only" for v in body["validationModes"])
-    assert not any(v["id"] == "logic_and_llm" for v in body["validationModes"])
+    assert body["uploadMode"] == "api"
 
 
 @pytest.mark.asyncio
@@ -81,8 +68,8 @@ async def test_document_model_id_catalog_reports_runtime_availability(client, mo
 
     assert response.status_code == 200
     models = {model["id"]: model for model in response.json()["models"]}
-    assert models[REPODY_VLM_CATALOG_ID]["available"] is True
-    assert models[REPODY_VLM_CATALOG_ID]["runtime"] == "Repody VLM"
+    assert models[MODEL_ID]["available"] is True
+    assert models[MODEL_ID]["label"] == "Repody VLM"
 
 
 @pytest.mark.asyncio

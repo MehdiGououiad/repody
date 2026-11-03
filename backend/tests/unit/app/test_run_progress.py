@@ -29,9 +29,6 @@ def test_progress_plan_supports_snapshot_documents():
         id="doc-1",
         document_type="Invoice",
         position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm",
         schema_fields=[
             SnapshotSchemaField(
                 id="field-1",
@@ -49,10 +46,7 @@ def test_progress_plan_supports_snapshot_documents():
     )
 
     assert steps[1]["id"] == "extract-doc-1"
-    assert steps[1]["readPath"] == "document_model"
-    assert steps[1]["validationMode"] == "logic_only"
-    assert "Read:" in steps[1]["detail"]
-    assert "Validation:" not in steps[1]["detail"]
+    assert steps[1]["mode"] == "document_model"
 
 
 def test_step_index_for_resolves_by_id():
@@ -87,9 +81,6 @@ def test_progress_plan_includes_markdown_only_documents():
         id="doc-md",
         document_type="Document",
         position=0,
-        extraction_mode="document_model",
-        validation_mode="logic_only",
-        document_model_id="repody:vlm",
         markdown_extraction=True,
         schema_fields=[],
     )

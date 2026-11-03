@@ -59,13 +59,7 @@ export function DocumentExtractionOutput({
   className?: string;
 }) {
   if (extraction.markdownExtraction && extraction.markdownText) {
-    return (
-      <DocumentMarkdownPanel
-        text={extraction.markdownText}
-        readPathUsed={extraction.readPathUsed}
-        className={className}
-      />
-    );
+    return <DocumentMarkdownPanel text={extraction.markdownText} className={className} />;
   }
 
   if (extraction.rawText) {

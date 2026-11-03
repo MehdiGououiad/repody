@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, ScanText } from "lucide-react";
+import { ScanText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
@@ -8,21 +8,12 @@ import { DocumentMarkdownPreview } from "@/components/documents/document-markdow
 import { CopyableOutputPanel, OutputPre } from "@/components/shared/copyable-output-panel";
 import { normalizeDocumentMarkdown } from "@/lib/document-markdown/normalize";
 
-export function DocumentMarkdownPanel({
-  text,
-  readPathUsed,
-  className,
-}: {
-  text: string;
-  readPathUsed?: string;
-  className?: string;
-}) {
+export function DocumentMarkdownPanel({ text, className }: { text: string; className?: string }) {
   const t = useTranslations("workflows.builder.documentMarkdown");
   const normalized = useMemo(() => normalizeDocumentMarkdown(text), [text]);
   const lineCount = normalized.split("\n").length;
   const pageCount = (normalized.match(/^## Page \d+$/gm) ?? []).length;
   const hasTables = /\|.+\|/.test(normalized);
-  const Icon = readPathUsed === "document_model" ? ScanText : FileText;
 
   const subtitle = [
     t("subtitle", { lines: lineCount, chars: normalized.length.toLocaleString() }),
@@ -38,7 +29,7 @@ export function DocumentMarkdownPanel({
       headerClassName="from-accent-blue/5"
       icon={
         <div className="size-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
-          <Icon className="h-4 w-4 text-accent-blue" />
+          <ScanText className="h-4 w-4 text-accent-blue" />
         </div>
       }
       labels={{

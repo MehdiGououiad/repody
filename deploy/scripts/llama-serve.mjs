@@ -100,7 +100,6 @@ function warmup({ background = false, force = false } = {}) {
     shell: false,
     env: {
       ...process.env,
-      AUDIT_INFERENCE_MODE: "llamacpp",
       AUDIT_LLAMACPP_BASE_URL: `http://127.0.0.1:${port}/v1`,
       AUDIT_REPODY_VLM_WARMUP_ON_START: "true",
     },

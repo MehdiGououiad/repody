@@ -19,14 +19,6 @@ def validate_production_guardrails(settings: Settings) -> None:
         raise ValueError(
             "AUDIT_OIDC_ENABLED must be true when AUDIT_DEPLOYMENT_ENVIRONMENT=production."
         )
-    if (settings.extractor or "").strip().lower() == "stub":
-        raise ValueError(
-            "AUDIT_EXTRACTOR=stub is not allowed when AUDIT_DEPLOYMENT_ENVIRONMENT=production."
-        )
-    if (settings.inference_mode or "").strip().lower() == "stub":
-        raise ValueError(
-            "AUDIT_INFERENCE_MODE=stub is not allowed when AUDIT_DEPLOYMENT_ENVIRONMENT=production."
-        )
 
 
 def validate_timeout_alignment(settings: Settings) -> None:

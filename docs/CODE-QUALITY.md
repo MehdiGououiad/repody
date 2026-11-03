@@ -39,9 +39,9 @@ Biome already covers, so the two linters never disagree about the same line.
 - **Functions and records over classes.** Classes are for data
   (frozen dataclasses, Pydantic models, SQLAlchemy models) or for interfaces a
   third-party framework demands (Starlette middleware, SDK adapters). Behaviour
-  lives in module-level functions that take their state explicitly, or in
-  closures bundled into a frozen record of callables - see
-  `infra/storage/base.py`.
+  lives in module-level functions that take their state explicitly. A
+  swappable dependency is a `typing.Protocol` with one real implementation
+  and a test fake - see `infra/storage/base.py`.
 - **No pass-through re-exports.** Import from the module that defines a symbol.
   A barrel is acceptable only for a types-only module that is erased at compile
   time, such as `lib/types/index.ts`.

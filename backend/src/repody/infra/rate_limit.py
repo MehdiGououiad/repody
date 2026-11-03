@@ -97,11 +97,9 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            raise (
-                AppError(
-                    code=ErrorCode.RATE_LIMIT,
-                    message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
-                )
+            raise AppError(
+                code=ErrorCode.RATE_LIMIT,
+                message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
             ) from exc
         return
 
@@ -113,14 +111,12 @@ async def check_run_rate_limits(
             source=source,
             limit=settings.rate_limit_runs_per_workflow,
         )
-        raise (
-            AppError(
-                code=ErrorCode.RATE_LIMIT,
-                message=(
-                    f"Rate limit exceeded (workflow:{workflow_id}): "
-                    f"max {settings.rate_limit_runs_per_workflow} runs per {window}s."
-                ),
-            )
+        raise AppError(
+            code=ErrorCode.RATE_LIMIT,
+            message=(
+                f"Rate limit exceeded (workflow:{workflow_id}): "
+                f"max {settings.rate_limit_runs_per_workflow} runs per {window}s."
+            ),
         )
 
     if not client_key:
@@ -138,11 +134,9 @@ async def check_run_rate_limits(
             error_message=repr(exc),
         )
         if not _allow_on_redis_error(settings):
-            raise (
-                AppError(
-                    code=ErrorCode.RATE_LIMIT,
-                    message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
-                )
+            raise AppError(
+                code=ErrorCode.RATE_LIMIT,
+                message=f"Rate limit exceeded (redis): max 0 runs per {window}s.",
             ) from exc
         return
 
@@ -153,14 +147,12 @@ async def check_run_rate_limits(
             client_key=client_key,
             limit=settings.rate_limit_runs_per_client,
         )
-        raise (
-            AppError(
-                code=ErrorCode.RATE_LIMIT,
-                message=(
-                    f"Rate limit exceeded (client): "
-                    f"max {settings.rate_limit_runs_per_client} runs per {window}s."
-                ),
-            )
+        raise AppError(
+            code=ErrorCode.RATE_LIMIT,
+            message=(
+                f"Rate limit exceeded (client): "
+                f"max {settings.rate_limit_runs_per_client} runs per {window}s."
+            ),
         )
     return
 

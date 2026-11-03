@@ -1,4 +1,4 @@
-"""S3/MinIO object store as plain functions + ObjectStore binder."""
+"""S3/MinIO object store (boto3 calls run in a worker thread)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 
-from repody.infra.storage.base import ObjectStore, PresignedPut
+from repody.infra.storage.base import PresignedPut
 from repody.settings import Settings
 
 
@@ -50,124 +50,88 @@ def build_s3_clients(settings: Settings) -> tuple[Any, Any]:
     return internal, _make_client(public_endpoint, settings)
 
 
-def build_s3_store(settings: Settings) -> ObjectStore:
-    bucket = settings.minio_bucket
-    client, presign_client = build_s3_clients(settings)
+class S3Store:
+    def __init__(self, settings: Settings) -> None:
+        self._bucket = settings.minio_bucket
+        self._cors_origins = settings.cors_origins
+        self._client, self._presign_client = build_s3_clients(settings)
 
-    def _ensure_cors() -> None:
-        origins = settings.cors_origins
-        if not origins:
-            return
-        # MinIO may reject PutBucketCors; global CORS is configured in Helm values.
-        with contextlib.suppress(ClientError):
-            client.put_bucket_cors(
-                Bucket=bucket,
-                CORSConfiguration={
-                    "CORSRules": [
-                        {
-                            "AllowedHeaders": ["*"],
-                            "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
-                            "AllowedOrigins": origins,
-                            "ExposeHeaders": ["ETag"],
-                            "MaxAgeSeconds": 3600,
-                        }
-                    ]
-                },
-            )
-
-    async def ensure_bucket() -> None:
+    async def ensure_bucket(self) -> None:
         def _ensure() -> None:
             try:
-                client.head_bucket(Bucket=bucket)
+                self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
-                client.create_bucket(Bucket=bucket)
-            _ensure_cors()
+                self._client.create_bucket(Bucket=self._bucket)
+            if not self._cors_origins:
+                return
+            # MinIO may reject PutBucketCors; global CORS is configured in Helm values.
+            with contextlib.suppress(ClientError):
+                self._client.put_bucket_cors(
+                    Bucket=self._bucket,
+                    CORSConfiguration={
+                        "CORSRules": [
+                            {
+                                "AllowedHeaders": ["*"],
+                                "AllowedMethods": ["GET", "PUT", "POST", "HEAD"],
+                                "AllowedOrigins": self._cors_origins,
+                                "ExposeHeaders": ["ETag"],
+                                "MaxAgeSeconds": 3600,
+                            }
+                        ]
+                    },
+                )
 
         await asyncio.to_thread(_ensure)
 
-    async def put_bytes(key: str, data: bytes, content_type: str) -> str:
-        def _put() -> None:
-            client.put_object(
-                Bucket=bucket,
-                Key=key,
-                Body=data,
-                ContentType=content_type,
-            )
-
-        await asyncio.to_thread(_put)
+    async def put_bytes(self, key: str, data: bytes, content_type: str) -> str:
+        await asyncio.to_thread(
+            self._client.put_object,
+            Bucket=self._bucket,
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+        )
         return key
 
-    async def get_bytes(key: str) -> bytes:
+    async def get_bytes(self, key: str) -> bytes:
         def _get() -> bytes:
-            obj = client.get_object(Bucket=bucket, Key=key)
-            return obj["Body"].read()
+            return self._client.get_object(Bucket=self._bucket, Key=key)["Body"].read()
 
         return await asyncio.to_thread(_get)
 
-    async def stat_object(key: str) -> tuple[int, str | None]:
+    async def delete(self, key: str) -> None:
+        await asyncio.to_thread(self._client.delete_object, Bucket=self._bucket, Key=key)
+
+    async def stat_object(self, key: str) -> tuple[int, str | None]:
         def _head() -> tuple[int, str | None]:
             try:
-                obj = client.head_object(Bucket=bucket, Key=key)
+                obj = self._client.head_object(Bucket=self._bucket, Key=key)
             except ClientError as exc:
                 code = exc.response.get("Error", {}).get("Code", "")
                 if code in ("404", "NoSuchKey", "NotFound"):
                     raise FileNotFoundError(key) from exc
                 raise
-            size = int(obj.get("ContentLength") or 0)
-            content_type = obj.get("ContentType")
-            return size, content_type
+            return int(obj.get("ContentLength") or 0), obj.get("ContentType")
 
         return await asyncio.to_thread(_head)
 
-    async def get_range_bytes(key: str, *, start: int, end: int) -> bytes:
+    async def head_bytes(self, key: str, *, max_bytes: int = 4096) -> bytes:
         def _get_range() -> bytes:
-            byte_range = f"bytes={start}-{max(start, end - 1)}"
-            obj = client.get_object(Bucket=bucket, Key=key, Range=byte_range)
+            obj = self._client.get_object(
+                Bucket=self._bucket, Key=key, Range=f"bytes=0-{max(0, max_bytes - 1)}"
+            )
             return obj["Body"].read()
 
         return await asyncio.to_thread(_get_range)
 
-    async def head_bytes(key: str, *, max_bytes: int = 4096) -> bytes:
-        return await get_range_bytes(key, start=0, end=max_bytes)
-
-    async def delete(key: str) -> None:
-        def _delete() -> None:
-            client.delete_object(Bucket=bucket, Key=key)
-
-        await asyncio.to_thread(_delete)
-
     async def presign_put(
-        key: str,
-        content_type: str,
-        *,
-        expires_seconds: int = 3600,
+        self, key: str, content_type: str, *, expires_seconds: int = 3600
     ) -> PresignedPut:
-        def _presign() -> str:
-            return presign_client.generate_presigned_url(
-                "put_object",
-                Params={
-                    "Bucket": bucket,
-                    "Key": key,
-                    "ContentType": content_type,
-                },
-                ExpiresIn=expires_seconds,
-                HttpMethod="PUT",
-            )
-
-        url = await asyncio.to_thread(_presign)
-        return PresignedPut(
-            upload_url=url,
-            method="PUT",
-            headers={"Content-Type": content_type},
+        url = await asyncio.to_thread(
+            self._presign_client.generate_presigned_url,
+            "put_object",
+            Params={"Bucket": self._bucket, "Key": key, "ContentType": content_type},
+            ExpiresIn=expires_seconds,
+            HttpMethod="PUT",
         )
-
-    return ObjectStore(
-        ensure_bucket=ensure_bucket,
-        put_bytes=put_bytes,
-        get_bytes=get_bytes,
-        delete=delete,
-        stat_object=stat_object,
-        head_bytes=head_bytes,
-        get_range_bytes=get_range_bytes,
-        presign_put=presign_put,
-    )
+        return PresignedPut(upload_url=url, headers={"Content-Type": content_type})

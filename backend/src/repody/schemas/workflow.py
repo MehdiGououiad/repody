@@ -24,12 +24,6 @@ SchemaFieldSchema.model_rebuild()
 class DocumentDefSchema(CamelModel):
     id: str
     document_type: str = ""
-    extraction_mode: str = Field(
-        default="document_model",
-        description="Read path id from GET /processing-paths (document_model).",
-    )
-    validation_mode: str = Field(default="logic_only", description="logic_only")
-    document_model_id: str | None = "repody:vlm"
     schema_fields: list[SchemaFieldSchema] = Field(
         default_factory=list,
         validation_alias="schema",
@@ -39,10 +33,6 @@ class DocumentDefSchema(CamelModel):
     markdown_extraction: bool = Field(
         default=False,
         description="When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
-    )
-    native_pdf_auto: bool = Field(
-        default=False,
-        description="When true, try Firecrawl pdf-inspector native PDF text → Qwen JSON; if quality is weak, fall back to documentModelId.",
     )
     extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
         default_factory=list,
@@ -196,9 +186,6 @@ class RunProgressStepSchema(CamelModel):
     mode: str | None = None
     kind: str | None = None
     detail: str | None = None
-    read_path: str | None = None
-    validation_mode: str | None = None
-    document_model_id: str | None = None
     duration_ms: int | None = None
     cache_hit: bool = False
     gpu_cold_start_hint: bool = False

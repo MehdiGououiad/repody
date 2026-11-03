@@ -5,20 +5,13 @@ from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.run.helpers import attr_or_key
+from repody.app.run.snapshot import SnapshotDocument
 from repody.app.run.sse import publish_run_progress, publish_run_terminal
-from repody.extraction.branding import normalize_public_catalog_id
-from repody.extraction.modes import (
-    document_needs_extraction,
-    is_serverless_inference,
-    parse_read_path,
-    plan_extraction_detail,
-    resolve_run_validation_mode,
-)
+from repody.extraction.types import ExtractionMetadata
+from repody.inference.runtime import is_serverless_inference
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run
 from repody.rules.conditions import logic_check_entries
-from repody.rules.types import rule_kind
 from repody.settings import get_settings
 
 StepStatus = Literal["pending", "active", "done"]
@@ -31,6 +24,8 @@ __all__ = [
     "StepStatus",
     "build_run_progress_plan",
     "clear_progress_commit_cache",
+    "completed_extraction_detail",
+    "document_wants_extraction",
     "fail_run_progress",
     "init_queued_progress",
     "mark_step_done",
@@ -57,9 +52,6 @@ def progress_step(
     mode: str | None = None,
     kind: str | None = None,
     detail: str | None = None,
-    read_path: str | None = None,
-    validation_mode: str | None = None,
-    document_model_id: str | None = None,
     duration_ms: int | None = None,
     gpu_cold_start_hint: bool = False,
 ) -> dict[str, Any]:
@@ -70,12 +62,6 @@ def progress_step(
         row["kind"] = kind
     if detail:
         row["detail"] = detail
-    if read_path:
-        row["readPath"] = read_path
-    if validation_mode:
-        row["validationMode"] = validation_mode
-    if document_model_id:
-        row["documentModelId"] = normalize_public_catalog_id(document_model_id)
     if duration_ms is not None:
         row["durationMs"] = duration_ms
     if gpu_cold_start_hint:
@@ -95,18 +81,28 @@ def _queue_wait_detail() -> str:
     )
 
 
-def _read_path_for_doc(doc: Any, *, has_file: bool) -> tuple[str, str, str | None]:
-    if not has_file:
-        return "schema", "schema", None
-    ext_mode = attr_or_key(doc, "extraction_mode", "document_model")
-    path = parse_read_path(ext_mode)
-    document_model_id = attr_or_key(doc, "document_model_id")
-    return "document_model", path.id, document_model_id
+def document_wants_extraction(doc: SnapshotDocument) -> bool:
+    """A document with a file goes to the model when it has schema fields or wants Markdown."""
+    return doc.markdown_extraction or any(f.name.strip() for f in doc.schema_fields)
+
+
+def completed_extraction_detail(meta: ExtractionMetadata) -> str:
+    parts: list[str] = []
+    if meta.cache_hit:
+        parts.append("Same document as a previous run — reused the cached extraction")
+    if meta.gpu_cold_start_likely:
+        parts.append("Slow extraction may include GPU warm-up (first request after idle)")
+    if meta.pages_dropped and meta.pages_rendered:
+        parts.append(
+            f"Warning: only {meta.pages_sent} of {meta.pages_rendered} page(s) sent to the model"
+        )
+    parts.append(f"{meta.fields_extracted} field(s) in {meta.extraction_ms}ms")
+    return " · ".join(parts)
 
 
 def build_run_progress_plan(
     *,
-    workflow_docs: list[Any],
+    workflow_docs: list[SnapshotDocument],
     rules: list[dict],
     docs_with_files: set[str],
 ) -> list[dict[str, Any]]:
@@ -117,42 +113,17 @@ def build_run_progress_plan(
             detail=_queue_wait_detail(),
         ),
     ]
-    run_validation_mode = resolve_run_validation_mode(rules)
     for doc in workflow_docs:
-        doc_id = attr_or_key(doc, "id", "")
-        has_file = doc_id in docs_with_files
-        if not document_needs_extraction(doc, has_file=has_file):
+        if doc.id not in docs_with_files or not document_wants_extraction(doc):
             continue
-        doc_type = attr_or_key(doc, "document_type", "Document")
-        mode, read_path, document_model_id = _read_path_for_doc(doc, has_file=has_file)
         steps.append(
             progress_step(
-                f"extract-{doc_id}",
-                f"Extract \u00b7 {doc_type}",
-                mode=mode,
-                read_path=read_path,
-                validation_mode=run_validation_mode,
-                document_model_id=document_model_id,
-                detail=plan_extraction_detail(
-                    doc, has_file=has_file, run_validation_mode=run_validation_mode
-                ),
+                f"extract-{doc.id}",
+                f"Extract · {doc.document_type or 'Document'}",
+                mode="document_model",
             )
         )
     for rule in rules:
-        kind = rule_kind(rule)
-        if kind == "llm":
-            rule_id = rule.get("id") or "rule"
-            name = rule.get("name") or "Rule"
-            steps.append(
-                progress_step(
-                    f"rule-{rule_id}",
-                    f"Validate \u00b7 {name}",
-                    kind=kind,
-                    detail="LLM rule evaluation",
-                )
-            )
-            continue
-
         checks = logic_check_entries(rule)
         if not checks:
             rule_id = rule.get("id") or "rule"
