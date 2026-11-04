@@ -5,10 +5,10 @@ import type { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { CatalogModelEntry } from "@/lib/api/schema-types";
 
 export type ModelStatus = {
-  model: CatalogModelEntry | undefined;
+  /** Whether the llama-server serves the model (undefined until loaded). */
+  available: boolean | undefined;
   loaded: boolean;
   error: boolean;
   onRetry: () => void;
@@ -22,8 +22,8 @@ export function ProcessingSettings({
   t: ReturnType<typeof useTranslations>;
   status: ModelStatus;
 }) {
-  const { error, loaded, model, onRetry } = status;
-  const offline = loaded && model?.available === false;
+  const { error, loaded, available, onRetry } = status;
+  const offline = loaded && available === false;
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
@@ -51,7 +51,7 @@ export function ProcessingSettings({
       <div className="max-w-lg space-y-1.5">
         <p className="text-xs font-semibold">{t("extraction.documentModelLabel")}</p>
         <div className="flex items-center gap-2 text-sm">
-          <span>{model?.label ?? "Repody VLM"}</span>
+          <span>Repody VLM</span>
           {offline ? (
             <Badge variant="danger" className="text-[10px]">
               {t("extraction.offlineBadge")}
@@ -59,9 +59,7 @@ export function ProcessingSettings({
           ) : null}
         </div>
         <p className="text-[11px] leading-relaxed text-on-surface-variant">
-          {offline && model?.availabilityNote
-            ? model.availabilityNote
-            : t("extraction.profileNuextractQ4Hint")}
+          {t("extraction.profileNuextractQ4Hint")}
         </p>
       </div>
     </div>

@@ -1,6 +1,5 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
 import {
   isRuleFailure,
   RuleStatusIcon,
@@ -39,7 +38,6 @@ export function RunDetailedRuleCard({
         : "bg-danger/5"
       : "bg-surface-container-low/50";
 
-  const kindLabel = rule.kind === "logic" ? L.logic : L.llm;
   const scopeLabel = rule.scope === "cross" ? L.cross : L.intra;
   const sevLabel =
     rule.severity === "reject" ? L.reject : rule.severity === "flag" ? L.flag : L.info;
@@ -59,9 +57,6 @@ export function RunDetailedRuleCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="text-sm font-semibold text-on-surface">{rule.name}</span>
-            <span className="text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-              {kindLabel}
-            </span>
             <span className="text-[10px] font-mono uppercase tracking-wide px-1.5 py-0.5 rounded bg-surface-container text-on-surface-variant">
               {scopeLabel}
             </span>
@@ -78,11 +73,9 @@ export function RunDetailedRuleCard({
               {sevLabel}
             </span>
           </div>
-          {rule.kind === "logic" && (
-            <code className="text-[10px] font-mono text-on-surface-variant block truncate">
-              {rule.expression}
-            </code>
-          )}
+          <code className="text-[10px] font-mono text-on-surface-variant block truncate">
+            {rule.expression}
+          </code>
         </div>
         <span
           className={cn("text-xs font-semibold shrink-0 mt-0.5", passed ? "text-success" : iconCls)}
@@ -98,25 +91,6 @@ export function RunDetailedRuleCard({
           >
             {rule.detail}
           </p>
-          {(rule.expectedValue || rule.actualValue) && (
-            <div className="flex items-center gap-4 flex-wrap">
-              {rule.expectedValue && (
-                <div className={size === "sm" ? "text-[11px]" : "text-xs"}>
-                  <span className="text-on-surface-variant">{L.expected} </span>
-                  <code className="font-mono font-semibold text-success">{rule.expectedValue}</code>
-                </div>
-              )}
-              {rule.expectedValue && rule.actualValue && (
-                <ArrowRight className="h-3.5 w-3.5 text-on-surface-variant shrink-0" />
-              )}
-              {rule.actualValue && (
-                <div className={size === "sm" ? "text-[11px]" : "text-xs"}>
-                  <span className="text-on-surface-variant">{L.got} </span>
-                  <code className="font-mono font-semibold text-danger">{rule.actualValue}</code>
-                </div>
-              )}
-            </div>
-          )}
           {rule.affectedFields.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
               {size === "md" && (

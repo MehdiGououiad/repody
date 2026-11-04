@@ -150,7 +150,10 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
                     <div className="min-w-0">
                       <p className="text-[11px] font-medium text-on-surface truncate">{r.name}</p>
                       <p className="text-[10px] text-on-surface-variant font-mono truncate mt-0.5">
-                        {r.body}
+                        {r.conditions
+                          .map((c) => c.left.value)
+                          .filter(Boolean)
+                          .join(", ")}
                       </p>
                     </div>
                     {/* severity label */}

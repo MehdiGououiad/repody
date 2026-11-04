@@ -3,7 +3,7 @@
 import { AlertCircle, CalendarDays, User } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import type { RuleTemplate, Workflow } from "@/lib/types";
+import type { Workflow } from "@/lib/types";
 import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
 import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { BuilderTopbar } from "./builder/builder-topbar";
@@ -16,15 +16,7 @@ import { RulesPanel } from "./rules/rules-panel";
 
 type BuilderMode = "new" | "edit";
 
-function BuilderShellCore({
-  workflow,
-  mode,
-  ruleLibrary,
-}: {
-  workflow: Workflow;
-  mode: BuilderMode;
-  ruleLibrary?: RuleTemplate[];
-}) {
+function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: BuilderMode }) {
   const tSteps = useTranslations("workflows.builder.steps");
   const isNew = mode === "new";
   const [nameConfirmed, setNameConfirmed] = useState(
@@ -114,19 +106,14 @@ function BuilderShellCore({
                     <DocumentsSection documents={documents} onChange={setDocuments} />
                   ) : null}
                   {step === 1 ? (
-                    <RulesPanel
-                      rules={rules}
-                      documents={documents}
-                      onChange={setRules}
-                      initialRuleLibrary={ruleLibrary}
-                    />
+                    <RulesPanel rules={rules} documents={documents} onChange={setRules} />
                   ) : null}
                   {step === 2 ? (
                     <TestDeployStep
                       workflowId={activeWorkflowId}
                       name={name || workflow.name}
                       apiKey={apiKey}
-                      apiKeyHint={workflow.apiKeyHint}
+                      apiKeyHint={workflow.apiKeyHint ?? undefined}
                       documents={documents}
                       rules={rules}
                       deployed={deployed}
@@ -164,14 +151,6 @@ export function NewWorkflowBuilder({ workflow }: { workflow: Workflow }) {
 }
 
 /** Edit an existing workflow with optional server-fetched rule library. */
-export function EditWorkflowBuilder({
-  workflow,
-  ruleLibrary,
-}: {
-  workflow: Workflow;
-  ruleLibrary?: RuleTemplate[];
-}) {
-  return (
-    <BuilderShellCore key={workflow.id} workflow={workflow} mode="edit" ruleLibrary={ruleLibrary} />
-  );
+export function EditWorkflowBuilder({ workflow }: { workflow: Workflow }) {
+  return <BuilderShellCore key={workflow.id} workflow={workflow} mode="edit" />;
 }

@@ -1,46 +1,23 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { type DashboardSnapshot, dashboardSnapshotFromResponse } from "@/lib/api/dashboard";
+import type { DashboardBundle } from "@/lib/api/dashboard";
 import { browserApi, unwrap } from "@/lib/api/openapi-client";
-import type { DashboardResponse } from "@/lib/api/schema-types";
 import { queryKeys } from "@/lib/hooks/query-keys";
 
-export type LiveDashboardData = DashboardSnapshot & {
-  apiLive: boolean;
-  lastUpdated: Date | null;
-};
+export type LiveDashboardData = DashboardBundle & { lastUpdated: Date | null };
 
 const REFRESH_MS = 30_000;
 
-type LiveSnapshot = DashboardSnapshot & { apiLive: boolean };
-
-async function fetchDashboardLive(): Promise<LiveSnapshot> {
-  const body = await unwrap(browserApi.GET("/v1/dashboard"));
-  return {
-    apiLive: true,
-    ...dashboardSnapshotFromResponse(body as DashboardResponse),
-  };
+async function fetchDashboardLive(): Promise<DashboardBundle> {
+  return { apiLive: true, ...(await unwrap(browserApi.GET("/v1/dashboard"))) };
 }
 
-export function useDashboardLive(
-  initial: Omit<LiveDashboardData, "lastUpdated">
-): LiveDashboardData {
-  const initialSnapshot: LiveSnapshot = {
-    apiLive: initial.apiLive,
-    kpis: initial.kpis,
-    performanceSeries: initial.performanceSeries,
-    violationBreakdown: initial.violationBreakdown,
-    healthAlerts: initial.healthAlerts,
-    audits: initial.audits,
-    workflows: initial.workflows,
-    queue: initial.queue,
-  };
-
+export function useDashboardLive(initial: DashboardBundle): LiveDashboardData {
   const query = useQuery({
     queryKey: queryKeys.dashboard.live,
     queryFn: fetchDashboardLive,
-    initialData: initialSnapshot,
+    initialData: initial,
     // SSR already hydrated the first snapshot - skip an immediate duplicate fetch.
     staleTime: REFRESH_MS,
     refetchInterval: REFRESH_MS,
@@ -49,7 +26,7 @@ export function useDashboardLive(
     retry: false,
   });
 
-  const data = query.data ?? initialSnapshot;
+  const data = query.data ?? initial;
   return {
     ...data,
     lastUpdated: data.apiLive && query.dataUpdatedAt > 0 ? new Date(query.dataUpdatedAt) : null,

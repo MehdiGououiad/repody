@@ -1,49 +1,71 @@
+"""Runs: live progress while queued or running, and the audit report once done."""
+
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import Field
+
 from repody.schemas.common import CamelModel
 
+RunStatus = Literal["queued", "running", "done", "failed"]
+Outcome = Literal["passed", "warning", "failed"]
 
-class RunAuditField(CamelModel):
+
+class ProgressStep(CamelModel):
+    id: str
+    label: str
+    status: Literal["pending", "active", "done"] = "pending"
+    detail: str | None = None
+    duration_ms: int | None = None
+    cache_hit: bool = False
+
+
+class RunProgress(CamelModel):
+    label: str
+    steps: list[ProgressStep] = Field(default_factory=list)
+    queue_position: int | None = Field(default=None, description="1-based, while queued.")
+    queue_depth: int | None = None
+
+
+class ExtractionMeta(CamelModel):
+    extraction_ms: int = 0
+    cache_hit: bool = False
+    fields_extracted: int = 0
+    pages_rendered: int = 0
+    pages_sent: int = 0
+    raw_text: str | None = Field(default=None, description="The model's JSON answer.")
+    markdown_text: str | None = None
+
+
+class AuditField(CamelModel):
     key: str
     description: str = ""
-    value: str = ""
-    type: str = "string"
-    confidence: float | None = None
-    extracted: bool = True
+    type: str
+    value: str
+    extracted: bool
     flagged: bool = False
 
 
-class RunDocumentExtractionMeta(CamelModel):
-    extraction_ms: int = 0
-    cache_hit: bool = False
-    gpu_cold_start_likely: bool = False
-    fields_extracted: int = 0
-    markdown_text: str | None = None
-    raw_text: str | None = None
-    markdown_extraction: bool = False
-    pages_rendered: int | None = None
-    pages_sent: int | None = None
-    pages_dropped: int | None = None
-
-
-class RunAuditDocument(CamelModel):
+class AuditDocument(CamelModel):
     id: str
     document_type: str
-    file_name: str | None = None
-    fields: list[RunAuditField]
-    extraction: RunDocumentExtractionMeta | None = None
+    file_name: str
+    fields: list[AuditField]
+    extraction: ExtractionMeta | None = None
 
 
-class RunAuditRule(CamelModel):
+class AuditRule(CamelModel):
     id: str
+    rule_id: str
     name: str
-    kind: str
-    scope: str = "intra"
-    status: str
+    scope: str
     severity: str
-    expression: str = ""
-    affected_fields: list[str] = []
-    detail: str = ""
-    expected_value: str | None = None
-    actual_value: str | None = None
+    status: Literal["passed", "failed", "skipped"]
+    expression: str
+    detail: str
+    affected_fields: list[str]
 
 
 class RunSummary(CamelModel):
@@ -53,22 +75,53 @@ class RunSummary(CamelModel):
     fields_extracted: int
 
 
-class RunAuditMetadata(CamelModel):
-    started_at: str | None = None
-    finished_at: str | None = None
+class RunTimings(CamelModel):
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
     duration_ms: int = 0
     extraction_ms: int = 0
     validation_ms: int = 0
 
 
-class RunAuditDetail(CamelModel):
+class AuditDetail(CamelModel):
     id: str
     workflow_id: str
     workflow_name: str
-    status: str
+    status: Outcome
     source: str
-    created_at: str
-    documents: list[RunAuditDocument]
-    rule_results: list[RunAuditRule]
+    created_at: datetime
+    documents: list[AuditDocument]
+    rule_results: list[AuditRule]
     summary: RunSummary
-    metadata: RunAuditMetadata | None = None
+    metadata: RunTimings
+
+
+class RunState(CamelModel):
+    """What a client polls: status, live progress, and the report once done."""
+
+    status: RunStatus
+    progress: RunProgress | None = None
+    error: str | None = None
+    result: AuditDetail | None = None
+
+
+class RunCreated(CamelModel):
+    run_id: str
+    status: RunStatus = "queued"
+
+
+class AuditListItem(CamelModel):
+    id: str
+    status: Outcome
+    workflow_id: str
+    workflow_name: str
+    timestamp: datetime
+    rows: int
+    failed_rules: int
+
+
+class AuditList(CamelModel):
+    audits: list[AuditListItem]
+    total: int
+    limit: int
+    offset: int

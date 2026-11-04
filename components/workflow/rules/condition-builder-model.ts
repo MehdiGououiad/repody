@@ -1,6 +1,5 @@
 import { NO_RIGHT } from "@/lib/rules/comparison-ops";
-import type { ArithmeticOp, RuleCondition } from "@/lib/types";
-import { shortId } from "@/lib/utils";
+import type { ArithmeticOp } from "@/lib/types";
 
 export { NO_RIGHT };
 
@@ -18,11 +17,4 @@ export type ConditionFieldOption = {
   tableParent?: string;
 };
 
-export function newCondition(): RuleCondition {
-  return {
-    id: shortId(),
-    left: { kind: "field", value: "" },
-    operator: "==",
-    right: { kind: "literal", value: "" },
-  };
-}
+export { newCondition } from "@/lib/workflow/new-items";

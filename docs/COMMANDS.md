@@ -105,7 +105,7 @@ Usually started by `pnpm platform`. Manual:
 |---------|------|
 | `pnpm llamacpp:serve` | `:8081` |
 
-Stop: `pnpm llamacpp:stop`. Warm up: `pnpm llamacpp:warmup`.
+Stop: `pnpm llamacpp:stop`.
 
 ## Architecture dossier
 

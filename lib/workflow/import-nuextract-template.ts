@@ -20,7 +20,7 @@ import {
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
-import { shortId } from "@/lib/utils";
+import { newSchemaField } from "@/lib/workflow/new-items";
 
 export type ImportNuextractTemplateResult =
   | { ok: true; fields: SchemaField[] }
@@ -37,15 +37,8 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function newField(partial: Omit<SchemaField, "id"> & { id?: string }): SchemaField {
-  return {
-    id: partial.id ?? `f${shortId()}`,
-    name: partial.name,
-    description: partial.description ?? "",
-    templateType: partial.templateType,
-    enumValues: partial.enumValues,
-    children: partial.children,
-  };
+function newField(partial: Pick<SchemaField, "name"> & Partial<SchemaField>): SchemaField {
+  return newSchemaField(partial);
 }
 
 function leafType(raw: string): string {

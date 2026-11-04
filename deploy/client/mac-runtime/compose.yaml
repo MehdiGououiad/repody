@@ -107,31 +107,20 @@ services:
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:${REPODY_POSTGRES_PASSWORD:-audit-local-dev}@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_PUBLIC_ENDPOINT: localhost:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: ${REPODY_MINIO_USER:-minioadmin}
-      AUDIT_MINIO_SECRET_KEY: ${REPODY_MINIO_PASSWORD:-minio-local-dev}
-      AUDIT_MINIO_SECURE: "false"
+      AUDIT_S3_ENDPOINT_URL: http://minio:9000
+      AUDIT_S3_ACCESS_KEY: ${REPODY_MINIO_USER:-minioadmin}
+      AUDIT_S3_SECRET_KEY: ${REPODY_MINIO_PASSWORD:-minio-local-dev}
       AUDIT_OIDC_ENABLED: "true"
       AUDIT_OIDC_ISSUER: http://localhost:8080/realms/repody
       AUDIT_OIDC_ISSUER_ALIASES: http://127.0.0.1:8080/realms/repody
       AUDIT_OIDC_JWKS_URL: http://keycloak:8080/realms/repody/protocol/openid-connect/certs
       AUDIT_OIDC_AUDIENCE: repody-api
-      AUDIT_KEYCLOAK_ADMIN_URL: http://keycloak:8080
-      AUDIT_KEYCLOAK_ADMIN_USER: ${REPODY_KEYCLOAK_ADMIN_USER:-admin}
-      AUDIT_KEYCLOAK_ADMIN_PASSWORD: ${REPODY_KEYCLOAK_ADMIN_PASSWORD:-admin}
-      AUDIT_KEYCLOAK_CLIENT_ID: repody-web
-      AUDIT_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
       AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
       AUDIT_SEED_ON_STARTUP: ${AUDIT_SEED_ON_STARTUP:-true}
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_LOG_JSON: "true"
-      AUDIT_LOG_FILE: /tmp/repody/api.log
       OTEL_SDK_DISABLED: "true"
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
-      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
     healthcheck:
       test:
         [
@@ -164,66 +153,27 @@ services:
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
       BACKEND_URL: http://api:8000
-      INTERNAL_API_URL: http://api:8000
     restart: unless-stopped
 
-  worker-extract:
+  worker:
     <<: *backend
-    command: ["python", "-m", "repody.taskiq.worker"]
+    command: ["taskiq", "worker", "repody.worker:broker", "--workers", "1", "--max-async-tasks", "1"]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:${REPODY_POSTGRES_PASSWORD:-audit-local-dev}@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: ${REPODY_MINIO_USER:-minioadmin}
-      AUDIT_MINIO_SECRET_KEY: ${REPODY_MINIO_PASSWORD:-minio-local-dev}
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
+      AUDIT_S3_ENDPOINT_URL: http://minio:9000
+      AUDIT_S3_ACCESS_KEY: ${REPODY_MINIO_USER:-minioadmin}
+      AUDIT_S3_SECRET_KEY: ${REPODY_MINIO_PASSWORD:-minio-local-dev}
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
-      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
-      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "10"
-      AUDIT_STALE_RUN_TIMEOUT_MINUTES: "12"
-      AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
-      AUDIT_WORKER_POOL: extract
-      AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
-    healthcheck:
-      test: ["CMD", "python", "-m", "repody.taskiq.healthcheck"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-
-  worker-fast:
-    <<: *backend
-    command: ["python", "-m", "repody.taskiq.worker"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:${REPODY_POSTGRES_PASSWORD:-audit-local-dev}@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: ${REPODY_MINIO_USER:-minioadmin}
-      AUDIT_MINIO_SECRET_KEY: ${REPODY_MINIO_PASSWORD:-minio-local-dev}
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_WORKER_POOL: fast
+      AUDIT_INFERENCE_TIMEOUT_SECONDS: "600"
+      AUDIT_RUN_TIMEOUT_MINUTES: "10"
 
 volumes:
   repody-postgres:

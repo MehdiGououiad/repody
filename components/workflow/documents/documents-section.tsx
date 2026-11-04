@@ -3,9 +3,10 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/layout/section-heading";
-import { useUnifiedModelsCatalog } from "@/lib/hooks/use-catalog-queries";
+import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
 import type { DocumentDef } from "@/lib/types";
-import { cn, shortId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { newDocument } from "@/lib/workflow/new-items";
 import { DocumentCard } from "./document-card";
 
 export function DocumentsSection({
@@ -16,27 +17,19 @@ export function DocumentsSection({
   onChange: (docs: DocumentDef[]) => void;
 }) {
   const t = useTranslations("workflows.builder");
-  const catalogQuery = useUnifiedModelsCatalog();
+  const config = usePlatformConfig();
 
   const modelStatus = {
-    model: catalogQuery.data?.models[0],
-    loaded: catalogQuery.isFetched,
-    error: catalogQuery.isError,
-    onRetry: () => void catalogQuery.refetch(),
+    available: config.data?.modelAvailable,
+    loaded: config.isFetched,
+    error: config.isError,
+    onRetry: () => void config.refetch(),
   };
 
   const updateDoc = (id: string, patch: Partial<DocumentDef>) =>
     onChange(documents.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const removeDoc = (id: string) => onChange(documents.filter((d) => d.id !== id));
-  const addDoc = () =>
-    onChange([
-      ...documents,
-      {
-        id: `doc${shortId()}`,
-        documentType: "",
-        schema: [],
-      },
-    ]);
+  const addDoc = () => onChange([...documents, newDocument()]);
 
   return (
     <div className="space-y-4">

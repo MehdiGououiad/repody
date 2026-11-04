@@ -1,7 +1,6 @@
 import dynamic from "next/dynamic";
 import { BuilderShellLoader } from "@/components/workflow/builder-shell-loader";
-import type { Workflow } from "@/lib/types";
-import { shortId } from "@/lib/utils";
+import { newWorkflow } from "@/lib/workflow/new-items";
 
 const NewWorkflowBuilder = dynamic(
   () =>
@@ -11,27 +10,6 @@ const NewWorkflowBuilder = dynamic(
   { loading: () => <BuilderShellLoader /> }
 );
 
-function buildBlankWorkflow(): Workflow {
-  return {
-    id: `wf-${shortId()}`,
-    name: "",
-    description: "",
-    status: "draft",
-    owner: "Me",
-    lastRun: null,
-    successRate: 0,
-    totalRuns: 0,
-    documents: [
-      {
-        id: `doc${shortId()}`,
-        documentType: "",
-        schema: [],
-      },
-    ],
-    rules: [],
-  };
-}
-
 export default function NewWorkflowPage() {
-  return <NewWorkflowBuilder workflow={buildBlankWorkflow()} />;
+  return <NewWorkflowBuilder workflow={newWorkflow()} />;
 }

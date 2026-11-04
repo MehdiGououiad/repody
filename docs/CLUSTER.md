@@ -13,7 +13,7 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 |---------|----------------|---------------|
 | PostgreSQL | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/)) | `AUDIT_DATABASE_URL` in the Secret |
 | Redis | Managed Redis/Valkey, or an operator | `AUDIT_REDIS_URL` in the Secret |
-| S3 object storage | S3, MinIO operator, ODF | `config.AUDIT_MINIO_ENDPOINT`, keys in the Secret |
+| S3 object storage | S3, MinIO operator, ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
 | OIDC provider | Keycloak (operator or managed), realm [`deploy/keycloak/realm-repody.json`](../deploy/keycloak/realm-repody.json) | `config.AUDIT_OIDC_ISSUER`, `web.keycloakClientId` |
 | Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_LLAMACPP_BASE_URL` |
 | Secrets | External Secrets Operator + Vault | `existingSecret` |
@@ -39,7 +39,7 @@ ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example
 |-----|---------|
 | `AUDIT_DATABASE_URL` | API, workers, migrations (`postgresql+asyncpg://…`) |
 | `AUDIT_REDIS_URL` | API, workers |
-| `AUDIT_MINIO_ACCESS_KEY`, `AUDIT_MINIO_SECRET_KEY` | API, workers |
+| `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers |
 | `AUTH_SECRET` | web (Auth.js session encryption) |
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
 | `AUDIT_LLAMACPP_API_KEY` | workers, optional bearer token for the inference endpoint |
@@ -78,8 +78,8 @@ Then sign in on the app host and run a test extraction from the workflow builder
 
 - **Web to API:** the web pod gets `INTERNAL_API_URL=http://<release>-api:8000`; Next.js proxies browser `/api/v1/*` there, so the same image works on Compose and Kubernetes.
 - **OIDC:** browsers use `AUDIT_OIDC_ISSUER` (public URL). If pods cannot reach that URL, set `web.internalIssuer` and `config.AUDIT_OIDC_JWKS_URL` to the in-cluster Keycloak Service.
-- **Uploads:** the browser PUTs files straight to S3 with presigned URLs, so `AUDIT_MINIO_PUBLIC_ENDPOINT` must be browser-reachable. To serve it from the cluster, set `ingress.filesHost` and `ingress.filesService` (your MinIO Service).
-- **Inference:** `AUDIT_LLAMACPP_BASE_URL` must be reachable from the extract workers - never `host.docker.internal`.
+- **Uploads:** files go to the API in the run request (multipart), and the API stores them in S3; only the API and workers reach the bucket.
+- **Inference:** `AUDIT_LLAMACPP_BASE_URL` must be reachable from the workers - never `host.docker.internal`.
 - **NetworkPolicy:** off by default (platform teams usually own it). `networkPolicy.enabled: true` gives a default-deny policy that allows in-release traffic, DNS, ingress to web/API, and egress to `networkPolicy.egressCidrs`.
 
 ## Images and releases
@@ -111,15 +111,13 @@ with Grafana, Loki and Tempo. `BUGSINK_DSN` in the Secret enables error tracking
 
 | Env var | Default | Rule |
 |---------|---------|------|
-| `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` | 3 | Run ceiling, hard max 15 |
-| `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` | 180 | ≤ worker timeout × 60 (enforced in production) |
-| `AUDIT_STALE_RUN_TIMEOUT_MINUTES` | 5 | ≥ worker timeout + 1 (enforced in production) |
-| `AUDIT_QUEUED_STALE_TIMEOUT_MINUTES` | 60 | Fail queued runs when no worker is running |
+| `AUDIT_RUN_TIMEOUT_MINUTES` | 5 | A longer run fails; maintenance fails a `running` run past it |
+| `AUDIT_INFERENCE_TIMEOUT_SECONDS` | 180 | Per model call, ≤ run timeout (checked at start) |
 | `workers.extract.terminationGracePeriodSeconds` | 240 | ≥ worker timeout in seconds |
 
 ### Connection budget
 
-Defaults: `AUDIT_DB_POOL_SIZE=20`, `AUDIT_DB_MAX_OVERFLOW=20`, `AUDIT_REDIS_MAX_CONNECTIONS=64`.
+Defaults: `AUDIT_DB_POOL_SIZE=10`, `AUDIT_WORKER_CONCURRENCY=1` (runs per worker pod).
 
 ```
 Postgres connections ≈ (api + worker replicas) × (pool size + overflow)
@@ -131,16 +129,16 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 ### Health and alerts
 
 - `GET /v1/healthz/live` - liveness; `GET /v1/healthz` - readiness (Postgres + Redis).
-- Workers' readiness probe checks the Redis broker (`python -m repody.taskiq.healthcheck`).
+- Workers have no probe: Taskiq redelivers a task whose worker stopped, and maintenance fails runs that stay `running`.
 
 | Alert | Log event / signal | Threshold |
 |-------|--------------------|-----------|
 | Run failures | `run_failed` | >5% of runs / 15m |
 | Stuck runs reaped | `stale_run_reaped` | any |
 | Dispatch failure | `taskiq_dispatch_failed` (run stays queued; maintenance re-sends) | sustained |
-| Queue pressure | readiness `queuedRuns` vs `AUDIT_ADMISSION_MAX_QUEUED` | >80% for 10m |
+| Queue pressure | dashboard `queue.queuedRuns` vs `AUDIT_MAX_QUEUED_RUNS` | >80% for 10m |
 | Slow model | run metadata `extractionMs` | p99 > 80% of worker timeout |
-| Worker crash loop | `worker-extract` restarts | >3 / 15m |
+| Worker crash loop | `repody-worker` restarts | >3 / 15m |
 
 ## Troubleshooting
 
@@ -149,9 +147,9 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 | Pods `CreateContainerConfigError` | `repody-runtime-secrets` exists and has the keys above |
 | Migrations Job fails | `AUDIT_DATABASE_URL` reachable from the namespace |
 | Workers cannot extract | `AUDIT_LLAMACPP_BASE_URL` reachable; 401 means `AUDIT_LLAMACPP_API_KEY` |
-| Upload fails in the browser | `AUDIT_MINIO_PUBLIC_ENDPOINT` reachable from the browser; bucket CORS |
+| Upload fails | `AUDIT_MAX_UPLOAD_BYTES` and the Ingress body size limit |
 | Sign-in loops / 401 | Issuer and JWKS reachable from API and web pods (`web.internalIssuer`) |
 | `ImagePullBackOff` | Pull secret; repository includes the registry host |
 | Run stuck `queued` | Redis; worker replicas; `runs.dispatched_at` NULL means not yet sent |
-| Run stuck `running` | Extract worker logs; model endpoint; stale reap after `AUDIT_STALE_RUN_TIMEOUT_MINUTES` |
+| Run stuck `running` | Worker logs; model endpoint; maintenance fails it after `AUDIT_RUN_TIMEOUT_MINUTES` |
 | Progress not live (SSE) | Redis reachable (`redisOk` in readiness); proxy buffering off for `/api/v1/runs/*/events` |

@@ -58,7 +58,7 @@ export function DocumentExtractionOutput({
   extraction: RunDocumentExtractionMeta;
   className?: string;
 }) {
-  if (extraction.markdownExtraction && extraction.markdownText) {
+  if (extraction.markdownText) {
     return <DocumentMarkdownPanel text={extraction.markdownText} className={className} />;
   }
 

@@ -4,8 +4,7 @@
 # Docs: docs/LOCAL.md
 #
 #   pnpm platform          # Hub images: + compose.portable.yaml (see deploy/scripts/platform-dev.mjs)
-#   pnpm dev:src:all       # source lane: this file + workers + host API/UI
-#   pnpm dev:src:stop      # stop the source lane
+#   pnpm platform dev      # source lane: data plane here, API/UI/worker from source
 
 name: repody
 
@@ -81,8 +80,8 @@ services:
       retries: 12
       start_period: 30s
 
-  # Taskiq workers - Linux containers (same image as API).
-  worker-extract:
+  # Taskiq worker (same image as the API). Scale with `--scale worker=N`.
+  worker:
     profiles: [workers]
     build:
       context: ./backend
@@ -95,84 +94,23 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
+      AUDIT_S3_ENDPOINT_URL: http://minio:9000
+      AUDIT_S3_ACCESS_KEY: minioadmin
+      AUDIT_S3_SECRET_KEY: minio-local-dev
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
+      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
+      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
+      AUDIT_INFERENCE_TIMEOUT_SECONDS: ${AUDIT_INFERENCE_TIMEOUT_SECONDS:-600}
+      AUDIT_RUN_TIMEOUT_MINUTES: ${AUDIT_RUN_TIMEOUT_MINUTES:-10}
       OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_SERVICE_NAME: repody-worker-extract
-      BUGSINK_DSN: ${BUGSINK_DSN:-}
-      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
-      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q8_0}
-      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
-      # Host `pnpm llamacpp:serve` already warms NuExtract; keep worker boot fast.
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
-      AUDIT_REPODY_VLM_TIMEOUT_SECONDS: ${AUDIT_REPODY_VLM_TIMEOUT_SECONDS:-600}
-      # Model timeouts must stay <= worker minutes * 60
-      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: ${AUDIT_WORKER_TASK_TIMEOUT_MINUTES:-10}
-      AUDIT_STALE_RUN_TIMEOUT_MINUTES: ${AUDIT_STALE_RUN_TIMEOUT_MINUTES:-12}
-      AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
-      AUDIT_WORKER_POOL: extract
-      AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
-      AUDIT_DB_POOL_SIZE: ${AUDIT_DB_POOL_SIZE:-20}
-      AUDIT_DB_MAX_OVERFLOW: ${AUDIT_DB_MAX_OVERFLOW:-20}
-      AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
+      SENTRY_DSN: ${BUGSINK_DSN:-}
+      OTEL_SERVICE_NAME: repody-worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    healthcheck:
-      test: ["CMD", "python", "-m", "repody.taskiq.healthcheck"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
-  worker-fast:
-    profiles: [workers]
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: worker
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      OTEL_SERVICE_NAME: repody-worker-fast
-      BUGSINK_DSN: ${BUGSINK_DSN:-}
-      AUDIT_WORKER_POOL: fast
-      AUDIT_DB_POOL_SIZE: ${AUDIT_DB_POOL_SIZE:-20}
-      AUDIT_DB_MAX_OVERFLOW: ${AUDIT_DB_MAX_OVERFLOW:-20}
-      AUDIT_REDIS_MAX_CONNECTIONS: ${AUDIT_REDIS_MAX_CONNECTIONS:-64}
-    healthcheck:
-      test: ["CMD", "python", "-m", "repody.taskiq.healthcheck"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
     restart: unless-stopped
 
   # Observability (optional: docker compose --profile observability up -d)

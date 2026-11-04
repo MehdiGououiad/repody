@@ -10,7 +10,6 @@ import {
 } from "@/components/workflow/builder/test-run-session";
 import { browserApi } from "@/lib/api/openapi-client";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
-import { workflowFromWire } from "@/lib/api/workflow-wire";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
@@ -62,19 +61,13 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const patchTestSession = (patch: Partial<TestSessionState>) =>
     setTestSession((prev) => ({ ...prev, ...patch }));
 
-  const buildPayload = (idOverride?: string): Workflow => ({
-    id: idOverride ?? (activeWorkflowId === "new" ? workflow.id : activeWorkflowId),
+  const buildPayload = () => ({
     name: name || workflow.name,
     description: workflow.description,
-    status: deployed ? "active" : "draft",
+    status: deployed ? ("active" as const) : ("draft" as const),
     owner: workflow.owner,
-    lastRun: workflow.lastRun,
-    successRate: workflow.successRate,
-    totalRuns: workflow.totalRuns,
     documents,
     rules,
-    deployedAt: workflow.deployedAt,
-    apiKey: apiKey || workflow.apiKey,
   });
 
   const persistWorkflow = async (options?: {
@@ -82,7 +75,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     toastOnSuccess?: boolean;
   }): Promise<string> => {
     const id = activeWorkflowId === "new" ? workflow.id : activeWorkflowId;
-    const payload = buildPayload(id);
+    const payload = buildPayload();
     if (!payload.name?.trim()) {
       throw new Error(t("toasts.nameRequired"));
     }
@@ -91,13 +84,13 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       throw new Error(schemaErrors[0]);
     }
     const ruleResults = await validateRulesViaApi(payload.documents, payload.rules);
-    const ruleError = firstRuleIssue(ruleResults, payload.rules);
+    const ruleError = firstRuleIssue(ruleResults);
     if (ruleError) {
       throw new Error(ruleError);
     }
     const { error, response } = await browserApi.PUT("/v1/workflows/{workflow_id}", {
       params: { path: { workflow_id: id } },
-      body: payload as never,
+      body: payload,
     });
     if (error || !response.ok) {
       throw new Error(`Save failed: HTTP ${response.status}`);
@@ -133,15 +126,13 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
         "/v1/workflows/{workflow_id}/deploy",
         {
           params: { path: { workflow_id: id } },
-          body: {},
         }
       );
       if (error || !response.ok || !data) {
         throw new Error(`Deploy failed: HTTP ${response.status}`);
       }
-      const res = { workflow: workflowFromWire(data.workflow) };
       setDeployed(true);
-      const revealed = res.workflow.apiKey ?? apiKey;
+      const revealed = data.apiKey ?? apiKey;
       setApiKey(revealed);
       rememberApiKey(id, revealed);
       setStep(2);

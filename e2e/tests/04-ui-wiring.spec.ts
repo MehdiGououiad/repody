@@ -35,21 +35,19 @@ test.describe("UI wiring", () => {
     });
     expect(created.ok()).toBeTruthy();
     const body = (await created.json()) as {
-      workflow: {
+      id: string;
+      documents: Array<{
         id: string;
-        documents: Array<{
-          id: string;
-          documentType: string;
-          schema: Array<{ id: string; name: string; description: string }>;
-        }>;
-        [key: string]: unknown;
-      };
+        documentType: string;
+        schema: Array<{ id: string; name: string; description: string }>;
+      }>;
+      [key: string]: unknown;
     };
-    const workflowId = body.workflow.id;
+    const workflowId = body.id;
 
     try {
-      body.workflow.documents[0].documentType = "Invoice";
-      body.workflow.documents[0].schema = [
+      body.documents[0].documentType = "Invoice";
+      body.documents[0].schema = [
         {
           id: `field-${Date.now()}`,
           name: "invoice_number",
@@ -58,7 +56,7 @@ test.describe("UI wiring", () => {
       ];
       const configured = await request.put(`${API}/v1/workflows/${workflowId}`, {
         headers: apiAuthHeaders({ "content-type": "application/json" }),
-        data: body.workflow,
+        data: body,
       });
       expect(configured.ok()).toBeTruthy();
 
@@ -71,7 +69,7 @@ test.describe("UI wiring", () => {
       await page.getByRole("button", { name: /Test & Deploy/i }).click();
       await expect(page.getByRole("heading", { name: /Deploy & API/i })).toBeVisible();
 
-      const docType = body.workflow.documents[0].documentType;
+      const docType = body.documents[0].documentType;
 
       await expect(
         page
@@ -81,14 +79,14 @@ test.describe("UI wiring", () => {
           })
           .first()
       ).toBeVisible();
-      await expect(page.getByText(new RegExp(`document_types=\\["${docType}"\\]`))).toBeVisible();
+      await expect(page.getByText(`-F "documents=${docType}"`)).toBeVisible();
       await expect(page.getByText(/-F "files=@\/path\/to\/invoice\.pdf"/)).toBeVisible();
 
       await page.getByRole("tab", { name: "python" }).click();
       await expect(
         page
           .locator("code")
-          .filter({ hasText: /document_types/ })
+          .filter({ hasText: /"documents"/ })
           .first()
       ).toBeVisible();
       await expect(
@@ -99,7 +97,7 @@ test.describe("UI wiring", () => {
       ).toBeVisible();
 
       await page.getByRole("tab", { name: "js" }).click();
-      await expect(page.getByText(/form\.append\("document_types"/)).toBeVisible();
+      await expect(page.getByText(/form\.append\("documents"/)).toBeVisible();
       await expect(page.getByText(/form\.append\("files"/)).toBeVisible();
     } finally {
       await request.delete(`${API}/v1/workflows/${workflowId}`, {

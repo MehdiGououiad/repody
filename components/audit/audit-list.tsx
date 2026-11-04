@@ -68,7 +68,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
   const [urlQuery, setUrlQuery] = useQueryParam("q");
   const [status, setStatus] = useQueryParam("status", "all");
   const [workflow, setWorkflow] = useQueryParam("workflow", "all");
-  const [entity, setEntity] = useQueryParam("entity", "all");
 
   const workflowOptions = useMemo(
     () =>
@@ -77,29 +76,19 @@ export function AuditList({ audits }: { audits: Audit[] }) {
       ),
     [audits, locale]
   );
-  const entityOptions = useMemo(
-    () =>
-      Array.from(new Set(audits.map((a) => a.entity))).sort((a, b) => a.localeCompare(b, locale)),
-    [audits, locale]
-  );
 
   const filtered = useMemo(() => {
     return audits.filter((a) => {
       if (status !== "all" && a.status !== status) return false;
       if (workflow !== "all" && a.workflowName !== workflow) return false;
-      if (entity !== "all" && a.entity !== entity) return false;
       if (urlQuery) {
         const q = urlQuery.toLowerCase();
-        if (
-          !a.id.toLowerCase().includes(q) &&
-          !a.entity.toLowerCase().includes(q) &&
-          !a.workflowName.toLowerCase().includes(q)
-        )
+        if (!a.id.toLowerCase().includes(q) && !a.workflowName.toLowerCase().includes(q))
           return false;
       }
       return true;
     });
-  }, [audits, status, workflow, entity, urlQuery]);
+  }, [audits, status, workflow, urlQuery]);
 
   const activeFilters = [
     status !== "all" && {
@@ -111,11 +100,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
       key: "workflow",
       label: `${t("filters.workflow")}: ${workflow}`,
       clear: () => setWorkflow(null),
-    },
-    entity !== "all" && {
-      key: "entity",
-      label: `${t("filters.entity")}: ${entity}`,
-      clear: () => setEntity(null),
     },
   ].filter(Boolean) as { key: string; label: string; clear: () => void }[];
 
@@ -165,19 +149,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
             ))}
           </SelectContent>
         </Select>
-        <Select value={entity} onValueChange={(v) => setEntity(v === "all" ? null : v)}>
-          <SelectTrigger className="w-[180px]" aria-label={t("filters.entity")}>
-            <SelectValue placeholder={t("filters.entity")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filters.allEntities")}</SelectItem>
-            {entityOptions.map((e) => (
-              <SelectItem key={e} value={e}>
-                {e}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
         <div className="ml-auto text-xs text-on-surface-variant tabular-nums">
           {t("table.filtered", {
             filtered: filtered.length,
@@ -208,7 +179,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
             onClick={() => {
               setStatus(null);
               setWorkflow(null);
-              setEntity(null);
             }}
           >
             {t("filters.clearAll")}
@@ -222,7 +192,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
             <TableHead>{t("table.id")}</TableHead>
             <TableHead>{t("table.status")}</TableHead>
             <TableHead>{t("table.workflow")}</TableHead>
-            <TableHead>{t("table.entity")}</TableHead>
             <TableHead>{t("table.timestamp")}</TableHead>
             <TableHead className="text-right">{t("table.rows")}</TableHead>
           </TableRow>
@@ -230,7 +199,7 @@ export function AuditList({ audits }: { audits: Audit[] }) {
         <TableBody>
           {filtered.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-12 text-on-surface-variant">
+              <TableCell colSpan={5} className="text-center py-12 text-on-surface-variant">
                 {t("table.empty")}
               </TableCell>
             </TableRow>
@@ -250,7 +219,6 @@ export function AuditList({ audits }: { audits: Audit[] }) {
                   <AuditStatusBadge status={a.status} failedCount={a.failedRules} />
                 </TableCell>
                 <TableCell className="text-sm">{a.workflowName}</TableCell>
-                <TableCell className="text-sm">{a.entity}</TableCell>
                 <TableCell className="text-sm text-on-surface-variant tabular-nums">
                   {formatDateTime(a.timestamp, locale, { withYear: true })}
                 </TableCell>

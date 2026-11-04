@@ -9,7 +9,6 @@ const variantMap: Record<AuditStatus, "success" | "danger" | "warning" | "info">
   passed: "success",
   failed: "danger",
   warning: "warning",
-  running: "info",
 };
 
 interface AuditStatusBadgeProps {

@@ -27,26 +27,6 @@ function clientStepLabels(t: ReturnType<typeof useTranslations>): ClientStepLabe
       label: t("test.progress.saveWorkflow"),
       pendingDetail: t("test.progress.saveWorkflowDetail"),
     },
-    "upload-check": {
-      label: t("test.progress.uploadCheck"),
-      pendingDetail: t("test.progress.uploadCheckDetail"),
-    },
-    "upload-reuse": {
-      label: t("test.progress.uploadReuse"),
-      pendingDetail: t("test.progress.uploadReuseDetail", { files: "{files}" }),
-    },
-    "upload-presign": {
-      label: t("test.progress.uploadPresign"),
-      pendingDetail: t("test.progress.uploadPresignDetail"),
-    },
-    "upload-transfer": {
-      label: t("test.progress.uploadTransfer"),
-      pendingDetail: t("test.progress.uploadTransferDetail"),
-    },
-    "upload-confirm": {
-      label: t("test.progress.uploadConfirm"),
-      pendingDetail: t("test.progress.uploadConfirmDetail"),
-    },
     "start-run": {
       label: t("test.progress.startRun"),
       pendingDetail: t("test.progress.startRunDetail"),
@@ -62,7 +42,6 @@ function TestRunPanel({
   workflowId,
   documents,
   rules,
-  workflowName,
   onBeforeRun,
   session,
   onSessionChange,
@@ -71,7 +50,6 @@ function TestRunPanel({
   workflowId: string;
   documents: DocumentDef[];
   rules: WorkflowRule[];
-  workflowName: string;
   onBeforeRun?: () => Promise<string>;
   session: TestSessionState;
   onSessionChange: (patch: Partial<TestSessionState>) => void;
@@ -94,7 +72,7 @@ function TestRunPanel({
         progress: clientProgress(stepLabels, "save-workflow"),
       });
       const id = onBeforeRun ? await onBeforeRun() : workflowId;
-      const payload = { documents, rules, workflowName };
+      const payload = { documents, rules };
       const reporter = {
         clientLabels: stepLabels,
         onProgress: (progress: RunProgress) => onSessionChange({ progress }),
@@ -204,7 +182,6 @@ export function TestDeployStep({
         workflowId={workflowId}
         documents={documents}
         rules={rules}
-        workflowName={name}
         onBeforeRun={onBeforeRun}
         session={testSession}
         onSessionChange={onTestSessionChange}

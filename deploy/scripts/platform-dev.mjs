@@ -367,8 +367,7 @@ async function up() {
       "keycloak",
       "api",
       "web",
-      "worker-extract",
-      "worker-fast"
+      "worker"
     ),
     { inherit: true, env: composeEnv }
   );
@@ -437,8 +436,7 @@ async function dev() {
       "redis",
       "minio",
       "keycloak",
-      "worker-extract",
-      "worker-fast"
+      "worker"
     ),
     { inherit: true }
   );
@@ -513,18 +511,7 @@ function logs() {
   console.log("Tailing API + web + workers (Ctrl+C to stop)…\n");
   run(
     "docker",
-    composeArgs(
-      "--profile",
-      "workers",
-      "logs",
-      "-f",
-      "--tail",
-      "200",
-      "api",
-      "web",
-      "worker-extract",
-      "worker-fast"
-    ),
+    composeArgs("--profile", "workers", "logs", "-f", "--tail", "200", "api", "web", "worker"),
     { inherit: true, allowFail: true }
   );
 }

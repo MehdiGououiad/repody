@@ -14,10 +14,6 @@ function slugFileName(documentType: string): string {
   return slug ? `${slug}.pdf` : "document.pdf";
 }
 
-function jsonArray(values: string[]): string {
-  return JSON.stringify(values);
-}
-
 export type WorkflowRunSnippets = {
   curl: string;
   python: string;
@@ -25,6 +21,10 @@ export type WorkflowRunSnippets = {
   documentTypes: string[];
 };
 
+/**
+ * Examples of `POST /v1/workflows/{id}/runs`: multipart, one `files` part per document and,
+ * in the same order, a `documents` part naming its workflow document type.
+ */
 export function buildWorkflowRunSnippets({
   endpoint,
   apiKey,
@@ -34,58 +34,52 @@ export function buildWorkflowRunSnippets({
   apiKey: string;
   documents: DocumentDef[];
 }): WorkflowRunSnippets {
-  const slots = workflowDocumentSlots(documents);
-  const documentTypes = slots.map((d) => d.documentType.trim());
-  const typesJson = jsonArray(documentTypes);
+  const slots = workflowDocumentSlots(documents).map((d) => ({
+    type: d.documentType.trim(),
+    file: slugFileName(d.documentType),
+  }));
+  const documentTypes = slots.map((s) => s.type);
+  const auth = `Authorization: Bearer ${apiKey}`;
 
-  const curlFileLines = slots.map((d) => `  -F "files=@/path/to/${slugFileName(d.documentType)}"`);
-  const curl =
-    slots.length === 0
-      ? [
-          `curl -X POST "${endpoint}" \\`,
-          `  -H "Authorization: Bearer ${apiKey}" \\`,
-          `  # Configure document slots first, then add:`,
-          `  # -F 'document_types=["Invoice"]' \\`,
-          `  # -F "files=@/path/to/invoice.pdf"`,
-        ].join("\n")
-      : [
-          `curl -X POST "${endpoint}" \\`,
-          `  -H "Authorization: Bearer ${apiKey}" \\`,
-          `  -F 'document_types=${typesJson}' \\`,
-          ...curlFileLines,
-        ].join("\n");
+  const curl = [
+    `curl -X POST "${endpoint}" \\`,
+    `  -H "${auth}"${slots.length ? " \\" : ""}`,
+    ...slots.flatMap((s, i) => [
+      `  -F "documents=${s.type}" \\`,
+      `  -F "files=@/path/to/${s.file}"${i < slots.length - 1 ? " \\" : ""}`,
+    ]),
+  ].join("\n");
 
-  const pythonFileTuples = slots
-    .map((d) => {
-      const name = slugFileName(d.documentType);
-      return `        ("files", ("${name}", open("${name}", "rb"), "application/pdf")),`;
-    })
-    .join("\n");
+  const python = [
+    "import requests",
+    "",
+    "response = requests.post(",
+    `    "${endpoint}",`,
+    `    headers={"Authorization": "Bearer ${apiKey}"},`,
+    `    data={"documents": ${JSON.stringify(documentTypes)}},`,
+    "    files=[",
+    ...slots.map(
+      (s) => `        ("files", ("${s.file}", open("${s.file}", "rb"), "application/pdf")),`
+    ),
+    "    ],",
+    ")",
+    "print(response.json())",
+  ].join("\n");
 
-  const python =
-    slots.length === 0
-      ? `import requests\n\nresponse = requests.post(\n    "${endpoint}",\n    headers={"Authorization": "Bearer ${apiKey}"},\n)\nprint(response.json())`
-      : `import json\nimport requests\n\nresponse = requests.post(\n    "${endpoint}",\n    headers={"Authorization": "Bearer ${apiKey}"},\n    files=[\n${pythonFileTuples}\n        ("document_types", (None, json.dumps(${typesJson}), "application/json")),\n    ],\n)\nprint(response.json())`;
-
-  const jsDecls = slots
-    .map((d) => {
-      const name = slugFileName(d.documentType);
-      const varName = name.replace(/[^a-z0-9]/gi, "_");
-      return `const ${varName} = /* File for ${d.documentType.trim()} */;`;
-    })
-    .join("\n");
-  const jsAppends = slots
-    .map((d) => {
-      const name = slugFileName(d.documentType);
-      const varName = name.replace(/[^a-z0-9]/gi, "_");
-      return `form.append("files", ${varName}); // ${d.documentType.trim()}`;
-    })
-    .join("\n");
-
-  const js =
-    slots.length === 0
-      ? `const res = await fetch("${endpoint}", {\n  method: "POST",\n  headers: { Authorization: "Bearer ${apiKey}" },\n});\nconst data = await res.json();`
-      : `${jsDecls}\n\nconst form = new FormData();\nform.append("document_types", JSON.stringify(${typesJson}));\n${jsAppends}\n\nconst res = await fetch("${endpoint}", {\n  method: "POST",\n  headers: { Authorization: "Bearer ${apiKey}" },\n  body: form,\n});\nconst data = await res.json();`;
+  const js = [
+    "const form = new FormData();",
+    ...slots.flatMap((s) => [
+      `form.append("documents", "${s.type}");`,
+      `form.append("files", /* File for ${s.type} */, "${s.file}");`,
+    ]),
+    "",
+    `const res = await fetch("${endpoint}", {`,
+    '  method: "POST",',
+    `  headers: { Authorization: "Bearer ${apiKey}" },`,
+    "  body: form,",
+    "});",
+    "const data = await res.json();",
+  ].join("\n");
 
   return { curl, python, js, documentTypes };
 }

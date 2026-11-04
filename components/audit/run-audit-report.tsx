@@ -16,7 +16,6 @@ import Papa from "papaparse";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
 import {
-  ConfidenceBar,
   formatFieldValue,
   type RunReportLabels,
 } from "@/components/audit/run-report/report-shared";
@@ -46,11 +45,7 @@ function buildCsv(
       [`${t("validationTime")}: ${formatDurationMs(audit.metadata.validationMs)}`]
     );
   }
-  rows.push(
-    [],
-    [t("extractedData")],
-    [t("field"), t("value"), "Type", t("confidence"), t("status")]
-  );
+  rows.push([], [t("extractedData")], [t("field"), t("value"), "Type", t("status")]);
   for (const doc of audit.documents) {
     rows.push([`--- ${doc.documentType} ---`]);
     if (doc.extraction) rows.push(["Ms", String(doc.extraction.extractionMs)]);
@@ -59,18 +54,13 @@ function buildCsv(
         f.key,
         formatFieldValue(f, locale),
         f.type,
-        f.confidence != null ? `${Math.round(f.confidence * 100)}%` : "",
         f.flagged ? t("failed") : t("passed"),
       ]);
     }
   }
-  rows.push(
-    [],
-    [t("validationRules")],
-    ["ID", t("field"), "Kind", "Scope", t("status"), t("source")]
-  );
+  rows.push([], [t("validationRules")], ["ID", t("field"), "Scope", t("status"), t("source")]);
   for (const r of audit.ruleResults) {
-    rows.push([r.name, r.expression, r.kind, r.scope, ruleStatusLabel(r.status), r.detail]);
+    rows.push([r.name, r.expression, r.scope, ruleStatusLabel(r.status), r.detail]);
   }
   // escapeFormulae: cells starting with = + - @ cannot run as spreadsheet formulas.
   return Papa.unparse(rows, { quotes: true, escapeFormulae: true });
@@ -177,9 +167,6 @@ function DocExtractionCard({
               <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
                 {t("value")}
               </th>
-              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[160px]">
-                {t("confidence")}
-              </th>
               <th className="text-right px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[80px]">
                 {t("status")}
               </th>
@@ -224,13 +211,6 @@ function DocExtractionCard({
                   >
                     {formatFieldValue(field, locale)}
                   </span>
-                </td>
-                <td className="px-4 py-3">
-                  {field.confidence != null && field.extracted ? (
-                    <ConfidenceBar value={field.confidence} />
-                  ) : (
-                    <span className="text-[11px] text-on-surface-variant">—</span>
-                  )}
                 </td>
                 <td className="px-5 py-3 text-right">
                   {field.flagged ? (

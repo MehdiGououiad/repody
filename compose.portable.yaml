@@ -12,20 +12,34 @@ name: repody
 x-portable-backend: &portable-backend
   image: ${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}
   pull_policy: ${REPODY_PULL_POLICY:-missing}
-  # Prefer Hub image; platform-dev passes `docker compose up --no-build`.
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+  restart: unless-stopped
+
+x-backend-env: &backend-env
+  AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
+  AUDIT_REDIS_URL: redis://redis:6379/0
+  AUDIT_S3_ENDPOINT_URL: http://minio:9000
+  AUDIT_S3_ACCESS_KEY: minioadmin
+  AUDIT_S3_SECRET_KEY: minio-local-dev
+  AUDIT_DEPLOYMENT_ENVIRONMENT: development
+  AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
+  AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
+  AUDIT_INFERENCE_TIMEOUT_SECONDS: ${AUDIT_INFERENCE_TIMEOUT_SECONDS:-600}
+  AUDIT_RUN_TIMEOUT_MINUTES: ${AUDIT_RUN_TIMEOUT_MINUTES:-10}
+  OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+  SENTRY_DSN: ${BUGSINK_DSN:-}
 
 services:
   api:
     <<: *portable-backend
-    # Hub image is target `backend` (entrypoint only) - role set by command.
     command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_started
       # One-shot bucket init; this condition also lets `compose up --wait` accept its exit 0.
       minio-init:
         condition: service_completed_successfully
@@ -33,47 +47,17 @@ services:
         condition: service_started
     ports:
       - "8000:8000"
-    env_file:
-      - path: backend/.env
-        required: false
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      # Browser-reachable host for presigned PUTs (internal DNS `minio` is not resolvable in the UI).
-      AUDIT_MINIO_PUBLIC_ENDPOINT: localhost:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      # Browser tokens use localhost issuer; containers fetch JWKS via Docker DNS.
+      <<: *backend-env
+      # Browser tokens carry the localhost issuer; the API fetches the JWKS over Docker DNS.
       AUDIT_OIDC_ENABLED: "true"
       AUDIT_OIDC_ISSUER: http://localhost:8080/realms/repody
       AUDIT_OIDC_ISSUER_ALIASES: http://127.0.0.1:8080/realms/repody
       AUDIT_OIDC_JWKS_URL: http://keycloak:8080/realms/repody/protocol/openid-connect/certs
       AUDIT_OIDC_AUDIENCE: repody-api
-      AUDIT_KEYCLOAK_ADMIN_URL: http://keycloak:8080
-      AUDIT_KEYCLOAK_ADMIN_USER: admin
-      AUDIT_KEYCLOAK_ADMIN_PASSWORD: admin
-      AUDIT_KEYCLOAK_CLIENT_ID: repody-web
-      AUDIT_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
       AUDIT_RUN_MIGRATIONS_ON_STARTUP: "true"
       AUDIT_SEED_ON_STARTUP: ${AUDIT_SEED_ON_STARTUP:-true}
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_LOG_JSON: "true"
-      # Host backend/.env often sets ../.logs - not writable in-container.
-      AUDIT_LOG_FILE: /tmp/repody/api.log
-      OTEL_SDK_DISABLED: ${OTEL_SDK_DISABLED:-true}
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
       OTEL_SERVICE_NAME: repody-api
-      BUGSINK_DSN: ${BUGSINK_DSN:-}
-      # Host inference (Docker Desktop Mac/Windows/Linux)
-      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
-      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
-      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
     healthcheck:
       test:
         [
@@ -101,62 +85,23 @@ services:
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-auth-secret-32chars-min!}
       AUTH_URL: http://localhost:3000
       AUTH_KEYCLOAK_ID: repody-web
-      AUTH_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
       AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:-repody-web-dev-secret}
-      # Browser redirects use public issuer; Auth.js server calls use Docker DNS.
+      # Browser redirects use the public issuer; Auth.js server calls use Docker DNS.
       AUTH_KEYCLOAK_ISSUER: http://localhost:8080/realms/repody
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
-      # Runtime proxy (app/api/v1/[...path]) - Compose DNS name is `api`.
-      # Kubernetes Helm sets the same vars to http://repody-api:8000.
       BACKEND_URL: http://api:8000
-      INTERNAL_API_URL: http://api:8000
       BUGSINK_DSN: ${BUGSINK_DSN:-}
     restart: unless-stopped
 
-  worker-extract:
+  worker:
     <<: *portable-backend
     profiles: [workers]
-    command: ["python", "-m", "repody.taskiq.worker"]
+    command: ["taskiq", "worker", "repody.worker:broker", "--workers", "1", "--max-async-tasks", "1"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
-      AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q4_k_m}
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "false"
-      AUDIT_EXTRACTION_CACHE_ENABLED: "false"
-      AUDIT_WORKER_TASK_TIMEOUT_MINUTES: ${AUDIT_WORKER_TASK_TIMEOUT_MINUTES:-10}
-      AUDIT_STALE_RUN_TIMEOUT_MINUTES: ${AUDIT_STALE_RUN_TIMEOUT_MINUTES:-12}
-      AUDIT_QUEUED_STALE_TIMEOUT_MINUTES: "60"
-      AUDIT_WORKER_POOL: extract
-      AUDIT_WORKER_EXTRACT_MAX_JOBS: "1"
-      BUGSINK_DSN: ${BUGSINK_DSN:-}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    restart: unless-stopped
-
-  worker-fast:
-    <<: *portable-backend
-    profiles: [workers]
-    command: ["python", "-m", "repody.taskiq.worker"]
-    environment:
-      AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-      AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_MINIO_ENDPOINT: minio:9000
-      AUDIT_MINIO_BUCKET: audit-documents
-      AUDIT_MINIO_ACCESS_KEY: minioadmin
-      AUDIT_MINIO_SECRET_KEY: minio-local-dev
-      AUDIT_MINIO_SECURE: "false"
-      AUDIT_OIDC_ENABLED: "false"
-      AUDIT_LOG_JSON: "true"
-      AUDIT_DEPLOYMENT_ENVIRONMENT: development
-      AUDIT_WORKER_POOL: fast
-      BUGSINK_DSN: ${BUGSINK_DSN:-}
-    restart: unless-stopped
+      <<: *backend-env
+      OTEL_SERVICE_NAME: repody-worker

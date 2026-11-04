@@ -1,127 +1,14 @@
-/**
- * Workflow builder and rule authoring types.
- *
- * Wire / API shapes come from OpenAPI (`lib/api/schema-types`). This module keeps
- * UI-oriented fields (e.g. `sampleValue`) and narrower unions used by the builder.
- * Prefer OpenAPI aliases when typing API payloads; keep these types for editor state.
- */
+/** Workflow, document and rule types: aliases of the generated API schema. */
+import type { Schema } from "@/lib/api/schema-types";
 
-export type RuleKind = "logic";
-export type RuleSeverity = "reject" | "flag" | "info";
-export type RuleScope = "intra" | "cross";
-
-export interface SchemaField {
-  id: string;
-  name: string;
-  description: string;
-  /** NuExtract template leaf type, e.g. verbatim-string, number, date-time. */
-  templateType?: string;
-  /** Allowed values for enum / multi-enum NuExtract templates. */
-  enumValues?: string[];
-  /** Nested columns for object-array (repeating row) templates. */
-  children?: SchemaField[];
-  /** Optional value for dry-run rule validation without uploading a file. */
-  sampleValue?: string;
-}
-
-export interface ExtractionIclExample {
-  input: string;
-  output: string;
-}
-
-export interface DocumentDef {
-  id: string;
-  documentType: string;
-  schema: SchemaField[];
-  extractionInstructions?: string;
-  markdownExtraction?: boolean;
-  extractionIclExamples?: ExtractionIclExample[];
-}
-
-export type ArithmeticOp = "+" | "-" | "*" | "/";
-
-export type ComparisonOp =
-  | "=="
-  | "!="
-  | ">"
-  | ">="
-  | "<"
-  | "<="
-  | "IN"
-  | "NOT_IN"
-  | "EXISTS"
-  | "IS_EMPTY";
-
-export type ConditionJunction = "AND" | "OR";
-
-export interface ConditionOperand {
-  kind: "field" | "literal";
-  value: string;
-}
-
-export type TableAggregateFn = "sum_rows" | "sum_rows_where" | "count_rows_where";
-
-export interface TableAggregateLeft {
-  fn: TableAggregateFn;
-  tableField: string;
-  amountColumn?: string;
-  filterColumn?: string;
-  filterContains?: string;
-}
-
-export interface RuleCondition {
-  id: string;
-  left: ConditionOperand;
-  arithmeticOp?: ArithmeticOp;
-  leftExtra?: ConditionOperand;
-  tableAggregate?: TableAggregateLeft;
-  operator: ComparisonOp;
-  right?: ConditionOperand;
-}
-
-export interface WorkflowRule {
-  id: string;
-  name: string;
-  kind: RuleKind;
-  scope: RuleScope;
-  appliesTo: string[];
-  conditions?: RuleCondition[];
-  conditionJunction?: ConditionJunction;
-  body: string;
-  severity: RuleSeverity;
-}
-
-export interface Workflow {
-  id: string;
-  name: string;
-  description: string;
-  status: "active" | "draft" | "paused";
-  owner: string;
-  lastRun: string | null;
-  successRate: number;
-  totalRuns: number;
-  documents: DocumentDef[];
-  rules: WorkflowRule[];
-  deployedAt?: string;
-  apiKey?: string;
-  apiKeyHint?: string;
-  apiStats?: WorkflowApiStats;
-}
-
-export interface RuleTemplate {
-  id: string;
-  name: string;
-  kind: RuleKind;
-  scope: RuleScope;
-  description: string;
-  body: string;
-  severity: RuleSeverity;
-}
-
-export interface WorkflowApiStats {
-  apiCallsToday: number;
-  apiCallsTotal: number;
-  avgLatencyMs: number;
-  callSeries: { day: string; calls: number }[];
-  topFailingRules: { name: string; count: number; severity: RuleSeverity }[];
-}
+export type SchemaField = Schema["SchemaField-Output"];
+export type DocumentDef = Schema["DocumentDef-Output"];
+export type ConditionOperand = Schema["Operand-Output"];
+export type TableAggregateLeft = Schema["TableAggregate-Output"];
+export type RuleCondition = Schema["Condition-Output"];
+export type ComparisonOp = RuleCondition["operator"];
+export type ArithmeticOp = NonNullable<RuleCondition["arithmeticOp"]>;
+export type WorkflowRule = Schema["Rule-Output"];
+export type RuleScope = WorkflowRule["scope"];
+export type RuleSeverity = WorkflowRule["severity"];
+export type Workflow = Schema["WorkflowOut"];

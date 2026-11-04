@@ -1,24 +1,11 @@
 "use client";
 
 import type { RunAuditField } from "@/lib/types/audit";
-import { cn, formatExtractedFieldValue } from "@/lib/utils";
+import { formatExtractedFieldValue } from "@/lib/utils";
 
 export function formatFieldValue(field: RunAuditField, locale: string): string {
   if (!field.extracted) return "—";
   return formatExtractedFieldValue(field.value, field.type, locale);
-}
-
-export function ConfidenceBar({ value }: { value: number }) {
-  const pct = Math.round(value * 100);
-  const color = pct >= 90 ? "bg-success" : pct >= 70 ? "bg-warning" : "bg-danger";
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-20 rounded-full bg-surface-container-highest overflow-hidden">
-        <div className={cn("h-full rounded-full", color)} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-[10px] font-mono text-on-surface-variant tabular-nums">{pct}%</span>
-    </div>
-  );
 }
 
 export type RunReportLabels = {

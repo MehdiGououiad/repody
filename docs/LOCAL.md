@@ -82,7 +82,7 @@ Images pull as public multi-arch - no Hub login required.
    - macOS: `brew install llama.cpp`
    - Windows: `winget install ggml.llamacpp`
 4. **NuExtract GGUFs** - download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
-5. Disk / RAM for Hub images (~2–4 GB) and GGUFs. `uv` is used for `pnpm llamacpp:warmup`.
+5. Disk / RAM for Hub images (~2–4 GB) and GGUFs.
 
 ---
 
@@ -172,7 +172,7 @@ Observability is **on by default** (`--no-obs` to skip):
 
 JSON logs go to Loki; traces to Tempo (`trace_id` links them in Grafana). Config: `deploy/observability/`.
 
-**Bugsink (optional):** create a project -> set `BUGSINK_DSN` / `NEXT_PUBLIC_BUGSINK_DSN` in `backend/.env` and `.env.local`. For Compose workers, use `host.docker.internal` in the DSN and recreate `api` / workers. Observability starts with `pnpm platform` and `pnpm platform dev` unless you pass `--no-obs`.
+**Bugsink (optional):** create a project -> set `SENTRY_DSN` in `backend/.env` (the API and worker report through the Sentry SDK) and `NEXT_PUBLIC_BUGSINK_DSN` in `.env.local`. Compose passes `BUGSINK_DSN` from the repo-root `.env` to the containers as `SENTRY_DSN`; recreate `api` and `worker` after changing it. Observability starts with `pnpm platform` and `pnpm platform dev` unless you pass `--no-obs`.
 
 ---
 

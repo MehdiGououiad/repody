@@ -50,13 +50,13 @@ export async function createCrossDocWorkflow(request: {
     },
   });
   expect(created.ok()).toBeTruthy();
-  const body = (await created.json()) as { workflow: WorkflowPayload };
-  const workflowId = body.workflow.id;
+  const body = (await created.json()) as WorkflowPayload;
+  const workflowId = body.id;
   const docAId = `doc-a-${ts}`;
   const docBId = `doc-b-${ts}`;
 
   const payload: WorkflowPayload = {
-    ...body.workflow,
+    ...body,
     name: `E2E Cross-doc ${ts}`,
     documents: [
       {
@@ -125,7 +125,7 @@ export async function addCrossDocumentTotalRule(page: Page, ruleName: string) {
   await page.getByRole("option", { name: "Facture 2.total_amount" }).click();
 
   await expect(
-    ruleCard.getByText(/facture_1__total_amount == facture_2__total_amount/i)
+    ruleCard.getByText(/facture_1.total_amount == facture_2.total_amount/i)
   ).toBeVisible();
 }
 

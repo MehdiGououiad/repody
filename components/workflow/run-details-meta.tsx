@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, FileSearch, Snowflake, Sparkles } from "lucide-react";
+import { Clock, FileSearch, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import type {
@@ -73,20 +73,14 @@ export function DocumentExtractionMeta({
           Cached
         </span>
       )}
-      {extraction.pagesDropped ? (
+      {extraction.pagesSent < extraction.pagesRendered ? (
         <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-2 py-0.5">
           {t("pagesTruncated", {
-            sent: extraction.pagesSent ?? 0,
-            total: extraction.pagesRendered ?? 0,
+            sent: extraction.pagesSent,
+            total: extraction.pagesRendered,
           })}
         </span>
       ) : null}
-      {extraction.gpuColdStartLikely && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 px-2 py-0.5">
-          <Snowflake className="h-3 w-3" />
-          {t("gpuColdStartDone")}
-        </span>
-      )}
       <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 tabular-nums">
         <Clock className="h-3 w-3" />
         {formatDurationMs(extraction.extractionMs)} · {extraction.fieldsExtracted} field(s)
@@ -98,9 +92,7 @@ export function DocumentExtractionMeta({
 export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
   const locale = useLocale();
   const hasOutput = result.documents.some(
-    (d) =>
-      d.extraction &&
-      ((d.extraction.markdownExtraction && d.extraction.markdownText) || d.extraction.rawText)
+    (d) => d.extraction && (d.extraction.markdownText || d.extraction.rawText)
   );
 
   return (
@@ -111,8 +103,7 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
           {result.documents.flatMap((doc) => {
             const extraction = doc.extraction;
             if (!extraction) return [];
-            const hasOutput =
-              (extraction.markdownExtraction && extraction.markdownText) || extraction.rawText;
+            const hasOutput = extraction.markdownText || extraction.rawText;
             if (!hasOutput) return [];
             return [<DocumentExtractionOutput key={doc.id} extraction={extraction} />];
           })}

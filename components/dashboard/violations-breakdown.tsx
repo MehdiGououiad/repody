@@ -1,30 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { ViolationBreakdown } from "@/lib/types";
+import type { SeverityShare } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const colorMap = {
-  danger: "bg-danger",
-  warning: "bg-warning",
-  info: "bg-accent-blue",
-  neutral: "bg-outline-variant",
-} as const;
+const COLORS: Record<string, string> = { reject: "bg-danger", flag: "bg-warning" };
 
-const TYPE_KEYS = ["format", "missing", "logic", "llm", "other", "none"] as const;
-type ViolationTypeKey = (typeof TYPE_KEYS)[number];
-
-function violationTypeLabel(
-  t: ReturnType<typeof useTranslations<"dashboard.violations">>,
-  type: string
-) {
-  if ((TYPE_KEYS as readonly string[]).includes(type)) {
-    return t(`types.${type as ViolationTypeKey}`);
-  }
-  return t("types.other");
-}
-
-export function ViolationsBreakdown({ items }: { items: ViolationBreakdown[] }) {
+/** Share of this week's rule failures by severity. */
+export function ViolationsBreakdown({ items }: { items: SeverityShare[] }) {
   const t = useTranslations("dashboard.violations");
   return (
     <div className="panel-elevated rounded-xl flex flex-col">
@@ -33,31 +16,25 @@ export function ViolationsBreakdown({ items }: { items: ViolationBreakdown[] }) 
         <p className="text-xs text-on-surface-variant mt-0.5">{t("hint")}</p>
       </div>
       <div className="p-4 flex flex-col gap-4">
-        {items.map((it) => (
-          <div key={it.type} className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <div
-                className={cn(
-                  "w-2.5 h-2.5 rounded-full",
-                  colorMap[it.color as keyof typeof colorMap] ?? colorMap.neutral
-                )}
-              />
-              <span className="text-sm text-on-surface flex-1">
-                {violationTypeLabel(t, it.type)}
-              </span>
-              <span className="text-xs font-semibold tabular-nums">{it.share}%</span>
+        {items.length === 0 ? <p className="text-sm text-on-surface-variant">{t("none")}</p> : null}
+        {items.map((it) => {
+          const pct = Math.round(it.share * 1000) / 10;
+          const color = COLORS[it.severity] ?? "bg-outline-variant";
+          return (
+            <div key={it.severity} className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <div className={cn("w-2.5 h-2.5 rounded-full", color)} />
+                <span className="text-sm text-on-surface flex-1">
+                  {it.severity === "reject" ? t("reject") : t("flag")}
+                </span>
+                <span className="text-xs font-semibold tabular-nums">{pct}%</span>
+              </div>
+              <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                <div className={cn("h-full", color)} style={{ width: `${pct}%` }} />
+              </div>
             </div>
-            <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
-              <div
-                className={cn(
-                  "h-full",
-                  colorMap[it.color as keyof typeof colorMap] ?? colorMap.neutral
-                )}
-                style={{ width: `${it.share}%` }}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

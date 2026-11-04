@@ -2,7 +2,7 @@
 /**
  * Host llama-server for NuExtract3 (OpenAI-compatible, detached).
  *
- *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|warmup|download
+ *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download
  *
  * Reads deploy/llamacpp/paths.local.env (LLAMACPP_*), overridable by process env.
  * Flags follow https://huggingface.co/numind/NuExtract3-GGUF and llama.cpp docs/multimodal.md.
@@ -24,7 +24,6 @@ import {
 const DIR = path.join(ROOT, "deploy/llamacpp");
 const LOG_DIR = path.join(DIR, "logs");
 const PID_FILE = path.join(LOG_DIR, "llama-server.pid");
-const WARMUP_MARKER = path.join(LOG_DIR, ".warmup-complete");
 const HF_REPO = "numind/NuExtract3-GGUF";
 const CONTEXT = 16384;
 
@@ -86,37 +85,6 @@ function missingPaths() {
   if (!model || !fs.existsSync(model)) missing.push("LLAMACPP_MODEL");
   if (!mmproj || !fs.existsSync(mmproj)) missing.push("LLAMACPP_MMPROJ");
   return missing;
-}
-
-/** Facture.pdf through the real VLM adapter; the script writes the marker on success. */
-function warmup({ background = false, force = false } = {}) {
-  if (!force && fs.existsSync(WARMUP_MARKER)) {
-    console.log("NuExtract warmup already completed for this server session — skipping.");
-    return;
-  }
-  const uvArgs = ["run", "python", "scripts/warmup_repody_vlm.py"];
-  const opts = {
-    cwd: path.join(ROOT, "backend"),
-    shell: false,
-    env: {
-      ...process.env,
-      AUDIT_LLAMACPP_BASE_URL: `http://127.0.0.1:${port}/v1`,
-      AUDIT_REPODY_VLM_WARMUP_ON_START: "true",
-    },
-  };
-  console.log("\nPriming NuExtract (Facture.pdf, invoice + total-only schemas)...");
-  if (background) {
-    console.log("(background — stack continues; marker written by warmup_repody_vlm.py)");
-    spawn(resolveExecutable("uv"), uvArgs, { ...opts, detached: true, stdio: "ignore" }).unref();
-    return;
-  }
-  const result = spawnSync(resolveExecutable("uv"), uvArgs, { ...opts, stdio: "inherit" });
-  if (result.status !== 0) {
-    console.error("NuExtract warmup failed — first extraction may be slow.");
-    process.exit(result.status ?? 1);
-  }
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-  fs.writeFileSync(WARMUP_MARKER, new Date().toISOString(), "utf8");
 }
 
 async function verify() {
@@ -190,9 +158,6 @@ async function serve() {
   }
   console.log("NuExtract3 llama-server is up.");
   await verify();
-  // Opt-in (LLAMACPP_WARMUP=on), in the background so the stack continues.
-  if (get("WARMUP", "off").toLowerCase() === "on") warmup({ background: true });
-  else console.log("(warmup skipped — LLAMACPP_WARMUP=on or: pnpm llamacpp:warmup)");
   console.log(`  AUDIT_LLAMACPP_BASE_URL=http://host.docker.internal:${port}/v1`);
   console.log(`  AUDIT_LLAMACPP_SERVED_MODEL=${alias}`);
 }
@@ -208,7 +173,6 @@ function isLlamaServer(pid) {
 
 /** Kill the server we started (PID file), then anything still bound to the port. */
 function stop() {
-  fs.rmSync(WARMUP_MARKER, { force: true });
   const pid = fs.existsSync(PID_FILE) ? Number(fs.readFileSync(PID_FILE, "utf8").trim()) : 0;
   if (pid > 0 && isLlamaServer(pid)) {
     if (process.platform === "win32") {
@@ -251,11 +215,8 @@ else if (cmd === "restart") {
   waitForPortRelease(port, 5000);
   await serve();
 } else if (cmd === "verify") await verify();
-else if (cmd === "warmup") warmup({ force: true });
 else if (cmd === "download") download();
 else {
-  console.error(
-    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|warmup|download"
-  );
+  console.error("Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download");
   process.exit(2);
 }

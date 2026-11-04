@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     fetchDashboardBundle(),
   ]);
 
-  const auditsWeek = data.kpis.find((k) => k.id === "auditsWeek")?.rawValue ?? 0;
+  const auditsWeek = data.kpis.find((k) => k.id === "auditsWeek")?.value ?? 0;
   const showGetStarted = data.workflows.length === 0 || auditsWeek === 0;
 
   if (!data.apiLive) {
@@ -53,18 +53,7 @@ export default async function DashboardPage() {
 
       {showGetStarted ? <GetStartedPanel /> : null}
 
-      <BusinessDashboard
-        initial={{
-          apiLive: data.apiLive,
-          kpis: data.kpis,
-          audits: data.audits,
-          workflows: data.workflows,
-          performanceSeries: data.performanceSeries,
-          violationBreakdown: data.violationBreakdown,
-          healthAlerts: data.healthAlerts,
-          queue: data.queue,
-        }}
-      />
+      <BusinessDashboard initial={data} />
     </PageShell.Stagger>
   );
 }

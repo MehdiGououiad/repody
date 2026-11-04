@@ -4,12 +4,11 @@ import { fetchAudits } from "@/lib/api/client";
 export async function GET() {
   const { audits } = await fetchAudits();
   const rows = [
-    ["id", "status", "workflow", "entity", "timestamp", "rows", "failedRules"],
+    ["id", "status", "workflow", "timestamp", "rows", "failedRules"],
     ...audits.map((audit) => [
       audit.id,
       audit.status,
       audit.workflowName,
-      audit.entity,
       audit.timestamp,
       audit.rows,
       audit.failedRules,

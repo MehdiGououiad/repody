@@ -1,14 +1,12 @@
-{{- range $pool, $worker := .Values.workers }}
-{{- $component := printf "worker-%s" $pool }}
-{{- $ctx := dict "root" $ "component" $component }}
----
+{{- $worker := .Values.worker }}
+{{- $ctx := dict "root" . "component" "worker" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "repody.fullname" $ }}-{{ $component }}
+  name: {{ include "repody.fullname" . }}-worker
   labels:
-    {{- include "repody.labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ $component }}
+    {{- include "repody.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
 spec:
   {{- if not $worker.autoscaling.enabled }}
   replicas: {{ $worker.replicas }}
@@ -21,34 +19,23 @@ spec:
       labels:
         {{- include "repody.selectorLabels" $ctx | nindent 8 }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") $ | sha256sum }}
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       {{- include "repody.podDefaults" $ctx | nindent 6 }}
       # Taskiq finishes the running task on SIGTERM; give it time before SIGKILL.
       terminationGracePeriodSeconds: {{ $worker.terminationGracePeriodSeconds }}
       containers:
         - name: worker
-          image: {{ include "repody.image" (dict "image" $.Values.images.backend "root" $) | quote }}
-          imagePullPolicy: {{ $.Values.images.backend.pullPolicy }}
+          image: {{ include "repody.image" (dict "image" .Values.images.backend "root" .) | quote }}
+          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
           # args (not command) so the image entrypoint can start the OTEL agent.
-          args: [python, -m, repody.taskiq.worker]
+          args: [taskiq, worker, "repody.worker:broker", --workers, "1", --max-async-tasks, {{ $worker.concurrency | quote }}]
           securityContext:
-            {{- include "repody.containerSecurityContext" $ | nindent 12 }}
-          {{- include "repody.backendEnvFrom" $ | nindent 10 }}
+            {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          {{- include "repody.backendEnvFrom" . | nindent 10 }}
           env:
-            {{- include "repody.backendSecretEnv" $ | nindent 12 }}
-            - name: AUDIT_WORKER_POOL
-              value: {{ $pool | quote }}
-            - name: AUDIT_WORKER_{{ upper $pool }}_MAX_JOBS
-              value: {{ $worker.maxJobs | quote }}
+            {{- include "repody.backendSecretEnv" . | nindent 12 }}
             - name: OTEL_SERVICE_NAME
-              value: repody-{{ $component }}
-          readinessProbe:
-            exec:
-              command: [python, -m, repody.taskiq.healthcheck]
-            initialDelaySeconds: 15
-            periodSeconds: 10
-            timeoutSeconds: 5
+              value: repody-worker
           resources:
             {{- toYaml $worker.resources | nindent 12 }}
-{{- end }}

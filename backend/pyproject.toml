@@ -4,42 +4,33 @@ version = "0.1.0"
 description = "Repody — document audit platform backend"
 requires-python = ">=3.12"
 dependencies = [
-  # Core API
+  # HTTP API
   "fastapi>=0.141.1",
   "uvicorn[standard]>=0.52.4",
   "pydantic>=2.13.5",
   "pydantic-settings>=2.15.0",
   "python-multipart>=0.0.20",
   "sse-starlette>=3.4.11",
-  "asgi-correlation-id>=4.3.4",
   # Database
   "sqlalchemy[asyncio]>=2.0.52",
   "asyncpg>=0.30.0",
   "alembic>=1.15.0",
-  # Queue + cache
+  # Queue, cache, rate limits
   "taskiq[opentelemetry]>=0.12.6",
   "taskiq-redis>=1.2.0",
   "redis>=8.1.0",
   "limits[async-redis]>=4.4.1",
-  # OpenAI-compatible client for llama-server
+  # Extraction: llama-server (OpenAI-compatible), PDF rendering, file types
   "openai>=2.54.0",
-  # HTTP + storage
-  "httpx>=0.28.0",
-  "boto3>=1.43.30",
+  "pymupdf>=1.28.2",
   "filetype>=1.2.0",
-  # Rules
-  "simpleeval>=1.0.3",
-  # Auth (Keycloak JWT)
+  # Rules: amounts in documents
+  "price-parser>=0.4.0",
+  # Storage, auth, logs and errors
+  "boto3>=1.43.30",
   "pyjwt[crypto]>=2.10.0",
-  "cryptography>=44.0.0",
-  # Observability + reliability
   "structlog>=25.1.0",
   "sentry-sdk[fastapi]>=2.69.1",
-  "opentelemetry-api>=1.44.0",
-  # Document preprocessing
-  "pillow>=11.1.0",
-  "pymupdf>=1.28.2",
-  "price-parser>=0.4.0",
 ]
 
 [project.optional-dependencies]
@@ -51,6 +42,7 @@ dev = [
   "pytest-html>=4.1.0",
   "pytest-cov>=6.0.0",
   "respx>=0.22.0",
+  "httpx>=0.28.0",
   "import-linter>=2.15",
 ]
 # OpenTelemetry agent (`opentelemetry-instrument`, see scripts/docker-entrypoint.sh): the distro
@@ -77,6 +69,7 @@ packages = ["src/repody"]
 line-length = 100
 target-version = "py313"
 src = ["src", "tests", "scripts"]
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -107,20 +100,8 @@ select = [
   "RUF",   # ruff-specific
 ]
 ignore = [
-  # Handled by formatting/readability review; long SQL/HTML/messages are common here.
-  "E501",
-  # FastAPI intentionally uses Depends/File/Form/Header calls in endpoint defaults.
-  "B008",
-  # Public exception names are part of the current service interface.
-  "N818",
-  # Passing timeout through to HTTP clients is intentional in async adapter functions.
-  "ASYNC109",
-  # PEP 695 generics are not required for this codebase style yet.
-  "UP047",
-  # Python 3.11-compatible enum spelling is kept for readability and migrations.
-  "UP042",
-  # Async tests may use pathlib for fixture paths.
-  "ASYNC240",
+  "E501",  # the formatter wraps code; long strings and URLs stay readable
+  "B008",  # FastAPI declares dependencies and form fields in argument defaults
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -130,72 +111,44 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]
-"tests/integration/api/test_routes.py" = ["E402"]
 # CLI entry points report progress on stdout by design.
 "scripts/**" = ["T20"]
 # Tests assert on fixture arguments that linters read as unused, and live
 # journey tests print extraction output for the operator running them.
 "tests/**" = ["ARG001", "ARG002", "ARG005"]
 "tests/live/**" = ["ARG001", "ARG002", "ARG005", "T20"]
+# Amounts as documents write them: Unicode minus and narrow no-break space.
+"tests/unit/test_rules.py" = ["RUF001"]
 # Pydantic deep-copies field defaults per instance, so a list/dict default is
 # safe here. Annotating these as ClassVar would drop them from the model.
 "src/repody/schemas/*.py" = ["RUF012"]
 
-# Layer contracts (import-linter): `uv run lint-imports`, run by `pnpm architecture:check`.
+# Layer contracts: `uv run lint-imports`.
 [tool.importlinter]
 root_package = "repody"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Runtime contracts are framework- and IO-free"
-type = "forbidden"
-source_modules = ["repody.runtime.contracts"]
-forbidden_modules = [
-  "sqlalchemy", "fastapi", "redis", "structlog",
-  "repody.api", "repody.app", "repody.infra", "repody.settings",
-  "repody.taskiq", "repody.extraction", "repody.rules",
+name = "Layers: HTTP routes -> use cases -> domain"
+type = "layers"
+layers = [
+  "repody.main",
+  "repody.api",
+  "repody.app",
+  "repody.extraction | repody.rules",
 ]
 
 [[tool.importlinter.contracts]]
-name = "Application layer is framework-free"
+name = "Use cases and domain are framework-free"
 type = "forbidden"
-source_modules = ["repody.app"]
-forbidden_modules = ["fastapi", "starlette", "repody.api"]
-# Known indirect path: app.run.enqueue -> infra.rate_limit -> starlette.
-allow_indirect_imports = true
+source_modules = ["repody.app", "repody.extraction", "repody.rules", "repody.schemas"]
+forbidden_modules = ["fastapi", "starlette", "sse_starlette"]
 
 [[tool.importlinter.contracts]]
-name = "Infrastructure has no use cases or HTTP routes"
+name = "Rules are pure"
 type = "forbidden"
-source_modules = ["repody.infra"]
-forbidden_modules = ["repody.api", "repody.app", "repody.taskiq"]
-
-[[tool.importlinter.contracts]]
-name = "Settings is a leaf"
-type = "forbidden"
-source_modules = ["repody.settings"]
-forbidden_modules = [
-  "repody.api", "repody.app", "repody.catalog", "repody.extraction",
-  "repody.inference", "repody.infra", "repody.rules", "repody.runtime", "repody.taskiq",
-]
-
-[[tool.importlinter.contracts]]
-name = "Runtime metrics build is IO-free"
-type = "forbidden"
-source_modules = ["repody.runtime.metrics"]
-forbidden_modules = [
-  "sqlalchemy", "fastapi", "redis",
-  "repody.api", "repody.app", "repody.infra", "repody.taskiq",
-]
-
-[[tool.importlinter.contracts]]
-name = "Runtime run is pure + contracts"
-type = "forbidden"
-source_modules = ["repody.runtime.run"]
-forbidden_modules = [
-  "sqlalchemy", "fastapi", "redis", "structlog",
-  "repody.api", "repody.app", "repody.infra", "repody.settings", "repody.taskiq",
-]
+source_modules = ["repody.rules"]
+forbidden_modules = ["sqlalchemy", "redis", "repody.db", "repody.models", "repody.settings"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]
@@ -206,34 +159,9 @@ reportMissingTypeStubs = false
 venvPath = "."
 venv = ".venv"
 
-# Tests and one-off scripts lean on MagicMock, SimpleNamespace and partially
-# built fixtures. Those patterns are deliberately untyped, so the shape-related
-# rules are relaxed there; everything that catches real defects (unbound names,
-# bad returns, unreachable code) still applies.
 [[tool.pyright.executionEnvironments]]
 root = "tests"
-# Tests import sibling helpers as `tests.*`, matching pytest's pythonpath = ["."].
-extraPaths = ["."]
-reportArgumentType = "none"
-reportCallIssue = "none"
-reportAttributeAccessIssue = "none"
-reportOptionalMemberAccess = "none"
-reportOptionalSubscript = "none"
-reportIndexIssue = "none"
-
-[[tool.pyright.executionEnvironments]]
-root = "scripts"
-# Bench scripts import each other as `scripts.*` after inserting the repo root.
-extraPaths = ["."]
-reportArgumentType = "none"
-reportCallIssue = "none"
-reportAttributeAccessIssue = "none"
-reportOptionalMemberAccess = "none"
-reportOptionalSubscript = "none"
-reportIndexIssue = "none"
-
-[[tool.pyright.executionEnvironments]]
-root = "src"
+extraPaths = ["."]  # tests import shared helpers as `tests.*` (pytest pythonpath)
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -241,25 +169,9 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = [
-  "--strict-markers",
-  "-ra",
-]
+addopts = ["--strict-markers", "-ra", "-m", "not live"]
 markers = [
-  "unit: fast pure tests — no DB, no live stack",
-  "integration: ASGI + Postgres (or real storage boundary), no Taskiq workers",
-  "live: requires running API/stack (E2E_STACK=1 or E2E_API_URL)",
-  "e2e: end-to-end journey (API live and/or Playwright UI)",
-  "e2e_facture: Facture.pdf path tests (text / llm / optional vlm)",
-  "slow: long-running extraction / pipeline cases",
+  "unit: pure tests, no services",
+  "integration: the app on Postgres and Redis, runs processed inline",
+  "live: a running stack with the llama-server (E2E_API_URL)",
 ]
-
-[tool.coverage.run]
-source = ["repody"]
-branch = true
-omit = ["*/tests/*"]
-
-[tool.coverage.report]
-show_missing = true
-skip_covered = true
-fail_under = 0

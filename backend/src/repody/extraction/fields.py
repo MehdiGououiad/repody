@@ -1,51 +1,54 @@
-"""Project NuExtract's JSON answer onto schema leaves for the UI and rules.
+"""Flatten NuExtract's JSON answer into one value per schema leaf, for the report and rules.
 
-The model returns JSON shaped like the template; that object is the source of truth
-(stored as ``rawText``). This only flattens it into one ``ExtractedFieldResult`` per leaf.
+``object`` fields expand to ``parent.child`` keys; an ``object-array`` stays one leaf whose
+value is its JSON table. Lists and tables are stored as JSON text.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Any
 
-from repody.extraction.types import ExtractedFieldResult, SchemaFieldSpec
-from repody.rules.value_coercion import MISSING
+from repody.rules.values import MISSING
+from repody.schemas.workflow import SchemaField
 
 
-def fields_from_nuextract_json(
-    raw: str, schema: list[SchemaFieldSpec]
-) -> list[ExtractedFieldResult]:
-    """Every schema leaf with its value from the model JSON (missing -> ``MISSING``)."""
+@dataclass(frozen=True, slots=True)
+class FieldValue:
+    key: str
+    description: str
+    type: str
+    value: str
+
+    @property
+    def extracted(self) -> bool:
+        return self.value != MISSING
+
+
+def leaf_values(fields: list[SchemaField], answer: str | None) -> list[FieldValue]:
+    """Every leaf with its value from ``answer`` (``MISSING`` when absent or no answer)."""
     try:
-        data = json.loads(raw or "")
+        data = json.loads(answer or "")
     except json.JSONDecodeError:
         data = {}
-    return list(_leaves(schema, data if isinstance(data, dict) else {}, ""))
+    return list(_leaves(fields, data if isinstance(data, dict) else {}, ""))
 
 
-def _leaves(
-    schema: list[SchemaFieldSpec], data: dict[str, Any], prefix: str
-) -> Iterator[ExtractedFieldResult]:
-    for field in schema:
+def _leaves(fields: list[SchemaField], data: dict[str, Any], prefix: str) -> Iterator[FieldValue]:
+    for field in fields:
         if not field.name:
             continue
-        key = f"{prefix}.{field.name}" if prefix else field.name
+        key = f"{prefix}{field.name}"
         value = data.get(field.name)
         if field.template_type == "object" and field.children:
-            yield from _leaves(field.children, value if isinstance(value, dict) else {}, key)
+            yield from _leaves(field.children, value if isinstance(value, dict) else {}, f"{key}.")
             continue
-        # Strings are stored as-is; lists / objects (tables) as JSON.
         if isinstance(value, str):
             text = value.strip() or MISSING
         else:
             text = MISSING if value is None else json.dumps(value, ensure_ascii=False)
-        yield ExtractedFieldResult(
-            key=key,
-            description=field.description,
-            value=text,
-            type=field.template_type,
-            confidence=None,
-            extracted=text != MISSING,
+        yield FieldValue(
+            key=key, description=field.description, type=field.template_type, value=text
         )

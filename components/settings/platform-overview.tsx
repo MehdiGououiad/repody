@@ -1,6 +1,5 @@
-import { BrainCircuit, Gauge, type LucideIcon, ServerCog, Zap } from "lucide-react";
-import type { PlatformConfig } from "@/lib/api/platform-config";
-import type { ModelsCatalogResponse } from "@/lib/api/schema-types";
+import { BrainCircuit, Gauge, type LucideIcon } from "lucide-react";
+import type { PlatformConfig } from "@/lib/api/schema-types";
 import { formatBytes } from "@/lib/utils";
 
 function MetricCard({
@@ -31,22 +30,13 @@ function MetricCard({
 }
 
 /** Read-only platform configuration and document-model status (no operator actions). */
-export function PlatformOverview({
-  platform,
-  catalog,
-}: {
-  platform: PlatformConfig;
-  catalog: ModelsCatalogResponse | null;
-}) {
-  const model = catalog?.models[0];
-  const modelState = !model ? "Unknown" : model.available ? "Ready" : "Unavailable";
+export function PlatformOverview({ platform }: { platform: PlatformConfig }) {
   const runtimeRows = [
-    ["Queue", platform.queueBackend],
     ["Inference endpoint", platform.llamacppBaseUrl],
     ["Served model", platform.servedModel],
-    ["Worker pools", Object.values(platform.workerPools).join(", ")],
+    ["Pages per document", String(platform.maxPagesPerDocument ?? "All")],
     ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
-    ["Task timeout", `${platform.workerTaskTimeoutMinutes} min`],
+    ["Run timeout", `${platform.runTimeoutMinutes} min`],
   ];
 
   return (
@@ -54,27 +44,15 @@ export function PlatformOverview({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Document model"
-          value={modelState}
-          detail={model?.availabilityNote ?? model?.label ?? platform.servedModel}
+          value={platform.modelAvailable ? "Ready" : "Unavailable"}
+          detail={platform.servedModel}
           Icon={BrainCircuit}
-        />
-        <MetricCard
-          label="Execution"
-          value={platform.queueBackend}
-          detail={platform.taskiqConfigured ? "Queue configured" : "Queue needs attention"}
-          Icon={Zap}
         />
         <MetricCard
           label="Cache"
           value={platform.cacheEnabled ? "Enabled" : "Disabled"}
           detail="Redis extraction cache"
           Icon={Gauge}
-        />
-        <MetricCard
-          label="Rate limit"
-          value={platform.rateLimitEnabled ? "Enabled" : "Off"}
-          detail="API request limits"
-          Icon={ServerCog}
         />
       </div>
 

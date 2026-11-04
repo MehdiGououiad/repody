@@ -32,7 +32,8 @@ import {
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
-import { cn, shortId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { newSchemaField } from "@/lib/workflow/new-items";
 import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
 
 const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "structure", "advanced"];
@@ -267,16 +268,7 @@ export function SchemaTable({
   const update = (id: string, patch: Partial<SchemaField>) =>
     onChange(schema.map((f) => (f.id === id ? { ...f, ...patch } : f)));
   const remove = (id: string) => onChange(schema.filter((f) => f.id !== id));
-  const add = () =>
-    onChange([
-      ...schema,
-      {
-        id: `f${shortId()}`,
-        name: "",
-        description: "",
-        templateType: DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-      },
-    ]);
+  const add = () => onChange([...schema, newSchemaField()]);
 
   return (
     <div className="space-y-2">

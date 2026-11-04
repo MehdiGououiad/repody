@@ -10,7 +10,8 @@
 | [006](./006-three-agent-functional-idp.md) | IDP agent slice (superseded by 008) |
 | [007](./007-staged-agent-queues-taskiq.md) | Staged agent queues on Taskiq (superseded by 008) |
 | [008](./008-flat-run-pipeline.md) | Flat run pipeline: state UPDATEs, one worker module, `dispatched_at`, exceptions |
+| [009](./009-simple-backend.md) | One workflow definition, typed rules, one queue, multipart uploads |
 
-Run pipeline: [ADR 008](./008-flat-run-pipeline.md).
+Current backend shape: [ADR 009](./009-simple-backend.md).
 
 Start with [CONTEXT.md](../../CONTEXT.md) and the [documentation map](../README.md).

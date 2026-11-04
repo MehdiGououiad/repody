@@ -10,7 +10,8 @@ import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
 import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { type LiveDashboardData, useDashboardLive } from "@/lib/hooks/use-dashboard-live";
+import type { DashboardBundle } from "@/lib/api/dashboard";
+import { useDashboardLive } from "@/lib/hooks/use-dashboard-live";
 import type { Audit } from "@/lib/types";
 
 const KpiCard = dynamic(
@@ -66,9 +67,9 @@ function AttentionRow({ audits }: { audits: Audit[] }) {
           >
             <div className="min-w-0">
               <p className="text-sm font-semibold text-on-surface truncate group-hover:text-danger transition-colors">
-                {audit.workflowName || audit.entity}
+                {audit.workflowName}
               </p>
-              <p className="text-[11px] text-on-surface-variant truncate">{audit.entity}</p>
+              <p className="text-[11px] text-on-surface-variant truncate">{audit.id}</p>
             </div>
             <Badge variant="danger" className="text-[10px] shrink-0">
               {audit.failedRules} {t("failedRulesBadge")}
@@ -100,11 +101,7 @@ function LiveIndicator({ updated }: { updated: Date | null }) {
   );
 }
 
-export function BusinessDashboard({
-  initial,
-}: {
-  initial: Omit<LiveDashboardData, "lastUpdated">;
-}) {
+export function BusinessDashboard({ initial }: { initial: DashboardBundle }) {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const live = useDashboardLive(initial);
@@ -115,7 +112,7 @@ export function BusinessDashboard({
 
   return (
     <div className="space-y-6">
-      <HealthStrip alerts={live.healthAlerts} />
+      <HealthStrip staleRuns={live.staleRuns} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <LiveIndicator updated={live.lastUpdated} />
@@ -139,7 +136,7 @@ export function BusinessDashboard({
         <div className="xl:col-span-2">
           <PerformanceChart data={live.performanceSeries} />
         </div>
-        <ViolationsBreakdown items={live.violationBreakdown} />
+        <ViolationsBreakdown items={live.failuresBySeverity} />
       </div>
 
       <section className="space-y-4">

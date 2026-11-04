@@ -66,7 +66,6 @@
     "deployWorkflow": "Déployer le workflow",
     "redeployWorkflow": "Redéployer",
     "of": "sur",
-    "dismiss": "Fermer",
     "skipToContent": "Aller au contenu principal",
     "neverRun": "Jamais exécuté",
     "newWorkflow": "Nouveau workflow",
@@ -85,10 +84,6 @@
     "retry": "Réessayer"
   },
   "runProgress": {
-    "gpuColdStartTitle": "Démarrage à froid du GPU",
-    "gpuColdStartHint": "GPU serverless — la première requête après inactivité peut prendre 1 à 2 minutes le temps de démarrer un worker.",
-    "gpuColdStartActive": "Préparation du GPU serverless… {elapsed}",
-    "gpuColdStartDone": "Démarrage à froid GPU inclus",
     "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
     "queuePosition": "Position dans la file {position} sur {depth}",
     "queueWaiting": "En attente dans la file…",
@@ -144,16 +139,11 @@
       "peakDay": "Jour de pic"
     },
     "violations": {
-      "title": "Échecs par type de règle",
-      "hint": "Répartition des échecs cette semaine.",
-      "types": {
-        "format": "Format de données incorrect",
-        "missing": "Champs manquants",
-        "logic": "Anomalies logiques",
-        "llm": "Échecs de règles LLM",
-        "other": "Autre",
-        "none": "Aucun échec"
-      }
+      "title": "Échecs par gravité",
+      "hint": "Part des échecs de règles cette semaine.",
+      "reject": "Rejet",
+      "flag": "Signalement",
+      "none": "Aucun échec cette semaine."
     },
     "getStarted": {
       "title": "Lancez votre premier audit",
@@ -186,7 +176,6 @@
       "allRulesPassed": "Toutes les règles validées",
       "validationFailed": "Validation échouée",
       "reviewRequired": "Révision requise",
-      "confidence": "Confiance",
       "value": "Valeur extraite",
       "field": "Champ",
       "status": "Statut",
@@ -211,7 +200,6 @@
       "id": "ID d'audit",
       "status": "Statut",
       "workflow": "Workflow",
-      "entity": "Entité",
       "timestamp": "Horodatage",
       "rows": "Lignes",
       "summary": "{count, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
@@ -224,8 +212,6 @@
       "allStatuses": "Tous les statuts",
       "workflow": "Workflow",
       "allWorkflows": "Tous les workflows",
-      "entity": "Entité",
-      "allEntities": "Toutes les entités",
       "clearAll": "Réinitialiser"
     },
     "status": {
@@ -270,7 +256,6 @@
         "extract": "Quoi extraire",
         "extractHint": "Types de documents, champs et modèle d'extraction",
         "rules": "Règles de validation",
-        "rulesHint": "Contrôles logiques sur les valeurs extraites",
         "upload": "Test & déploiement",
         "uploadHint": "Échantillon → extraction → validation en une passe",
         "back": "Retour",
@@ -321,16 +306,6 @@
           "starting": "Démarrage du test…",
           "saveWorkflow": "Enregistrer le workflow",
           "saveWorkflowDetail": "Sauvegarde du schéma et des règles sur le serveur",
-          "uploadCheck": "Mode de téléversement",
-          "uploadCheckDetail": "Détection du téléversement direct vers le stockage ou repli API",
-          "uploadReuse": "Réutiliser les fichiers",
-          "uploadReuseDetail": "Mêmes fichiers que la dernière exécution — pas de re-téléversement ({files})",
-          "uploadPresign": "Préparer les URLs",
-          "uploadPresignDetail": "Demande de liens de téléversement sécurisés à l'API",
-          "uploadTransfer": "Téléverser les fichiers",
-          "uploadTransferDetail": "Envoi des documents vers le stockage objet",
-          "uploadConfirm": "Vérifier les téléversements",
-          "uploadConfirmDetail": "Confirmation que les fichiers sont bien stockés et valides",
           "startRun": "Lancer l'audit",
           "startRunDetail": "Création du run et envoi aux workers",
           "pollRun": "Traitement worker",
@@ -623,10 +598,7 @@
       "rules": {
         "title": "Règles de validation",
         "active": "Actives",
-        "library": "Bibliothèque",
-        "addRule": "Ajouter une règle",
         "addLogic": "Nouvelle règle logique",
-        "kindLogic": "Règle logique",
         "severityReject": "Rejeter en cas d'échec",
         "severityFlag": "Signaler pour relecture",
         "newLogicName": "Règle logique sans titre",
@@ -634,9 +606,7 @@
         "hint": "Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites.",
         "runsOnOcr": "Repody VLM extrait d'abord les champs du schéma. Les contrôles logiques s'exécutent localement sur les valeurs extraites.",
         "appliesTo": "Périmètre",
-        "scopeIntra": "Au sein du document",
         "scopeIntraShort": "Intra-doc",
-        "scopeCross": "Entre documents",
         "scopeCrossShort": "Inter-doc",
         "selectOneDoc": "Document",
         "selectTwoDocs": "Document A → Document B",
@@ -646,7 +616,6 @@
         "unnamedDoc": "Document",
         "expressionLabel": "Expression logique",
         "onFail": "En cas d'échec",
-        "added": "Ajoutée",
         "conditions": {
           "literalPlaceholder": "valeur…",
           "literalDatePlaceholder": "AAAA-MM-JJ",
@@ -764,11 +733,10 @@
     }
   },
   "health": {
-    "degraded": "Pipeline d'audit des factures dégradé",
-    "degradedDetail": "3 échecs consécutifs au cours des 30 dernières minutes",
     "alerts": {
       "stale": {
-        "title": "Exécutions bloquées"
+        "title": "Exécutions bloquées",
+        "detail": "{count, plural, one {# exécution} other {# exécutions}} encore en cours après le délai."
       }
     }
   }

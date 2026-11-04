@@ -1,202 +1,113 @@
+"""Test setup.
+
+Unit tests need nothing. Integration tests use a migrated Postgres database
+(``repody_test``) and Redis from the local stack, an in-memory object store, and run
+each queued run inline instead of on a Taskiq worker. Live tests (``-m live``) call a
+running stack at E2E_API_URL.
+"""
+
+from __future__ import annotations
+
 import os
 
-# Test env MUST be set before any `repody` import. `repody.infra.db.base` calls
-# get_settings() at import time (engine), and Settings is lru_cached - importing
-# tests.helpers.db before these assignments would lock in backend/.env (e.g. OTEL).
-_DEFAULT_TEST_DATABASE_URL = "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
-
-# Test defaults - production uses Postgres + Alembic; live HTTP E2E uses the docker
-# stack API (backend/.env DB). Only force the isolated *_test DB for in-process tests.
-_db_url = os.environ.get("AUDIT_DATABASE_URL", "")
-_live_stack = os.environ.get("E2E_STACK") == "1" or bool(os.environ.get("E2E_API_URL"))
-if not _db_url and not _live_stack:
-    os.environ["AUDIT_DATABASE_URL"] = _DEFAULT_TEST_DATABASE_URL
-elif _live_stack and (not _db_url or _db_url.rstrip("/").endswith("_test")):
-    # Align host-side scripts with Compose workers when running live E2E.
-    os.environ["AUDIT_DATABASE_URL"] = (
-        "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody"
-    )
-os.environ["AUDIT_RUN_EVENTS_ENABLED"] = os.environ.get("AUDIT_RUN_EVENTS_ENABLED", "false")
-os.environ["AUDIT_EXTRACTION_CACHE_ENABLED"] = os.environ.get(
-    "AUDIT_EXTRACTION_CACHE_ENABLED", "false"
+# Before any `repody` import: settings are read once and cached.
+os.environ.setdefault(
+    "AUDIT_DATABASE_URL", "postgresql+asyncpg://audit:audit-local-dev@127.0.0.1:5432/repody_test"
 )
-os.environ["AUDIT_OIDC_ENABLED"] = "false"
-os.environ["AUDIT_RUN_MIGRATIONS_ON_STARTUP"] = "false"
-os.environ["AUDIT_SEED_ON_STARTUP"] = "false"
-# Uploads go through the API; the object store is an in-memory fake (see use_memory_store).
-os.environ["AUDIT_DIRECT_UPLOAD_ENABLED"] = "false"
-os.environ["AUDIT_GPU_LIVE_PROBE"] = "false"
-os.environ["AUDIT_HEALTHZ_PROBE_INFERENCE"] = "false"
-os.environ["AUDIT_LLAMACPP_BASE_URL"] = "http://llamacpp-mock.test/v1"
-os.environ["AUDIT_TEST_POLL_INTERVAL_MS"] = "50"
-os.environ["AUDIT_RATE_LIMIT_ENABLED"] = "false"
-# Force off even when backend/.env has Compose OTEL (avoids export noise / closed-file logs).
-os.environ["OTEL_SDK_DISABLED"] = "true"
+os.environ.update(
+    AUDIT_OIDC_ENABLED="false",
+    AUDIT_OIDC_AUDIENCE="",
+    AUDIT_SEED_ON_STARTUP="false",
+    AUDIT_EXTRACTION_CACHE_TTL_SECONDS="0",
+    AUDIT_LLAMACPP_BASE_URL="http://llamacpp.test/v1",
+    OTEL_SDK_DISABLED="true",
+)
 
-import httpx
+import asyncio
+import subprocess
+import sys
+from collections.abc import AsyncIterator
+from pathlib import Path
+
+import asyncpg
 import pytest
-import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from tests.helpers.db import (
-    DEFAULT_TEST_DATABASE_URL,
-    bind_test_database,
-    configure_test_database_url,
-    create_test_engine,
-    ensure_postgres_database,
-    patch_session_factory,
-    reset_test_database,
-    upgrade_database_to_head,
-)
-from tests.llm_mocks import disable_dmr_mock, enable_dmr_mock
-from tests.support.memory_store import MemoryStore
+from sqlalchemy import text
 
-from repody.inference import openai_compat
-from repody.infra.storage.factory import use_storage
+from repody import db, queue
+from repody.app import execute
+from repody.extraction import client as inference
 from repody.main import create_app
-from repody.settings import clear_settings_cache, get_settings
+from repody.settings import get_settings
+from repody.storage import use_store
 
-assert DEFAULT_TEST_DATABASE_URL == _DEFAULT_TEST_DATABASE_URL
-
-_session_dmr_router: dict[str, object] = {"router": None}
-
-
-@pytest.fixture(autouse=True)
-def fresh_settings():
-    clear_settings_cache()
-    yield
-    clear_settings_cache()
+BACKEND = Path(__file__).resolve().parents[1]
+FACTURE_PDF = BACKEND.parent / "e2e" / "fixtures" / "documents" / "Facture.pdf"
 
 
-@pytest.fixture(autouse=True)
-def use_memory_store(request):
-    if request.node.get_closest_marker("live") is not None:
-        yield
-        return
-    use_storage(MemoryStore())
-    yield
-    use_storage(None)
+class MemoryStore:
+    def __init__(self) -> None:
+        self.objects: dict[str, bytes] = {}
+
+    async def put(self, key: str, data: bytes, content_type: str) -> None:
+        self.objects[key] = data
+
+    async def get(self, key: str) -> bytes:
+        return self.objects[key]
 
 
-@pytest.fixture
-async def live_client(request):
-    """HTTP client against a running docker/k8s stack (Taskiq workers)."""
-    if request.node.get_closest_marker("live") is None:
-        pytest.skip("live_client fixture requires @pytest.mark.live")
-    if os.environ.get("E2E_STACK") != "1" and not os.environ.get("E2E_API_URL"):
-        pytest.skip("Set E2E_STACK=1 or E2E_API_URL for live API tests")
-    from tests.support.live_stack import create_live_async_client
-
-    async with create_live_async_client() as ac:
-        yield ac
-
-
-@pytest_asyncio.fixture(scope="session")
-async def test_session_factory():
-    """One migrated Postgres database per test session (Alembic, same as prod)."""
-    database_url = configure_test_database_url()
-    await ensure_postgres_database(database_url)
-    upgrade_database_to_head(database_url)
-
-    engine = create_test_engine(database_url)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    bind_test_database(engine, session_factory)
-
-    yield session_factory
-
-    await engine.dispose()
-    get_settings.cache_clear()
-
-
-@pytest_asyncio.fixture(scope="session")
-async def app(test_session_factory):
-    """Real ASGI app against migrated Postgres (UI-identical routes)."""
-    os.environ["AUDIT_OIDC_ENABLED"] = "false"
-    os.environ["AUDIT_OIDC_AUDIENCE"] = ""
-    get_settings.cache_clear()
-    router = enable_dmr_mock(monkeypatch=None)
-    _session_dmr_router["router"] = router
-
-    application = create_app()
-
-    yield application
-
-    from repody.app.run.dispatch import close_taskiq_brokers
-    from repody.taskiq.broker import clear_broker_cache
-    from repody.taskiq.tasks import clear_task_registry
-
-    await close_taskiq_brokers()
-    clear_broker_cache()
-    clear_task_registry()
-    disable_dmr_mock(router)
-    _session_dmr_router["router"] = None
-    get_settings.cache_clear()
-
-
-@pytest.fixture
-async def postgres_session(monkeypatch, test_session_factory):
-    """Async session on migrated Postgres; DB truncated + seeded before each use."""
-    await reset_test_database(test_session_factory)
-    patch_session_factory(monkeypatch, test_session_factory)
-    async with test_session_factory() as session:
-        yield session
-
-
-@pytest.fixture(autouse=True)
-def respx_visible_openai_transport(request, monkeypatch):
-    """Route OpenAI SDK traffic through a plain ``httpx`` client so ``respx`` can mock it.
-
-    ``openai>=3`` sends requests with ``httpx2``, which ``respx`` does not patch. The SDK
-    still accepts an ``httpx.AsyncClient`` via ``http_client``. Live tests keep the real
-    transport.
-    """
-    if request.node.get_closest_marker("live") is not None:
-        return
-    real_async_openai = openai_compat.AsyncOpenAI
-
-    def async_openai_with_httpx(**kwargs):
-        return real_async_openai(**kwargs, http_client=httpx.AsyncClient())
-
-    monkeypatch.setattr(openai_compat, "AsyncOpenAI", async_openai_with_httpx)
-
-
-@pytest.fixture(autouse=True)
-async def reset_inference_clients():
-    """Drop cached OpenAI/httpx clients between tests (session loop reuse)."""
-    yield
-    from repody.inference.openai_compat import close_openai_clients
-
-    await close_openai_clients()
-
-
-@pytest.fixture
-async def client(app, test_session_factory, monkeypatch):
-    await reset_test_database(test_session_factory)
-    patch_session_factory(monkeypatch, test_session_factory)
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-
-@pytest.fixture
-def mock_dmr(app):
-    """Session Model Runner mock (real API routes, stubbed inference HTTP)."""
-    return _session_dmr_router["router"]
-
-
-@pytest.fixture
-def mock_ollama_llm(mock_dmr):
-    return mock_dmr
-
-
-def pytest_collection_modifyitems(config, items):
-    """Auto-tag by pyramid path (unit / integration / live)."""
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
     for item in items:
-        path = str(item.path).replace("\\", "/")
-        if "/tests/unit/" in path:
-            item.add_marker(pytest.mark.unit)
-        elif "/tests/integration/" in path:
-            item.add_marker(pytest.mark.integration)
-        elif "/tests/live/" in path:
-            item.add_marker(pytest.mark.live)
-            item.add_marker(pytest.mark.e2e)
+        for kind in ("unit", "integration", "live"):
+            if f"tests/{kind}/" in item.path.as_posix():
+                item.add_marker(kind)
+
+
+@pytest.fixture(scope="session")
+async def database() -> None:
+    """Create ``repody_test`` once and migrate it with Alembic, as in production."""
+    url = get_settings().database_url
+    name = url.rsplit("/", 1)[1]
+    admin = await asyncpg.connect(url.replace("+asyncpg", "").rsplit("/", 1)[0] + "/postgres")
+    try:
+        await admin.execute(f'DROP DATABASE IF EXISTS "{name}" WITH (FORCE)')
+        await admin.execute(f'CREATE DATABASE "{name}"')
+    finally:
+        await admin.close()
+    alembic = [sys.executable, "-m", "alembic", "upgrade", "head"]
+    await asyncio.to_thread(subprocess.run, alembic, cwd=BACKEND, check=True)
+
+
+@pytest.fixture
+def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
+    """What the fake llama-server answers: set ``model_answer["text"]``."""
+    answer = {"text": "{}"}
+
+    async def chat(_payload: dict) -> str:
+        return answer["text"]
+
+    monkeypatch.setattr(inference, "chat", chat)
+    return answer
+
+
+@pytest.fixture
+async def api(
+    database, monkeypatch: pytest.MonkeyPatch, model_answer
+) -> AsyncIterator[AsyncClient]:
+    """The app on a clean database; a dispatched run is processed before the request returns."""
+    async with db.engine.begin() as conn:
+        tables = ", ".join(t.name for t in reversed(db.Base.metadata.sorted_tables))
+        await conn.execute(text(f"TRUNCATE {tables} CASCADE"))
+
+    async def run_inline(run_id: str) -> bool:
+        await execute.process_run(run_id)
+        return True
+
+    monkeypatch.setattr(queue, "dispatch", run_inline)
+    use_store(MemoryStore())
+    async with AsyncClient(
+        transport=ASGITransport(app=create_app()), base_url="http://test"
+    ) as client:
+        yield client
+    use_store(None)
+    await db.engine.dispose()

@@ -80,6 +80,6 @@ export async function saveWorkflowName(page: Page, workflowId: string, name: str
   await page.getByRole("button", { name: "Save draft" }).click();
   const response = await saveResponse;
   expect(response.ok()).toBeTruthy();
-  const body = (await response.json()) as { workflow?: { name?: string } };
-  expect(body.workflow?.name).toBe(name);
+  const body = (await response.json()) as { name?: string };
+  expect(body.name).toBe(name);
 }

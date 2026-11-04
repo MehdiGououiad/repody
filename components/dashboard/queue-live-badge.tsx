@@ -5,11 +5,7 @@ import { useTranslations } from "next-intl";
 import type { QueueSnapshot } from "@/lib/api/schema-types";
 import { cn } from "@/lib/utils";
 
-const EMPTY_QUEUE: QueueSnapshot = {
-  queuedRuns: 0,
-  runningRuns: 0,
-  inflightRuns: 0,
-};
+const EMPTY_QUEUE: QueueSnapshot = { queuedRuns: 0, runningRuns: 0 };
 
 export function QueueLiveBadge({
   className,

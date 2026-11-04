@@ -55,9 +55,7 @@ test.describe("Authentication", () => {
   }) => {
     test.skip(!(await fetchOidcEnabled()), "OIDC disabled on this stack");
 
-    const res = await request.post(`${API}/v1/workflows/wf-invoice-audit/runs/json`, {
-      data: { snapshot: { documents: [], rules: [], workflowName: "E2E" } },
-    });
+    const res = await request.post(`${API}/v1/workflows/wf-invoice-audit/runs`);
     expect(res.status()).toBe(401);
   });
 

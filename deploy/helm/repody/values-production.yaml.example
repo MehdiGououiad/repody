@@ -5,7 +5,7 @@
 # The Secret named by existingSecret must exist first (External Secrets / Vault / SOPS) with:
 #   AUDIT_DATABASE_URL       postgresql+asyncpg://repody:…@postgres-rw.db.svc:5432/repody
 #   AUDIT_REDIS_URL          redis://…@redis.cache.svc:6379/0
-#   AUDIT_MINIO_ACCESS_KEY   AUDIT_MINIO_SECRET_KEY
+#   AUDIT_S3_ACCESS_KEY      AUDIT_S3_SECRET_KEY
 #   AUTH_SECRET              (openssl rand -base64 32)
 #   AUTH_KEYCLOAK_CLIENT_SECRET
 #   AUDIT_LLAMACPP_API_KEY   (optional, when the inference endpoint needs a bearer token)
@@ -31,15 +31,13 @@ config:
   AUDIT_OIDC_ENABLED: "true"
   AUDIT_OIDC_ISSUER: https://auth.example.com/realms/repody
   AUDIT_OIDC_AUDIENCE: repody-api
-  AUDIT_MINIO_ENDPOINT: minio.storage.svc:9000
-  AUDIT_MINIO_BUCKET: audit-documents
-  AUDIT_MINIO_PUBLIC_ENDPOINT: files.example.com
+  AUDIT_S3_ENDPOINT_URL: http://minio.storage.svc:9000
+  AUDIT_S3_BUCKET: audit-documents
   AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
   AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
-  AUDIT_REPODY_VLM_TIMEOUT_SECONDS: "180"
-  AUDIT_WORKER_TASK_TIMEOUT_MINUTES: "3"
-  AUDIT_CORS_ORIGINS: '["https://app.example.com"]'
-  AUDIT_RATE_LIMIT_FAIL_CLOSED: "true"
+  AUDIT_INFERENCE_TIMEOUT_SECONDS: "180"
+  AUDIT_RUN_TIMEOUT_MINUTES: "5"
+  AUDIT_CORS_ORIGINS: https://app.example.com
   AUDIT_LOG_JSON: "true"
   # OpenTelemetry agent (standard OTEL_* variables):
   # OTEL_SDK_DISABLED: "false"

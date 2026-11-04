@@ -26,9 +26,7 @@ AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1
 AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q4_k_m
 AUDIT_LLAMACPP_API_KEY=
 
-AUDIT_REPODY_VLM_TIMEOUT_SECONDS=180
-AUDIT_REPODY_VLM_MARKDOWN_ON_EXTRACT=false
-AUDIT_HEALTHZ_PROBE_INFERENCE=false
+AUDIT_INFERENCE_TIMEOUT_SECONDS=180
 ```
 
 | Fixed in code (not configurable) | Value |
@@ -38,7 +36,7 @@ AUDIT_HEALTHZ_PROBE_INFERENCE=false
 | Markdown temperature | **0** non-thinking · **0.7** thinking |
 | Input | Page images (PDF pages rendered to PNG) |
 
-Thinking mode (`AUDIT_REPODY_VLM_ENABLE_THINKING`, default `false`) and page cap (`AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST`, default: all pages) are configurable.
+Page cap: `AUDIT_MAX_PAGES_PER_DOCUMENT` (default: all pages, as in the official examples). Thinking mode is off.
 
 ### Local development
 
@@ -69,7 +67,7 @@ Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires au
 
 | Input | Behavior |
 |-------|----------|
-| PDF | PNG @ 170 DPI; **all pages** by default. Optional cap: `AUDIT_REPODY_VLM_MAX_PAGES_PER_REQUEST` |
+| PDF | PNG @ 170 DPI; **all pages** by default. Optional cap: `AUDIT_MAX_PAGES_PER_DOCUMENT` |
 | Image | Native PNG/JPEG/WebP bytes |
 | Other MIME | Rejected - upload PDF or image only |
 | Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking`, `temperature=0.2` (or `0.6` thinking; `0` with ICL), no `max_tokens` |
@@ -105,7 +103,7 @@ Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not ha
 |---------|-------|
 | `Repody VLM is unavailable` | Workers reach `$AUDIT_LLAMACPP_BASE_URL/models` |
 | 401/403 | `AUDIT_LLAMACPP_API_KEY` |
-| Timeout | Raise `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` and matching `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` (≤ worker×60). Compose extract defaults to 10 min / 600s |
+| Timeout | Raise `AUDIT_RUN_TIMEOUT_MINUTES` and `AUDIT_INFERENCE_TIMEOUT_SECONDS` (≤ run timeout). Compose extract defaults to 10 min / 600s |
 | Wrong JSON | llama-server started with `--jinja` |
 | Truncated output | Reduce schema size or set page cap |
 | Digits wrong / extra zeros | Prefer Q8_0 (or Q6) GGUF at vision 1024; `verbatim-string` + length/location in description |

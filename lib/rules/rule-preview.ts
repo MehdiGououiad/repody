@@ -1,21 +1,17 @@
 import { browserApi, unwrap } from "@/lib/api/openapi-client";
+import type { Schema } from "@/lib/api/schema-types";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
-export type RuleValidationResult = {
-  ruleId: string;
-  issues: string[];
-  /** Backend-compiled expression per condition, in order ("" while incomplete). */
-  checks: string[];
-};
+/** Backend feedback on one rule: what blocks saving, and each condition as text. */
+export type RuleValidationResult = Schema["RuleCheck"];
 
-/** Authoritative rule validation - backend compiler is the source of truth. */
 export async function validateRulesViaApi(
   documents: DocumentDef[],
   rules: WorkflowRule[]
 ): Promise<RuleValidationResult[]> {
   const data = await unwrap(
-    browserApi.POST("/v1/workflows/validate-rules", {
-      body: { documents, rules } as never,
+    browserApi.POST("/v1/workflows/check-rules", {
+      body: { documents, rules },
       signal: AbortSignal.timeout(30_000),
     })
   );
@@ -28,16 +24,6 @@ export function resultsByRuleId(
   return Object.fromEntries(results.map((row) => [row.ruleId, row]));
 }
 
-export function firstRuleIssue(
-  results: RuleValidationResult[],
-  rules: WorkflowRule[]
-): string | null {
-  for (const rule of rules) {
-    const issues = results.find((row) => row.ruleId === rule.id)?.issues ?? [];
-    if (issues.length) {
-      const label = rule.name?.trim() || rule.id;
-      return `${label}: ${issues[0]}`;
-    }
-  }
-  return null;
+export function firstRuleIssue(results: RuleValidationResult[]): string | null {
+  return results.flatMap((row) => row.issues)[0] ?? null;
 }

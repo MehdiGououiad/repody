@@ -1,47 +1,111 @@
+"""The home dashboard: this week's KPIs against the week before, the queue, recent audits."""
+
 from __future__ import annotations
 
-import asyncio
+from datetime import UTC, date, datetime, timedelta
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from repody.app import metrics as metrics_app
-from repody.app.audit.query import list_completed_audits
-from repody.app.run.admission import queue_snapshot_counts
-from repody.app.workflow.service import list_workflows
-from repody.infra.db.base import async_session_factory
-from repody.schemas.dashboard import DashboardResponse, QueueSnapshot
-
-_DASHBOARD_AUDIT_LIMIT = 50
+from repody.app.runs import audit_item
+from repody.app.workflows import list_workflows
+from repody.models import RuleResult, Run
+from repody.schemas.platform import Dashboard, DayRuns, Kpi, KpiPoint, QueueCounts, SeverityShare
+from repody.settings import get_settings
 
 
-async def get_dashboard(session: AsyncSession) -> DashboardResponse:
-    """Assemble dashboard with parallel short-lived sessions (no shared-session races)."""
-
-    async def _metrics():
-        async with async_session_factory() as s:
-            return await metrics_app.get_metrics(s)
-
-    async def _audits():
-        async with async_session_factory() as s:
-            return await list_completed_audits(s, limit=_DASHBOARD_AUDIT_LIMIT)
-
-    async def _workflows():
-        async with async_session_factory() as s:
-            return await list_workflows(s)
-
-    metrics, audits, workflows, (queued, running, inflight) = await asyncio.gather(
-        _metrics(),
-        _audits(),
-        _workflows(),
-        queue_snapshot_counts(session),
+async def _daily(session: AsyncSession, since: datetime) -> dict[date, tuple[int, int, int]]:
+    """``(runs, passed, failed)`` per day."""
+    rows = await session.execute(
+        select(
+            func.date(Run.created_at),
+            func.count(),
+            func.count().filter(Run.outcome == "passed"),
+            func.count().filter(Run.outcome == "failed"),
+        )
+        .where(Run.created_at >= since)
+        .group_by(func.date(Run.created_at))
     )
-    return DashboardResponse(
-        metrics=metrics,
-        audits=audits,
-        workflows=workflows,
-        queue=QueueSnapshot(
-            queued_runs=queued,
-            running_runs=running,
-            inflight_runs=inflight,
-        ),
+    return {day: (runs, passed, failed) for day, runs, passed, failed in rows.tuples()}
+
+
+async def get_dashboard(session: AsyncSession) -> Dashboard:
+    today = datetime.now(UTC).date()
+    week = [today - timedelta(days=6 - i) for i in range(7)]
+    previous_week = [d - timedelta(days=7) for d in week]
+    daily = await _daily(session, datetime.combine(previous_week[0], datetime.min.time(), UTC))
+
+    def column(days: list[date], index: int) -> list[float]:
+        return [float(daily.get(d, (0, 0, 0))[index]) for d in days]
+
+    def rate(days: list[date]) -> float:
+        runs, passed = sum(column(days, 0)), sum(column(days, 1))
+        return passed / runs if runs else 0.0
+
+    queued, running = (
+        await session.execute(
+            select(
+                func.count().filter(Run.status == "queued"),
+                func.count().filter(Run.status == "running"),
+            )
+        )
+    ).one()
+
+    def kpi(kpi_id, value: float, previous: float, series: list[float]) -> Kpi:
+        return Kpi(
+            id=kpi_id,
+            value=value,
+            previous=previous,
+            series=[
+                KpiPoint(day=d.isoformat(), value=v) for d, v in zip(week, series, strict=True)
+            ],
+        )
+
+    failures = await session.execute(
+        select(RuleResult.severity, func.count())
+        .join(Run, Run.id == RuleResult.run_id)
+        .where(
+            RuleResult.status == "failed",
+            Run.created_at >= datetime.combine(week[0], datetime.min.time(), UTC),
+        )
+        .group_by(RuleResult.severity)
+    )
+    failure_counts = dict(failures.tuples().all())
+    total_failures = sum(failure_counts.values())
+
+    stale_before = datetime.now(UTC) - timedelta(minutes=get_settings().run_timeout_minutes)
+    stale = await session.scalar(
+        select(func.count()).where(Run.status == "running", Run.started_at < stale_before)
+    )
+    recent = await session.scalars(
+        select(Run)
+        .where(Run.status == "done")
+        .order_by(Run.created_at.desc())
+        .limit(50)
+        .options(selectinload(Run.workflow))
+    )
+    return Dashboard(
+        kpis=[
+            kpi("auditsWeek", sum(column(week, 0)), sum(column(previous_week, 0)), column(week, 0)),
+            kpi("passRate", rate(week), rate(previous_week), column(week, 1)),
+            kpi("failures", sum(column(week, 2)), sum(column(previous_week, 2)), column(week, 2)),
+            kpi("pendingReview", queued + running, 0, column(week, 0)),
+        ],
+        performance_series=[
+            DayRuns(
+                day=d.strftime("%a"),
+                runs=int(daily.get(d, (0, 0, 0))[0]),
+                prev_runs=int(daily.get(p, (0, 0, 0))[0]),
+            )
+            for d, p in zip(week, previous_week, strict=True)
+        ],
+        failures_by_severity=[
+            SeverityShare(severity=severity, share=count / total_failures)
+            for severity, count in failure_counts.items()
+        ],
+        stale_runs=stale or 0,
+        queue=QueueCounts(queued_runs=queued, running_runs=running),
+        audits=[audit_item(run) for run in recent],
+        workflows=await list_workflows(session),
     )

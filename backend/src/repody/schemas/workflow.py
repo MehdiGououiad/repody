@@ -1,233 +1,145 @@
-from pydantic import Field
+"""A workflow: documents to extract (NuExtract schema) and rules to check."""
 
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Literal
+
+from pydantic import Field, field_validator, model_validator
+
+from repody.rules.models import Rule
 from repody.schemas.common import CamelModel
-from repody.schemas.run import RunAuditDetail, RunAuditField, RunAuditRule
+
+DEFAULT_TEMPLATE_TYPE = "verbatim-string"
 
 
-class ExtractionIclExampleSchema(CamelModel):
-    input: str = ""
-    output: str = ""
+class SchemaField(CamelModel):
+    """One NuExtract template field.
 
+    ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+    ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
+    ``object-array`` (with ``children``).
+    """
 
-class SchemaFieldSchema(CamelModel):
-    id: str
+    id: str = ""
     name: str
     description: str = ""
-    template_type: str = "verbatim-string"
+    template_type: str = DEFAULT_TEMPLATE_TYPE
     enum_values: list[str] = Field(default_factory=list)
-    children: list["SchemaFieldSchema"] = Field(default_factory=list)
+    children: list[SchemaField] = Field(default_factory=list)
+
+    @field_validator("name", "description")
+    @classmethod
+    def _strip(cls, value: str) -> str:
+        return value.strip()
+
+    @field_validator("template_type")
+    @classmethod
+    def _default_type(cls, value: str) -> str:
+        return value.strip() or DEFAULT_TEMPLATE_TYPE
 
 
-SchemaFieldSchema.model_rebuild()
+class IclExample(CamelModel):
+    """A NuExtract in-context example: input text and the JSON it should produce."""
+
+    input: str
+    output: str
 
 
-class DocumentDefSchema(CamelModel):
+class DocumentDef(CamelModel):
     id: str
     document_type: str = ""
-    schema_fields: list[SchemaFieldSchema] = Field(
-        default_factory=list,
-        validation_alias="schema",
-        serialization_alias="schema",
-    )
+    schema_fields: list[SchemaField] = Field(default_factory=list, alias="schema")
     extraction_instructions: str = ""
     markdown_extraction: bool = Field(
-        default=False,
-        description="When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
+        default=False, description="Transcribe the document to Markdown when it has no fields."
     )
-    extraction_icl_examples: list[ExtractionIclExampleSchema] = Field(
-        default_factory=list,
-        description="NuExtract in-context extraction examples (developer message pairs).",
-    )
+    extraction_icl_examples: list[IclExample] = Field(default_factory=list)
+
+    @property
+    def wants_extraction(self) -> bool:
+        return bool(self.schema_fields) or self.markdown_extraction
 
 
-class WorkflowRuleSchema(CamelModel):
-    id: str
-    name: str
-    kind: str = "logic"
-    scope: str = "intra"
-    applies_to: list[str] = []
-    conditions: list[dict] | None = None
-    condition_junction: str | None = None
-    body: str = ""
-    severity: str = "reject"
+class WorkflowDefinition(CamelModel):
+    """What a run executes; stored as JSON on the workflow and copied onto each run."""
+
+    documents: list[DocumentDef] = Field(default_factory=list)
+    rules: list[Rule] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _unique_field_names(self) -> WorkflowDefinition:
+        for doc in self.documents:
+            names = [f.name.lower() for f in doc.schema_fields if f.name]
+            dupes = sorted({n for n in names if names.count(n) > 1})
+            if dupes:
+                raise ValueError(
+                    f"{doc.document_type or 'Document'}: duplicate field name(s) {', '.join(dupes)}."
+                )
+        return self
 
 
-class TopFailingRuleSchema(CamelModel):
+WorkflowStatus = Literal["draft", "active", "paused"]
+
+
+class CallsPerDay(CamelModel):
+    day: str
+    calls: int
+
+
+class FailingRule(CamelModel):
     name: str
     count: int
     severity: str
 
 
-class CallSeriesPointSchema(CamelModel):
-    day: str
-    calls: int
+class ApiStats(CamelModel):
+    """Runs started with the workflow's API key."""
 
-
-class WorkflowApiStatsSchema(CamelModel):
     api_calls_today: int
     api_calls_total: int
     avg_latency_ms: int
-    call_series: list[CallSeriesPointSchema]
-    top_failing_rules: list[TopFailingRuleSchema]
+    call_series: list[CallsPerDay]
+    top_failing_rules: list[FailingRule]
 
 
-class WorkflowSchema(CamelModel):
-    id: str
-    name: str
-    description: str = ""
-    status: str = "draft"
-    owner: str = "Me"
-    last_run: str | None = None
-    success_rate: float = 0.0
-    total_runs: int = 0
-    documents: list[DocumentDefSchema] = []
-    rules: list[WorkflowRuleSchema] = []
-    deployed_at: str | None = None
-    api_key: str | None = Field(
-        default=None,
-        description="Plaintext key — returned only once on deploy.",
-    )
-    api_key_hint: str | None = Field(
-        default=None, description="Masked hint for deployed workflows."
-    )
-    api_stats: WorkflowApiStatsSchema | None = None
-
-
-class WorkflowListResponse(CamelModel):
-    workflows: list[WorkflowSchema]
-
-
-class WorkflowResponse(CamelModel):
-    workflow: WorkflowSchema
-
-
-class CreateWorkflowBody(CamelModel):
+class WorkflowIn(WorkflowDefinition):
     name: str = "Untitled workflow"
     description: str = ""
-    owner: str = "Me"
+    status: WorkflowStatus = "draft"
+    owner: str = ""
 
 
-class BulkDeleteWorkflowsBody(CamelModel):
+class WorkflowOut(WorkflowIn):
+    id: str
+    deployed_at: datetime | None = None
+    api_key: str | None = Field(default=None, description="Plaintext key, returned once on deploy.")
+    api_key_hint: str | None = None
+    total_runs: int = 0
+    success_rate: float = 0.0
+    last_run: datetime | None = None
+    api_stats: ApiStats | None = None
+
+
+class WorkflowList(CamelModel):
+    workflows: list[WorkflowOut]
+
+
+class CreateWorkflow(CamelModel):
+    name: str = "Untitled workflow"
+    description: str = ""
+    owner: str = ""
+
+
+class BulkDelete(CamelModel):
     ids: list[str] = Field(min_length=1)
 
 
-class DeployWorkflowBody(CamelModel):
-    api_key: str | None = None
-
-
-class DryRunFieldInput(CamelModel):
-    id: str
-    name: str
-    description: str = ""
-    template_type: str = "verbatim-string"
-    sample_value: str | None = None
-
-
-class DryRunRuleInput(CamelModel):
-    id: str
-    name: str
-    kind: str
-    body: str = ""
-    severity: str = "reject"
-    conditions: list[dict] | None = None
-    condition_junction: str | None = None
-
-
-class DryRunBody(CamelModel):
-    fields: list[DryRunFieldInput] = []
-    rules: list[DryRunRuleInput] = []
-    documents: list[DocumentDefSchema] | None = None
-    rules_full: list[WorkflowRuleSchema] | None = None
-
-
-class DryRunExtracted(CamelModel):
-    field: str
-    value: str
-    matched: bool
-
-
-class DryRunRuleResult(CamelModel):
-    id: str
-    name: str
-    kind: str
-    status: str
-    detail: str
-
-
-class DryRunResponse(CamelModel):
-    extracted: list[DryRunExtracted]
-    rule_results: list[DryRunRuleResult]
-
-
-class ValidateRulesBody(CamelModel):
-    documents: list[DocumentDefSchema]
-    rules: list[WorkflowRuleSchema]
-
-
-class RuleValidationItem(CamelModel):
+class RuleCheck(CamelModel):
     rule_id: str
     issues: list[str]
-    checks: list[str]
+    checks: list[str] = Field(description="Readable form of each condition, in order.")
 
 
-class ValidateRulesResponse(CamelModel):
-    rules: list[RuleValidationItem]
-
-
-class RunCreatedResponse(CamelModel):
-    run_id: str
-    job_id: str | None = None
-    status: str = "queued"
-
-
-class RunProgressStepSchema(CamelModel):
-    id: str
-    label: str
-    status: str
-    mode: str | None = None
-    kind: str | None = None
-    detail: str | None = None
-    duration_ms: int | None = None
-    cache_hit: bool = False
-    gpu_cold_start_hint: bool = False
-
-
-class RunProgressSchema(CamelModel):
-    current_index: int
-    steps: list[RunProgressStepSchema]
-    label: str
-    queue_position: int | None = None
-    queue_depth: int | None = None
-
-
-class RunPollResponse(CamelModel):
-    status: str
-    progress: RunProgressSchema | None = None
-    result: RunAuditDetail | None = None
-    error: str | None = None
-
-
-class RunPollStatus(CamelModel):
-    """Lightweight status-only poll (no audit detail payload)."""
-
-    status: str
-    progress: RunProgressSchema | None = None
-    error: str | None = None
-
-
-class RuleTemplateSchema(CamelModel):
-    id: str
-    name: str
-    kind: str
-    scope: str
-    description: str
-    body: str
-    severity: str
-
-
-# Re-export run schemas for OpenAPI
-__all__ = [
-    "RunAuditDetail",
-    "RunAuditField",
-    "RunAuditRule",
-]
+class RuleChecks(CamelModel):
+    rules: list[RuleCheck]

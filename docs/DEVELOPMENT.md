@@ -6,20 +6,22 @@ Backend layout, tests, and script ownership. Laptop start: [LOCAL.md](./LOCAL.md
 
 **Package:** `repody` (`backend/src/repody/`) · FastAPI on `/v1/*`.
 
-| Area | Role |
-|------|------|
-| `api/` | Thin HTTP routers |
-| `app/` | Use cases (run, workflow, uploads, …) |
-| `runtime/` | AppError, run status, metrics |
-| `catalog/` | Document model + llama-server status |
-| `extraction/` | Pipeline + NuExtract adapter |
-| `inference/` | OpenAI-compat clients |
-| `rules/` | Logic rule evaluator |
-| `taskiq/` | Worker broker + tasks |
-| `infra/` | DB, auth, storage, observability |
-| `schemas/`, `settings/` | DTOs · `AUDIT_*` settings |
+```
+backend/src/repody/
+├── main.py            FastAPI app, lifespan, error handler
+├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
+├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance
+├── extraction/        NuExtract request, page rendering, llama-server client, field values
+├── rules/             Typed conditions and their evaluation
+├── schemas/           Pydantic models (API and stored workflow definition)
+├── auth.py            Keycloak JWT, roles, workflow API keys
+├── queue.py · worker.py   Taskiq broker, dispatch, worker entry point
+├── models.py · db.py  SQLAlchemy tables and sessions
+├── storage.py         S3 documents
+└── settings.py        AUDIT_* settings
+```
 
-Hot path: `app/run/worker.py` `process_run` -> `extract_document` -> `validate_field_rows` -> `complete_run` ([ADR 008](./adr/008-flat-run-pipeline.md)).
+Hot path: `app/execute.py` `process_run` -> `extraction.pipeline.extract` -> `rules.evaluate.evaluate_rules` ([ADR 009](./adr/009-simple-backend.md)).
 
 Python ops scripts: [backend/scripts/README.md](../backend/scripts/README.md).
 

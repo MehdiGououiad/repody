@@ -28,7 +28,7 @@ test.describe("Cross-document validation — UI", () => {
 
       await expect(page.getByText("Totals must match").first()).toBeVisible();
       await expect(page.getByText("All checks passed")).toBeVisible();
-      await expect(page.getByText(/All conditions satisfied/i).first()).toBeVisible();
+      await expect(page.getByText(/All conditions hold/i).first()).toBeVisible();
     } finally {
       await deleteWorkflow(request, workflowId);
     }
@@ -51,7 +51,7 @@ test.describe("Cross-document validation — UI", () => {
       await runExtractValidateAndWait(page);
 
       await expect(page.getByText("Totals must match").first()).toBeVisible();
-      await expect(page.getByText(/Validation failed|evaluated to false/i).first()).toBeVisible();
+      await expect(page.getByText(/Validation failed|Not satisfied/i).first()).toBeVisible();
     } finally {
       await deleteWorkflow(request, workflowId);
     }

@@ -1,24 +1,19 @@
-// Convenience barrel for the domain types consumed across the app. Audit and
-// run-report types are imported straight from `@/lib/types/audit`, so they are
-// deliberately absent here.
+// The domain types used across the app; run-report types live in `@/lib/types/audit`.
 export type {
   Audit,
   AuditStatus,
-  HealthAlert,
-  KpiMetric,
+  Kpi,
   PerformancePoint,
-  ViolationBreakdown,
+  SeverityShare,
 } from "@/lib/types/dashboard";
 export type {
   ArithmeticOp,
   ComparisonOp,
-  ConditionJunction,
   ConditionOperand,
   DocumentDef,
   RuleCondition,
   RuleScope,
   RuleSeverity,
-  RuleTemplate,
   SchemaField,
   TableAggregateLeft,
   Workflow,

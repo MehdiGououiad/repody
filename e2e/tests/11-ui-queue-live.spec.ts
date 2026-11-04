@@ -20,7 +20,7 @@ function docker(args: string[]) {
 test.describe("UI queue position live", () => {
   test.afterEach(() => {
     try {
-      docker(["start", "repody-worker-extract-1"]);
+      docker(["start", "repody-worker-1"]);
     } catch {
       /* best effort */
     }
@@ -33,7 +33,7 @@ test.describe("UI queue position live", () => {
     fs.mkdirSync(OUT, { recursive: true });
     expect(fs.existsSync(PDF)).toBeTruthy();
 
-    docker(["stop", "repody-worker-extract-1"]);
+    docker(["stop", "repody-worker-1"]);
 
     await page.addInitScript(() => {
       const OrigES = window.EventSource;
@@ -99,7 +99,7 @@ test.describe("UI queue position live", () => {
     ).toBeTruthy();
 
     // Resume drain and confirm UI leaves the queue state.
-    docker(["start", "repody-worker-extract-1"]);
+    docker(["start", "repody-worker-1"]);
     await expect(
       page.getByText(/All checks passed|Open report|View full audit|failed/i).first()
     ).toBeVisible({ timeout: 300_000 });

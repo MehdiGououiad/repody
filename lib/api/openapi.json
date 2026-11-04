@@ -2,53 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Repody",
-    "version": "0.1.0"
+    "version": "0.2.0"
   },
   "paths": {
-    "/v1/healthz/live": {
-      "get": {
-        "tags": [
-          "health"
-        ],
-        "summary": "Health Live",
-        "description": "Liveness: process is alive, with no dependency or inference probe.",
-        "operationId": "health_live_v1_healthz_live_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthLiveResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/healthz": {
-      "get": {
-        "tags": [
-          "health"
-        ],
-        "summary": "Health Readiness",
-        "description": "Readiness with dependency checks, queue depth, and optional inference probe.",
-        "operationId": "health_readiness_v1_healthz_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HealthReadinessResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/workflows": {
       "get": {
         "tags": [
@@ -56,46 +12,23 @@
         ],
         "summary": "List Workflows",
         "operationId": "list_workflows_v1_workflows_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowListResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/WorkflowList"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
@@ -103,33 +36,15 @@
         ],
         "summary": "Create Workflow",
         "operationId": "create_workflow_v1_workflows_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWorkflowBody"
+                "$ref": "#/components/schemas/CreateWorkflow"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
@@ -137,7 +52,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowResponse"
+                  "$ref": "#/components/schemas/WorkflowOut"
                 }
               }
             }
@@ -152,7 +67,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/workflows/bulk-delete": {
@@ -160,35 +80,17 @@
         "tags": [
           "workflows"
         ],
-        "summary": "Bulk Delete Workflows",
-        "operationId": "bulk_delete_workflows_v1_workflows_bulk_delete_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
+        "summary": "Delete Workflows",
+        "operationId": "delete_workflows_v1_workflows_bulk_delete_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BulkDeleteWorkflowsBody"
+                "$ref": "#/components/schemas/BulkDelete"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "204": {
@@ -204,7 +106,59 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/workflows/check-rules": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Check Rules",
+        "description": "Builder feedback for unsaved rules: what blocks saving, and each condition as text.",
+        "operationId": "check_rules_v1_workflows_check_rules_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleChecks"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/workflows/{workflow_id}": {
@@ -214,6 +168,11 @@
         ],
         "summary": "Get Workflow",
         "operationId": "get_workflow_v1_workflows__workflow_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "workflow_id",
@@ -223,22 +182,6 @@
               "type": "string",
               "title": "Workflow Id"
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
         "responses": {
@@ -247,7 +190,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowResponse"
+                  "$ref": "#/components/schemas/WorkflowOut"
                 }
               }
             }
@@ -268,8 +211,13 @@
         "tags": [
           "workflows"
         ],
-        "summary": "Update Workflow",
-        "operationId": "update_workflow_v1_workflows__workflow_id__put",
+        "summary": "Save Workflow",
+        "operationId": "save_workflow_v1_workflows__workflow_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "workflow_id",
@@ -279,22 +227,6 @@
               "type": "string",
               "title": "Workflow Id"
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
         "requestBody": {
@@ -302,7 +234,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WorkflowSchema-Input"
+                "$ref": "#/components/schemas/WorkflowIn"
               }
             }
           }
@@ -313,7 +245,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowResponse"
+                  "$ref": "#/components/schemas/WorkflowOut"
                 }
               }
             }
@@ -336,6 +268,11 @@
         ],
         "summary": "Delete Workflow",
         "operationId": "delete_workflow_v1_workflows__workflow_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "workflow_id",
@@ -344,22 +281,6 @@
             "schema": {
               "type": "string",
               "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
             }
           }
         ],
@@ -386,7 +307,13 @@
           "workflows"
         ],
         "summary": "Deploy Workflow",
+        "description": "Activate the workflow and issue a new API key (shown once).",
         "operationId": "deploy_workflow_v1_workflows__workflow_id__deploy_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "workflow_id",
@@ -396,48 +323,15 @@
               "type": "string",
               "title": "Workflow Id"
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "anyOf": [
-                  {
-                    "$ref": "#/components/schemas/DeployWorkflowBody"
-                  },
-                  {
-                    "type": "null"
-                  }
-                ],
-                "title": "Body"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkflowResponse"
+                  "$ref": "#/components/schemas/WorkflowOut"
                 }
               }
             }
@@ -455,177 +349,46 @@
         }
       }
     },
-    "/v1/workflows/validate-rules": {
+    "/v1/workflows/{workflow_id}/runs": {
       "post": {
-        "tags": [
-          "workflows"
-        ],
-        "summary": "Validate Rules",
-        "description": "Authoritative rule validation for the workflow builder.",
-        "operationId": "validate_rules_v1_workflows_validate_rules_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ValidateRulesBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ValidateRulesResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/dry-run": {
-      "post": {
-        "tags": [
-          "workflows"
-        ],
-        "summary": "Dry Run",
-        "description": "Evaluate the posted draft only; ``workflow_id`` scopes the route, not the data.",
-        "operationId": "dry_run_v1_workflows__workflow_id__dry_run_post",
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DryRunBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DryRunResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/runs/{run_id}/status": {
-      "get": {
         "tags": [
           "runs"
         ],
-        "summary": "Get Run Status",
-        "description": "Lightweight poll - status and progress only (no full audit payload).",
-        "operationId": "get_run_status_v1_runs__run_id__status_get",
+        "summary": "Start Run",
+        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).",
+        "operationId": "start_run_v1_workflows__workflow_id__runs_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
-            "name": "run_id",
+            "name": "workflow_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Run Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
+              "title": "Workflow Id"
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_start_run_v1_workflows__workflow_id__runs_post"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
+          "202": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunPollResponse"
+                  "$ref": "#/components/schemas/RunCreated"
                 }
               }
             }
@@ -649,7 +412,13 @@
           "runs"
         ],
         "summary": "Get Run",
+        "description": "Status and live progress; the audit report once the run is done.",
         "operationId": "get_run_v1_runs__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "run_id",
@@ -659,34 +428,6 @@
               "type": "string",
               "title": "Run Id"
             }
-          },
-          {
-            "name": "full",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "description": "If false, same as /status (lightweight).",
-              "default": true,
-              "title": "Full"
-            },
-            "description": "If false, same as /status (lightweight)."
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
         "responses": {
@@ -695,7 +436,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunPollResponse"
+                  "$ref": "#/components/schemas/RunState"
                 }
               }
             }
@@ -718,9 +459,14 @@
         "tags": [
           "runs"
         ],
-        "summary": "Stream Run Events",
-        "description": "Server-Sent Events stream for live run progress (Redis pub/sub).",
-        "operationId": "stream_run_events_v1_runs__run_id__events_get",
+        "summary": "Run Events",
+        "description": "Server-Sent Events: the current state first, then each progress change until done.",
+        "operationId": "run_events_v1_runs__run_id__events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "run_id",
@@ -730,174 +476,16 @@
               "type": "string",
               "title": "Run Id"
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events stream of run progress updates",
+            "description": "Progress events",
             "content": {
               "application/json": {
                 "schema": {}
               },
-              "text/event-stream": {
-                "schema": {
-                  "type": "string",
-                  "description": "SSE `data:` frames containing JSON progress payloads"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/runs/json": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Create Run Json",
-        "description": "Create a run with files already uploaded to storage (presigned PUT flow).",
-        "operationId": "create_run_json_v1_workflows__workflow_id__runs_json_post",
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateRunJsonBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunCreatedResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/{workflow_id}/runs": {
-      "post": {
-        "tags": [
-          "runs"
-        ],
-        "summary": "Create Run",
-        "description": "Multipart fallback when presigned upload is unavailable.",
-        "operationId": "create_run_v1_workflows__workflow_id__runs_post",
-        "parameters": [
-          {
-            "name": "workflow_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Workflow Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_create_run_v1_workflows__workflow_id__runs_post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "202": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RunCreatedResponse"
-                }
-              }
+              "text/event-stream": {}
             }
           },
           "422": {
@@ -916,10 +504,15 @@
     "/v1/audits": {
       "get": {
         "tags": [
-          "audits"
+          "runs"
         ],
         "summary": "List Audits",
         "operationId": "list_audits_v1_audits_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
             "name": "limit",
@@ -940,22 +533,6 @@
               "default": 0,
               "title": "Offset"
             }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
           }
         ],
         "responses": {
@@ -964,7 +541,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AuditListResponse"
+                  "$ref": "#/components/schemas/AuditList"
                 }
               }
             }
@@ -982,37 +559,26 @@
         }
       }
     },
-    "/v1/audits/{audit_id}": {
+    "/v1/audits/{run_id}": {
       "get": {
         "tags": [
-          "audits"
+          "runs"
         ],
         "summary": "Get Audit",
-        "operationId": "get_audit_v1_audits__audit_id__get",
+        "operationId": "get_audit_v1_audits__run_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "parameters": [
           {
-            "name": "audit_id",
+            "name": "run_id",
             "in": "path",
             "required": true,
             "schema": {
               "type": "string",
-              "title": "Audit Id"
-            }
-          },
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
+              "title": "Run Id"
             }
           }
         ],
@@ -1022,7 +588,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RunAuditDetail"
+                  "$ref": "#/components/schemas/AuditDetail"
                 }
               }
             }
@@ -1040,48 +606,21 @@
         }
       }
     },
-    "/v1/metrics": {
+    "/v1/healthz/live": {
       "get": {
         "tags": [
-          "metrics"
+          "platform"
         ],
-        "summary": "Get Metrics",
-        "operationId": "get_metrics_v1_metrics_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
+        "summary": "Live",
+        "description": "The process answers (no dependency checks).",
+        "operationId": "live_v1_healthz_live_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MetricsResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Health"
                 }
               }
             }
@@ -1089,323 +628,21 @@
         }
       }
     },
-    "/v1/dashboard": {
+    "/v1/healthz": {
       "get": {
         "tags": [
-          "dashboard"
+          "platform"
         ],
-        "summary": "Dashboard Bundle",
-        "operationId": "dashboard_bundle_v1_dashboard_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
+        "summary": "Ready",
+        "description": "Postgres and Redis answer.",
+        "operationId": "ready_v1_healthz_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DashboardResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/rules/library": {
-      "get": {
-        "tags": [
-          "rules"
-        ],
-        "summary": "Rules Library",
-        "operationId": "rules_library_v1_rules_library_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RuleLibraryResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/uploads/capabilities": {
-      "get": {
-        "tags": [
-          "uploads"
-        ],
-        "summary": "Upload Capabilities",
-        "operationId": "upload_capabilities_v1_uploads_capabilities_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadCapabilitiesResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/uploads/presign": {
-      "post": {
-        "tags": [
-          "uploads"
-        ],
-        "summary": "Presign Uploads",
-        "operationId": "presign_uploads_v1_uploads_presign_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PresignRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PresignResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/uploads/confirm": {
-      "post": {
-        "tags": [
-          "uploads"
-        ],
-        "summary": "Confirm Uploads",
-        "operationId": "confirm_uploads_v1_uploads_confirm_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ConfirmUploadRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ConfirmUploadResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/uploads": {
-      "post": {
-        "tags": [
-          "uploads"
-        ],
-        "summary": "Upload Files",
-        "operationId": "upload_files_v1_uploads_post",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_upload_files_v1_uploads_post"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Health"
                 }
               }
             }
@@ -1418,113 +655,101 @@
         "tags": [
           "platform"
         ],
-        "summary": "Get Platform Config",
-        "description": "Read-only platform configuration snapshot (safe AUDIT_* fields).",
-        "operationId": "get_platform_config_v1_platform_config_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
+        "summary": "Platform Config",
+        "operationId": "platform_config_v1_platform_config_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlatformConfigResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/PlatformConfig"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
-    "/v1/models/catalog": {
+    "/v1/dashboard": {
       "get": {
         "tags": [
           "platform"
         ],
-        "summary": "Get Models Catalog",
-        "description": "The document model with live availability from the llama-server.",
-        "operationId": "get_models_catalog_v1_models_catalog_get",
-        "parameters": [
-          {
-            "name": "authorization",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Authorization"
-            }
-          }
-        ],
+        "summary": "Dashboard",
+        "operationId": "dashboard_v1_dashboard_get",
         "responses": {
           "200": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ModelsCatalogResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/Dashboard"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     }
   },
   "components": {
     "schemas": {
-      "AuditListItem": {
+      "ApiStats": {
+        "properties": {
+          "apiCallsToday": {
+            "type": "integer",
+            "title": "Apicallstoday"
+          },
+          "apiCallsTotal": {
+            "type": "integer",
+            "title": "Apicallstotal"
+          },
+          "avgLatencyMs": {
+            "type": "integer",
+            "title": "Avglatencyms"
+          },
+          "callSeries": {
+            "items": {
+              "$ref": "#/components/schemas/CallsPerDay"
+            },
+            "type": "array",
+            "title": "Callseries"
+          },
+          "topFailingRules": {
+            "items": {
+              "$ref": "#/components/schemas/FailingRule"
+            },
+            "type": "array",
+            "title": "Topfailingrules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "apiCallsToday",
+          "apiCallsTotal",
+          "avgLatencyMs",
+          "callSeries",
+          "topFailingRules"
+        ],
+        "title": "ApiStats",
+        "description": "Runs started with the workflow's API key."
+      },
+      "AuditDetail": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
           },
           "workflowId": {
             "type": "string",
@@ -1534,51 +759,143 @@
             "type": "string",
             "title": "Workflowname"
           },
-          "entity": {
+          "status": {
             "type": "string",
-            "title": "Entity"
+            "enum": [
+              "passed",
+              "warning",
+              "failed"
+            ],
+            "title": "Status"
           },
-          "timestamp": {
+          "source": {
             "type": "string",
-            "title": "Timestamp"
+            "title": "Source"
           },
-          "rows": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rows"
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
           },
-          "failedRules": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Failedrules"
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/AuditDocument"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "ruleResults": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRule"
+            },
+            "type": "array",
+            "title": "Ruleresults"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/RunTimings"
           }
         },
         "type": "object",
         "required": [
           "id",
-          "status",
           "workflowId",
           "workflowName",
-          "entity",
-          "timestamp",
-          "rows",
-          "failedRules"
+          "status",
+          "source",
+          "createdAt",
+          "documents",
+          "ruleResults",
+          "summary",
+          "metadata"
         ],
-        "title": "AuditListItem"
+        "title": "AuditDetail"
       },
-      "AuditListResponse": {
+      "AuditDocument": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype"
+          },
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/AuditField"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "extraction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtractionMeta"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "documentType",
+          "fileName",
+          "fields",
+          "extraction"
+        ],
+        "title": "AuditDocument"
+      },
+      "AuditField": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "extracted": {
+            "type": "boolean",
+            "title": "Extracted"
+          },
+          "flagged": {
+            "type": "boolean",
+            "title": "Flagged",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "description",
+          "type",
+          "value",
+          "extracted",
+          "flagged"
+        ],
+        "title": "AuditField"
+      },
+      "AuditList": {
         "properties": {
           "audits": {
             "items": {
@@ -1607,64 +924,119 @@
           "limit",
           "offset"
         ],
-        "title": "AuditListResponse"
+        "title": "AuditList"
       },
-      "Body_create_run_v1_workflows__workflow_id__runs_post": {
+      "AuditListItem": {
         "properties": {
-          "files": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string",
-                  "contentMediaType": "application/octet-stream"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Files"
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
-          "document_ids": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "warning",
+              "failed"
             ],
-            "title": "Document Ids"
+            "title": "Status"
           },
-          "document_types": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Types",
-            "description": "JSON array of configured document type names, same order as files."
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
           },
-          "payload": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payload"
+          "workflowName": {
+            "type": "string",
+            "title": "Workflowname"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Timestamp"
+          },
+          "rows": {
+            "type": "integer",
+            "title": "Rows"
+          },
+          "failedRules": {
+            "type": "integer",
+            "title": "Failedrules"
           }
         },
         "type": "object",
-        "title": "Body_create_run_v1_workflows__workflow_id__runs_post"
+        "required": [
+          "id",
+          "status",
+          "workflowId",
+          "workflowName",
+          "timestamp",
+          "rows",
+          "failedRules"
+        ],
+        "title": "AuditListItem"
       },
-      "Body_upload_files_v1_uploads_post": {
+      "AuditRule": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "ruleId": {
+            "type": "string",
+            "title": "Ruleid"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "passed",
+              "failed",
+              "skipped"
+            ],
+            "title": "Status"
+          },
+          "expression": {
+            "type": "string",
+            "title": "Expression"
+          },
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          },
+          "affectedFields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affectedfields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "ruleId",
+          "name",
+          "scope",
+          "severity",
+          "status",
+          "expression",
+          "detail",
+          "affectedFields"
+        ],
+        "title": "AuditRule"
+      },
+      "Body_start_run_v1_workflows__workflow_id__runs_post": {
         "properties": {
           "files": {
             "items": {
@@ -1672,16 +1044,36 @@
               "contentMediaType": "application/octet-stream"
             },
             "type": "array",
-            "title": "Files"
+            "title": "Files",
+            "description": "One file per workflow document.",
+            "default": []
+          },
+          "documents": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Documents",
+            "description": "Per file, in order: the workflow document id or type.",
+            "default": []
+          },
+          "definition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Definition",
+            "description": "Test runs only: an unsaved workflow definition (JSON)."
           }
         },
         "type": "object",
-        "required": [
-          "files"
-        ],
-        "title": "Body_upload_files_v1_uploads_post"
+        "title": "Body_start_run_v1_workflows__workflow_id__runs_post"
       },
-      "BulkDeleteWorkflowsBody": {
+      "BulkDelete": {
         "properties": {
           "ids": {
             "items": {
@@ -1696,9 +1088,9 @@
         "required": [
           "ids"
         ],
-        "title": "BulkDeleteWorkflowsBody"
+        "title": "BulkDelete"
       },
-      "CallSeriesPointSchema": {
+      "CallsPerDay": {
         "properties": {
           "day": {
             "type": "string",
@@ -1714,141 +1106,178 @@
           "day",
           "calls"
         ],
-        "title": "CallSeriesPointSchema"
+        "title": "CallsPerDay"
       },
-      "CatalogModelEntry": {
+      "Condition-Input": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "label": {
+          "left": {
+            "$ref": "#/components/schemas/Operand-Input"
+          },
+          "operator": {
             "type": "string",
-            "title": "Label"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "servedModel": {
-            "type": "string",
-            "title": "Servedmodel",
-            "default": ""
-          },
-          "available": {
-            "type": "boolean",
-            "title": "Available",
-            "default": true
-          },
-          "availabilityNote": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
+            "enum": [
+              "==",
+              "!=",
+              ">",
+              ">=",
+              "<",
+              "<=",
+              "IN",
+              "NOT_IN",
+              "EXISTS",
+              "IS_EMPTY"
             ],
-            "title": "Availabilitynote"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "description",
-          "servedModel",
-          "available",
-          "availabilityNote"
-        ],
-        "title": "CatalogModelEntry"
-      },
-      "ConfirmUploadItem": {
-        "properties": {
-          "storageKey": {
-            "type": "string",
-            "title": "Storagekey"
+            "title": "Operator",
+            "default": "=="
           },
-          "fileName": {
-            "type": "string",
-            "title": "Filename"
-          },
-          "mimeType": {
-            "type": "string",
-            "title": "Mimetype"
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          }
-        },
-        "type": "object",
-        "required": [
-          "storageKey",
-          "fileName",
-          "mimeType",
-          "size"
-        ],
-        "title": "ConfirmUploadItem"
-      },
-      "ConfirmUploadRequest": {
-        "properties": {
-          "storageKeys": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Storagekeys"
-          }
-        },
-        "type": "object",
-        "required": [
-          "storageKeys"
-        ],
-        "title": "ConfirmUploadRequest"
-      },
-      "ConfirmUploadResponse": {
-        "properties": {
-          "uploads": {
-            "items": {
-              "$ref": "#/components/schemas/ConfirmUploadItem"
-            },
-            "type": "array",
-            "title": "Uploads"
-          }
-        },
-        "type": "object",
-        "required": [
-          "uploads"
-        ],
-        "title": "ConfirmUploadResponse"
-      },
-      "CreateRunJsonBody": {
-        "properties": {
-          "snapshot": {
+          "right": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RunSnapshotBody"
+                "$ref": "#/components/schemas/Operand-Input"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "fileBindings": {
-            "items": {
-              "$ref": "#/components/schemas/StoredFileBinding"
-            },
-            "type": "array",
-            "title": "Filebindings",
-            "default": []
+          "arithmeticOp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "+",
+                  "-",
+                  "*",
+                  "/"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arithmeticop"
+          },
+          "leftExtra": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Operand-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tableAggregate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableAggregate-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
-        "title": "CreateRunJsonBody"
+        "required": [
+          "id",
+          "left"
+        ],
+        "title": "Condition",
+        "description": "``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``."
       },
-      "CreateWorkflowBody": {
+      "Condition-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "left": {
+            "$ref": "#/components/schemas/Operand-Output"
+          },
+          "operator": {
+            "type": "string",
+            "enum": [
+              "==",
+              "!=",
+              ">",
+              ">=",
+              "<",
+              "<=",
+              "IN",
+              "NOT_IN",
+              "EXISTS",
+              "IS_EMPTY"
+            ],
+            "title": "Operator",
+            "default": "=="
+          },
+          "right": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Operand-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "arithmeticOp": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "+",
+                  "-",
+                  "*",
+                  "/"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arithmeticop"
+          },
+          "leftExtra": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Operand-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "tableAggregate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TableAggregate-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "left",
+          "operator",
+          "right",
+          "arithmeticOp",
+          "leftExtra",
+          "tableAggregate"
+        ],
+        "title": "Condition",
+        "description": "``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``."
+      },
+      "CreateWorkflow": {
         "properties": {
           "name": {
             "type": "string",
@@ -1863,16 +1292,41 @@
           "owner": {
             "type": "string",
             "title": "Owner",
-            "default": "Me"
+            "default": ""
           }
         },
         "type": "object",
-        "title": "CreateWorkflowBody"
+        "title": "CreateWorkflow"
       },
-      "DashboardResponse": {
+      "Dashboard": {
         "properties": {
-          "metrics": {
-            "$ref": "#/components/schemas/MetricsResponse"
+          "kpis": {
+            "items": {
+              "$ref": "#/components/schemas/Kpi"
+            },
+            "type": "array",
+            "title": "Kpis"
+          },
+          "performanceSeries": {
+            "items": {
+              "$ref": "#/components/schemas/DayRuns"
+            },
+            "type": "array",
+            "title": "Performanceseries"
+          },
+          "failuresBySeverity": {
+            "items": {
+              "$ref": "#/components/schemas/SeverityShare"
+            },
+            "type": "array",
+            "title": "Failuresbyseverity"
+          },
+          "staleRuns": {
+            "type": "integer",
+            "title": "Staleruns"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueCounts"
           },
           "audits": {
             "items": {
@@ -1883,694 +1337,25 @@
           },
           "workflows": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowSchema-Output"
+              "$ref": "#/components/schemas/WorkflowOut"
             },
             "type": "array",
             "title": "Workflows"
-          },
-          "queue": {
-            "$ref": "#/components/schemas/QueueSnapshot"
-          }
-        },
-        "type": "object",
-        "required": [
-          "metrics",
-          "audits",
-          "workflows",
-          "queue"
-        ],
-        "title": "DashboardResponse"
-      },
-      "DeployWorkflowBody": {
-        "properties": {
-          "apiKey": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apikey"
-          }
-        },
-        "type": "object",
-        "title": "DeployWorkflowBody"
-      },
-      "DocumentDefSchema-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "documentType": {
-            "type": "string",
-            "title": "Documenttype",
-            "default": ""
-          },
-          "schema": {
-            "items": {
-              "$ref": "#/components/schemas/SchemaFieldSchema-Input"
-            },
-            "type": "array",
-            "title": "Schema"
-          },
-          "extractionInstructions": {
-            "type": "string",
-            "title": "Extractioninstructions",
-            "default": ""
-          },
-          "markdownExtraction": {
-            "type": "boolean",
-            "title": "Markdownextraction",
-            "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
-            "default": false
-          },
-          "extractionIclExamples": {
-            "items": {
-              "$ref": "#/components/schemas/ExtractionIclExampleSchema-Input"
-            },
-            "type": "array",
-            "title": "Extractioniclexamples",
-            "description": "NuExtract in-context extraction examples (developer message pairs)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id"
-        ],
-        "title": "DocumentDefSchema"
-      },
-      "DocumentDefSchema-Output": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "documentType": {
-            "type": "string",
-            "title": "Documenttype",
-            "default": ""
-          },
-          "schema": {
-            "items": {
-              "$ref": "#/components/schemas/SchemaFieldSchema-Output"
-            },
-            "type": "array",
-            "title": "Schema"
-          },
-          "extractionInstructions": {
-            "type": "string",
-            "title": "Extractioninstructions",
-            "default": ""
-          },
-          "markdownExtraction": {
-            "type": "boolean",
-            "title": "Markdownextraction",
-            "description": "When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).",
-            "default": false
-          },
-          "extractionIclExamples": {
-            "items": {
-              "$ref": "#/components/schemas/ExtractionIclExampleSchema-Output"
-            },
-            "type": "array",
-            "title": "Extractioniclexamples",
-            "description": "NuExtract in-context extraction examples (developer message pairs)."
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "documentType",
-          "schema",
-          "extractionInstructions",
-          "markdownExtraction",
-          "extractionIclExamples"
-        ],
-        "title": "DocumentDefSchema"
-      },
-      "DryRunBody": {
-        "properties": {
-          "fields": {
-            "items": {
-              "$ref": "#/components/schemas/DryRunFieldInput"
-            },
-            "type": "array",
-            "title": "Fields",
-            "default": []
-          },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/DryRunRuleInput"
-            },
-            "type": "array",
-            "title": "Rules",
-            "default": []
-          },
-          "documents": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/DocumentDefSchema-Input"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Documents"
-          },
-          "rulesFull": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rulesfull"
-          }
-        },
-        "type": "object",
-        "title": "DryRunBody"
-      },
-      "DryRunExtracted": {
-        "properties": {
-          "field": {
-            "type": "string",
-            "title": "Field"
-          },
-          "value": {
-            "type": "string",
-            "title": "Value"
-          },
-          "matched": {
-            "type": "boolean",
-            "title": "Matched"
-          }
-        },
-        "type": "object",
-        "required": [
-          "field",
-          "value",
-          "matched"
-        ],
-        "title": "DryRunExtracted"
-      },
-      "DryRunFieldInput": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "templateType": {
-            "type": "string",
-            "title": "Templatetype",
-            "default": "verbatim-string"
-          },
-          "sampleValue": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Samplevalue"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
-        "title": "DryRunFieldInput"
-      },
-      "DryRunResponse": {
-        "properties": {
-          "extracted": {
-            "items": {
-              "$ref": "#/components/schemas/DryRunExtracted"
-            },
-            "type": "array",
-            "title": "Extracted"
-          },
-          "ruleResults": {
-            "items": {
-              "$ref": "#/components/schemas/DryRunRuleResult"
-            },
-            "type": "array",
-            "title": "Ruleresults"
-          }
-        },
-        "type": "object",
-        "required": [
-          "extracted",
-          "ruleResults"
-        ],
-        "title": "DryRunResponse"
-      },
-      "DryRunRuleInput": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body",
-            "default": ""
-          },
-          "severity": {
-            "type": "string",
-            "title": "Severity",
-            "default": "reject"
-          },
-          "conditions": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditions"
-          },
-          "conditionJunction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditionjunction"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "kind"
-        ],
-        "title": "DryRunRuleInput"
-      },
-      "DryRunRuleResult": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "detail": {
-            "type": "string",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "kind",
-          "status",
-          "detail"
-        ],
-        "title": "DryRunRuleResult"
-      },
-      "ExtractionIclExampleSchema-Input": {
-        "properties": {
-          "input": {
-            "type": "string",
-            "title": "Input",
-            "default": ""
-          },
-          "output": {
-            "type": "string",
-            "title": "Output",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "title": "ExtractionIclExampleSchema"
-      },
-      "ExtractionIclExampleSchema-Output": {
-        "properties": {
-          "input": {
-            "type": "string",
-            "title": "Input",
-            "default": ""
-          },
-          "output": {
-            "type": "string",
-            "title": "Output",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "input",
-          "output"
-        ],
-        "title": "ExtractionIclExampleSchema"
-      },
-      "HTTPValidationError": {
-        "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "type": "array",
-            "title": "Detail"
-          }
-        },
-        "type": "object",
-        "title": "HTTPValidationError"
-      },
-      "HealthAlert": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "severity": {
-            "type": "string",
-            "title": "Severity"
-          },
-          "titleKey": {
-            "type": "string",
-            "title": "Titlekey"
-          },
-          "detailKey": {
-            "type": "string",
-            "title": "Detailkey"
-          },
-          "href": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Href"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "severity",
-          "titleKey",
-          "detailKey",
-          "href"
-        ],
-        "title": "HealthAlert"
-      },
-      "HealthLiveResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "const": "ok",
-            "title": "Status"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status"
-        ],
-        "title": "HealthLiveResponse"
-      },
-      "HealthReadinessResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "enum": [
-              "ok",
-              "degraded"
-            ],
-            "title": "Status"
-          },
-          "redisOk": {
-            "type": "boolean",
-            "title": "Redisok"
-          },
-          "llamacpp": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Llamacpp"
-          },
-          "directUploadEnabled": {
-            "type": "boolean",
-            "title": "Directuploadenabled"
-          },
-          "cacheEnabled": {
-            "type": "boolean",
-            "title": "Cacheenabled"
-          },
-          "dbPoolSize": {
-            "type": "integer",
-            "title": "Dbpoolsize"
-          },
-          "queueBackend": {
-            "type": "string",
-            "title": "Queuebackend"
-          },
-          "rateLimitEnabled": {
-            "type": "boolean",
-            "title": "Ratelimitenabled"
-          },
-          "queuedRuns": {
-            "type": "integer",
-            "title": "Queuedruns"
-          },
-          "runningRuns": {
-            "type": "integer",
-            "title": "Runningruns"
-          },
-          "inflightRuns": {
-            "type": "integer",
-            "title": "Inflightruns"
-          },
-          "authEnabled": {
-            "type": "boolean",
-            "title": "Authenabled"
-          },
-          "oidcEnabled": {
-            "type": "boolean",
-            "title": "Oidcenabled"
-          },
-          "workerPools": {
-            "$ref": "#/components/schemas/WorkerPoolsHealth"
-          },
-          "taskiqConfigured": {
-            "type": "boolean",
-            "title": "Taskiqconfigured"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "redisOk",
-          "llamacpp",
-          "directUploadEnabled",
-          "cacheEnabled",
-          "dbPoolSize",
-          "queueBackend",
-          "rateLimitEnabled",
-          "queuedRuns",
-          "runningRuns",
-          "inflightRuns",
-          "authEnabled",
-          "oidcEnabled",
-          "workerPools",
-          "taskiqConfigured"
-        ],
-        "title": "HealthReadinessResponse"
-      },
-      "KpiMetric": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "value": {
-            "type": "string",
-            "title": "Value"
-          },
-          "rawValue": {
-            "type": "number",
-            "title": "Rawvalue"
-          },
-          "delta": {
-            "type": "number",
-            "title": "Delta"
-          },
-          "deltaUnit": {
-            "type": "string",
-            "title": "Deltaunit"
-          },
-          "direction": {
-            "type": "string",
-            "title": "Direction"
-          },
-          "positive": {
-            "type": "boolean",
-            "title": "Positive"
-          },
-          "series": {
-            "items": {
-              "$ref": "#/components/schemas/KpiSeriesPoint"
-            },
-            "type": "array",
-            "title": "Series"
-          },
-          "icon": {
-            "type": "string",
-            "title": "Icon"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "value",
-          "rawValue",
-          "delta",
-          "deltaUnit",
-          "direction",
-          "positive",
-          "series",
-          "icon"
-        ],
-        "title": "KpiMetric"
-      },
-      "KpiSeriesPoint": {
-        "properties": {
-          "day": {
-            "type": "string",
-            "title": "Day"
-          },
-          "value": {
-            "type": "number",
-            "title": "Value"
-          }
-        },
-        "type": "object",
-        "required": [
-          "day",
-          "value"
-        ],
-        "title": "KpiSeriesPoint"
-      },
-      "MetricsResponse": {
-        "properties": {
-          "kpis": {
-            "items": {
-              "$ref": "#/components/schemas/KpiMetric"
-            },
-            "type": "array",
-            "title": "Kpis"
-          },
-          "performanceSeries": {
-            "items": {
-              "$ref": "#/components/schemas/PerformancePoint"
-            },
-            "type": "array",
-            "title": "Performanceseries"
-          },
-          "violationBreakdown": {
-            "items": {
-              "$ref": "#/components/schemas/ViolationBreakdown"
-            },
-            "type": "array",
-            "title": "Violationbreakdown"
-          },
-          "healthAlerts": {
-            "items": {
-              "$ref": "#/components/schemas/HealthAlert"
-            },
-            "type": "array",
-            "title": "Healthalerts"
           }
         },
         "type": "object",
         "required": [
           "kpis",
           "performanceSeries",
-          "violationBreakdown",
-          "healthAlerts"
+          "failuresBySeverity",
+          "staleRuns",
+          "queue",
+          "audits",
+          "workflows"
         ],
-        "title": "MetricsResponse"
+        "title": "Dashboard"
       },
-      "ModelsCatalogResponse": {
-        "properties": {
-          "models": {
-            "items": {
-              "$ref": "#/components/schemas/CatalogModelEntry"
-            },
-            "type": "array",
-            "title": "Models"
-          }
-        },
-        "type": "object",
-        "required": [
-          "models"
-        ],
-        "title": "ModelsCatalogResponse"
-      },
-      "PerformancePoint": {
+      "DayRuns": {
         "properties": {
           "day": {
             "type": "string",
@@ -2591,48 +1376,371 @@
           "runs",
           "prevRuns"
         ],
-        "title": "PerformancePoint"
+        "title": "DayRuns"
       },
-      "PlatformConfigResponse": {
+      "DocumentDef-Input": {
         "properties": {
-          "appName": {
+          "id": {
             "type": "string",
-            "title": "Appname"
+            "title": "Id"
           },
-          "queueBackend": {
+          "documentType": {
             "type": "string",
-            "title": "Queuebackend"
+            "title": "Documenttype",
+            "default": ""
           },
-          "directUploadEnabled": {
-            "type": "boolean",
-            "title": "Directuploadenabled"
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaField-Input"
+            },
+            "type": "array",
+            "title": "Schema"
           },
-          "cacheEnabled": {
-            "type": "boolean",
-            "title": "Cacheenabled"
-          },
-          "rateLimitEnabled": {
-            "type": "boolean",
-            "title": "Ratelimitenabled"
-          },
-          "servedModel": {
+          "extractionInstructions": {
             "type": "string",
-            "title": "Servedmodel"
+            "title": "Extractioninstructions",
+            "default": ""
           },
-          "nuextractMaxPagesPerRequest": {
+          "markdownExtraction": {
+            "type": "boolean",
+            "title": "Markdownextraction",
+            "description": "Transcribe the document to Markdown when it has no fields.",
+            "default": false
+          },
+          "extractionIclExamples": {
+            "items": {
+              "$ref": "#/components/schemas/IclExample"
+            },
+            "type": "array",
+            "title": "Extractioniclexamples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "DocumentDef"
+      },
+      "DocumentDef-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype",
+            "default": ""
+          },
+          "schema": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaField-Output"
+            },
+            "type": "array",
+            "title": "Schema"
+          },
+          "extractionInstructions": {
+            "type": "string",
+            "title": "Extractioninstructions",
+            "default": ""
+          },
+          "markdownExtraction": {
+            "type": "boolean",
+            "title": "Markdownextraction",
+            "description": "Transcribe the document to Markdown when it has no fields.",
+            "default": false
+          },
+          "extractionIclExamples": {
+            "items": {
+              "$ref": "#/components/schemas/IclExample"
+            },
+            "type": "array",
+            "title": "Extractioniclexamples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "documentType",
+          "schema",
+          "extractionInstructions",
+          "markdownExtraction",
+          "extractionIclExamples"
+        ],
+        "title": "DocumentDef"
+      },
+      "ExtractionMeta": {
+        "properties": {
+          "extractionMs": {
+            "type": "integer",
+            "title": "Extractionms",
+            "default": 0
+          },
+          "cacheHit": {
+            "type": "boolean",
+            "title": "Cachehit",
+            "default": false
+          },
+          "fieldsExtracted": {
+            "type": "integer",
+            "title": "Fieldsextracted",
+            "default": 0
+          },
+          "pagesRendered": {
+            "type": "integer",
+            "title": "Pagesrendered",
+            "default": 0
+          },
+          "pagesSent": {
+            "type": "integer",
+            "title": "Pagessent",
+            "default": 0
+          },
+          "rawText": {
             "anyOf": [
               {
-                "type": "integer"
+                "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Nuextractmaxpagesperrequest"
+            "title": "Rawtext",
+            "description": "The model's JSON answer."
+          },
+          "markdownText": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Markdowntext"
+          }
+        },
+        "type": "object",
+        "required": [
+          "extractionMs",
+          "cacheHit",
+          "fieldsExtracted",
+          "pagesRendered",
+          "pagesSent",
+          "rawText",
+          "markdownText"
+        ],
+        "title": "ExtractionMeta"
+      },
+      "FailingRule": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "count": {
+            "type": "integer",
+            "title": "Count"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "count",
+          "severity"
+        ],
+        "title": "FailingRule"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Health": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status"
+          },
+          "database": {
+            "type": "boolean",
+            "title": "Database",
+            "default": true
+          },
+          "redis": {
+            "type": "boolean",
+            "title": "Redis",
+            "default": true
+          },
+          "oidcEnabled": {
+            "type": "boolean",
+            "title": "Oidcenabled",
+            "description": "Whether API calls need a Keycloak token."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "database",
+          "redis",
+          "oidcEnabled"
+        ],
+        "title": "Health"
+      },
+      "IclExample": {
+        "properties": {
+          "input": {
+            "type": "string",
+            "title": "Input"
+          },
+          "output": {
+            "type": "string",
+            "title": "Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input",
+          "output"
+        ],
+        "title": "IclExample",
+        "description": "A NuExtract in-context example: input text and the JSON it should produce."
+      },
+      "Kpi": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "auditsWeek",
+              "passRate",
+              "failures",
+              "pendingReview"
+            ],
+            "title": "Id"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "previous": {
+            "type": "number",
+            "title": "Previous"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/KpiPoint"
+            },
+            "type": "array",
+            "title": "Series"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "value",
+          "previous",
+          "series"
+        ],
+        "title": "Kpi"
+      },
+      "KpiPoint": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "title": "Day"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "value"
+        ],
+        "title": "KpiPoint"
+      },
+      "Operand-Input": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "field",
+              "literal"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "Operand",
+        "description": "A field reference (``total`` or ``invoice.total``) or a literal typed by the user."
+      },
+      "Operand-Output": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "field",
+              "literal"
+            ],
+            "title": "Kind"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "Operand",
+        "description": "A field reference (``total`` or ``invoice.total``) or a literal typed by the user."
+      },
+      "PlatformConfig": {
+        "properties": {
+          "servedModel": {
+            "type": "string",
+            "title": "Servedmodel"
           },
           "llamacppBaseUrl": {
             "type": "string",
             "title": "Llamacppbaseurl"
+          },
+          "modelAvailable": {
+            "type": "boolean",
+            "title": "Modelavailable"
+          },
+          "cacheEnabled": {
+            "type": "boolean",
+            "title": "Cacheenabled"
           },
           "maxUploadBytes": {
             "type": "integer",
@@ -2642,158 +1750,56 @@
             "type": "integer",
             "title": "Maxuploadfiles"
           },
-          "staleRunTimeoutMinutes": {
-            "type": "integer",
-            "title": "Staleruntimeoutminutes"
-          },
-          "queuedStaleTimeoutMinutes": {
-            "type": "integer",
-            "title": "Queuedstaletimeoutminutes"
-          },
-          "workerTaskTimeoutMinutes": {
-            "type": "integer",
-            "title": "Workertasktimeoutminutes"
-          },
-          "maintenanceIntervalSeconds": {
-            "type": "integer",
-            "title": "Maintenanceintervalseconds"
-          },
-          "workerPools": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Workerpools"
-          },
-          "taskiqConfigured": {
-            "type": "boolean",
-            "title": "Taskiqconfigured",
-            "default": false
-          },
-          "healthzProbeInference": {
-            "type": "boolean",
-            "title": "Healthzprobeinference",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "appName",
-          "queueBackend",
-          "directUploadEnabled",
-          "cacheEnabled",
-          "rateLimitEnabled",
-          "servedModel",
-          "nuextractMaxPagesPerRequest",
-          "llamacppBaseUrl",
-          "maxUploadBytes",
-          "maxUploadFiles",
-          "staleRunTimeoutMinutes",
-          "queuedStaleTimeoutMinutes",
-          "workerTaskTimeoutMinutes",
-          "maintenanceIntervalSeconds",
-          "workerPools",
-          "taskiqConfigured",
-          "healthzProbeInference"
-        ],
-        "title": "PlatformConfigResponse"
-      },
-      "PresignFileRequest": {
-        "properties": {
-          "fileName": {
-            "type": "string",
-            "title": "Filename"
-          },
-          "mimeType": {
-            "type": "string",
-            "title": "Mimetype"
-          },
-          "size": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Size"
-          },
-          "documentId": {
+          "maxPagesPerDocument": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Documentid"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fileName",
-          "mimeType",
-          "size"
-        ],
-        "title": "PresignFileRequest"
-      },
-      "PresignRequest": {
-        "properties": {
-          "files": {
-            "items": {
-              "$ref": "#/components/schemas/PresignFileRequest"
-            },
-            "type": "array",
-            "title": "Files"
-          }
-        },
-        "type": "object",
-        "required": [
-          "files"
-        ],
-        "title": "PresignRequest"
-      },
-      "PresignResponse": {
-        "properties": {
-          "uploadMode": {
-            "type": "string",
-            "title": "Uploadmode",
-            "description": "presigned | api"
+            "title": "Maxpagesperdocument"
           },
-          "uploads": {
-            "items": {
-              "$ref": "#/components/schemas/PresignedUploadItem"
-            },
-            "type": "array",
-            "title": "Uploads"
+          "runTimeoutMinutes": {
+            "type": "integer",
+            "title": "Runtimeoutminutes"
           }
         },
         "type": "object",
         "required": [
-          "uploadMode",
-          "uploads"
+          "servedModel",
+          "llamacppBaseUrl",
+          "modelAvailable",
+          "cacheEnabled",
+          "maxUploadBytes",
+          "maxUploadFiles",
+          "maxPagesPerDocument",
+          "runTimeoutMinutes"
         ],
-        "title": "PresignResponse"
+        "title": "PlatformConfig"
       },
-      "PresignedUploadItem": {
+      "ProgressStep": {
         "properties": {
           "id": {
             "type": "string",
             "title": "Id"
           },
-          "storageKey": {
+          "label": {
             "type": "string",
-            "title": "Storagekey"
+            "title": "Label"
           },
-          "fileName": {
+          "status": {
             "type": "string",
-            "title": "Filename"
+            "enum": [
+              "pending",
+              "active",
+              "done"
+            ],
+            "title": "Status",
+            "default": "pending"
           },
-          "mimeType": {
-            "type": "string",
-            "title": "Mimetype"
-          },
-          "size": {
-            "type": "integer",
-            "title": "Size"
-          },
-          "documentId": {
+          "detail": {
             "anyOf": [
               {
                 "type": "string"
@@ -2802,47 +1808,37 @@
                 "type": "null"
               }
             ],
-            "title": "Documentid"
+            "title": "Detail"
           },
-          "uploadUrl": {
+          "durationMs": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "integer"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Uploadurl"
+            "title": "Durationms"
           },
-          "method": {
-            "type": "string",
-            "title": "Method",
-            "default": "PUT"
-          },
-          "headers": {
-            "additionalProperties": {
-              "type": "string"
-            },
-            "type": "object",
-            "title": "Headers"
+          "cacheHit": {
+            "type": "boolean",
+            "title": "Cachehit",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "id",
-          "storageKey",
-          "fileName",
-          "mimeType",
-          "size",
-          "documentId",
-          "uploadUrl",
-          "method",
-          "headers"
+          "label",
+          "status",
+          "detail",
+          "durationMs",
+          "cacheHit"
         ],
-        "title": "PresignedUploadItem"
+        "title": "ProgressStep"
       },
-      "QueueSnapshot": {
+      "QueueCounts": {
         "properties": {
           "queuedRuns": {
             "type": "integer",
@@ -2851,37 +1847,16 @@
           "runningRuns": {
             "type": "integer",
             "title": "Runningruns"
-          },
-          "inflightRuns": {
-            "type": "integer",
-            "title": "Inflightruns"
           }
         },
         "type": "object",
         "required": [
           "queuedRuns",
-          "runningRuns",
-          "inflightRuns"
+          "runningRuns"
         ],
-        "title": "QueueSnapshot"
+        "title": "QueueCounts"
       },
-      "RuleLibraryResponse": {
-        "properties": {
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/RuleTemplateSchema"
-            },
-            "type": "array",
-            "title": "Rules"
-          }
-        },
-        "type": "object",
-        "required": [
-          "rules"
-        ],
-        "title": "RuleLibraryResponse"
-      },
-      "RuleTemplateSchema": {
+      "Rule-Input": {
         "properties": {
           "id": {
             "type": "string",
@@ -2889,42 +1864,106 @@
           },
           "name": {
             "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
+            "title": "Name",
+            "default": ""
           },
           "scope": {
             "type": "string",
-            "title": "Scope"
+            "enum": [
+              "intra",
+              "cross"
+            ],
+            "title": "Scope",
+            "default": "intra"
           },
-          "description": {
-            "type": "string",
-            "title": "Description"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body"
+          "appliesTo": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Appliesto"
           },
           "severity": {
             "type": "string",
-            "title": "Severity"
+            "enum": [
+              "reject",
+              "flag"
+            ],
+            "title": "Severity",
+            "default": "reject"
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/Condition-Input"
+            },
+            "type": "array",
+            "title": "Conditions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "Rule",
+        "description": "A rule passes when every condition holds on the documents it applies to."
+      },
+      "Rule-Output": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": ""
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "intra",
+              "cross"
+            ],
+            "title": "Scope",
+            "default": "intra"
+          },
+          "appliesTo": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Appliesto"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "reject",
+              "flag"
+            ],
+            "title": "Severity",
+            "default": "reject"
+          },
+          "conditions": {
+            "items": {
+              "$ref": "#/components/schemas/Condition-Output"
+            },
+            "type": "array",
+            "title": "Conditions"
           }
         },
         "type": "object",
         "required": [
           "id",
           "name",
-          "kind",
           "scope",
-          "description",
-          "body",
-          "severity"
+          "appliesTo",
+          "severity",
+          "conditions"
         ],
-        "title": "RuleTemplateSchema"
+        "title": "Rule",
+        "description": "A rule passes when every condition holds on the documents it applies to."
       },
-      "RuleValidationItem": {
+      "RuleCheck": {
         "properties": {
           "ruleId": {
             "type": "string",
@@ -2942,7 +1981,8 @@
               "type": "string"
             },
             "type": "array",
-            "title": "Checks"
+            "title": "Checks",
+            "description": "Readable form of each condition, in order."
           }
         },
         "type": "object",
@@ -2951,88 +1991,118 @@
           "issues",
           "checks"
         ],
-        "title": "RuleValidationItem"
+        "title": "RuleCheck"
       },
-      "RunAuditDetail": {
+      "RuleChecks": {
         "properties": {
-          "id": {
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/RuleCheck"
+            },
+            "type": "array",
+            "title": "Rules"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rules"
+        ],
+        "title": "RuleChecks"
+      },
+      "RunCreated": {
+        "properties": {
+          "runId": {
             "type": "string",
-            "title": "Id"
-          },
-          "workflowId": {
-            "type": "string",
-            "title": "Workflowid"
-          },
-          "workflowName": {
-            "type": "string",
-            "title": "Workflowname"
+            "title": "Runid"
           },
           "status": {
             "type": "string",
-            "title": "Status"
-          },
-          "source": {
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "title": "Status",
+            "default": "queued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "runId",
+          "status"
+        ],
+        "title": "RunCreated"
+      },
+      "RunProgress": {
+        "properties": {
+          "label": {
             "type": "string",
-            "title": "Source"
+            "title": "Label"
           },
-          "createdAt": {
-            "type": "string",
-            "title": "Createdat"
-          },
-          "documents": {
+          "steps": {
             "items": {
-              "$ref": "#/components/schemas/RunAuditDocument"
+              "$ref": "#/components/schemas/ProgressStep"
             },
             "type": "array",
-            "title": "Documents"
+            "title": "Steps"
           },
-          "ruleResults": {
-            "items": {
-              "$ref": "#/components/schemas/RunAuditRule"
-            },
-            "type": "array",
-            "title": "Ruleresults"
-          },
-          "summary": {
-            "$ref": "#/components/schemas/RunSummary"
-          },
-          "metadata": {
+          "queuePosition": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RunAuditMetadata"
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queueposition",
+            "description": "1-based, while queued."
+          },
+          "queueDepth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Queuedepth"
+          }
+        },
+        "type": "object",
+        "required": [
+          "label",
+          "steps",
+          "queuePosition",
+          "queueDepth"
+        ],
+        "title": "RunProgress"
+      },
+      "RunState": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunProgress"
               },
               {
                 "type": "null"
               }
             ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "workflowId",
-          "workflowName",
-          "status",
-          "source",
-          "createdAt",
-          "documents",
-          "ruleResults",
-          "summary",
-          "metadata"
-        ],
-        "title": "RunAuditDetail"
-      },
-      "RunAuditDocument": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
           },
-          "documentType": {
-            "type": "string",
-            "title": "Documenttype"
-          },
-          "fileName": {
+          "error": {
             "anyOf": [
               {
                 "type": "string"
@@ -3041,19 +2111,12 @@
                 "type": "null"
               }
             ],
-            "title": "Filename"
+            "title": "Error"
           },
-          "fields": {
-            "items": {
-              "$ref": "#/components/schemas/RunAuditField"
-            },
-            "type": "array",
-            "title": "Fields"
-          },
-          "extraction": {
+          "result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/RunDocumentExtractionMeta"
+                "$ref": "#/components/schemas/AuditDetail"
               },
               {
                 "type": "null"
@@ -3063,75 +2126,49 @@
         },
         "type": "object",
         "required": [
-          "id",
-          "documentType",
-          "fileName",
-          "fields",
-          "extraction"
+          "status",
+          "progress",
+          "error",
+          "result"
         ],
-        "title": "RunAuditDocument"
+        "title": "RunState",
+        "description": "What a client polls: status, live progress, and the report once done."
       },
-      "RunAuditField": {
+      "RunSummary": {
         "properties": {
-          "key": {
-            "type": "string",
-            "title": "Key"
+          "total": {
+            "type": "integer",
+            "title": "Total"
           },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
+          "passed": {
+            "type": "integer",
+            "title": "Passed"
           },
-          "value": {
-            "type": "string",
-            "title": "Value",
-            "default": ""
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
           },
-          "type": {
-            "type": "string",
-            "title": "Type",
-            "default": "string"
-          },
-          "confidence": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "extracted": {
-            "type": "boolean",
-            "title": "Extracted",
-            "default": true
-          },
-          "flagged": {
-            "type": "boolean",
-            "title": "Flagged",
-            "default": false
+          "fieldsExtracted": {
+            "type": "integer",
+            "title": "Fieldsextracted"
           }
         },
         "type": "object",
         "required": [
-          "key",
-          "description",
-          "value",
-          "type",
-          "confidence",
-          "extracted",
-          "flagged"
+          "total",
+          "passed",
+          "failed",
+          "fieldsExtracted"
         ],
-        "title": "RunAuditField"
+        "title": "RunSummary"
       },
-      "RunAuditMetadata": {
+      "RunTimings": {
         "properties": {
           "startedAt": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -3142,7 +2179,8 @@
           "finishedAt": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -3174,468 +2212,14 @@
           "extractionMs",
           "validationMs"
         ],
-        "title": "RunAuditMetadata"
+        "title": "RunTimings"
       },
-      "RunAuditRule": {
+      "SchemaField-Input": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": "intra"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "severity": {
-            "type": "string",
-            "title": "Severity"
-          },
-          "expression": {
-            "type": "string",
-            "title": "Expression",
+            "title": "Id",
             "default": ""
-          },
-          "affectedFields": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Affectedfields",
-            "default": []
-          },
-          "detail": {
-            "type": "string",
-            "title": "Detail",
-            "default": ""
-          },
-          "expectedValue": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expectedvalue"
-          },
-          "actualValue": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Actualvalue"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "kind",
-          "scope",
-          "status",
-          "severity",
-          "expression",
-          "affectedFields",
-          "detail",
-          "expectedValue",
-          "actualValue"
-        ],
-        "title": "RunAuditRule"
-      },
-      "RunCreatedResponse": {
-        "properties": {
-          "runId": {
-            "type": "string",
-            "title": "Runid"
-          },
-          "jobId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Jobid"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "default": "queued"
-          }
-        },
-        "type": "object",
-        "required": [
-          "runId",
-          "jobId",
-          "status"
-        ],
-        "title": "RunCreatedResponse"
-      },
-      "RunDocumentExtractionMeta": {
-        "properties": {
-          "extractionMs": {
-            "type": "integer",
-            "title": "Extractionms",
-            "default": 0
-          },
-          "cacheHit": {
-            "type": "boolean",
-            "title": "Cachehit",
-            "default": false
-          },
-          "gpuColdStartLikely": {
-            "type": "boolean",
-            "title": "Gpucoldstartlikely",
-            "default": false
-          },
-          "fieldsExtracted": {
-            "type": "integer",
-            "title": "Fieldsextracted",
-            "default": 0
-          },
-          "markdownText": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Markdowntext"
-          },
-          "rawText": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rawtext"
-          },
-          "markdownExtraction": {
-            "type": "boolean",
-            "title": "Markdownextraction",
-            "default": false
-          },
-          "pagesRendered": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pagesrendered"
-          },
-          "pagesSent": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pagessent"
-          },
-          "pagesDropped": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pagesdropped"
-          }
-        },
-        "type": "object",
-        "required": [
-          "extractionMs",
-          "cacheHit",
-          "gpuColdStartLikely",
-          "fieldsExtracted",
-          "markdownText",
-          "rawText",
-          "markdownExtraction",
-          "pagesRendered",
-          "pagesSent",
-          "pagesDropped"
-        ],
-        "title": "RunDocumentExtractionMeta"
-      },
-      "RunPollResponse": {
-        "properties": {
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "progress": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RunProgressSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "result": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RunAuditDetail"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          }
-        },
-        "type": "object",
-        "required": [
-          "status",
-          "progress",
-          "result",
-          "error"
-        ],
-        "title": "RunPollResponse"
-      },
-      "RunProgressSchema": {
-        "properties": {
-          "currentIndex": {
-            "type": "integer",
-            "title": "Currentindex"
-          },
-          "steps": {
-            "items": {
-              "$ref": "#/components/schemas/RunProgressStepSchema"
-            },
-            "type": "array",
-            "title": "Steps"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "queuePosition": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Queueposition"
-          },
-          "queueDepth": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Queuedepth"
-          }
-        },
-        "type": "object",
-        "required": [
-          "currentIndex",
-          "steps",
-          "label",
-          "queuePosition",
-          "queueDepth"
-        ],
-        "title": "RunProgressSchema"
-      },
-      "RunProgressStepSchema": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "mode": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mode"
-          },
-          "kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Kind"
-          },
-          "detail": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Detail"
-          },
-          "durationMs": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Durationms"
-          },
-          "cacheHit": {
-            "type": "boolean",
-            "title": "Cachehit",
-            "default": false
-          },
-          "gpuColdStartHint": {
-            "type": "boolean",
-            "title": "Gpucoldstarthint",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "label",
-          "status",
-          "mode",
-          "kind",
-          "detail",
-          "durationMs",
-          "cacheHit",
-          "gpuColdStartHint"
-        ],
-        "title": "RunProgressStepSchema"
-      },
-      "RunSnapshotBody": {
-        "properties": {
-          "documents": {
-            "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema-Input"
-            },
-            "type": "array",
-            "title": "Documents",
-            "default": []
-          },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
-            },
-            "type": "array",
-            "title": "Rules",
-            "default": []
-          },
-          "workflowName": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Workflowname"
-          }
-        },
-        "type": "object",
-        "title": "RunSnapshotBody",
-        "description": "Ephemeral workflow config for a single run - does not mutate the saved workflow."
-      },
-      "RunSummary": {
-        "properties": {
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "passed": {
-            "type": "integer",
-            "title": "Passed"
-          },
-          "failed": {
-            "type": "integer",
-            "title": "Failed"
-          },
-          "fieldsExtracted": {
-            "type": "integer",
-            "title": "Fieldsextracted"
-          }
-        },
-        "type": "object",
-        "required": [
-          "total",
-          "passed",
-          "failed",
-          "fieldsExtracted"
-        ],
-        "title": "RunSummary"
-      },
-      "SchemaFieldSchema-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
           },
           "name": {
             "type": "string",
@@ -3660,7 +2244,7 @@
           },
           "children": {
             "items": {
-              "$ref": "#/components/schemas/SchemaFieldSchema-Input"
+              "$ref": "#/components/schemas/SchemaField-Input"
             },
             "type": "array",
             "title": "Children"
@@ -3668,16 +2252,17 @@
         },
         "type": "object",
         "required": [
-          "id",
           "name"
         ],
-        "title": "SchemaFieldSchema"
+        "title": "SchemaField",
+        "description": "One NuExtract template field.\n\n``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
       },
-      "SchemaFieldSchema-Output": {
+      "SchemaField-Output": {
         "properties": {
           "id": {
             "type": "string",
-            "title": "Id"
+            "title": "Id",
+            "default": ""
           },
           "name": {
             "type": "string",
@@ -3702,7 +2287,7 @@
           },
           "children": {
             "items": {
-              "$ref": "#/components/schemas/SchemaFieldSchema-Output"
+              "$ref": "#/components/schemas/SchemaField-Output"
             },
             "type": "array",
             "title": "Children"
@@ -3717,181 +2302,108 @@
           "enumValues",
           "children"
         ],
-        "title": "SchemaFieldSchema"
+        "title": "SchemaField",
+        "description": "One NuExtract template field.\n\n``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
       },
-      "StoredFileBinding": {
+      "SeverityShare": {
         "properties": {
-          "documentId": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Documentid"
-          },
-          "storageKey": {
-            "type": "string",
-            "title": "Storagekey"
-          },
-          "mimeType": {
-            "type": "string",
-            "title": "Mimetype"
-          },
-          "fileName": {
-            "type": "string",
-            "title": "Filename"
-          }
-        },
-        "type": "object",
-        "required": [
-          "storageKey",
-          "mimeType",
-          "fileName"
-        ],
-        "title": "StoredFileBinding"
-      },
-      "TopFailingRuleSchema": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
           "severity": {
             "type": "string",
             "title": "Severity"
+          },
+          "share": {
+            "type": "number",
+            "title": "Share"
           }
         },
         "type": "object",
         "required": [
-          "name",
-          "count",
-          "severity"
+          "severity",
+          "share"
         ],
-        "title": "TopFailingRuleSchema"
+        "title": "SeverityShare"
       },
-      "UploadCapabilitiesResponse": {
+      "TableAggregate-Input": {
         "properties": {
-          "directUploadEnabled": {
-            "type": "boolean",
-            "title": "Directuploadenabled"
-          },
-          "uploadMode": {
+          "fn": {
             "type": "string",
-            "title": "Uploadmode"
+            "enum": [
+              "sum_rows",
+              "sum_rows_where",
+              "count_rows_where"
+            ],
+            "title": "Fn"
           },
-          "maxUploadBytes": {
-            "type": "integer",
-            "title": "Maxuploadbytes"
+          "tableField": {
+            "type": "string",
+            "title": "Tablefield",
+            "default": ""
           },
-          "maxUploadFiles": {
-            "type": "integer",
-            "title": "Maxuploadfiles"
+          "amountColumn": {
+            "type": "string",
+            "title": "Amountcolumn",
+            "default": ""
+          },
+          "filterColumn": {
+            "type": "string",
+            "title": "Filtercolumn",
+            "default": ""
+          },
+          "filterContains": {
+            "type": "string",
+            "title": "Filtercontains",
+            "default": ""
           }
         },
         "type": "object",
         "required": [
-          "directUploadEnabled",
-          "uploadMode",
-          "maxUploadBytes",
-          "maxUploadFiles"
+          "fn"
         ],
-        "title": "UploadCapabilitiesResponse"
+        "title": "TableAggregate",
+        "description": "Sum or count rows of an object-array field (optionally filtered by a column)."
       },
-      "UploadItem": {
+      "TableAggregate-Output": {
         "properties": {
-          "id": {
+          "fn": {
             "type": "string",
-            "title": "Id"
+            "enum": [
+              "sum_rows",
+              "sum_rows_where",
+              "count_rows_where"
+            ],
+            "title": "Fn"
           },
-          "storageKey": {
+          "tableField": {
             "type": "string",
-            "title": "Storagekey"
+            "title": "Tablefield",
+            "default": ""
           },
-          "fileName": {
+          "amountColumn": {
             "type": "string",
-            "title": "Filename"
+            "title": "Amountcolumn",
+            "default": ""
           },
-          "mimeType": {
+          "filterColumn": {
             "type": "string",
-            "title": "Mimetype"
+            "title": "Filtercolumn",
+            "default": ""
           },
-          "size": {
-            "type": "integer",
-            "title": "Size"
+          "filterContains": {
+            "type": "string",
+            "title": "Filtercontains",
+            "default": ""
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "storageKey",
-          "fileName",
-          "mimeType",
-          "size"
+          "fn",
+          "tableField",
+          "amountColumn",
+          "filterColumn",
+          "filterContains"
         ],
-        "title": "UploadItem"
-      },
-      "UploadResponse": {
-        "properties": {
-          "uploads": {
-            "items": {
-              "$ref": "#/components/schemas/UploadItem"
-            },
-            "type": "array",
-            "title": "Uploads"
-          }
-        },
-        "type": "object",
-        "required": [
-          "uploads"
-        ],
-        "title": "UploadResponse"
-      },
-      "ValidateRulesBody": {
-        "properties": {
-          "documents": {
-            "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema-Input"
-            },
-            "type": "array",
-            "title": "Documents"
-          },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
-            },
-            "type": "array",
-            "title": "Rules"
-          }
-        },
-        "type": "object",
-        "required": [
-          "documents",
-          "rules"
-        ],
-        "title": "ValidateRulesBody"
-      },
-      "ValidateRulesResponse": {
-        "properties": {
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/RuleValidationItem"
-            },
-            "type": "array",
-            "title": "Rules"
-          }
-        },
-        "type": "object",
-        "required": [
-          "rules"
-        ],
-        "title": "ValidateRulesResponse"
+        "title": "TableAggregate",
+        "description": "Sum or count rows of an object-array field (optionally filtered by a column)."
       },
       "ValidationError": {
         "properties": {
@@ -3933,91 +2445,77 @@
         ],
         "title": "ValidationError"
       },
-      "ViolationBreakdown": {
+      "WorkflowDefinition": {
         "properties": {
-          "type": {
-            "type": "string",
-            "title": "Type"
-          },
-          "share": {
-            "type": "number",
-            "title": "Share"
-          },
-          "color": {
-            "type": "string",
-            "title": "Color"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "share",
-          "color"
-        ],
-        "title": "ViolationBreakdown"
-      },
-      "WorkerPoolsHealth": {
-        "properties": {
-          "fast": {
-            "type": "string",
-            "title": "Fast"
-          },
-          "extract": {
-            "type": "string",
-            "title": "Extract"
-          }
-        },
-        "type": "object",
-        "required": [
-          "fast",
-          "extract"
-        ],
-        "title": "WorkerPoolsHealth"
-      },
-      "WorkflowApiStatsSchema": {
-        "properties": {
-          "apiCallsToday": {
-            "type": "integer",
-            "title": "Apicallstoday"
-          },
-          "apiCallsTotal": {
-            "type": "integer",
-            "title": "Apicallstotal"
-          },
-          "avgLatencyMs": {
-            "type": "integer",
-            "title": "Avglatencyms"
-          },
-          "callSeries": {
+          "documents": {
             "items": {
-              "$ref": "#/components/schemas/CallSeriesPointSchema"
+              "$ref": "#/components/schemas/DocumentDef-Input"
             },
             "type": "array",
-            "title": "Callseries"
+            "title": "Documents"
           },
-          "topFailingRules": {
+          "rules": {
             "items": {
-              "$ref": "#/components/schemas/TopFailingRuleSchema"
+              "$ref": "#/components/schemas/Rule-Input"
             },
             "type": "array",
-            "title": "Topfailingrules"
+            "title": "Rules"
           }
         },
         "type": "object",
-        "required": [
-          "apiCallsToday",
-          "apiCallsTotal",
-          "avgLatencyMs",
-          "callSeries",
-          "topFailingRules"
-        ],
-        "title": "WorkflowApiStatsSchema"
+        "title": "WorkflowDefinition",
+        "description": "What a run executes; stored as JSON on the workflow and copied onto each run."
       },
-      "WorkflowListResponse": {
+      "WorkflowIn": {
+        "properties": {
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentDef-Input"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/Rule-Input"
+            },
+            "type": "array",
+            "title": "Rules"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "default": "Untitled workflow"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description",
+            "default": ""
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "paused"
+            ],
+            "title": "Status",
+            "default": "draft"
+          },
+          "owner": {
+            "type": "string",
+            "title": "Owner",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "WorkflowIn"
+      },
+      "WorkflowList": {
         "properties": {
           "workflows": {
             "items": {
-              "$ref": "#/components/schemas/WorkflowSchema-Output"
+              "$ref": "#/components/schemas/WorkflowOut"
             },
             "type": "array",
             "title": "Workflows"
@@ -4027,180 +2525,28 @@
         "required": [
           "workflows"
         ],
-        "title": "WorkflowListResponse"
+        "title": "WorkflowList"
       },
-      "WorkflowResponse": {
+      "WorkflowOut": {
         "properties": {
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowSchema-Output"
-          }
-        },
-        "type": "object",
-        "required": [
-          "workflow"
-        ],
-        "title": "WorkflowResponse"
-      },
-      "WorkflowRuleSchema-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind",
-            "default": "logic"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": "intra"
-          },
-          "appliesTo": {
+          "documents": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/DocumentDef-Output"
             },
             "type": "array",
-            "title": "Appliesto",
-            "default": []
+            "title": "Documents"
           },
-          "conditions": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditions"
-          },
-          "conditionJunction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditionjunction"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body",
-            "default": ""
-          },
-          "severity": {
-            "type": "string",
-            "title": "Severity",
-            "default": "reject"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
-        "title": "WorkflowRuleSchema"
-      },
-      "WorkflowRuleSchema-Output": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "kind": {
-            "type": "string",
-            "title": "Kind",
-            "default": "logic"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": "intra"
-          },
-          "appliesTo": {
+          "rules": {
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/Rule-Output"
             },
             "type": "array",
-            "title": "Appliesto",
-            "default": []
-          },
-          "conditions": {
-            "anyOf": [
-              {
-                "items": {
-                  "additionalProperties": true,
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditions"
-          },
-          "conditionJunction": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conditionjunction"
-          },
-          "body": {
-            "type": "string",
-            "title": "Body",
-            "default": ""
-          },
-          "severity": {
-            "type": "string",
-            "title": "Severity",
-            "default": "reject"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "kind",
-          "scope",
-          "appliesTo",
-          "conditions",
-          "conditionJunction",
-          "body",
-          "severity"
-        ],
-        "title": "WorkflowRuleSchema"
-      },
-      "WorkflowSchema-Input": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
+            "title": "Rules"
           },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "default": "Untitled workflow"
           },
           "description": {
             "type": "string",
@@ -4209,55 +2555,28 @@
           },
           "status": {
             "type": "string",
+            "enum": [
+              "draft",
+              "active",
+              "paused"
+            ],
             "title": "Status",
             "default": "draft"
           },
           "owner": {
             "type": "string",
             "title": "Owner",
-            "default": "Me"
+            "default": ""
           },
-          "lastRun": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lastrun"
-          },
-          "successRate": {
-            "type": "number",
-            "title": "Successrate",
-            "default": 0.0
-          },
-          "totalRuns": {
-            "type": "integer",
-            "title": "Totalruns",
-            "default": 0
-          },
-          "documents": {
-            "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema-Input"
-            },
-            "type": "array",
-            "title": "Documents",
-            "default": []
-          },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema-Input"
-            },
-            "type": "array",
-            "title": "Rules",
-            "default": []
+          "id": {
+            "type": "string",
+            "title": "Id"
           },
           "deployedAt": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -4275,7 +2594,7 @@
               }
             ],
             "title": "Apikey",
-            "description": "Plaintext key \u2014 returned only once on deploy."
+            "description": "Plaintext key, returned once on deploy."
           },
           "apiKeyHint": {
             "anyOf": [
@@ -4286,56 +2605,23 @@
                 "type": "null"
               }
             ],
-            "title": "Apikeyhint",
-            "description": "Masked hint for deployed workflows."
+            "title": "Apikeyhint"
           },
-          "apiStats": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/WorkflowApiStatsSchema"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name"
-        ],
-        "title": "WorkflowSchema"
-      },
-      "WorkflowSchema-Output": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
+          "totalRuns": {
+            "type": "integer",
+            "title": "Totalruns",
+            "default": 0
           },
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "description": {
-            "type": "string",
-            "title": "Description",
-            "default": ""
-          },
-          "status": {
-            "type": "string",
-            "title": "Status",
-            "default": "draft"
-          },
-          "owner": {
-            "type": "string",
-            "title": "Owner",
-            "default": "Me"
+          "successRate": {
+            "type": "number",
+            "title": "Successrate",
+            "default": 0.0
           },
           "lastRun": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               {
                 "type": "null"
@@ -4343,71 +2629,10 @@
             ],
             "title": "Lastrun"
           },
-          "successRate": {
-            "type": "number",
-            "title": "Successrate",
-            "default": 0.0
-          },
-          "totalRuns": {
-            "type": "integer",
-            "title": "Totalruns",
-            "default": 0
-          },
-          "documents": {
-            "items": {
-              "$ref": "#/components/schemas/DocumentDefSchema-Output"
-            },
-            "type": "array",
-            "title": "Documents",
-            "default": []
-          },
-          "rules": {
-            "items": {
-              "$ref": "#/components/schemas/WorkflowRuleSchema-Output"
-            },
-            "type": "array",
-            "title": "Rules",
-            "default": []
-          },
-          "deployedAt": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deployedat"
-          },
-          "apiKey": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apikey",
-            "description": "Plaintext key \u2014 returned only once on deploy."
-          },
-          "apiKeyHint": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Apikeyhint",
-            "description": "Masked hint for deployed workflows."
-          },
           "apiStats": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/WorkflowApiStatsSchema"
+                "$ref": "#/components/schemas/ApiStats"
               },
               {
                 "type": "null"
@@ -4417,30 +2642,29 @@
         },
         "type": "object",
         "required": [
-          "id",
+          "documents",
+          "rules",
           "name",
           "description",
           "status",
           "owner",
-          "lastRun",
-          "successRate",
-          "totalRuns",
-          "documents",
-          "rules",
+          "id",
           "deployedAt",
           "apiKey",
           "apiKeyHint",
+          "totalRuns",
+          "successRate",
+          "lastRun",
           "apiStats"
         ],
-        "title": "WorkflowSchema"
+        "title": "WorkflowOut"
       }
     },
     "securitySchemes": {
-      "bearerAuth": {
+      "HTTPBearer": {
         "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "API token",
-        "description": "Keycloak access token (`Authorization: Bearer <jwt>`) for UI users, or a per-workflow API key for run endpoints."
+        "description": "Keycloak access token or workflow API key",
+        "scheme": "bearer"
       }
     }
   }

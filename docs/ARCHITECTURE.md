@@ -61,13 +61,12 @@ Repody permet à une organisation de **configurer un audit documentaire sans éc
 | **Champ de schéma** | Donnée à extraire (nom, description, type NuExtract, configuration). |
 | **Run** | Une exécution du workflow sur des fichiers déposés (source `test` depuis l'UI, `api` depuis une intégration). |
 | **Modèle documentaire** | `repody:vlm` : NuExtract3 servi par un llama-server compatible OpenAI, qui transforme un document en JSON structuré. |
-| **Règle logic** | Contrôle déterministe évalué par `simpleeval` sur les champs extraits. |
+| **Règle** | Conditions typées (champ, opérateur, valeur) évaluées sur les champs extraits. |
 | **Audit** | Vue métier d'un run terminé : rapport consultable et exportable. |
-| **Pool `extract` / `fast`** | Files de traitement séparées : documents (coûteux) vs contrôles seuls (léger). |
 
 ### 2.2 Personas et habilitations
 
-Quatre rôles applicatifs, portés par les claims du JWT et appliqués par `infra/auth/permissions.py` (`ROLE_PERMISSIONS`). Les utilisateurs et l'attribution des rôles se gèrent dans la console d'administration Keycloak.
+Quatre rôles applicatifs, portés par les claims du JWT et appliqués par `auth.py` (`ROLE_PERMISSIONS`). Les utilisateurs et l'attribution des rôles se gèrent dans la console d'administration Keycloak.
 
 | Rôle | Périmètre fonctionnel |
 |---|---|
@@ -98,7 +97,7 @@ La matrice complète figure en [annexe 7.3](#73-matrice-dhabilitations).
 
 | Capacité | Description |
 |---|---|
-| Règles *logic* | Expressions déterministes (`simpleeval`) avec coercition de dates et montants. |
+| Règles | Conditions typées évaluées directement, avec lecture des dates et montants. |
 | Agrégats tabulaires | Fonctions `sum_rows`, `count_rows_where`, etc. pour les champs de type tableau. |
 | Constructeur de conditions | Interface de composition des opérandes, opérateurs et valeurs littérales. |
 | Portées | Contrôle intra-document ou transverse (*cross-document*). |
@@ -181,9 +180,9 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 | 3 | **Autorisation** | `ROLE_PERMISSIONS` (Python) | Décision d'accès `(ressource, action)` sur chaque route. |
 | 4 | **Bus de jobs / événements** | Redis Streams + pub/sub | Transport Taskiq et diffusion de la progression. |
 | 5 | **Workers** | Taskiq (pools `extract`, `fast`) | Exécution asynchrone des runs. |
-| 6 | **Traitement des runs** | Python (`app/run/worker.py`) | Orchestration extraction -> validation -> persistance. |
+| 6 | **Traitement des runs** | Python (`app/execute.py`) | Orchestration extraction -> validation -> persistance. |
 | 7 | **Pipeline d'extraction** | Python (`extraction/`) | Rendu, appel modèle, projection des champs, cache. |
-| 8 | **Moteur de règles** | `simpleeval` | Évaluation des contrôles déterministes. |
+| 8 | **Moteur de règles** | Python (`rules/`) | Évaluation des conditions typées. |
 | 9 | **Base de données** | PostgreSQL | Source de vérité (workflows, runs, champs, résultats). |
 | 10 | **Stockage objet** | MinIO / S3 | Fichiers déposés (`audit-documents`). |
 | 11 | **Identité** | OIDC (Keycloak ou IdP client) | Authentification, rôles, JWKS. |
@@ -201,94 +200,76 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 
 ### 3.3 API (`backend/src/repody/api/`)
 
-Treize modules de routes exposés sous le préfixe `/v1`.
+Trois routeurs sous `/v1` (14 routes) :
 
-| Module | Domaine fonctionnel |
+| Module | Routes |
 |---|---|
-| `health.py` | Liveness (`/healthz/live`) et readiness (`/healthz`, dépendances incluses). |
-| `workflows.py` | CRUD, déploiement, validation de règles, dry-run. |
-| `runs.py` | Création de runs (JSON et multipart), statut, détail, **flux SSE**. |
-| `uploads.py` | Capacités, présigné, confirmation, upload direct. |
-| `audits.py` | Liste et détail des runs terminés. |
-| `dashboard.py`, `metrics.py` | Agrégats de pilotage. |
-| `rules_library.py` | Bibliothèque de modèles de règles. |
-| `config.py` | Configuration plateforme, catalogue de modèles, suggestion de type. |
+| `workflows.py` | Liste, lecture, création, enregistrement (`PUT`, définition complète), archivage, déploiement (clé API), `check-rules` (retour du builder). |
+| `runs.py` | `POST /workflows/{id}/runs` (multipart : fichiers + document de chaque fichier, brouillon pour un test), `GET /runs/{id}` (statut, progression, rapport), flux SSE, liste et détail des audits. |
+| `platform.py` | Santé (`/healthz/live`, `/healthz`), configuration, tableau de bord. |
 
-L'API n'exécute **jamais** l'extraction : elle valide, persiste, met en file, puis répond.
+L'appelant est résolu par des dépendances FastAPI (`api/deps.py`) : `HTTPBearer`, utilisateur Keycloak ou clé API du workflow. L'API n'exécute **jamais** l'extraction : elle valide, enregistre les fichiers, met le run en file et répond.
 
 ### 3.4 Couche applicative (`backend/src/repody/app/`)
 
 | Module | Responsabilité |
 |---|---|
-| `workflow/` | Service, persistance de l'agrégat (documents + règles), validation, déploiement et clés API, statistiques. |
-| `run/` | Admission et mise en file (`enqueue`), envoi Taskiq (`dispatch`), transitions d'état (`state`), traitement worker (`worker`), classification de pool, instantané de configuration (`snapshot`), progression et SSE. |
-| `uploads/` | Intentions de dépôt, validation MIME et taille, association aux emplacements documentaires. |
-| `audit/` | Requêtes de restitution des runs terminés. |
-| `queue/`, `ops/` | Position de file, rafraîchissement, maintenance (runs bloqués, renvoi des runs non distribués). |
+| `workflows.py` | Lecture, enregistrement de la définition, archivage, déploiement, statistiques. |
+| `runs.py` | Démarrage d'un run (limites, plafond de file, fichiers, copie de la définition), état et rapport, liste des audits. |
+| `execute.py` | Traitement d'un run par le worker. |
+| `progress.py` | Plan d'étapes, publication Redis (SSE), position dans la file calculée à la lecture. |
+| `maintenance.py` | Échec des runs bloqués, renvoi des tâches jamais envoyées. |
+| `dashboard.py`, `seed.py` | Agrégats du tableau de bord, données de démonstration. |
 
 ### 3.5 Traitement des runs
 
-**Transitions d'état** (`app/run/state.py`) : chaque transition est un `UPDATE` conditionnel - `claim_run` (`queued -> running`), `complete_run` (`running -> done`), `fail_run` (état non terminal `-> failed`). La base garantit la machine à états ; une transition qui ne correspond pas à l'état courant ne modifie rien. `RunStatus` (`queued`, `running`, `done`, `failed`) est défini dans `runtime/run/status.py`.
-
-**Worker** (`app/run/worker.py`) :
+Un workflow est **une définition JSON** (documents à extraire et règles) validée par `WorkflowDefinition` ; chaque run en garde une **copie** : modifier un workflow ne change jamais un run en file ou terminé.
 
 ```
-process_run     réclame le run (UPDATE conditionnel), efface les résultats d'un essai précédent
-  └─ _execute    pour chaque document : lecture de l'objet -> extract_document -> champs persistés
-                 puis règles (validate_field_rows) -> résultats -> complete_run
+POST /runs   fichiers -> S3, run "queued" + copie de la définition, tâche Taskiq "process_run"
+process_run  UPDATE conditionnel queued -> running (une livraison en double ne fait rien)
+             pour chaque document : S3 -> extract (NuExtract) -> champs
+             règles -> résultats ; champs lus par une règle en échec signalés -> "done"
 ```
 
-Une erreur d'extraction sur un document est journalisée et ce document est ignoré ; toute autre erreur fait échouer le run. Les services lèvent `AppError` (`runtime/contracts/result.py`), traduit en réponse HTTP par un gestionnaire d'exceptions unique ([ADR 008](./adr/008-flat-run-pipeline.md)).
+Une erreur d'extraction sur un document est journalisée et ce document reste sans champs (ses règles sont `skipped`) ; toute autre erreur, ou un dépassement de `AUDIT_RUN_TIMEOUT_MINUTES`, fait échouer le run. Les cas d'usage lèvent `AppError(status, message)`, traduit en réponse HTTP dans `main.py`.
 
 ### 3.6 Pipeline d'extraction (`backend/src/repody/extraction/`)
 
-| Étape | Module | Détail |
-|---|---|---|
-| Cache | `cache.py` | Clé dérivée du schéma et du contenu ; évite une inférence redondante. |
-| Rendu | `render.py` | Conversion PDF/images en pages pour les modèles de vision, politique de DPI. |
-| Adaptateur | `vlm.py` | Appel de NuExtract3 (llama-server, API compatible OpenAI). |
-| Projection | `fields.py` | JSON du modèle -> champs feuilles exploitables par l'UI et les règles. |
-| Schéma | `schema.py`, `nuextract.py` | Conversion du schéma workflow en template de modèle, exemples ICL. |
-| Warmup | `warmup.py` | Préchauffage du modèle au démarrage du worker `extract`. |
+| Module | Rôle |
+|---|---|
+| `nuextract.py` | Requête officielle NuExtract3 : template, instructions (notes du document et des champs), exemples ICL. |
+| `render.py` | PDF -> PNG à 170 DPI (officiel), images telles quelles. |
+| `client.py` | llama-server via le SDK `openai` (compatible OpenAI). |
+| `fields.py` | Réponse JSON -> une valeur par feuille du schéma. |
+| `pipeline.py` | Enchaînement et cache Redis optionnel des réponses (clé : octets du document + requête). |
 
-**Modèle documentaire** : `repody:vlm`, NuExtract3 servi par llama-server - **seul modèle**. `extract_document` (`pipeline.py`) consulte le cache Redis puis appelle `vlm.py` directement ; il n'y a ni registre de modèles ni mode de lecture.
-
-La disponibilité réelle est sondée sur `GET /v1/models` du llama-server (`catalog/status.py`). Détail : [EXTRACTION.md](./EXTRACTION.md).
+**Modèle documentaire** : NuExtract3 servi par llama-server - seul modèle. Détail : [EXTRACTION.md](./EXTRACTION.md).
 
 ### 3.7 Moteur de règles (`backend/src/repody/rules/`)
 
-| Composant | Fonction |
-|---|---|
-| `runner.py` | Expansion des conditions, résolution des champs, évaluation des règles logic (les règles d'un autre type sont rapportées `skipped`). |
-| `logic_evaluator.py` | Évaluation `simpleeval` avec types composés, agrégats tabulaires, coercition dates/montants. |
+Une règle est une liste de **conditions typées** (`models.py`) : champ ou valeur à gauche (avec opération arithmétique ou agrégat de tableau), opérateur, champ ou valeur à droite. `evaluate.py` évalue chaque condition directement (pas d'expression générée), décrit chaque condition pour l'interface et signale ce qui empêche l'enregistrement. Une règle passe quand toutes ses conditions tiennent ; une valeur manquante la rend `skipped`. `values.py` lit montants (`price-parser`), dates ISO et booléens.
 
-Les règles ignorées sont **explicitement tracées** dans le rapport plutôt que silencieusement omises.
+### 3.8 Traitement asynchrone (`backend/src/repody/queue.py`, `worker.py`)
 
-### 3.8 Traitement asynchrone (`backend/src/repody/taskiq/`)
+- **Broker** : `RedisStreamBroker`, une file `repody:runs`, une tâche `process_run(run_id)`.
+- **Envoi** : après le commit ; en cas d'échec, `dispatched_at` reste vide et la maintenance renvoie la tâche.
+- **Worker** : CLI officielle `taskiq worker repody.worker:broker --max-async-tasks N` ; on dimensionne par réplicas.
 
-- **Broker** : `RedisStreamBroker`, préfixe de file `repody:audit:{pool}`.
-- **Tâche unique** : `process-audit-run`, charge utile `AuditRunInput` (`run_id`, `extract_pool`, `workflow_id`, `request_id`).
-- **Garde-fous** : délai maximal configurable (`AUDIT_WORKER_TASK_TIMEOUT_MINUTES`), une nouvelle tentative.
-- **Entrée worker** : `python -m repody.taskiq.worker`, initialisation de l'observabilité et warmup si pool `extract`.
-- **Sonde** : `python -m repody.taskiq.healthcheck` (PING Redis + inspection du stream).
-
-**Pourquoi deux pools** ([ADR 007](./adr/007-staged-agent-queues-taskiq.md)) : un run purement logique ne doit jamais attendre derrière un traitement documentaire coûteux. Les deux déploiements se dimensionnent séparément.
-
-### 3.9 Sécurité applicative (`backend/src/repody/infra/auth/`)
+### 3.9 Sécurité applicative (`backend/src/repody/auth.py`, `api/deps.py`)
 
 | Mécanisme | Mise en œuvre |
 |---|---|
-| Authentification | Validation du JWT contre le JWKS de l'IdP, issuers et alias configurables. |
-| Rôles | Extraits des claims *realm*/*groups*, filtrés sur la liste applicative connue. |
-| Autorisation | `infra/auth/permissions.py` (`ROLE_PERMISSIONS`), via `require_permission(resource, action)`. |
-| Accès run | Double voie : JWT porteur du droit `run:execute`, ou **clé API de workflow** (source `api`). |
-| Mode développement | Si `AUDIT_OIDC_ENABLED=false`, principal fixe `platform_admin` - **refusé en production** par les validateurs de configuration. |
+| Authentification | JWT vérifié avec PyJWT contre le JWKS de Keycloak (issuers et alias configurables). |
+| Rôles | Rôles *realm* et groupes ; `ROLE_PERMISSIONS` donne les permissions (`workflow:write`, `run:execute`, …). |
+| Accès run | Clé API du workflow déployé (source `api`) ou utilisateur ayant `run:execute` (source `test`). |
+| Mode développement | `AUDIT_OIDC_ENABLED=false` : chaque appelant est administrateur local - refusé en production. |
 
 ### 3.10 Persistance et stockage
 
-**PostgreSQL** - entités principales : `workflows`, `documents`, `schema_fields`, `workflow_rules`, `rule_templates`, `runs`, `run_documents`, `extracted_fields`, `rule_results`, `upload_intents`. Détail en [annexe 7.2](#72-modèle-de-données).
+**PostgreSQL** : `workflows` (définition JSON), `runs` (copie de la définition, progression, résumé), `run_documents`, `extracted_fields`, `rule_results`. Migrations Alembic.
 
-**Stockage objet** (`infra/storage/`) - MinIO ou S3 dans tous les environnements (`S3Store`, client interne + client public pour les URL signées). Le contrat `ObjectStore` est un `Protocol` ; les tests en processus installent un store en mémoire (`use_storage`).
+**Stockage objet** (`storage.py`) : S3 ou MinIO via `boto3` ; les tests utilisent un store en mémoire.
 
 ---
 
@@ -300,7 +281,7 @@ Les règles ignorées sont **explicitement tracées** dans le rapport plutôt qu
 |---|---|---|
 | **edge** | `repody-web` | Interface Next.js et proxy applicatif. |
 | **control** | `repody-api` | API FastAPI, autorisation, SSE, dispatch. |
-| **workers** | `repody-worker-extract`, `repody-worker-fast` | Traitement des runs, pools séparés. |
+| **worker** | `repody-worker` | Traitement des runs (une file, mise à l'échelle par réplicas). |
 | **data** | Postgres, Redis, stockage objet | Profil embarqué ou services managés du client. |
 
 Deux images seulement sont livrées : `repody-backend` (API + workers, rôle défini par la commande) et `repody-web`.
@@ -337,15 +318,14 @@ L'ensemble des paramètres serveur utilise le préfixe **`AUDIT_`**.
 | Domaine | Variables représentatives |
 |---|---|
 | Base de données | `AUDIT_DATABASE_URL`, `AUDIT_DB_POOL_SIZE`, `AUDIT_RUN_MIGRATIONS_ON_STARTUP` |
-| File et événements | `AUDIT_REDIS_URL`, `AUDIT_RUN_EVENTS_ENABLED` |
-| Stockage | `AUDIT_MINIO_*` (S3/MinIO, seul backend), `AUDIT_MAX_UPLOAD_*`, `AUDIT_PRESIGNED_UPLOAD_TTL_SECONDS` |
-| Identité | `AUDIT_OIDC_ENABLED`, `AUDIT_OIDC_ISSUER`, `AUDIT_OIDC_AUDIENCE`, `AUDIT_OIDC_JWKS_*` |
-| Workers | `AUDIT_WORKER_POOL`, `AUDIT_WORKER_EXTRACT_MAX_JOBS`, `AUDIT_WORKER_TASK_TIMEOUT_MINUTES` |
-| Inférence | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL`, `AUDIT_REPODY_VLM_TIMEOUT_SECONDS` |
-| Exploitation | `AUDIT_STALE_RUN_*`, `AUDIT_ADMISSION_*`, `AUDIT_RATE_LIMIT_*`, `AUDIT_MAINTENANCE_INTERVAL_SECONDS` |
+| File et événements | `AUDIT_REDIS_URL` |
+| Stockage | `AUDIT_S3_*`, `AUDIT_MAX_UPLOAD_*` |
+| Identité | `AUDIT_OIDC_ENABLED`, `AUDIT_OIDC_ISSUER`, `AUDIT_OIDC_AUDIENCE`, `AUDIT_OIDC_JWKS_URL` |
+| Runs | `AUDIT_WORKER_CONCURRENCY`, `AUDIT_RUN_TIMEOUT_MINUTES`, `AUDIT_MAX_QUEUED_RUNS`, `AUDIT_RUNS_PER_MINUTE_PER_CLIENT` |
+| Inférence | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL`, `AUDIT_INFERENCE_TIMEOUT_SECONDS` |
 | Observabilité | `AUDIT_LOG_JSON`, `AUDIT_DEPLOYMENT_ENVIRONMENT` ; traces : agent OpenTelemetry (`OTEL_SDK_DISABLED=false`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`) |
 
-Des validateurs refusent au démarrage les configurations incohérentes en production (OIDC désactivé, extracteur factice, délais d'expiration mal alignés). Référence des clés : [`deploy/ENV.md`](../deploy/ENV.md).
+Des validateurs refusent au démarrage les configurations incohérentes en production (OIDC désactivé, délai d'inférence supérieur au délai d'un run). Référence des clés : [`deploy/ENV.md`](../deploy/ENV.md).
 
 ### 4.5 Observabilité
 
@@ -402,11 +382,10 @@ Source : [`diagrams/sequence-upload-et-run.mmd`](./diagrams/sequence-upload-et-r
 
 Points saillants :
 
-1. **Dépôt présigné** - `presign` -> `PUT` direct vers le stockage -> `confirm` avec vérification `HeadObject` et du type MIME réel.
-2. **Mise en file** - résolution de la source (JWT de test ou clé API), limitation de débit, admission, classification de pool, insertion du run, commit, publication Taskiq et horodatage `dispatched_at`, réponse `202`.
-3. **Extraction** - réclamation atomique, récupération de l'objet, rendu des pages, appel du modèle documentaire, persistance des champs.
-4. **Validation** - règles logic ; écriture des résultats et clôture du run.
-5. **Suivi** - publication des événements de progression consommés par le flux SSE.
+1. **Dépôt et mise en file** - une requête multipart : appelant (clé API ou utilisateur), limite de débit, plafond de file, type réel des fichiers, fichiers vers S3, run et copie de la définition, commit, tâche Taskiq et `dispatched_at`, réponse `202`.
+2. **Extraction** - réclamation atomique, récupération de l'objet, rendu des pages, appel du modèle documentaire, persistance des champs.
+3. **Validation** - règles ; écriture des résultats et clôture du run.
+4. **Suivi** - publication des événements de progression consommés par le flux SSE.
 
 ### 5.3 Cycle de vie fonctionnel complet
 
@@ -483,28 +462,20 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 | Domaine | Endpoints |
 |---|---|
 | Santé | `GET /v1/healthz/live`, `GET /v1/healthz` |
-| Workflows | `GET/POST /v1/workflows`, `GET/PUT/DELETE /v1/workflows/{id}`, `POST /v1/workflows/bulk-delete`, `POST /v1/workflows/{id}/deploy`, `POST /v1/workflows/validate-rules`, `POST /v1/workflows/{id}/dry-run` |
-| Runs | `POST /v1/workflows/{id}/runs/json`, `POST /v1/workflows/{id}/runs`, `GET /v1/runs/{id}`, `GET /v1/runs/{id}/status`, `GET /v1/runs/{id}/events` |
-| Uploads | `GET /v1/uploads/capabilities`, `POST /v1/uploads/presign`, `POST /v1/uploads/confirm`, `POST /v1/uploads` |
+| Workflows | `GET/POST /v1/workflows`, `GET/PUT/DELETE /v1/workflows/{id}`, `POST /v1/workflows/bulk-delete`, `POST /v1/workflows/{id}/deploy`, `POST /v1/workflows/check-rules` |
+| Runs | `POST /v1/workflows/{id}/runs` (multipart), `GET /v1/runs/{id}`, `GET /v1/runs/{id}/events` |
 | Audits | `GET /v1/audits`, `GET /v1/audits/{id}` |
-| Pilotage | `GET /v1/dashboard`, `GET /v1/metrics` |
-| Règles | `GET /v1/rules/library` |
-| Plateforme | `GET /v1/platform/config`, `GET /v1/models/catalog`, `GET /v1/schema/suggest-type` |
+| Pilotage et plateforme | `GET /v1/dashboard`, `GET /v1/platform/config` |
 
 ### 7.2 Modèle de données
 
 | Table | Contenu | Relations |
 |---|---|---|
-| `workflows` | Nom, statut, propriétaire, date de déploiement, empreinte de clé API | 1 -> N documents, règles, runs |
-| `documents` | Type, position, modèle documentaire, instructions, extraction Markdown | N -> 1 workflow ; 1 -> N champs |
-| `schema_fields` | Nom, description, type de template, configuration, position | N -> 1 document |
-| `workflow_rules` | Nom, nature, portée, corps, sévérité, conditions | N -> 1 workflow |
-| `rule_templates` | Bibliothèque de règles réutilisables | - |
-| `runs` | Source, statut, statut global, erreur, résumés, progression, instantané, pool, date d'envoi (`dispatched_at`) | N -> 1 workflow ; 1 -> N documents et résultats |
-| `run_documents` | Clé de stockage, type MIME, nom de fichier, métadonnées d'extraction | N -> 1 run ; 1 -> N champs extraits |
-| `extracted_fields` | Clé, valeur, type, confiance, indicateurs, boîte englobante | N -> 1 document de run |
-| `rule_results` | Statut, sévérité, expression, champs concernés, valeurs attendue et constatée | N -> 1 run |
-| `upload_intents` | Clé de stockage unique, fichier, taille, propriétaire, date de confirmation | - |
+| `workflows` | Nom, statut, propriétaire, **définition JSON** (documents, schémas, règles), déploiement, empreinte de clé API | 1 -> N runs |
+| `runs` | Source, statut, résultat, erreur, **copie de la définition**, progression, résumé et durées, `dispatched_at` | N -> 1 workflow ; 1 -> N documents et résultats |
+| `run_documents` | Document du workflow, fichier, type MIME, clé de stockage, métadonnées d'extraction | N -> 1 run ; 1 -> N champs extraits |
+| `extracted_fields` | Clé, description, type, valeur, extrait, signalé | N -> 1 document de run |
+| `rule_results` | Règle, portée, sévérité, statut, expression, détail, champs concernés | N -> 1 run |
 
 ### 7.3 Matrice d'habilitations
 
@@ -512,14 +483,9 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 |---|---|---|---|---|
 | `workflow` | read | read, write | read, write, delete | tout |
 | `run` | read | read, execute | read, execute | tout |
-| `audit` | read | read | read | tout |
-| `upload` | - | write | write | tout |
-| `models` | read | read | read | tout |
-| `rules` | read | read | read | tout |
-| `metrics` | - | read | read | tout |
-| `settings` | - | read | read, write | tout |
+| `metrics` (tableau de bord, configuration) | - | read | read | tout |
 
-Source : `backend/src/repody/infra/auth/permissions.py`.
+Source : `backend/src/repody/auth.py`.
 
 ### 7.4 Socle technique
 

@@ -1,1 +1,0 @@
-"""Platform metrics package."""

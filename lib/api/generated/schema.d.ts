@@ -4,46 +4,6 @@
  */
 
 export interface paths {
-    "/v1/healthz/live": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Health Live
-         * @description Liveness: process is alive, with no dependency or inference probe.
-         */
-        get: operations["health_live_v1_healthz_live_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/healthz": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Health Readiness
-         * @description Readiness with dependency checks, queue depth, and optional inference probe.
-         */
-        get: operations["health_readiness_v1_healthz_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/workflows": {
         parameters: {
             query?: never;
@@ -71,8 +31,28 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Bulk Delete Workflows */
-        post: operations["bulk_delete_workflows_v1_workflows_bulk_delete_post"];
+        /** Delete Workflows */
+        post: operations["delete_workflows_v1_workflows_bulk_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/workflows/check-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Rules
+         * @description Builder feedback for unsaved rules: what blocks saving, and each condition as text.
+         */
+        post: operations["check_rules_v1_workflows_check_rules_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -88,8 +68,8 @@ export interface paths {
         };
         /** Get Workflow */
         get: operations["get_workflow_v1_workflows__workflow_id__get"];
-        /** Update Workflow */
-        put: operations["update_workflow_v1_workflows__workflow_id__put"];
+        /** Save Workflow */
+        put: operations["save_workflow_v1_workflows__workflow_id__put"];
         post?: never;
         /** Delete Workflow */
         delete: operations["delete_workflow_v1_workflows__workflow_id__delete"];
@@ -107,7 +87,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Deploy Workflow */
+        /**
+         * Deploy Workflow
+         * @description Activate the workflow and issue a new API key (shown once).
+         */
         post: operations["deploy_workflow_v1_workflows__workflow_id__deploy_post"];
         delete?: never;
         options?: never;
@@ -115,7 +98,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/workflows/validate-rules": {
+    "/v1/workflows/{workflow_id}/runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -125,50 +108,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Validate Rules
-         * @description Authoritative rule validation for the workflow builder.
+         * Start Run
+         * @description Start a run with the workflow API key (production) or as a signed-in user (test run).
          */
-        post: operations["validate_rules_v1_workflows_validate_rules_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workflows/{workflow_id}/dry-run": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Dry Run
-         * @description Evaluate the posted draft only; ``workflow_id`` scopes the route, not the data.
-         */
-        post: operations["dry_run_v1_workflows__workflow_id__dry_run_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Run Status
-         * @description Lightweight poll - status and progress only (no full audit payload).
-         */
-        get: operations["get_run_status_v1_runs__run_id__status_get"];
-        put?: never;
-        post?: never;
+        post: operations["start_run_v1_workflows__workflow_id__runs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -182,7 +125,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Run */
+        /**
+         * Get Run
+         * @description Status and live progress; the audit report once the run is done.
+         */
         get: operations["get_run_v1_runs__run_id__get"];
         put?: never;
         post?: never;
@@ -200,52 +146,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Stream Run Events
-         * @description Server-Sent Events stream for live run progress (Redis pub/sub).
+         * Run Events
+         * @description Server-Sent Events: the current state first, then each progress change until done.
          */
-        get: operations["stream_run_events_v1_runs__run_id__events_get"];
+        get: operations["run_events_v1_runs__run_id__events_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workflows/{workflow_id}/runs/json": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Run Json
-         * @description Create a run with files already uploaded to storage (presigned PUT flow).
-         */
-        post: operations["create_run_json_v1_workflows__workflow_id__runs_json_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/workflows/{workflow_id}/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Create Run
-         * @description Multipart fallback when presigned upload is unavailable.
-         */
-        post: operations["create_run_v1_workflows__workflow_id__runs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -269,7 +175,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/audits/{audit_id}": {
+    "/v1/audits/{run_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -277,7 +183,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get Audit */
-        get: operations["get_audit_v1_audits__audit_id__get"];
+        get: operations["get_audit_v1_audits__run_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -286,15 +192,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/metrics": {
+    "/v1/healthz/live": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Metrics */
-        get: operations["get_metrics_v1_metrics_get"];
+        /**
+         * Live
+         * @description The process answers (no dependency checks).
+         */
+        get: operations["live_v1_healthz_live_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/healthz": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ready
+         * @description Postgres and Redis answer.
+         */
+        get: operations["ready_v1_healthz_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/platform/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform Config */
+        get: operations["platform_config_v1_platform_config_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -310,133 +256,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Dashboard Bundle */
-        get: operations["dashboard_bundle_v1_dashboard_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/rules/library": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Rules Library */
-        get: operations["rules_library_v1_rules_library_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/uploads/capabilities": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Upload Capabilities */
-        get: operations["upload_capabilities_v1_uploads_capabilities_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/uploads/presign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Presign Uploads */
-        post: operations["presign_uploads_v1_uploads_presign_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/uploads/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Confirm Uploads */
-        post: operations["confirm_uploads_v1_uploads_confirm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/uploads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Upload Files */
-        post: operations["upload_files_v1_uploads_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/platform/config": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Platform Config
-         * @description Read-only platform configuration snapshot (safe AUDIT_* fields).
-         */
-        get: operations["get_platform_config_v1_platform_config_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/models/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Get Models Catalog
-         * @description The document model with live availability from the llama-server.
-         */
-        get: operations["get_models_catalog_v1_models_catalog_get"];
+        /** Dashboard */
+        get: operations["dashboard_v1_dashboard_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -449,27 +270,84 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** AuditListItem */
-        AuditListItem: {
+        /**
+         * ApiStats
+         * @description Runs started with the workflow's API key.
+         */
+        ApiStats: {
+            /** Apicallstoday */
+            apiCallsToday: number;
+            /** Apicallstotal */
+            apiCallsTotal: number;
+            /** Avglatencyms */
+            avgLatencyMs: number;
+            /** Callseries */
+            callSeries: components["schemas"]["CallsPerDay"][];
+            /** Topfailingrules */
+            topFailingRules: components["schemas"]["FailingRule"][];
+        };
+        /** AuditDetail */
+        AuditDetail: {
             /** Id */
             id: string;
-            /** Status */
-            status: string;
             /** Workflowid */
             workflowId: string;
             /** Workflowname */
             workflowName: string;
-            /** Entity */
-            entity: string;
-            /** Timestamp */
-            timestamp: string;
-            /** Rows */
-            rows: number | null;
-            /** Failedrules */
-            failedRules: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "passed" | "warning" | "failed";
+            /** Source */
+            source: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Documents */
+            documents: components["schemas"]["AuditDocument"][];
+            /** Ruleresults */
+            ruleResults: components["schemas"]["AuditRule"][];
+            summary: components["schemas"]["RunSummary"];
+            metadata: components["schemas"]["RunTimings"];
         };
-        /** AuditListResponse */
-        AuditListResponse: {
+        /** AuditDocument */
+        AuditDocument: {
+            /** Id */
+            id: string;
+            /** Documenttype */
+            documentType: string;
+            /** Filename */
+            fileName: string;
+            /** Fields */
+            fields: components["schemas"]["AuditField"][];
+            extraction: components["schemas"]["ExtractionMeta"] | null;
+        };
+        /** AuditField */
+        AuditField: {
+            /** Key */
+            key: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /** Type */
+            type: string;
+            /** Value */
+            value: string;
+            /** Extracted */
+            extracted: boolean;
+            /**
+             * Flagged
+             * @default false
+             */
+            flagged: boolean;
+        };
+        /** AuditList */
+        AuditList: {
             /** Audits */
             audits: components["schemas"]["AuditListItem"][];
             /** Total */
@@ -479,93 +357,127 @@ export interface components {
             /** Offset */
             offset: number;
         };
-        /** Body_create_run_v1_workflows__workflow_id__runs_post */
-        Body_create_run_v1_workflows__workflow_id__runs_post: {
-            /** Files */
-            files?: string[] | null;
-            /** Document Ids */
-            document_ids?: string | null;
+        /** AuditListItem */
+        AuditListItem: {
+            /** Id */
+            id: string;
             /**
-             * Document Types
-             * @description JSON array of configured document type names, same order as files.
+             * Status
+             * @enum {string}
              */
-            document_types?: string | null;
-            /** Payload */
-            payload?: string | null;
+            status: "passed" | "warning" | "failed";
+            /** Workflowid */
+            workflowId: string;
+            /** Workflowname */
+            workflowName: string;
+            /**
+             * Timestamp
+             * Format: date-time
+             */
+            timestamp: string;
+            /** Rows */
+            rows: number;
+            /** Failedrules */
+            failedRules: number;
         };
-        /** Body_upload_files_v1_uploads_post */
-        Body_upload_files_v1_uploads_post: {
-            /** Files */
+        /** AuditRule */
+        AuditRule: {
+            /** Id */
+            id: string;
+            /** Ruleid */
+            ruleId: string;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+            /** Severity */
+            severity: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "passed" | "failed" | "skipped";
+            /** Expression */
+            expression: string;
+            /** Detail */
+            detail: string;
+            /** Affectedfields */
+            affectedFields: string[];
+        };
+        /** Body_start_run_v1_workflows__workflow_id__runs_post */
+        Body_start_run_v1_workflows__workflow_id__runs_post: {
+            /**
+             * Files
+             * @description One file per workflow document.
+             * @default []
+             */
             files: string[];
+            /**
+             * Documents
+             * @description Per file, in order: the workflow document id or type.
+             * @default []
+             */
+            documents: string[];
+            /**
+             * Definition
+             * @description Test runs only: an unsaved workflow definition (JSON).
+             */
+            definition?: string | null;
         };
-        /** BulkDeleteWorkflowsBody */
-        BulkDeleteWorkflowsBody: {
+        /** BulkDelete */
+        BulkDelete: {
             /** Ids */
             ids: string[];
         };
-        /** CallSeriesPointSchema */
-        CallSeriesPointSchema: {
+        /** CallsPerDay */
+        CallsPerDay: {
             /** Day */
             day: string;
             /** Calls */
             calls: number;
         };
-        /** CatalogModelEntry */
-        CatalogModelEntry: {
+        /**
+         * Condition
+         * @description ``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``.
+         */
+        "Condition-Input": {
             /** Id */
             id: string;
-            /** Label */
-            label: string;
+            left: components["schemas"]["Operand-Input"];
             /**
-             * Description
-             * @default
+             * Operator
+             * @default ==
+             * @enum {string}
              */
-            description: string;
+            operator: "==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY";
+            right?: components["schemas"]["Operand-Input"] | null;
+            /** Arithmeticop */
+            arithmeticOp?: ("+" | "-" | "*" | "/") | null;
+            leftExtra?: components["schemas"]["Operand-Input"] | null;
+            tableAggregate?: components["schemas"]["TableAggregate-Input"] | null;
+        };
+        /**
+         * Condition
+         * @description ``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``.
+         */
+        "Condition-Output": {
+            /** Id */
+            id: string;
+            left: components["schemas"]["Operand-Output"];
             /**
-             * Servedmodel
-             * @default
+             * Operator
+             * @default ==
+             * @enum {string}
              */
-            servedModel: string;
-            /**
-             * Available
-             * @default true
-             */
-            available: boolean;
-            /** Availabilitynote */
-            availabilityNote: string | null;
+            operator: "==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY";
+            right: components["schemas"]["Operand-Output"] | null;
+            /** Arithmeticop */
+            arithmeticOp: ("+" | "-" | "*" | "/") | null;
+            leftExtra: components["schemas"]["Operand-Output"] | null;
+            tableAggregate: components["schemas"]["TableAggregate-Output"] | null;
         };
-        /** ConfirmUploadItem */
-        ConfirmUploadItem: {
-            /** Storagekey */
-            storageKey: string;
-            /** Filename */
-            fileName: string;
-            /** Mimetype */
-            mimeType: string;
-            /** Size */
-            size: number;
-        };
-        /** ConfirmUploadRequest */
-        ConfirmUploadRequest: {
-            /** Storagekeys */
-            storageKeys: string[];
-        };
-        /** ConfirmUploadResponse */
-        ConfirmUploadResponse: {
-            /** Uploads */
-            uploads: components["schemas"]["ConfirmUploadItem"][];
-        };
-        /** CreateRunJsonBody */
-        CreateRunJsonBody: {
-            snapshot?: components["schemas"]["RunSnapshotBody"] | null;
-            /**
-             * Filebindings
-             * @default []
-             */
-            fileBindings: components["schemas"]["StoredFileBinding"][];
-        };
-        /** CreateWorkflowBody */
-        CreateWorkflowBody: {
+        /** CreateWorkflow */
+        CreateWorkflow: {
             /**
              * Name
              * @default Untitled workflow
@@ -578,305 +490,28 @@ export interface components {
             description: string;
             /**
              * Owner
-             * @default Me
+             * @default
              */
             owner: string;
         };
-        /** DashboardResponse */
-        DashboardResponse: {
-            metrics: components["schemas"]["MetricsResponse"];
+        /** Dashboard */
+        Dashboard: {
+            /** Kpis */
+            kpis: components["schemas"]["Kpi"][];
+            /** Performanceseries */
+            performanceSeries: components["schemas"]["DayRuns"][];
+            /** Failuresbyseverity */
+            failuresBySeverity: components["schemas"]["SeverityShare"][];
+            /** Staleruns */
+            staleRuns: number;
+            queue: components["schemas"]["QueueCounts"];
             /** Audits */
             audits: components["schemas"]["AuditListItem"][];
             /** Workflows */
-            workflows: components["schemas"]["WorkflowSchema-Output"][];
-            queue: components["schemas"]["QueueSnapshot"];
+            workflows: components["schemas"]["WorkflowOut"][];
         };
-        /** DeployWorkflowBody */
-        DeployWorkflowBody: {
-            /** Apikey */
-            apiKey?: string | null;
-        };
-        /** DocumentDefSchema */
-        "DocumentDefSchema-Input": {
-            /** Id */
-            id: string;
-            /**
-             * Documenttype
-             * @default
-             */
-            documentType: string;
-            /** Schema */
-            schema?: components["schemas"]["SchemaFieldSchema-Input"][];
-            /**
-             * Extractioninstructions
-             * @default
-             */
-            extractionInstructions: string;
-            /**
-             * Markdownextraction
-             * @description When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).
-             * @default false
-             */
-            markdownExtraction: boolean;
-            /**
-             * Extractioniclexamples
-             * @description NuExtract in-context extraction examples (developer message pairs).
-             */
-            extractionIclExamples?: components["schemas"]["ExtractionIclExampleSchema-Input"][];
-        };
-        /** DocumentDefSchema */
-        "DocumentDefSchema-Output": {
-            /** Id */
-            id: string;
-            /**
-             * Documenttype
-             * @default
-             */
-            documentType: string;
-            /** Schema */
-            schema: components["schemas"]["SchemaFieldSchema-Output"][];
-            /**
-             * Extractioninstructions
-             * @default
-             */
-            extractionInstructions: string;
-            /**
-             * Markdownextraction
-             * @description When the document has no schema fields, run NuExtract document-to-Markdown instead of structured extraction (not in parallel with fields).
-             * @default false
-             */
-            markdownExtraction: boolean;
-            /**
-             * Extractioniclexamples
-             * @description NuExtract in-context extraction examples (developer message pairs).
-             */
-            extractionIclExamples: components["schemas"]["ExtractionIclExampleSchema-Output"][];
-        };
-        /** DryRunBody */
-        DryRunBody: {
-            /**
-             * Fields
-             * @default []
-             */
-            fields: components["schemas"]["DryRunFieldInput"][];
-            /**
-             * Rules
-             * @default []
-             */
-            rules: components["schemas"]["DryRunRuleInput"][];
-            /** Documents */
-            documents?: components["schemas"]["DocumentDefSchema-Input"][] | null;
-            /** Rulesfull */
-            rulesFull?: components["schemas"]["WorkflowRuleSchema-Input"][] | null;
-        };
-        /** DryRunExtracted */
-        DryRunExtracted: {
-            /** Field */
-            field: string;
-            /** Value */
-            value: string;
-            /** Matched */
-            matched: boolean;
-        };
-        /** DryRunFieldInput */
-        DryRunFieldInput: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /**
-             * Description
-             * @default
-             */
-            description: string;
-            /**
-             * Templatetype
-             * @default verbatim-string
-             */
-            templateType: string;
-            /** Samplevalue */
-            sampleValue?: string | null;
-        };
-        /** DryRunResponse */
-        DryRunResponse: {
-            /** Extracted */
-            extracted: components["schemas"]["DryRunExtracted"][];
-            /** Ruleresults */
-            ruleResults: components["schemas"]["DryRunRuleResult"][];
-        };
-        /** DryRunRuleInput */
-        DryRunRuleInput: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Kind */
-            kind: string;
-            /**
-             * Body
-             * @default
-             */
-            body: string;
-            /**
-             * Severity
-             * @default reject
-             */
-            severity: string;
-            /** Conditions */
-            conditions?: {
-                [key: string]: unknown;
-            }[] | null;
-            /** Conditionjunction */
-            conditionJunction?: string | null;
-        };
-        /** DryRunRuleResult */
-        DryRunRuleResult: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Kind */
-            kind: string;
-            /** Status */
-            status: string;
-            /** Detail */
-            detail: string;
-        };
-        /** ExtractionIclExampleSchema */
-        "ExtractionIclExampleSchema-Input": {
-            /**
-             * Input
-             * @default
-             */
-            input: string;
-            /**
-             * Output
-             * @default
-             */
-            output: string;
-        };
-        /** ExtractionIclExampleSchema */
-        "ExtractionIclExampleSchema-Output": {
-            /**
-             * Input
-             * @default
-             */
-            input: string;
-            /**
-             * Output
-             * @default
-             */
-            output: string;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** HealthAlert */
-        HealthAlert: {
-            /** Id */
-            id: string;
-            /** Severity */
-            severity: string;
-            /** Titlekey */
-            titleKey: string;
-            /** Detailkey */
-            detailKey: string;
-            /** Href */
-            href: string | null;
-        };
-        /** HealthLiveResponse */
-        HealthLiveResponse: {
-            /**
-             * Status
-             * @constant
-             */
-            status: "ok";
-        };
-        /** HealthReadinessResponse */
-        HealthReadinessResponse: {
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "ok" | "degraded";
-            /** Redisok */
-            redisOk: boolean;
-            /** Llamacpp */
-            llamacpp: boolean | null;
-            /** Directuploadenabled */
-            directUploadEnabled: boolean;
-            /** Cacheenabled */
-            cacheEnabled: boolean;
-            /** Dbpoolsize */
-            dbPoolSize: number;
-            /** Queuebackend */
-            queueBackend: string;
-            /** Ratelimitenabled */
-            rateLimitEnabled: boolean;
-            /** Queuedruns */
-            queuedRuns: number;
-            /** Runningruns */
-            runningRuns: number;
-            /** Inflightruns */
-            inflightRuns: number;
-            /** Authenabled */
-            authEnabled: boolean;
-            /** Oidcenabled */
-            oidcEnabled: boolean;
-            workerPools: components["schemas"]["WorkerPoolsHealth"];
-            /** Taskiqconfigured */
-            taskiqConfigured: boolean;
-        };
-        /** KpiMetric */
-        KpiMetric: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Value */
-            value: string;
-            /** Rawvalue */
-            rawValue: number;
-            /** Delta */
-            delta: number;
-            /** Deltaunit */
-            deltaUnit: string;
-            /** Direction */
-            direction: string;
-            /** Positive */
-            positive: boolean;
-            /** Series */
-            series: components["schemas"]["KpiSeriesPoint"][];
-            /** Icon */
-            icon: string;
-        };
-        /** KpiSeriesPoint */
-        KpiSeriesPoint: {
-            /** Day */
-            day: string;
-            /** Value */
-            value: number;
-        };
-        /** MetricsResponse */
-        MetricsResponse: {
-            /** Kpis */
-            kpis: components["schemas"]["KpiMetric"][];
-            /** Performanceseries */
-            performanceSeries: components["schemas"]["PerformancePoint"][];
-            /** Violationbreakdown */
-            violationBreakdown: components["schemas"]["ViolationBreakdown"][];
-            /** Healthalerts */
-            healthAlerts: components["schemas"]["HealthAlert"][];
-        };
-        /** ModelsCatalogResponse */
-        ModelsCatalogResponse: {
-            /** Models */
-            models: components["schemas"]["CatalogModelEntry"][];
-        };
-        /** PerformancePoint */
-        PerformancePoint: {
+        /** DayRuns */
+        DayRuns: {
             /** Day */
             day: string;
             /** Runs */
@@ -884,210 +519,362 @@ export interface components {
             /** Prevruns */
             prevRuns: number;
         };
-        /** PlatformConfigResponse */
-        PlatformConfigResponse: {
-            /** Appname */
-            appName: string;
-            /** Queuebackend */
-            queueBackend: string;
-            /** Directuploadenabled */
-            directUploadEnabled: boolean;
-            /** Cacheenabled */
-            cacheEnabled: boolean;
-            /** Ratelimitenabled */
-            rateLimitEnabled: boolean;
-            /** Servedmodel */
-            servedModel: string;
-            /** Nuextractmaxpagesperrequest */
-            nuextractMaxPagesPerRequest: number | null;
-            /** Llamacppbaseurl */
-            llamacppBaseUrl: string;
-            /** Maxuploadbytes */
-            maxUploadBytes: number;
-            /** Maxuploadfiles */
-            maxUploadFiles: number;
-            /** Staleruntimeoutminutes */
-            staleRunTimeoutMinutes: number;
-            /** Queuedstaletimeoutminutes */
-            queuedStaleTimeoutMinutes: number;
-            /** Workertasktimeoutminutes */
-            workerTaskTimeoutMinutes: number;
-            /** Maintenanceintervalseconds */
-            maintenanceIntervalSeconds: number;
-            /** Workerpools */
-            workerPools: {
-                [key: string]: string;
-            };
-            /**
-             * Taskiqconfigured
-             * @default false
-             */
-            taskiqConfigured: boolean;
-            /**
-             * Healthzprobeinference
-             * @default false
-             */
-            healthzProbeInference: boolean;
-        };
-        /** PresignFileRequest */
-        PresignFileRequest: {
-            /** Filename */
-            fileName: string;
-            /** Mimetype */
-            mimeType: string;
-            /** Size */
-            size: number;
-            /** Documentid */
-            documentId?: string | null;
-        };
-        /** PresignRequest */
-        PresignRequest: {
-            /** Files */
-            files: components["schemas"]["PresignFileRequest"][];
-        };
-        /** PresignResponse */
-        PresignResponse: {
-            /**
-             * Uploadmode
-             * @description presigned | api
-             */
-            uploadMode: string;
-            /** Uploads */
-            uploads: components["schemas"]["PresignedUploadItem"][];
-        };
-        /** PresignedUploadItem */
-        PresignedUploadItem: {
+        /** DocumentDef */
+        "DocumentDef-Input": {
             /** Id */
             id: string;
-            /** Storagekey */
-            storageKey: string;
-            /** Filename */
-            fileName: string;
-            /** Mimetype */
-            mimeType: string;
-            /** Size */
-            size: number;
-            /** Documentid */
-            documentId: string | null;
-            /** Uploadurl */
-            uploadUrl: string | null;
             /**
-             * Method
-             * @default PUT
+             * Documenttype
+             * @default
              */
-            method: string;
-            /** Headers */
-            headers: {
-                [key: string]: string;
-            };
+            documentType: string;
+            /** Schema */
+            schema?: components["schemas"]["SchemaField-Input"][];
+            /**
+             * Extractioninstructions
+             * @default
+             */
+            extractionInstructions: string;
+            /**
+             * Markdownextraction
+             * @description Transcribe the document to Markdown when it has no fields.
+             * @default false
+             */
+            markdownExtraction: boolean;
+            /** Extractioniclexamples */
+            extractionIclExamples?: components["schemas"]["IclExample"][];
         };
-        /** QueueSnapshot */
-        QueueSnapshot: {
-            /** Queuedruns */
-            queuedRuns: number;
-            /** Runningruns */
-            runningRuns: number;
-            /** Inflightruns */
-            inflightRuns: number;
-        };
-        /** RuleLibraryResponse */
-        RuleLibraryResponse: {
-            /** Rules */
-            rules: components["schemas"]["RuleTemplateSchema"][];
-        };
-        /** RuleTemplateSchema */
-        RuleTemplateSchema: {
+        /** DocumentDef */
+        "DocumentDef-Output": {
             /** Id */
             id: string;
+            /**
+             * Documenttype
+             * @default
+             */
+            documentType: string;
+            /** Schema */
+            schema: components["schemas"]["SchemaField-Output"][];
+            /**
+             * Extractioninstructions
+             * @default
+             */
+            extractionInstructions: string;
+            /**
+             * Markdownextraction
+             * @description Transcribe the document to Markdown when it has no fields.
+             * @default false
+             */
+            markdownExtraction: boolean;
+            /** Extractioniclexamples */
+            extractionIclExamples: components["schemas"]["IclExample"][];
+        };
+        /** ExtractionMeta */
+        ExtractionMeta: {
+            /**
+             * Extractionms
+             * @default 0
+             */
+            extractionMs: number;
+            /**
+             * Cachehit
+             * @default false
+             */
+            cacheHit: boolean;
+            /**
+             * Fieldsextracted
+             * @default 0
+             */
+            fieldsExtracted: number;
+            /**
+             * Pagesrendered
+             * @default 0
+             */
+            pagesRendered: number;
+            /**
+             * Pagessent
+             * @default 0
+             */
+            pagesSent: number;
+            /**
+             * Rawtext
+             * @description The model's JSON answer.
+             */
+            rawText: string | null;
+            /** Markdowntext */
+            markdownText: string | null;
+        };
+        /** FailingRule */
+        FailingRule: {
             /** Name */
             name: string;
-            /** Kind */
-            kind: string;
-            /** Scope */
-            scope: string;
-            /** Description */
-            description: string;
-            /** Body */
-            body: string;
+            /** Count */
+            count: number;
             /** Severity */
             severity: string;
         };
-        /** RuleValidationItem */
-        RuleValidationItem: {
-            /** Ruleid */
-            ruleId: string;
-            /** Issues */
-            issues: string[];
-            /** Checks */
-            checks: string[];
+        /** HTTPValidationError */
+        HTTPValidationError: {
+            /** Detail */
+            detail?: components["schemas"]["ValidationError"][];
         };
-        /** RunAuditDetail */
-        RunAuditDetail: {
-            /** Id */
-            id: string;
-            /** Workflowid */
-            workflowId: string;
-            /** Workflowname */
-            workflowName: string;
-            /** Status */
-            status: string;
-            /** Source */
-            source: string;
-            /** Createdat */
-            createdAt: string;
-            /** Documents */
-            documents: components["schemas"]["RunAuditDocument"][];
-            /** Ruleresults */
-            ruleResults: components["schemas"]["RunAuditRule"][];
-            summary: components["schemas"]["RunSummary"];
-            metadata: components["schemas"]["RunAuditMetadata"] | null;
-        };
-        /** RunAuditDocument */
-        RunAuditDocument: {
-            /** Id */
-            id: string;
-            /** Documenttype */
-            documentType: string;
-            /** Filename */
-            fileName: string | null;
-            /** Fields */
-            fields: components["schemas"]["RunAuditField"][];
-            extraction: components["schemas"]["RunDocumentExtractionMeta"] | null;
-        };
-        /** RunAuditField */
-        RunAuditField: {
-            /** Key */
-            key: string;
+        /** Health */
+        Health: {
             /**
-             * Description
-             * @default
+             * Status
+             * @enum {string}
              */
-            description: string;
+            status: "ok" | "degraded";
+            /**
+             * Database
+             * @default true
+             */
+            database: boolean;
+            /**
+             * Redis
+             * @default true
+             */
+            redis: boolean;
+        };
+        /**
+         * IclExample
+         * @description A NuExtract in-context example: input text and the JSON it should produce.
+         */
+        IclExample: {
+            /** Input */
+            input: string;
+            /** Output */
+            output: string;
+        };
+        /** Kpi */
+        Kpi: {
+            /**
+             * Id
+             * @enum {string}
+             */
+            id: "auditsWeek" | "passRate" | "failures" | "pendingReview";
+            /** Value */
+            value: number;
+            /** Previous */
+            previous: number;
+            /** Series */
+            series: components["schemas"]["KpiPoint"][];
+        };
+        /** KpiPoint */
+        KpiPoint: {
+            /** Day */
+            day: string;
+            /** Value */
+            value: number;
+        };
+        /**
+         * Operand
+         * @description A field reference (``total`` or ``invoice.total``) or a literal typed by the user.
+         */
+        "Operand-Input": {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "field" | "literal";
             /**
              * Value
              * @default
              */
             value: string;
+        };
+        /**
+         * Operand
+         * @description A field reference (``total`` or ``invoice.total``) or a literal typed by the user.
+         */
+        "Operand-Output": {
             /**
-             * Type
-             * @default string
+             * Kind
+             * @enum {string}
              */
-            type: string;
-            /** Confidence */
-            confidence: number | null;
+            kind: "field" | "literal";
             /**
-             * Extracted
-             * @default true
+             * Value
+             * @default
              */
-            extracted: boolean;
+            value: string;
+        };
+        /** PlatformConfig */
+        PlatformConfig: {
+            /** Servedmodel */
+            servedModel: string;
+            /** Llamacppbaseurl */
+            llamacppBaseUrl: string;
+            /** Modelavailable */
+            modelAvailable: boolean;
+            /** Cacheenabled */
+            cacheEnabled: boolean;
+            /** Maxuploadbytes */
+            maxUploadBytes: number;
+            /** Maxuploadfiles */
+            maxUploadFiles: number;
+            /** Maxpagesperdocument */
+            maxPagesPerDocument: number | null;
+            /** Runtimeoutminutes */
+            runTimeoutMinutes: number;
+        };
+        /** ProgressStep */
+        ProgressStep: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
             /**
-             * Flagged
+             * Status
+             * @default pending
+             * @enum {string}
+             */
+            status: "pending" | "active" | "done";
+            /** Detail */
+            detail: string | null;
+            /** Durationms */
+            durationMs: number | null;
+            /**
+             * Cachehit
              * @default false
              */
-            flagged: boolean;
+            cacheHit: boolean;
         };
-        /** RunAuditMetadata */
-        RunAuditMetadata: {
+        /** QueueCounts */
+        QueueCounts: {
+            /** Queuedruns */
+            queuedRuns: number;
+            /** Runningruns */
+            runningRuns: number;
+        };
+        /**
+         * Rule
+         * @description A rule passes when every condition holds on the documents it applies to.
+         */
+        "Rule-Input": {
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Scope
+             * @default intra
+             * @enum {string}
+             */
+            scope: "intra" | "cross";
+            /** Appliesto */
+            appliesTo?: string[];
+            /**
+             * Severity
+             * @default reject
+             * @enum {string}
+             */
+            severity: "reject" | "flag";
+            /** Conditions */
+            conditions?: components["schemas"]["Condition-Input"][];
+        };
+        /**
+         * Rule
+         * @description A rule passes when every condition holds on the documents it applies to.
+         */
+        "Rule-Output": {
+            /** Id */
+            id: string;
+            /**
+             * Name
+             * @default
+             */
+            name: string;
+            /**
+             * Scope
+             * @default intra
+             * @enum {string}
+             */
+            scope: "intra" | "cross";
+            /** Appliesto */
+            appliesTo: string[];
+            /**
+             * Severity
+             * @default reject
+             * @enum {string}
+             */
+            severity: "reject" | "flag";
+            /** Conditions */
+            conditions: components["schemas"]["Condition-Output"][];
+        };
+        /** RuleCheck */
+        RuleCheck: {
+            /** Ruleid */
+            ruleId: string;
+            /** Issues */
+            issues: string[];
+            /**
+             * Checks
+             * @description Readable form of each condition, in order.
+             */
+            checks: string[];
+        };
+        /** RuleChecks */
+        RuleChecks: {
+            /** Rules */
+            rules: components["schemas"]["RuleCheck"][];
+        };
+        /** RunCreated */
+        RunCreated: {
+            /** Runid */
+            runId: string;
+            /**
+             * Status
+             * @default queued
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "failed";
+        };
+        /** RunProgress */
+        RunProgress: {
+            /** Label */
+            label: string;
+            /** Steps */
+            steps: components["schemas"]["ProgressStep"][];
+            /**
+             * Queueposition
+             * @description 1-based, while queued.
+             */
+            queuePosition: number | null;
+            /** Queuedepth */
+            queueDepth: number | null;
+        };
+        /**
+         * RunState
+         * @description What a client polls: status, live progress, and the report once done.
+         */
+        RunState: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "failed";
+            progress: components["schemas"]["RunProgress"] | null;
+            /** Error */
+            error: string | null;
+            result: components["schemas"]["AuditDetail"] | null;
+        };
+        /** RunSummary */
+        RunSummary: {
+            /** Total */
+            total: number;
+            /** Passed */
+            passed: number;
+            /** Failed */
+            failed: number;
+            /** Fieldsextracted */
+            fieldsExtracted: number;
+        };
+        /** RunTimings */
+        RunTimings: {
             /** Startedat */
             startedAt: string | null;
             /** Finishedat */
@@ -1108,174 +895,19 @@ export interface components {
              */
             validationMs: number;
         };
-        /** RunAuditRule */
-        RunAuditRule: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Kind */
-            kind: string;
-            /**
-             * Scope
-             * @default intra
-             */
-            scope: string;
-            /** Status */
-            status: string;
-            /** Severity */
-            severity: string;
-            /**
-             * Expression
-             * @default
-             */
-            expression: string;
-            /**
-             * Affectedfields
-             * @default []
-             */
-            affectedFields: string[];
-            /**
-             * Detail
-             * @default
-             */
-            detail: string;
-            /** Expectedvalue */
-            expectedValue: string | null;
-            /** Actualvalue */
-            actualValue: string | null;
-        };
-        /** RunCreatedResponse */
-        RunCreatedResponse: {
-            /** Runid */
-            runId: string;
-            /** Jobid */
-            jobId: string | null;
-            /**
-             * Status
-             * @default queued
-             */
-            status: string;
-        };
-        /** RunDocumentExtractionMeta */
-        RunDocumentExtractionMeta: {
-            /**
-             * Extractionms
-             * @default 0
-             */
-            extractionMs: number;
-            /**
-             * Cachehit
-             * @default false
-             */
-            cacheHit: boolean;
-            /**
-             * Gpucoldstartlikely
-             * @default false
-             */
-            gpuColdStartLikely: boolean;
-            /**
-             * Fieldsextracted
-             * @default 0
-             */
-            fieldsExtracted: number;
-            /** Markdowntext */
-            markdownText: string | null;
-            /** Rawtext */
-            rawText: string | null;
-            /**
-             * Markdownextraction
-             * @default false
-             */
-            markdownExtraction: boolean;
-            /** Pagesrendered */
-            pagesRendered: number | null;
-            /** Pagessent */
-            pagesSent: number | null;
-            /** Pagesdropped */
-            pagesDropped: number | null;
-        };
-        /** RunPollResponse */
-        RunPollResponse: {
-            /** Status */
-            status: string;
-            progress: components["schemas"]["RunProgressSchema"] | null;
-            result: components["schemas"]["RunAuditDetail"] | null;
-            /** Error */
-            error: string | null;
-        };
-        /** RunProgressSchema */
-        RunProgressSchema: {
-            /** Currentindex */
-            currentIndex: number;
-            /** Steps */
-            steps: components["schemas"]["RunProgressStepSchema"][];
-            /** Label */
-            label: string;
-            /** Queueposition */
-            queuePosition: number | null;
-            /** Queuedepth */
-            queueDepth: number | null;
-        };
-        /** RunProgressStepSchema */
-        RunProgressStepSchema: {
-            /** Id */
-            id: string;
-            /** Label */
-            label: string;
-            /** Status */
-            status: string;
-            /** Mode */
-            mode: string | null;
-            /** Kind */
-            kind: string | null;
-            /** Detail */
-            detail: string | null;
-            /** Durationms */
-            durationMs: number | null;
-            /**
-             * Cachehit
-             * @default false
-             */
-            cacheHit: boolean;
-            /**
-             * Gpucoldstarthint
-             * @default false
-             */
-            gpuColdStartHint: boolean;
-        };
         /**
-         * RunSnapshotBody
-         * @description Ephemeral workflow config for a single run - does not mutate the saved workflow.
+         * SchemaField
+         * @description One NuExtract template field.
+         *
+         *     ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+         *     ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
+         *     ``object-array`` (with ``children``).
          */
-        RunSnapshotBody: {
+        "SchemaField-Input": {
             /**
-             * Documents
-             * @default []
+             * Id
+             * @default
              */
-            documents: components["schemas"]["DocumentDefSchema-Input"][];
-            /**
-             * Rules
-             * @default []
-             */
-            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
-            /** Workflowname */
-            workflowName?: string | null;
-        };
-        /** RunSummary */
-        RunSummary: {
-            /** Total */
-            total: number;
-            /** Passed */
-            passed: number;
-            /** Failed */
-            failed: number;
-            /** Fieldsextracted */
-            fieldsExtracted: number;
-        };
-        /** SchemaFieldSchema */
-        "SchemaFieldSchema-Input": {
-            /** Id */
             id: string;
             /** Name */
             name: string;
@@ -1292,11 +924,21 @@ export interface components {
             /** Enumvalues */
             enumValues?: string[];
             /** Children */
-            children?: components["schemas"]["SchemaFieldSchema-Input"][];
+            children?: components["schemas"]["SchemaField-Input"][];
         };
-        /** SchemaFieldSchema */
-        "SchemaFieldSchema-Output": {
-            /** Id */
+        /**
+         * SchemaField
+         * @description One NuExtract template field.
+         *
+         *     ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+         *     ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
+         *     ``object-array`` (with ``children``).
+         */
+        "SchemaField-Output": {
+            /**
+             * Id
+             * @default
+             */
             id: string;
             /** Name */
             name: string;
@@ -1313,68 +955,76 @@ export interface components {
             /** Enumvalues */
             enumValues: string[];
             /** Children */
-            children: components["schemas"]["SchemaFieldSchema-Output"][];
+            children: components["schemas"]["SchemaField-Output"][];
         };
-        /** StoredFileBinding */
-        StoredFileBinding: {
-            /** Documentid */
-            documentId?: string | null;
-            /** Storagekey */
-            storageKey: string;
-            /** Mimetype */
-            mimeType: string;
-            /** Filename */
-            fileName: string;
-        };
-        /** TopFailingRuleSchema */
-        TopFailingRuleSchema: {
-            /** Name */
-            name: string;
-            /** Count */
-            count: number;
+        /** SeverityShare */
+        SeverityShare: {
             /** Severity */
             severity: string;
+            /** Share */
+            share: number;
         };
-        /** UploadCapabilitiesResponse */
-        UploadCapabilitiesResponse: {
-            /** Directuploadenabled */
-            directUploadEnabled: boolean;
-            /** Uploadmode */
-            uploadMode: string;
-            /** Maxuploadbytes */
-            maxUploadBytes: number;
-            /** Maxuploadfiles */
-            maxUploadFiles: number;
+        /**
+         * TableAggregate
+         * @description Sum or count rows of an object-array field (optionally filtered by a column).
+         */
+        "TableAggregate-Input": {
+            /**
+             * Fn
+             * @enum {string}
+             */
+            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
+            /**
+             * Tablefield
+             * @default
+             */
+            tableField: string;
+            /**
+             * Amountcolumn
+             * @default
+             */
+            amountColumn: string;
+            /**
+             * Filtercolumn
+             * @default
+             */
+            filterColumn: string;
+            /**
+             * Filtercontains
+             * @default
+             */
+            filterContains: string;
         };
-        /** UploadItem */
-        UploadItem: {
-            /** Id */
-            id: string;
-            /** Storagekey */
-            storageKey: string;
-            /** Filename */
-            fileName: string;
-            /** Mimetype */
-            mimeType: string;
-            /** Size */
-            size: number;
-        };
-        /** UploadResponse */
-        UploadResponse: {
-            /** Uploads */
-            uploads: components["schemas"]["UploadItem"][];
-        };
-        /** ValidateRulesBody */
-        ValidateRulesBody: {
-            /** Documents */
-            documents: components["schemas"]["DocumentDefSchema-Input"][];
-            /** Rules */
-            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
-        };
-        /** ValidateRulesResponse */
-        ValidateRulesResponse: {
-            /** Rules */
-            rules: components["schemas"]["RuleValidationItem"][];
+        /**
+         * TableAggregate
+         * @description Sum or count rows of an object-array field (optionally filtered by a column).
+         */
+        "TableAggregate-Output": {
+            /**
+             * Fn
+             * @enum {string}
+             */
+            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
+            /**
+             * Tablefield
+             * @default
+             */
+            tableField: string;
+            /**
+             * Amountcolumn
+             * @default
+             */
+            amountColumn: string;
+            /**
+             * Filtercolumn
+             * @default
+             */
+            filterColumn: string;
+            /**
+             * Filtercontains
+             * @default
+             */
+            filterContains: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -1389,125 +1039,59 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
-        /** ViolationBreakdown */
-        ViolationBreakdown: {
-            /** Type */
-            type: string;
-            /** Share */
-            share: number;
-            /** Color */
-            color: string;
+        /**
+         * WorkflowDefinition
+         * @description What a run executes; stored as JSON on the workflow and copied onto each run.
+         */
+        WorkflowDefinition: {
+            /** Documents */
+            documents?: components["schemas"]["DocumentDef-Input"][];
+            /** Rules */
+            rules?: components["schemas"]["Rule-Input"][];
         };
-        /** WorkerPoolsHealth */
-        WorkerPoolsHealth: {
-            /** Fast */
-            fast: string;
-            /** Extract */
-            extract: string;
+        /** WorkflowIn */
+        WorkflowIn: {
+            /** Documents */
+            documents?: components["schemas"]["DocumentDef-Input"][];
+            /** Rules */
+            rules?: components["schemas"]["Rule-Input"][];
+            /**
+             * Name
+             * @default Untitled workflow
+             */
+            name: string;
+            /**
+             * Description
+             * @default
+             */
+            description: string;
+            /**
+             * Status
+             * @default draft
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
+            /**
+             * Owner
+             * @default
+             */
+            owner: string;
         };
-        /** WorkflowApiStatsSchema */
-        WorkflowApiStatsSchema: {
-            /** Apicallstoday */
-            apiCallsToday: number;
-            /** Apicallstotal */
-            apiCallsTotal: number;
-            /** Avglatencyms */
-            avgLatencyMs: number;
-            /** Callseries */
-            callSeries: components["schemas"]["CallSeriesPointSchema"][];
-            /** Topfailingrules */
-            topFailingRules: components["schemas"]["TopFailingRuleSchema"][];
-        };
-        /** WorkflowListResponse */
-        WorkflowListResponse: {
+        /** WorkflowList */
+        WorkflowList: {
             /** Workflows */
-            workflows: components["schemas"]["WorkflowSchema-Output"][];
+            workflows: components["schemas"]["WorkflowOut"][];
         };
-        /** WorkflowResponse */
-        WorkflowResponse: {
-            workflow: components["schemas"]["WorkflowSchema-Output"];
-        };
-        /** WorkflowRuleSchema */
-        "WorkflowRuleSchema-Input": {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
+        /** WorkflowOut */
+        WorkflowOut: {
+            /** Documents */
+            documents: components["schemas"]["DocumentDef-Output"][];
+            /** Rules */
+            rules: components["schemas"]["Rule-Output"][];
             /**
-             * Kind
-             * @default logic
+             * Name
+             * @default Untitled workflow
              */
-            kind: string;
-            /**
-             * Scope
-             * @default intra
-             */
-            scope: string;
-            /**
-             * Appliesto
-             * @default []
-             */
-            appliesTo: string[];
-            /** Conditions */
-            conditions?: {
-                [key: string]: unknown;
-            }[] | null;
-            /** Conditionjunction */
-            conditionJunction?: string | null;
-            /**
-             * Body
-             * @default
-             */
-            body: string;
-            /**
-             * Severity
-             * @default reject
-             */
-            severity: string;
-        };
-        /** WorkflowRuleSchema */
-        "WorkflowRuleSchema-Output": {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /**
-             * Kind
-             * @default logic
-             */
-            kind: string;
-            /**
-             * Scope
-             * @default intra
-             */
-            scope: string;
-            /**
-             * Appliesto
-             * @default []
-             */
-            appliesTo: string[];
-            /** Conditions */
-            conditions: {
-                [key: string]: unknown;
-            }[] | null;
-            /** Conditionjunction */
-            conditionJunction: string | null;
-            /**
-             * Body
-             * @default
-             */
-            body: string;
-            /**
-             * Severity
-             * @default reject
-             */
-            severity: string;
-        };
-        /** WorkflowSchema */
-        "WorkflowSchema-Input": {
-            /** Id */
-            id: string;
-            /** Name */
             name: string;
             /**
              * Description
@@ -1517,105 +1101,38 @@ export interface components {
             /**
              * Status
              * @default draft
+             * @enum {string}
              */
-            status: string;
+            status: "draft" | "active" | "paused";
             /**
              * Owner
-             * @default Me
-             */
-            owner: string;
-            /** Lastrun */
-            lastRun?: string | null;
-            /**
-             * Successrate
-             * @default 0
-             */
-            successRate: number;
-            /**
-             * Totalruns
-             * @default 0
-             */
-            totalRuns: number;
-            /**
-             * Documents
-             * @default []
-             */
-            documents: components["schemas"]["DocumentDefSchema-Input"][];
-            /**
-             * Rules
-             * @default []
-             */
-            rules: components["schemas"]["WorkflowRuleSchema-Input"][];
-            /** Deployedat */
-            deployedAt?: string | null;
-            /**
-             * Apikey
-             * @description Plaintext key — returned only once on deploy.
-             */
-            apiKey?: string | null;
-            /**
-             * Apikeyhint
-             * @description Masked hint for deployed workflows.
-             */
-            apiKeyHint?: string | null;
-            apiStats?: components["schemas"]["WorkflowApiStatsSchema"] | null;
-        };
-        /** WorkflowSchema */
-        "WorkflowSchema-Output": {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /**
-             * Description
              * @default
              */
-            description: string;
-            /**
-             * Status
-             * @default draft
-             */
-            status: string;
-            /**
-             * Owner
-             * @default Me
-             */
             owner: string;
-            /** Lastrun */
-            lastRun: string | null;
-            /**
-             * Successrate
-             * @default 0
-             */
-            successRate: number;
-            /**
-             * Totalruns
-             * @default 0
-             */
-            totalRuns: number;
-            /**
-             * Documents
-             * @default []
-             */
-            documents: components["schemas"]["DocumentDefSchema-Output"][];
-            /**
-             * Rules
-             * @default []
-             */
-            rules: components["schemas"]["WorkflowRuleSchema-Output"][];
+            /** Id */
+            id: string;
             /** Deployedat */
             deployedAt: string | null;
             /**
              * Apikey
-             * @description Plaintext key — returned only once on deploy.
+             * @description Plaintext key, returned once on deploy.
              */
             apiKey: string | null;
-            /**
-             * Apikeyhint
-             * @description Masked hint for deployed workflows.
-             */
+            /** Apikeyhint */
             apiKeyHint: string | null;
-            apiStats: components["schemas"]["WorkflowApiStatsSchema"] | null;
+            /**
+             * Totalruns
+             * @default 0
+             */
+            totalRuns: number;
+            /**
+             * Successrate
+             * @default 0
+             */
+            successRate: number;
+            /** Lastrun */
+            lastRun: string | null;
+            apiStats: components["schemas"]["ApiStats"] | null;
         };
     };
     responses: never;
@@ -1626,52 +1143,10 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    health_live_v1_healthz_live_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthLiveResponse"];
-                };
-            };
-        };
-    };
-    health_readiness_v1_healthz_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HealthReadinessResponse"];
-                };
-            };
-        };
-    };
     list_workflows_v1_workflows_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -1683,16 +1158,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkflowListResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["WorkflowList"];
                 };
             };
         };
@@ -1700,15 +1166,13 @@ export interface operations {
     create_workflow_v1_workflows_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateWorkflowBody"];
+                "application/json": components["schemas"]["CreateWorkflow"];
             };
         };
         responses: {
@@ -1718,7 +1182,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkflowResponse"];
+                    "application/json": components["schemas"]["WorkflowOut"];
                 };
             };
             /** @description Validation Error */
@@ -1732,18 +1196,16 @@ export interface operations {
             };
         };
     };
-    bulk_delete_workflows_v1_workflows_bulk_delete_post: {
+    delete_workflows_v1_workflows_bulk_delete_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BulkDeleteWorkflowsBody"];
+                "application/json": components["schemas"]["BulkDelete"];
             };
         };
         responses: {
@@ -1765,18 +1227,18 @@ export interface operations {
             };
         };
     };
-    get_workflow_v1_workflows__workflow_id__get: {
+    check_rules_v1_workflows_check_rules_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowDefinition"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -1784,7 +1246,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkflowResponse"];
+                    "application/json": components["schemas"]["RuleChecks"];
                 };
             };
             /** @description Validation Error */
@@ -1798,12 +1260,41 @@ export interface operations {
             };
         };
     };
-    update_workflow_v1_workflows__workflow_id__put: {
+    get_workflow_v1_workflows__workflow_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
+            header?: never;
+            path: {
+                workflow_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_workflow_v1_workflows__workflow_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
             path: {
                 workflow_id: string;
             };
@@ -1811,7 +1302,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WorkflowSchema-Input"];
+                "application/json": components["schemas"]["WorkflowIn"];
             };
         };
         responses: {
@@ -1821,7 +1312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WorkflowResponse"];
+                    "application/json": components["schemas"]["WorkflowOut"];
                 };
             };
             /** @description Validation Error */
@@ -1838,9 +1329,7 @@ export interface operations {
     delete_workflow_v1_workflows__workflow_id__delete: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 workflow_id: string;
             };
@@ -1869,120 +1358,9 @@ export interface operations {
     deploy_workflow_v1_workflows__workflow_id__deploy_post: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["DeployWorkflowBody"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["WorkflowResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    validate_rules_v1_workflows_validate_rules_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ValidateRulesBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ValidateRulesResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    dry_run_v1_workflows__workflow_id__dry_run_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DryRunBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DryRunResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_run_status_v1_runs__run_id__status_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                run_id: string;
             };
             cookie?: never;
         };
@@ -1994,7 +1372,42 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunPollResponse"];
+                    "application/json": components["schemas"]["WorkflowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_run_v1_workflows__workflow_id__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_start_run_v1_workflows__workflow_id__runs_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunCreated"];
                 };
             };
             /** @description Validation Error */
@@ -2010,13 +1423,8 @@ export interface operations {
     };
     get_run_v1_runs__run_id__get: {
         parameters: {
-            query?: {
-                /** @description If false, same as /status (lightweight). */
-                full?: boolean;
-            };
-            header?: {
-                authorization?: string | null;
-            };
+            query?: never;
+            header?: never;
             path: {
                 run_id: string;
             };
@@ -2030,7 +1438,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunPollResponse"];
+                    "application/json": components["schemas"]["RunState"];
                 };
             };
             /** @description Validation Error */
@@ -2044,12 +1452,10 @@ export interface operations {
             };
         };
     };
-    stream_run_events_v1_runs__run_id__events_get: {
+    run_events_v1_runs__run_id__events_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
                 run_id: string;
             };
@@ -2057,88 +1463,14 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Server-Sent Events stream of run progress updates */
+            /** @description Progress events */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
-                    "text/event-stream": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_run_json_v1_workflows__workflow_id__runs_json_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateRunJsonBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunCreatedResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_run_v1_workflows__workflow_id__runs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path: {
-                workflow_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_create_run_v1_workflows__workflow_id__runs_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunCreatedResponse"];
+                    "text/event-stream": unknown;
                 };
             };
             /** @description Validation Error */
@@ -2158,9 +1490,7 @@ export interface operations {
                 limit?: number;
                 offset?: number;
             };
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2172,7 +1502,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AuditListResponse"];
+                    "application/json": components["schemas"]["AuditList"];
                 };
             };
             /** @description Validation Error */
@@ -2186,14 +1516,12 @@ export interface operations {
             };
         };
     };
-    get_audit_v1_audits__audit_id__get: {
+    get_audit_v1_audits__run_id__get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path: {
-                audit_id: string;
+                run_id: string;
             };
             cookie?: never;
         };
@@ -2205,7 +1533,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RunAuditDetail"];
+                    "application/json": components["schemas"]["AuditDetail"];
                 };
             };
             /** @description Validation Error */
@@ -2219,12 +1547,10 @@ export interface operations {
             };
         };
     };
-    get_metrics_v1_metrics_get: {
+    live_v1_healthz_live_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2236,26 +1562,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MetricsResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Health"];
                 };
             };
         };
     };
-    dashboard_bundle_v1_dashboard_get: {
+    ready_v1_healthz_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2267,26 +1582,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DashboardResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Health"];
                 };
             };
         };
     };
-    rules_library_v1_rules_library_get: {
+    platform_config_v1_platform_config_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2298,26 +1602,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RuleLibraryResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["PlatformConfig"];
                 };
             };
         };
     };
-    upload_capabilities_v1_uploads_capabilities_get: {
+    dashboard_v1_dashboard_get: {
         parameters: {
             query?: never;
-            header?: {
-                authorization?: string | null;
-            };
+            header?: never;
             path?: never;
             cookie?: never;
         };
@@ -2329,183 +1622,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UploadCapabilitiesResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    presign_uploads_v1_uploads_presign_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PresignRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PresignResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    confirm_uploads_v1_uploads_confirm_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ConfirmUploadRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ConfirmUploadResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    upload_files_v1_uploads_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": components["schemas"]["Body_upload_files_v1_uploads_post"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["UploadResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_platform_config_v1_platform_config_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlatformConfigResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    get_models_catalog_v1_models_catalog_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                authorization?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ModelsCatalogResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": components["schemas"]["Dashboard"];
                 };
             };
         };

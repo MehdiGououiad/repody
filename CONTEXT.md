@@ -37,18 +37,17 @@ sequenceDiagram
   participant API as FastAPI /v1
   participant Store as MinIO (S3)
   participant Q as Redis / Taskiq
-  participant W as Worker (extract|fast)
+  participant W as Worker
   participant Inf as External VLM
 
-  UI->>API: POST presign / confirm upload
-  API->>Store: storage key
-  UI->>API: POST /workflows/{id}/runs
-  API->>Q: enqueue audit-run task (Taskiq)
+  UI->>API: POST /workflows/{id}/runs (multipart files)
+  API->>Store: put files
+  API->>Q: send process_run (Taskiq)
   Q->>W: execute run task
   W->>Store: fetch PDF/image
   W->>Inf: document-model chat completion
   Inf-->>W: structured JSON fields
-  W->>W: validate rules (logic + optional LLM)
+  W->>W: check rules
   W->>API: persist Run / RuleResults
   UI->>API: GET /runs/{id} (poll / SSE)
 ```
@@ -57,38 +56,38 @@ sequenceDiagram
 
 ```
 backend/src/repody/
-├── api/                 HTTP routers → app use cases
-├── app/                 Application use cases (run, workflow, uploads, …)
-├── runtime/             AppError · run status · metrics
-├── extraction/          pipeline · vlm · nuextract · render
-├── inference/           OpenAI-compat clients
-├── rules/               Logic rule evaluator
-├── catalog/             Document model + llama-server status
-├── taskiq/              Worker entrypoint + async tasks
-├── infra/               db · storage · auth · observability
-├── schemas/             HTTP Pydantic DTOs
-└── settings/            AUDIT_* settings
+├── main.py            FastAPI app, lifespan, error handler
+├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
+├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance
+├── extraction/        NuExtract request, page rendering, llama-server client, field values
+├── rules/             Typed conditions and their evaluation
+├── schemas/           Pydantic models (API and stored workflow definition)
+├── auth.py            Keycloak JWT, roles, workflow API keys
+├── queue.py · worker.py   Taskiq broker, dispatch, worker entry point
+├── models.py · db.py  SQLAlchemy tables and sessions
+├── storage.py         S3 documents
+└── settings.py        AUDIT_* settings
 ```
 
-**Hot path:** `app/run/worker.py` `process_run`: claim (conditional UPDATE) -> extract each document -> evaluate rules -> `complete_run` ([ADR 008](./docs/adr/008-flat-run-pipeline.md)).
+**Hot path:** `app/execute.py` `process_run`: claim (conditional UPDATE) -> extract each document -> check rules -> save the report ([ADR 009](./docs/adr/009-simple-backend.md)).
 
 ### Bounded contexts
 
 | Context | Responsibility | Key modules |
 |---------|----------------|-------------|
-| **Workflow configuration** | Templates, rules, deployment | `app/workflow/` |
-| **Audit execution** | Claim/complete, queue, worker | `app/run/` (`state`, `worker`, `dispatch`), `taskiq/` |
-| **Platform / catalog** | AppError, document model status | `runtime/`, `catalog/` |
+| **Workflow configuration** | Definition (documents + rules), deployment, API keys | `app/workflows.py`, `schemas/workflow.py` |
+| **Run execution** | Start, queue, process, progress, upkeep | `app/runs.py`, `app/execute.py`, `app/progress.py`, `queue.py` |
+| **Rules** | Typed conditions and their evaluation | `rules/` |
 
 ### Run pipeline
 
-Capacity pools: `extract` / `fast`. State transitions live in `app/run/state.py` (single conditional UPDATEs; terminal states publish over SSE). `RunStatus` lives in `runtime/run/status.py`. Worker entry: `app/run/worker.py`. Dispatch: `app/run/dispatch.py` (send after commit, `runs.dispatched_at`, maintenance re-sends). Decision: [ADR 008](./docs/adr/008-flat-run-pipeline.md).
+One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance resends lost ones and fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES`. The worker's claim is a conditional UPDATE, so a duplicate delivery does nothing. Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
 
 ## Extraction
 
-`extraction/pipeline.py` `extract_document` is the one entrypoint: Redis cache, then NuExtract on the
-llama-server (`extraction/vlm.py`). There is one document model (`repody:vlm`); its live status
-comes from `catalog/status.py` (`GET /v1/models` on the llama-server).
+`extraction/pipeline.py` `extract` is the one entry point: optional Redis cache, then NuExtract on the
+llama-server (`extraction/client.py`). Model availability is `GET /v1/models` on the llama-server,
+shown by `GET /v1/platform/config`.
 
 ## Inference
 
@@ -109,8 +108,8 @@ Next.js 16 App Router at repo root:
 
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
-| control | `repody-api` | Workflows, runs, uploads, dispatch |
-| workers | `repody-worker-extract`, `repody-worker-fast` | IDP pools |
+| control | `repody-api` | Workflows, runs, uploads, maintenance |
+| worker | `repody-worker` | Runs (one queue; scale by replicas) |
 | edge | `repody-web` | Next.js UI |
 | data plane | Postgres, Redis, object storage | Durable state + Taskiq broker |
 | auth | External OIDC | Authentication |
@@ -127,13 +126,13 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs
 
 ## Authorization
 
-Keycloak realm roles -> `infra/auth/permissions.py` (`ROLE_PERMISSIONS`). Routers use `require_permission(resource, action)`. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
+Keycloak realm roles -> `auth.py` (`ROLE_PERMISSIONS`). Routes declare `require("workflow:write")` and similar. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
 
 | Role | Typical access |
 |------|----------------|
-| `viewer` | Read workflows, runs, audits, models, rules |
-| `operator` | Viewer + write workflows, execute runs, upload, metrics, settings (read) |
-| `admin` | Operator + delete workflows, settings (write) |
+| `viewer` | Read workflows, runs and audits |
+| `operator` | Viewer + write workflows, start runs, dashboard and platform config |
+| `admin` | Operator + delete workflows |
 
 ## Tests
 

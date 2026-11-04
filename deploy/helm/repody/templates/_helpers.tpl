@@ -74,14 +74,16 @@ envFrom:
 {{/* Only the Secret keys the API and workers read (not the web's Auth.js secrets). */}}
 {{- define "repody.backendSecretEnv" -}}
 {{- $secret := required "existingSecret is required" .Values.existingSecret -}}
-{{- range $key := list "AUDIT_DATABASE_URL" "AUDIT_REDIS_URL" "AUDIT_MINIO_ACCESS_KEY" "AUDIT_MINIO_SECRET_KEY" }}
+{{- range $key := list "AUDIT_DATABASE_URL" "AUDIT_REDIS_URL" "AUDIT_S3_ACCESS_KEY" "AUDIT_S3_SECRET_KEY" }}
 - name: {{ $key }}
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: {{ $key }} }
 {{- end }}
-{{- range $key := list "AUDIT_LLAMACPP_API_KEY" "BUGSINK_DSN" }}
-- name: {{ $key }}
+- name: AUDIT_LLAMACPP_API_KEY
   valueFrom:
-    secretKeyRef: { name: {{ $secret }}, key: {{ $key }}, optional: true }
-{{- end }}
+    secretKeyRef: { name: {{ $secret }}, key: AUDIT_LLAMACPP_API_KEY, optional: true }
+# Errors go to Bugsink through the Sentry SDK.
+- name: SENTRY_DSN
+  valueFrom:
+    secretKeyRef: { name: {{ $secret }}, key: BUGSINK_DSN, optional: true }
 {{- end }}

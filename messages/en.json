@@ -66,7 +66,6 @@
     "deployWorkflow": "Deploy workflow",
     "redeployWorkflow": "Re-deploy",
     "of": "of",
-    "dismiss": "Dismiss",
     "skipToContent": "Skip to main content",
     "neverRun": "Never run",
     "newWorkflow": "New Workflow",
@@ -85,10 +84,6 @@
     "retry": "Retry"
   },
   "runProgress": {
-    "gpuColdStartTitle": "GPU cold start",
-    "gpuColdStartHint": "Serverless GPU — the first request after idle can take 1–2 minutes while a worker starts.",
-    "gpuColdStartActive": "Warming up serverless GPU… {elapsed}",
-    "gpuColdStartDone": "Included GPU cold start",
     "pagesTruncated": "Only {sent} of {total} pages analyzed",
     "queuePosition": "Queue position {position} of {depth}",
     "queueWaiting": "Waiting in queue…",
@@ -144,16 +139,11 @@
       "peakDay": "Peak day"
     },
     "violations": {
-      "title": "Failures by rule type",
-      "hint": "Share of failures this week.",
-      "types": {
-        "format": "Data format mismatch",
-        "missing": "Missing fields",
-        "logic": "Logic anomalies",
-        "llm": "LLM rule failures",
-        "other": "Other",
-        "none": "No failures"
-      }
+      "title": "Failures by severity",
+      "hint": "Share of this week's rule failures.",
+      "reject": "Reject",
+      "flag": "Flag",
+      "none": "No failures this week."
     },
     "getStarted": {
       "title": "Get your first audit running",
@@ -186,7 +176,6 @@
       "allRulesPassed": "All rules passed",
       "validationFailed": "Validation failed",
       "reviewRequired": "Review required",
-      "confidence": "Confidence",
       "value": "Extracted value",
       "field": "Field",
       "status": "Status",
@@ -211,7 +200,6 @@
       "id": "Audit ID",
       "status": "Status",
       "workflow": "Workflow",
-      "entity": "Entity",
       "timestamp": "Timestamp",
       "rows": "Rows",
       "summary": "{count, plural, =0 {No audits} one {# audit} other {# audits}}",
@@ -224,8 +212,6 @@
       "allStatuses": "All statuses",
       "workflow": "Workflow",
       "allWorkflows": "All workflows",
-      "entity": "Entity",
-      "allEntities": "All entities",
       "clearAll": "Clear all"
     },
     "status": {
@@ -270,7 +256,6 @@
         "extract": "What to extract",
         "extractHint": "Document types, fields, and extraction model",
         "rules": "Validation rules",
-        "rulesHint": "Logic checks on extracted values",
         "upload": "Test & deploy",
         "uploadHint": "Upload a sample → extract → validate in one run",
         "back": "Back",
@@ -321,16 +306,6 @@
           "starting": "Starting test run…",
           "saveWorkflow": "Save workflow",
           "saveWorkflowDetail": "Persisting your latest schema and rules on the server",
-          "uploadCheck": "Check upload mode",
-          "uploadCheckDetail": "Detecting direct-to-storage upload vs API fallback",
-          "uploadReuse": "Reuse uploaded files",
-          "uploadReuseDetail": "Same files as the last run — skipping re-upload ({files})",
-          "uploadPresign": "Prepare storage URLs",
-          "uploadPresignDetail": "Requesting secure upload links from the API",
-          "uploadTransfer": "Upload files",
-          "uploadTransferDetail": "Sending documents to object storage",
-          "uploadConfirm": "Verify uploads",
-          "uploadConfirmDetail": "Confirming files landed in storage and pass validation",
           "startRun": "Start audit job",
           "startRunDetail": "Creating the audit run and dispatching to workers",
           "pollRun": "Worker processing",
@@ -623,10 +598,7 @@
       "rules": {
         "title": "Validation rules",
         "active": "Active",
-        "library": "Library",
-        "addRule": "Add rule",
         "addLogic": "New logic rule",
-        "kindLogic": "Logic rule",
         "severityReject": "Reject on fail",
         "severityFlag": "Flag for review",
         "newLogicName": "Untitled logic rule",
@@ -634,9 +606,7 @@
         "hint": "Each rule references fields from step 1 and runs on extracted values.",
         "runsOnOcr": "Repody VLM extracts schema fields first. Logic checks run locally on the extracted values.",
         "appliesTo": "Scope",
-        "scopeIntra": "Within document",
         "scopeIntraShort": "Intra-doc",
-        "scopeCross": "Across documents",
         "scopeCrossShort": "Cross-doc",
         "selectOneDoc": "Document",
         "selectTwoDocs": "Document A → Document B",
@@ -646,7 +616,6 @@
         "unnamedDoc": "Document",
         "expressionLabel": "Logic expression",
         "onFail": "On fail",
-        "added": "Added",
         "conditions": {
           "literalPlaceholder": "value…",
           "literalDatePlaceholder": "YYYY-MM-DD",
@@ -764,11 +733,10 @@
     }
   },
   "health": {
-    "degraded": "Invoice Audit Pipeline degraded",
-    "degradedDetail": "3 consecutive failures in the last 30 minutes",
     "alerts": {
       "stale": {
-        "title": "Runs stuck in progress"
+        "title": "Runs stuck in progress",
+        "detail": "{count, plural, one {# run} other {# runs}} still running past the timeout."
       }
     }
   }

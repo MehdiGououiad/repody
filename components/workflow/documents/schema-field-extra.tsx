@@ -26,7 +26,7 @@ import {
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
-import { shortId } from "@/lib/utils";
+import { newSchemaField } from "@/lib/workflow/new-items";
 
 const CHILD_TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "advanced"];
 
@@ -258,17 +258,7 @@ function NestedChildrenEditor({
         variant="outline"
         size="sm"
         className="h-8 w-full text-[11px] sm:w-auto"
-        onClick={() =>
-          onChange([
-            ...fields,
-            {
-              id: `f${shortId()}`,
-              name: "",
-              description: "",
-              templateType: DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-            },
-          ])
-        }
+        onClick={() => onChange([...fields, newSchemaField()])}
       >
         <Plus className="h-3.5 w-3.5" />
         {addLabel}

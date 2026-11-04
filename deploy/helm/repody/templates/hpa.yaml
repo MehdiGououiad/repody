@@ -1,7 +1,4 @@
-{{- $components := dict "api" .Values.api "web" .Values.web }}
-{{- range $pool, $worker := .Values.workers }}
-{{- $_ := set $components (printf "worker-%s" $pool) $worker }}
-{{- end }}
+{{- $components := dict "api" .Values.api "web" .Values.web "worker" .Values.worker }}
 {{- range $component, $spec := $components }}
 {{- with $spec.autoscaling }}
 {{- if .enabled }}

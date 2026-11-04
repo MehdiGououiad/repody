@@ -67,7 +67,7 @@ API: `http://127.0.0.1:8081/v1` (model id from `LLAMACPP_MODEL_ALIAS`).
 
 ```powershell
 # backend/.env already sets AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
-docker compose --profile workers restart worker-extract
+docker compose --profile workers restart worker
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
@@ -106,14 +106,14 @@ Then align cluster admission in client values and restart:
 
 ```powershell
 pnpm llamacpp:restart
-docker compose --profile workers restart worker-extract
+docker compose --profile workers restart worker
 ```
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| Slow first request | Run `pnpm llamacpp:warmup` or set `LLAMACPP_WARMUP=on` in `paths.local.env` |
+| Slow first request | llama-server warms the model at start; the first image still pays for the vision projector |
 | `failed to process image` / Vulkan `ErrorDeviceLost` | Cap `--image-max-tokens` (and match `-ub` / `--mtmd-batch-max-tokens`). Try 1536 first; if unstable, fall back to 1024. Restart with `pnpm llamacpp:restart`. |
 | `/v1/models` missing multimodal | Check `LLAMACPP_MMPROJ` path and `--mmproj-offload` |
 | Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |

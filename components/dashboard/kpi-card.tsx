@@ -1,35 +1,34 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Coins,
-  Gavel,
-  GitBranch,
-  Timer,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { CheckCircle2, Gavel, GitBranch, Timer, TrendingDown, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { ChartContainer } from "@/components/dashboard/chart-container";
-import type { KpiMetric } from "@/lib/types";
+import type { Kpi } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const iconMap: Record<string, React.ElementType> = {
-  account_tree: GitBranch,
-  check_circle: CheckCircle2,
-  gavel: Gavel,
-  timer: Timer,
-  payments: Coins,
+const ICONS: Record<Kpi["id"], React.ElementType> = {
+  auditsWeek: GitBranch,
+  passRate: CheckCircle2,
+  failures: Gavel,
+  pendingReview: Timer,
 };
 
-export function KpiCard({ metric }: { metric: KpiMetric }) {
+/** Where fewer is better, a drop is good news. */
+const LOWER_IS_BETTER = new Set<Kpi["id"]>(["failures", "pendingReview"]);
+
+function formatKpi(id: Kpi["id"], value: number): string {
+  return id === "passRate" ? `${(value * 100).toFixed(1)}%` : String(Math.round(value));
+}
+
+export function KpiCard({ metric }: { metric: Kpi }) {
   const t = useTranslations("dashboard.kpi");
-  const Icon = iconMap[metric.icon] ?? GitBranch;
-  const labelKey = metric.id as Parameters<typeof t>[0];
-  const TrendIcon = metric.direction === "up" ? TrendingUp : TrendingDown;
-  const deltaStr = metric.deltaUnit === "percent" ? `${metric.delta}%` : `${metric.delta}`;
-  const positive = metric.positive;
+  const Icon = ICONS[metric.id];
+  const change = metric.value - metric.previous;
+  const TrendIcon = change >= 0 ? TrendingUp : TrendingDown;
+  const deltaStr =
+    metric.id === "passRate" ? `${(change * 100).toFixed(1)} pts` : `${Math.round(change)}`;
+  const positive = LOWER_IS_BETTER.has(metric.id) ? change <= 0 : change >= 0;
   const trendColor = positive ? "var(--success)" : "var(--danger)";
   const trendLabel = positive
     ? t("trendUp", { delta: deltaStr })
@@ -39,13 +38,13 @@ export function KpiCard({ metric }: { metric: KpiMetric }) {
     <div className="panel-elevated rounded-xl p-4 hover:border-accent-blue/25 transition-[border-color,box-shadow] duration-200 flex flex-col gap-3 overflow-hidden relative group">
       <div className="flex items-start justify-between">
         <span className="text-[11px] font-semibold tracking-wider uppercase text-on-surface-variant">
-          {t(labelKey)}
+          {t(metric.id)}
         </span>
         <Icon className="h-4 w-4 text-outline-variant" aria-hidden="true" />
       </div>
       <div className="flex items-baseline gap-2">
         <span className="font-display text-2xl font-semibold text-on-surface tracking-tight tabular-nums">
-          {metric.value}
+          {formatKpi(metric.id, metric.value)}
         </span>
         <span
           className={cn(

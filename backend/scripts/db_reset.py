@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Drop app schema, re-apply Alembic migrations, and seed demo data."""
+"""Drop every table, migrate to head and load the demo data (local development only)."""
 
 from __future__ import annotations
 
@@ -10,46 +9,30 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from repody.infra.db.base import async_session_factory, engine
-from repody.infra.db.seed import seed_database
-
-BACKEND_ROOT = Path(__file__).resolve().parents[1]
+from repody import db
+from repody.app.seed import seed
 
 
-async def _drop_public_schema() -> None:
-    async with engine.begin() as conn:
-        await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
+async def drop_schema() -> None:
+    async with db.engine.begin() as conn:
+        await conn.execute(text("DROP SCHEMA public CASCADE"))
         await conn.execute(text("CREATE SCHEMA public"))
-        await conn.execute(text("GRANT ALL ON SCHEMA public TO public"))
-    await engine.dispose()
+    await db.engine.dispose()
 
 
-def _run_alembic_upgrade() -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
-        cwd=BACKEND_ROOT,
-        check=False,
-    )
-    if result.returncode != 0:
-        raise SystemExit(result.returncode)
-
-
-async def _seed() -> None:
-    async with async_session_factory() as session:
-        await seed_database(session)
+async def load_demo() -> None:
+    async with db.session_factory() as session:
+        await seed(session)
         await session.commit()
-
-
-async def main() -> int:
-    print("Dropping public schema…", flush=True)
-    await _drop_public_schema()
-    print("Applying Alembic migrations…", flush=True)
-    _run_alembic_upgrade()
-    print("Seeding demo data…", flush=True)
-    await _seed()
-    print("Database reset complete.", flush=True)
-    return 0
+    await db.engine.dispose()
 
 
 if __name__ == "__main__":
-    raise SystemExit(asyncio.run(main()))
+    asyncio.run(drop_schema())
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=Path(__file__).resolve().parents[1],
+        check=True,
+    )
+    asyncio.run(load_demo())
+    print("Database reset and seeded.")

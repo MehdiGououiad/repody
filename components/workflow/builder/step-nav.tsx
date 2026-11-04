@@ -14,8 +14,7 @@ export function stepComplete(
 ): boolean {
   if (step === 0)
     return documents.some((d) => d.documentType.trim() && d.schema.some((f) => f.name.trim()));
-  if (step === 1)
-    return rules.some((r) => r.name.trim() && (r.body.trim() || r.conditions?.length));
+  if (step === 1) return rules.some((r) => r.name.trim() && r.conditions.length > 0);
   return false;
 }
 

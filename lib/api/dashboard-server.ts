@@ -1,25 +1,20 @@
 import "server-only";
 
 import { cache } from "react";
-import {
-  type DashboardBundle,
-  dashboardSnapshotFromResponse,
-  EMPTY_DASHBOARD_QUEUE,
-} from "@/lib/api/dashboard";
+import { type DashboardBundle, EMPTY_DASHBOARD_QUEUE } from "@/lib/api/dashboard";
 import { unwrap } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
 
 export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => {
   try {
-    const data = await unwrap(serverApi.GET("/v1/dashboard"));
-    return { apiLive: true, ...dashboardSnapshotFromResponse(data) };
+    return { apiLive: true, ...(await unwrap(serverApi.GET("/v1/dashboard"))) };
   } catch {
     return {
       apiLive: false,
       kpis: [],
       performanceSeries: [],
-      violationBreakdown: [],
-      healthAlerts: [],
+      failuresBySeverity: [],
+      staleRuns: 0,
       audits: [],
       workflows: [],
       queue: EMPTY_DASHBOARD_QUEUE,

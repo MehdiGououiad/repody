@@ -3,12 +3,7 @@
 import { AlertTriangle, FileText } from "lucide-react";
 import type { RunAuditDetail, RunAuditDocument } from "@/lib/types/audit";
 import { cn } from "@/lib/utils";
-import {
-  ConfidenceBar,
-  formatFieldValue,
-  mergeLabels,
-  type RunReportLabels,
-} from "./report-shared";
+import { formatFieldValue, mergeLabels, type RunReportLabels } from "./report-shared";
 
 function RunDocFieldsCardHeader({
   doc,
@@ -86,11 +81,6 @@ function RunDocFieldsListBody({ doc, locale }: { doc: RunAuditDocument; locale: 
             >
               {formatFieldValue(field, locale)}
             </p>
-            {field.confidence != null && field.extracted ? (
-              <div className="flex justify-end mt-1">
-                <ConfidenceBar value={field.confidence} />
-              </div>
-            ) : null}
           </div>
         </div>
       ))}

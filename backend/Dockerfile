@@ -64,7 +64,6 @@ COPY --from=build --chown=repody:repody /opt/venv /opt/venv
 COPY --chown=repody:repody alembic.ini ./
 COPY --chown=repody:repody alembic/ ./alembic/
 COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
-COPY --chown=repody:repody scripts/bootstrap_migrations.py ./scripts/bootstrap_migrations.py
 
 USER repody
 
@@ -82,7 +81,7 @@ ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
 FROM backend AS worker
 
 ENV OTEL_SERVICE_NAME=repody-worker
-CMD ["python", "-m", "repody.taskiq.worker"]
+CMD ["sh", "-c", "exec taskiq worker repody.worker:broker --workers 1 --max-async-tasks ${AUDIT_WORKER_CONCURRENCY:-1}"]
 
 FROM backend AS api
 

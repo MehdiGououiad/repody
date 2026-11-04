@@ -58,11 +58,9 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 | Package | May import | Must not import |
 |---------|------------|-----------------|
-| `api/` (FastAPI routers, auth dependencies) | everything below | - |
-| `app/` (use cases) | domain packages, `infra`, `schemas`, `settings`, `taskiq` (dispatch) | `fastapi`, `starlette`, `api` |
-| `infra/` (DB, storage, auth tokens, Redis, observability) | `runtime.contracts`, `settings` | `api`, `app`, `taskiq` |
-| `settings/` | `util` | any other `repody` package |
-| `runtime/contracts`, `runtime/run` | standard library, pydantic | `api`, `app`, `infra`, `settings`, SQLAlchemy |
+| `api/` (routes, caller dependencies) | everything below | - |
+| `app/` (use cases) | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api` |
+| `extraction/`, `rules/` (domain) | `schemas`, `settings` (extraction only) | `app`, `api`; `rules` also no DB, Redis or settings |
 - **Suppressions must explain themselves.** Every `biome-ignore`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 
@@ -70,18 +68,18 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 | Area | Expected shape | Review signal |
 |------|----------------|---------------|
-| Run state | `app/run/state.py`: claim / complete / fail as conditional UPDATEs | A transition that does not match the current status changes nothing and returns False |
-| Run processing | `app/run/worker.py` calls typed functions directly | No untyped `Callable[...]` indirection between the worker and the extractor |
+| Run state | Conditional UPDATEs (`app/execute.py` claim, `app/runs.py` `fail_run`) | A transition that does not match the current status changes nothing |
+| Rules | Typed `Condition` models evaluated directly (`rules/evaluate.py`) | No generated expression text, no `dict` rules |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `taskiq/` delivers; `run/worker.py` processes | Worker claims the run, processes it, records terminal failure |
+| Worker layer | `queue.py` / `worker.py` deliver; `app/execute.py` processes | Worker claims the run, processes it, records terminal failure |
 | Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
 | Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 
 ## Current Strong Modules
 
-- `app/run/state.py` + `worker.py`: the whole run lifecycle in two modules ([ADR 008](./adr/008-flat-run-pipeline.md)).
-- `app/workflow/`: workflow orchestration and persistence are separated.
-- `catalog/`: the document model and its llama-server status in one place.
+- `app/execute.py`: the whole run, from claim to report, in one module.
+- `rules/`: models, values, tables and evaluation in four small modules.
+- `schemas/workflow.py`: one Pydantic definition for the API, the database and each run.
 - `docs/COMMANDS.md`: single command reference for development, release, and client checks.
 
 ## Smells To Reject In Review
