@@ -56,13 +56,6 @@ def validate_workflow_rules(payload: WorkflowSchema) -> None:
             raise ValueError("; ".join(issues))
 
 
-def _schema_fields(doc: DocumentDefSchema | dict) -> list:
-    if isinstance(doc, dict):
-        fields = normalize_keys_to_snake(doc)
-        return fields.get("schema_fields") or fields.get("schema") or []
-    return doc.schema_fields
-
-
 def _document_type(doc: DocumentDefSchema | dict) -> str:
     if isinstance(doc, dict):
         fields = normalize_keys_to_snake(doc)

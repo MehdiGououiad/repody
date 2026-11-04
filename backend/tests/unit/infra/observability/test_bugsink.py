@@ -1,5 +1,5 @@
 import repody.infra.observability.bugsink as bugsink
-from repody.infra.observability.bugsink import bugsink_enabled, init_bugsink
+from repody.infra.observability.bugsink import init_bugsink
 
 
 def _reset_init() -> None:
@@ -15,7 +15,6 @@ def test_bugsink_disabled_without_dsn(monkeypatch):
         called["n"] += 1
 
     monkeypatch.setattr(bugsink.sentry_sdk, "init", fail_init)
-    assert bugsink_enabled() is False
     init_bugsink("repody-api")
     assert called["n"] == 0
 
@@ -31,7 +30,6 @@ def test_bugsink_init_follows_sdk_recommendations(monkeypatch):
         captured.update(kwargs)
 
     monkeypatch.setattr(bugsink.sentry_sdk, "init", fake_init)
-    assert bugsink_enabled() is True
     init_bugsink("repody-api")
 
     assert captured["dsn"] == "http://key@bugsink:8000/1"

@@ -75,10 +75,6 @@ def _before_breadcrumb(crumb: Breadcrumb, hint: BreadcrumbHint) -> Breadcrumb:
     return crumb
 
 
-def bugsink_enabled() -> bool:
-    return bool(os.getenv("BUGSINK_DSN", "").strip())
-
-
 def init_bugsink(service_name: str | None = None) -> None:
     """Init once, as early as possible (before FastAPI()/ASGI serve)."""
     global _initialized
