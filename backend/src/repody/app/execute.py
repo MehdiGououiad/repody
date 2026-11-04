@@ -14,19 +14,17 @@ import structlog
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from repody import db
-from repody.app.progress import Tracker, publish
+from repody.app.progress import FINALIZE_STEP, RULES_STEP, Tracker, extract_step, publish
 from repody.app.runs import fail_run
-from repody.app.workflows import new_id
-from repody.extraction.fields import FieldValue
 from repody.extraction.pipeline import extract
-from repody.models import ExtractedField, RuleResult, Run
-from repody.rules.evaluate import FieldRow, RuleOutcome, evaluate_rules
+from repody.infra import db
+from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, new_id
+from repody.infra.storage import get_store
+from repody.rules.evaluate import RuleOutcome, evaluate_rules
 from repody.rules.values import field_key
 from repody.schemas.run import RunProgress
 from repody.schemas.workflow import WorkflowDefinition
 from repody.settings import get_settings
-from repody.storage import get_store
 
 log = structlog.get_logger(__name__)
 
@@ -60,6 +58,82 @@ async def _claim(run_id: str) -> bool:
         return claimed.scalar_one_or_none() is not None
 
 
+async def _process(run_id: str) -> None:
+    if not await _claim(run_id):
+        log.info("run_already_claimed")
+        return
+    async with db.session_factory() as session:
+        run = await session.scalar(
+            select(Run)
+            .where(Run.id == run_id)
+            .options(selectinload(Run.documents).selectinload(RunDocument.fields))
+        )
+        assert run is not None
+        definition = WorkflowDefinition.model_validate(run.definition)
+        tracker = Tracker(run_id, RunProgress.model_validate(run.progress))
+
+        fields = await _extract_documents(run, definition, tracker)
+        await tracker.start(RULES_STEP, "Checking the rules…")
+        started = time.perf_counter()
+        results = evaluate_rules(
+            definition.rules,
+            [(f.key, f.value, doc_type, f.type) for f, doc_type in fields],
+            doc_types_by_id={doc.id: doc.document_type for doc in definition.documents},
+            multi_document=sum(bool(doc.schema_fields) for doc in definition.documents) > 1,
+        )
+        run.validation_ms = int((time.perf_counter() - started) * 1000)
+        await tracker.start(FINALIZE_STEP, "Saving the audit report…")
+
+        _flag_fields(fields, results)
+        session.add_all(_rule_row(run_id, i, result) for i, result in enumerate(results))
+        run.status, run.outcome, run.finished_at = "done", _outcome(results), datetime.now(UTC)
+        run.rules_total = len(results)
+        run.rules_failed = sum(r.status == "failed" for r in results)
+        run.rules_passed = sum(r.status == "passed" for r in results)
+        run.fields_extracted = sum(f.value is not None for f, _ in fields)
+        run.progress = tracker.finish()
+        await session.commit()
+    await publish(run_id, {"terminal": True, "status": "done"})
+    log.info("run_done", outcome=run.outcome, rules_failed=run.rules_failed)
+
+
+async def _extract_documents(
+    run: Run, definition: WorkflowDefinition, tracker: Tracker
+) -> list[tuple[ExtractedField, str]]:
+    """Extract every uploaded document; ``(saved field, document type)`` for each leaf."""
+    docs_by_id = {doc.id: doc for doc in definition.documents}
+    saved: list[tuple[ExtractedField, str]] = []
+    for run_doc in run.documents:
+        doc = docs_by_id.get(run_doc.document_id)
+        if doc is None or not doc.wants_extraction:
+            continue
+        step_id = extract_step(doc.id)
+        await tracker.start(step_id, f"Extracting {doc.document_type or 'document'}…")
+        try:
+            data = await get_store().get(run_doc.storage_key)
+            values, meta = await extract(doc, data, run_doc.mime_type)
+        except Exception:
+            log.exception("document_extraction_failed", document_id=doc.id)
+            continue
+        run_doc.extraction = meta.model_dump()
+        run.extraction_ms += meta.extraction_ms
+        for position, value in enumerate(values):
+            field = ExtractedField(
+                id=new_id("fld"),
+                position=position,
+                key=value.key,
+                description=value.description,
+                type=value.type,
+                value=value.value,
+            )
+            run_doc.fields.append(field)
+            saved.append((field, run_doc.document_type))
+        if step := tracker.step(step_id):
+            step.duration_ms, step.cache_hit = meta.extraction_ms, meta.cache_hit
+            step.detail = f"{meta.fields_extracted} field(s) in {meta.extraction_ms} ms"
+    return saved
+
+
 def _outcome(results: list[RuleOutcome]) -> str:
     failed = [r for r in results if r.status == "failed"]
     if any(r.rule.severity == "reject" for r in failed):
@@ -67,95 +141,11 @@ def _outcome(results: list[RuleOutcome]) -> str:
     return "warning" if failed else "passed"
 
 
-async def _process(run_id: str) -> None:
-    if not await _claim(run_id):
-        log.info("run_already_claimed")
-        return
-    async with db.session_factory() as session:
-        run = await session.scalar(
-            select(Run).where(Run.id == run_id).options(selectinload(Run.documents))
-        )
-        assert run is not None
-        definition = WorkflowDefinition.model_validate(run.definition)
-        tracker = Tracker(run_id, RunProgress.model_validate(run.progress))
-        docs_by_id = {doc.id: doc for doc in definition.documents}
-        multi_document = sum(bool(doc.schema_fields) for doc in definition.documents) > 1
-
-        rows: list[FieldRow] = []
-        saved: list[tuple[ExtractedField, str]] = []
-        extraction_ms = 0
-        for run_doc in run.documents:
-            doc = docs_by_id.get(run_doc.document_id)
-            if doc is None or not doc.wants_extraction:
-                continue
-            step_id = f"extract-{doc.id}"
-            await tracker.start(
-                step_id, f"Extracting {doc.document_type or 'document'}…", persist=True
-            )
-            try:
-                fields, meta = await extract(doc, await get_store().get(run_doc.storage_key))
-            except Exception:
-                log.exception("document_extraction_failed", document_id=doc.id)
-                continue
-            run_doc.extraction = meta.model_dump()
-            extraction_ms += meta.extraction_ms
-            for position, field in enumerate(fields):
-                row = _field_row(run_doc.id, position, field)
-                session.add(row)
-                saved.append((row, run_doc.document_type))
-            rows += [(f.key, f.value, run_doc.document_type, f.type) for f in fields]
-            if step := tracker.step(step_id):
-                step.duration_ms, step.cache_hit = meta.extraction_ms, meta.cache_hit
-                step.detail = f"{meta.fields_extracted} field(s) in {meta.extraction_ms} ms"
-
-        validation_started = time.perf_counter()
-
-        async def on_rule(rule) -> None:
-            await tracker.start(f"rule-{rule.id}", f"Checking {rule.name or 'rule'}…")
-
-        results = await evaluate_rules(
-            definition.rules,
-            rows,
-            doc_types_by_id={doc.id: doc.document_type for doc in definition.documents},
-            multi_document=multi_document,
-            on_rule_start=on_rule,
-        )
-        validation_ms = int((time.perf_counter() - validation_started) * 1000)
-        await tracker.start("finalize", "Saving the audit report…")
-
-        # Flag the fields a failed rule read: by bare name or `<document type>.<field>`.
-        failed_keys = {
-            field_key(f) for r in results if r.status == "failed" for f in r.affected_fields
-        }
-        for field, doc_type in saved:
-            field.flagged = bool(
-                {field_key(field.key), field_key(f"{doc_type}.{field.key}")} & failed_keys
-            )
-        for position, result in enumerate(results):
-            session.add(_rule_row(run_id, position, result))
-
-        run.status, run.outcome, run.finished_at = "done", _outcome(results), datetime.now(UTC)
-        run.rules_total = len(results)
-        run.rules_passed = sum(r.status == "passed" for r in results)
-        run.rules_failed = sum(r.status == "failed" for r in results)
-        run.fields_extracted = sum(row.value is not None for row, _ in saved)
-        run.extraction_ms, run.validation_ms = extraction_ms, validation_ms
-        run.progress = tracker.finish()
-        await session.commit()
-    await publish(run_id, {"terminal": True, "status": "done"})
-    log.info("run_done", outcome=run.outcome, rules_failed=run.rules_failed)
-
-
-def _field_row(run_document_id: str, position: int, field: FieldValue) -> ExtractedField:
-    return ExtractedField(
-        id=new_id("fld"),
-        run_document_id=run_document_id,
-        position=position,
-        key=field.key,
-        description=field.description,
-        type=field.type,
-        value=field.value,
-    )
+def _flag_fields(fields: list[tuple[ExtractedField, str]], results: list[RuleOutcome]) -> None:
+    """Flag the fields a failed rule read: by bare name or ``<document type>.<field>``."""
+    failed = {field_key(f) for r in results if r.status == "failed" for f in r.affected_fields}
+    for field, doc_type in fields:
+        field.flagged = bool({field_key(field.key), field_key(f"{doc_type}.{field.key}")} & failed)
 
 
 def _rule_row(run_id: str, position: int, result: RuleOutcome) -> RuleResult:

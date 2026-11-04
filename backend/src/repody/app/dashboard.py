@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from repody.app.runs import audit_item
 from repody.app.workflows import list_workflows
-from repody.models import RuleResult, Run
+from repody.infra.models import RuleResult, Run
 from repody.schemas.platform import Dashboard, DayRuns, Kpi, KpiPoint, QueueCounts, SeverityShare
 from repody.settings import get_settings
 
@@ -58,7 +58,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
             value=value,
             previous=previous,
             series=[
-                KpiPoint(day=d.isoformat(), value=v) for d, v in zip(week, series, strict=True)
+                KpiPoint(day=d.isoformat(), value=v) for d, v in zip(week, series, strict=False)
             ],
         )
 
@@ -90,7 +90,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
             kpi("auditsWeek", sum(column(week, 0)), sum(column(previous_week, 0)), column(week, 0)),
             kpi("passRate", rate(week), rate(previous_week), column(week, 1)),
             kpi("failures", sum(column(week, 2)), sum(column(previous_week, 2)), column(week, 2)),
-            kpi("pendingReview", queued + running, 0, column(week, 0)),
+            kpi("pendingReview", queued + running, 0, []),  # a live count: no history
         ],
         performance_series=[
             DayRuns(

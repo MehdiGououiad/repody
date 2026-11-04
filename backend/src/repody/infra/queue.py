@@ -15,8 +15,8 @@ from taskiq.kicker import AsyncKicker
 from taskiq.middlewares.opentelemetry_middleware import OpenTelemetryMiddleware
 from taskiq_redis import RedisStreamBroker
 
-from repody import db
-from repody.models import Run
+from repody.infra import db
+from repody.infra.models import Run
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)

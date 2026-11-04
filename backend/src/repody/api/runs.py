@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import json
 from typing import Annotated
 
@@ -10,8 +9,7 @@ from sse_starlette import EventSourceResponse
 
 from repody.api.deps import BearerDep, OptionalUser, SessionDep, require, token_of
 from repody.app import progress, runs, workflows
-from repody.auth import api_key_matches
-from repody.models import Workflow
+from repody.infra.auth import api_key_matches, hash_api_key
 from repody.schemas.run import AuditDetail, AuditList, RunCreated, RunState
 from repody.schemas.workflow import WorkflowDefinition
 from repody.settings import get_settings
@@ -47,7 +45,7 @@ async def start_run(
     wf = await workflows.load(session, workflow_id)
     token = token_of(credentials)
     if token and api_key_matches(token, wf.api_key_hash):
-        source, client_key = "api", hashlib.sha256(token.encode()).hexdigest()[:16]
+        source, client_key = "api", hash_api_key(token)[:16]
     elif user is not None and user.can("run:execute"):
         source, client_key = "test", user.subject
     else:
@@ -60,7 +58,7 @@ async def start_run(
             raise HTTPException(422, f"Invalid definition: {exc.errors()[0]['msg']}") from exc
     return await runs.start_run(
         session,
-        workflow_id,
+        wf,
         source=source,
         uploads=[await _read(upload) for upload in files],
         slots=documents,
@@ -76,9 +74,7 @@ async def require_run_reader(
     if user is not None and user.can("run:read"):
         return
     token = token_of(credentials)
-    workflow_id = await runs.run_workflow_id(session, run_id)
-    wf = await session.get(Workflow, workflow_id) if workflow_id else None
-    if token and wf and api_key_matches(token, wf.api_key_hash):
+    if token and api_key_matches(token, await runs.run_api_key_hash(session, run_id)):
         return
     raise HTTPException(401, "Use the workflow API key or sign in.")
 

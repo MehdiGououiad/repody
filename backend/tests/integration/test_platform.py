@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import update
 
-from repody import db
 from repody.app.maintenance import fail_stuck_runs
 from repody.app.seed import seed
-from repody.models import Run
+from repody.infra import db
+from repody.infra.models import Run
 
 
 async def test_health_and_config(api):

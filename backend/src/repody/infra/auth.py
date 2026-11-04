@@ -76,10 +76,13 @@ def hash_api_key(key: str) -> str:
 
 
 def api_key_matches(key: str, stored_hash: str | None) -> bool:
-    return bool(stored_hash) and secrets.compare_digest(hash_api_key(key), stored_hash or "")
+    return stored_hash is not None and secrets.compare_digest(hash_api_key(key), stored_hash)
 
 
-def new_api_key() -> tuple[str, str]:
-    """``(key, hint)``; only the hash is stored, the key is shown once."""
-    key = f"wbk_live_{secrets.token_hex(16)}"
-    return key, f"{key[:12]}********"
+def new_api_key() -> str:
+    """A workflow API key; only its hash and hint are stored, the key is shown once."""
+    return f"wbk_live_{secrets.token_hex(16)}"
+
+
+def api_key_hint(key: str) -> str:
+    return f"{key[:12]}********"

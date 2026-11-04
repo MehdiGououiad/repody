@@ -198,6 +198,20 @@ Concevoir ──► Déployer ──► Intégrer ──► Exécuter ──► 
 - **Accès API** : les composants serveur (RSC) appellent directement le backend via `INTERNAL_API_URL` ; le navigateur passe par le route handler `app/api/v1/[...path]/route.ts`.
 - **Temps réel** : `lib/api/run-events.ts` ouvre le flux SSE, `lib/api/run-poll.ts` orchestre SSE + polling de position, avec repli complet en polling.
 
+### Organisation du backend (`backend/src/repody/`)
+
+```
+main.py, worker.py   points d'entrée : service API (FastAPI) et service worker (Taskiq)
+settings.py          toutes les variables AUDIT_*
+api/                 routes HTTP et dépendances (appelant, session)
+app/                 cas d'usage : workflows, runs, exécution, progression, maintenance
+extraction/, rules/  domaine : extraction NuExtract, évaluation des règles (pur)
+schemas/             modèles Pydantic partagés : API et définition de workflow
+infra/               adaptateurs : Postgres (db, models), Redis, S3, file Taskiq, Keycloak, logs
+```
+
+Les dépendances vont dans un seul sens (`main | worker -> api -> app -> extraction | rules -> infra`), vérifié par `lint-imports`. Les deux points d'entrée partagent le paquet et se déploient et se mettent à l'échelle séparément.
+
 ### 3.3 API (`backend/src/repody/api/`)
 
 Trois routeurs sous `/v1` (14 routes) :
@@ -248,15 +262,15 @@ Une erreur d'extraction sur un document est journalisée et ce document reste sa
 
 ### 3.7 Moteur de règles (`backend/src/repody/rules/`)
 
-Une règle est une liste de **conditions typées** (`models.py`) : champ ou valeur à gauche (avec opération arithmétique ou agrégat de tableau), opérateur, champ ou valeur à droite. `evaluate.py` évalue chaque condition directement (pas d'expression générée), décrit chaque condition pour l'interface et signale ce qui empêche l'enregistrement. Une règle passe quand toutes ses conditions tiennent ; une valeur manquante la rend `skipped`. Chaque valeur est lue selon le **type déclaré du champ** (`values.py`) : NuExtract renvoie un nombre JSON pour `number`, une date ISO pour `date`, un booléen pour `boolean` ; rien n'est deviné à partir du texte. Une valeur saisie dans une règle prend le type du champ comparé, et l'enregistrement refuse un opérateur qui ne convient pas au type (`>` sur du texte, arithmétique hors nombres).
+Une règle est une liste de **conditions typées** (`schemas/rule.py`) : champ ou valeur à gauche (avec opération arithmétique ou agrégat de tableau), opérateur, champ ou valeur à droite. `evaluate.py` évalue chaque condition directement (pas d'expression générée), décrit chaque condition pour l'interface et signale ce qui empêche l'enregistrement. Une règle passe quand toutes ses conditions tiennent ; une valeur manquante la rend `skipped`. Chaque valeur est lue selon le **type déclaré du champ** (`values.py`) : NuExtract renvoie un nombre JSON pour `number`, une date ISO pour `date`, un booléen pour `boolean` ; rien n'est deviné à partir du texte. Une valeur saisie dans une règle prend le type du champ comparé, et l'enregistrement refuse un opérateur qui ne convient pas au type (`>` sur du texte, arithmétique hors nombres).
 
-### 3.8 Traitement asynchrone (`backend/src/repody/queue.py`, `worker.py`)
+### 3.8 Traitement asynchrone (`backend/src/repody/infra/queue.py`, `worker.py`)
 
 - **Broker** : `RedisStreamBroker`, une file `repody:runs`, une tâche `process_run(run_id)`.
 - **Envoi** : après le commit ; en cas d'échec, `dispatched_at` reste vide et la maintenance renvoie la tâche.
 - **Worker** : CLI officielle `taskiq worker repody.worker:broker --max-async-tasks N` ; on dimensionne par réplicas.
 
-### 3.9 Sécurité applicative (`backend/src/repody/auth.py`, `api/deps.py`)
+### 3.9 Sécurité applicative (`backend/src/repody/infra/auth.py`, `api/deps.py`)
 
 | Mécanisme | Mise en œuvre |
 |---|---|
@@ -485,7 +499,7 @@ Ces fichiers s'ouvrent dans un modeleur BPMN standard (bpmn.io, Camunda Modeler)
 | `run` | read | read, execute | read, execute | tout |
 | `metrics` (tableau de bord, configuration) | - | read | read | tout |
 
-Source : `backend/src/repody/auth.py`.
+Source : `backend/src/repody/infra/auth.py`.
 
 ### 7.4 Socle technique
 

@@ -9,9 +9,9 @@ from datetime import UTC, datetime, timedelta
 import structlog
 from sqlalchemy import select
 
-from repody import db, queue
 from repody.app.runs import fail_run
-from repody.models import Run
+from repody.infra import db, queue
+from repody.infra.models import Run
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)

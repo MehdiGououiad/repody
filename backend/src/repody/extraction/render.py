@@ -5,15 +5,15 @@ from __future__ import annotations
 import base64
 from typing import Any
 
-import filetype
 import pymupdf
 
 PDF_DPI = 170
 
 
-def page_images(data: bytes, *, max_pages: int | None) -> tuple[list[dict[str, Any]], int]:
-    """``(image_url content parts, page count of the document)``."""
-    mime = filetype.guess_mime(data) or ""
+def page_images(
+    data: bytes, mime: str, *, max_pages: int | None
+) -> tuple[list[dict[str, Any]], int]:
+    """``(image_url content parts, page count of the document)``; ``mime`` was checked on upload."""
     if mime == "application/pdf":
         with pymupdf.open(stream=data, filetype="pdf") as pdf:
             total = len(pdf)

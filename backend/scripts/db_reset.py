@@ -9,8 +9,8 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from repody import db
 from repody.app.seed import seed
+from repody.infra import db
 
 
 async def drop_schema() -> None:

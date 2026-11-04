@@ -1,4 +1,5 @@
-"""NuExtract3 chat.completions requests: template, instructions and in-context examples.
+"""NuExtract3 requests, as ``chat.completions.create`` arguments: the template, instructions
+and in-context examples go to llama-server's chat template (``chat_template_kwargs``).
 
 https://huggingface.co/numind/NuExtract3-GGUF · https://github.com/numindai/nuextract
 """
@@ -12,8 +13,7 @@ from typing import Any
 from repody.schemas.workflow import DocumentDef, SchemaField
 
 STRUCTURED_TEMPERATURE = 0.2
-ICL_TEMPERATURE = 0.0  # the official in-context examples use 0
-MARKDOWN_TEMPERATURE = 0.0
+EXACT_TEMPERATURE = 0.0  # the official in-context and Markdown examples use 0
 LIST_SUFFIX = "-list"  # platform spelling of a list type: `number-list` is `["number"]`
 
 
@@ -75,7 +75,7 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
         kwargs["instructions"] = text
     return {
         "model": model,
-        "temperature": ICL_TEMPERATURE if examples else STRUCTURED_TEMPERATURE,
+        "temperature": EXACT_TEMPERATURE if examples else STRUCTURED_TEMPERATURE,
         "messages": [
             *(
                 {
@@ -89,14 +89,14 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
             ),
             {"role": "user", "content": []},
         ],
-        "chat_template_kwargs": kwargs,
+        "extra_body": {"chat_template_kwargs": kwargs},
     }
 
 
 def markdown_request(model: str) -> dict[str, Any]:
     return {
         "model": model,
-        "temperature": MARKDOWN_TEMPERATURE,
+        "temperature": EXACT_TEMPERATURE,
         "messages": [{"role": "user", "content": []}],
-        "chat_template_kwargs": {"mode": "markdown", "enable_thinking": False},
+        "extra_body": {"chat_template_kwargs": {"mode": "markdown", "enable_thinking": False}},
     }

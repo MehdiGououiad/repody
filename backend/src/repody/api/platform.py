@@ -3,11 +3,11 @@ from __future__ import annotations
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
-from repody import db
 from repody.api.deps import SessionDep, require
 from repody.app.dashboard import get_dashboard
 from repody.extraction.client import model_available
-from repody.redis_pool import get_redis
+from repody.infra import db
+from repody.infra.redis import get_redis
 from repody.schemas.platform import Dashboard, Health, PlatformConfig
 from repody.settings import get_settings
 

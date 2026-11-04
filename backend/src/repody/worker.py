@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from taskiq import TaskiqEvents, TaskiqState
 
-from repody import observability
 from repody.app.execute import process_run
-from repody.queue import TASK_NAME, broker
+from repody.infra import observability
+from repody.infra.queue import TASK_NAME, broker
 
 __all__ = ["broker"]
 

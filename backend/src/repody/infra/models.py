@@ -7,13 +7,18 @@ workflow never changes a run that is queued or done.
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from repody.db import Base
+from repody.infra.db import Base
+
+
+def new_id(prefix: str) -> str:
+    return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
 
 class Workflow(Base):

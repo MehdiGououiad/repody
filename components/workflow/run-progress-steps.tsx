@@ -7,10 +7,10 @@ import { useEffect, useState } from "react";
 import type { RunProgress } from "@/lib/api/run";
 import { cn, formatDurationMs } from "@/lib/utils";
 
-/** Worker step ids: `extract-<document>`, `rule-<rule>` (prefixed `worker-` in a test run). */
+/** Worker step ids: `extract-<document>`, `rules` (prefixed `worker-` in a test run). */
 function stepKind(step: RunProgress["steps"][number]): "extract" | "rule" | null {
   const id = step.id.replace(/^worker-/, "");
-  return id.startsWith("extract-") ? "extract" : id.startsWith("rule-") ? "rule" : null;
+  return id.startsWith("extract-") ? "extract" : id === "rules" ? "rule" : null;
 }
 
 function stepIcon(step: RunProgress["steps"][number]) {

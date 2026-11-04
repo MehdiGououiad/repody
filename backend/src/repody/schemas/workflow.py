@@ -7,8 +7,8 @@ from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
-from repody.rules.models import Rule
 from repody.schemas.common import CamelModel
+from repody.schemas.rule import Rule
 
 DEFAULT_TEMPLATE_TYPE = "verbatim-string"
 

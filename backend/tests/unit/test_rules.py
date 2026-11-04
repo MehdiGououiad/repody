@@ -9,8 +9,8 @@ from repody.rules.evaluate import (
     field_values,
     rule_issues,
 )
-from repody.rules.models import Condition, Operand, Rule, TableAggregate
 from repody.rules.values import field_key, literal, typed
+from repody.schemas.rule import Condition, Operand, Rule, TableAggregate
 
 
 def field(name: str) -> Operand:
@@ -179,7 +179,7 @@ def test_rule_issues_are_labelled():
     assert rule_issues(rule) == ["Sum: Condition 1: Choose the second operand of the arithmetic."]
 
 
-async def test_cross_document_namespace():
+def test_cross_document_namespace():
     rows = [
         ("total", 6000, "Invoice", "number"),
         ("total", 6000, "Purchase Order", "number"),
@@ -196,5 +196,5 @@ async def test_cross_document_namespace():
     assert values["invoice__total"] == (6000, "number")
     assert "total" not in values  # ambiguous across the two documents
     assert values["vendor"] == ("Acme", "verbatim-string")  # only one document has it
-    [outcome] = await evaluate_rules([cross], rows, doc_types_by_id=types, multi_document=True)
+    [outcome] = evaluate_rules([cross], rows, doc_types_by_id=types, multi_document=True)
     assert outcome.status == "passed"

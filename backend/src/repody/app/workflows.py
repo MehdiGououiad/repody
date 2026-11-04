@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.auth import hash_api_key, new_api_key
-from repody.errors import AppError
+from repody.app.errors import AppError
 from repody.extraction.fields import leaves
-from repody.models import RuleResult, Run, Workflow
+from repody.infra.auth import api_key_hint, hash_api_key, new_api_key
+from repody.infra.models import RuleResult, Run, Workflow, new_id
 from repody.rules.evaluate import condition_issue, describe, rule_issues
 from repody.rules.values import field_key
 from repody.schemas.workflow import (
@@ -25,12 +24,6 @@ from repody.schemas.workflow import (
     WorkflowIn,
     WorkflowOut,
 )
-
-SEED_WORKFLOW_ID = "wf-invoice-audit"
-
-
-def new_id(prefix: str) -> str:
-    return f"{prefix}-{uuid.uuid4().hex[:12]}"
 
 
 async def _run_stats(
@@ -198,24 +191,22 @@ async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowI
         body.status,
         body.owner,
     )
-    wf.definition = WorkflowDefinition.model_validate(body.model_dump()).model_dump()
+    wf.definition = body.model_dump(include={"documents", "rules"})
     await session.flush()
     return await get_workflow(session, workflow_id)
 
 
 async def archive_workflows(session: AsyncSession, workflow_ids: list[str]) -> None:
     for wf in await session.scalars(select(Workflow).where(Workflow.id.in_(workflow_ids))):
-        if wf.id != SEED_WORKFLOW_ID:
-            wf.status = "archived"
+        wf.status = "archived"
 
 
 async def deploy_workflow(session: AsyncSession, workflow_id: str) -> WorkflowOut:
     """Activate the workflow with a new API key, returned once."""
     wf = await load(session, workflow_id)
-    key, hint = new_api_key()
-    wf.deployed_at = datetime.now(UTC)
-    wf.status = "active"
-    wf.api_key_hash, wf.api_key_hint = hash_api_key(key), hint
+    key = new_api_key()
+    wf.deployed_at, wf.status = datetime.now(UTC), "active"
+    wf.api_key_hash, wf.api_key_hint = hash_api_key(key), api_key_hint(key)
     await session.flush()
     return await get_workflow(session, workflow_id, api_key=key)
 

@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from repody.extraction import client, nuextract
 from repody.extraction.fields import FieldValue, leaf_values
 from repody.extraction.render import page_images
-from repody.redis_pool import get_redis
+from repody.infra.redis import get_redis
 from repody.schemas.run import ExtractionMeta
 from repody.schemas.workflow import DocumentDef
 from repody.settings import get_settings
@@ -34,10 +34,9 @@ class _Answer(BaseModel):
     pages_sent: int = 0
 
 
-async def _ask_model(doc: DocumentDef, data: bytes, request: dict) -> _Answer:
-    settings = get_settings()
+async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict) -> _Answer:
     images, total = await asyncio.to_thread(
-        page_images, data, max_pages=settings.max_pages_per_document
+        page_images, data, mime, max_pages=get_settings().max_pages_per_document
     )
     request["messages"][-1]["content"] = images
     text = await client.chat(request)
@@ -48,7 +47,9 @@ async def _ask_model(doc: DocumentDef, data: bytes, request: dict) -> _Answer:
     return _Answer(markdown=text[:MAX_TEXT_CHARS], pages_rendered=total, pages_sent=len(images))
 
 
-async def extract(doc: DocumentDef, data: bytes) -> tuple[list[FieldValue], ExtractionMeta]:
+async def extract(
+    doc: DocumentDef, data: bytes, mime: str
+) -> tuple[list[FieldValue], ExtractionMeta]:
     settings = get_settings()
     model = settings.llamacpp_served_model
     request = (
@@ -62,7 +63,11 @@ async def extract(doc: DocumentDef, data: bytes) -> tuple[list[FieldValue], Extr
 
     started = time.perf_counter()
     cached = await get_redis().get(key) if ttl else None
-    answer = _Answer.model_validate_json(cached) if cached else await _ask_model(doc, data, request)
+    answer = (
+        _Answer.model_validate_json(cached)
+        if cached
+        else await _ask_model(doc, data, mime, request)
+    )
     if ttl and not cached:
         await get_redis().set(key, answer.model_dump_json(), ex=ttl)
     elapsed = int((time.perf_counter() - started) * 1000)

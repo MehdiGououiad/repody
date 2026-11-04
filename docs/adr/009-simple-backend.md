@@ -14,7 +14,7 @@ updated by four paths, three throttling layers and about 70 settings.
 - **A workflow is one JSON definition** (`schemas.workflow.WorkflowDefinition`: documents,
   NuExtract schemas, rules), stored on `workflows.definition`. Each run stores its own copy,
   so editing a workflow never changes a queued or finished run.
-- **Rules are typed conditions** (`rules.models.Condition`) evaluated directly. A rule passes
+- **Rules are typed conditions** (`schemas.rule.Condition`) evaluated directly. A rule passes
   when every condition holds; the readable form of each condition is shown in the builder
   and stored on the result. No expression language, no `simpleeval`.
 - **Values keep the type the schema declares.** NuExtract returns each field in its

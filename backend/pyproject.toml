@@ -125,26 +125,27 @@ root_package = "repody"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Layers: HTTP routes -> use cases -> domain"
+name = "Layers: entry points -> HTTP routes -> use cases -> domain -> infrastructure"
 type = "layers"
 layers = [
-  "repody.main",
+  "repody.main | repody.worker",
   "repody.api",
   "repody.app",
   "repody.extraction | repody.rules",
+  "repody.infra",
 ]
 
 [[tool.importlinter.contracts]]
 name = "Use cases and domain are framework-free"
 type = "forbidden"
-source_modules = ["repody.app", "repody.extraction", "repody.rules", "repody.schemas"]
+source_modules = ["repody.app", "repody.extraction", "repody.rules", "repody.schemas", "repody.infra"]
 forbidden_modules = ["fastapi", "starlette", "sse_starlette"]
 
 [[tool.importlinter.contracts]]
 name = "Rules are pure"
 type = "forbidden"
 source_modules = ["repody.rules"]
-forbidden_modules = ["sqlalchemy", "redis", "repody.db", "repody.models", "repody.settings"]
+forbidden_modules = ["sqlalchemy", "redis", "repody.infra", "repody.settings"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts"]

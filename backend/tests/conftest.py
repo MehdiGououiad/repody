@@ -34,12 +34,12 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
-from repody import db, queue
 from repody.app import execute
 from repody.extraction import client as inference
+from repody.infra import db, queue
+from repody.infra.storage import use_store
 from repody.main import create_app
 from repody.settings import get_settings
-from repody.storage import use_store
 
 BACKEND = Path(__file__).resolve().parents[1]
 FACTURE_PDF = BACKEND.parent / "e2e" / "fixtures" / "documents" / "Facture.pdf"

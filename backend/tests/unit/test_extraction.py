@@ -51,13 +51,13 @@ def test_structured_request():
     assert request["temperature"] == 0.0  # in-context examples
     assert request["messages"][0]["role"] == "developer"
     assert request["messages"][-1] == {"role": "user", "content": []}
-    kwargs = request["chat_template_kwargs"]
+    kwargs = request["extra_body"]["chat_template_kwargs"]
     assert json.loads(kwargs["template"])["total"] == "number"
     assert kwargs["instructions"] == (
         "French invoice.\n\nField guidance:\n- total: Amount due\n- vendor.name: Legal name"
     )
     assert instructions(DocumentDef(id="d")) == ""
-    assert markdown_request("m")["chat_template_kwargs"]["mode"] == "markdown"
+    assert markdown_request("m")["extra_body"]["chat_template_kwargs"]["mode"] == "markdown"
 
 
 def test_leaf_values_keep_json_types():
@@ -83,8 +83,8 @@ def test_page_images():
     pdf = pymupdf.open()
     for _ in range(3):
         pdf.new_page()
-    images, total = page_images(pdf.tobytes(), max_pages=2)
+    images, total = page_images(pdf.tobytes(), "application/pdf", max_pages=2)
     assert total == 3 and len(images) == 2
     assert images[0]["image_url"]["url"].startswith("data:image/png;base64,")
     with pytest.raises(ValueError, match="Unsupported"):
-        page_images(b"plain text", max_pages=None)
+        page_images(b"plain text", "text/plain", max_pages=None)

@@ -5,7 +5,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from pydantic import ValidationError
 
-from repody import auth
+from repody.infra import auth
 from repody.settings import Settings, get_settings
 
 
@@ -20,8 +20,8 @@ def test_comma_separated_lists(monkeypatch):
 
 
 def test_api_keys():
-    key, hint = auth.new_api_key()
-    assert hint.endswith("********") and key.startswith(hint[:12])
+    key = auth.new_api_key()
+    assert auth.api_key_hint(key) == f"{key[:12]}********"
     assert auth.api_key_matches(key, auth.hash_api_key(key))
     assert not auth.api_key_matches("other", auth.hash_api_key(key))
     assert not auth.api_key_matches(key, None)

@@ -6,12 +6,12 @@ from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody.app.workflows import SEED_WORKFLOW_ID
-from repody.auth import hash_api_key
-from repody.models import ExtractedField, RuleResult, Run, RunDocument, Workflow
-from repody.rules.models import Condition, Operand, Rule
+from repody.infra.auth import api_key_hint, hash_api_key
+from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, Workflow
+from repody.schemas.rule import Condition, Operand, Rule
 from repody.schemas.workflow import DocumentDef, SchemaField, WorkflowDefinition
 
+SEED_WORKFLOW_ID = "wf-invoice-audit"
 SEED_API_KEY = "wbk_live_4f8a2c1e9d3b7f6a0c5e2d8b1a4f7c3e"
 
 _INVOICE_FIELDS = [
@@ -51,10 +51,7 @@ def _fields(rows: list[tuple[str, str, str, str]]) -> list[SchemaField]:
 
 
 async def seed(session: AsyncSession) -> None:
-    existing = await session.get(Workflow, SEED_WORKFLOW_ID)
-    if existing is not None:
-        if existing.status == "archived":
-            existing.status = "active"
+    if await session.get(Workflow, SEED_WORKFLOW_ID) is not None:
         return
     definition = WorkflowDefinition(
         documents=[
@@ -73,7 +70,7 @@ async def seed(session: AsyncSession) -> None:
             definition=definition.model_dump(),
             deployed_at=datetime(2023, 10, 12, tzinfo=UTC),
             api_key_hash=hash_api_key(SEED_API_KEY),
-            api_key_hint=f"{SEED_API_KEY[:12]}********",
+            api_key_hint=api_key_hint(SEED_API_KEY),
         )
     )
     await session.flush()

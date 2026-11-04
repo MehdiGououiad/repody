@@ -4,20 +4,21 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from importlib.metadata import version
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from repody import db, observability, queue
 from repody.api import platform, runs, workflows
 from repody.app import maintenance
+from repody.app.errors import AppError
 from repody.app.seed import seed
-from repody.errors import AppError
 from repody.extraction import client
-from repody.redis_pool import close_redis
+from repody.infra import db, observability, queue
+from repody.infra.redis import close_redis
+from repody.infra.storage import S3Store, get_store
 from repody.settings import get_settings
-from repody.storage import S3Store, get_store
 
 
 @asynccontextmanager
@@ -49,7 +50,7 @@ async def _app_error(_request: Request, exc: Exception) -> JSONResponse:
 
 def create_app() -> FastAPI:
     observability.setup()
-    app = FastAPI(title="Repody", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(title="Repody", version=version("repody"), lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=get_settings().cors_origins,

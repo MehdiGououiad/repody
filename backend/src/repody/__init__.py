@@ -1,3 +1,1 @@
-"""Repody - backend package."""
-
-__version__ = "0.1.0"
+"""Repody: document audit backend. Entry points: `main` (API) and `worker` (runs)."""

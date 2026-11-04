@@ -9,11 +9,10 @@ from __future__ import annotations
 import json
 import math
 import operator
-from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from repody.rules.models import UNARY_OPERATORS, Condition, Operand, Rule
 from repody.rules.tables import count_rows, sum_rows
 from repody.rules.values import (
     NUMBER_TYPES,
@@ -23,6 +22,7 @@ from repody.rules.values import (
     literal,
     typed,
 )
+from repody.schemas.rule import UNARY_OPERATORS, Condition, Operand, Rule
 
 Status = Literal["passed", "failed", "skipped"]
 
@@ -137,11 +137,11 @@ def _describe(operand: Operand | None) -> str:
     return operand.value
 
 
-def _left_type(condition: Condition, types: Mapping[str, str]) -> str | None:
+def _left_type(condition: Condition, type_of: Callable[[str], str | None]) -> str | None:
     """The type the left side produces: aggregates and arithmetic give numbers."""
     if condition.table_aggregate or condition.arithmetic_op:
         return "number"
-    return types.get(field_key(condition.left.value))
+    return type_of(field_key(condition.left.value))
 
 
 def condition_issue(condition: Condition, types: Mapping[str, str] | None = None) -> str | None:
@@ -175,7 +175,7 @@ def condition_issue(condition: Condition, types: Mapping[str, str] | None = None
         for operand in (condition.left, condition.left_extra):
             if operand and types.get(field_key(operand.value)) not in NUMBER_TYPES:
                 return f"Arithmetic needs number fields; {operand.value} is not a number."
-    left_type = _left_type(condition, types)
+    left_type = _left_type(condition, types.get)
     if condition.operator in ORDERING_OPERATORS and left_type not in ORDERED_TYPES:
         return f"{condition.operator} compares numbers or dates; the left side is {left_type}."
     right = condition.right
@@ -248,7 +248,7 @@ def check(condition: Condition, values: Values) -> bool | None:
     right = condition.right
     if right is None or left is None:
         return None
-    left_type = _left_type(condition, {k: t for k, (_v, t) in values.items()})
+    left_type = _left_type(condition, lambda key: values[key][1] if key in values else None)
     if condition.operator in ("IN", "NOT_IN") and right.kind == "literal" and "," in right.value:
         value: Any = [literal(part, left_type) for part in right.value.split(",") if part.strip()]
     else:
@@ -296,20 +296,19 @@ def evaluate_rule(rule: Rule, values: Values) -> RuleOutcome:
     )
 
 
-async def evaluate_rules(
+def evaluate_rules(
     rules: list[Rule],
     rows: Sequence[FieldRow],
     *,
     doc_types_by_id: dict[str, str],
     multi_document: bool,
-    on_rule_start: Callable[[Rule], Awaitable[None]] | None = None,
 ) -> list[RuleOutcome]:
-    outcomes: list[RuleOutcome] = []
-    for rule in rules:
-        if on_rule_start is not None:
-            await on_rule_start(rule)
-        values = field_values(
-            rows, rule=rule, doc_types_by_id=doc_types_by_id, multi_document=multi_document
+    return [
+        evaluate_rule(
+            rule,
+            field_values(
+                rows, rule=rule, doc_types_by_id=doc_types_by_id, multi_document=multi_document
+            ),
         )
-        outcomes.append(evaluate_rule(rule, values))
-    return outcomes
+        for rule in rules
+    ]

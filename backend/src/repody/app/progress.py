@@ -13,32 +13,36 @@ from typing import Any
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody import db
-from repody.models import Run
-from repody.redis_pool import get_redis
+from repody.infra import db
+from repody.infra.models import Run
+from repody.infra.redis import get_redis
 from repody.schemas.run import ProgressStep, RunProgress
 from repody.schemas.workflow import WorkflowDefinition
 
 STREAM_SECONDS = 3600
+RULES_STEP = "rules"
+FINALIZE_STEP = "finalize"
 
 
 def _channel(run_id: str) -> str:
     return f"run-events:{run_id}"
 
 
+def extract_step(document_id: str) -> str:
+    return f"extract-{document_id}"
+
+
 def plan(definition: WorkflowDefinition, document_ids_with_files: set[str]) -> RunProgress:
-    """Queued -> extract each document -> check each rule -> save the report."""
+    """Queued -> extract each document -> check the rules -> save the report."""
     steps = [ProgressStep(id="queue", label="Queued for a worker", status="active")]
     steps += [
-        ProgressStep(id=f"extract-{doc.id}", label=f"Extract · {doc.document_type or 'Document'}")
+        ProgressStep(id=extract_step(doc.id), label=f"Extract · {doc.document_type or 'Document'}")
         for doc in definition.documents
         if doc.id in document_ids_with_files and doc.wants_extraction
     ]
-    steps += [
-        ProgressStep(id=f"rule-{rule.id}", label=f"Check · {rule.name or 'Rule'}")
-        for rule in definition.rules
-    ]
-    steps.append(ProgressStep(id="finalize", label="Save the audit report"))
+    if definition.rules:
+        steps.append(ProgressStep(id=RULES_STEP, label=f"Check {len(definition.rules)} rule(s)"))
+    steps.append(ProgressStep(id=FINALIZE_STEP, label="Save the audit report"))
     return RunProgress(label="Waiting for a worker…", steps=steps)
 
 
@@ -81,20 +85,16 @@ async def with_queue_position(session: AsyncSession, run: Run) -> RunProgress | 
 
 
 class Tracker:
-    """The worker's view of a run's progress: every change is published, and stored on the
-    run row at most once per ``PERSIST_EVERY`` seconds (or when ``persist=True``)."""
-
-    PERSIST_EVERY = 1.0
+    """The worker's view of a run's progress: each change is stored on the run and published."""
 
     def __init__(self, run_id: str, progress: RunProgress) -> None:
         self.run_id = run_id
         self.progress = progress
-        self._persisted_at = 0.0
 
     def step(self, step_id: str) -> ProgressStep | None:
         return next((s for s in self.progress.steps if s.id == step_id), None)
 
-    async def start(self, step_id: str, label: str, *, persist: bool = False) -> None:
+    async def start(self, step_id: str, label: str) -> None:
         """Mark every step before ``step_id`` done and ``step_id`` active."""
         ids = [s.id for s in self.progress.steps]
         index = ids.index(step_id) if step_id in ids else -1
@@ -104,22 +104,14 @@ class Tracker:
             elif i == index:
                 step.status = "active"
         self.progress.label = label
-        await self._push(persist)
+        data = self.progress.model_dump()
+        async with db.session_factory() as session:
+            await session.execute(update(Run).where(Run.id == self.run_id).values(progress=data))
+            await session.commit()
+        await publish(self.run_id, {"progress": data})
 
     def finish(self) -> dict[str, Any]:
         for step in self.progress.steps:
             step.status = "done"
         self.progress.label = "Complete"
         return self.progress.model_dump()
-
-    async def _push(self, persist: bool) -> None:
-        data = self.progress.model_dump()
-        await publish(self.run_id, {"progress": data})
-        now = time.monotonic()
-        if persist or now - self._persisted_at >= self.PERSIST_EVERY:
-            self._persisted_at = now
-            async with db.session_factory() as session:
-                await session.execute(
-                    update(Run).where(Run.id == self.run_id).values(progress=data)
-                )
-                await session.commit()

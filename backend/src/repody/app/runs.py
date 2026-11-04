@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from functools import lru_cache
 from typing import Literal
 
 import filetype
@@ -15,11 +16,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody import db, queue
+from repody.app.errors import AppError
 from repody.app.progress import plan, publish, with_queue_position
-from repody.app.workflows import load, new_id
-from repody.errors import AppError
-from repody.models import Run, RunDocument
+from repody.infra import db, queue
+from repody.infra.models import Run, RunDocument, Workflow, new_id
+from repody.infra.storage import get_store
 from repody.schemas.run import (
     AuditDetail,
     AuditDocument,
@@ -33,7 +34,6 @@ from repody.schemas.run import (
 )
 from repody.schemas.workflow import WorkflowDefinition
 from repody.settings import get_settings
-from repody.storage import get_store
 
 log = structlog.get_logger(__name__)
 
@@ -46,18 +46,14 @@ class Upload:
     data: bytes
 
 
-_limiter: MovingWindowRateLimiter | None = None
+@lru_cache
+def _limiter() -> MovingWindowRateLimiter:
+    return MovingWindowRateLimiter(RedisStorage(get_settings().redis_url))
 
 
 async def _check_rate(client_key: str) -> None:
-    global _limiter
-    settings = get_settings()
-    if not settings.runs_per_minute_per_client:
-        return
-    if _limiter is None:
-        _limiter = MovingWindowRateLimiter(RedisStorage(settings.redis_url))
-    limit = parse(f"{settings.runs_per_minute_per_client}/minute")
-    if not await _limiter.hit(limit, "runs", client_key):
+    per_minute = get_settings().runs_per_minute_per_client
+    if per_minute and not await _limiter().hit(parse(f"{per_minute}/minute"), "runs", client_key):
         raise AppError(429, "Too many runs started; try again in a minute.", retry_after=60)
 
 
@@ -100,7 +96,7 @@ def _mime(upload: Upload) -> str:
 
 async def start_run(
     session: AsyncSession,
-    workflow_id: str,
+    wf: Workflow,
     *,
     source: Source,
     uploads: list[Upload],
@@ -114,7 +110,6 @@ async def start_run(
     deployed workflow.
     """
     settings = get_settings()
-    wf = await load(session, workflow_id)
     if source == "api" and not wf.deployed_at:
         raise AppError(409, "Workflow is not deployed.")
     if len(uploads) > settings.max_upload_files:
@@ -125,13 +120,14 @@ async def start_run(
     if source == "api" or definition is None:
         definition = WorkflowDefinition.model_validate(wf.definition)
     document_ids = _document_ids(definition, slots, len(uploads))
+    mimes = [_mime(upload) for upload in uploads]
     types = {doc.id: doc.document_type for doc in definition.documents}
 
     run = Run(
         id=new_id("AUD"), workflow_id=wf.id, source=source, definition=definition.model_dump()
     )
-    for position, (upload, document_id) in enumerate(zip(uploads, document_ids, strict=True)):
-        mime = _mime(upload)
+    files = zip(uploads, document_ids, mimes, strict=True)
+    for position, (upload, document_id, mime) in enumerate(files):
         key = f"runs/{run.id}/{position}"
         await get_store().put(key, upload.data, mime)
         run.documents.append(
@@ -170,14 +166,16 @@ async def fail_run(run_id: str, error: str, *, only_if: str | None = None) -> bo
     return True
 
 
-async def _load_run(session: AsyncSession, run_id: str, *, with_report: bool) -> Run:
-    query = select(Run).where(Run.id == run_id).options(selectinload(Run.workflow))
-    if with_report:
-        query = query.options(
+async def _load_run(session: AsyncSession, run_id: str) -> Run:
+    run = await session.scalar(
+        select(Run)
+        .where(Run.id == run_id)
+        .options(
+            selectinload(Run.workflow),
             selectinload(Run.documents).selectinload(RunDocument.fields),
             selectinload(Run.rule_results),
         )
-    run = await session.scalar(query)
+    )
     if run is None:
         raise AppError(404, "Run not found.")
     return run
@@ -215,9 +213,7 @@ def _report(run: Run) -> AuditDetail:
 
 
 async def run_state(session: AsyncSession, run_id: str) -> RunState:
-    run = await _load_run(session, run_id, with_report=False)
-    if run.status == "done":
-        run = await _load_run(session, run_id, with_report=True)
+    run = await _load_run(session, run_id)
     return RunState(
         status=run.status,  # type: ignore[arg-type]
         progress=await with_queue_position(session, run),
@@ -227,14 +223,19 @@ async def run_state(session: AsyncSession, run_id: str) -> RunState:
 
 
 async def run_report(session: AsyncSession, run_id: str) -> AuditDetail:
-    run = await _load_run(session, run_id, with_report=True)
+    run = await _load_run(session, run_id)
     if run.status != "done":
         raise AppError(404, "Audit not found.")
     return _report(run)
 
 
-async def run_workflow_id(session: AsyncSession, run_id: str) -> str | None:
-    return await session.scalar(select(Run.workflow_id).where(Run.id == run_id))
+async def run_api_key_hash(session: AsyncSession, run_id: str) -> str | None:
+    """Hash of the API key of the run's workflow (None for an unknown run or no key)."""
+    return await session.scalar(
+        select(Workflow.api_key_hash)
+        .join(Run, Run.workflow_id == Workflow.id)
+        .where(Run.id == run_id)
+    )
 
 
 async def list_audits(session: AsyncSession, *, limit: int = 50, offset: int = 0) -> AuditList:

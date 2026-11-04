@@ -9,8 +9,8 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from repody import db
-from repody.auth import DEV_USER, InvalidTokenError, Permission, User, user_from_token
+from repody.infra import db
+from repody.infra.auth import DEV_USER, InvalidTokenError, Permission, User, user_from_token
 from repody.settings import get_settings
 
 

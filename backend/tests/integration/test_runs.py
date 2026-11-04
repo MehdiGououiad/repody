@@ -3,8 +3,8 @@ import json
 from tests.conftest import FACTURE_PDF
 from tests.integration.helpers import condition, invoice_workflow, rule
 
-from repody import queue
 from repody.extraction import client
+from repody.infra import queue
 from repody.settings import get_settings
 
 PDF = FACTURE_PDF.read_bytes()
