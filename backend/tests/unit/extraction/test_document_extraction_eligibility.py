@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from repody.app.run.progress import document_wants_extraction
-from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
+from repody.app.run.snapshot import SnapshotDocument
+from repody.extraction.types import SchemaFieldSpec
 
 
 def _doc(**kwargs) -> SnapshotDocument:
@@ -17,5 +18,5 @@ def test_markdown_only_document_is_extracted() -> None:
 
 
 def test_document_with_schema_fields_is_extracted() -> None:
-    field = SnapshotSchemaField(id="f1", name="total", description="", position=0)
+    field = SchemaFieldSpec(name="total")
     assert document_wants_extraction(_doc(schema_fields=[field])) is True

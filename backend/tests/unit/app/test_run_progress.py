@@ -4,24 +4,13 @@ import pytest
 
 from repody.app.run.progress import (
     build_run_progress_plan,
-    clear_progress_commit_cache,
     progress_snapshot,
     progress_step,
     set_run_progress,
     step_index_for,
 )
-from repody.app.run.snapshot import SnapshotDocument, SnapshotSchemaField
-
-
-@pytest.fixture(autouse=True)
-def _clear_progress_throttle():
-    clear_progress_commit_cache()
-    yield
-    clear_progress_commit_cache()
-
-
-class _ThrottleSettings:
-    progress_commit_interval_ms = 60_000
+from repody.app.run.snapshot import SnapshotDocument
+from repody.extraction.types import SchemaFieldSpec
 
 
 def test_progress_plan_supports_snapshot_documents():
@@ -29,14 +18,7 @@ def test_progress_plan_supports_snapshot_documents():
         id="doc-1",
         document_type="Invoice",
         position=0,
-        schema_fields=[
-            SnapshotSchemaField(
-                id="field-1",
-                name="total",
-                description="Invoice total",
-                position=0,
-            )
-        ],
+        schema_fields=[SchemaFieldSpec(name="total", description="Invoice total")],
     )
 
     steps = build_run_progress_plan(
@@ -94,90 +76,42 @@ def test_progress_plan_includes_markdown_only_documents():
     assert steps[1]["id"] == "extract-doc-md"
 
 
-@pytest.mark.asyncio
-async def test_progress_sse_published_even_when_db_throttled(monkeypatch):
-    published: list[dict] = []
-    db_opened = False
+class _Run:
+    progress = None
 
-    async def _publish(run_id: str, progress: dict) -> None:
-        published.append({"run_id": run_id, "progress": progress})
 
-    class _Run:
-        progress = None
+class _Session:
+    def __init__(self, writes: list[dict]):
+        self.writes = writes
+        self.run = _Run()
 
-    class _Session:
-        async def get(self, _model, run_id: str):
-            return _Run()
+    async def get(self, _model, _run_id: str):
+        return self.run
 
-        async def commit(self):
-            nonlocal db_opened
-            db_opened = True
+    async def commit(self):
+        self.writes.append(self.run.progress)
 
-        async def __aenter__(self):
-            return self
+    async def __aenter__(self):
+        return self
 
-        async def __aexit__(self, *args):
-            return False
-
-    def _session_factory():
-        return _Session()
-
-    monkeypatch.setattr("repody.app.run.progress.publish_run_progress", _publish)
-    monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
-    monkeypatch.setattr(
-        "repody.app.run.progress.get_settings",
-        lambda: _ThrottleSettings(),
-    )
-
-    steps = [progress_step("queue", "Queued")]
-    await set_run_progress(None, "run-1", steps, 0, "Primed", force=True)
-    published.clear()
-    db_opened = False
-
-    await set_run_progress(None, "run-1", steps, 0, "Working…", force=False)
-
-    assert len(published) == 1
-    assert published[0]["progress"]["label"] == "Working…"
-    assert db_opened is False
+    async def __aexit__(self, *args):
+        return False
 
 
 @pytest.mark.asyncio
-async def test_progress_db_written_when_forced(monkeypatch):
+@pytest.mark.parametrize("persist", [True, False])
+async def test_progress_is_always_published_and_stored_only_when_asked(monkeypatch, persist):
     published: list[dict] = []
-    db_writes = 0
+    writes: list[dict] = []
 
-    async def _publish(run_id: str, progress: dict) -> None:
+    async def _publish(_run_id: str, progress: dict) -> None:
         published.append(progress)
 
-    class _Run:
-        progress = None
-
-    class _Session:
-        async def get(self, _model, run_id: str):
-            return _Run()
-
-        async def commit(self):
-            nonlocal db_writes
-            db_writes += 1
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, *args):
-            return False
-
-    def _session_factory():
-        return _Session()
-
     monkeypatch.setattr("repody.app.run.progress.publish_run_progress", _publish)
-    monkeypatch.setattr("repody.infra.db.base.async_session_factory", _session_factory)
-    monkeypatch.setattr(
-        "repody.app.run.progress.get_settings",
-        lambda: _ThrottleSettings(),
-    )
+    monkeypatch.setattr("repody.infra.db.base.async_session_factory", lambda: _Session(writes))
 
     steps = [progress_step("queue", "Queued")]
-    await set_run_progress(None, "run-2", steps, 0, "Done", force=True)
+    await set_run_progress(None, "run-1", steps, 0, "Working…", persist=persist)
 
-    assert len(published) == 1
-    assert db_writes == 1
+    assert [p["label"] for p in published] == ["Working…"]
+    assert len(writes) == (1 if persist else 0)

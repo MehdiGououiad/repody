@@ -29,12 +29,7 @@ from repody.app.run.progress import (
 from repody.app.run.snapshot import SnapshotDocument, materialize_run_config
 from repody.app.run.state import PUBLIC_RUN_FAILURE_MESSAGE, claim_run, complete_run, fail_run
 from repody.extraction.pipeline import extract_document
-from repody.extraction.types import (
-    ExtractionIclExample,
-    ExtractionMetadata,
-    ExtractionResult,
-    SchemaFieldSpec,
-)
+from repody.extraction.types import ExtractionMetadata, ExtractionResult
 from repody.inference.runtime import is_serverless_inference
 from repody.infra.db import base as db_base
 from repody.infra.db.models import (
@@ -134,11 +129,18 @@ class _Progress:
         self.run_id = run_id
         self.steps = steps
         self.index = 1
+        self._persisted_at = 0.0
 
     async def show(self, step_id: str | None, label: str, *, force: bool = True) -> None:
         if step_id is not None and (found := step_index_for(self.steps, step_id)) is not None:
             self.index = found
-        await set_run_progress(None, self.run_id, self.steps, self.index, label, force=force)
+        # SSE gets every update; the run row is written at most every progress_commit_interval_ms.
+        now = time.monotonic()
+        interval = get_settings().progress_commit_interval_ms / 1000
+        persist = force or now - self._persisted_at >= interval
+        if persist:
+            self._persisted_at = now
+        await set_run_progress(None, self.run_id, self.steps, self.index, label, persist=persist)
 
     async def extract_start(self, doc: SnapshotDocument, index: int, total: int) -> None:
         step_id = f"extract-{doc.id}"
@@ -190,31 +192,14 @@ def _label(doc: SnapshotDocument) -> str:
 
 async def _extract(doc: SnapshotDocument, run_doc: RunDocument) -> ExtractionResult:
     blob = await get_storage().get_bytes(run_doc.storage_key or "")
-    schema = [
-        SchemaFieldSpec.model_validate(
-            {
-                "name": f.name,
-                "description": f.description,
-                "template_type": f.template_type,
-                "field_config": f.field_config,
-            }
-        )
-        for f in doc.schema_fields
-        if f.name.strip()
-    ]
-    examples = [
-        ExtractionIclExample(input=str(row["input"]).strip(), output=str(row["output"]).strip())
-        for row in doc.extraction_icl_examples or []
-        if str(row.get("input") or "").strip() and str(row.get("output") or "").strip()
-    ]
     return await extract_document(
         blob,
         resolve_upload_mime(run_doc.mime_type, blob),
         _label(doc),
-        schema,
+        doc.schema_fields,
         extraction_instructions=doc.extraction_instructions or "",
         markdown_extraction=bool(doc.markdown_extraction),
-        extraction_icl_examples=examples or None,
+        extraction_icl_examples=doc.extraction_icl_examples or None,
     )
 
 

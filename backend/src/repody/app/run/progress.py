@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any, Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,18 +11,13 @@ from repody.inference.runtime import is_serverless_inference
 from repody.infra.db import base as db_base
 from repody.infra.db.models import Run
 from repody.rules.conditions import logic_check_entries
-from repody.settings import get_settings
 
 StepStatus = Literal["pending", "active", "done"]
 
 
-_last_progress_commit: dict[str, float] = {}
-_MAX_PROGRESS_CACHE = 512
-
 __all__ = [
     "StepStatus",
     "build_run_progress_plan",
-    "clear_progress_commit_cache",
     "completed_extraction_detail",
     "document_wants_extraction",
     "fail_run_progress",
@@ -83,7 +77,7 @@ def _queue_wait_detail() -> str:
 
 def document_wants_extraction(doc: SnapshotDocument) -> bool:
     """A document with a file goes to the model when it has schema fields or wants Markdown."""
-    return doc.markdown_extraction or any(f.name.strip() for f in doc.schema_fields)
+    return doc.markdown_extraction or bool(doc.schema_fields)
 
 
 def completed_extraction_detail(meta: ExtractionMetadata) -> str:
@@ -195,63 +189,31 @@ def mark_step_done(
             return
 
 
-def clear_progress_commit_cache(run_id: str | None = None) -> None:
-    if run_id:
-        _last_progress_commit.pop(run_id, None)
-    else:
-        _last_progress_commit.clear()
-
-
-def _touch_progress_cache(run_id: str, now: float) -> None:
-    if run_id in _last_progress_commit:
-        _last_progress_commit.pop(run_id)
-    _last_progress_commit[run_id] = now
-    while len(_last_progress_commit) > _MAX_PROGRESS_CACHE:
-        _last_progress_commit.pop(next(iter(_last_progress_commit)))
-
-
 async def set_run_progress(
-    session: object,
+    session: AsyncSession | None,
     run_id: str,
     steps: list[dict[str, Any]],
     current_index: int,
     label: str,
     *,
-    force: bool = False,
-    event_type: str | None = None,
+    persist: bool = True,
 ) -> None:
-    """Publish live progress over SSE; persist to DB on an interval (or when forced)."""
+    """Publish live progress over SSE; with `persist`, also store it on the run row."""
     progress = progress_snapshot(steps, current_index, label)
-    if event_type:
-        progress["lastEvent"] = event_type
-        progress["eventVersion"] = 1
-
     await publish_run_progress(run_id, progress)
-
-    settings = get_settings()
-    interval_s = settings.progress_commit_interval_ms / 1000.0
-    now = time.monotonic()
-    last = _last_progress_commit.get(run_id, 0.0)
-    if not force and (now - last) < interval_s:
+    if not persist:
         return
-
-    if isinstance(session, AsyncSession):
-        run = await session.get(Run, run_id)
-        if run:
+    if session is not None:
+        if run := await session.get(Run, run_id):
             run.progress = progress
-        _touch_progress_cache(run_id, now)
         return
-
-    async with db_base.async_session_factory() as progress_session:
-        run = await progress_session.get(Run, run_id)
-        if not run:
-            return
-        run.progress = progress
-        await progress_session.commit()
-    _touch_progress_cache(run_id, now)
+    async with db_base.async_session_factory() as own:
+        if run := await own.get(Run, run_id):
+            run.progress = progress
+            await own.commit()
 
 
-async def init_queued_progress(session: object, run_id: str) -> None:
+async def init_queued_progress(session: AsyncSession, run_id: str) -> None:
     steps = [
         progress_step(
             "queue",
@@ -259,7 +221,7 @@ async def init_queued_progress(session: object, run_id: str) -> None:
             detail=_queue_wait_detail(),
         )
     ]
-    await set_run_progress(session, run_id, steps, 0, "Waiting for worker\u2026", force=True)
+    await set_run_progress(session, run_id, steps, 0, "Waiting for worker\u2026")
 
 
 async def fail_run_progress(run_id: str, error: str) -> None:
@@ -289,4 +251,3 @@ async def fail_run_progress(run_id: str, error: str) -> None:
         if run:
             run.progress = progress
             await session.commit()
-    clear_progress_commit_cache(run_id)

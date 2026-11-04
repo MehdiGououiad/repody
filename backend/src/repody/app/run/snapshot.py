@@ -2,34 +2,45 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from typing import Any
+
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 from repody.app.run.helpers import rule_dict_from_row, rules_payload
+from repody.extraction.types import ExtractionIclExample, SchemaFieldSpec
 from repody.infra.db.models import Document, Run, Workflow
 from repody.util.json_shape import normalize_keys_to_snake
 
 
-@dataclass
-class SnapshotSchemaField:
-    id: str
-    name: str
-    description: str
-    position: int
-    template_type: str = "verbatim-string"
-    field_config: dict | None = None
+class SnapshotDocument(BaseModel):
+    """A workflow document as one run sees it: from the run snapshot or the live workflow."""
 
-
-@dataclass
-class SnapshotDocument:
-    """Document view for run pipeline - ORM Document or snapshot JSON."""
+    model_config = ConfigDict(extra="ignore")
 
     id: str
-    document_type: str
-    position: int
+    document_type: str = ""
+    position: int = 0
     extraction_instructions: str = ""
     markdown_extraction: bool = False
-    extraction_icl_examples: list[dict] | None = None
-    schema_fields: list[SnapshotSchemaField] = field(default_factory=list)
+    extraction_icl_examples: list[ExtractionIclExample] = Field(default_factory=list)
+    schema_fields: list[SchemaFieldSpec] = Field(
+        default_factory=list, validation_alias=AliasChoices("schema_fields", "schema")
+    )
+
+    @field_validator("extraction_icl_examples", mode="before")
+    @classmethod
+    def _complete_examples(cls, value: Any) -> list[Any]:
+        return [
+            ex
+            for ex in value or []
+            if isinstance(ex, dict) and ex.get("input") and ex.get("output")
+        ]
+
+    @field_validator("schema_fields", mode="after")
+    @classmethod
+    def _named_fields(cls, value: list[SchemaFieldSpec]) -> list[SchemaFieldSpec]:
+        return [field for field in value if field.name]
 
 
 def build_run_snapshot(
@@ -50,68 +61,25 @@ def build_run_snapshot(
     return out
 
 
-def _schema_fields_from_snapshot(doc: dict) -> list[SnapshotSchemaField]:
-    raw = doc.get("schema") or doc.get("schema_fields") or []
-    fields: list[SnapshotSchemaField] = []
-    for idx, field_row in enumerate(raw):
-        if not isinstance(field_row, dict):
-            continue
-        name = (field_row.get("name") or "").strip()
-        if not name:
-            continue
-        fields.append(
-            SnapshotSchemaField(
-                id=str(field_row.get("id") or f"sf-{idx}"),
-                name=name,
-                description=str(field_row.get("description") or ""),
-                template_type=str(field_row.get("template_type") or "verbatim-string"),
-                field_config=_field_config_from_snapshot_row(field_row),
-                position=idx,
-            )
-        )
-    return fields
-
-
-def _field_config_from_snapshot_row(field_row: dict) -> dict | None:
-    config = {
-        key: field_row[key]
-        for key in ("enum_values", "children")
-        if isinstance(field_row.get(key), list) and field_row[key]
-    }
-    return config or None
-
-
-def _document_from_snapshot(doc: dict, position: int) -> SnapshotDocument:
-    return SnapshotDocument(
-        id=str(doc.get("id") or f"doc-{position}"),
-        document_type=str(doc.get("document_type") or ""),
-        position=position,
-        extraction_instructions=str(doc.get("extraction_instructions") or ""),
-        markdown_extraction=bool(doc.get("markdown_extraction") or False),
-        extraction_icl_examples=list(doc.get("extraction_icl_examples") or []),
-        schema_fields=_schema_fields_from_snapshot(doc),
-    )
-
-
 def _document_from_orm(doc: Document) -> SnapshotDocument:
-    return SnapshotDocument(
-        id=doc.id,
-        document_type=doc.document_type,
-        position=doc.position,
-        extraction_instructions=doc.extraction_instructions or "",
-        markdown_extraction=doc.markdown_extraction,
-        extraction_icl_examples=list(doc.extraction_icl_examples or []),
-        schema_fields=[
-            SnapshotSchemaField(
-                id=f.id,
-                name=f.name,
-                description=f.description or "",
-                template_type=getattr(f, "template_type", None) or "verbatim-string",
-                field_config=normalize_keys_to_snake(getattr(f, "field_config", None) or None),
-                position=f.position,
-            )
-            for f in sorted(doc.schema_fields, key=lambda x: x.position)
-        ],
+    return SnapshotDocument.model_validate(
+        {
+            "id": doc.id,
+            "document_type": doc.document_type,
+            "position": doc.position,
+            "extraction_instructions": doc.extraction_instructions,
+            "markdown_extraction": doc.markdown_extraction,
+            "extraction_icl_examples": doc.extraction_icl_examples,
+            "schema_fields": [
+                {
+                    "name": f.name,
+                    "description": f.description,
+                    "template_type": f.template_type,
+                    "field_config": f.field_config,
+                }
+                for f in sorted(doc.schema_fields, key=lambda x: x.position)
+            ],
+        }
     )
 
 
@@ -127,7 +95,12 @@ class MaterializedRunConfig:
 def _documents_from(snapshot: dict, workflow: Workflow | None) -> list[SnapshotDocument]:
     raw_docs = snapshot.get("documents")
     if raw_docs:
-        return [_document_from_snapshot(doc, idx) for idx, doc in enumerate(raw_docs)]
+        return [
+            SnapshotDocument.model_validate(
+                {**doc, "id": doc.get("id") or f"doc-{idx}", "position": idx}
+            )
+            for idx, doc in enumerate(raw_docs)
+        ]
     if workflow is None or not getattr(workflow, "documents", None):
         return []
     return [_document_from_orm(doc) for doc in sorted(workflow.documents, key=lambda d: d.position)]

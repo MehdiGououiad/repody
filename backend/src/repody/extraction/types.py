@@ -76,10 +76,16 @@ class DocumentBundle:
     mime_type: str
 
 
-@dataclass
-class ExtractionIclExample:
+class ExtractionIclExample(BaseModel):
+    """One NuExtract in-context example (input text and the expected JSON output)."""
+
     input: str
     output: str
+
+    @field_validator("input", "output", mode="before")
+    @classmethod
+    def _strip(cls, value: Any) -> str:
+        return str(value or "").strip()
 
 
 @dataclass
