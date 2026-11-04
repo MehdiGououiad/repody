@@ -31,6 +31,7 @@ LightOnOCR-3-4B and Xiaomi-OCR-0 (official path here is CPU Transformers; droppe
     uv run make_docs.py && uv run real_docs.py
     pnpm llamacpp:serve && uv run runners/nuextract3.py      # then pnpm llamacpp:stop
     MODELS=~/models/ocr-bench bash run_others.sh            # MiniCPM, Surya, then score.py
+    MODELS=~/models/ocr-bench bash run_dspark.sh            # MiniCPM with its DSpark draft head
 
 ## Results (2026-11-04, llama.cpp b12098)
 
@@ -44,3 +45,11 @@ On the payslip, Surya and MiniCPM write the French decimal comma as a point (`3 
 `3 500,00€`), which the exact score counts as wrong. Treating `,` and `.` as equal, the payslip scores
 are Surya 98.4, MiniCPM 99.2 and NuExtract3 86.9 (NuExtract3 misread the URSSAF number and the
 hourly rate, and left out the employee block).
+
+### MiniCPM-OCR DSpark (speculative decoding)
+
+`run_dspark.sh` serves MiniCPM-OCR with the `MiniCPM-OCR-1.0-DSpark-gguf` draft head exactly as the
+official llama.cpp guide. On this machine's Vulkan backend llama-server aborts on the first request
+(`ggml-vulkan.cpp:5779: GGML_ASSERT(allow_misalign || misalign_bytes == 0)`) with both b12098 and
+b12119, so there is no DSpark result yet. The guide was verified on Metal; CUDA is also documented.
+Rerun the script (`LLAMA_SERVER=<path>` picks a build) once llama.cpp fixes it.

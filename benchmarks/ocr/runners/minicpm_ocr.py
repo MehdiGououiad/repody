@@ -22,6 +22,7 @@ no layout overlap. The page is the SDK's Markdown.
     uv run runners/minicpm_ocr.py
 """
 
+import os
 import tempfile
 from importlib.resources import files
 from pathlib import Path
@@ -49,4 +50,10 @@ def infer(pdf: Path) -> str:
         return "\n\n".join(p.read_text(encoding="utf-8") for p in sorted(Path(cfg["_meta"]["output_dir"]).rglob("*.md")))
 
 
-run("minicpm-ocr-1.0", {"runtime": "minicpm-ocr SDK (layout CPU) + llama.cpp b12098 Vulkan, Q8_0", "weights": "openbmb/MiniCPM-OCR-1.0-gguf"}, infer)
+# BENCH_VARIANT=dspark when the service runs with the DSpark draft head (see run_dspark.sh).
+VARIANT = os.environ.get("BENCH_VARIANT", "")
+run(
+    f"minicpm-ocr-1.0{'-' + VARIANT if VARIANT else ''}",
+    {"runtime": f"minicpm-ocr SDK (layout CPU) + llama.cpp b12098 Vulkan, Q8_0{' + DSpark draft' if VARIANT else ''}", "weights": "openbmb/MiniCPM-OCR-1.0-gguf"},
+    infer,
+)
