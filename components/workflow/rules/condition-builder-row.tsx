@@ -13,19 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  ARITH_OPS,
-  type ConditionFieldOption,
-  NO_RIGHT,
-} from "@/components/workflow/rules/condition-builder-model";
 import { OperandPicker } from "@/components/workflow/rules/condition-operand-picker";
+import { ARITH_OPS, NO_RIGHT } from "@/lib/rules/comparison-ops";
 import {
   comparisonOpsForTemplateType,
   literalInputKindForTemplateType,
   NUMBER_TEMPLATE_TYPES,
   resolveFieldTemplateType,
 } from "@/lib/rules/condition-input-kind";
-import type { TableFieldOption } from "@/lib/rules/document-fields";
+import type { DocumentFieldOption, TableFieldOption } from "@/lib/rules/document-fields";
 import type { ArithmeticOp, ComparisonOp, RuleCondition, TableAggregateLeft } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +34,7 @@ export function ConditionRow({
   canRemove,
 }: {
   condition: RuleCondition;
-  fields: ConditionFieldOption[];
+  fields: DocumentFieldOption[];
   tableFields: TableFieldOption[];
   onChange: (patch: Partial<RuleCondition>) => void;
   onRemove: () => void;
@@ -51,7 +47,7 @@ export function ConditionRow({
     tableFields.find((table) => table.token === condition.tableAggregate?.tableField) ??
     tableFields[0];
   const hasArith = Boolean(condition.arithmeticOp) && !useAggregate;
-  const noRight = NO_RIGHT.includes(condition.operator);
+  const noRight = NO_RIGHT.has(condition.operator);
   const leftTemplateType =
     condition.left.kind === "field"
       ? resolveFieldTemplateType(condition.left.value, fields)
@@ -288,7 +284,7 @@ export function ConditionRow({
           onValueChange={(value) => {
             const operator = value as ComparisonOp;
             const patch: Partial<RuleCondition> = { operator };
-            if (NO_RIGHT.includes(operator)) patch.right = undefined;
+            if (NO_RIGHT.has(operator)) patch.right = undefined;
             else if (!condition.right) patch.right = { kind: "literal", value: "" };
             onChange(patch);
           }}

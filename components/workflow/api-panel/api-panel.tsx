@@ -4,15 +4,12 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { ApiInfoScreen } from "@/components/workflow/api-panel/api-panel-info";
 import { ApiRunLoadingScreen } from "@/components/workflow/api-panel/api-panel-loading";
-import {
-  type ApiRunReport,
-  ApiRunReportScreen,
-} from "@/components/workflow/api-panel/api-panel-report";
+import { ApiRunReportScreen } from "@/components/workflow/api-panel/api-panel-report";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
 import { type RunProgress, runWorkflow } from "@/lib/api/run";
 import { reportClientError } from "@/lib/report-error";
-import type { DocumentDef } from "@/lib/types";
+import type { DocumentDef, RunAuditDetail } from "@/lib/types";
 
 type Screen = "info" | "loading" | "report";
 
@@ -31,7 +28,7 @@ export function ApiPanel({
 }) {
   const t = useTranslations("workflows.builder");
   const [screen, setScreen] = useState<Screen>("info");
-  const [report, setReport] = useState<ApiRunReport | null>(null);
+  const [report, setReport] = useState<RunAuditDetail | null>(null);
   const [filesByDocId, setFilesByDocId] = useState<Record<string, File>>({});
   const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
@@ -49,7 +46,7 @@ export function ApiPanel({
         { documents, filesByDocId },
         { apiKey, onProgress: setRunProgress }
       );
-      setReport({ ...detail, processedAt: detail.createdAt });
+      setReport(detail);
       setScreen("report");
     } catch (error) {
       reportClientError(error, { workflowId, surface: "api-panel" });

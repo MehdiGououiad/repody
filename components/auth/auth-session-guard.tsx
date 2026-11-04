@@ -7,8 +7,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
 import { isPublicPage } from "@/lib/auth/public-paths";
-import { useClientPathname } from "@/lib/hooks/use-client-pathname";
-import { useHydrated } from "@/lib/hooks/use-hydrated";
+import { useClientPathname, useHydrated } from "@/lib/hooks/use-hydrated";
 import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
 
 function AuthGateSpinner({ message }: { message: string }) {

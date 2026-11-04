@@ -3,11 +3,7 @@
 import { Clock, FileSearch, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
-import type {
-  RunAuditDetail,
-  RunAuditMetadata,
-  RunDocumentExtractionMeta,
-} from "@/lib/types/audit";
+import type { RunAuditDetail, RunAuditMetadata, RunDocumentExtractionMeta } from "@/lib/types";
 import { cn, formatDurationMs, formatExtractedFieldValue } from "@/lib/utils";
 
 function MetaChip({

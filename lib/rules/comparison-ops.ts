@@ -1,4 +1,4 @@
-import type { ComparisonOp } from "@/lib/types";
+import type { ArithmeticOp, ComparisonOp } from "@/lib/types";
 
 /** Comparison operators shown in the Logic-rule condition builder. */
 export const COMPARISON_OP_DEFS: { value: ComparisonOp; key: string; noRight?: true }[] = [
@@ -14,5 +14,14 @@ export const COMPARISON_OP_DEFS: { value: ComparisonOp; key: string; noRight?: t
   { value: "IS_EMPTY", key: "opIsEmpty", noRight: true },
 ];
 
-/** Operators that do not take a right-hand operand. */
-export const NO_RIGHT: ComparisonOp[] = ["EXISTS", "IS_EMPTY"];
+export const ARITH_OPS: { value: ArithmeticOp; label: string }[] = [
+  { value: "+", label: "+" },
+  { value: "-", label: "-" },
+  { value: "*", label: "x" },
+  { value: "/", label: "/" },
+];
+
+/** Operators that test the left side alone (no right-hand operand). */
+export const NO_RIGHT = new Set<ComparisonOp>(
+  COMPARISON_OP_DEFS.filter((op) => op.noRight).map((op) => op.value)
+);

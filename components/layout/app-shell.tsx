@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { AuthSessionGuard } from "@/components/auth/auth-session-guard";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isPublicPage } from "@/lib/auth/public-paths";
-import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { useClientPathname } from "@/lib/hooks/use-hydrated";
 import { AppSidebar } from "./app-sidebar";
 import { TopBar } from "./topbar";
 

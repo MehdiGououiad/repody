@@ -25,7 +25,7 @@ import type { TestPhase } from "@/components/workflow/builder/test-run-session";
 import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
 import type { RunProgress } from "@/lib/api/run";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import type { RunAuditDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const statusColor: Record<string, string> = {
@@ -44,6 +44,7 @@ export function TestRunResults({
   result: RunAuditDetail | null;
 }) {
   const t = useTranslations("workflows.builder");
+  const tReport = useTranslations("audits.report");
   const StatusIcon =
     result?.status === "passed"
       ? CheckCircle2
@@ -118,7 +119,6 @@ export function TestRunResults({
               </div>
               <div className="divide-y divide-border">
                 {result.ruleResults.map((rule) => {
-                  const KindIcon = Code;
                   const failedRule = isRuleFailure(rule.status);
 
                   return (
@@ -129,11 +129,11 @@ export function TestRunResults({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <KindIcon className="h-3 w-3 text-on-surface-variant shrink-0" />
+                          <Code className="h-3 w-3 text-on-surface-variant shrink-0" />
                           <span className="text-xs font-semibold text-on-surface">{rule.name}</span>
                           {failedRule && rule.severity === "reject" ? (
                             <Badge variant="danger" className="text-[9px] px-1">
-                              Reject
+                              {tReport("reject")}
                             </Badge>
                           ) : null}
                           {rule.status !== "passed" && rule.status !== "failed" ? (

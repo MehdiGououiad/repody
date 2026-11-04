@@ -4,7 +4,7 @@ import { LogOut, Plus, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { useClientPathname } from "@/lib/hooks/use-hydrated";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 

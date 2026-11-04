@@ -15,17 +15,14 @@ import { useLocale, useTranslations } from "next-intl";
 import Papa from "papaparse";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
-import {
-  formatFieldValue,
-  type RunReportLabels,
-} from "@/components/audit/run-report/report-shared";
+import { formatFieldValue } from "@/components/audit/run-report/report-shared";
 import { isRuleFailure, ruleStatusLabel } from "@/components/shared/rule-status";
 import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { setPreferenceCookie } from "@/lib/browser-cookie";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import type { RunAuditDetail } from "@/lib/types";
 import { cn, formatDurationMs } from "@/lib/utils";
 
 function buildCsv(
@@ -74,35 +71,6 @@ function downloadCsv(content: string, filename: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-function auditReportLabels(
-  t: ReturnType<typeof useTranslations>,
-  audit: RunAuditDetail
-): RunReportLabels {
-  return {
-    allPassed: t("allRulesPassed"),
-    validationFailed: t("validationFailed"),
-    reviewRequired: t("reviewRequired"),
-    fieldsExtracted: t("fieldsExtracted", { count: audit.summary.fieldsExtracted })
-      .replace(String(audit.summary.fieldsExtracted), "")
-      .trim(),
-    rulesPassed: t("rulesPassed", { passed: audit.summary.passed, total: audit.summary.total }),
-    rulesFailed: t("rulesFailed", { count: audit.summary.failed }),
-    expected: t("expected"),
-    got: t("got"),
-    logic: t("logic"),
-    llm: t("llm"),
-    cross: t("cross"),
-    intra: t("intra"),
-    reject: t("reject"),
-    flag: t("flag"),
-    info: t("info"),
-    passed: t("passed"),
-    affectedFields: t("affectedFields"),
-    extractedData: t("extractedData"),
-    validationResults: t("validationRules"),
-  };
 }
 
 function LangToggle() {
@@ -233,7 +201,6 @@ function DocExtractionCard({
 export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
   const t = useTranslations("audits.report");
   const locale = useLocale();
-  const labels = auditReportLabels(t, audit);
   const generatedAt = new Date().toLocaleString(locale);
 
   const handlePrint = () => window.print();
@@ -310,7 +277,6 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
 
         <RunStatusBanner
           audit={audit}
-          labels={labels}
           subtitle={`${audit.workflowName} · ${ts}`}
           className="rounded-2xl p-6 print:rounded-none [&_p:first-child]:text-xl"
           footer={
@@ -354,7 +320,7 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
             </h2>
           </div>
           {[...failed, ...other, ...passed].map((rule) => (
-            <RunDetailedRuleCard key={rule.id} rule={rule} labels={labels} size="md" />
+            <RunDetailedRuleCard key={rule.id} rule={rule} size="md" />
           ))}
         </section>
 

@@ -1,25 +1,23 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import {
   isRuleFailure,
   RuleStatusIcon,
   ruleStatusColor,
   ruleStatusLabel,
 } from "@/components/shared/rule-status";
-import type { RunAuditDetail, RunAuditRule } from "@/lib/types/audit";
+import type { RunAuditDetail, RunAuditRule } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { mergeLabels, type RunReportLabels } from "./report-shared";
 
 export function RunDetailedRuleCard({
   rule,
-  labels,
   size = "md",
 }: {
   rule: RunAuditRule;
-  labels?: RunReportLabels;
   size?: "sm" | "md";
 }) {
-  const L = mergeLabels(labels);
+  const t = useTranslations("audits.report");
   const passed = rule.status === "passed";
   const failedRule = isRuleFailure(rule.status);
   const iconCls = passed ? "text-success" : ruleStatusColor(rule.status);
@@ -38,10 +36,9 @@ export function RunDetailedRuleCard({
         : "bg-danger/5"
       : "bg-surface-container-low/50";
 
-  const scopeLabel = rule.scope === "cross" ? L.cross : L.intra;
-  const sevLabel =
-    rule.severity === "reject" ? L.reject : rule.severity === "flag" ? L.flag : L.info;
-  const statusText = passed ? (L.statusPassed ?? L.passed) : ruleStatusLabel(rule.status);
+  const scopeLabel = rule.scope === "cross" ? t("cross") : t("intra");
+  const sevLabel = rule.severity === "reject" ? t("reject") : t("flag");
+  const statusText = passed ? t("passed") : ruleStatusLabel(rule.status);
 
   const pad = size === "sm" ? "px-4 py-3" : "px-5 py-4";
   const detailPad =
@@ -95,7 +92,7 @@ export function RunDetailedRuleCard({
             <div className="flex flex-wrap gap-1 mt-1">
               {size === "md" && (
                 <span className="text-[11px] text-on-surface-variant mr-2">
-                  {L.affectedFields}:
+                  {t("affectedFields")}:
                 </span>
               )}
               {rule.affectedFields.map((f) => (
@@ -121,11 +118,9 @@ export function RunDetailedRuleCard({
 
 export function RunRuleResultsDetailed({
   audit,
-  labels,
   size = "md",
 }: {
   audit: RunAuditDetail;
-  labels?: RunReportLabels;
   size?: "sm" | "md";
 }) {
   const failed = audit.ruleResults.filter((r) => isRuleFailure(r.status));
@@ -136,7 +131,7 @@ export function RunRuleResultsDetailed({
   return (
     <>
       {ordered.map((rule) => (
-        <RunDetailedRuleCard key={rule.id} rule={rule} labels={labels} size={size} />
+        <RunDetailedRuleCard key={rule.id} rule={rule} size={size} />
       ))}
     </>
   );

@@ -1,9 +1,7 @@
 import { cache } from "react";
 import { unwrap } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
-import type { AuditListResponse } from "@/lib/api/schema-types";
-import type { Workflow } from "@/lib/types";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import type { AuditListResponse, RunAuditDetail, Workflow } from "@/lib/types";
 
 export const fetchWorkflows = cache(async (): Promise<Workflow[]> => {
   const data = await unwrap(serverApi.GET("/v1/workflows"));

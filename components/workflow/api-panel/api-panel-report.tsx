@@ -5,57 +5,18 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedReportSections } from "@/components/audit/run-report/report-sections";
-import type { RunReportLabels } from "@/components/audit/run-report/report-shared";
-import type { RunAuditDetail } from "@/lib/types/audit";
-
-export type ApiRunReport = RunAuditDetail & { processedAt: string };
-
-function apiReportLabels(
-  t: ReturnType<typeof useTranslations>,
-  report?: ApiRunReport
-): RunReportLabels {
-  return {
-    allPassed: t("allPassed"),
-    validationFailed: t("validationFailed"),
-    reviewRequired: t("reviewRequired"),
-    fieldsExtracted: report
-      ? t("fieldsExtracted", { count: report.summary.fieldsExtracted })
-          .replace(String(report.summary.fieldsExtracted), "")
-          .trim()
-      : undefined,
-    rulesPassed: report
-      ? t("rulesPassed", { passed: report.summary.passed, total: report.summary.total })
-      : undefined,
-    rulesFailed: report
-      ? t("rulesFailed", { count: report.summary.failed })
-          .replace(String(report.summary.failed), "")
-          .trim()
-      : undefined,
-    docExtracted: (done, total) => t("docExtracted", { done, total }),
-    statusPassed: t("statusPassed"),
-    expected: t("expected"),
-    got: t("got"),
-    extractedData: t("extractedData"),
-    validationResults: t("validationResults"),
-  };
-}
+import type { RunAuditDetail } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 
 export function ApiRunReportScreen({
   report,
   onBack,
 }: {
-  report: ApiRunReport;
+  report: RunAuditDetail;
   onBack: () => void;
 }) {
   const t = useTranslations("workflows.builder.api");
   const locale = useLocale();
-  const labels = apiReportLabels(t, report);
-  const ts = new Date(report.processedAt).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 
   return (
     <div className="flex flex-col gap-5">
@@ -70,8 +31,7 @@ export function ApiRunReportScreen({
 
       <RunStatusBanner
         audit={report}
-        labels={labels}
-        subtitle={`${report.workflowName} \u00b7 ${ts}`}
+        subtitle={`${report.workflowName} · ${formatDateTime(report.createdAt, locale)}`}
       />
 
       <Link
@@ -81,13 +41,13 @@ export function ApiRunReportScreen({
         <div>
           <p className="text-sm font-semibold text-primary">{t("viewFullReport")}</p>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            {report.id} \u00b7 {t("shareable")}
+            {report.id} · {t("shareable")}
           </p>
         </div>
         <ExternalLink className="h-4 w-4 text-primary shrink-0 group-hover:translate-x-0.5 transition-transform" />
       </Link>
 
-      <RunDetailedReportSections audit={report} locale={locale} labels={labels} />
+      <RunDetailedReportSections audit={report} />
     </div>
   );
 }

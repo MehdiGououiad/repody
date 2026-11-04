@@ -1,10 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { auth, isOidcConfigured } from "@/auth";
-import { resolveAuthCredential } from "@/lib/api/auth-policy";
 import { backendOrigin } from "@/lib/api/backend-origin";
-import { getRequestAccessToken } from "@/lib/auth/access-token";
 import { isPublicApi, isPublicPage } from "@/lib/auth/public-paths";
+
+/** The run API also accepts a workflow API key, which the caller sends itself. */
+const WORKFLOW_RUN_PATH = /^\/api\/v1\/workflows\/[^/]+\/runs$/;
 
 /**
  * Browser `/api/v1/*` -> FastAPI `/v1/*`. A proxy rewrite to the runtime backend origin
@@ -18,80 +19,44 @@ function toBackend(request: NextRequest, headers?: Headers): NextResponse {
   return NextResponse.rewrite(target, headers ? { request: { headers } } : undefined);
 }
 
-function hasCallerBearer(request: { headers: Headers }): boolean {
-  return Boolean(request.headers.get("authorization")?.trim());
-}
-
-async function forwardWithSessionBearer(
-  request: NextRequest & {
-    auth?: {
-      accessToken?: string | null;
-      error?: string | null;
-    } | null;
-  }
-): Promise<NextResponse> {
-  if (request.auth?.error) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-  const accessToken = getRequestAccessToken(request);
-  if (!accessToken) {
-    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
-  }
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("Authorization", `Bearer ${accessToken}`);
-  return toBackend(request, requestHeaders);
-}
-
-function redirectToLogin(request: { nextUrl: URL; url: string }): NextResponse {
+function redirectToLogin(request: NextRequest): NextResponse {
   const login = new URL("/login", request.url);
-  const path = request.nextUrl.pathname;
-  if (path && path !== "/login") {
-    login.searchParams.set("callbackUrl", path);
-  }
+  login.searchParams.set("callbackUrl", request.nextUrl.pathname);
   return NextResponse.redirect(login);
 }
 
-function hasValidSession(
-  auth: {
-    user?: unknown;
-    error?: string | null;
-  } | null
-): boolean {
-  return Boolean(auth?.user && !auth?.error);
-}
-
 export default auth(async (request) => {
-  if (!isOidcConfigured()) {
-    return request.nextUrl.pathname.startsWith("/api/v1/")
-      ? toBackend(request)
-      : NextResponse.next();
-  }
-
   const path = request.nextUrl.pathname;
+  if (!isOidcConfigured()) {
+    return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
+  }
+  // The token Auth.js just refreshed (reading the cookie again would race a second refresh).
+  const session = request.auth?.error ? null : request.auth;
+  const token = session?.accessToken;
 
   if (!path.startsWith("/api/")) {
-    const signedIn = hasValidSession(request.auth);
+    const signedIn = Boolean(session?.user);
     if (path === "/login" && signedIn) {
       const callback = request.nextUrl.searchParams.get("callbackUrl");
       const dest =
         callback?.startsWith("/") && !callback.startsWith("//") ? callback : "/dashboard";
       return NextResponse.redirect(new URL(dest, request.url));
     }
-    if (!isPublicPage(path) && !signedIn) {
-      return redirectToLogin(request);
-    }
-    return NextResponse.next();
+    return isPublicPage(path) || signedIn ? NextResponse.next() : redirectToLogin(request);
   }
 
   if (isPublicApi(path)) {
     return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
   }
-
-  // Workflow run API: a caller Bearer is the workflow API key; otherwise use the session JWT.
-  if (resolveAuthCredential(path) === "workflow" && hasCallerBearer(request)) {
-    return toBackend(request);
+  if (WORKFLOW_RUN_PATH.test(path) && request.headers.get("authorization")?.trim()) {
+    return toBackend(request); // the caller's workflow API key
   }
-  return forwardWithSessionBearer(request);
+  if (!token) {
+    return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+  }
+  const headers = new Headers(request.headers);
+  headers.set("Authorization", `Bearer ${token}`);
+  return toBackend(request, headers);
 });
 
 export const config = {

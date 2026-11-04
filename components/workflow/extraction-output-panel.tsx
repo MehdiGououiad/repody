@@ -6,7 +6,7 @@ import { useMemo } from "react";
 
 import { CopyableOutputPanel, OutputPre } from "@/components/shared/copyable-output-panel";
 import { DocumentMarkdownPanel } from "@/components/workflow/document-markdown-panel";
-import type { RunDocumentExtractionMeta } from "@/lib/types/audit";
+import type { RunDocumentExtractionMeta } from "@/lib/types";
 
 function formatJson(text: string): string {
   const trimmed = text.trim();

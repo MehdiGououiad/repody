@@ -1,6 +1,6 @@
 import type { UploadedFile } from "@/components/workflow/ingestion-section";
 import type { RunProgress } from "@/lib/api/run";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import type { RunAuditDetail } from "@/lib/types";
 
 export type TestPhase = "idle" | "running" | "done";
 

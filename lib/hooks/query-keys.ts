@@ -5,4 +5,5 @@ export const queryKeys = {
   dashboard: {
     live: ["dashboard", "live"] as const,
   },
+  checkRules: (draftFingerprint: string) => ["check-rules", draftFingerprint] as const,
 } as const;

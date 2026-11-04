@@ -194,7 +194,8 @@
       "runDetails": "Run details",
       "totalDuration": "Total duration",
       "extractionTime": "Extraction time",
-      "validationTime": "Validation time"
+      "validationTime": "Validation time",
+      "docExtracted": "{done} / {total} extracted"
     },
     "table": {
       "id": "Audit ID",
@@ -326,7 +327,6 @@
       "ingestion": {
         "severityReject": "Reject",
         "severityFlag": "Flag",
-        "severityInfo": "Info",
         "fileReady": "Ready",
         "fieldsToExtract": "Fields to extract",
         "validationRulesLabel": "Validation rules",
@@ -335,9 +335,8 @@
         "noDocs": "No documents configured yet.",
         "noDocsHint": "Go to step 1 to define your document types and fields.",
         "unnamedDoc": "Document",
-        "fieldSingular": "field",
-        "fieldPlural": "fields",
-        "ruleCount": "rules"
+        "ruleCount": "{count, plural, one {# rule} other {# rules}}",
+        "fieldCount": "{count, plural, one {# field} other {# fields}}"
       },
       "extraction": {
         "documentModelLabel": "Document model",
@@ -593,8 +592,7 @@
         },
         "empty": "No fields yet. Add one to describe what should be extracted from the document.",
         "emptyShort": "No fields yet",
-        "fieldLabel": "field",
-        "fieldsLabel": "fields"
+        "fieldCount": "{count, plural, one {# field} other {# fields}}"
       },
       "rules": {
         "title": "Validation rules",
@@ -680,19 +678,7 @@
         "processing": "Processing documents…",
         "processingHint": "Extracting fields and validating rules for {name}",
         "parseStep": "Parsing document structure",
-        "allPassed": "All rules passed",
-        "validationFailed": "Validation failed",
-        "reviewRequired": "Review required",
-        "fieldsExtracted": "{count} fields extracted",
-        "rulesPassed": "{passed}/{total} rules passed",
-        "rulesFailed": "{count} failed",
         "backToApi": "Back to API info",
-        "extractedData": "Extracted data",
-        "validationResults": "Validation results",
-        "statusPassed": "Passed",
-        "expected": "Expected",
-        "got": "Got",
-        "docExtracted": "{done} / {total} extracted",
         "viewFullReport": "View full audit report",
         "shareable": "Shareable · printable · exportable",
         "keyUnavailable": "Full API key is only shown once at deploy — redeploy to run a live test from the UI, or paste a saved key below."
@@ -705,7 +691,8 @@
         "sourceTab": "Markdown source",
         "copy": "Copy",
         "copied": "Copied",
-        "copyFailed": "Could not copy to clipboard"
+        "copyFailed": "Could not copy to clipboard",
+        "pageCount": "{count, plural, one {# page} other {# pages}}"
       },
       "jsonOutput": {
         "title": "Structured extraction JSON",

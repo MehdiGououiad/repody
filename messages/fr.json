@@ -194,7 +194,8 @@
       "runDetails": "Détails de l'exécution",
       "totalDuration": "Durée totale",
       "extractionTime": "Temps d'extraction",
-      "validationTime": "Temps de validation"
+      "validationTime": "Temps de validation",
+      "docExtracted": "{done} / {total} extrait(s)"
     },
     "table": {
       "id": "ID d'audit",
@@ -326,7 +327,6 @@
       "ingestion": {
         "severityReject": "Rejeter",
         "severityFlag": "Signaler",
-        "severityInfo": "Info",
         "fileReady": "Prêt",
         "fieldsToExtract": "Champs à extraire",
         "validationRulesLabel": "Règles de validation",
@@ -335,9 +335,8 @@
         "noDocs": "Aucun document configuré.",
         "noDocsHint": "Allez à l'étape 1 pour définir vos types de documents et champs.",
         "unnamedDoc": "Document",
-        "fieldSingular": "champ",
-        "fieldPlural": "champs",
-        "ruleCount": "règles"
+        "ruleCount": "{count, plural, one {# règle} other {# règles}}",
+        "fieldCount": "{count, plural, one {# champ} other {# champs}}"
       },
       "extraction": {
         "documentModelLabel": "Modèle document",
@@ -593,8 +592,7 @@
         },
         "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait.",
         "emptyShort": "Aucun champ pour le moment",
-        "fieldLabel": "champ",
-        "fieldsLabel": "champs"
+        "fieldCount": "{count, plural, one {# champ} other {# champs}}"
       },
       "rules": {
         "title": "Règles de validation",
@@ -680,19 +678,7 @@
         "processing": "Traitement des documents…",
         "processingHint": "Extraction des champs et validation des règles pour {name}",
         "parseStep": "Analyse de la structure du document",
-        "allPassed": "Toutes les règles validées",
-        "validationFailed": "Validation échouée",
-        "reviewRequired": "Révision requise",
-        "fieldsExtracted": "{count} champs extraits",
-        "rulesPassed": "{passed}/{total} règles validées",
-        "rulesFailed": "{count} échouée(s)",
         "backToApi": "Retour aux infos API",
-        "extractedData": "Données extraites",
-        "validationResults": "Résultats de validation",
-        "statusPassed": "Validée",
-        "expected": "Attendu",
-        "got": "Obtenu",
-        "docExtracted": "{done} / {total} extrait(s)",
         "viewFullReport": "Voir le rapport d'audit complet",
         "shareable": "Partageable · imprimable · exportable",
         "keyUnavailable": "La clé API complète n’est affichée qu’au déploiement — redéployez pour tester depuis l’interface, ou utilisez une clé que vous avez enregistrée."
@@ -705,7 +691,8 @@
         "sourceTab": "Source Markdown",
         "copy": "Copier",
         "copied": "Copié",
-        "copyFailed": "Impossible de copier"
+        "copyFailed": "Impossible de copier",
+        "pageCount": "{count, plural, one {# page} other {# pages}}"
       },
       "jsonOutput": {
         "title": "JSON d'extraction structurée",

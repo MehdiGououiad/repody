@@ -16,7 +16,6 @@
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
   isStructureTemplateType,
-  type NuExtractTemplateType,
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
@@ -116,7 +115,7 @@ function fieldFromArrayNode(name: string, value: unknown[]): SchemaField {
       return newField({
         name,
         description: "",
-        templateType: withListTemplateType(scalar as NuExtractTemplateType, true),
+        templateType: withListTemplateType(scalar, true),
       });
     }
   }

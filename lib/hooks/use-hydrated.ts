@@ -1,11 +1,21 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
 const subscribe = () => () => {};
-const getClientSnapshot = () => true;
-const getServerSnapshot = () => false;
 
+/** False during server render and hydration, true once the client has mounted. */
 export function useHydrated(): boolean {
-  return useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+  return useSyncExternalStore(
+    subscribe,
+    () => true,
+    () => false
+  );
+}
+
+/** The pathname once hydrated; empty before, so server and client markup match. */
+export function useClientPathname(): string {
+  const pathname = usePathname();
+  return useHydrated() ? pathname : "";
 }

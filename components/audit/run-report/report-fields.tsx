@@ -1,23 +1,17 @@
 "use client";
 
 import { AlertTriangle, FileText } from "lucide-react";
-import type { RunAuditDetail, RunAuditDocument } from "@/lib/types/audit";
+import { useLocale, useTranslations } from "next-intl";
+import type { RunAuditDetail, RunAuditDocument } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { formatFieldValue, mergeLabels, type RunReportLabels } from "./report-shared";
+import { formatFieldValue } from "./report-shared";
 
-function RunDocFieldsCardHeader({
-  doc,
-  labels,
-}: {
-  doc: RunAuditDocument;
-  labels?: RunReportLabels;
-}) {
-  const L = mergeLabels(labels);
-  const extractedCount = doc.fields.filter((f) => f.extracted).length;
-  const extractedLabel =
-    typeof L.docExtracted === "function"
-      ? L.docExtracted(extractedCount, doc.fields.length)
-      : (L.docExtracted ?? `${extractedCount}/${doc.fields.length} extracted`);
+function RunDocFieldsCardHeader({ doc }: { doc: RunAuditDocument }) {
+  const t = useTranslations("audits.report");
+  const extractedLabel = t("docExtracted", {
+    done: doc.fields.filter((f) => f.extracted).length,
+    total: doc.fields.length,
+  });
 
   return (
     <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-surface-container-low">
@@ -89,36 +83,21 @@ function RunDocFieldsListBody({ doc, locale }: { doc: RunAuditDocument; locale: 
 }
 
 /** Compact list layout for builder panels and side previews. */
-export function RunDocFieldsList({
-  doc,
-  locale,
-  labels,
-}: {
-  doc: RunAuditDocument;
-  locale: string;
-  labels?: RunReportLabels;
-}) {
+function RunDocFieldsList({ doc }: { doc: RunAuditDocument }) {
+  const locale = useLocale();
   return (
     <div className="panel-elevated rounded-xl overflow-hidden">
-      <RunDocFieldsCardHeader doc={doc} labels={labels} />
+      <RunDocFieldsCardHeader doc={doc} />
       <RunDocFieldsListBody doc={doc} locale={locale} />
     </div>
   );
 }
 
-export function RunFieldsList({
-  audit,
-  locale,
-  labels,
-}: {
-  audit: RunAuditDetail;
-  locale: string;
-  labels?: RunReportLabels;
-}) {
+export function RunFieldsList({ audit }: { audit: RunAuditDetail }) {
   return (
     <div className="space-y-4">
       {audit.documents.map((doc) => (
-        <RunDocFieldsList key={doc.id} doc={doc} locale={locale} labels={labels} />
+        <RunDocFieldsList key={doc.id} doc={doc} />
       ))}
     </div>
   );

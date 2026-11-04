@@ -55,12 +55,6 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const severityLabels = {
-    reject: t("severityReject"),
-    flag: t("severityFlag"),
-    info: t("severityInfo"),
-  };
-
   return (
     <div className="rounded-xl panel-elevated overflow-hidden">
       {/* Header */}
@@ -71,8 +65,8 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-on-surface truncate">{docName}</p>
           <p className="text-[11px] text-on-surface-variant">
-            {namedFields.length} {namedFields.length !== 1 ? t("fieldPlural") : t("fieldSingular")}
-            {docRules.length > 0 && ` · ${docRules.length} ${t("ruleCount")}`}
+            {t("fieldCount", { count: namedFields.length })}
+            {docRules.length > 0 && ` · ${t("ruleCount", { count: docRules.length })}`}
           </p>
         </div>
         {uploadedFile && (
@@ -156,22 +150,15 @@ function DocUploadCard({ doc, rules, onFileChange, uploadedFile }: DocUploadCard
                           .join(", ")}
                       </p>
                     </div>
-                    {/* severity label */}
-                    {r.severity === "reject" ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-danger shrink-0">
-                        <AlertTriangle className="h-2.5 w-2.5" />
-                        {severityLabels.reject}
-                      </span>
-                    ) : r.severity === "flag" ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-warning shrink-0">
-                        <AlertTriangle className="h-2.5 w-2.5" />
-                        {severityLabels.flag}
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-semibold uppercase tracking-wide text-on-surface-variant shrink-0">
-                        {severityLabels.info}
-                      </span>
-                    )}
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide shrink-0",
+                        r.severity === "reject" ? "text-danger" : "text-warning"
+                      )}
+                    >
+                      <AlertTriangle className="h-2.5 w-2.5" />
+                      {r.severity === "reject" ? t("severityReject") : t("severityFlag")}
+                    </span>
                   </div>
                 ))}
               </div>

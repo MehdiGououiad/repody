@@ -63,7 +63,7 @@ export function DocumentCard({
             </span>
             <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
               {namedFieldNames.length > 0
-                ? `${namedFieldNames.length} ${namedFieldNames.length !== 1 ? t("schema.fieldsLabel") : t("schema.fieldLabel")} · ${namedFieldNames.join(", ")}`
+                ? `${t("schema.fieldCount", { count: namedFieldNames.length })} · ${namedFieldNames.join(", ")}`
                 : t("schema.emptyShort")}
             </p>
           </div>

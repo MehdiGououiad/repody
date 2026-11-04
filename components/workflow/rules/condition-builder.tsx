@@ -3,14 +3,11 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import {
-  type ConditionFieldOption,
-  newCondition,
-} from "@/components/workflow/rules/condition-builder-model";
 import { ConditionPreview } from "@/components/workflow/rules/condition-builder-preview";
 import { ConditionRow } from "@/components/workflow/rules/condition-builder-row";
-import type { TableFieldOption } from "@/lib/rules/document-fields";
+import type { DocumentFieldOption, TableFieldOption } from "@/lib/rules/document-fields";
 import type { RuleCondition } from "@/lib/types";
+import { newCondition } from "@/lib/workflow/new-items";
 
 export function ConditionBuilder({
   conditions,
@@ -20,7 +17,7 @@ export function ConditionBuilder({
   onConditionsChange,
 }: {
   conditions: RuleCondition[];
-  fields: ConditionFieldOption[];
+  fields: DocumentFieldOption[];
   tableFields: TableFieldOption[];
   checks: string[];
   onConditionsChange: (conditions: RuleCondition[]) => void;

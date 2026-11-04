@@ -1,13 +1,8 @@
 export type NuExtractTypeGroup = "common" | "structure" | "advanced";
 
-export interface NuExtractTypeDef {
-  value: string;
-  group: NuExtractTypeGroup;
-  /** Hidden from the picker (still valid for stored workflows). */
-  hidden?: boolean;
-}
-
-export const NUEXTRACT_TEMPLATE_TYPE_DEFS = [
+/** NuExtract template types offered in the schema picker. Stored workflows may use others
+ * (e.g. `region:FR`); the picker then shows the stored value as is. */
+const TEMPLATE_TYPE_DEFS = [
   { value: "verbatim-string", group: "common" },
   { value: "string", group: "common" },
   { value: "integer", group: "common" },
@@ -19,14 +14,6 @@ export const NUEXTRACT_TEMPLATE_TYPE_DEFS = [
   { value: "currency", group: "common" },
   { value: "email-address", group: "common" },
   { value: "phone-number", group: "common" },
-  { value: "verbatim-string-list", group: "common", hidden: true },
-  { value: "string-list", group: "common", hidden: true },
-  { value: "integer-list", group: "common", hidden: true },
-  { value: "number-list", group: "common", hidden: true },
-  { value: "date-list", group: "common", hidden: true },
-  { value: "date-time-list", group: "common", hidden: true },
-  { value: "time-list", group: "common", hidden: true },
-  { value: "boolean-list", group: "common", hidden: true },
   { value: "object", group: "structure" },
   { value: "object-array", group: "structure" },
   { value: "enum", group: "structure" },
@@ -40,103 +27,40 @@ export const NUEXTRACT_TEMPLATE_TYPE_DEFS = [
   { value: "iban", group: "advanced" },
   { value: "bic", group: "advanced" },
   { value: "unit-code", group: "advanced" },
-  { value: "region:US", group: "advanced", hidden: true },
-  { value: "region:FR", group: "advanced", hidden: true },
-  { value: "region:IE", group: "advanced", hidden: true },
-  { value: "region:GB", group: "advanced", hidden: true },
-  { value: "region:IT", group: "advanced", hidden: true },
-  { value: "region:ES", group: "advanced", hidden: true },
-  { value: "region:DE", group: "advanced", hidden: true },
-  { value: "region:PT", group: "advanced", hidden: true },
-  { value: "region:CA", group: "advanced", hidden: true },
-  { value: "region:MX", group: "advanced", hidden: true },
-  { value: "region:BR", group: "advanced", hidden: true },
-  { value: "region:AU", group: "advanced", hidden: true },
-  { value: "region:JP", group: "advanced", hidden: true },
-  { value: "region:KR", group: "advanced", hidden: true },
-] as const satisfies readonly NuExtractTypeDef[];
+] as const satisfies readonly { value: string; group: NuExtractTypeGroup }[];
 
-type NuExtractTypeDefEntry = (typeof NUEXTRACT_TEMPLATE_TYPE_DEFS)[number];
-
-function isHiddenTemplateTypeDef(
-  def: NuExtractTypeDefEntry
-): def is NuExtractTypeDefEntry & { hidden: true } {
-  return "hidden" in def && def.hidden === true;
-}
-
-export type NuExtractTemplateType = NuExtractTypeDefEntry["value"];
-
-export const DEFAULT_NUEXTRACT_TEMPLATE_TYPE: NuExtractTemplateType = "verbatim-string";
-
+const TEMPLATE_TYPES: string[] = TEMPLATE_TYPE_DEFS.map((t) => t.value);
+const STRUCTURE_TYPES = new Set(["object", "object-array", "enum", "multi-enum"]);
 const LIST_SUFFIX = "-list";
 
-/** Strip `-list` suffix; structure types pass through unchanged. */
-export function scalarTemplateType(value?: string): string {
-  const raw = (value || DEFAULT_NUEXTRACT_TEMPLATE_TYPE).trim();
-  if (isStructureTemplateType(raw)) return raw;
-  if (raw.endsWith(LIST_SUFFIX)) return raw.slice(0, -LIST_SUFFIX.length);
-  return raw;
-}
-
-/** Apply or remove NuExtract array wrapper (`type-list` -> template `["type"]`). */
-export function withListTemplateType(value: string | undefined, asList: boolean): string {
-  const scalar = scalarTemplateType(value);
-  if (isStructureTemplateType(scalar)) return scalar;
-  return asList ? `${scalar}${LIST_SUFFIX}` : scalar;
-}
-
-export function supportsListTemplateType(value?: string): boolean {
-  return !isStructureTemplateType(value);
-}
+export const DEFAULT_NUEXTRACT_TEMPLATE_TYPE = "verbatim-string";
 
 export function isStructureTemplateType(value?: string): boolean {
-  const current = (value || "").trim();
-  return (
-    current === "object" ||
-    current === "object-array" ||
-    current === "enum" ||
-    current === "multi-enum"
-  );
+  return STRUCTURE_TYPES.has((value || "").trim());
 }
 
+/** Platform spelling of an official `["type"]` list: `type-list`. */
 export function isListTemplateType(value?: string): boolean {
   const raw = (value || "").trim();
-  if (!raw.endsWith(LIST_SUFFIX) || isStructureTemplateType(raw)) return false;
-  // Platform encoding of official `["type"]` arrays - allow known and passthrough scalars.
-  return raw.slice(0, -LIST_SUFFIX.length).length > 0;
+  return raw.endsWith(LIST_SUFFIX) && raw !== LIST_SUFFIX && !isStructureTemplateType(raw);
 }
 
-export function getVisibleTemplateTypes(): NuExtractTemplateType[] {
-  return NUEXTRACT_TEMPLATE_TYPE_DEFS.filter((t) => !isHiddenTemplateTypeDef(t)).map(
-    (t) => t.value
-  );
+/** The type without its `-list` suffix. */
+export function scalarTemplateType(value?: string): string {
+  const raw = (value || DEFAULT_NUEXTRACT_TEMPLATE_TYPE).trim();
+  return isListTemplateType(raw) ? raw.slice(0, -LIST_SUFFIX.length) : raw;
 }
 
-/** Types shown in the picker: visible types plus the current value when it is hidden/unknown. */
-export function getSelectableTemplateTypes(currentValue?: string): NuExtractTemplateType[] {
-  const visible = getVisibleTemplateTypes();
+export function withListTemplateType(value: string | undefined, asList: boolean): string {
+  const scalar = scalarTemplateType(value);
+  return asList && !isStructureTemplateType(scalar) ? `${scalar}${LIST_SUFFIX}` : scalar;
+}
+
+/** Picker types by group, plus the current value when it is not one of them. */
+export function groupedTemplateTypes(currentValue?: string): Record<NuExtractTypeGroup, string[]> {
+  const grouped: Record<NuExtractTypeGroup, string[]> = { common: [], structure: [], advanced: [] };
+  for (const def of TEMPLATE_TYPE_DEFS) grouped[def.group].push(def.value);
   const current = scalarTemplateType(currentValue);
-  if (current && !visible.includes(current as NuExtractTemplateType)) {
-    return [...visible, current as NuExtractTemplateType];
-  }
-  return visible;
-}
-
-export function getTemplateTypeGroup(value: string): NuExtractTypeGroup {
-  const def = NUEXTRACT_TEMPLATE_TYPE_DEFS.find((t) => t.value === value);
-  return def?.group ?? "advanced";
-}
-
-export function groupTemplateTypes(
-  types: NuExtractTemplateType[]
-): Record<NuExtractTypeGroup, NuExtractTemplateType[]> {
-  const grouped: Record<NuExtractTypeGroup, NuExtractTemplateType[]> = {
-    common: [],
-    structure: [],
-    advanced: [],
-  };
-  for (const value of types) {
-    grouped[getTemplateTypeGroup(value)].push(value);
-  }
+  if (!TEMPLATE_TYPES.includes(current)) grouped.advanced.push(current);
   return grouped;
 }

@@ -8,13 +8,11 @@ import {
   emptyTestSession,
   type TestSessionState,
 } from "@/components/workflow/builder/test-run-session";
-import { browserApi } from "@/lib/api/openapi-client";
+import { browserApi, unwrap } from "@/lib/api/openapi-client";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
-import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
-import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
 
 function readStoredApiKey(workflowId: string, fromWorkflow?: string | null): string {
   if (isFullWorkflowApiKey(fromWorkflow)) return fromWorkflow;
@@ -79,22 +77,13 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     if (!payload.name?.trim()) {
       throw new Error(t("toasts.nameRequired"));
     }
-    const schemaErrors = validateDocumentSchemas(payload.documents);
-    if (schemaErrors.length) {
-      throw new Error(schemaErrors[0]);
-    }
-    const ruleResults = await validateRulesViaApi(payload.documents, payload.rules);
-    const ruleError = firstRuleIssue(ruleResults);
-    if (ruleError) {
-      throw new Error(ruleError);
-    }
-    const { error, response } = await browserApi.PUT("/v1/workflows/{workflow_id}", {
-      params: { path: { workflow_id: id } },
-      body: payload,
-    });
-    if (error || !response.ok) {
-      throw new Error(`Save failed: HTTP ${response.status}`);
-    }
+    // The API rejects duplicate field names and rules that do not fit the schema (422).
+    await unwrap(
+      browserApi.PUT("/v1/workflows/{workflow_id}", {
+        params: { path: { workflow_id: id } },
+        body: payload,
+      })
+    );
     if (isNew || activeWorkflowId === "new") {
       setActiveWorkflowId(id);
       if (options?.navigate !== false) {
@@ -122,15 +111,11 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const handleDeploy = async () => {
     try {
       const id = await persistWorkflow({ navigate: false, toastOnSuccess: false });
-      const { data, error, response } = await browserApi.POST(
-        "/v1/workflows/{workflow_id}/deploy",
-        {
+      const data = await unwrap(
+        browserApi.POST("/v1/workflows/{workflow_id}/deploy", {
           params: { path: { workflow_id: id } },
-        }
+        })
       );
-      if (error || !response.ok || !data) {
-        throw new Error(`Deploy failed: HTTP ${response.status}`);
-      }
       setDeployed(true);
       const revealed = data.apiKey ?? apiKey;
       setApiKey(revealed);

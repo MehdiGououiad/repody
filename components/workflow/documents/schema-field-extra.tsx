@@ -15,14 +15,11 @@ import {
 } from "@/components/ui/select";
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  getSelectableTemplateTypes,
-  groupTemplateTypes,
+  groupedTemplateTypes,
   isListTemplateType,
   isStructureTemplateType,
-  type NuExtractTemplateType,
   type NuExtractTypeGroup,
   scalarTemplateType,
-  supportsListTemplateType,
   withListTemplateType,
 } from "@/lib/nuextract-types";
 import type { SchemaField } from "@/lib/types";
@@ -34,11 +31,8 @@ function childTypeLabel(t: ReturnType<typeof useTranslations>, value: string) {
   const scalar = scalarTemplateType(value);
   const key =
     `schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label";
-  try {
-    return isListTemplateType(value) ? `${t(key)} · ${t("schema.listModeSuffix")}` : t(key);
-  } catch {
-    return value;
-  }
+  if (!t.has(key)) return value;
+  return isListTemplateType(value) ? `${t(key)} · ${t("schema.listModeSuffix")}` : t(key);
 }
 
 function EnumValuesEditor({
@@ -109,17 +103,8 @@ function NestedChildrenEditor({
   t: ReturnType<typeof useTranslations>;
   mode: "object" | "object-array";
 }) {
-  const grouped = groupTemplateTypes(
-    getSelectableTemplateTypes().filter((type) => {
-      if (mode === "object-array") {
-        return (
-          type !== "object-array" && type !== "object" && type !== "enum" && type !== "multi-enum"
-        );
-      }
-      // Nested object groups may themselves nest further objects / tables / enums.
-      return true;
-    })
-  );
+  // Table columns are scalars (no structure group); nested objects may nest further.
+  const grouped = groupedTemplateTypes();
   const typeGroups: NuExtractTypeGroup[] =
     mode === "object-array" ? CHILD_TYPE_GROUPS : ["common", "structure", "advanced"];
 
@@ -191,10 +176,7 @@ function NestedChildrenEditor({
                       value={scalarTemplateType(childType)}
                       onValueChange={(templateType) =>
                         updateChild(child.id, {
-                          templateType: withListTemplateType(
-                            templateType,
-                            childListMode
-                          ) as NuExtractTemplateType,
+                          templateType: withListTemplateType(templateType, childListMode),
                         })
                       }
                     >
@@ -238,7 +220,7 @@ function NestedChildrenEditor({
                     type="checkbox"
                     className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
                     checked={childListMode}
-                    disabled={!supportsListTemplateType(childType)}
+                    disabled={isStructureTemplateType(childType)}
                     onChange={(e) =>
                       updateChild(child.id, {
                         templateType: withListTemplateType(childType, e.target.checked),

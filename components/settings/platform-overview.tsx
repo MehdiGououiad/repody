@@ -1,5 +1,5 @@
 import { BrainCircuit, Gauge, type LucideIcon } from "lucide-react";
-import type { PlatformConfig } from "@/lib/api/schema-types";
+import type { PlatformConfig } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
 
 function MetricCard({

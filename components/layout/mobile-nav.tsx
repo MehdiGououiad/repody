@@ -7,7 +7,7 @@ import { useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useClientPathname } from "@/lib/hooks/use-client-pathname";
+import { useClientPathname } from "@/lib/hooks/use-hydrated";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 

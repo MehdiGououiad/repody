@@ -68,21 +68,15 @@ function TestRunPanel({
     });
 
     try {
-      onSessionChange({
-        progress: clientProgress(stepLabels, "save-workflow"),
-      });
       const id = onBeforeRun ? await onBeforeRun() : workflowId;
-      const payload = { documents, rules };
-      const reporter = {
-        clientLabels: stepLabels,
-        onProgress: (progress: RunProgress) => onSessionChange({ progress }),
-      };
       const data = await runWorkflow(
         id,
-        hasFiles ? { ...payload, filesByDocId } : payload,
-        reporter
+        { documents, rules, filesByDocId },
+        {
+          clientLabels: stepLabels,
+          onProgress: (progress: RunProgress) => onSessionChange({ progress }),
+        }
       );
-
       onSessionChange({ result: data, phase: "done", progress: null });
     } catch (error) {
       const { message, runId } = runErrorFromUnknown(error);

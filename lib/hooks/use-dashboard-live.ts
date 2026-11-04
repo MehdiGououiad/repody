@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { DashboardBundle } from "@/lib/api/dashboard";
 import { browserApi, unwrap } from "@/lib/api/openapi-client";
 import { queryKeys } from "@/lib/hooks/query-keys";
+import type { DashboardBundle } from "@/lib/types";
 
 export type LiveDashboardData = DashboardBundle & { lastUpdated: Date | null };
 

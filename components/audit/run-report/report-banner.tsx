@@ -1,24 +1,22 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import { useTranslations } from "next-intl";
+import type { RunAuditDetail } from "@/lib/types";
 import { cn, formatDurationMs } from "@/lib/utils";
-import { mergeLabels, type RunReportLabels } from "./report-shared";
 
 export function RunStatusBanner({
   audit,
-  labels,
   subtitle,
   className,
   footer,
 }: {
   audit: RunAuditDetail;
-  labels?: RunReportLabels;
   subtitle?: string;
   className?: string;
   footer?: React.ReactNode;
 }) {
-  const L = mergeLabels(labels);
+  const t = useTranslations("audits.report");
   const failed = audit.status === "failed";
   const passed = audit.status === "passed";
 
@@ -27,7 +25,7 @@ export function RunStatusBanner({
         bg: "bg-success/10 border-success/30",
         icon: CheckCircle2,
         iconCls: "text-success",
-        label: L.allPassed,
+        label: t("allRulesPassed"),
         labelCls: "text-success",
       }
     : failed
@@ -35,14 +33,14 @@ export function RunStatusBanner({
           bg: "bg-danger/10 border-danger/30",
           icon: XCircle,
           iconCls: "text-danger",
-          label: L.validationFailed,
+          label: t("validationFailed"),
           labelCls: "text-danger",
         }
       : {
           bg: "bg-warning/10 border-warning/30",
           icon: AlertTriangle,
           iconCls: "text-warning",
-          label: L.reviewRequired,
+          label: t("reviewRequired"),
           labelCls: "text-warning",
         };
 
@@ -62,16 +60,14 @@ export function RunStatusBanner({
         {subtitle && <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>}
         <div className="flex flex-wrap gap-3 mt-3">
           <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">
-            <span className="font-semibold text-on-surface">{audit.summary.fieldsExtracted}</span>{" "}
-            {L.fieldsExtracted ?? "fields extracted"}
+            {t("fieldsExtracted", { count: audit.summary.fieldsExtracted })}
           </span>
           <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">
-            {L.rulesPassed ?? `${audit.summary.passed}/${audit.summary.total} rules passed`}
+            {t("rulesPassed", { passed: audit.summary.passed, total: audit.summary.total })}
           </span>
           {audit.summary.failed > 0 && (
             <span className="text-[11px] bg-surface-container px-2 py-1 rounded-md text-on-surface-variant">
-              <span className="font-semibold text-danger">{audit.summary.failed}</span>{" "}
-              {L.rulesFailed ?? "failed"}
+              {t("rulesFailed", { count: audit.summary.failed })}
             </span>
           )}
           {footer}

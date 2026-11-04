@@ -10,9 +10,8 @@ import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
 import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { DashboardBundle } from "@/lib/api/dashboard";
 import { useDashboardLive } from "@/lib/hooks/use-dashboard-live";
-import type { Audit } from "@/lib/types";
+import type { Audit, DashboardBundle } from "@/lib/types";
 
 const KpiCard = dynamic(
   () => import("@/components/dashboard/kpi-card").then((m) => ({ default: m.KpiCard })),

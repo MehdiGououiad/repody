@@ -54,43 +54,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return token;
       }
 
-      const expiresAt = token.expiresAt;
-      if (typeof expiresAt === "number" && Date.now() / 1000 < expiresAt - 60) {
-        return token;
-      }
-
-      if (token.refreshToken) {
-        const refreshed = await refreshKeycloakAccessToken({
-          accessToken: token.accessToken as string | undefined,
-          refreshToken: token.refreshToken as string | undefined,
-          expiresAt: token.expiresAt as number | undefined,
-          roles: token.roles as string[] | undefined,
-          error: token.error as string | undefined,
-        });
-        return { ...token, ...refreshed };
-      }
-
-      if (token.error) {
-        return token;
-      }
-
-      return { ...token, error: "SessionExpired" };
+      if (token.expiresAt && Date.now() / 1000 < token.expiresAt - 60) return token;
+      if (token.refreshToken) return refreshKeycloakAccessToken(token);
+      return token.error ? token : { ...token, error: "SessionExpired" };
     },
     async session({ session, token }) {
-      if (token.error) {
-        session.error = token.error as string;
+      if (token.error || !token.accessToken) {
+        session.error = token.error ?? "SessionExpired";
         return session;
       }
-      if (!token.accessToken) {
-        session.error = "SessionExpired";
-        return session;
-      }
-      // Needed by proxy/RSC so API calls use the token Auth.js just refreshed
-      // (reading the JWT cookie via getToken races a second Keycloak refresh).
-      session.accessToken = token.accessToken as string;
-      if (token.roles) {
-        session.roles = token.roles as string[];
-      }
+      // Proxy and Server Components call the API with the token Auth.js just refreshed.
+      session.accessToken = token.accessToken;
+      session.roles = token.roles;
       return session;
     },
   },

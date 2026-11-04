@@ -14,8 +14,8 @@ export type TableFieldOption = {
   columns: Array<{ label: string; name: string }>;
 };
 
-/** Display token for a field name; the backend canonicalises it (`field_key`). */
-function fieldToken(name: string): string {
+/** Canonical field name, as rules name it (the backend's `field_key` also maps `.` to `__`). */
+export function fieldToken(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "_");
 }
 

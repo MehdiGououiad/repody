@@ -9,12 +9,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ConditionFieldOption } from "@/components/workflow/rules/condition-builder-model";
 import {
   LiteralValueInput,
   literalPlaceholderForKind,
 } from "@/components/workflow/rules/condition-literal-value-input";
 import type { LiteralInputKind } from "@/lib/rules/condition-input-kind";
+import type { DocumentFieldOption } from "@/lib/rules/document-fields";
 import type { ConditionOperand } from "@/lib/types";
 
 export function OperandPicker({
@@ -26,7 +26,7 @@ export function OperandPicker({
   literalInputKind = "text",
 }: {
   operand: ConditionOperand;
-  fields: ConditionFieldOption[];
+  fields: DocumentFieldOption[];
   onChange: (operand: ConditionOperand) => void;
   placeholder?: string;
   allowLiteral?: boolean;

@@ -4,13 +4,10 @@
  * fresh and finishes the run if the stream drops.
  */
 import { fetchEventSource } from "@microsoft/fetch-event-source";
-import { formatApiError, raiseRunError } from "@/lib/api/api-error";
-import { workflowAuthHeaders } from "@/lib/api/auth-policy";
+import { apiErrorMessage, RunWorkflowError } from "@/lib/api/api-error";
 import { browserApi } from "@/lib/api/openapi-client";
-import type { RunProgress } from "@/lib/api/schema-types";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
-import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import type { RunAuditDetail } from "@/lib/types/audit";
+import type { DocumentDef, RunAuditDetail, RunProgress, WorkflowRule } from "@/lib/types";
 
 export type { RunProgress };
 export type RunProgressStep = RunProgress["steps"][number];
@@ -150,10 +147,10 @@ export async function watchRun(
       pollUntilTerminal(runId, onProgress, signal),
     ]);
     if (outcome === "timeout") {
-      raiseRunError("Run timed out - check worker and inference logs", {
-        step: "Audit worker",
-        runId,
-      });
+      throw new RunWorkflowError(
+        `The run did not finish within ${Math.round(maxMs / 60_000)} minutes. Check the worker and inference logs.`,
+        runId
+      );
     }
   } finally {
     stop.abort();
@@ -162,10 +159,7 @@ export async function watchRun(
     params: { path: { run_id: runId } },
   });
   if (!run || run.status === "failed" || !run.result) {
-    raiseRunError(run?.error || `Run failed (HTTP ${response.status})`, {
-      step: "Audit worker",
-      runId,
-    });
+    throw new RunWorkflowError(run?.error || `The run failed (HTTP ${response.status}).`, runId);
   }
   return run.result;
 }
@@ -211,15 +205,13 @@ export async function runWorkflow(
   report(reporter, "start-run");
   const response = await fetch(`/api/v1/workflows/${encodeURIComponent(workflowId)}/runs`, {
     method: "POST",
-    headers: apiKey ? (workflowAuthHeaders(apiKey) as Record<string, string>) : undefined,
+    headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
     body: form,
     signal: AbortSignal.timeout(120_000),
   });
   if (!response.ok) {
-    raiseRunError(formatApiError(await response.text()) || `HTTP ${response.status}`, {
-      step: "Start audit run",
-      status: response.status,
-    });
+    const message = apiErrorMessage(await response.text()) || `HTTP ${response.status}`;
+    throw new Error(`Could not start the run: ${message}`);
   }
   const { runId } = (await response.json()) as { runId: string };
 

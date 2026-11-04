@@ -1,9 +1,9 @@
 import "server-only";
 
 import { cache } from "react";
-import { type DashboardBundle, EMPTY_DASHBOARD_QUEUE } from "@/lib/api/dashboard";
 import { unwrap } from "@/lib/api/openapi-client";
 import { serverApi } from "@/lib/api/openapi-server";
+import type { DashboardBundle } from "@/lib/types";
 
 export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => {
   try {
@@ -17,7 +17,7 @@ export const fetchDashboardBundle = cache(async (): Promise<DashboardBundle> => 
       staleRuns: 0,
       audits: [],
       workflows: [],
-      queue: EMPTY_DASHBOARD_QUEUE,
+      queue: { queuedRuns: 0, runningRuns: 0 },
     };
   }
 });

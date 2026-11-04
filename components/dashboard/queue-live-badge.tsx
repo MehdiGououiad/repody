@@ -2,7 +2,7 @@
 
 import { ListOrdered, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { QueueSnapshot } from "@/lib/api/schema-types";
+import type { QueueSnapshot } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const EMPTY_QUEUE: QueueSnapshot = { queuedRuns: 0, runningRuns: 0 };

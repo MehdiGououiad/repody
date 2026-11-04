@@ -21,23 +21,19 @@ import {
 } from "@/components/workflow/documents/schema-field-extra";
 import {
   DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  getSelectableTemplateTypes,
-  getVisibleTemplateTypes,
-  groupTemplateTypes,
+  groupedTemplateTypes,
   isListTemplateType,
-  type NuExtractTemplateType,
+  isStructureTemplateType,
   type NuExtractTypeGroup,
   scalarTemplateType,
-  supportsListTemplateType,
   withListTemplateType,
 } from "@/lib/nuextract-types";
+import { fieldToken } from "@/lib/rules/document-fields";
 import type { SchemaField } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { newSchemaField } from "@/lib/workflow/new-items";
-import { normalizeSchemaFieldName } from "@/lib/workflow/schema-validation";
 
 const TYPE_GROUPS: NuExtractTypeGroup[] = ["common", "structure", "advanced"];
-const VISIBLE_TEMPLATE_TYPES = new Set(getVisibleTemplateTypes());
 
 /** Desktop table columns; minmax(0,…) lets cells shrink without overlapping neighbors. */
 const SCHEMA_ROW_GRID =
@@ -48,28 +44,13 @@ const FIELD_LABEL_CLASS =
 
 function useTypeLabels(t: ReturnType<typeof useTranslations>) {
   return useMemo(() => {
-    const label = (value: string) => {
-      const scalar = scalarTemplateType(value);
-      if (!VISIBLE_TEMPLATE_TYPES.has(scalar as NuExtractTemplateType)) return value;
-      try {
-        return t(
-          `schema.templateTypes.${scalar}.label` as "schema.templateTypes.verbatim-string.label"
-        );
-      } catch {
-        return scalar;
-      }
+    // Types without a translation (e.g. `region:FR` from an import) show as stored.
+    const message = (value: string, part: "label" | "description") => {
+      const key = `schema.templateTypes.${scalarTemplateType(value)}.${part}` as "schema.title";
+      return t.has(key) ? t(key) : undefined;
     };
-    const description = (value: string) => {
-      const scalar = scalarTemplateType(value);
-      if (!VISIBLE_TEMPLATE_TYPES.has(scalar as NuExtractTemplateType)) return "";
-      try {
-        return t(
-          `schema.templateTypes.${scalar}.description` as "schema.templateTypes.verbatim-string.description"
-        );
-      } catch {
-        return "";
-      }
-    };
+    const label = (value: string) => message(value, "label") ?? value;
+    const description = (value: string) => message(value, "description") ?? "";
     return { label, description };
   }, [t]);
 }
@@ -82,21 +63,15 @@ function TemplateTypeSelect({
 }: {
   value: string;
   listMode: boolean;
-  onChange: (value: NuExtractTemplateType) => void;
+  onChange: (value: string) => void;
   t: ReturnType<typeof useTranslations>;
 }) {
   const { label, description } = useTypeLabels(t);
   const scalar = scalarTemplateType(value);
-  const selectable = getSelectableTemplateTypes(scalar);
-  const grouped = groupTemplateTypes(selectable);
+  const grouped = groupedTemplateTypes(scalar);
 
   return (
-    <Select
-      value={scalar}
-      onValueChange={(next) =>
-        onChange(withListTemplateType(next, listMode) as NuExtractTemplateType)
-      }
-    >
+    <Select value={scalar} onValueChange={(next) => onChange(withListTemplateType(next, listMode))}>
       <SelectTrigger className="h-auto min-h-8 w-full min-w-0 py-1 text-xs border-transparent bg-transparent shadow-none focus:bg-card gap-2">
         <SelectValue className="sr-only" aria-label={label(value)} />
         <div className="flex min-w-0 flex-1 flex-col items-start text-left overflow-hidden">
@@ -154,7 +129,7 @@ function SchemaFieldRow({
 }) {
   const currentType = field.templateType || DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
   const listMode = isListTemplateType(currentType);
-  const normName = normalizeSchemaFieldName(field.name);
+  const normName = fieldToken(field.name);
   const isDuplicate = normName.length > 0 && duplicateNames.has(normName);
 
   return (
@@ -204,7 +179,7 @@ function SchemaFieldRow({
         </div>
         <div className="flex flex-col gap-1 min-w-0 md:items-center md:justify-center md:px-2 md:border-r md:border-border">
           <span className={FIELD_LABEL_CLASS}>{t("schema.listModeLabel")}</span>
-          {supportsListTemplateType(currentType) ? (
+          {!isStructureTemplateType(currentType) ? (
             <label
               className="flex items-center justify-end gap-1.5 text-[10px] text-on-surface-variant whitespace-nowrap cursor-pointer md:justify-center"
               title={t("schema.listModeHint")}
@@ -258,7 +233,7 @@ export function SchemaTable({
   const duplicateNames = useMemo(() => {
     const counts = new Map<string, number>();
     for (const field of schema) {
-      const norm = normalizeSchemaFieldName(field.name);
+      const norm = fieldToken(field.name);
       if (!norm) continue;
       counts.set(norm, (counts.get(norm) ?? 0) + 1);
     }

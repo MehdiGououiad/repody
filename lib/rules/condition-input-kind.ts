@@ -4,11 +4,6 @@ export type LiteralInputKind = "text" | "date" | "datetime-local" | "time" | "nu
 
 export const DATE_LIKE_TEMPLATE_TYPES = new Set(["date", "date-time", "time"]);
 
-export type ConditionFieldMeta = {
-  token: string;
-  templateType?: string;
-};
-
 export function literalInputKindForTemplateType(templateType?: string): LiteralInputKind {
   switch (templateType) {
     case "date":
@@ -29,7 +24,7 @@ export function literalInputKindForTemplateType(templateType?: string): LiteralI
 
 export function resolveFieldTemplateType(
   token: string,
-  fields: ConditionFieldMeta[]
+  fields: { token: string; templateType?: string }[]
 ): string | undefined {
   const trimmed = token.trim();
   if (!trimmed) return undefined;

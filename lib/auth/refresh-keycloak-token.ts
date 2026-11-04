@@ -1,22 +1,14 @@
+import type { JWT } from "next-auth/jwt";
 import { realmRolesFromAccessToken } from "@/lib/auth/jwt-claims";
 
-export type RefreshableJwt = {
-  accessToken?: string;
-  refreshToken?: string;
-  expiresAt?: number;
-  roles?: string[];
-  error?: string;
-};
-
-export async function refreshKeycloakAccessToken(token: RefreshableJwt): Promise<RefreshableJwt> {
+/** A new access token from Keycloak's token endpoint (refresh_token grant). */
+export async function refreshKeycloakAccessToken(token: JWT): Promise<JWT> {
   const issuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? process.env.AUTH_KEYCLOAK_ISSUER;
   const clientId = process.env.AUTH_KEYCLOAK_ID;
   const clientSecret = process.env.AUTH_KEYCLOAK_SECRET ?? process.env.AUTH_KEYCLOAK_CLIENT_SECRET;
-
   if (!issuer || !clientId || !token.refreshToken) {
     return { ...token, error: "RefreshTokenError" };
   }
-
   try {
     const res = await fetch(`${issuer}/protocol/openid-connect/token`, {
       method: "POST",
@@ -29,18 +21,12 @@ export async function refreshKeycloakAccessToken(token: RefreshableJwt): Promise
         refresh_token: token.refreshToken,
       }),
     });
-
     const data = (await res.json()) as {
       access_token?: string;
       refresh_token?: string;
       expires_in?: number;
-      error_description?: string;
     };
-
-    if (!res.ok || !data.access_token) {
-      throw new Error(data.error_description ?? "Token refresh failed");
-    }
-
+    if (!res.ok || !data.access_token) return { ...token, error: "RefreshTokenError" };
     return {
       ...token,
       accessToken: data.access_token,

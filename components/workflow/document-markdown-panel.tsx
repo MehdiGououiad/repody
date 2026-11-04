@@ -17,7 +17,7 @@ export function DocumentMarkdownPanel({ text, className }: { text: string; class
 
   const subtitle = [
     t("subtitle", { lines: lineCount, chars: normalized.length.toLocaleString() }),
-    pageCount > 0 ? `${pageCount} page${pageCount === 1 ? "" : "s"}` : null,
+    pageCount > 0 ? t("pageCount", { count: pageCount }) : null,
     hasTables ? t("hasTables") : null,
   ]
     .filter(Boolean)
