@@ -74,3 +74,5 @@ def test_validate_rules_preview_returns_per_rule_rows():
     assert [row.rule_id for row in rows] == ["r1", "r2"]
     assert rows[0].issues == []
     assert rows[1].issues == ["Empty: Add at least one condition."]
+    assert rows[0].checks == ["total > 0"]
+    assert rows[1].checks == []

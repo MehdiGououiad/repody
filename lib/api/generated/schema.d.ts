@@ -1018,6 +1018,8 @@ export interface components {
             ruleId: string;
             /** Issues */
             issues: string[];
+            /** Checks */
+            checks: string[];
         };
         /** RunAuditDetail */
         RunAuditDetail: {

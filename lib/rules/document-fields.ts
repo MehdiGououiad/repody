@@ -1,5 +1,4 @@
 import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
-import { fieldToken } from "@/lib/rules/expression";
 import type { DocumentDef, SchemaField } from "@/lib/types";
 
 export type DocumentFieldOption = {
@@ -14,6 +13,11 @@ export type TableFieldOption = {
   token: string;
   columns: Array<{ label: string; name: string }>;
 };
+
+/** Display token for a field name; the backend canonicalises it (`field_key`). */
+function fieldToken(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, "_");
+}
 
 function fieldOptionsForSchema(doc: DocumentDef, multi: boolean): DocumentFieldOption[] {
   const fields: DocumentFieldOption[] = [];

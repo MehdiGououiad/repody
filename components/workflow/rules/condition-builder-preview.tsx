@@ -2,18 +2,24 @@
 
 import { Code2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { conditionToString } from "@/lib/rules/expression";
 import type { RuleCondition } from "@/lib/types";
 
-export function ConditionPreview({ conditions }: { conditions: RuleCondition[] }) {
+/** Shows the backend-compiled expression of each condition (`checks`, aligned by index). */
+export function ConditionPreview({
+  conditions,
+  checks,
+}: {
+  conditions: RuleCondition[];
+  checks: string[];
+}) {
   const t = useTranslations("workflows.builder.rules.conditions");
 
-  if (conditions.some((condition) => conditionToString(condition))) {
+  if (checks.some(Boolean)) {
     return (
       <div className="rounded-lg border border-border bg-surface-container-lowest px-3 py-2 space-y-1.5">
         <p className="text-[10px] text-on-surface-variant">{t("separateChecksHint")}</p>
         {conditions.map((condition, index) => {
-          const line = conditionToString(condition);
+          const line = checks[index];
           if (!line) return null;
 
           return (

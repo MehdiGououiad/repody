@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { issuesByRuleId, validateRulesViaApi } from "@/lib/rules/rule-preview";
+import {
+  type RuleValidationResult,
+  resultsByRuleId,
+  validateRulesViaApi,
+} from "@/lib/rules/rule-preview";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { rulesValidationFingerprint } from "@/lib/workflow/draft-fingerprint";
 
 const DEBOUNCE_MS = 400;
 
-/** Debounced backend rule validation for builder UI feedback. */
-export function useRuleValidationIssues(
+/** Debounced backend rule validation (issues and compiled checks) for builder UI feedback. */
+export function useRuleValidation(
   documents: DocumentDef[],
   rules: WorkflowRule[]
-): Record<string, string[]> {
-  const [issuesMap, setIssuesMap] = useState<Record<string, string[]>>({});
+): Record<string, RuleValidationResult> {
+  const [resultsMap, setResultsMap] = useState<Record<string, RuleValidationResult>>({});
   const lastValidatedRef = useRef<string | null>(null);
   const fingerprint = useMemo(
     () => rulesValidationFingerprint(documents, rules),
@@ -35,11 +39,11 @@ export function useRuleValidationIssues(
         .then((results) => {
           if (!cancelled) {
             lastValidatedRef.current = fingerprint;
-            setIssuesMap(issuesByRuleId(results));
+            setResultsMap(resultsByRuleId(results));
           }
         })
         .catch(() => {
-          if (!cancelled) setIssuesMap({});
+          if (!cancelled) setResultsMap({});
         });
     }, DEBOUNCE_MS);
 
@@ -49,5 +53,5 @@ export function useRuleValidationIssues(
     };
   }, [documents, fingerprint, rules]);
 
-  return rules.length === 0 ? {} : issuesMap;
+  return rules.length === 0 ? {} : resultsMap;
 }

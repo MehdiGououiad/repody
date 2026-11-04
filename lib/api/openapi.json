@@ -2936,12 +2936,20 @@
             },
             "type": "array",
             "title": "Issues"
+          },
+          "checks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Checks"
           }
         },
         "type": "object",
         "required": [
           "ruleId",
-          "issues"
+          "issues",
+          "checks"
         ],
         "title": "RuleValidationItem"
       },

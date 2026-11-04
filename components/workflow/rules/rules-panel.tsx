@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRulesLibraryCatalog } from "@/lib/hooks/use-catalog-queries";
-import { useRuleValidationIssues } from "@/lib/hooks/use-rule-validation";
+import { useRuleValidation } from "@/lib/hooks/use-rule-validation";
 import type {
   ConditionJunction,
   DocumentDef,
@@ -33,7 +33,7 @@ export function RulesPanel({
   const shouldFetchLibrary = initialRuleLibrary === undefined;
   const { data: fetchedLibrary = [] } = useRulesLibraryCatalog(shouldFetchLibrary);
   const ruleLibrary = initialRuleLibrary ?? fetchedLibrary;
-  const ruleIssuesById = useRuleValidationIssues(documents, rules);
+  const validationById = useRuleValidation(documents, rules);
 
   const updateRule = (id: string, patch: Partial<WorkflowRule>) => {
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -123,7 +123,7 @@ export function RulesPanel({
                 key={r.id}
                 rule={r}
                 documents={documents}
-                issues={ruleIssuesById[r.id]}
+                validation={validationById[r.id]}
                 onChange={(patch) => updateRule(r.id, patch)}
                 onRemove={() => remove(r.id)}
               />

@@ -16,11 +16,13 @@ export function ConditionBuilder({
   conditions,
   fields,
   tableFields,
+  checks,
   onConditionsChange,
 }: {
   conditions: RuleCondition[];
   fields: ConditionFieldOption[];
   tableFields: TableFieldOption[];
+  checks: string[];
   onConditionsChange: (conditions: RuleCondition[]) => void;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
@@ -65,7 +67,7 @@ export function ConditionBuilder({
       </Button>
 
       <div className="space-y-1">
-        <ConditionPreview conditions={conditions} />
+        <ConditionPreview conditions={conditions} checks={checks} />
       </div>
     </div>
   );

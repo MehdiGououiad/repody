@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from repody.rules.conditions import NO_RIGHT, resolve_rule_body
+from repody.rules.conditions import NO_RIGHT, condition_to_string, resolve_rule_body
 from repody.rules.rule_syntax import validate_logic_rule_body
 from repody.rules.types import rule_kind
 from repody.schemas.workflow import DocumentDefSchema, WorkflowRuleSchema, WorkflowSchema
@@ -115,12 +115,23 @@ def validate_workflow_rule(
 
 @dataclass(frozen=True, slots=True)
 class RulePreview:
-    """Validation outcome for one rule in the builder preview."""
+    """Validation outcome for one rule in the builder preview.
+
+    `checks` is the compiled expression of each condition, in order ("" while incomplete).
+    """
 
     rule_id: str
     issues: list[str]
+    checks: list[str]
 
 
 def validate_rules_preview(rules: list[WorkflowRuleSchema]) -> list[RulePreview]:
     """Validate all rules for builder preview - one result per rule id."""
-    return [RulePreview(rule_id=rule.id, issues=validate_workflow_rule(rule)) for rule in rules]
+    return [
+        RulePreview(
+            rule_id=rule.id,
+            issues=validate_workflow_rule(rule),
+            checks=[condition_to_string(c) for c in rule.conditions or []],
+        )
+        for rule in rules
+    ]

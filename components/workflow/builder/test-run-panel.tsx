@@ -19,7 +19,6 @@ import {
   type RunProgress,
   runWorkflow,
 } from "@/lib/api/run";
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
 function clientStepLabels(t: ReturnType<typeof useTranslations>): ClientStepLabels {
@@ -95,7 +94,7 @@ function TestRunPanel({
         progress: clientProgress(stepLabels, "save-workflow"),
       });
       const id = onBeforeRun ? await onBeforeRun() : workflowId;
-      const payload = { documents, rules: syncRuleBodies(rules), workflowName };
+      const payload = { documents, rules, workflowName };
       const reporter = {
         clientLabels: stepLabels,
         onProgress: (progress: RunProgress) => onSessionChange({ progress }),

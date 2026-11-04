@@ -14,9 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { resolveDocumentFields, resolveTableFields } from "@/lib/rules/document-fields";
-import { conditionsToExpression } from "@/lib/rules/expression";
+import type { RuleValidationResult } from "@/lib/rules/rule-preview";
 import type {
-  ConditionJunction,
   DocumentDef,
   RuleCondition,
   RuleScope,
@@ -30,13 +29,13 @@ import { ScopeToggle } from "./scope-toggle";
 export function RuleCard({
   rule,
   documents,
-  issues,
+  validation,
   onChange,
   onRemove,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
-  issues?: string[];
+  validation?: RuleValidationResult;
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
 }) {
@@ -56,7 +55,6 @@ export function RuleCard({
       right: { kind: "literal", value: "" },
     },
   ];
-  const junction: ConditionJunction = rule.conditionJunction ?? "AND";
 
   const switchScope = (s: RuleScope) => {
     if (s === "intra") {
@@ -84,14 +82,9 @@ export function RuleCard({
     }
   };
 
-  const handleConditionsChange = (next: RuleCondition[]) => {
-    onChange({
-      conditions: next,
-      body: conditionsToExpression(next, junction),
-    });
-  };
+  const handleConditionsChange = (next: RuleCondition[]) => onChange({ conditions: next });
 
-  const ruleIssues = issues ?? [];
+  const ruleIssues = validation?.issues ?? [];
 
   return (
     <div className="panel-elevated rounded-xl p-4 group space-y-4 border-border">
@@ -174,6 +167,7 @@ export function RuleCard({
           conditions={conditions}
           fields={fields}
           tableFields={tableFields}
+          checks={validation?.checks ?? []}
           onConditionsChange={handleConditionsChange}
         />
         {ruleIssues.length > 0 && (

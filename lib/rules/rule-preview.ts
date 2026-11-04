@@ -4,6 +4,8 @@ import type { DocumentDef, WorkflowRule } from "@/lib/types";
 export type RuleValidationResult = {
   ruleId: string;
   issues: string[];
+  /** Backend-compiled expression per condition, in order ("" while incomplete). */
+  checks: string[];
 };
 
 /** Authoritative rule validation - backend compiler is the source of truth. */
@@ -20,8 +22,10 @@ export async function validateRulesViaApi(
   return data.rules;
 }
 
-export function issuesByRuleId(results: RuleValidationResult[]): Record<string, string[]> {
-  return Object.fromEntries(results.map((row) => [row.ruleId, row.issues]));
+export function resultsByRuleId(
+  results: RuleValidationResult[]
+): Record<string, RuleValidationResult> {
+  return Object.fromEntries(results.map((row) => [row.ruleId, row]));
 }
 
 export function firstRuleIssue(

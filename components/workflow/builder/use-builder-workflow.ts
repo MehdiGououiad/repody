@@ -13,7 +13,6 @@ import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import { workflowFromWire } from "@/lib/api/workflow-wire";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { firstRuleIssue, validateRulesViaApi } from "@/lib/rules/rule-preview";
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
 import { validateDocumentSchemas } from "@/lib/workflow/schema-validation";
@@ -73,7 +72,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     successRate: workflow.successRate,
     totalRuns: workflow.totalRuns,
     documents,
-    rules: syncRuleBodies(rules),
+    rules,
     deployedAt: workflow.deployedAt,
     apiKey: apiKey || workflow.apiKey,
   });

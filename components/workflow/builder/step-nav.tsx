@@ -2,7 +2,6 @@
 
 import { Check, CheckCircle2, CircleDot, Database, Rocket, ShieldCheck } from "lucide-react";
 import type { useTranslations } from "next-intl";
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +14,8 @@ export function stepComplete(
 ): boolean {
   if (step === 0)
     return documents.some((d) => d.documentType.trim() && d.schema.some((f) => f.name.trim()));
-  if (step === 1) return syncRuleBodies(rules).some((r) => r.name.trim() && r.body.trim());
+  if (step === 1)
+    return rules.some((r) => r.name.trim() && (r.body.trim() || r.conditions?.length));
   return false;
 }
 

@@ -167,6 +167,7 @@ class ValidateRulesBody(CamelModel):
 class RuleValidationItem(CamelModel):
     rule_id: str
     issues: list[str]
+    checks: list[str]
 
 
 class ValidateRulesResponse(CamelModel):

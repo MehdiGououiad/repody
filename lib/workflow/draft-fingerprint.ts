@@ -1,4 +1,3 @@
-import { syncRuleBodies } from "@/lib/rules/sync-rules";
 import type { DocumentDef, SchemaField, WorkflowRule } from "@/lib/types";
 
 function normalizeSchemaField(field: SchemaField): SchemaField {
@@ -33,19 +32,18 @@ function normalizeDocument(doc: DocumentDef): DocumentDef {
 }
 
 function normalizeRule(rule: WorkflowRule): WorkflowRule {
-  const synced = syncRuleBodies([rule])[0];
   return {
-    id: synced.id,
-    name: synced.name ?? "",
-    kind: synced.kind,
-    scope: synced.scope,
-    appliesTo: [...synced.appliesTo].sort(),
-    body: synced.body ?? "",
-    severity: synced.severity,
-    ...(synced.conditions?.length
+    id: rule.id,
+    name: rule.name ?? "",
+    kind: rule.kind,
+    scope: rule.scope,
+    appliesTo: [...rule.appliesTo].sort(),
+    body: rule.body ?? "",
+    severity: rule.severity,
+    ...(rule.conditions?.length
       ? {
-          conditions: synced.conditions,
-          conditionJunction: synced.conditionJunction ?? "AND",
+          conditions: rule.conditions,
+          conditionJunction: rule.conditionJunction ?? "AND",
         }
       : {}),
   };
@@ -60,9 +58,7 @@ export function workflowDraftFingerprint(input: {
   const documents = [...input.documents]
     .map(normalizeDocument)
     .sort((a, b) => a.id.localeCompare(b.id));
-  const rules = syncRuleBodies(input.rules)
-    .map(normalizeRule)
-    .sort((a, b) => a.id.localeCompare(b.id));
+  const rules = [...input.rules].map(normalizeRule).sort((a, b) => a.id.localeCompare(b.id));
 
   return JSON.stringify({
     name: input.name.trim(),
