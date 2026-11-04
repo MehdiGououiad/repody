@@ -133,7 +133,7 @@ async def initial_run_progress(run_id: str) -> dict | None:
 async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:
     run = await session.get(Run, run_id)
     if not run:
-        return RunPollStatus(status="failed", error="Run not found", progress=None)
+        raise AppError(code=ErrorCode.NOT_FOUND, message="Run not found")
     progress_dict = await enrich_progress_for_poll(session, run)
     progress = (
         RunProgressSchema.model_validate(progress_dict) if progress_dict else progress_from_run(run)
@@ -145,16 +145,7 @@ async def poll_run_status(session: AsyncSession, run_id: str) -> RunPollStatus:
 
 async def poll_run(session: AsyncSession, run_id: str) -> RunPollResponse:
     body = await poll_run_status(session, run_id)
-    progress = body.progress
-    status = body.status
-    if status == "done":
-        detail = await get_run_detail(session, run_id)
-        return RunPollResponse(status="done", result=detail, error=None, progress=progress)
-    if status == "failed":
-        return RunPollResponse(
-            status="failed",
-            result=None,
-            error=body.error or "Run failed",
-            progress=progress,
-        )
-    return RunPollResponse(status=status, result=None, error=None, progress=progress)
+    result = await get_run_detail(session, run_id) if body.status == "done" else None
+    return RunPollResponse(
+        status=body.status, result=result, error=body.error, progress=body.progress
+    )
