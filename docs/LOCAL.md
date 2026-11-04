@@ -73,10 +73,10 @@ Images pull as public multi-arch - no Hub login required.
 ## Prerequisites (once)
 
 1. **Docker Desktop** running.
-2. **Node 24** + **pnpm 12.5.1**:
+2. **Node 24** + **pnpm 12.16.1**:
    ```bash
    corepack enable
-   corepack prepare pnpm@12.5.1 --activate
+   corepack prepare pnpm@12.16.1 --activate
    ```
 3. **llama-server** on PATH (NuExtract):
    - macOS: `brew install llama.cpp`

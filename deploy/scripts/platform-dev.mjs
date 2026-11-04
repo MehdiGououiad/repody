@@ -205,7 +205,7 @@ function preflight({ quietOk = false } = {}) {
     ok: toolchain.ok,
     state: toolchain.detail.replace(/^ok:\s*/i, ""),
     required: true,
-    fix: "Install Node 24 + corepack enable (pnpm 12.5.1)",
+    fix: "Install Node 24 + corepack enable (pnpm 12.16.1)",
   });
 
   const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;

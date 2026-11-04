@@ -27,7 +27,7 @@ async def _daily(session: AsyncSession, since: datetime) -> dict[date, tuple[int
         .where(Run.created_at >= since)
         .group_by(func.date(Run.created_at))
     )
-    return {day: (runs, passed, failed) for day, runs, passed, failed in rows.tuples()}
+    return {day: (runs, passed, failed) for day, runs, passed, failed in rows}
 
 
 async def get_dashboard(session: AsyncSession) -> Dashboard:
@@ -71,7 +71,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
         )
         .group_by(RuleResult.severity)
     )
-    failure_counts = dict(failures.tuples().all())
+    failure_counts = dict(failures.all())
     total_failures = sum(failure_counts.values())
 
     stale_before = datetime.now(UTC) - timedelta(minutes=get_settings().run_timeout_minutes)

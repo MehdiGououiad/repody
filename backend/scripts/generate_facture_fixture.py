@@ -1,13 +1,17 @@
-"""Generate Facture.pdf fixture matching E2E expectations (Total TTC 6000, TVA 1000)."""
+"""Generate Facture.pdf fixture matching E2E expectations (Total TTC 6000, TVA 1000).
+
+A scanned-style invoice: the text is drawn on an A4 page image (150 DPI) saved as a PDF.
+"""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-import fitz
+from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]  # backend/
 OUT = ROOT.parent / "e2e" / "fixtures" / "documents" / "Facture.pdf"
+DPI = 150
 
 TEXT = """FACTURE N° FAC-2024-001
 Date: 15/01/2024
@@ -24,12 +28,11 @@ Merci pour votre confiance.
 
 def main() -> None:
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    doc = fitz.open()
-    page = doc.new_page(width=595, height=842)
-    page.insert_text((72, 72), TEXT, fontsize=11)
-    doc.save(OUT)
-    doc.close()
-    print(f"Wrote {OUT} ({OUT.stat().st_size} bytes)")
+    page = Image.new("RGB", (int(8.27 * DPI), int(11.69 * DPI)), "white")
+    font = ImageFont.load_default(size=int(11 * DPI / 72))
+    ImageDraw.Draw(page).multiline_text((DPI, DPI), TEXT, fill="black", font=font, spacing=12)
+    page.save(OUT, "PDF", resolution=DPI)
+    print(f"Wrote {OUT}")
 
 
 if __name__ == "__main__":

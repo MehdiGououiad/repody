@@ -80,6 +80,7 @@ test.describe("UI queue position live", () => {
       /Queue position\s+\d+\s+of\s+\d+|Queued\s+[—-]\s+position\s+\d+\s+of\s+\d+/i
     );
     await expect(queueText.first()).toBeVisible({ timeout: 180_000 });
+    // biome-ignore lint/performance/useDomNodeTextContent: the test reads the text as painted (innerText)
     const painted = (await queueText.first().innerText()).trim();
     // eslint-disable-next-line no-console
     console.log("QUEUE_UI_TEXT", painted);

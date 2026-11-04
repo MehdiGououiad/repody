@@ -43,7 +43,7 @@ async def _run_stats(
     )
     return {
         wf_id: (total, passed / done if done else 0.0, last)
-        for wf_id, total, passed, done, last in rows.tuples()
+        for wf_id, total, passed, done, last in rows
     }
 
 
@@ -67,9 +67,7 @@ async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
                 .where(api_runs, Run.created_at >= week)
                 .group_by(func.date(Run.created_at))
             )
-        )
-        .tuples()
-        .all()
+        ).all()
     )
     failing = await session.execute(
         select(RuleResult.name, RuleResult.severity, func.count())
@@ -87,7 +85,7 @@ async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
         call_series=[CallsPerDay(day=d.strftime("%a"), calls=per_day.get(d, 0)) for d in days],
         top_failing_rules=[
             FailingRule(name=name, severity=severity, count=count)
-            for name, severity, count in failing.tuples()
+            for name, severity, count in failing
         ],
     )
 

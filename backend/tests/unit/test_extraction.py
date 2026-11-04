@@ -1,6 +1,7 @@
+import io
 import json
 
-import pymupdf
+import pypdfium2 as pdfium
 import pytest
 
 from repody.extraction.fields import leaf_values
@@ -80,10 +81,12 @@ def test_leaf_values_keep_json_types():
 
 
 def test_page_images():
-    pdf = pymupdf.open()
+    pdf = pdfium.PdfDocument.new()
     for _ in range(3):
-        pdf.new_page()
-    images, total = page_images(pdf.tobytes(), "application/pdf", max_pages=2)
+        pdf.new_page(595, 842)
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    images, total = page_images(buffer.getvalue(), "application/pdf", max_pages=2)
     assert total == 3 and len(images) == 2
     assert images[0]["image_url"]["url"].startswith("data:image/png;base64,")
     with pytest.raises(ValueError, match="Unsupported"):

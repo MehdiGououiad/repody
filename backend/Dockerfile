@@ -3,7 +3,7 @@
 #   docker buildx bake backend --load      (see docker-bake.hcl)
 # Role-specific targets (same layers): --target api | --target worker
 
-FROM python:3.13.15-slim AS runtime-base
+FROM python:3.13.18-slim AS runtime-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -30,7 +30,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-ins
 
 FROM runtime-base AS build
 
-COPY --from=ghcr.io/astral-sh/uv:0.12.17 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
