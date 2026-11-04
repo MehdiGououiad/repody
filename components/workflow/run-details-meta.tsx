@@ -136,9 +136,7 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
                           field.flagged ? "text-danger" : "text-on-surface"
                         )}
                       >
-                        {field.extracted
-                          ? formatExtractedFieldValue(field.value, field.type, locale)
-                          : "—"}
+                        {field.extracted ? formatExtractedFieldValue(field.value, locale) : "—"}
                       </span>
                     </div>
                   ))}

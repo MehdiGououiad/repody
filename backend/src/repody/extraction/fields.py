@@ -1,7 +1,8 @@
-"""Flatten NuExtract's JSON answer into one value per schema leaf, for the report and rules.
+"""NuExtract's JSON answer as one value per schema leaf, for the report and rules.
 
 ``object`` fields expand to ``parent.child`` keys; an ``object-array`` stays one leaf whose
-value is its JSON table. Lists and tables are stored as JSON text.
+value is its list of rows. Values keep the JSON type the model returned; a field the model
+left out (or returned empty) is None.
 """
 
 from __future__ import annotations
@@ -11,7 +12,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
-from repody.rules.values import MISSING
 from repody.schemas.workflow import SchemaField
 
 
@@ -20,35 +20,43 @@ class FieldValue:
     key: str
     description: str
     type: str
-    value: str
+    value: Any
 
     @property
     def extracted(self) -> bool:
-        return self.value != MISSING
+        return self.value is not None
 
 
-def leaf_values(fields: list[SchemaField], answer: str | None) -> list[FieldValue]:
-    """Every leaf with its value from ``answer`` (``MISSING`` when absent or no answer)."""
-    try:
-        data = json.loads(answer or "")
-    except json.JSONDecodeError:
-        data = {}
-    return list(_leaves(fields, data if isinstance(data, dict) else {}, ""))
-
-
-def _leaves(fields: list[SchemaField], data: dict[str, Any], prefix: str) -> Iterator[FieldValue]:
+def leaves(
+    fields: list[SchemaField], data: Any = None, prefix: str = ""
+) -> Iterator[tuple[str, SchemaField, Any]]:
+    """``(key, field, value in data)`` for every leaf of the schema."""
     for field in fields:
         if not field.name:
             continue
         key = f"{prefix}{field.name}"
-        value = data.get(field.name)
+        value = data.get(field.name) if isinstance(data, dict) else None
         if field.template_type == "object" and field.children:
-            yield from _leaves(field.children, value if isinstance(value, dict) else {}, f"{key}.")
-            continue
-        if isinstance(value, str):
-            text = value.strip() or MISSING
+            yield from leaves(field.children, value, f"{key}.")
         else:
-            text = MISSING if value is None else json.dumps(value, ensure_ascii=False)
-        yield FieldValue(
-            key=key, description=field.description, type=field.template_type, value=text
+            yield key, field, value
+
+
+def _clean(value: Any) -> Any:
+    if isinstance(value, str):
+        value = value.strip()
+    return None if value in ("", [], {}) else value
+
+
+def leaf_values(fields: list[SchemaField], answer: str | None) -> list[FieldValue]:
+    """Every leaf with its value from the model's JSON ``answer``."""
+    try:
+        data = json.loads(answer or "")
+    except json.JSONDecodeError:
+        data = None
+    return [
+        FieldValue(
+            key=key, description=field.description, type=field.template_type, value=_clean(value)
         )
+        for key, field, value in leaves(fields, data)
+    ]

@@ -1,41 +1,31 @@
-"""Sum and count rows of an object-array field (stored as a JSON list of objects)."""
+"""Sum and count the rows of an object-array field (a JSON list of objects).
+
+Columns are the field's child names; a summed cell must be a number (declare the column
+``number``), and the filter matches text case-insensitively.
+"""
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
-from repody.rules.values import field_key, parse_numeric_value
+
+def _rows(table: Any) -> list[dict[str, Any]]:
+    return [row for row in table if isinstance(row, dict)] if isinstance(table, list) else []
 
 
-def _rows(raw: str | None) -> list[dict[str, Any]]:
-    try:
-        data = json.loads(raw or "")
-    except json.JSONDecodeError:
-        return []
-    return [row for row in data if isinstance(row, dict)] if isinstance(data, list) else []
+def _matching(table: Any, filter_column: str, contains: str) -> list[dict[str, Any]]:
+    needle = contains.strip().casefold()
+    return [
+        row
+        for row in _rows(table)
+        if not needle or needle in str(row.get(filter_column) or "").casefold()
+    ]
 
 
-def _cell(row: dict[str, Any], column: str) -> str:
-    target = field_key(column)
-    value = next((v for k, v in row.items() if field_key(str(k)) == target), None)
-    return "" if value is None else str(value).strip()
+def sum_rows(table: Any, amount_column: str, filter_column: str = "", contains: str = "") -> float:
+    cells = (row.get(amount_column) for row in _matching(table, filter_column, contains))
+    return sum(c for c in cells if isinstance(c, int | float) and not isinstance(c, bool))
 
 
-def _matching(raw: str | None, filter_column: str, contains: str) -> list[dict[str, Any]]:
-    needle = contains.strip().upper()
-    return [row for row in _rows(raw) if not needle or needle in _cell(row, filter_column).upper()]
-
-
-def sum_rows(
-    raw: str | None, amount_column: str, filter_column: str = "", contains: str = ""
-) -> float:
-    amounts = (
-        parse_numeric_value(_cell(row, amount_column))
-        for row in _matching(raw, filter_column, contains)
-    )
-    return round(sum(a for a in amounts if a is not None), 2)
-
-
-def count_rows(raw: str | None, filter_column: str = "", contains: str = "") -> int:
-    return len(_matching(raw, filter_column, contains))
+def count_rows(table: Any, filter_column: str = "", contains: str = "") -> int:
+    return len(_matching(table, filter_column, contains))

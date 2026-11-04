@@ -18,9 +18,7 @@ export function literalInputKindForTemplateType(templateType?: string): LiteralI
     case "time":
       return "time";
     case "integer":
-      return "number";
     case "number":
-    case "currency":
       return "number";
     case "boolean":
       return "boolean";
@@ -38,9 +36,19 @@ export function resolveFieldTemplateType(
   return fields.find((field) => field.token === trimmed)?.templateType;
 }
 
+/** Types the backend compares in order (numbers, ISO dates and times); the rest use == / IN. */
+export const NUMBER_TEMPLATE_TYPES = new Set(["number", "integer"]);
+const ORDERED_TEMPLATE_TYPES = new Set([...NUMBER_TEMPLATE_TYPES, ...DATE_LIKE_TEMPLATE_TYPES]);
+const ORDERING_OPS = new Set(["<", "<=", ">", ">="]);
+
+/** Operators that fit the left field's type (the backend rejects the others on save). */
 export function comparisonOpsForTemplateType(templateType?: string) {
-  if (templateType && DATE_LIKE_TEMPLATE_TYPES.has(templateType)) {
-    return COMPARISON_OP_DEFS.filter((op) => op.value !== "IN" && op.value !== "NOT_IN");
-  }
-  return COMPARISON_OP_DEFS;
+  return COMPARISON_OP_DEFS.filter((op) => {
+    if (ORDERING_OPS.has(op.value))
+      return !templateType || ORDERED_TEMPLATE_TYPES.has(templateType);
+    if (op.value === "IN" || op.value === "NOT_IN") {
+      return !templateType || !DATE_LIKE_TEMPLATE_TYPES.has(templateType);
+    }
+    return true;
+  });
 }

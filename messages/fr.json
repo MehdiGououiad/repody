@@ -265,7 +265,8 @@
         "continueBlockedSchema": "Nommez chaque document et ajoutez au moins un champ avant de continuer.",
         "continueRulesOptional": "Ajoutez des règles de validation, ou continuez — les règles sont optionnelles pour l'extraction seule.",
         "continueReady": "Quand cette étape est prête, passez à la suivante.",
-        "finalStepHint": "Lancez un test avec des fichiers exemple, puis déployez quand vous êtes prêt."
+        "finalStepHint": "Lancez un test avec des fichiers exemple, puis déployez quand vous êtes prêt.",
+        "rulesHint": "Contrôles logiques sur les valeurs extraites"
       },
       "namePlaceholder": "Nom du workflow…",
       "nameGate": {

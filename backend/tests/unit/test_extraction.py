@@ -6,7 +6,6 @@ import pytest
 from repody.extraction.fields import leaf_values
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.extraction.render import page_images
-from repody.rules.values import MISSING
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
 
 FIELDS = [
@@ -61,16 +60,23 @@ def test_structured_request():
     assert markdown_request("m")["chat_template_kwargs"]["mode"] == "markdown"
 
 
-def test_leaf_values():
+def test_leaf_values_keep_json_types():
     answer = json.dumps(
-        {"total": 6000, "currency": "MAD", "vendor": {"name": " Acme "}, "lines": [{"label": "x"}]}
+        {
+            "total": 6000,
+            "currency": "MAD",
+            "vendor": {"name": " Acme "},
+            "lines": [{"label": "x"}],
+            "tags": [],
+        }
     )
     values = {v.key: v for v in leaf_values(FIELDS, answer)}
-    assert values["total"].value == "6000"
+    assert values["total"].value == 6000
     assert values["vendor.name"].value == "Acme"
-    assert json.loads(values["lines"].value) == [{"label": "x"}]
-    assert values["tags"].value == MISSING and not values["tags"].extracted
-    assert all(v.value == MISSING for v in leaf_values(FIELDS, "not json"))
+    assert values["lines"].value == [{"label": "x"}]
+    assert values["tags"].value is None
+    assert not values["tags"].extracted
+    assert all(v.value is None for v in leaf_values(FIELDS, "not json"))
 
 
 def test_page_images():

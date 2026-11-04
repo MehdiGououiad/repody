@@ -868,20 +868,22 @@
           },
           "type": {
             "type": "string",
-            "title": "Type"
+            "title": "Type",
+            "description": "NuExtract template type the value follows."
           },
           "value": {
-            "type": "string",
-            "title": "Value"
-          },
-          "extracted": {
-            "type": "boolean",
-            "title": "Extracted"
+            "title": "Value",
+            "description": "JSON value; null when not extracted."
           },
           "flagged": {
             "type": "boolean",
             "title": "Flagged",
             "default": false
+          },
+          "extracted": {
+            "type": "boolean",
+            "title": "Extracted",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -890,8 +892,8 @@
           "description",
           "type",
           "value",
-          "extracted",
-          "flagged"
+          "flagged",
+          "extracted"
         ],
         "title": "AuditField"
       },

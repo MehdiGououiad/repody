@@ -22,6 +22,7 @@ import { OperandPicker } from "@/components/workflow/rules/condition-operand-pic
 import {
   comparisonOpsForTemplateType,
   literalInputKindForTemplateType,
+  NUMBER_TEMPLATE_TYPES,
   resolveFieldTemplateType,
 } from "@/lib/rules/condition-input-kind";
 import type { TableFieldOption } from "@/lib/rules/document-fields";
@@ -59,8 +60,11 @@ export function ConditionRow({
     condition.right?.kind === "field"
       ? resolveFieldTemplateType(condition.right.value, fields)
       : undefined;
-  const literalInputKind = literalInputKindForTemplateType(leftTemplateType ?? rightTemplateType);
-  const comparisonOps = comparisonOpsForTemplateType(leftTemplateType).map((definition) => ({
+  // Arithmetic and aggregates produce numbers; literals are typed like the left side.
+  const leftType = useAggregate || hasArith ? "number" : leftTemplateType;
+  const canArith = !leftTemplateType || NUMBER_TEMPLATE_TYPES.has(leftTemplateType);
+  const literalInputKind = literalInputKindForTemplateType(leftType ?? rightTemplateType);
+  const comparisonOps = comparisonOpsForTemplateType(leftType).map((definition) => ({
     value: definition.value,
     label: t(definition.key as Parameters<typeof t>[0]),
     noRight: definition.noRight,
@@ -228,19 +232,21 @@ export function ConditionRow({
                 allowLiteral={false}
                 placeholder={t("pickField")}
               />
-              <button
-                type="button"
-                onClick={toggleArith}
-                className={cn(
-                  "h-8 w-8 rounded border flex items-center justify-center text-[11px] font-bold transition-colors shrink-0",
-                  hasArith
-                    ? "bg-primary/10 border-primary/30 text-primary"
-                    : "bg-surface-container-high border-border text-on-surface-variant hover:border-outline"
-                )}
-                title={hasArith ? t("removeArith") : t("addArith")}
-              >
-                +
-              </button>
+              {canArith ? (
+                <button
+                  type="button"
+                  onClick={toggleArith}
+                  className={cn(
+                    "h-8 w-8 rounded border flex items-center justify-center text-[11px] font-bold transition-colors shrink-0",
+                    hasArith
+                      ? "bg-primary/10 border-primary/30 text-primary"
+                      : "bg-surface-container-high border-border text-on-surface-variant hover:border-outline"
+                  )}
+                  title={hasArith ? t("removeArith") : t("addArith")}
+                >
+                  +
+                </button>
+              ) : null}
             </>
           )}
         </div>

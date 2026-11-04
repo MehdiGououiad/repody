@@ -265,7 +265,8 @@
         "continueBlockedSchema": "Name each document and add at least one field before continuing.",
         "continueRulesOptional": "Add validation rules, or continue — rules are optional for extraction-only workflows.",
         "continueReady": "When you're done with this step, continue to the next.",
-        "finalStepHint": "Run a test with sample files, then deploy when you're ready."
+        "finalStepHint": "Run a test with sample files, then deploy when you're ready.",
+        "rulesHint": "Logic checks on extracted values"
       },
       "namePlaceholder": "Workflow name…",
       "nameGate": {

@@ -5,7 +5,7 @@ import { formatExtractedFieldValue } from "@/lib/utils";
 
 export function formatFieldValue(field: RunAuditField, locale: string): string {
   if (!field.extracted) return "—";
-  return formatExtractedFieldValue(field.value, field.type, locale);
+  return formatExtractedFieldValue(field.value, locale);
 }
 
 export type RunReportLabels = {

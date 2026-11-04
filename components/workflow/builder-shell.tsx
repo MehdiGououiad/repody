@@ -1,9 +1,10 @@
 "use client";
 
 import { AlertCircle, CalendarDays, User } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import type { Workflow } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
 import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { BuilderTopbar } from "./builder/builder-topbar";
@@ -18,6 +19,7 @@ type BuilderMode = "new" | "edit";
 
 function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: BuilderMode }) {
   const tSteps = useTranslations("workflows.builder.steps");
+  const locale = useLocale();
   const isNew = mode === "new";
   const [nameConfirmed, setNameConfirmed] = useState(
     () => !isNew || workflow.name.trim().length > 0
@@ -87,7 +89,9 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                 {workflow.lastRun ? (
                   <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
                     <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{workflow.lastRun}</span>
+                    <span className="truncate">
+                      {formatDateTime(workflow.lastRun, locale, { withYear: true })}
+                    </span>
                   </div>
                 ) : null}
                 {!schemaReady && step > 0 ? (

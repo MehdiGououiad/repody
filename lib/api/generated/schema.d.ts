@@ -334,17 +334,23 @@ export interface components {
              * @default
              */
             description: string;
-            /** Type */
+            /**
+             * Type
+             * @description NuExtract template type the value follows.
+             */
             type: string;
-            /** Value */
-            value: string;
-            /** Extracted */
-            extracted: boolean;
+            /**
+             * Value
+             * @description JSON value; null when not extracted.
+             */
+            value: unknown;
             /**
              * Flagged
              * @default false
              */
             flagged: boolean;
+            /** Extracted */
+            readonly extracted: boolean;
         };
         /** AuditList */
         AuditList: {
@@ -635,6 +641,11 @@ export interface components {
              * @default true
              */
             redis: boolean;
+            /**
+             * Oidcenabled
+             * @description Whether API calls need a Keycloak token.
+             */
+            oidcEnabled: boolean;
         };
         /**
          * IclExample

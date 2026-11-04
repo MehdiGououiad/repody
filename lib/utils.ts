@@ -64,69 +64,10 @@ export function shortId(): string {
   return crypto.randomUUID().slice(0, 8);
 }
 
-/** Parse extraction/LLM amounts: `6000.00`, `6 000,00`, `1.234,56`, `1,234.56`, etc. */
-function parseNumericValue(raw: string): number | null {
-  const text = raw.trim();
-  if (!text || text === "—" || text === "-") return null;
-
-  let cleaned = text.replace(/[^\d.,\s-]/g, "").replace(/\s/g, "");
-  if (!cleaned || /^[.,-]+$/.test(cleaned)) return null;
-
-  const lastComma = cleaned.lastIndexOf(",");
-  const lastDot = cleaned.lastIndexOf(".");
-
-  if (lastComma >= 0 && lastDot >= 0) {
-    if (lastComma > lastDot) {
-      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-    } else {
-      cleaned = cleaned.replace(/,/g, "");
-    }
-  } else if (lastComma >= 0) {
-    const parts = cleaned.split(",");
-    if (parts.length === 2 && parts[1].length <= 2) {
-      cleaned = `${parts[0].replace(/\./g, "")}.${parts[1]}`;
-    } else {
-      cleaned = cleaned.replace(/,/g, "");
-    }
-  } else if (lastDot >= 0) {
-    const parts = cleaned.split(".");
-    if (parts.length === 2 && parts[1].length <= 2) {
-      cleaned = `${parts[0].replace(/,/g, "")}.${parts[1]}`;
-    } else {
-      cleaned = cleaned.replace(/\./g, "");
-    }
-  }
-
-  const num = Number(cleaned);
-  return Number.isFinite(num) ? num : null;
-}
-
-export function formatExtractedFieldValue(
-  value: string,
-  type: string,
-  locale: LocaleArg = "en-US"
-): string {
-  if (!value || value === "—") return "—";
-
-  if (type === "currency" || type === "number") {
-    const num = parseNumericValue(value);
-    if (num === null) return value;
-    if (type === "currency") {
-      return new Intl.NumberFormat(locale, {
-        style: "decimal",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(num);
-    }
-    return new Intl.NumberFormat(locale).format(num);
-  }
-
-  if (type === "percent") {
-    const num = parseNumericValue(value);
-    if (num === null) return value;
-    const ratio = value.includes("%") || Math.abs(num) > 1 ? num / 100 : num;
-    return formatPercent(ratio, 0, locale);
-  }
-
-  return value;
+/** An extracted value for display: numbers in the reader's locale, tables and lists as JSON. */
+export function formatExtractedFieldValue(value: unknown, locale: LocaleArg = "en-US"): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "number") return new Intl.NumberFormat(locale).format(value);
+  if (typeof value === "string") return value;
+  return JSON.stringify(value);
 }

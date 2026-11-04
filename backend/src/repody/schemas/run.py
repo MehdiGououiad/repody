@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, computed_field
 
 from repody.schemas.common import CamelModel
 
@@ -42,10 +42,14 @@ class ExtractionMeta(CamelModel):
 class AuditField(CamelModel):
     key: str
     description: str = ""
-    type: str
-    value: str
-    extracted: bool
+    type: str = Field(description="NuExtract template type the value follows.")
+    value: Any = Field(default=None, description="JSON value; null when not extracted.")
     flagged: bool = False
+
+    @computed_field
+    @property
+    def extracted(self) -> bool:
+        return self.value is not None
 
 
 class AuditDocument(CamelModel):

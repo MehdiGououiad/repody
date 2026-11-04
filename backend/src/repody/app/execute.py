@@ -103,7 +103,7 @@ async def _process(run_id: str) -> None:
                 row = _field_row(run_doc.id, position, field)
                 session.add(row)
                 saved.append((row, run_doc.document_type))
-            rows += [(f.key, f.value, run_doc.document_type) for f in fields]
+            rows += [(f.key, f.value, run_doc.document_type, f.type) for f in fields]
             if step := tracker.step(step_id):
                 step.duration_ms, step.cache_hit = meta.extraction_ms, meta.cache_hit
                 step.detail = f"{meta.fields_extracted} field(s) in {meta.extraction_ms} ms"
@@ -138,7 +138,7 @@ async def _process(run_id: str) -> None:
         run.rules_total = len(results)
         run.rules_passed = sum(r.status == "passed" for r in results)
         run.rules_failed = sum(r.status == "failed" for r in results)
-        run.fields_extracted = sum(1 for row, _ in saved if row.extracted)
+        run.fields_extracted = sum(row.value is not None for row, _ in saved)
         run.extraction_ms, run.validation_ms = extraction_ms, validation_ms
         run.progress = tracker.finish()
         await session.commit()
@@ -155,7 +155,6 @@ def _field_row(run_document_id: str, position: int, field: FieldValue) -> Extrac
         description=field.description,
         type=field.type,
         value=field.value,
-        extracted=field.extracted,
     )
 
 

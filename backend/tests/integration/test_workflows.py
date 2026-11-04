@@ -25,6 +25,10 @@ async def test_save_rejects_incomplete_rules_and_duplicate_fields(api):
     assert response.status_code == 422
     assert "Choose a field on the left" in response.json()["detail"]
 
+    mistyped = invoice_workflow(rule("r", condition("total_amount", ">", "a lot")))
+    response = await api.put("/v1/workflows/wf-x", json=mistyped)
+    assert "'a lot' is not a number value" in response.json()["detail"]
+
     duplicate = invoice_workflow()
     duplicate["documents"][0]["schema"].append({"id": "f3", "name": "TVA"})
     assert (await api.put("/v1/workflows/wf-x", json=duplicate)).status_code == 422

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { browserApi } from "@/lib/api/openapi-client";
 import type { Workflow } from "@/lib/types";
-import { cn, formatNumber, formatPercent } from "@/lib/utils";
+import { cn, formatDateTime, formatNumber, formatPercent } from "@/lib/utils";
 
 const statusConfig = {
   active: { variant: "success" as const, Icon: Play, key: "active" as const },
@@ -191,7 +191,9 @@ export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow
                       <div className="text-xs text-on-surface-variant uppercase tracking-wider">
                         {t("card.lastRun")}
                       </div>
-                      <div className="text-sm font-medium mt-0.5 truncate">{w.lastRun ?? "—"}</div>
+                      <div className="text-sm font-medium mt-0.5 truncate">
+                        {w.lastRun ? formatDateTime(w.lastRun, locale, { withYear: true }) : "—"}
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs text-on-surface-variant uppercase tracking-wider">

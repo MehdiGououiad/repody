@@ -23,7 +23,7 @@ async def test_api_run_extracts_and_checks_rules(api, model_answer):
         rule("total", condition("total_amount", "==", "6000")),
         rule("tva", condition("tva", "<", "500"), severity="flag"),
     )
-    model_answer["text"] = json.dumps({"total_amount": "6 000,00", "tva": 1000})
+    model_answer["text"] = json.dumps({"total_amount": 6000, "tva": 1000})
     started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
     assert started.status_code == 202, started.text
     run_id = started.json()["runId"]
@@ -35,7 +35,7 @@ async def test_api_run_extracts_and_checks_rules(api, model_answer):
     assert report["source"] == "api"
     assert [r["status"] for r in report["ruleResults"]] == ["passed", "failed"]
     fields = {f["key"]: f for f in report["documents"][0]["fields"]}
-    assert fields["total_amount"]["value"] == "6 000,00"
+    assert fields["total_amount"]["value"] == 6000
     assert not fields["total_amount"]["flagged"]
     assert fields["tva"]["flagged"]
     assert report["summary"] == {"total": 2, "passed": 1, "failed": 1, "fieldsExtracted": 2}
@@ -49,7 +49,7 @@ async def test_api_run_extracts_and_checks_rules(api, model_answer):
 async def test_test_run_uses_the_posted_draft(api, model_answer):
     await deploy(api)
     draft = invoice_workflow(rule("total", condition("total_amount", "==", "1")))
-    model_answer["text"] = json.dumps({"total_amount": "6000"})
+    model_answer["text"] = json.dumps({"total_amount": 6000})
     started = await api.post(
         "/v1/workflows/wf-run/runs",
         files=FILE,

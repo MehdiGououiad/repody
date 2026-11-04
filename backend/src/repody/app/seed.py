@@ -15,17 +15,17 @@ from repody.schemas.workflow import DocumentDef, SchemaField, WorkflowDefinition
 SEED_API_KEY = "wbk_live_4f8a2c1e9d3b7f6a0c5e2d8b1a4f7c3e"
 
 _INVOICE_FIELDS = [
-    ("f1", "invoice_number", "Unique identifier, usually near the header."),
-    ("f2", "vendor_name", "Legal name of the vendor issuing the invoice."),
-    ("f3", "subtotal", "Sum of line items before tax."),
-    ("f4", "tax", "Total tax amount applied."),
-    ("f5", "total_amount", "Final amount due, including taxes and fees."),
-    ("f6", "po_number", "Purchase order number referenced on the invoice."),
+    ("f1", "invoice_number", "Unique identifier, usually near the header.", "verbatim-string"),
+    ("f2", "vendor_name", "Legal name of the vendor issuing the invoice.", "verbatim-string"),
+    ("f3", "subtotal", "Sum of line items before tax.", "number"),
+    ("f4", "tax", "Total tax amount applied.", "number"),
+    ("f5", "total_amount", "Final amount due, including taxes and fees.", "number"),
+    ("f6", "po_number", "Purchase order number referenced on the invoice.", "verbatim-string"),
 ]
 _PO_FIELDS = [
-    ("p1", "po_number", "Unique purchase order identifier."),
-    ("p2", "approved_total", "Approved total amount on the PO."),
-    ("p3", "vendor_name", "Vendor name as listed on the purchase order."),
+    ("p1", "po_number", "Unique purchase order identifier.", "verbatim-string"),
+    ("p2", "approved_total", "Approved total amount on the PO.", "number"),
+    ("p3", "vendor_name", "Vendor name as listed on the purchase order.", "verbatim-string"),
 ]
 _MATH_RULE = Rule(
     id="r-math",
@@ -43,8 +43,11 @@ _MATH_RULE = Rule(
 )
 
 
-def _fields(rows: list[tuple[str, str, str]]) -> list[SchemaField]:
-    return [SchemaField(id=fid, name=name, description=desc) for fid, name, desc in rows]
+def _fields(rows: list[tuple[str, str, str, str]]) -> list[SchemaField]:
+    return [
+        SchemaField(id=fid, name=name, description=desc, template_type=kind)
+        for fid, name, desc, kind in rows
+    ]
 
 
 async def seed(session: AsyncSession) -> None:
@@ -102,17 +105,16 @@ async def seed(session: AsyncSession) -> None:
             id=f"fld-{key}",
             position=i,
             key=key,
-            type="verbatim-string",
+            type=kind,
             value=value,
-            extracted=True,
             flagged=key != "vendor_name",
         )
-        for i, (key, value) in enumerate(
+        for i, (key, kind, value) in enumerate(
             [
-                ("vendor_name", "Acme Corp Ltd."),
-                ("subtotal", "5625.00"),
-                ("tax", "478.13"),
-                ("total_amount", "6200.00"),
+                ("vendor_name", "verbatim-string", "Acme Corp Ltd."),
+                ("subtotal", "number", 5625.0),
+                ("tax", "number", 478.13),
+                ("total_amount", "number", 6200.0),
             ]
         )
     ]

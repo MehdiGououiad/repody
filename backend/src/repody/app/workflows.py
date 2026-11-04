@@ -10,8 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.auth import hash_api_key, new_api_key
 from repody.errors import AppError
+from repody.extraction.fields import leaves
 from repody.models import RuleResult, Run, Workflow
 from repody.rules.evaluate import condition_issue, describe, rule_issues
+from repody.rules.values import field_key
 from repody.schemas.workflow import (
     ApiStats,
     CallsPerDay,
@@ -167,8 +169,19 @@ async def create_workflow(session: AsyncSession, body: CreateWorkflow) -> Workfl
     return _out(wf)
 
 
+def field_types(definition: WorkflowDefinition) -> dict[str, str]:
+    """Template type of every field a rule can name: ``field`` and ``document type.field``."""
+    types: dict[str, str] = {}
+    for doc in definition.documents:
+        for key, field, _value in leaves(doc.schema_fields):
+            types.setdefault(field_key(key), field.template_type)
+            types[field_key(f"{doc.document_type}.{key}")] = field.template_type
+    return types
+
+
 def rule_check_issues(definition: WorkflowDefinition) -> list[str]:
-    return [issue for rule in definition.rules for issue in rule_issues(rule)]
+    types = field_types(definition)
+    return [issue for rule in definition.rules for issue in rule_issues(rule, types)]
 
 
 async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowIn) -> WorkflowOut:
@@ -209,10 +222,11 @@ async def deploy_workflow(session: AsyncSession, workflow_id: str) -> WorkflowOu
 
 def check_rules(definition: WorkflowDefinition) -> list[RuleCheck]:
     """Builder feedback: issues and the readable form of every condition."""
+    types = field_types(definition)
     return [
         RuleCheck(
             rule_id=rule.id,
-            issues=rule_issues(rule),
+            issues=rule_issues(rule, types),
             checks=["" if condition_issue(c) else describe(c) for c in rule.conditions],
         )
         for rule in definition.rules

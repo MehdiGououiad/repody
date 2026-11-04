@@ -17,6 +17,10 @@ updated by four paths, three throttling layers and about 70 settings.
 - **Rules are typed conditions** (`rules.models.Condition`) evaluated directly. A rule passes
   when every condition holds; the readable form of each condition is shown in the builder
   and stored on the result. No expression language, no `simpleeval`.
+- **Values keep the type the schema declares.** NuExtract returns each field in its
+  template type, so extracted values are stored as JSON (NULL when missing) and rules read
+  them by that type: no amount or date guessing (`price-parser` removed), no money-specific
+  rounding. Saving a workflow rejects operators that do not fit a field's type.
 - **One Taskiq queue and task**, `process_run(run_id)`, run with the official CLI. Send after
   commit, resend from maintenance, conditional claim.
 - **One upload path**: the run request is multipart (files, and for each file its workflow
@@ -33,4 +37,5 @@ updated by four paths, three throttling layers and about 70 settings.
 - Large files travel through the API instead of straight to S3; the upload cap
   (`AUDIT_MAX_UPLOAD_BYTES`, default 25 MiB) bounds this.
 - A rule that needs "any of" must be written as separate rules.
+- A total compared as a number must be declared `number`; a `verbatim-string` field compares as text.
 - Rule templates, the dry-run endpoint and serverless GPU hints were removed.

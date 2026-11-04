@@ -13,7 +13,6 @@ import pytest
 from tests.conftest import FACTURE_PDF
 
 from repody.app.seed import SEED_API_KEY
-from repody.rules.values import parse_numeric_value
 
 API = os.environ.get("E2E_API_URL", "http://127.0.0.1:8000")
 AUTH = {"Authorization": f"Bearer {SEED_API_KEY}"}
@@ -49,6 +48,6 @@ def test_demo_workflow_on_facture(http: httpx.Client):
     report = state["result"]
     fields = {f["key"]: f["value"] for f in report["documents"][0]["fields"]}
     print(fields, [(r["name"], r["status"], r["detail"]) for r in report["ruleResults"]])
-    assert parse_numeric_value(fields["total_amount"]) == 6000.0
-    assert parse_numeric_value(fields["tax"]) == 1000.0
+    assert fields["total_amount"] == 6000
+    assert fields["tax"] == 1000
     assert report["ruleResults"][0]["status"] == "passed"  # 5000 + 1000 == 6000

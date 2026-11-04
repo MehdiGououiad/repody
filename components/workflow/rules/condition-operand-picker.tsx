@@ -67,6 +67,11 @@ export function OperandPicker({
           {fields.map((field) => (
             <SelectItem key={field.token} value={field.token} className="text-xs font-mono">
               {field.label}
+              {field.templateType ? (
+                <span className="ml-2 text-[10px] text-on-surface-variant">
+                  {field.templateType}
+                </span>
+              ) : null}
             </SelectItem>
           ))}
           {fields.length === 0 ? (

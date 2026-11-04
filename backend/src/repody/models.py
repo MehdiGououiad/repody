@@ -104,8 +104,8 @@ class ExtractedField(Base):
     key: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text, default="")
     type: Mapped[str] = mapped_column(String(32))
-    value: Mapped[str] = mapped_column(Text)
-    extracted: Mapped[bool] = mapped_column(default=False)
+    # The model's JSON value in the field's template type; NULL when not extracted.
+    value: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
     flagged: Mapped[bool] = mapped_column(default=False)
 
     run_document: Mapped[RunDocument] = relationship(back_populates="fields")

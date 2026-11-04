@@ -97,7 +97,7 @@ La matrice complète figure en [annexe 7.3](#73-matrice-dhabilitations).
 
 | Capacité | Description |
 |---|---|
-| Règles | Conditions typées évaluées directement, avec lecture des dates et montants. |
+| Règles | Conditions typées évaluées directement, selon le type déclaré de chaque champ. |
 | Agrégats tabulaires | Fonctions `sum_rows`, `count_rows_where`, etc. pour les champs de type tableau. |
 | Constructeur de conditions | Interface de composition des opérandes, opérateurs et valeurs littérales. |
 | Portées | Contrôle intra-document ou transverse (*cross-document*). |
@@ -248,7 +248,7 @@ Une erreur d'extraction sur un document est journalisée et ce document reste sa
 
 ### 3.7 Moteur de règles (`backend/src/repody/rules/`)
 
-Une règle est une liste de **conditions typées** (`models.py`) : champ ou valeur à gauche (avec opération arithmétique ou agrégat de tableau), opérateur, champ ou valeur à droite. `evaluate.py` évalue chaque condition directement (pas d'expression générée), décrit chaque condition pour l'interface et signale ce qui empêche l'enregistrement. Une règle passe quand toutes ses conditions tiennent ; une valeur manquante la rend `skipped`. `values.py` lit montants (`price-parser`), dates ISO et booléens.
+Une règle est une liste de **conditions typées** (`models.py`) : champ ou valeur à gauche (avec opération arithmétique ou agrégat de tableau), opérateur, champ ou valeur à droite. `evaluate.py` évalue chaque condition directement (pas d'expression générée), décrit chaque condition pour l'interface et signale ce qui empêche l'enregistrement. Une règle passe quand toutes ses conditions tiennent ; une valeur manquante la rend `skipped`. Chaque valeur est lue selon le **type déclaré du champ** (`values.py`) : NuExtract renvoie un nombre JSON pour `number`, une date ISO pour `date`, un booléen pour `boolean` ; rien n'est deviné à partir du texte. Une valeur saisie dans une règle prend le type du champ comparé, et l'enregistrement refuse un opérateur qui ne convient pas au type (`>` sur du texte, arithmétique hors nombres).
 
 ### 3.8 Traitement asynchrone (`backend/src/repody/queue.py`, `worker.py`)
 
