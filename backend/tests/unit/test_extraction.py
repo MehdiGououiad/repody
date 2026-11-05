@@ -1,12 +1,14 @@
+import base64
 import io
 import json
 
 import pypdfium2 as pdfium
 import pytest
+from PIL import Image
 
+from repody.extraction import lightonocr, nuextract
 from repody.extraction.fields import leaf_values
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
-from repody.extraction.render import page_images
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
 
 FIELDS = [
@@ -80,37 +82,45 @@ def test_leaf_values_keep_json_types():
     assert all(v.value is None for v in leaf_values(FIELDS, "not json"))
 
 
-def test_page_images():
+def _pdf(pages: int) -> bytes:
     pdf = pdfium.PdfDocument.new()
-    for _ in range(3):
-        pdf.new_page(595, 842)
+    for _ in range(pages):
+        pdf.new_page(595, 842)  # A4 in points
     buffer = io.BytesIO()
     pdf.save(buffer)
-    images, total = page_images(buffer.getvalue(), "application/pdf", max_pages=2)
-    assert total == 3 and len(images) == 2
-    assert images[0]["image_url"]["url"].startswith("data:image/png;base64,")
-    with pytest.raises(ValueError, match="Unsupported"):
-        page_images(b"plain text", "text/plain", max_pages=None)
+    return buffer.getvalue()
+
+
+def _png(width: int, height: int) -> bytes:
+    buffer = io.BytesIO()
+    Image.new("RGB", (width, height), "white").save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+def _size(part: dict) -> tuple[int, int]:
+    data = base64.b64decode(part["image_url"]["url"].split(",", 1)[1])
+    return Image.open(io.BytesIO(data)).size
+
+
+def test_nuextract_pages_at_170_dpi_and_images_as_uploaded():
+    parts, total = nuextract.page_parts(_pdf(3), "application/pdf", max_pages=2)
+    assert total == 3 and len(parts) == 2
+    width, height = _size(parts[0])
+    assert abs(width - 595 * 170 / 72) < 1 and abs(height - 842 * 170 / 72) < 1  # 170 DPI
+    jpeg = io.BytesIO()
+    Image.new("RGB", (10, 10)).save(jpeg, "JPEG")
+    [part], total = nuextract.page_parts(jpeg.getvalue(), "image/jpeg", max_pages=None)
+    assert total == 1
+    assert (
+        part["image_url"]["url"]
+        == "data:image/jpeg;base64," + base64.b64encode(jpeg.getvalue()).decode()
+    )
 
 
 def test_lightonocr_pages_follow_the_official_client():
-    from PIL import Image
-
-    from repody.extraction import lightonocr
-
-    pdf = pdfium.PdfDocument.new()
-    pdf.new_page(595, 842)  # A4 in points
-    buffer = io.BytesIO()
-    pdf.save(buffer)
-    [page], total = lightonocr.page_images(buffer.getvalue(), "application/pdf", max_pages=None)
-    assert total == 1 and max(page.size) == 2048  # rendered at the model's longest edge
-
-    small = io.BytesIO()
-    Image.new("RGB", (800, 600), "white").save(small, "PNG")
-    [image], _ = lightonocr.page_images(small.getvalue(), "image/png", max_pages=None)
-    assert image.size == (800, 600)  # never upscaled
-
-    large = io.BytesIO()
-    Image.new("RGB", (4000, 3000), "white").save(large, "PNG")
-    [image], _ = lightonocr.page_images(large.getvalue(), "image/png", max_pages=None)
-    assert image.size == (2048, 1536)
+    [page], total = lightonocr.page_parts(_pdf(1), "application/pdf", max_pages=None)
+    assert total == 1 and max(_size(page)) == 2048  # rendered at the model's longest edge
+    [image], _ = lightonocr.page_parts(_png(800, 600), "image/png", max_pages=None)
+    assert _size(image) == (800, 600)  # never upscaled
+    [image], _ = lightonocr.page_parts(_png(4000, 3000), "image/png", max_pages=None)
+    assert _size(image) == (2048, 1536)

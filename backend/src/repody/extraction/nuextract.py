@@ -10,11 +10,25 @@ import json
 from collections.abc import Iterator
 from typing import Any
 
+from repody.extraction import render
 from repody.schemas.workflow import DocumentDef, SchemaField
 
 STRUCTURED_TEMPERATURE = 0.2
 EXACT_TEMPERATURE = 0.0  # the official in-context and Markdown examples use 0
 LIST_SUFFIX = "-list"  # platform spelling of a list type: `number-list` is `["number"]`
+
+
+def page_parts(
+    data: bytes, mime: str, *, max_pages: int | None
+) -> tuple[list[dict[str, Any]], int]:
+    """``(image parts, page count)``: PDF pages at 170 DPI (official), images as uploaded.
+
+    All pages go in one request, as the model card sends a multi-page PDF.
+    """
+    if mime == "application/pdf":
+        pages, total = render.pdf_pages(data, max_pages=max_pages)
+        return [render.image_part(page) for page in pages], total
+    return [render.image_part(data, mime)], 1
 
 
 def _choices(field: SchemaField) -> list[str]:
@@ -65,7 +79,7 @@ def instructions(doc: DocumentDef) -> str:
 
 
 def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
-    """Request body without the page images (``messages[-1]`` gets them)."""
+    """Request body; the page images go in the last (user) message."""
     examples = [ex for ex in doc.extraction_icl_examples if ex.input.strip() and ex.output.strip()]
     kwargs: dict[str, Any] = {
         "template": json.dumps(template(doc.schema_fields), ensure_ascii=False, indent=4),

@@ -21,7 +21,6 @@ from pydantic import BaseModel
 
 from repody.extraction import client, lightonocr, nuextract
 from repody.extraction.fields import FieldValue, leaf_values
-from repody.extraction.render import page_images
 from repody.infra.redis import get_redis
 from repody.schemas.run import ExtractionMeta
 from repody.schemas.workflow import DocumentDef
@@ -53,40 +52,38 @@ def _request(doc: DocumentDef) -> dict[str, Any]:
     return nuextract.markdown_request(settings.llamacpp_served_model)
 
 
-async def _ask_nuextract(data: bytes, mime: str, request: dict) -> tuple[str, int, int]:
-    """All pages in one request, as NuExtract's model card sends a multi-page PDF."""
-    images, total = await asyncio.to_thread(
-        page_images, data, mime, max_pages=get_settings().max_pages_per_document
-    )
-    request["messages"][-1]["content"] = images
-    return await client.chat(request), total, len(images)
+def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[str, Any]:
+    """A copy of ``request`` whose last (user) message holds the page images."""
+    return {**request, "messages": [*request["messages"][:-1], {"role": "user", "content": parts}]}
 
 
-async def _ask_lightonocr(data: bytes, mime: str, request: dict) -> tuple[str, int, int]:
-    """One request per page, as LightOn's client does; pages joined by a blank line."""
+async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any]) -> _Answer:
     settings = get_settings()
-    pages, total = await asyncio.to_thread(
-        lightonocr.page_images, data, mime, max_pages=settings.max_pages_per_document
-    )
-    texts = []
-    for page in pages:
-        request["messages"][0]["content"] = [lightonocr.image_part(page)]
-        texts.append(
-            await client.chat(
-                request, base_url=settings.lightonocr_base_url, api_key=settings.lightonocr_api_key
-            )
+    max_pages = settings.max_pages_per_document
+    if _uses_lightonocr(doc):
+        # One request per page, as LightOn's client does; pages joined by a blank line.
+        parts, total = await asyncio.to_thread(
+            lightonocr.page_parts, data, mime, max_pages=max_pages
         )
-    return "\n\n".join(texts), total, len(pages)
-
-
-async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict) -> _Answer:
-    ask = _ask_lightonocr if _uses_lightonocr(doc) else _ask_nuextract
-    text, total, sent = await ask(data, mime, request)
+        texts = [
+            await client.chat(
+                _with_pages(request, [part]),
+                base_url=settings.lightonocr_base_url,
+                api_key=settings.lightonocr_api_key,
+            )
+            for part in parts
+        ]
+        text = "\n\n".join(texts)
+    else:
+        parts, total = await asyncio.to_thread(
+            nuextract.page_parts, data, mime, max_pages=max_pages
+        )
+        text = await client.chat(_with_pages(request, parts))
     if doc.schema_fields:
-        return _Answer(answer=text, pages_rendered=total, pages_sent=sent)
+        return _Answer(answer=text, pages_rendered=total, pages_sent=len(parts))
     if not text:
         raise RuntimeError("The model returned no Markdown for the document.")
-    return _Answer(markdown=text[:MAX_TEXT_CHARS], pages_rendered=total, pages_sent=sent)
+    return _Answer(markdown=text[:MAX_TEXT_CHARS], pages_rendered=total, pages_sent=len(parts))
 
 
 async def extract(
