@@ -98,7 +98,11 @@ def _out(
     api_stats: ApiStats | None = None,
     api_key: str | None = None,
 ) -> WorkflowOut:
-    definition = WorkflowDefinition.model_validate(wf.definition if with_definition else {})
+    definition = (
+        WorkflowDefinition.model_validate(wf.definition)
+        if with_definition
+        else WorkflowDefinition()
+    )
     return WorkflowOut(
         id=wf.id,
         name=wf.name,

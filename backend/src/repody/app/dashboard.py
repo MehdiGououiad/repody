@@ -11,7 +11,15 @@ from sqlalchemy.orm import selectinload
 from repody.app.runs import audit_item
 from repody.app.workflows import list_workflows
 from repody.infra.models import RuleResult, Run
-from repody.schemas.platform import Dashboard, DayRuns, Kpi, KpiPoint, QueueCounts, SeverityShare
+from repody.schemas.platform import (
+    Dashboard,
+    DayRuns,
+    Kpi,
+    KpiId,
+    KpiPoint,
+    QueueCounts,
+    SeverityShare,
+)
 from repody.settings import get_settings
 
 
@@ -52,7 +60,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
         )
     ).one()
 
-    def kpi(kpi_id, value: float, previous: float, series: list[float]) -> Kpi:
+    def kpi(kpi_id: KpiId, value: float, previous: float, series: list[float]) -> Kpi:
         return Kpi(
             id=kpi_id,
             value=value,

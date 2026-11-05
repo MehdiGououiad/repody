@@ -1,1 +1,1 @@
-"""Application use cases (run, workflow, operator, uploads, queue, ops, …)."""
+"""Use cases: workflows, runs (start, process, progress), the dashboard and maintenance."""
