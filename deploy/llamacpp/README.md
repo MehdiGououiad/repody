@@ -1,108 +1,95 @@
-# llama-server + NuExtract3 for Repody
+# llama-server for Repody: NuExtract3, and LightOnOCR-3 (optional)
 
-Serve [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) with the official
-**llama-server** binary (`winget install llama.cpp`). Platform wiring: `docs/EXTRACTION.md`.
+Repody's models run on the official **llama-server** binary (`winget install llama.cpp`), each on its
+own OpenAI-compatible port. Platform wiring: `docs/EXTRACTION.md`.
+
+| Model | Used for | Port | Weights |
+|---|---|---|---|
+| NuExtract3 | Field extraction, and Markdown by default | 8081 | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) |
+| LightOnOCR-3-4B | Markdown when `AUDIT_MARKDOWN_PROVIDER=lightonocr` | 8082 | [prithivMLmods/LightOnOCR-3-4B-GGUF](https://huggingface.co/prithivMLmods/LightOnOCR-3-4B-GGUF) |
 
 ## 1. Install llama.cpp
 
 ```powershell
 winget install llama.cpp
-# later: winget upgrade ggml.llamacpp   # pulls latest GitHub Vulkan release
+# later: winget upgrade ggml.llamacpp   # latest GitHub Vulkan release
 ```
 
-Confirm your GPU backend:
+`llama-server --list-devices` lists the GPUs; llama.cpp uses one by default.
 
-```powershell
-llama-server --list-devices
-```
+## 2. NuExtract3 weights
 
-Use the device id in `paths.local.env` (e.g. `Vulkan0`, `CUDA0`).
+| File | Size |
+|------|------|
+| `NuExtract3-Q8_0.gguf` | ~4.6 GB |
+| `NuExtract3-Q6_K.gguf` | ~3.5 GB |
+| `NuExtract3-Q4_K_M.gguf` | ~2.7 GB |
+| `mmproj-NuExtract3-BF16.gguf` | vision projector (required) |
 
-## 2. Download the model
+`node deploy/scripts/llama-serve.mjs download` fetches the repository into `deploy/llamacpp/models`.
+On the Repody OCR benchmark (`benchmarks/ocr`), Q8_0 is the most accurate.
 
-| File | Purpose |
-|------|---------|
-| `NuExtract3-Q8_0.gguf` | Text weights (~4.5 GB) - **deep-bench winner on Arc** |
-| `NuExtract3-Q6_K.gguf` | Strong runner-up (~3.5 GB) |
-| `NuExtract3-Q4_K_M.gguf` | Smaller / faster (~2.7 GB) - official HF “local default” |
-| `mmproj-NuExtract3-BF16.gguf` | Vision projector (required for images) |
-
-## 3. Configure paths
+## 3. Configure and start
 
 ```powershell
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
-```
-
-## 4. Start the server
-
-```powershell
 pnpm llamacpp:serve
 pnpm llamacpp:verify
 ```
 
-Command reference: [../../docs/COMMANDS.md](../../docs/COMMANDS.md).
+### Server flags
 
-### Server flags (aligned with NuExtract + llama.cpp docs)
+The launcher (`deploy/scripts/llama-serve.mjs`) passes only what the model cards and llama.cpp need:
 
-The launcher (`deploy/scripts/llama-serve.mjs nuextract`) starts llama-server with the official
-minimal multimodal command plus accuracy / GPU knobs from upstream docs:
+| Flag | Why |
+|------|-----|
+| `-m` + `--mmproj` (or `-hf repo:quant`) | The weights and vision projector |
+| `-a <alias>` | The model id Repody sends (`AUDIT_*_SERVED_MODEL`) |
+| `--jinja` | The chat templates read `chat_template_kwargs` (NuExtract `mode`/`template`, thinking off) |
+| `-c` (`*_CONTEXT`) `-np 1` | One request at a time with its own context: 32768 for NuExtract (several pages per request), 16384 for LightOnOCR (one page per request) |
+| `--reasoning off` | LightOnOCR only: the LightOnOCR-3 card serves with thinking off (vLLM `--default-chat-template-kwargs`) |
 
-| Setting | Value | Source |
-|---------|-------|--------|
-| Context | **16384** (`-c`) | NuExtract vLLM `--max-model-len 16384` |
-| Model + mmproj | **Q4_K_M** + BF16 mmproj | NuExtract3-GGUF (official local) |
-| GPU offload | `-ngl 99` + `--mmproj-offload` + `--device Vulkan0` | llama.cpp multimodal |
-| Flash Attention | `-fa on` | llama.cpp (`LLAMACPP_FLASH_ATTN`) |
-| Chat template | `--jinja` | Required for `chat_template_kwargs` |
-| Server reasoning | `-rea off` | Official non-thinking (`enable_thinking=false`) |
-| Parallel slots | **1** (`-np 1`) default | Full 16k context per slot |
-| Vision tokens | `--image-min/max-tokens` (default **1024** in `paths.local.env.example` / serve script) | Qwen-VL floor is 1024; Arc: keep max capped. Raise toward 1536 only with GPU headroom |
-| Vision batch | `-ub` + `--mtmd-batch-max-tokens` match vision budget | Must track image-max-tokens |
+Image resolution, batch sizes, flash attention and GPU offload are llama.cpp's defaults. Repody sends
+the images the model cards describe (NuExtract3: PDF pages at 170 DPI; LightOnOCR-3: at most 2048 px on
+the longest edge), and every request sets the documented sampling.
 
-**Recommendation:** `NuExtract3-Q8_0.gguf` + vision **1024**. Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL`.
-
-API: `http://127.0.0.1:8081/v1` (model id from `LLAMACPP_MODEL_ALIAS`).
-
-## 5. Point Repody at llama-server
+## 4. Point Repody at the servers
 
 ```powershell
-# backend/.env already sets AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 for Compose dev
+# backend/.env: AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 (Compose: host.docker.internal)
 docker compose --profile workers restart worker
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
 
-## Manual command (minimal)
+## LightOnOCR-3 for Markdown (optional)
+
+Documents without fields are transcribed to Markdown. NuExtract3 does it by default; to use
+LightOnOCR-3 instead:
 
 ```powershell
-llama-server `
-  -m C:\path\to\NuExtract3-Q4_K_M.gguf `
-  --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
-  --host 0.0.0.0 --port 8081 `
-  -c 16384 -np 1 -ub 1536 `
-  -ngl 99 -fa on --device Vulkan0 --mmproj-offload `
-  --image-min-tokens 1536 --image-max-tokens 1536 `
-  --mtmd-batch-max-tokens 1536 `
-  -a nuextract3-q4_k_m --jinja -rea off
+pnpm lightonocr:serve      # llama-server -hf prithivMLmods/LightOnOCR-3-4B-GGUF:Q8_0 on :8082
+pnpm lightonocr:verify
 ```
 
-## Throughput scaling (`-np` / parallel slots)
+Then set `AUDIT_MARKDOWN_PROVIDER=lightonocr` (and `AUDIT_LIGHTONOCR_BASE_URL` when it is not on
+`127.0.0.1:8082`). The first start downloads the weights into llama.cpp's cache; set
+`LIGHTONOCR_MODEL` and `LIGHTONOCR_MMPROJ` in `paths.local.env` to use local files instead.
 
-Each parallel slot reserves a full context window. Throughput scales roughly linearly with `-np` until VRAM or CPU saturates.
+## Manual commands
 
-| Slots | When | Worker pool |
-|-------|------|-------------|
-| **1** | Small GPU / daily dev | `workerExtract.maxJobs: 1` |
-| **2** | Arc 16 GB+, dedicated stress runs | 2 extract workers or `maxJobs: 2` |
-| **4+** | Multi-GPU / production vLLM | Match extract worker concurrency to GPU slots; excess runs wait in Taskiq |
+```powershell
+llama-server -m C:\path\to\NuExtract3-Q8_0.gguf --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
+  --host 0.0.0.0 --port 8081 -a nuextract3-q8_0 --jinja -c 32768 -np 1
 
-In `paths.local.env`:
-
-```env
-LLAMACPP_PARALLEL=2
+llama-server -hf prithivMLmods/LightOnOCR-3-4B-GGUF:Q8_0 `
+  --host 0.0.0.0 --port 8082 -a lightonocr-3-4b --jinja -c 16384 -np 1 --reasoning off
 ```
 
-Then align cluster admission in client values and restart:
+## Throughput (`-np`)
+
+Each slot gets its own context window. Match `LLAMACPP_PARALLEL` to the worker concurrency
+(`AUDIT_WORKER_CONCURRENCY`, Helm `worker.concurrency`): runs beyond it wait in the queue.
 
 ```powershell
 pnpm llamacpp:restart
@@ -113,9 +100,9 @@ docker compose --profile workers restart worker
 
 | Symptom | Fix |
 |---------|-----|
-| Slow first request | llama-server warms the model at start; the first image still pays for the vision projector |
-| `failed to process image` / Vulkan `ErrorDeviceLost` | Cap `--image-max-tokens` (and match `-ub` / `--mtmd-batch-max-tokens`). Try 1536 first; if unstable, fall back to 1024. Restart with `pnpm llamacpp:restart`. |
-| `/v1/models` missing multimodal | Check `LLAMACPP_MMPROJ` path and `--mmproj-offload` |
-| Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |
+| Slow first request | The first image also loads the vision projector |
+| `/v1/models` has no multimodal capability | Check the `*_MMPROJ` path |
+| Model alias mismatch | Align `*_MODEL_ALIAS` with `AUDIT_*_SERVED_MODEL` |
+| Vulkan `ErrorDeviceLost` on large pages | Update llama.cpp (`winget upgrade ggml.llamacpp`); report it upstream with the page |
 
-Logs: `deploy/llamacpp/logs/`.
+Logs: `deploy/llamacpp/logs/` (`<model>-llama-server.*.log`).

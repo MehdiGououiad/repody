@@ -78,3 +78,17 @@ Arc 140V through llama.cpp's Vulkan backend (`run_vulkan4.sh`, `rerun_nuextract.
   headers and footers, which `middle_json` keeps.
 
 `real_scores.py` prints this table from the outputs.
+
+### Through Repody's own pipeline (2026-11-05)
+
+`run_via_repody.sh` starts both servers with Repody's launcher (`deploy/scripts/llama-serve.mjs`:
+llama.cpp defaults, no image-token cap) and sends the eight real documents through
+`repody.extraction.pipeline.extract` in Markdown mode (`via_repody.py`):
+
+| Path | Mean | Asia Home | Babani | C&A | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan |
+|---|---|---|---|---|---|---|---|---|---|
+| Repody, `AUDIT_MARKDOWN_PROVIDER=nuextract` | **96.9** | 89 | 98 | 100 | 99 | 100 | 97 | 100 | 92 |
+| Repody, `AUDIT_MARKDOWN_PROVIDER=lightonocr` | **92.8** | 88 | 67 | 100 | 97 | 99 | 100 | 100 | 92 |
+
+NuExtract3's output is byte-for-byte the benchmark run's. LightOnOCR samples (temperature 0.2), so a
+run differs slightly: here it misread `CASOI21005079` as `CASO1…` on the customs invoice.

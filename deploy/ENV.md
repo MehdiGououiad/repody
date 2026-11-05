@@ -50,6 +50,10 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_LLAMACPP_BASE_URL` | `http://127.0.0.1:8081/v1` | OpenAI-compatible llama-server serving NuExtract |
 | `AUDIT_LLAMACPP_API_KEY` | `local` | Bearer token for the endpoint (secret) |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | `nuextract3-q4_k_m` | Model id from `/v1/models` |
+| `AUDIT_MARKDOWN_PROVIDER` | `nuextract` | Markdown for documents without fields: `nuextract` or `lightonocr` |
+| `AUDIT_LIGHTONOCR_BASE_URL` | `http://127.0.0.1:8082/v1` | OpenAI-compatible server for LightOnOCR-3 (`pnpm lightonocr:serve`) |
+| `AUDIT_LIGHTONOCR_API_KEY` | `local` | Bearer token for that endpoint (secret) |
+| `AUDIT_LIGHTONOCR_SERVED_MODEL` | `lightonocr-3-4b` | LightOnOCR model id from `/v1/models` |
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | `180` | Per model call; must fit in the run timeout |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
 | `AUDIT_EXTRACTION_CACHE_TTL_SECONDS` | `0` | Cache model answers in Redis (`0` = off) |

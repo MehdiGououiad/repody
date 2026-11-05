@@ -1,43 +1,51 @@
-"""The llama-server, through the official openai SDK."""
+"""OpenAI-compatible model servers (llama-server or vLLM), through the official openai SDK."""
 
 from __future__ import annotations
 
-from functools import lru_cache
 from typing import Any
 
 from openai import AsyncOpenAI
 
 from repody.settings import get_settings
 
+_clients: dict[tuple[str, str], AsyncOpenAI] = {}
 
-@lru_cache
-def _client() -> AsyncOpenAI:
+
+def _client(base_url: str, api_key: str) -> AsyncOpenAI:
+    """One client per server, reused across requests."""
+    if (base_url, api_key) not in _clients:
+        _clients[base_url, api_key] = AsyncOpenAI(
+            base_url=base_url,
+            api_key=api_key,
+            timeout=get_settings().inference_timeout_seconds,
+            max_retries=2,
+        )
+    return _clients[base_url, api_key]
+
+
+async def chat(
+    request: dict[str, Any], *, base_url: str | None = None, api_key: str | None = None
+) -> str:
+    """Text of the first choice of ``chat.completions.create(**request)``, sent to the NuExtract
+    server unless another ``base_url`` is given."""
     settings = get_settings()
-    return AsyncOpenAI(
-        base_url=settings.llamacpp_base_url,
-        api_key=settings.llamacpp_api_key,
-        timeout=settings.inference_timeout_seconds,
-        max_retries=2,
-    )
-
-
-async def chat(request: dict[str, Any]) -> str:
-    """Text of the first choice of a ``chat.completions.create(**request)`` call."""
-    response = await _client().chat.completions.create(**request)
+    client = _client(base_url or settings.llamacpp_base_url, api_key or settings.llamacpp_api_key)
+    response = await client.chat.completions.create(**request)
     return (response.choices[0].message.content or "").strip()
 
 
 async def model_available() -> bool:
-    """Whether the llama-server answers and serves the configured model."""
-    served = get_settings().llamacpp_served_model
+    """Whether the NuExtract server answers and serves the configured model."""
+    settings = get_settings()
+    client = _client(settings.llamacpp_base_url, settings.llamacpp_api_key)
     try:
-        models = await _client().with_options(timeout=5, max_retries=0).models.list()
+        models = await client.with_options(timeout=5, max_retries=0).models.list()
     except Exception:
         return False
-    return any(model.id == served for model in models.data)
+    return any(model.id == settings.llamacpp_served_model for model in models.data)
 
 
 async def close() -> None:
-    if _client.cache_info().currsize:
-        await _client().close()
-        _client.cache_clear()
+    for client in _clients.values():
+        await client.close()
+    _clients.clear()

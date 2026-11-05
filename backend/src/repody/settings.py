@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import BeforeValidator, Field, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -59,6 +59,13 @@ class Settings(BaseSettings):
     llamacpp_api_key: str = "local"
     llamacpp_served_model: str = "nuextract3-q4_k_m"
     inference_timeout_seconds: float = Field(default=180.0, ge=10)
+
+    # Markdown transcription (documents without fields): NuExtract's markdown mode, or
+    # LightOnOCR-3 on its own OpenAI-compatible server (llama-server or vLLM).
+    markdown_provider: Literal["nuextract", "lightonocr"] = "nuextract"
+    lightonocr_base_url: str = "http://127.0.0.1:8082/v1"
+    lightonocr_api_key: str = "local"
+    lightonocr_served_model: str = "lightonocr-3-4b"
     max_pages_per_document: int | None = Field(default=None, ge=1)
     extraction_cache_ttl_seconds: int = 0  # 0 disables the Redis extraction cache
 

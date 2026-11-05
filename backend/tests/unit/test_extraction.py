@@ -91,3 +91,26 @@ def test_page_images():
     assert images[0]["image_url"]["url"].startswith("data:image/png;base64,")
     with pytest.raises(ValueError, match="Unsupported"):
         page_images(b"plain text", "text/plain", max_pages=None)
+
+
+def test_lightonocr_pages_follow_the_official_client():
+    from PIL import Image
+
+    from repody.extraction import lightonocr
+
+    pdf = pdfium.PdfDocument.new()
+    pdf.new_page(595, 842)  # A4 in points
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    [page], total = lightonocr.page_images(buffer.getvalue(), "application/pdf", max_pages=None)
+    assert total == 1 and max(page.size) == 2048  # rendered at the model's longest edge
+
+    small = io.BytesIO()
+    Image.new("RGB", (800, 600), "white").save(small, "PNG")
+    [image], _ = lightonocr.page_images(small.getvalue(), "image/png", max_pages=None)
+    assert image.size == (800, 600)  # never upscaled
+
+    large = io.BytesIO()
+    Image.new("RGB", (4000, 3000), "white").save(large, "PNG")
+    [image], _ = lightonocr.page_images(large.getvalue(), "image/png", max_pages=None)
+    assert image.size == (2048, 1536)

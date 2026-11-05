@@ -36,6 +36,10 @@ config:
   AUDIT_S3_BUCKET: audit-documents
   AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
   AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
+  # Markdown transcription: nuextract, or lightonocr on its own OpenAI-compatible server.
+  AUDIT_MARKDOWN_PROVIDER: nuextract
+  AUDIT_LIGHTONOCR_BASE_URL: https://ocr.example.com/v1
+  AUDIT_LIGHTONOCR_SERVED_MODEL: lightonocr-3-4b
   AUDIT_CORS_ORIGINS: https://app.example.com
   AUDIT_LOG_JSON: "true"
 

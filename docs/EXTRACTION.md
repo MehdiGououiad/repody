@@ -1,42 +1,35 @@
-# Document extraction (NuExtract)
+# Document extraction
 
-Repody has one document model, `repody:vlm`: **NuExtract3** served by an OpenAI-compatible
-**llama-server**. Workers call the server over HTTP; the backend image ships no model weights.
+Repody extracts each workflow document with a vision-language model on an OpenAI-compatible server
+(llama-server locally, any OpenAI-compatible endpoint in Kubernetes). Workers call it over HTTP; the
+backend image ships no model weights.
 
-| Catalog id | Code | Official docs | Local serve |
-|---|---|---|---|
-| `repody:vlm` | `backend/src/repody/extraction/vlm.py`, `nuextract.py`, `render.py` | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) | `pnpm llamacpp:serve` **:8081** |
+| Documents | Model | Code | Official docs | Local server |
+|---|---|---|---|---|
+| With fields (structured JSON) | NuExtract3 | `extraction/nuextract.py`, `render.py` | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) | `pnpm llamacpp:serve` :8081 |
+| Without fields (Markdown), default | NuExtract3, markdown mode | `extraction/nuextract.py` | same | same |
+| Without fields, `AUDIT_MARKDOWN_PROVIDER=lightonocr` | LightOnOCR-3-4B | `extraction/lightonocr.py` | [lightonai/LightOnOCR-3-4B](https://huggingface.co/lightonai/LightOnOCR-3-4B), [client](https://github.com/lightonai/LightOnOCR) | `pnpm lightonocr:serve` :8082 |
 
-NuExtract structured JSON is stored verbatim in `run_documents.extraction_meta.rawText`; leaf rows
-in `extracted_fields` are derived for the UI and rules. Rules are logic rules only.
-
-Workflows saved before the engine consolidation may still reference `paddleocr:qwen`,
-`glm:qwen` or `repody:vlm:cloud`; those ids run on `repody:vlm`.
-
-Repody does not run inference inside the Kubernetes chart. Document extraction calls an external OpenAI-compatible **llama-server** with **NuExtract3**.
-
-Reference: [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF)
+NuExtract's structured JSON is stored as `extraction.rawText`; the leaf rows in `extracted_fields`
+are derived for the UI and the rules. Markdown is stored as `extraction.markdownText`.
 
 ### What you configure
 
-Only wiring and operational limits - extraction behavior follows the official NuExtract contract (`extraction/nuextract.py`, `extraction/render.py`).
+Only wiring and limits; requests follow the model cards (`extraction/nuextract.py`, `lightonocr.py`).
 
 ```env
 AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1
-AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q4_k_m
+AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q8_0
 AUDIT_LLAMACPP_API_KEY=
 
+# Optional: LightOnOCR-3 for Markdown
+AUDIT_MARKDOWN_PROVIDER=nuextract          # or lightonocr
+AUDIT_LIGHTONOCR_BASE_URL=http://127.0.0.1:8082/v1
+AUDIT_LIGHTONOCR_SERVED_MODEL=lightonocr-3-4b
+
 AUDIT_INFERENCE_TIMEOUT_SECONDS=180
+AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
 ```
-
-| Fixed in code (not configurable) | Value |
-|----------------------------------|-------|
-| PDF raster | PNG @ **170 DPI** |
-| Structured temperature | **0.2** non-thinking · **0.6** thinking · **0** with ICL |
-| Markdown temperature | **0** non-thinking · **0.7** thinking |
-| Input | Page images (PDF pages rendered to PNG) |
-
-Page cap: `AUDIT_MAX_PAGES_PER_DOCUMENT` (default: all pages, as in the official examples). Thinking mode is off.
 
 ### Local development
 
@@ -45,36 +38,44 @@ winget install llama.cpp   # or brew install llama.cpp on macOS
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
 pnpm llamacpp:serve
 pnpm llamacpp:verify
+pnpm lightonocr:serve      # only with AUDIT_MARKDOWN_PROVIDER=lightonocr
 ```
 
-Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md). Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL`.
+Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md).
 
 ### Kubernetes
 
+Set the endpoints in the chart's `config` (`deploy/helm/repody/values.yaml`):
+
 ```yaml
 config:
-  llamacppBaseUrl: https://your-inference-host/v1
-  llamacppServedModel: nuextract3-q4_k_m
-  repodyVlmTimeoutSeconds: 180
-
-secrets:
-  existingSecret: repody-runtime-secrets
+  AUDIT_LLAMACPP_BASE_URL: https://your-inference-host/v1
+  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
+  AUDIT_MARKDOWN_PROVIDER: nuextract
 ```
 
-Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires auth.
+Put `AUDIT_LLAMACPP_API_KEY` (and `AUDIT_LIGHTONOCR_API_KEY`) in the runtime secret when the
+endpoint requires auth.
 
-### NuExtract payload contract
+### NuExtract3 requests (model card)
 
-| Input | Behavior |
-|-------|----------|
-| PDF | PNG @ 170 DPI; **all pages** by default. Optional cap: `AUDIT_MAX_PAGES_PER_DOCUMENT` |
-| Image | Native PNG/JPEG/WebP bytes |
-| Other MIME | Rejected - upload PDF or image only |
-| Structured call | `chat_template_kwargs.template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking`, `temperature=0.2` (or `0.6` thinking; `0` with ICL), no `max_tokens` |
-| `instructions` | Workflow document notes + `Field guidance:` list - hints here, not in the template |
-| Markdown mode | `chat_template_kwargs.mode: "markdown"`, `temperature=0` (`0.7` when thinking) |
-| Source of truth | Model JSON as `extraction.rawText`; leaf `extracted_fields` are UI/rules projection |
-| ICL examples | `developer` role pairs from workflow `extractionIclExamples` (text only; local only) |
+| Input | Behaviour |
+|-------|-----------|
+| PDF | Every page as PNG at **170 DPI** (the card's PDF example), all pages in one request |
+| Image | The uploaded PNG/JPEG/WebP as it is |
+| Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2**, or **0** with in-context examples |
+| `instructions` | The document's notes, then a `Field guidance:` list built from the field descriptions |
+| In-context examples | `developer` messages, input then expected output |
+| Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **0** |
+
+### LightOnOCR-3 requests (model card and official client)
+
+| Input | Behaviour |
+|-------|-----------|
+| PDF | Each page rendered at **2048 px** on its longest edge, one request per page |
+| Image | Downscaled to 2048 px on its longest edge when larger (never upscaled) |
+| Request | The image alone (transcription mode), `enable_thinking: false`, temperature **0.2**, top_p **1.0** |
+| Output | The model's Markdown as it comes (the client's optional escaped-math repair is not applied) |
 
 ### Endpoint check
 
@@ -92,7 +93,6 @@ Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not ha
 | Use `verbatim-string` for exact copy | Official type for no reformulation |
 | Format/location hints in field **description** | Maps to `instructions` |
 | Prefer native image uploads | Avoids extra PDF -> PNG |
-| Keep llama.cpp `--image-min-tokens` ≥ 1024 | Qwen-VL accuracy floor |
 | Import NuExtract JSON templates in the builder | Same constructors as the docs |
 | Prefer one **full name** field on ID photos | Split nom/prenom often swaps on holograms |
 | Missing fields are `null` | Official empty result |
@@ -106,4 +106,4 @@ Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not ha
 | Timeout | Raise `AUDIT_RUN_TIMEOUT_MINUTES` and `AUDIT_INFERENCE_TIMEOUT_SECONDS` (≤ run timeout). Compose extract defaults to 10 min / 600s |
 | Wrong JSON | llama-server started with `--jinja` |
 | Truncated output | Reduce schema size or set page cap |
-| Digits wrong / extra zeros | Prefer Q8_0 (or Q6) GGUF at vision 1024; `verbatim-string` + length/location in description |
+| Digits wrong / extra zeros | Prefer the Q8_0 GGUF; `verbatim-string` + length/location in description |

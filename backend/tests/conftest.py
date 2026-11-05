@@ -80,10 +80,14 @@ async def database() -> None:
 
 @pytest.fixture
 def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
-    """What the fake llama-server answers: set ``model_answer["text"]``."""
-    answer = {"text": "{}"}
+    """What the fake model server answers: set ``model_answer["text"]``; ``model_answer["calls"]``
+    lists each request with the server it went to (None: the NuExtract server)."""
+    answer: dict = {"text": "{}", "calls": []}
 
-    async def chat(_payload: dict) -> str:
+    async def chat(
+        payload: dict, *, base_url: str | None = None, api_key: str | None = None
+    ) -> str:
+        answer["calls"].append({"request": payload, "base_url": base_url})
         return answer["text"]
 
     monkeypatch.setattr(inference, "chat", chat)

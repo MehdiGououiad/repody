@@ -118,3 +118,40 @@ async def test_queue_cap_and_position(api, monkeypatch):
     second = await api.post("/v1/workflows/wf-run/runs")
     assert second.status_code == 503
     assert second.headers["retry-after"] == "15"
+
+
+def markdown_workflow() -> dict:
+    """One document without fields: it is transcribed to Markdown."""
+    return {
+        "name": "Scans",
+        "documents": [{"id": "doc-scan", "documentType": "Scan", "markdownExtraction": True}],
+    }
+
+
+async def run_markdown(api) -> dict:
+    await api.put("/v1/workflows/wf-md", json=markdown_workflow())
+    started = await api.post("/v1/workflows/wf-md/runs", files=FILE)
+    return (await api.get(f"/v1/runs/{started.json()['runId']}")).json()["result"]["documents"][0]
+
+
+async def test_markdown_with_nuextract(api, model_answer):
+    model_answer["text"] = "# FACTURE"
+    document = await run_markdown(api)
+    assert document["extraction"]["markdownText"] == "# FACTURE"
+    [call] = model_answer["calls"]
+    assert call["base_url"] is None  # the NuExtract server
+    assert call["request"]["extra_body"]["chat_template_kwargs"]["mode"] == "markdown"
+
+
+async def test_markdown_with_lightonocr(api, model_answer, monkeypatch):
+    settings = get_settings()
+    monkeypatch.setattr(settings, "markdown_provider", "lightonocr")
+    model_answer["text"] = "# FACTURE"
+    document = await run_markdown(api)
+    assert document["extraction"]["markdownText"] == "# FACTURE"
+    [call] = model_answer["calls"]  # one page, one request
+    assert call["base_url"] == settings.lightonocr_base_url
+    request = call["request"]
+    assert request["model"] == settings.lightonocr_served_model
+    assert (request["temperature"], request["top_p"]) == (0.2, 1.0)
+    assert [part["type"] for part in request["messages"][0]["content"]] == ["image_url"]
