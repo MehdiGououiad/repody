@@ -8,11 +8,12 @@ llama.cpp as that card shows (`llama serve -hf prithivMLmods/LightOnOCR-3-4B-GGU
 page rendered at 400 DPI with its longest edge at 2048 px, the image alone (transcription), thinking
 off, temperature 0.2, top_p 0.9, max_tokens 4096.
 
-    llama-server -hf prithivMLmods/LightOnOCR-3-4B-GGUF:Q4_K_M --port 18501
+    llama-server -hf prithivMLmods/LightOnOCR-3-4B-GGUF:Q8_0 --port 18501   # LIGHTON_QUANT=Q8_0
     uv run runners/lightonocr_gguf.py
 """
 
 import base64
+import os
 
 import httpx
 from common import page_image, png, run
@@ -34,4 +35,5 @@ def infer(page) -> str:
     return response.json()["choices"][0]["message"]["content"] or ""
 
 
-run("lightonocr-3-4b-q4_k_m", {"runtime": "llama.cpp b12098 Vulkan, Q4_K_M (prithivMLmods GGUF)", "weights": "lightonai/LightOnOCR-3-4B"}, infer)
+QUANT = os.environ.get("LIGHTON_QUANT", "Q8_0")
+run(f"lightonocr-3-4b-{QUANT.lower()}", {"runtime": f"llama.cpp b12098 Vulkan, {QUANT} (prithivMLmods GGUF)", "weights": "lightonai/LightOnOCR-3-4B"}, infer)

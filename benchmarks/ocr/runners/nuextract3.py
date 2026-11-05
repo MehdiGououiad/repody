@@ -10,6 +10,7 @@ Needs the llama-server from `pnpm llamacpp:serve` (http://127.0.0.1:8081).
 """
 
 import base64
+import os
 
 import httpx
 from common import page_image, png, run
@@ -30,4 +31,9 @@ def infer(pdf) -> str:
     return response.json()["choices"][0]["message"]["content"] or ""
 
 
-run("nuextract3-q8_0", {"runtime": "llama.cpp b12098 Vulkan, Q8_0", "weights": "numind/NuExtract3-GGUF"}, infer)
+# BENCH_NAME / BENCH_RUNTIME label a run on another server setup (see run_vulkan4.sh).
+run(
+    os.environ.get("BENCH_NAME", "nuextract3-q8_0"),
+    {"runtime": os.environ.get("BENCH_RUNTIME", "llama.cpp b12098 Vulkan, Q8_0 (Repody's server flags)"), "weights": "numind/NuExtract3-GGUF"},
+    infer,
+)

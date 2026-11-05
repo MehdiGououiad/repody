@@ -53,3 +53,28 @@ official llama.cpp guide. On this machine's Vulkan backend llama-server aborts o
 (`ggml-vulkan.cpp:5779: GGML_ASSERT(allow_misalign || misalign_bytes == 0)`) with both b12098 and
 b12119, so there is no DSpark result yet. The guide was verified on Metal; CUDA is also documented.
 Rerun the script (`LLAMA_SERVER=<path>` picks a build) once llama.cpp fixes it.
+
+## Real French documents, all on the Arc GPU (2026-11-05)
+
+Eight real documents with hand-checked gold (`real_docs.py`): a payslip, a hand-filled repair invoice,
+a handwritten invoice, a dense Moroccan customs invoice, a faded 1981 till receipt, a 1968 rent
+receipt, a 1921 invoice and an 1832 delivery note. Each model as its documentation sets it up, on the
+Arc 140V through llama.cpp's Vulkan backend (`run_vulkan4.sh`, `rerun_nuextract.sh`). Lenient score.
+
+| Model | Mean | Asia Home | Babani 1921 | C&A 1981 | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan 1832 | s/page |
+|---|---|---|---|---|---|---|---|---|---|---|
+| NuExtract3 Q8_0, llama.cpp default flags | **96.9** | 89 | 98 | 100 | 99 | 100 | 97 | 100 | 92 | 105 |
+| LightOnOCR-3-4B Q8_0 (prithivMLmods GGUF) | 93.2 | 88 | 67 | 100 | 100 | 99 | 100 | 100 | 92 | 62 |
+| Surya OCR 2.5 | 87.6 | 89 | 84 | 100 | 98 | 98 | 59 | 100 | 72 | 30 |
+| MinerU 4 standard, middle_json | 75.1 | 43 | 62 | 75 | 97 | 97 | 62 | 100 | 64 | 29 |
+| MinerU 4 standard, Markdown | 68.9 | 43 | 32 | 75 | 78 | 97 | 62 | 100 | 64 | 31 |
+
+- NuExtract3 with llama.cpp's default server flags scores 100 on the payslip; with Repody's server flags
+  (`--image-min/max-tokens 1024`, `-ub 1024`, ...) it scored 86.9 there and took longer.
+- LightOnOCR Q8_0 fixes the Q4_K_M misread on the customs invoice and reads old cursive well; it drops
+  part of the 1921 invoice (Babani 67).
+- Surya is the fastest whole-page model but weak on cursive handwriting (rent receipt 59, 1832 note 72).
+- MinerU reads printed pages well but handwriting poorly (Asia Home 43); its Markdown also leaves out
+  headers and footers, which `middle_json` keeps.
+
+`real_scores.py` prints this table from the outputs.

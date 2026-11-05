@@ -3,14 +3,17 @@
 # dependencies = ["mineru>=4.0,<5", "pypdfium2>=5.14", "pillow"]
 # ///
 """MinerU 4 (MinerU2.5-Pro VLM) as its README: the base install (ONNX + llama.cpp engines, "CPU works,
-Vulkan recommended") and `mineru-kit parse <file> -o <file>.md --tier standard`, the default tier for
-normal reading. Equal footing with whole-page models: the page is every block of the documented
-`--format middle_json` output in reading order (its Markdown leaves out headers and footers).
+Vulkan recommended"; here the VLM runs on llama.cpp Vulkan and small models on ONNX DirectML) and
+`mineru-kit parse <file> -o <file>.md --tier standard`, the default tier for normal reading.
+
+MINERU_FORMAT=markdown (default) scores that Markdown, which leaves out headers and footers;
+MINERU_FORMAT=middle_json scores every block of the documented `--format middle_json` output in order.
 
     uv run runners/mineru.py
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -19,6 +22,7 @@ from pathlib import Path
 from common import run
 
 KIT = Path(sys.executable).with_name("mineru-kit.exe" if sys.platform == "win32" else "mineru-kit")
+FORMAT = os.environ.get("MINERU_FORMAT", "markdown")
 
 
 def block_text(block: dict) -> str:
@@ -33,6 +37,10 @@ def block_text(block: dict) -> str:
 
 def infer(page: Path) -> str:
     with tempfile.TemporaryDirectory() as tmp:
+        if FORMAT == "markdown":
+            out = Path(tmp) / f"{page.stem}.md"
+            subprocess.run([str(KIT), "parse", str(page), "-o", str(out), "--tier", "standard"], check=True)
+            return out.read_text(encoding="utf-8")
         out = Path(tmp) / f"{page.stem}.json"
         cmd = [str(KIT), "parse", str(page), "-o", str(out), "--tier", "standard", "--format", "middle_json"]
         subprocess.run(cmd, check=True)
@@ -41,4 +49,8 @@ def infer(page: Path) -> str:
         return "\n\n".join(t for t in (block_text(b) for b in blocks) if t)
 
 
-run("mineru-4-standard", {"runtime": "mineru-kit 4.x --tier standard (ONNX + llama.cpp)", "weights": "opendatalab/MinerU2.5-Pro"}, infer)
+run(
+    f"mineru-4-standard-{FORMAT}",
+    {"runtime": f"mineru-kit 4.1.7 --tier standard, {FORMAT} (llama.cpp Vulkan + ONNX DirectML)", "weights": "opendatalab/MinerU2.5-Pro"},
+    infer,
+)
