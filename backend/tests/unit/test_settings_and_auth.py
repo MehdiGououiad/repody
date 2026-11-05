@@ -65,3 +65,15 @@ def test_user_from_token(monkeypatch):
     with pytest.raises(auth.InvalidTokenError):
         auth.user_from_token("not-a-jwt")
     get_settings.cache_clear()
+
+
+def test_uvicorn_logs_go_through_the_json_formatter():
+    import logging
+
+    from repody.infra import observability
+
+    logging.getLogger("uvicorn.access").addHandler(logging.StreamHandler())
+    observability.setup()
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        assert logging.getLogger(name).handlers == []
+        assert logging.getLogger(name).propagate

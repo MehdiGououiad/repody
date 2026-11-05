@@ -47,4 +47,8 @@ def setup() -> None:
         )
     )
     logging.basicConfig(handlers=[handler], level=level, force=True)
+    # Uvicorn gives its loggers their own text handlers; send them to the root handler instead.
+    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
+        logging.getLogger(name).handlers.clear()
+        logging.getLogger(name).propagate = True
     sentry_sdk.init(environment=settings.deployment_environment, traces_sample_rate=0)
