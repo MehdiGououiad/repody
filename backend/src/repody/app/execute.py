@@ -71,6 +71,9 @@ async def _process(run_id: str) -> None:
         assert run is not None
         definition = WorkflowDefinition.model_validate(run.definition)
         tracker = Tracker(run_id, RunProgress.model_validate(run.progress))
+        # End the read transaction: the connection goes back to the pool while the model works
+        # (minutes); the loaded objects stay usable and their changes are saved by the last commit.
+        await session.commit()
 
         fields = await _extract_documents(run, definition, tracker)
         await tracker.start(RULES_STEP, "Checking the rules…")

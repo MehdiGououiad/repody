@@ -37,3 +37,12 @@ async def test_dashboard_and_maintenance(api):
     state = (await api.get("/v1/runs/AUD-2023-8902")).json()
     assert state["status"] == "failed"
     assert "worker stopped" in state["error"]
+
+
+async def test_one_replica_does_the_upkeep_per_interval(api):
+    from repody.app.maintenance import _claim_turn
+    from repody.infra.redis import get_redis
+
+    await get_redis().delete("repody:maintenance")
+    assert await _claim_turn(60) is True
+    assert await _claim_turn(60) is False  # another replica in the same interval skips
