@@ -119,7 +119,7 @@ function patchBackendEnv() {
     AUDIT_LLAMACPP_SERVED_MODEL:
       (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
       process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
-      "nuextract3-q4_k_m",
+      "nuextract3-q8_0",
     // OpenTelemetry agent for containers (Compose reads this file for interpolation).
     OTEL_SDK_DISABLED: opts.withObs ? "false" : "true",
     ...(opts.withObs && { AUDIT_LOG_JSON: "true" }),

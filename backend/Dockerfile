@@ -16,31 +16,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 
 # Upgrade Debian security packages, then drop the base-image pip (vendored msgpack and setuptools).
+# Every dependency ships a wheel (asyncpg, pypdfium2, Pillow, ...): no system libraries needed.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      libpq5 libgomp1 libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /usr/local/lib/python3.13/site-packages/pip \
       /usr/local/lib/python3.13/site-packages/pip-*.dist-info \
       /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.13 \
     && groupadd --system --gid 10001 repody \
     && useradd --system --uid 10001 --gid repody --home-dir /app --shell /usr/sbin/nologin repody \
-    && mkdir -p /app /app/.data/storage /app/benchmark-reports /tmp/repody \
-    && chown -R repody:repody /app /tmp/repody
+    && mkdir -p /app \
+    && chown repody:repody /app
 
 FROM runtime-base AS build
 
 COPY --from=ghcr.io/astral-sh/uv:0.13.7 /uv /uvx /bin/
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
+# Optional dependency groups from pyproject.toml (otel: the OpenTelemetry agent).
 ARG BACKEND_EXTRAS=otel
-# Compose and docker-bake.hcl pass otel,glmocr by default (official GLM-OCR SDK).
-# torch/torchvision resolve from the PyTorch CPU index (pyproject tool.uv.sources)
-# so extract images stay lean with AUDIT_GLM_OCR_LAYOUT_DEVICE=cpu.
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     set -eux; \

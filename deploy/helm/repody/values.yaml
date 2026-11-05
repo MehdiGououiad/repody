@@ -35,7 +35,7 @@ config:
   AUDIT_S3_ENDPOINT_URL: https://s3.example.com
   AUDIT_S3_BUCKET: audit-documents
   AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
-  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q4_k_m
+  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
   # Markdown transcription: nuextract, or lightonocr on its own OpenAI-compatible server.
   AUDIT_MARKDOWN_PROVIDER: nuextract
   AUDIT_LIGHTONOCR_BASE_URL: https://ocr.example.com/v1

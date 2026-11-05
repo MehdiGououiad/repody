@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     # Inference: NuExtract on an OpenAI-compatible llama-server
     llamacpp_base_url: str = "http://127.0.0.1:8081/v1"
     llamacpp_api_key: str = "local"
-    llamacpp_served_model: str = "nuextract3-q4_k_m"
+    llamacpp_served_model: str = "nuextract3-q8_0"
     inference_timeout_seconds: float = Field(default=180.0, ge=10)
 
     # Markdown transcription (documents without fields): NuExtract's markdown mode, or
