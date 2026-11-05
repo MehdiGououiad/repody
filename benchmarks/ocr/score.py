@@ -11,7 +11,10 @@ For each page and model (outputs/<model>/<page>.txt, the model's Markdown or HTM
   lines   share of text lines found (fuzzy match >= 90, ignoring case, spaces and markup)
   tables  share of table rows found as one output row with every cell (fuzzy >= 90 per cell)
   score   mean of the three (pages without a table: mean of values and lines)
-Speed is the median seconds per page from outputs/<model>/timings.json.
+
+Two scores per model: `strict` (characters as printed) and `lenient`, where a decimal comma and a
+decimal point count as the same (`3 500,00` = `3 500.00`): some models rewrite French numbers.
+`Real` is the mean over real documents (pages ending in `__real`); speed is the median seconds per page.
 """
 
 from __future__ import annotations
@@ -31,14 +34,16 @@ THRESHOLD = 90
 VARIANTS = ("digital", "scan", "lowres", "photo", "fax", "real")
 
 
-def norm(text: str) -> str:
+def norm(text: str, lenient: bool = False) -> str:
     text = unicodedata.normalize("NFKC", html.unescape(text)).casefold()
     text = text.replace("\\", "").replace("’", "'").replace("«", '"').replace("»", '"')
+    if lenient:
+        text = text.replace(",", ".")
     return re.sub(r"\s+", " ", text).strip()
 
 
-def squash(text: str) -> str:
-    return re.sub(r"\s+", "", norm(text))
+def squash(text: str, lenient: bool = False) -> str:
+    return re.sub(r"\s+", "", norm(text, lenient))
 
 
 def plain(raw: str) -> str:
@@ -52,34 +57,37 @@ def plain(raw: str) -> str:
     return text
 
 
-def rows(raw: str) -> list[list[str]]:
+def rows(raw: str, lenient: bool) -> list[list[str]]:
     """Table rows in the output: HTML <tr> rows and Markdown pipe rows."""
     found = []
     for tr in re.findall(r"(?is)<tr[^>]*>(.*?)</tr>", raw):
-        found.append([norm(re.sub(r"<[^>]+>", " ", c)) for c in re.findall(r"(?is)<t[dh][^>]*>(.*?)</t[dh]>", tr)])
+        cells = re.findall(r"(?is)<t[dh][^>]*>(.*?)</t[dh]>", tr)
+        found.append([norm(re.sub(r"<[^>]+>", " ", c), lenient) for c in cells])
     for line in raw.splitlines():
         if line.count("|") >= 2 and not re.fullmatch(r"[\s|:\-]+", line):
-            found.append([norm(c) for c in line.strip().strip("|").split("|")])
+            found.append([norm(c, lenient) for c in line.strip().strip("|").split("|")])
     return found
 
 
-def row_found(gold_row: list[str], candidates: list[list[str]]) -> bool:
-    cells = [norm(c) for c in gold_row if c.strip()]
+def row_found(gold_row: list[str], candidates: list[list[str]], lenient: bool) -> bool:
+    cells = [norm(c, lenient) for c in gold_row if c.strip()]
     return any(
         all(max((fuzz.ratio(c, o) for o in out), default=0) >= THRESHOLD for c in cells) for out in candidates
     )
 
 
-def score_page(gold: dict, raw: str) -> dict[str, float | None]:
-    text = norm(plain(raw))
-    flat = squash(plain(raw))
+def score_page(gold: dict, raw: str, lenient: bool = False) -> dict[str, float | None]:
+    text = norm(plain(raw), lenient)
+    flat = squash(plain(raw), lenient)
     values = [v for v in gold["values"] if len(squash(v)) >= 3]
-    value_score = sum(squash(v) in flat for v in values) / len(values) if values else None
+    value_score = sum(squash(v, lenient) in flat for v in values) / len(values) if values else None
     lines = gold["lines"]
-    line_score = sum(fuzz.partial_ratio(norm(line), text) >= THRESHOLD for line in lines) / len(lines)
+    line_score = sum(fuzz.partial_ratio(norm(line, lenient), text) >= THRESHOLD for line in lines) / len(lines)
     table_rows = [row for table in gold["tables"] for row in table]
-    out_rows = rows(raw)
-    table_score = sum(row_found(r, out_rows) for r in table_rows) / len(table_rows) if table_rows else None
+    out_rows = rows(raw, lenient)
+    table_score = (
+        sum(row_found(r, out_rows, lenient) for r in table_rows) / len(table_rows) if table_rows else None
+    )
     parts = [s for s in (value_score, line_score, table_score) if s is not None]
     return {"values": value_score, "lines": line_score, "tables": table_score, "score": sum(parts) / len(parts)}
 
@@ -99,40 +107,55 @@ def main() -> None:
     for model_dir in sorted(p for p in OUT.iterdir() if p.is_dir()):
         timings = json.loads((model_dir / "timings.json").read_text()) if (model_dir / "timings.json").exists() else {}
         meta = json.loads((model_dir / "meta.json").read_text()) if (model_dir / "meta.json").exists() else {}
-        pages = {}
+        strict, lenient = {}, {}
         for page_id, gold in golds.items():
             out = model_dir / f"{page_id}.txt"
             raw = out.read_text(encoding="utf-8") if out.exists() else ""
-            pages[page_id] = score_page(gold, raw) | {"missing": not out.exists()}
-        variants = {v: mean([s["score"] for k, s in pages.items() if k.endswith(f"__{v}")]) for v in VARIANTS}
+            strict[page_id] = score_page(gold, raw) | {"missing": not out.exists()}
+            lenient[page_id] = score_page(gold, raw, lenient=True)
+
+        def group(pages: dict, suffix: str) -> float | None:
+            return mean([s["score"] for k, s in pages.items() if k.endswith(f"__{suffix}")])
+
         results[model_dir.name] = {
             "meta": meta,
-            "pages": pages,
-            "score": mean([s["score"] for s in pages.values()]),
-            "values": mean([s["values"] for s in pages.values()]),
-            "lines": mean([s["lines"] for s in pages.values()]),
-            "tables": mean([s["tables"] for s in pages.values()]),
-            "variants": variants,
-            "missing": sum(s["missing"] for s in pages.values()),
+            "pages": strict,
+            "pages_lenient": lenient,
+            "score": mean([s["score"] for s in strict.values()]),
+            "lenient": mean([s["score"] for s in lenient.values()]),
+            "values": mean([s["values"] for s in lenient.values()]),
+            "lines": mean([s["lines"] for s in lenient.values()]),
+            "tables": mean([s["tables"] for s in lenient.values()]),
+            "variants": {v: group(lenient, v) for v in VARIANTS},
+            "missing": sum(s["missing"] for s in strict.values()),
             "median_s": statistics.median(timings.values()) if timings else None,
         }
     (HERE / "results.json").write_text(json.dumps(results, indent=1, ensure_ascii=False), encoding="utf-8")
 
-    ranked = sorted(results.items(), key=lambda kv: -(kv[1]["score"] or 0))
+    ranked = sorted(results.items(), key=lambda kv: -(kv[1]["lenient"] or 0))
+    heads = ["Digital", "Scan", "Low-res", "Photo", "Fax", "Real"]
     lines = [
         f"# OCR benchmark ({len(golds)} pages)",
         "",
-        "| Model | Score | Values | Lines | Tables | Digital | Scan | Low-res | Photo | Fax | Payslip | s/page | Missing | Runtime |",
-        "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|",
+        "Ranked by the lenient score (decimal comma = point). Component and variant columns are lenient.",
+        "",
+        "| Model | Lenient | Strict | Values | Lines | Tables | " + " | ".join(heads) + " | s/page | Missing | Runtime |",
+        "|---" * (9 + len(heads)) + "|",
     ]
     for name, r in ranked:
-        v = r["variants"]
         speed = "—" if r["median_s"] is None else f"{r['median_s']:.1f}"
         lines.append(
-            f"| {name} | **{pct(r['score'])}** | {pct(r['values'])} | {pct(r['lines'])} | {pct(r['tables'])} | "
-            + " | ".join(pct(v[k]) for k in VARIANTS)
+            f"| {name} | **{pct(r['lenient'])}** | {pct(r['score'])} | {pct(r['values'])} | {pct(r['lines'])} | "
+            f"{pct(r['tables'])} | "
+            + " | ".join(pct(r["variants"][v]) for v in VARIANTS)
             + f" | {speed} | {r['missing']} | {r['meta'].get('runtime', '')} |"
         )
+    real = [p for p in golds if p.endswith("__real")]
+    if real:
+        lines += ["", "## Real documents (lenient)", "", "| Page | " + " | ".join(n for n, _ in ranked) + " |",
+                  "|---" * (1 + len(ranked)) + "|"]
+        for page in real:
+            lines.append(f"| {page} | " + " | ".join(pct(r["pages_lenient"][page]["score"]) for _, r in ranked) + " |")
     (HERE / "results.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
 

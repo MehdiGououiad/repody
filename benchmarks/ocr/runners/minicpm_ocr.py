@@ -32,6 +32,14 @@ from minicpmvocr import load_config, pipelined_run
 from minicpmvocr.layouts.download import ensure_layout_model
 
 LAYOUT = ensure_layout_model(ROOT / ".models" / "PP-DocLayoutV3_infer")
+# Equal footing: keep headers, footers, numbers, footnotes and side text in the Markdown, and show
+# the text read inside image blocks (by default all of these are left out).
+PROMPT_MAP = Path(tempfile.mkdtemp()) / "prompt_map.yaml"
+PROMPT_MAP.write_text(
+    "markdown_assembly:\n  ignore_labels: []\n  image_render: placeholder\n  image_format: ''\n"
+    "  image_show_ocr_content: true\n",
+    encoding="utf-8",
+)
 
 
 def infer(pdf: Path) -> str:
@@ -41,7 +49,8 @@ def infer(pdf: Path) -> str:
             overrides={
                 "input": {"file_path": str(pdf)},
                 "engine": {"type": "llamacpp", "server_url": "http://127.0.0.1:18499", "model_name": "minicpm-ocr", "max_model_len": 8192},
-                "layout": {"model_dir": str(LAYOUT), "device": "cpu"},
+                "layout": {"model_dir": str(LAYOUT), "device": "cpu", "use_ocr_for_image_block": True},
+                "prompt": {"prompt_map": str(PROMPT_MAP)},
                 "pipeline": {"overlap_layout": False, "queue_mode": "serial"},
                 "run": {"run_root": tmp, "workers": 1},
             },
