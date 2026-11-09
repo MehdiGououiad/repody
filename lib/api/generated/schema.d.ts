@@ -1060,7 +1060,10 @@ export interface components {
             /** Rules */
             rules?: components["schemas"]["Rule-Input"][];
         };
-        /** WorkflowIn */
+        /**
+         * WorkflowIn
+         * @description What the builder saves. The status is not part of it: only deploying changes it.
+         */
         WorkflowIn: {
             /** Documents */
             documents?: components["schemas"]["DocumentDef-Input"][];
@@ -1076,12 +1079,6 @@ export interface components {
              * @default
              */
             description: string;
-            /**
-             * Status
-             * @default draft
-             * @enum {string}
-             */
-            status: "draft" | "active" | "paused";
             /**
              * Owner
              * @default
@@ -1110,18 +1107,18 @@ export interface components {
              */
             description: string;
             /**
-             * Status
-             * @default draft
-             * @enum {string}
-             */
-            status: "draft" | "active" | "paused";
-            /**
              * Owner
              * @default
              */
             owner: string;
             /** Id */
             id: string;
+            /**
+             * Status
+             * @description active once deployed (it has an API key).
+             * @enum {string}
+             */
+            status: "draft" | "active";
             /** Deployedat */
             deployedAt: string | null;
             /**

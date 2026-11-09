@@ -11,7 +11,7 @@ import math
 import operator
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from repody.rules.tables import count_rows, sum_rows
 from repody.rules.values import (
@@ -23,8 +23,7 @@ from repody.rules.values import (
     typed,
 )
 from repody.schemas.rule import UNARY_OPERATORS, Condition, Operand, Rule
-
-Status = Literal["passed", "failed", "skipped"]
+from repody.schemas.run import RuleStatus
 
 # An extracted field: (key, JSON value or None, document type, declared template type).
 FieldRow = tuple[str, Any, str | None, str]
@@ -65,7 +64,7 @@ _ARITHMETIC: dict[str, Callable[[Any, Any], Any]] = {
 @dataclass(frozen=True, slots=True)
 class RuleOutcome:
     rule: Rule
-    status: Status
+    status: RuleStatus
     detail: str
     expression: str
     affected_fields: list[str]
@@ -281,7 +280,7 @@ def evaluate_rule(rule: Rule, values: Values) -> RuleOutcome:
             notes.append(f"Not satisfied: {text}")
 
     if failed:
-        status: Status = "failed"
+        status: RuleStatus = "failed"
     elif skipped or not rule.conditions:
         status = "skipped"
     else:

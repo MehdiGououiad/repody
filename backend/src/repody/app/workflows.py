@@ -107,7 +107,7 @@ def _out(
         id=wf.id,
         name=wf.name,
         description=wf.description,
-        status=wf.status,  # type: ignore[arg-type]
+        status="active" if wf.deployed_at else "draft",  # archived ones are never returned
         owner=wf.owner,
         documents=definition.documents,
         rules=definition.rules,
@@ -180,19 +180,17 @@ def rule_check_issues(definition: WorkflowDefinition) -> list[str]:
 
 
 async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowIn) -> WorkflowOut:
-    """Create or replace the workflow (the builder saves the whole definition)."""
+    """Create or replace the workflow's definition (the builder saves all of it); its status
+    does not change."""
     if issues := rule_check_issues(body):
         raise AppError(422, "; ".join(issues))
     wf = await session.get(Workflow, workflow_id)
     if wf is None:
-        wf = Workflow(id=workflow_id)
+        wf = Workflow(id=workflow_id, status="draft")
         session.add(wf)
-    wf.name, wf.description, wf.status, wf.owner = (
-        body.name,
-        body.description,
-        body.status,
-        body.owner,
-    )
+    elif wf.status == "archived":
+        raise AppError(404, "Workflow not found.")
+    wf.name, wf.description, wf.owner = body.name, body.description, body.owner
     wf.definition = body.model_dump(include={"documents", "rules"})
     await session.flush()
     return await get_workflow(session, workflow_id)

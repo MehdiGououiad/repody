@@ -2494,16 +2494,6 @@
             "title": "Description",
             "default": ""
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "paused"
-            ],
-            "title": "Status",
-            "default": "draft"
-          },
           "owner": {
             "type": "string",
             "title": "Owner",
@@ -2511,7 +2501,8 @@
           }
         },
         "type": "object",
-        "title": "WorkflowIn"
+        "title": "WorkflowIn",
+        "description": "What the builder saves. The status is not part of it: only deploying changes it."
       },
       "WorkflowList": {
         "properties": {
@@ -2555,16 +2546,6 @@
             "title": "Description",
             "default": ""
           },
-          "status": {
-            "type": "string",
-            "enum": [
-              "draft",
-              "active",
-              "paused"
-            ],
-            "title": "Status",
-            "default": "draft"
-          },
           "owner": {
             "type": "string",
             "title": "Owner",
@@ -2573,6 +2554,15 @@
           "id": {
             "type": "string",
             "title": "Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "active"
+            ],
+            "title": "Status",
+            "description": "active once deployed (it has an API key)."
           },
           "deployedAt": {
             "anyOf": [
@@ -2648,9 +2638,9 @@
           "rules",
           "name",
           "description",
-          "status",
           "owner",
           "id",
+          "status",
           "deployedAt",
           "apiKey",
           "apiKeyHint",

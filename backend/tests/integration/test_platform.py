@@ -30,7 +30,12 @@ async def test_dashboard_and_maintenance(api):
         await session.execute(
             update(Run)
             .where(Run.id == "AUD-2023-8902")
-            .values(status="running", started_at=datetime.now(UTC) - timedelta(hours=1))
+            .values(
+                status="running",
+                outcome=None,
+                finished_at=None,
+                started_at=datetime.now(UTC) - timedelta(hours=1),
+            )
         )
         await session.commit()
     assert await fail_stuck_runs() == 1

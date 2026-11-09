@@ -9,8 +9,9 @@ from pydantic import Field, computed_field
 
 from repody.schemas.common import CamelModel
 
-RunStatus = Literal["queued", "running", "done", "failed"]
-Outcome = Literal["passed", "warning", "failed"]
+RunStatus = Literal["queued", "running", "done", "failed"]  # lifecycle: repody.app.lifecycle
+Outcome = Literal["passed", "warning", "failed"]  # a done run's result
+RuleStatus = Literal["passed", "failed", "skipped"]
 
 
 class ProgressStep(CamelModel):
@@ -66,7 +67,7 @@ class AuditRule(CamelModel):
     name: str
     scope: str
     severity: str
-    status: Literal["passed", "failed", "skipped"]
+    status: RuleStatus
     expression: str
     detail: str
     affected_fields: list[str]

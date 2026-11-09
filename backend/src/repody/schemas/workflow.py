@@ -79,7 +79,8 @@ class WorkflowDefinition(CamelModel):
         return self
 
 
-WorkflowStatus = Literal["draft", "active", "paused"]
+# Owned by the server (repody.app.lifecycle): deploying makes a workflow active.
+WorkflowStatus = Literal["draft", "active"]
 
 
 class CallsPerDay(CamelModel):
@@ -104,14 +105,16 @@ class ApiStats(CamelModel):
 
 
 class WorkflowIn(WorkflowDefinition):
+    """What the builder saves. The status is not part of it: only deploying changes it."""
+
     name: str = "Untitled workflow"
     description: str = ""
-    status: WorkflowStatus = "draft"
     owner: str = ""
 
 
 class WorkflowOut(WorkflowIn):
     id: str
+    status: WorkflowStatus = Field(description="active once deployed (it has an API key).")
     deployed_at: datetime | None = None
     api_key: str | None = Field(default=None, description="Plaintext key, returned once on deploy.")
     api_key_hint: str | None = None

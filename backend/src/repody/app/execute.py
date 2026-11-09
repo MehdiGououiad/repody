@@ -11,9 +11,10 @@ import time
 from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+from repody.app.lifecycle import move_run
 from repody.app.progress import FINALIZE_STEP, RULES_STEP, Tracker, extract_step, publish
 from repody.app.runs import fail_run
 from repody.extraction.pipeline import extract
@@ -22,7 +23,7 @@ from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, ne
 from repody.infra.storage import get_store
 from repody.rules.evaluate import RuleOutcome, evaluate_rules
 from repody.rules.values import field_key
-from repody.schemas.run import RunProgress
+from repody.schemas.run import Outcome, RunProgress
 from repody.schemas.workflow import WorkflowDefinition
 from repody.settings import get_settings
 
@@ -48,14 +49,9 @@ async def process_run(run_id: str) -> None:
 
 async def _claim(run_id: str) -> bool:
     async with db.session_factory() as session:
-        claimed = await session.execute(
-            update(Run)
-            .where(Run.id == run_id, Run.status == "queued")
-            .values(status="running", started_at=datetime.now(UTC))
-            .returning(Run.id)
-        )
+        claimed = await move_run(session, run_id, "running", started_at=datetime.now(UTC))
         await session.commit()
-        return claimed.scalar_one_or_none() is not None
+        return claimed
 
 
 async def _process(run_id: str) -> None:
@@ -89,15 +85,22 @@ async def _process(run_id: str) -> None:
 
         _flag_fields(fields, results)
         session.add_all(_rule_row(run_id, i, result) for i, result in enumerate(results))
-        run.status, run.outcome, run.finished_at = "done", _outcome(results), datetime.now(UTC)
         run.rules_total = len(results)
         run.rules_failed = sum(r.status == "failed" for r in results)
         run.rules_passed = sum(r.status == "passed" for r in results)
         run.fields_extracted = sum(f.value is not None for f, _ in fields)
         run.progress = tracker.finish()
+        outcome = _outcome(results)
+        if not await move_run(
+            session, run_id, "done", outcome=outcome, finished_at=datetime.now(UTC)
+        ):
+            # Failed meanwhile (timeout or maintenance): a final state is never overwritten.
+            await session.rollback()
+            log.warning("run_finished_elsewhere")
+            return
         await session.commit()
     await publish(run_id, {"terminal": True, "status": "done"})
-    log.info("run_done", outcome=run.outcome, rules_failed=run.rules_failed)
+    log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
 
 
 async def _extract_documents(
@@ -137,7 +140,7 @@ async def _extract_documents(
     return saved
 
 
-def _outcome(results: list[RuleOutcome]) -> str:
+def _outcome(results: list[RuleOutcome]) -> Outcome:
     failed = [r for r in results if r.status == "failed"]
     if any(r.rule.severity == "reject" for r in failed):
         return "failed"

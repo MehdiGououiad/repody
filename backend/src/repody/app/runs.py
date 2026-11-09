@@ -12,11 +12,12 @@ import structlog
 from limits import parse
 from limits.aio.storage import RedisStorage
 from limits.aio.strategies import MovingWindowRateLimiter
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from repody.app.errors import AppError
+from repody.app.lifecycle import move_run
 from repody.app.progress import plan, publish, with_queue_position
 from repody.infra import db, queue
 from repody.infra.models import Run, RunDocument, Workflow, new_id
@@ -29,6 +30,7 @@ from repody.schemas.run import (
     AuditRule,
     RunCreated,
     RunState,
+    RunStatus,
     RunSummary,
     RunTimings,
 )
@@ -148,17 +150,18 @@ async def start_run(
     return RunCreated(run_id=run.id)
 
 
-async def fail_run(run_id: str, error: str, *, only_if: str | None = None) -> bool:
+async def fail_run(run_id: str, error: str, *, only_if: RunStatus | None = None) -> bool:
     """Mark a queued or running run failed (``only_if`` narrows the expected status)."""
     async with db.session_factory() as session:
-        condition = Run.status == only_if if only_if else Run.status.in_(("queued", "running"))
-        failed = await session.execute(
-            update(Run)
-            .where(Run.id == run_id, condition)
-            .values(status="failed", error=error[:4000], finished_at=datetime.now(UTC))
-            .returning(Run.id)
+        failed = await move_run(
+            session,
+            run_id,
+            "failed",
+            only_from=only_if,
+            error=error[:4000],
+            finished_at=datetime.now(UTC),
         )
-        if failed.scalar_one_or_none() is None:
+        if not failed:
             return False
         await session.commit()
     await publish(run_id, {"terminal": True, "status": "failed", "error": error[:500]})
@@ -191,7 +194,7 @@ def _report(run: Run) -> AuditDetail:
         id=run.id,
         workflow_id=run.workflow_id,
         workflow_name=run.workflow.name,
-        status=run.outcome or "warning",  # type: ignore[arg-type]
+        status=run.outcome or "warning",
         source=run.source,
         created_at=run.created_at,
         documents=[AuditDocument.model_validate(doc) for doc in run.documents],
@@ -215,7 +218,7 @@ def _report(run: Run) -> AuditDetail:
 async def run_state(session: AsyncSession, run_id: str) -> RunState:
     run = await _load_run(session, run_id)
     return RunState(
-        status=run.status,  # type: ignore[arg-type]
+        status=run.status,
         progress=await with_queue_position(session, run),
         error=run.error,
         result=_report(run) if run.status == "done" else None,
@@ -260,7 +263,7 @@ async def list_audits(session: AsyncSession, *, limit: int = 50, offset: int = 0
 def audit_item(run: Run) -> AuditListItem:
     return AuditListItem(
         id=run.id,
-        status=run.outcome or "warning",  # type: ignore[arg-type]
+        status=run.outcome or "warning",
         workflow_id=run.workflow_id,
         workflow_name=run.workflow.name,
         timestamp=run.created_at,
