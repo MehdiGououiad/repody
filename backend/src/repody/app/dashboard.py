@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, date, datetime, timedelta
+from typing import NamedTuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,8 +24,15 @@ from repody.schemas.platform import (
 from repody.settings import get_settings
 
 
-async def _daily(session: AsyncSession, since: datetime) -> dict[date, tuple[int, int, int]]:
-    """``(runs, passed, failed)`` per day."""
+class Day(NamedTuple):
+    """Runs created on a day, and how many of them passed or failed."""
+
+    runs: int = 0
+    passed: int = 0
+    failed: int = 0
+
+
+async def _daily(session: AsyncSession, since: datetime) -> dict[date, Day]:
     rows = await session.execute(
         select(
             func.date(Run.created_at),
@@ -35,7 +43,7 @@ async def _daily(session: AsyncSession, since: datetime) -> dict[date, tuple[int
         .where(Run.created_at >= since)
         .group_by(func.date(Run.created_at))
     )
-    return {day: (runs, passed, failed) for day, runs, passed, failed in rows}
+    return {day: Day(runs, passed, failed) for day, runs, passed, failed in rows}
 
 
 async def get_dashboard(session: AsyncSession) -> Dashboard:
@@ -44,12 +52,12 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
     previous_week = [d - timedelta(days=7) for d in week]
     daily = await _daily(session, datetime.combine(previous_week[0], datetime.min.time(), UTC))
 
-    def column(days: list[date], index: int) -> list[float]:
-        return [float(daily.get(d, (0, 0, 0))[index]) for d in days]
+    this_week = [daily.get(d, Day()) for d in week]
+    last_week = [daily.get(d, Day()) for d in previous_week]
 
-    def rate(days: list[date]) -> float:
-        runs, passed = sum(column(days, 0)), sum(column(days, 1))
-        return passed / runs if runs else 0.0
+    def pass_rate(days: list[Day]) -> float:
+        runs = sum(d.runs for d in days)
+        return sum(d.passed for d in days) / runs if runs else 0.0
 
     queued, running = (
         await session.execute(
@@ -60,7 +68,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
         )
     ).one()
 
-    def kpi(kpi_id: KpiId, value: float, previous: float, series: list[float]) -> Kpi:
+    def kpi(kpi_id: KpiId, value: float, previous: float, series: list[int]) -> Kpi:
         return Kpi(
             id=kpi_id,
             value=value,
@@ -95,18 +103,29 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
     )
     return Dashboard(
         kpis=[
-            kpi("auditsWeek", sum(column(week, 0)), sum(column(previous_week, 0)), column(week, 0)),
-            kpi("passRate", rate(week), rate(previous_week), column(week, 1)),
-            kpi("failures", sum(column(week, 2)), sum(column(previous_week, 2)), column(week, 2)),
+            kpi(
+                "auditsWeek",
+                sum(d.runs for d in this_week),
+                sum(d.runs for d in last_week),
+                [d.runs for d in this_week],
+            ),
+            kpi(
+                "passRate",
+                pass_rate(this_week),
+                pass_rate(last_week),
+                [d.passed for d in this_week],
+            ),
+            kpi(
+                "failures",
+                sum(d.failed for d in this_week),
+                sum(d.failed for d in last_week),
+                [d.failed for d in this_week],
+            ),
             kpi("pendingReview", queued + running, 0, []),  # a live count: no history
         ],
         performance_series=[
-            DayRuns(
-                day=d.strftime("%a"),
-                runs=int(daily.get(d, (0, 0, 0))[0]),
-                prev_runs=int(daily.get(p, (0, 0, 0))[0]),
-            )
-            for d, p in zip(week, previous_week, strict=True)
+            DayRuns(day=d.strftime("%a"), runs=now.runs, prev_runs=before.runs)
+            for d, now, before in zip(week, this_week, last_week, strict=True)
         ],
         failures_by_severity=[
             SeverityShare(severity=severity, share=count / total_failures)
