@@ -185,7 +185,10 @@ function imagesPresent() {
     (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0
   );
   if (missing.length === 0) {
-    return { ok: true, detail: `${BACKEND_IMAGE.split("/").pop()} + ${WEB_IMAGE.split("/").pop()}` };
+    return {
+      ok: true,
+      detail: `${BACKEND_IMAGE.split("/").pop()} + ${WEB_IMAGE.split("/").pop()}`,
+    };
   }
   if (FROM_SOURCE) return { ok: true, detail: "built from this checkout on start" };
   return { ok: false, detail: `missing ${missing.join(", ")} — run: pnpm platform setup` };
