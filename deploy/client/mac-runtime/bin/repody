@@ -87,8 +87,8 @@ cmd_setup() {
   echo "Pulling images…"
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  docker pull "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}"
-  docker pull "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}"
+  docker pull "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.2.0}"
+  docker pull "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.2.0}"
   "${COMPOSE[@]}" pull
   echo
   echo "Next:"
@@ -132,12 +132,12 @@ cmd_doctor() {
   if [[ -f .env ]]; then
     # shellcheck disable=SC1091
     set -a && source .env && set +a
-    if docker image inspect "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}" >/dev/null 2>&1; then
+    if docker image inspect "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.2.0}" >/dev/null 2>&1; then
       echo "ok   backend image"
     else
       echo "warn backend image not local — ./bin/repody pull"
     fi
-    if docker image inspect "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}" >/dev/null 2>&1; then
+    if docker image inspect "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.2.0}" >/dev/null 2>&1; then
       echo "ok   web image"
     else
       echo "warn web image not local — ./bin/repody pull"
@@ -285,8 +285,8 @@ cmd_pull() {
   [[ -f .env ]] || cp .env.example .env
   # shellcheck disable=SC1091
   set -a && source .env && set +a
-  docker pull "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}"
-  docker pull "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}"
+  docker pull "${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.2.0}"
+  docker pull "${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.2.0}"
   "${COMPOSE[@]}" pull
 }
 

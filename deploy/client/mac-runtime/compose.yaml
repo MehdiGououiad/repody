@@ -8,7 +8,7 @@
 name: repody
 
 x-backend: &backend
-  image: ${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}
+  image: ${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.2.0}
   pull_policy: ${REPODY_PULL_POLICY:-missing}
   extra_hosts:
     - "host.docker.internal:host-gateway"
@@ -135,7 +135,7 @@ services:
       start_period: 90s
 
   web:
-    image: ${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}
+    image: ${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.2.0}
     pull_policy: ${REPODY_PULL_POLICY:-missing}
     depends_on:
       api:

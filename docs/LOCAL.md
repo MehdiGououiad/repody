@@ -35,7 +35,7 @@ Kit source in-repo: [`deploy/client/mac-runtime/`](../deploy/client/mac-runtime/
 ### Client: install on Mac
 
 ```bash
-unzip repody-mac-runtime-0.1.0.zip
+unzip repody-mac-runtime-0.2.0.zip
 cd repody-mac-runtime   # or the staged folder name inside the zip
 chmod +x bin/repody
 ./bin/repody setup

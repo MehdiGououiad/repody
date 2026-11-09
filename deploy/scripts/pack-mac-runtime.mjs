@@ -19,15 +19,11 @@ const REALM_SRC = path.join(ROOT, "deploy/keycloak/realm-repody.json");
 const DIST = path.join(ROOT, "dist");
 const STAGE_NAME = "repody-mac-runtime";
 
+/** The image tag to package: REPODY_IMAGE_TAG, else the release version in package.json. */
 function readTag() {
   const fromEnv = (process.env.REPODY_IMAGE_TAG || "").trim();
   if (fromEnv) return fromEnv;
-  try {
-    const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8"));
-    return String(pkg.version || "0.1.0");
-  } catch {
-    return "0.1.0";
-  }
+  return JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf8")).version;
 }
 
 function rmrf(p) {

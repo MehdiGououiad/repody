@@ -10,13 +10,13 @@ imagePullSecrets: []
 images:
   backend:
     repository: repody-backend
-    tag: "0.1.0"
+    tag: "0.2.0"
     # Prefer a digest in GitOps (sha256:…); when set it wins over the tag.
     digest: ""
     pullPolicy: IfNotPresent
   web:
     repository: repody-web
-    tag: "0.1.0"
+    tag: "0.2.0"
     digest: ""
     pullPolicy: IfNotPresent
 
