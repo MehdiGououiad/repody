@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * Repody local platform CLI (Windows + macOS + Linux) - same Hub images everywhere.
+ * Repody local platform CLI (Windows + macOS + Linux).
  *
  *   pnpm platform setup     # once
- *   pnpm platform           # pull images + start stack + host NuExtract
+ *   pnpm platform           # build images from this checkout + start stack + host NuExtract
  *   pnpm platform dev       # contributors: API + UI from source with reload
  *   pnpm platform status | stop | doctor | logs | help
  *
- * up:  Hub images (linux/amd64 + linux/arm64), compose.yaml + compose.portable.yaml
+ * up:  images built from this checkout (docker-bake.hcl, tag "dev"), or the published images
+ *      named by REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE; compose.yaml + compose.portable.yaml
  * dev: compose.yaml data plane + workers built from source; API and UI on the host
  */
 import { spawnSync } from "node:child_process";
@@ -37,8 +38,12 @@ const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
 const LLAMA_PATHS = path.join(ROOT, "deploy/llamacpp/paths.local.env");
 const LLAMA_MAC_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.mac.env.example");
 const LLAMA_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.local.env.example");
-const BACKEND_IMAGE = process.env.REPODY_BACKEND_IMAGE || "mehdigououiad/repody-backend:0.1.0";
-const WEB_IMAGE = process.env.REPODY_WEB_IMAGE || "mehdigououiad/repody-web:0.1.0";
+// The stack runs the code of this checkout: images are built locally (Docker caches the
+// layers, so an unchanged tree rebuilds in seconds). Set both variables to run published
+// images instead, e.g. a release from the registry.
+const FROM_SOURCE = !process.env.REPODY_BACKEND_IMAGE && !process.env.REPODY_WEB_IMAGE;
+const BACKEND_IMAGE = process.env.REPODY_BACKEND_IMAGE || "repody-backend:dev";
+const WEB_IMAGE = process.env.REPODY_WEB_IMAGE || "repody-web:dev";
 
 const rawArgs = process.argv.slice(2);
 const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
@@ -58,6 +63,7 @@ const opts = {
   // Observability (Grafana/Loki/Tempo/Bugsink) on by default for Hub platform.
   withObs: !(flags.has("--no-obs") || flags.has("--no-observability")),
   skipPull: flags.has("--no-pull"),
+  skipBuild: flags.has("--no-build"),
 };
 
 function printHelp() {
@@ -67,15 +73,15 @@ Repody platform CLI (same on Windows, macOS, Linux)
 Flow (new PC):
   1) pnpm install && pnpm doctor
   2) Download NuExtract GGUFs → set deploy/llamacpp/paths.local.env
-  3) pnpm platform setup     # once — env files + pull Hub images
+  3) pnpm platform setup     # once — env files + build the images
   4) pnpm platform           # start platform + host NuExtract
   5) pnpm platform status    # health
   6) pnpm platform stop      # tear down
 
 Commands:
-  up         Start Hub platform + host NuExtract   [default]
+  up         Build images from this checkout, start the platform + host NuExtract   [default]
   dev        Contributors: data plane + workers from source, API + UI on the host (reload)
-  setup      Once: env / paths + pull Hub images
+  setup      Once: env / paths + build the images
   bootstrap  setup + up (new machine after git clone / pnpm install)
   doctor     Check everything needed before start (Node, Docker, llama-server, GGUFs, env)
   status     Probe services + observability URLs
@@ -87,9 +93,11 @@ Options (pnpm platform -- … / pnpm platform setup -- …):
   --no-nuextract     Skip host NuExtract (:8081)
   --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
   --platform-only    Containers only (no host model)
-  --no-pull          Do not docker pull (setup + up)
+  --no-build         Start the images already built (skip the rebuild)
+  --no-pull          Published images only: do not docker pull
 
-Images: ${BACKEND_IMAGE} · ${WEB_IMAGE}
+Images: ${FROM_SOURCE ? "built from this checkout" : "published"} — ${BACKEND_IMAGE} · ${WEB_IMAGE}
+  Published images: REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… pnpm platform
 Guide: docs/LOCAL.md
 `);
 }
@@ -172,13 +180,24 @@ function checkToolchain() {
   return { ok: false, detail };
 }
 
-function hubImagesPresent() {
+function imagesPresent() {
   const missing = [BACKEND_IMAGE, WEB_IMAGE].filter(
     (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0
   );
-  return missing.length === 0
-    ? { ok: true, detail: `${BACKEND_IMAGE.split("/").pop()} + ${WEB_IMAGE.split("/").pop()}` }
-    : { ok: false, detail: `missing ${missing.join(", ")} — run: pnpm platform setup` };
+  if (missing.length === 0) {
+    return { ok: true, detail: `${BACKEND_IMAGE.split("/").pop()} + ${WEB_IMAGE.split("/").pop()}` };
+  }
+  if (FROM_SOURCE) return { ok: true, detail: "built from this checkout on start" };
+  return { ok: false, detail: `missing ${missing.join(", ")} — run: pnpm platform setup` };
+}
+
+/** docker-bake.hcl targets backend + web, loaded into Docker as repody-*:dev. */
+function buildImages() {
+  console.log("\n── Build images from this checkout (docker buildx bake) ─────────");
+  run("docker", ["buildx", "bake", "-f", "docker-bake.hcl", "--load"], {
+    inherit: true,
+    env: { REPODY_IMAGE_REGISTRY: "", REPODY_IMAGE_TAG: "dev" },
+  });
 }
 
 function llamaServerVersion(exe) {
@@ -217,11 +236,11 @@ function preflight({ quietOk = false } = {}) {
     fix: "Start Docker Desktop, wait until ready",
   });
 
-  const hub = dockerOk ? hubImagesPresent() : { ok: false, detail: "docker not running" };
+  const images = dockerOk ? imagesPresent() : { ok: false, detail: "docker not running" };
   rows.push({
-    name: "Hub images",
-    ok: hub.ok,
-    state: hub.detail,
+    name: "Images",
+    ok: images.ok,
+    state: images.detail,
     required: true,
     fix: "pnpm platform setup",
   });
@@ -283,7 +302,7 @@ function preflight({ quietOk = false } = {}) {
     console.log(`  [${mark}] ${row.name.padEnd(18)} ${row.state}`);
   }
   console.log(
-    "\nScope: tools, Hub images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
+    "\nScope: tools, images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
   );
 
   const failed = rows.filter((row) => !row.ok && row.required);
@@ -307,11 +326,13 @@ function setup() {
   );
 
   if (!dockerOk) {
-    console.warn("\nwarn: skipped image pull — start Docker Desktop, then: pnpm platform setup");
+    console.warn("\nwarn: skipped the images — start Docker Desktop, then: pnpm platform setup");
+  } else if (FROM_SOURCE) {
+    buildImages();
   } else if (opts.skipPull) {
-    console.log("\n(--no-pull) skipped Hub image pull");
+    console.log("\n(--no-pull) skipped the image pull");
   } else {
-    console.log("\n── Pull Hub images ──────────────────────────────────────────");
+    console.log("\n── Pull published images ──────────────────────────────────────");
     run("docker", ["pull", BACKEND_IMAGE], { inherit: true });
     run("docker", ["pull", WEB_IMAGE], { inherit: true });
   }
@@ -328,11 +349,16 @@ async function up() {
   preflight({ quietOk: true });
   patchBackendEnv();
   console.log(
-    `Plan: Hub images  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`
+    `Plan: images=${FROM_SOURCE ? "from this checkout" : "published"}  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`
   );
 
+  if (FROM_SOURCE && !opts.skipBuild) buildImages();
+  // Local images are never pulled: a registry has no repody-*:dev.
+  const pull = FROM_SOURCE || opts.skipPull ? "never" : "missing";
   const composeEnv = {
-    REPODY_PULL_POLICY: opts.skipPull ? "never" : process.env.REPODY_PULL_POLICY || "missing",
+    REPODY_BACKEND_IMAGE: BACKEND_IMAGE,
+    REPODY_WEB_IMAGE: WEB_IMAGE,
+    REPODY_PULL_POLICY: process.env.REPODY_PULL_POLICY || pull,
   };
   if (opts.withObs) {
     console.log("\n── Observability (Grafana · Loki · Tempo · Bugsink) ─────────");
@@ -349,7 +375,7 @@ async function up() {
     llamaServe("serve", { allowFail: true });
   }
 
-  console.log("\n── Start Hub platform (waits for healthchecks) ───────────────");
+  console.log("\n── Start the platform (waits for healthchecks) ───────────────");
   run(
     "docker",
     composeArgs(
@@ -359,7 +385,7 @@ async function up() {
       "--wait-timeout",
       "180",
       "--pull",
-      opts.skipPull ? "never" : "missing",
+      pull,
       "--no-build",
       "postgres",
       "redis",

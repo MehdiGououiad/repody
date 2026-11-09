@@ -41,7 +41,7 @@ cd repody
 corepack enable
 pnpm install
 pnpm doctor
-pnpm platform setup    # once: env files + docker pull Hub images
+pnpm platform setup    # once: env files + build the images
 # edit deploy/llamacpp/paths.local.env with NuExtract GGUF paths
 pnpm platform          # start API/UI/workers + host NuExtract (repody:vlm)
 pnpm platform status
@@ -74,7 +74,7 @@ Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS
 - Frontend: Next.js 16, React 19, Tailwind
 - Backend: FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
 - Jobs: Taskiq over Redis Streams
-- Local: Docker Compose + Hub images (`pnpm platform`)
+- Local: Docker Compose, images built from the checkout (`pnpm platform`)
 - Storage: MinIO or S3-compatible object storage
 
 ## License

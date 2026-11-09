@@ -16,16 +16,16 @@ Client (on the Mac, after unzip): `./bin/repody setup` -> `./bin/repody start` -
 
 ## Develop (daily) - vendors / contributors (git checkout)
 
-Pull Hub images, start the platform, and (by default) **host NuExtract** (`repody:vlm`).
+Build the images from this checkout (`repody-*:dev`, cached), start the platform, and (by default) **host NuExtract** (`repody:vlm`). To run a published release instead: `REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… pnpm platform`.
 
 | Command | When |
 |---------|------|
-| `pnpm platform setup` | **Once** - env files + pull Hub images |
-| `pnpm platform doctor` | **Preflight** - Node/pnpm, Docker, Hub images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
+| `pnpm platform setup` | **Once** - env files + build the images |
+| `pnpm platform doctor` | **Preflight** - Node/pnpm, Docker, images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
 | `pnpm platform` | **Daily** - preflight + start stack + NuExtract on host |
 | `pnpm platform -- --platform-only` | Containers only (no host models) |
 | `pnpm platform -- --no-nuextract` | Skip NuExtract |
-| `pnpm platform -- --no-pull` | Skip `docker pull` |
+| `pnpm platform -- --no-build` | Start the images already built (skip the rebuild) |
 | `pnpm platform status` | Health probes |
 | `pnpm platform stop` | Tear down |
 | `pnpm platform help` | Flags |
@@ -44,7 +44,7 @@ Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.
 pnpm install
 pnpm doctor
 pnpm platform setup
-pnpm platform                 # Hub images + host NuExtract
+pnpm platform                 # images from this checkout + host NuExtract
 pnpm platform status
 pnpm platform stop
 ```

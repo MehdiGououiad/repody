@@ -82,7 +82,7 @@ Images pull as public multi-arch - no Hub login required.
    - macOS: `brew install llama.cpp`
    - Windows: `winget install ggml.llamacpp`
 4. **NuExtract GGUFs** - download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
-5. Disk / RAM for Hub images (~2–4 GB) and GGUFs.
+5. Disk / RAM for the images (~2–4 GB, plus build cache) and GGUFs.
 
 ---
 
@@ -93,7 +93,7 @@ git clone https://github.com/MehdiGououiad/repody.git
 cd repody
 pnpm install
 pnpm doctor
-pnpm platform setup             # once: env files + docker pull
+pnpm platform setup             # once: env files + build the images
 # edit deploy/llamacpp/paths.local.env with NuExtract GGUF paths
 pnpm platform doctor            # preflight
 pnpm platform                   # same preflight, then start
@@ -194,9 +194,8 @@ pnpm platform help
 ```bash
 pnpm platform -- --platform-only
 pnpm platform -- --no-nuextract
-pnpm platform -- --no-pull
+pnpm platform -- --no-build
 pnpm platform -- --no-obs
-pnpm platform setup -- --no-pull
 ```
 
 | Flag | Effect |
@@ -204,7 +203,7 @@ pnpm platform setup -- --no-pull
 | (default) | Host NuExtract `:8081` -> `repody:vlm` |
 | `--no-nuextract` | Skip NuExtract |
 | `--platform-only` | Containers only |
-| `--no-pull` | Skip `docker pull` |
+| `--no-build` | Start the images already built (skip the rebuild) |
 | `--no-obs` | Skip Grafana/Bugsink stack |
 
 
@@ -215,7 +214,7 @@ pnpm platform setup -- --no-pull
 
 | Command | Purpose |
 |---------|---------|
-| `pnpm platform setup` | Once - env + pull Hub images |
+| `pnpm platform setup` | Once - env + build the images |
 | `pnpm platform doctor` | Preflight |
 | `pnpm platform` | Preflight + start |
 | `pnpm platform status` | Health |

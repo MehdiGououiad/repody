@@ -1,16 +1,17 @@
-# Portable overlay - pull Hub images (no local Docker build). Windows + macOS + Linux.
+# Portable overlay - prebuilt images, no build at start. Windows + macOS + Linux.
 #
-#   pnpm platform
+#   pnpm platform          # builds repody-backend:dev + repody-web:dev from this checkout first
 #   docker compose -f compose.yaml -f compose.portable.yaml --profile workers up -d --no-build
 #
-# Images: mehdigououiad/repody-backend + repody-web (linux/amd64 + linux/arm64).
+# Images: REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE, default repody-*:dev (pnpm images:build);
+# set them to a registry tag to run a published release.
 # Inference stays on the host (llama-server for NuExtract).
 # See docs/LOCAL.md
 
 name: repody
 
 x-portable-backend: &portable-backend
-  image: ${REPODY_BACKEND_IMAGE:-mehdigououiad/repody-backend:0.1.0}
+  image: ${REPODY_BACKEND_IMAGE:-repody-backend:dev}
   pull_policy: ${REPODY_PULL_POLICY:-missing}
   extra_hosts:
     - "host.docker.internal:host-gateway"
@@ -75,7 +76,7 @@ services:
       start_period: 90s
 
   web:
-    image: ${REPODY_WEB_IMAGE:-mehdigououiad/repody-web:0.1.0}
+    image: ${REPODY_WEB_IMAGE:-repody-web:dev}
     pull_policy: ${REPODY_PULL_POLICY:-missing}
     depends_on:
       api:

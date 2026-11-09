@@ -3,7 +3,7 @@
 # Redis/Postgres: official Docker Library pins.
 # Docs: docs/LOCAL.md
 #
-#   pnpm platform          # Hub images: + compose.portable.yaml (see deploy/scripts/platform-dev.mjs)
+#   pnpm platform          # images built from this checkout + compose.portable.yaml (deploy/scripts/platform-dev.mjs)
 #   pnpm platform dev      # source lane: data plane here, API/UI/worker from source
 
 name: repody
