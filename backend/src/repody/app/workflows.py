@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,10 +27,13 @@ from repody.schemas.workflow import (
 )
 
 
-async def _run_stats(
-    session: AsyncSession, workflow_ids: list[str]
-) -> dict[str, tuple[int, float, datetime | None]]:
-    """``(total runs, share of finished runs that passed, last run)`` per workflow."""
+class RunStats(NamedTuple):
+    total: int = 0
+    success_rate: float = 0.0  # share of finished runs that passed
+    last_run: datetime | None = None
+
+
+async def _run_stats(session: AsyncSession, workflow_ids: list[str]) -> dict[str, RunStats]:
     rows = await session.execute(
         select(
             Run.workflow_id,
@@ -42,7 +46,7 @@ async def _run_stats(
         .group_by(Run.workflow_id)
     )
     return {
-        wf_id: (total, passed / done if done else 0.0, last)
+        wf_id: RunStats(total, passed / done if done else 0.0, last)
         for wf_id, total, passed, done, last in rows
     }
 
@@ -92,17 +96,12 @@ async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
 
 def _out(
     wf: Workflow,
-    stats: tuple[int, float, datetime | None] = (0, 0.0, None),
+    definition: WorkflowDefinition,
+    stats: RunStats,
     *,
-    with_definition: bool = True,
     api_stats: ApiStats | None = None,
     api_key: str | None = None,
 ) -> WorkflowOut:
-    definition = (
-        WorkflowDefinition.model_validate(wf.definition)
-        if with_definition
-        else WorkflowDefinition()
-    )
     return WorkflowOut(
         id=wf.id,
         name=wf.name,
@@ -114,9 +113,9 @@ def _out(
         deployed_at=wf.deployed_at,
         api_key=api_key,
         api_key_hint=wf.api_key_hint,
-        total_runs=stats[0],
-        success_rate=stats[1],
-        last_run=stats[2],
+        total_runs=stats.total,
+        success_rate=stats.success_rate,
+        last_run=stats.last_run,
         api_stats=api_stats,
     )
 
@@ -138,16 +137,18 @@ async def list_workflows(session: AsyncSession) -> list[WorkflowOut]:
         )
     ).all()
     stats = await _run_stats(session, [wf.id for wf in workflows])
-    return [_out(wf, stats.get(wf.id, (0, 0.0, None)), with_definition=False) for wf in workflows]
+    empty = WorkflowDefinition()
+    return [_out(wf, empty, stats.get(wf.id, RunStats())) for wf in workflows]
 
 
 async def get_workflow(
     session: AsyncSession, workflow_id: str, *, api_key: str | None = None
 ) -> WorkflowOut:
     wf = await load(session, workflow_id)
-    stats = (await _run_stats(session, [wf.id])).get(wf.id, (0, 0.0, None))
+    stats = (await _run_stats(session, [wf.id])).get(wf.id, RunStats())
     api_stats = await _api_stats(session, wf.id) if wf.deployed_at else None
-    return _out(wf, stats, api_stats=api_stats, api_key=api_key)
+    definition = WorkflowDefinition.model_validate(wf.definition)
+    return _out(wf, definition, stats, api_stats=api_stats, api_key=api_key)
 
 
 async def create_workflow(session: AsyncSession, body: CreateWorkflow) -> WorkflowOut:
@@ -161,7 +162,7 @@ async def create_workflow(session: AsyncSession, body: CreateWorkflow) -> Workfl
     )
     session.add(wf)
     await session.flush()
-    return _out(wf)
+    return _out(wf, definition, RunStats())
 
 
 def field_types(definition: WorkflowDefinition) -> dict[str, str]:
@@ -174,15 +175,11 @@ def field_types(definition: WorkflowDefinition) -> dict[str, str]:
     return types
 
 
-def rule_check_issues(definition: WorkflowDefinition) -> list[str]:
-    types = field_types(definition)
-    return [issue for rule in definition.rules for issue in rule_issues(rule, types)]
-
-
 async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowIn) -> WorkflowOut:
     """Create or replace the workflow's definition (the builder saves all of it); its status
     does not change."""
-    if issues := rule_check_issues(body):
+    types = field_types(body)
+    if issues := [issue for rule in body.rules for issue in rule_issues(rule, types)]:
         raise AppError(422, "; ".join(issues))
     wf = await session.get(Workflow, workflow_id)
     if wf is None:
