@@ -28,6 +28,7 @@ from repody.schemas.run import (
     AuditList,
     AuditListItem,
     AuditRule,
+    Outcome,
     RunCreated,
     RunState,
     RunStatus,
@@ -194,7 +195,7 @@ def _report(run: Run) -> AuditDetail:
         id=run.id,
         workflow_id=run.workflow_id,
         workflow_name=run.workflow.name,
-        status=run.outcome or "warning",
+        status=_outcome(run),
         source=run.source,
         created_at=run.created_at,
         documents=[AuditDocument.model_validate(doc) for doc in run.documents],
@@ -260,10 +261,17 @@ async def list_audits(session: AsyncSession, *, limit: int = 50, offset: int = 0
     )
 
 
+def _outcome(run: Run) -> Outcome:
+    """The result of a done run; only done runs have one (CHECK ck_runs_outcome)."""
+    if run.outcome is None:
+        raise ValueError(f"Run {run.id} is {run.status}: it has no report.")
+    return run.outcome
+
+
 def audit_item(run: Run) -> AuditListItem:
     return AuditListItem(
         id=run.id,
-        status=run.outcome or "warning",
+        status=_outcome(run),
         workflow_id=run.workflow_id,
         workflow_name=run.workflow.name,
         timestamp=run.created_at,
