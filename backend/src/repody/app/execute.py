@@ -71,24 +71,30 @@ async def _process(run_id: str) -> None:
         # (minutes); the loaded objects stay usable and their changes are saved by the last commit.
         await session.commit()
 
-        fields = await _extract_documents(run, definition, tracker)
+        await _extract_documents(run, definition, tracker)
         await tracker.start(RULES_STEP, "Checking the rules…")
         started = time.perf_counter()
         results = evaluate_rules(
             definition.rules,
-            [(f.key, f.value, doc_type, f.type) for f, doc_type in fields],
+            [
+                (field.key, field.value, doc.document_type, field.type)
+                for doc in run.documents
+                for field in doc.fields
+            ],
             doc_types_by_id={doc.id: doc.document_type for doc in definition.documents},
             multi_document=sum(bool(doc.schema_fields) for doc in definition.documents) > 1,
         )
         run.validation_ms = int((time.perf_counter() - started) * 1000)
         await tracker.start(FINALIZE_STEP, "Saving the audit report…")
 
-        _flag_fields(fields, results)
+        _flag_fields(run.documents, results)
         session.add_all(_rule_row(run_id, i, result) for i, result in enumerate(results))
         run.rules_total = len(results)
         run.rules_failed = sum(r.status == "failed" for r in results)
         run.rules_passed = sum(r.status == "passed" for r in results)
-        run.fields_extracted = sum(f.value is not None for f, _ in fields)
+        run.fields_extracted = sum(
+            field.value is not None for doc in run.documents for field in doc.fields
+        )
         run.progress = tracker.finish()
         outcome = _outcome(results)
         if not await move_run(
@@ -103,12 +109,9 @@ async def _process(run_id: str) -> None:
     log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
 
 
-async def _extract_documents(
-    run: Run, definition: WorkflowDefinition, tracker: Tracker
-) -> list[tuple[ExtractedField, str]]:
-    """Extract every uploaded document; ``(saved field, document type)`` for each leaf."""
+async def _extract_documents(run: Run, definition: WorkflowDefinition, tracker: Tracker) -> None:
+    """Extract every uploaded document into its fields (one per schema leaf)."""
     docs_by_id = {doc.id: doc for doc in definition.documents}
-    saved: list[tuple[ExtractedField, str]] = []
     for run_doc in run.documents:
         doc = docs_by_id.get(run_doc.document_id)
         if doc is None or not doc.wants_extraction:
@@ -123,8 +126,8 @@ async def _extract_documents(
             continue
         run_doc.extraction = meta.model_dump()
         run.extraction_ms += meta.extraction_ms
-        for position, value in enumerate(values):
-            field = ExtractedField(
+        run_doc.fields = [
+            ExtractedField(
                 id=new_id("fld"),
                 position=position,
                 key=value.key,
@@ -132,12 +135,11 @@ async def _extract_documents(
                 type=value.type,
                 value=value.value,
             )
-            run_doc.fields.append(field)
-            saved.append((field, run_doc.document_type))
+            for position, value in enumerate(values)
+        ]
         if step := tracker.step(step_id):
             step.duration_ms, step.cache_hit = meta.extraction_ms, meta.cache_hit
             step.detail = f"{meta.fields_extracted} field(s) in {meta.extraction_ms} ms"
-    return saved
 
 
 def _outcome(results: list[RuleOutcome]) -> Outcome:
@@ -147,11 +149,13 @@ def _outcome(results: list[RuleOutcome]) -> Outcome:
     return "warning" if failed else "passed"
 
 
-def _flag_fields(fields: list[tuple[ExtractedField, str]], results: list[RuleOutcome]) -> None:
+def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> None:
     """Flag the fields a failed rule read: by bare name or ``<document type>.<field>``."""
     failed = {field_key(f) for r in results if r.status == "failed" for f in r.affected_fields}
-    for field, doc_type in fields:
-        field.flagged = bool({field_key(field.key), field_key(f"{doc_type}.{field.key}")} & failed)
+    for doc in documents:
+        for field in doc.fields:
+            names = {field_key(field.key), field_key(f"{doc.document_type}.{field.key}")}
+            field.flagged = bool(names & failed)
 
 
 def _rule_row(run_id: str, position: int, result: RuleOutcome) -> RuleResult:
