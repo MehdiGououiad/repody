@@ -1,12 +1,10 @@
 # Dependency and build output
 node_modules
 .next
-build-next
 .turbo
 coverage
 htmlcov
 .git
-.docker-cache
 **/__pycache__
 *.pyc
 .pytest_cache
@@ -33,10 +31,8 @@ e2e/
 *.md
 !README.md
 
-# Benchmark, reports, and local artifacts
-benchmark-reports
-carte-*.txt
-carte-*.json
+# Benchmarks, reports, and local artifacts
+benchmarks
 playwright-report
 test-results
 test-results-*

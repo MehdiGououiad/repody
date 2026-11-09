@@ -37,5 +37,4 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 
 - [docs/CLUSTER.md](../CLUSTER.md)
 - [CONTEXT.md](../../CONTEXT.md)
-- [docs/adr/003-modular-platform-modules.md](./003-modular-platform-modules.md)
 - [docs/adr/005-kubernetes-only-external-inference.md](./005-kubernetes-only-external-inference.md)

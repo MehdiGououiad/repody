@@ -1,6 +1,6 @@
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { hasSampleDocument, resolveSampleDocument } from "../helpers/document";
+import { SAMPLE_DOCUMENT } from "../helpers/document";
 import {
   clickExtractValidate,
   goToTestDeployStep,
@@ -27,15 +27,11 @@ test.describe("Extraction and validation errors", () => {
     await expect(failedRule).toBeVisible();
   });
 
-  test.skip(!hasSampleDocument(), "Add a file to e2e/fixtures/documents/ (see README)");
-
   test("document upload run completes or surfaces extraction error", async ({ page }) => {
-    const samplePath = resolveSampleDocument();
-    if (!samplePath) throw new Error("No sample document found in e2e/fixtures/documents/");
-    const fileName = path.basename(samplePath);
+    const fileName = path.basename(SAMPLE_DOCUMENT);
 
     const fileInput = page.locator('input[type="file"]').first();
-    await fileInput.setInputFiles(samplePath);
+    await fileInput.setInputFiles(SAMPLE_DOCUMENT);
     await expect(page.getByText(fileName)).toBeVisible({ timeout: 10_000 });
 
     await clickExtractValidate(page);

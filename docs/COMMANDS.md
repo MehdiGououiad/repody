@@ -107,12 +107,3 @@ Usually started by `pnpm platform`. Manual:
 
 Stop: `pnpm llamacpp:stop`.
 
-## Architecture dossier
-
-Source of truth: [ARCHITECTURE.md](./ARCHITECTURE.md). Diagram index: [diagrams/README.md](./diagrams/README.md).
-
-`docs/ARCHITECTURE.docx` is generated, not edited by hand:
-
-```bash
-python docs/_md_to_docx.py
-```

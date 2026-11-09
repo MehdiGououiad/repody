@@ -28,7 +28,7 @@ from repody.infra.db import Base
 from repody.schemas.run import Outcome, RuleStatus, RunStatus
 
 # Lifecycles (repody.app.lifecycle): the CHECK constraints keep every row in a state the
-# transitions produce. Kept in step with migration 0003.
+# transitions produce. Kept in step with the migration (alembic/versions).
 WorkflowState = Literal["draft", "active", "archived"]
 
 

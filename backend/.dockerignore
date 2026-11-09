@@ -12,16 +12,11 @@ dist/
 coverage/
 htmlcov/
 *.egg-info/
-*.sqlite
-*.db
-alembic_dev.db
 node_modules/
 
 # Tests and local-only artifacts are not copied into the runtime image.
 tests/
 .agents/
-benchmark-reports/
-tests/.storage/
 
 # Secrets, scratch files, and logs.
 .env

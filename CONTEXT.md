@@ -2,8 +2,6 @@
 
 Single-page map for tech leads and new contributors. How-tos: [docs/README.md](./docs/README.md). Decisions: [docs/adr/](./docs/adr/).
 
-Full functional + technical architecture dossier (FR): [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
-
 ## Names (read once)
 
 | Name | Where | Meaning |
@@ -23,13 +21,11 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
 | **Document model** | `repody:vlm` — NuExtract3 on an OpenAI-compatible llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
-| **Logic rule** | Deterministic check via `simpleeval` on extracted fields |
-| **Worker pool `extract`** | Taskiq worker for document-model extraction |
-| **Worker pool `fast`** | Taskiq worker for logic-only / no-file runs |
+| **Logic rule** | Typed conditions on extracted fields (`rules/`); passed, failed or skipped |
+| **Audit** | A done run: its report, with an outcome of passed, warning or failed |
+| **Lifecycle** | The states of a run, workflow or builder flow, and their one owner: [docs/LIFECYCLES.md](./docs/LIFECYCLES.md) |
 
 ## Request lifecycle
-
-Production architecture for executives (ArchiMate + logos): [docs/diagrams/architecture-enterprise.html](./docs/diagrams/architecture-enterprise.html). Engineers: [docs/diagrams/architecture.mmd](./docs/diagrams/architecture.mmd).
 
 ```mermaid
 sequenceDiagram
@@ -56,16 +52,15 @@ sequenceDiagram
 
 ```
 backend/src/repody/
-├── main.py            FastAPI app, lifespan, error handler
+├── main.py · worker.py  FastAPI app; Taskiq worker entry point
 ├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
-├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance
-├── extraction/        NuExtract request, page rendering, llama-server client, field values
+├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance,
+│                      lifecycle (the only code that changes a run's status)
+├── extraction/        NuExtract / LightOnOCR requests, page rendering, model client, field values
 ├── rules/             Typed conditions and their evaluation
 ├── schemas/           Pydantic models (API and stored workflow definition)
-├── auth.py            Keycloak JWT, roles, workflow API keys
-├── queue.py · worker.py   Taskiq broker, dispatch, worker entry point
-├── models.py · db.py  SQLAlchemy tables and sessions
-├── storage.py         S3 documents
+├── infra/             auth (Keycloak JWT, roles, API keys), queue (Taskiq), models, db,
+│                      storage (S3), redis, observability (logs, errors)
 └── settings.py        AUDIT_* settings
 ```
 
@@ -81,7 +76,7 @@ backend/src/repody/
 
 ### Run pipeline
 
-One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance resends lost ones and fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES`. The worker's claim is a conditional UPDATE, so a duplicate delivery does nothing. Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
+One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance resends lost ones and fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES`. Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
 
 ## Extraction
 
@@ -121,12 +116,12 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs
 |------|---------|
 | Run the product locally | `pnpm platform` |
 | Develop from source | `pnpm platform dev` |
-| OpenShift production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
+| Kubernetes production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
 | Release to client | `pnpm images:release` |
 
 ## Authorization
 
-Keycloak realm roles -> `auth.py` (`ROLE_PERMISSIONS`). Routes declare `require("workflow:write")` and similar. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
+Keycloak realm roles -> `infra/auth.py` (`ROLE_PERMISSIONS`). Routes declare `require("workflow:write")` and similar. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
 
 | Role | Typical access |
 |------|----------------|
@@ -148,4 +143,5 @@ Full command list: [docs/COMMANDS.md](./docs/COMMANDS.md). Engineering notes: [d
 
 - [docs/README.md](./docs/README.md) - docs hub
 - [docs/EXTRACTION.md](./docs/EXTRACTION.md) - document models
+- [docs/LIFECYCLES.md](./docs/LIFECYCLES.md) - every state machine and its owner
 - [docs/adr/](./docs/adr/README.md) - ADRs

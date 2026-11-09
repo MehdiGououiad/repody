@@ -12,18 +12,15 @@
       "!**/playwright-report",
       "!**/test-results",
       "!**/reports",
-      "!**/benchmark-reports",
       "!**/.venv",
       "!**/__pycache__",
       "!.agents",
-      "!public",
       "!next-env.d.ts",
       "!pnpm-lock.yaml",
       "!lib/api/openapi.json",
       "!lib/api/generated",
       "!deploy/helm",
       "!e2e/fixtures",
-      "!docs/diagrams/exports",
       "!**/*.css",
       "!**/*.svg"
     ]

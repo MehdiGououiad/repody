@@ -19,8 +19,8 @@ Workflow::
 
 Every run transition is one conditional UPDATE (``WHERE status IN <allowed sources>``), so two
 processes racing on one run (a duplicate task delivery, maintenance and a slow worker) cannot
-both move it: the loser's update matches no row. The database CHECK constraints (migration
-0003) reject any state these transitions would not produce. Diagrams: docs/LIFECYCLES.md.
+both move it: the loser's update matches no row. The database CHECK constraints (infra/models.py,
+alembic/versions) reject any state these transitions would not produce. Diagrams: docs/LIFECYCLES.md.
 """
 
 from __future__ import annotations

@@ -33,7 +33,6 @@ RUN apk upgrade --no-cache \
   && addgroup -g 10001 -S repody \
   && adduser -u 10001 -S -G repody -H -s /sbin/nologin repody
 ENV PORT=3000
-COPY --from=builder --chown=10001:10001 /app/public ./public
 COPY --from=builder --chown=10001:10001 /app/.next/standalone ./
 COPY --from=builder --chown=10001:10001 /app/.next/static ./.next/static
 USER 10001:10001

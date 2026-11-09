@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Copy public/ and .next/static into .next/standalone for local production runs.
+ * Copy .next/static into .next/standalone for local production runs.
  * Mirrors Dockerfile.web runner stage (required for output: "standalone").
  */
 import { cpSync, existsSync, mkdirSync } from "node:fs";
@@ -21,7 +21,6 @@ function copyDir(src, dest) {
   cpSync(src, dest, { recursive: true, force: true });
 }
 
-copyDir(join(root, "public"), join(standaloneDir, "public"));
 copyDir(join(root, ".next", "static"), join(standaloneDir, ".next", "static"));
 
-console.error("✓ Standalone server prepared (public + static copied)");
+console.error("✓ Standalone server prepared (static assets copied)");

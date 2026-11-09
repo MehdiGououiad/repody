@@ -17,12 +17,9 @@
 /playwright-report/
 /test-results/
 /blob-report/
-/benchmark-reports/
-/backend/benchmark-reports/
 
 # next.js
 /.next/
-/build-next/
 /out/
 
 # production
@@ -30,19 +27,11 @@
 /dist/
 /backend/dist/
 
-# security scan output (pnpm security:scan / CI)
-/dist-security/
-/dist-security-*
-
 # misc
 .DS_Store
-.docker-cache/
-.uv-cache/
-.runtime-enterprise/
 *.pem
 __pycache__/
 *.py[cod]
-backend/tests/.storage/
 
 # debug
 npm-debug.log*
@@ -52,17 +41,6 @@ yarn-error.log*
 *.log
 /logs/
 /.logs/
-
-# local HTTP/auth scratch artifacts
-/body.txt
-/cookies.txt
-/csrf.json
-/e2e-cookies.txt
-/headers.txt
-
-# throwaway experiment scratch (never commit)
-.tmp_*
-_tmp_*
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -83,13 +61,6 @@ next-env.d.ts
 deploy/llamacpp/paths.local.env
 deploy/llamacpp/models/*.gguf
 deploy/llamacpp/logs/
-deploy/glmocr/paths.local.env
-deploy/glmocr/models/
-deploy/glmocr/logs/
-deploy/qwen35/paths.local.env
-deploy/qwen35/models/
-deploy/qwen35/logs/
-.runtime-enterprise/
 backend/.venv/
 *.tgz
 

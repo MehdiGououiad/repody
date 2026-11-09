@@ -10,8 +10,8 @@ gitignored `private/` folder at the repo root.
 
 | File | Use |
 |------|-----|
-| `Facture.pdf` · `Facture.benchmark.json` | Invoice used by the API and e2e suites |
-| `bank-statement.pdf` | Fictional two-page bank statement (40 movements); regenerate with `backend/scripts/generate_bank_statement_fixture.py` |
+| `Facture.pdf` | Invoice used by the API and e2e suites (`E2E_SAMPLE_DOCUMENT` overrides it) |
+| `bank-statement.pdf` | Fictional two-page bank statement (40 movements) |
 | `commercial-invoice.png` · `10986_tutorial_invoice_logo_left.png` | Printed invoice samples |
 | `Facture RETOUCHE remplie AVEC TVA.png` · `facturehandwritten.png` · `handwritten.jpg` | Handwritten invoices and receipts |
 | `fiche.webp` · `../bulletin-pdf.png` | Payslip templates (demo data) |

@@ -22,7 +22,7 @@ Statuses were implicit state machines spread over the code:
 - **One owner per lifecycle.** Run transitions go through `app/lifecycle.py` `move_run`, checked
   against `RUN_TRANSITIONS`, each one a conditional UPDATE: a final state is never overwritten.
   Workflow status is server-owned: deploy activates, delete archives, save never changes it.
-- **The database enforces the invariants** with CHECK constraints (migration 0003): valid
+- **The database enforces the invariants** with CHECK constraints in the migration: valid
   statuses, outcome only on done runs, active exactly when deployed.
 - **Statuses are enums end to end**: `Literal` types in the schemas and ORM columns, OpenAPI
   enums, generated TypeScript unions, `Record<Status, …>` maps in the UI so a new state is a
@@ -30,7 +30,7 @@ Statuses were implicit state machines spread over the code:
 - **Async UI flows are discriminated unions** holding only their phase's data (`TestRun`), or a
   single in-flight state (`BuilderSync`). States nothing produces are removed.
 - **One page documents them all**: [LIFECYCLES.md](../LIFECYCLES.md), linked from CONTEXT.md and
-  CLAUDE.md for people and coding agents.
+  the docs hub, for people and coding agents.
 
 ## Consequences
 
