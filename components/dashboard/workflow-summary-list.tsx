@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import type { Workflow } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 function passRateLabel(rate: number): string {
   return `${Math.round(rate * 100)}%`;
@@ -18,7 +17,7 @@ export function WorkflowSummaryList({ workflows }: { workflows: Workflow[] }) {
   if (!workflows.length) return null;
 
   const sorted = [...workflows].sort((a, b) => {
-    const rank = (w: Workflow) => (w.status === "active" ? 0 : w.status === "paused" ? 1 : 2);
+    const rank = (w: Workflow) => (w.status === "active" ? 0 : 1);
     return rank(a) - rank(b) || a.name.localeCompare(b.name);
   });
 
@@ -59,10 +58,7 @@ export function WorkflowSummaryList({ workflows }: { workflows: Workflow[] }) {
             </div>
             <Badge
               variant={workflow.status === "active" ? "success" : "outline"}
-              className={cn(
-                "shrink-0 text-[10px]",
-                workflow.status === "paused" && "border-warning/40 text-warning"
-              )}
+              className="shrink-0 text-[10px]"
             >
               {tStatus(workflow.status)}
             </Badge>

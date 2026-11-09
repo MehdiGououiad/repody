@@ -2,10 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import {
+  byRuleStatus,
   isRuleFailure,
   RuleStatusIcon,
   ruleStatusColor,
-  ruleStatusLabel,
 } from "@/components/shared/rule-status";
 import type { RunAuditDetail, RunAuditRule } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -38,7 +38,7 @@ export function RunDetailedRuleCard({
 
   const scopeLabel = rule.scope === "cross" ? t("cross") : t("intra");
   const sevLabel = rule.severity === "reject" ? t("reject") : t("flag");
-  const statusText = passed ? t("passed") : ruleStatusLabel(rule.status);
+  const statusText = t(rule.status);
 
   const pad = size === "sm" ? "px-4 py-3" : "px-5 py-4";
   const detailPad =
@@ -123,14 +123,9 @@ export function RunRuleResultsDetailed({
   audit: RunAuditDetail;
   size?: "sm" | "md";
 }) {
-  const failed = audit.ruleResults.filter((r) => isRuleFailure(r.status));
-  const passed = audit.ruleResults.filter((r) => r.status === "passed");
-  const other = audit.ruleResults.filter((r) => r.status !== "passed" && !isRuleFailure(r.status));
-  const ordered = [...failed, ...other, ...passed];
-
   return (
     <>
-      {ordered.map((rule) => (
+      {byRuleStatus(audit.ruleResults).map((rule) => (
         <RunDetailedRuleCard key={rule.id} rule={rule} size={size} />
       ))}
     </>

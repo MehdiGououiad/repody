@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import type { BuilderSync } from "@/components/workflow/builder/use-builder-workflow";
 
 export function BuilderTopbar({
   name,
   deployed,
-  saving,
+  sync,
   schemaReady,
   onNameChange,
   onSaveDraft,
@@ -19,7 +20,7 @@ export function BuilderTopbar({
 }: {
   name: string;
   deployed: boolean;
-  saving: boolean;
+  sync: BuilderSync;
   schemaReady: boolean;
   onNameChange: (name: string) => void;
   onSaveDraft: () => void;
@@ -65,12 +66,12 @@ export function BuilderTopbar({
           variant="ghost"
           size="sm"
           className="h-8 gap-1.5 text-xs"
-          disabled={saving}
+          disabled={sync !== "idle"}
           onClick={onSaveDraft}
         >
           <Save className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">
-            {saving ? tCommon("saving") : tCommon("saveDraft")}
+            {sync === "saving" ? tCommon("saving") : tCommon("saveDraft")}
           </span>
         </Button>
 
@@ -78,16 +79,22 @@ export function BuilderTopbar({
           <Button
             size="sm"
             className="h-8 gap-1.5 text-xs"
-            disabled={!schemaReady}
+            disabled={!schemaReady || sync !== "idle"}
             onClick={onDeploy}
           >
             <Rocket className="h-3.5 w-3.5" />
-            <span>{tCommon("deployWorkflow")}</span>
+            <span>{sync === "deploying" ? tCommon("deploying") : tCommon("deployWorkflow")}</span>
           </Button>
         ) : (
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={onDeploy}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            disabled={sync !== "idle"}
+            onClick={onDeploy}
+          >
             <Play className="h-3.5 w-3.5" />
-            <span>{tCommon("redeployWorkflow")}</span>
+            <span>{sync === "deploying" ? tCommon("deploying") : tCommon("redeployWorkflow")}</span>
           </Button>
         )}
       </div>

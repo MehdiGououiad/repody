@@ -19,8 +19,11 @@ test.describe("UI wiring", () => {
     });
     expect(configStatus).toBe(200);
 
-    await page.getByRole("button", { name: "Notifications" }).click();
-    await expect(page.locator("[data-sonner-toast]")).toContainText("Coming soon");
+    await page
+      .getByRole("button", { name: /Search audits, workflows/ })
+      .first()
+      .click();
+    await expect(page.getByRole("option", { name: "Settings" })).toBeVisible();
     expect(serverErrors).toEqual([]);
   });
 

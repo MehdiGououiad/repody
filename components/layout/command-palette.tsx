@@ -12,26 +12,21 @@ import {
 } from "@/components/ui/command";
 import { DialogTitle } from "@/components/ui/dialog";
 
-interface CommandLink {
-  groupKey: "navigate" | "audits" | "workflows";
-  labelKey: string;
-  fallback: string;
-  href: string;
-}
+type Group = "navigate" | "workflows";
 
-const commandItems: CommandLink[] = [
-  { groupKey: "navigate", labelKey: "nav.dashboard", fallback: "Dashboard", href: "/dashboard" },
-  { groupKey: "navigate", labelKey: "nav.workflows", fallback: "Workflows", href: "/workflows" },
-  { groupKey: "navigate", labelKey: "nav.audits", fallback: "Audit Reports", href: "/audits" },
-  {
-    groupKey: "workflows",
-    labelKey: "common.newWorkflow",
-    fallback: "New workflow",
-    href: "/workflows/new",
-  },
+const commands: {
+  group: Group;
+  label: Parameters<ReturnType<typeof useTranslations>>[0];
+  href: string;
+}[] = [
+  { group: "navigate", label: "nav.dashboard", href: "/dashboard" },
+  { group: "navigate", label: "nav.workflows", href: "/workflows" },
+  { group: "navigate", label: "nav.audits", href: "/audits" },
+  { group: "navigate", label: "nav.settings", href: "/settings" },
+  { group: "workflows", label: "common.newWorkflow", href: "/workflows/new" },
 ];
 
-const groupKeys: CommandLink["groupKey"][] = ["navigate", "audits", "workflows"];
+const groups: Group[] = ["navigate", "workflows"];
 
 export function CommandPalette({
   open,
@@ -50,19 +45,19 @@ export function CommandPalette({
       <CommandInput placeholder={tBar("searchPlaceholder")} />
       <CommandList>
         <CommandEmpty>{tBar("noResults")}</CommandEmpty>
-        {groupKeys.map((group) => (
+        {groups.map((group) => (
           <CommandGroup key={group} heading={tBar(`commandGroups.${group}`)}>
-            {commandItems
-              .filter((i) => i.groupKey === group)
-              .map((i) => (
+            {commands
+              .filter((command) => command.group === group)
+              .map((command) => (
                 <CommandItem
-                  key={i.href}
+                  key={command.href}
                   onSelect={() => {
-                    router.push(i.href);
+                    router.push(command.href);
                     onOpenChange(false);
                   }}
                 >
-                  {i.labelKey.startsWith("_inline_") ? i.fallback : t(i.labelKey)}
+                  {t(command.label)}
                 </CommandItem>
               ))}
           </CommandGroup>

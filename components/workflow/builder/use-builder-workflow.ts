@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   emptyTestSession,
+  type TestRun,
   type TestSessionState,
 } from "@/components/workflow/builder/test-run-session";
 import { browserApi, unwrap } from "@/lib/api/openapi-client";
@@ -26,6 +27,12 @@ function rememberApiKey(workflowId: string, key: string | null | undefined) {
   sessionStorage.setItem(`workflow-api-key:${workflowId}`, key);
 }
 
+/**
+ * What the builder is sending to the server: one thing at a time, so a deploy never races a
+ * save and a double click never issues two API keys. See docs/LIFECYCLES.md.
+ */
+export type BuilderSync = "idle" | "saving" | "deploying";
+
 export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "edit") {
   const isNew = mode === "new";
   const t = useTranslations("workflows.builder");
@@ -38,7 +45,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const [rules, setRules] = useState<WorkflowRule[]>(workflow.rules);
   const [deployed, setDeployed] = useState(!!workflow.deployedAt);
   const [apiKey, setApiKey] = useState(() => readStoredApiKey(workflow.id, workflow.apiKey));
-  const [saving, setSaving] = useState(false);
+  const [sync, setSync] = useState<BuilderSync>("idle");
   const [activeWorkflowId, setActiveWorkflowId] = useState(workflow.id);
   const [testSession, setTestSession] = useState<TestSessionState>(emptyTestSession);
   const [savedFingerprint, setSavedFingerprint] = useState(() =>
@@ -58,11 +65,15 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
 
   const patchTestSession = (patch: Partial<TestSessionState>) =>
     setTestSession((prev) => ({ ...prev, ...patch }));
+  const setTestRun = (next: SetStateAction<TestRun>) =>
+    setTestSession((prev) => ({
+      ...prev,
+      run: typeof next === "function" ? next(prev.run) : next,
+    }));
 
   const buildPayload = () => ({
     name: name || workflow.name,
     description: workflow.description,
-    status: deployed ? ("active" as const) : ("draft" as const),
     owner: workflow.owner,
     documents,
     rules,
@@ -109,6 +120,8 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   };
 
   const handleDeploy = async () => {
+    if (sync !== "idle") return;
+    setSync("deploying");
     try {
       const id = await persistWorkflow({ navigate: false, toastOnSuccess: false });
       const data = await unwrap(
@@ -133,33 +146,37 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       });
     } catch {
       toast.error(tCommon("saveFailed"));
-    }
-  };
-
-  const handleSaveDraft = async (toastOnSuccess = true) => {
-    setSaving(true);
-    try {
-      await persistWorkflow({ navigate: isNew, toastOnSuccess });
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : tCommon("saveFailed"));
     } finally {
-      setSaving(false);
+      setSync("idle");
     }
   };
 
-  const persistRef = useRef(persistWorkflow);
+  const save = async ({ silent }: { silent: boolean }) => {
+    if (sync !== "idle") return;
+    setSync("saving");
+    try {
+      await persistWorkflow({ navigate: !silent && isNew, toastOnSuccess: !silent });
+    } catch (e) {
+      if (!silent) toast.error(e instanceof Error ? e.message : tCommon("saveFailed"));
+    } finally {
+      setSync("idle");
+    }
+  };
+
+  const handleSaveDraft = () => save({ silent: false });
+
+  const saveRef = useRef(save);
 
   useEffect(() => {
-    persistRef.current = persistWorkflow;
+    saveRef.current = save;
   });
 
+  // Autosave an existing workflow 2.5 s after the last edit, when nothing else is in flight.
   useEffect(() => {
-    if (!dirty || saving || isNew) return;
-    const timer = window.setTimeout(() => {
-      void persistRef.current({ navigate: false, toastOnSuccess: false }).catch(() => {});
-    }, 2500);
+    if (!dirty || sync !== "idle" || isNew) return;
+    const timer = window.setTimeout(() => void saveRef.current({ silent: true }), 2500);
     return () => window.clearTimeout(timer);
-  }, [dirty, saving, isNew, name, documents, rules]);
+  }, [dirty, sync, isNew, name, documents, rules]);
 
   return {
     step,
@@ -172,10 +189,11 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     setRules,
     deployed,
     apiKey,
-    saving,
+    sync,
     activeWorkflowId,
     testSession,
     patchTestSession,
+    setTestRun,
     handleDeploy,
     handleSaveDraft,
     persistWorkflow,

@@ -43,13 +43,8 @@
     "searchPlaceholder": "Search audits, workflows…",
     "language": "Language",
     "toggleTheme": "Toggle theme",
-    "notifications": "Notifications",
-    "help": "Help",
-    "history": "History",
-    "comingSoon": "Coming soon.",
     "commandGroups": {
       "navigate": "Navigate",
-      "audits": "Audits",
       "workflows": "Workflows"
     },
     "noResults": "No results found."
@@ -76,6 +71,7 @@
     "backendOffline": "Backend offline — start Docker or run uvicorn",
     "backendChecking": "Checking API…",
     "saving": "Saving…",
+    "deploying": "Deploying…",
     "saveFailed": "Could not save workflow",
     "delete": "Delete",
     "confirm": "Confirm",
@@ -170,6 +166,7 @@
       "validationRules": "Validation rules",
       "passed": "Passed",
       "failed": "Failed",
+      "skipped": "Skipped",
       "fieldsExtracted": "{count} fields extracted",
       "rulesPassed": "{passed} / {total} rules passed",
       "rulesFailed": "{count} failed",
@@ -219,7 +216,6 @@
       "passed": "Passed",
       "failed": "Failed",
       "warning": "Warning",
-      "running": "Running",
       "failedWithRules": "Failed ({count, plural, one {# rule} other {# rules}})"
     }
   },
@@ -228,7 +224,6 @@
     "description": "Your data extraction and validation pipelines.",
     "status": {
       "active": "Active",
-      "paused": "Paused",
       "draft": "Draft"
     },
     "card": {

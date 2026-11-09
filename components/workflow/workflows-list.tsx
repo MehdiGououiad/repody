@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ChevronRight, FileEdit, Pause, Play, Trash2, TrendingUp } from "lucide-react";
+import { Activity, ChevronRight, FileEdit, Play, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -11,13 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { browserApi } from "@/lib/api/openapi-client";
-import type { Workflow } from "@/lib/types";
+import type { Workflow, WorkflowStatus } from "@/lib/types";
 import { cn, formatDateTime, formatNumber, formatPercent } from "@/lib/utils";
 
-const statusConfig = {
-  active: { variant: "success" as const, Icon: Play, key: "active" as const },
-  paused: { variant: "warning" as const, Icon: Pause, key: "paused" as const },
-  draft: { variant: "outline" as const, Icon: FileEdit, key: "draft" as const },
+const statusConfig: Record<
+  WorkflowStatus,
+  { variant: "success" | "outline"; Icon: typeof Play; key: WorkflowStatus }
+> = {
+  active: { variant: "success", Icon: Play, key: "active" },
+  draft: { variant: "outline", Icon: FileEdit, key: "draft" },
 };
 
 function WorkflowCheckbox({
@@ -149,7 +151,7 @@ export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {workflows.map((w) => {
-          const cfg = statusConfig[w.status as keyof typeof statusConfig] ?? statusConfig.draft;
+          const cfg = statusConfig[w.status];
           const isSelected = selected.has(w.id);
           return (
             <div

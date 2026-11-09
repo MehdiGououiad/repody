@@ -16,7 +16,7 @@ import Papa from "papaparse";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
 import { formatFieldValue } from "@/components/audit/run-report/report-shared";
-import { isRuleFailure, ruleStatusLabel } from "@/components/shared/rule-status";
+import { byRuleStatus } from "@/components/shared/rule-status";
 import { Button } from "@/components/ui/button";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
 import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
@@ -57,7 +57,7 @@ function buildCsv(
   }
   rows.push([], [t("validationRules")], ["ID", t("field"), "Scope", t("status"), t("source")]);
   for (const r of audit.ruleResults) {
-    rows.push([r.name, r.expression, r.scope, ruleStatusLabel(r.status), r.detail]);
+    rows.push([r.name, r.expression, r.scope, t(r.status), r.detail]);
   }
   // escapeFormulae: cells starting with = + - @ cannot run as spreadsheet formulas.
   return Papa.unparse(rows, { quotes: true, escapeFormulae: true });
@@ -211,10 +211,6 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
     downloadCsv(csv, `audit-${audit.id}-${ts}.csv`);
   };
 
-  const failed = audit.ruleResults.filter((r) => isRuleFailure(r.status));
-  const passed = audit.ruleResults.filter((r) => r.status === "passed");
-  const other = audit.ruleResults.filter((r) => r.status !== "passed" && !isRuleFailure(r.status));
-
   const ts = new Date(audit.createdAt).toLocaleString(locale, {
     year: "numeric",
     month: "long",
@@ -319,7 +315,7 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
               {t("validationRules")}
             </h2>
           </div>
-          {[...failed, ...other, ...passed].map((rule) => (
+          {byRuleStatus(audit.ruleResults).map((rule) => (
             <RunDetailedRuleCard key={rule.id} rule={rule} size="md" />
           ))}
         </section>

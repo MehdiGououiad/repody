@@ -36,10 +36,11 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
     setRules,
     deployed,
     apiKey,
-    saving,
+    sync,
     activeWorkflowId,
     testSession,
     patchTestSession,
+    setTestRun,
     handleDeploy,
     handleSaveDraft,
     persistWorkflow,
@@ -53,7 +54,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
       <BuilderTopbar
         name={name}
         deployed={deployed}
-        saving={saving}
+        sync={sync}
         schemaReady={schemaReady}
         onNameChange={setName}
         onSaveDraft={() => handleSaveDraft()}
@@ -78,7 +79,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                 rules={rules}
                 onChange={setStep}
                 tSteps={tSteps}
-                testHasResults={!!testSession.result}
+                testHasResults={testSession.run.phase === "done"}
               />
 
               <div className="mt-6 border-t border-border pt-4 space-y-2.5 px-1">
@@ -121,12 +122,14 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                       documents={documents}
                       rules={rules}
                       deployed={deployed}
+                      sync={sync}
                       onDeploy={handleDeploy}
                       onBeforeRun={() =>
                         persistWorkflow({ navigate: false, toastOnSuccess: false })
                       }
                       testSession={testSession}
                       onTestSessionChange={patchTestSession}
+                      onTestRunChange={setTestRun}
                     />
                   ) : null}
                 </div>

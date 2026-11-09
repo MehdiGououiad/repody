@@ -2,14 +2,18 @@
 
 import { CheckCircle2, Loader2, Play, Rocket } from "lucide-react";
 import { useTranslations } from "next-intl";
+import type { Dispatch, SetStateAction } from "react";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { Button } from "@/components/ui/button";
 import { ApiPanel } from "@/components/workflow/api-panel/api-panel";
 import { TestRunResults } from "@/components/workflow/builder/test-run-results";
 import {
   formatUploadSize,
+  type TestRun,
   type TestSessionState,
+  withProgress,
 } from "@/components/workflow/builder/test-run-session";
+import type { BuilderSync } from "@/components/workflow/builder/use-builder-workflow";
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { runErrorFromUnknown } from "@/lib/api/api-error";
@@ -45,6 +49,7 @@ function TestRunPanel({
   onBeforeRun,
   session,
   onSessionChange,
+  onRunChange,
   t,
 }: {
   workflowId: string;
@@ -53,39 +58,32 @@ function TestRunPanel({
   onBeforeRun?: () => Promise<string>;
   session: TestSessionState;
   onSessionChange: (patch: Partial<TestSessionState>) => void;
+  onRunChange: Dispatch<SetStateAction<TestRun>>;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const { phase, progress, result, error, errorRunId, filesByDocId, uploadMeta } = session;
+  const { run, filesByDocId, uploadMeta } = session;
+  const running = run.phase === "running";
   const hasFiles = Object.keys(filesByDocId).length > 0;
   const stepLabels = clientStepLabels(t);
 
   const runTest = async () => {
-    onSessionChange({
-      phase: "running",
-      progress: clientProgress(stepLabels, "save-workflow"),
-      error: null,
-      errorRunId: null,
-    });
-
+    if (running) return;
+    onRunChange({ phase: "running", progress: clientProgress(stepLabels, "save-workflow") });
     try {
       const id = onBeforeRun ? await onBeforeRun() : workflowId;
-      const data = await runWorkflow(
+      const result = await runWorkflow(
         id,
         { documents, rules, filesByDocId },
         {
           clientLabels: stepLabels,
-          onProgress: (progress: RunProgress) => onSessionChange({ progress }),
+          onProgress: (progress: RunProgress) =>
+            onRunChange((prev) => withProgress(prev, progress)),
         }
       );
-      onSessionChange({ result: data, phase: "done", progress: null });
+      onRunChange({ phase: "done", result });
     } catch (error) {
       const { message, runId } = runErrorFromUnknown(error);
-      onSessionChange({
-        error: message,
-        errorRunId: runId ?? null,
-        phase: "idle",
-        progress: null,
-      });
+      onRunChange({ phase: "failed", error: message, runId: runId ?? null });
     }
   };
 
@@ -118,26 +116,22 @@ function TestRunPanel({
         <Button
           className="w-full gap-2 sm:w-auto sm:min-w-[12rem]"
           onClick={runTest}
-          disabled={phase === "running"}
+          disabled={running}
         >
-          {phase === "running" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-          {phase === "running" ? t("test.running") : t("test.runBtn")}
+          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+          {running ? t("test.running") : t("test.runBtn")}
         </Button>
-        {!hasFiles && phase === "idle" ? (
+        {!hasFiles && !running ? (
           <p className="text-[11px] text-on-surface-variant text-center sm:text-left">
             {t("test.noFilesHint")}
           </p>
         ) : null}
-        {error ? (
-          <RunErrorAlert title={t("test.errorTitle")} message={error} runId={errorRunId} />
+        {run.phase === "failed" ? (
+          <RunErrorAlert title={t("test.errorTitle")} message={run.error} runId={run.runId} />
         ) : null}
       </section>
 
-      <TestRunResults phase={phase} progress={progress} result={result} />
+      <TestRunResults run={run} />
     </div>
   );
 }
@@ -150,10 +144,12 @@ export function TestDeployStep({
   documents,
   rules,
   deployed,
+  sync,
   onDeploy,
   onBeforeRun,
   testSession,
   onTestSessionChange,
+  onTestRunChange,
 }: {
   workflowId: string;
   name: string;
@@ -162,10 +158,12 @@ export function TestDeployStep({
   documents: DocumentDef[];
   rules: WorkflowRule[];
   deployed: boolean;
+  sync: BuilderSync;
   onDeploy: () => void;
   onBeforeRun?: () => Promise<string>;
   testSession: TestSessionState;
   onTestSessionChange: (patch: Partial<TestSessionState>) => void;
+  onTestRunChange: Dispatch<SetStateAction<TestRun>>;
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
@@ -179,6 +177,7 @@ export function TestDeployStep({
         onBeforeRun={onBeforeRun}
         session={testSession}
         onSessionChange={onTestSessionChange}
+        onRunChange={onTestRunChange}
         t={t}
       />
 
@@ -199,9 +198,13 @@ export function TestDeployStep({
                 {t("deploy.readyHint")}
               </p>
             </div>
-            <Button onClick={onDeploy} className="gap-2 shrink-0 w-full sm:w-auto">
+            <Button
+              onClick={onDeploy}
+              disabled={sync !== "idle"}
+              className="gap-2 shrink-0 w-full sm:w-auto"
+            >
               <Rocket className="h-4 w-4" />
-              {tCommon("deployWorkflow")}
+              {sync === "deploying" ? tCommon("deploying") : tCommon("deployWorkflow")}
             </Button>
           </div>
         ) : (
@@ -218,10 +221,11 @@ export function TestDeployStep({
                 variant="outline"
                 size="sm"
                 onClick={onDeploy}
+                disabled={sync !== "idle"}
                 className="gap-1.5 h-8 text-xs shrink-0 w-full sm:w-auto"
               >
                 <Play className="h-3.5 w-3.5" />
-                {tCommon("redeployWorkflow")}
+                {sync === "deploying" ? tCommon("deploying") : tCommon("redeployWorkflow")}
               </Button>
             </div>
 

@@ -27,6 +27,8 @@ import { useQueryParam } from "@/lib/hooks/use-query-param";
 import type { Audit, AuditStatus } from "@/lib/types";
 import { formatDateTime, formatNumber } from "@/lib/utils";
 
+const AUDIT_STATUSES: AuditStatus[] = ["passed", "failed", "warning"];
+
 function AuditSearchInput({
   id,
   initialValue,
@@ -66,7 +68,9 @@ export function AuditList({ audits }: { audits: Audit[] }) {
   const tCommon = useTranslations("common");
 
   const [urlQuery, setUrlQuery] = useQueryParam("q");
-  const [status, setStatus] = useQueryParam("status", "all");
+  const [statusParam, setStatus] = useQueryParam("status", "all");
+  // An audit is a finished run: its status is the outcome. Anything else in the URL means all.
+  const status = AUDIT_STATUSES.find((s) => s === statusParam) ?? "all";
   const [workflow, setWorkflow] = useQueryParam("workflow", "all");
 
   const workflowOptions = useMemo(
@@ -93,7 +97,7 @@ export function AuditList({ audits }: { audits: Audit[] }) {
   const activeFilters = [
     status !== "all" && {
       key: "status",
-      label: `${t("filters.status")}: ${t(`status.${status as AuditStatus}`)}`,
+      label: `${t("filters.status")}: ${t(`status.${status}`)}`,
       clear: () => setStatus(null),
     },
     workflow !== "all" && {
@@ -130,10 +134,11 @@ export function AuditList({ audits }: { audits: Audit[] }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">{t("filters.allStatuses")}</SelectItem>
-            <SelectItem value="passed">{t("status.passed")}</SelectItem>
-            <SelectItem value="failed">{t("status.failed")}</SelectItem>
-            <SelectItem value="warning">{t("status.warning")}</SelectItem>
-            <SelectItem value="running">{t("status.running")}</SelectItem>
+            {AUDIT_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {t(`status.${s}`)}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={workflow} onValueChange={(v) => setWorkflow(v === "all" ? null : v)}>

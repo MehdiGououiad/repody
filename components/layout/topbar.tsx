@@ -1,10 +1,9 @@
 "use client";
 
-import { Bell, HelpCircle, History, Moon, Search, Sun } from "lucide-react";
+import { Moon, Search, Sun } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 import { UserMenu } from "@/components/auth/user-menu";
 import { useTheme } from "@/components/providers/theme-provider";
 import { Button } from "@/components/ui/button";
@@ -69,37 +68,6 @@ export function TopBar() {
         <LanguageSwitcher />
         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={tBar("toggleTheme")}>
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          aria-label={tBar("notifications")}
-          onClick={() => toast.message(tBar("notifications"), { description: tBar("comingSoon") })}
-        >
-          <Bell className="h-4 w-4" />
-          <span
-            className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-accent-blue ring-2 ring-card"
-            aria-hidden="true"
-          />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden sm:inline-flex"
-          aria-label={tBar("help")}
-          onClick={() => toast.message(tBar("help"), { description: tBar("comingSoon") })}
-        >
-          <HelpCircle className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="hidden sm:inline-flex"
-          aria-label={tBar("history")}
-          onClick={() => toast.message(tBar("history"), { description: tBar("comingSoon") })}
-        >
-          <History className="h-4 w-4" />
         </Button>
         <UserMenu />
       </div>

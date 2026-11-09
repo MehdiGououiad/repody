@@ -43,13 +43,8 @@
     "searchPlaceholder": "Rechercher des audits, workflows…",
     "language": "Langue",
     "toggleTheme": "Changer de thème",
-    "notifications": "Notifications",
-    "help": "Aide",
-    "history": "Historique",
-    "comingSoon": "Bientôt disponible.",
     "commandGroups": {
       "navigate": "Naviguer",
-      "audits": "Audits",
       "workflows": "Workflows"
     },
     "noResults": "Aucun résultat."
@@ -76,6 +71,7 @@
     "backendOffline": "API hors ligne — lancez Docker ou uvicorn",
     "backendChecking": "Vérification de l'API…",
     "saving": "Enregistrement…",
+    "deploying": "Déploiement…",
     "saveFailed": "Impossible d'enregistrer le workflow",
     "delete": "Supprimer",
     "confirm": "Confirmer",
@@ -170,6 +166,7 @@
       "validationRules": "Règles de validation",
       "passed": "Validée",
       "failed": "Échouée",
+      "skipped": "Ignorée",
       "fieldsExtracted": "{count} champs extraits",
       "rulesPassed": "{passed} / {total} règles validées",
       "rulesFailed": "{count} échouée(s)",
@@ -219,7 +216,6 @@
       "passed": "Validé",
       "failed": "Échec",
       "warning": "Avertissement",
-      "running": "En cours",
       "failedWithRules": "Échec ({count, plural, one {# règle} other {# règles}})"
     }
   },
@@ -228,7 +224,6 @@
     "description": "Vos pipelines d'extraction et de validation.",
     "status": {
       "active": "Actif",
-      "paused": "En pause",
       "draft": "Brouillon"
     },
     "card": {
