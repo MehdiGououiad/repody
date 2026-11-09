@@ -146,28 +146,40 @@ def _left_type(condition: Condition, type_of: Callable[[str], str | None]) -> st
 def condition_issue(condition: Condition, types: Mapping[str, str] | None = None) -> str | None:
     """Why a condition cannot be saved, or None. ``types`` (field_key -> template type) adds
     the checks that need the schema: known fields, and operators that fit their types."""
-    agg = condition.table_aggregate
-    if agg:
-        if not agg.table_field.strip():
-            return "Choose the table field to aggregate."
-        if agg.fn != "count_rows_where" and not agg.amount_column.strip():
-            return "Choose the column to sum."
-    elif not condition.left.value.strip():
-        return "Choose a field on the left."
-    if condition.arithmetic_op and not (
-        condition.left_extra and condition.left_extra.value.strip()
-    ):
-        return "Choose the second operand of the arithmetic."
-    if condition.operator not in UNARY_OPERATORS and not (
-        condition.right and condition.right.value.strip()
-    ):
-        return "Enter a value or field on the right."
-    if types is None:
-        return None
+    issue = _incomplete(condition)
+    if issue is None and types is not None:
+        issue = _unknown_field(condition, types) or _mistyped(condition, types)
+    return issue
 
+
+def _incomplete(condition: Condition) -> str | None:
+    """A part of the condition the builder left empty."""
+    agg = condition.table_aggregate
+    if agg and not agg.table_field.strip():
+        return "Choose the table field to aggregate."
+    if agg and agg.fn != "count_rows_where" and not agg.amount_column.strip():
+        return "Choose the column to sum."
+    if not agg and not condition.left.value.strip():
+        return "Choose a field on the left."
+    extra = condition.left_extra
+    if condition.arithmetic_op and not (extra and extra.value.strip()):
+        return "Choose the second operand of the arithmetic."
+    right = condition.right
+    if condition.operator not in UNARY_OPERATORS and not (right and right.value.strip()):
+        return "Enter a value or field on the right."
+    return None
+
+
+def _unknown_field(condition: Condition, types: Mapping[str, str]) -> str | None:
     for name in condition_fields(condition):
         if field_key(name) not in types:
             return f"Unknown field {name}: it is not in the document schemas."
+    return None
+
+
+def _mistyped(condition: Condition, types: Mapping[str, str]) -> str | None:
+    """An operator or literal that does not fit the types of the fields it reads."""
+    agg = condition.table_aggregate
     if agg and types[field_key(agg.table_field)] != TABLE_TYPE:
         return f"{agg.table_field} is not an object-array field."
     if condition.arithmetic_op and not agg:
