@@ -1,6 +1,4 @@
-"""Request dependencies: a database session and the caller."""
-
-from __future__ import annotations
+"""Request dependencies: a database session, the bearer token and the caller."""
 
 from collections.abc import AsyncIterator
 from typing import Annotated
@@ -22,18 +20,22 @@ async def get_session() -> AsyncIterator[AsyncSession]:
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 bearer = HTTPBearer(auto_error=False, description="Keycloak access token or workflow API key")
-BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
 
-def token_of(credentials: HTTPAuthorizationCredentials | None) -> str | None:
+def bearer_token(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
+) -> str | None:
+    """The request's bearer token: a Keycloak access token or a workflow API key."""
     return credentials.credentials if credentials else None
 
 
-def optional_user(credentials: BearerDep) -> User | None:
+TokenDep = Annotated[str | None, Depends(bearer_token)]
+
+
+def optional_user(token: TokenDep) -> User | None:
     """The signed-in user, None without a valid token (always the dev user without OIDC)."""
     if not get_settings().oidc_enabled:
         return DEV_USER
-    token = token_of(credentials)
     if token is None:
         return None
     try:

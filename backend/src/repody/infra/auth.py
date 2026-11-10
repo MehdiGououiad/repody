@@ -1,8 +1,6 @@
 """Who is calling: Keycloak users (JWT, verified with PyJWT against the realm JWKS) and
 workflow API keys (stored as SHA-256 hashes)."""
 
-from __future__ import annotations
-
 import hashlib
 import secrets
 from dataclasses import dataclass
@@ -44,13 +42,18 @@ class InvalidTokenError(Exception):
     pass
 
 
+# A Keycloak outage fails a request in seconds, not after PyJWT's default 30 s.
+JWKS_TIMEOUT_SECONDS = 5
+
+
 @lru_cache
 def _jwks(url: str) -> jwt.PyJWKClient:
-    return jwt.PyJWKClient(url, cache_keys=True, lifespan=300)
+    return jwt.PyJWKClient(url, cache_keys=True, timeout=JWKS_TIMEOUT_SECONDS)
 
 
 def user_from_token(token: str) -> User:
-    """Verify a Keycloak access token; roles come from realm roles and groups."""
+    """Verify a Keycloak access token (not an ID or refresh token: ``typ`` is Bearer) for the
+    configured audience; roles come from realm roles and groups."""
     settings = get_settings()
     issuer = (settings.oidc_issuer or "").rstrip("/")
     jwks_url = settings.oidc_jwks_url or f"{issuer}/protocol/openid-connect/certs"
@@ -66,6 +69,8 @@ def user_from_token(token: str) -> User:
         )
     except jwt.PyJWTError as exc:
         raise InvalidTokenError(str(exc)) from exc
+    if claims.get("typ") != "Bearer":
+        raise InvalidTokenError("Not an access token.")
     roles = {*((claims.get("realm_access") or {}).get("roles") or [])}
     roles |= {str(group).lstrip("/") for group in claims.get("groups") or []}
     return User(subject=str(claims["sub"]), roles=frozenset(roles) & ROLE_PERMISSIONS.keys())

@@ -21,15 +21,15 @@
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   fetchJson,
+  fetchProbe,
   findExecutable,
-  killListenerPort,
   parseEnvFile,
   ROOT,
   resolveExecutable,
   waitForLlamaServer,
-  waitForPortRelease,
 } from "./runtime-env.mjs";
 
 const DIR = path.join(ROOT, "deploy/llamacpp");
@@ -176,7 +176,7 @@ function isLlamaServer(pid) {
   return /llama-server/i.test(r.stdout || "");
 }
 
-/** Kill the server we started (PID file), then anything still bound to the port. */
+/** Stop the server we started (its PID file). Other programs on the port are left alone. */
 function stop() {
   const pid = fs.existsSync(pidFile) ? Number(fs.readFileSync(pidFile, "utf8").trim()) : 0;
   if (pid > 0 && isLlamaServer(pid)) {
@@ -191,7 +191,6 @@ function stop() {
     }
   }
   fs.rmSync(pidFile, { force: true });
-  killListenerPort(port);
   console.log(`Stopped ${spec.title} on :${port} (if it was running).`);
 }
 
@@ -230,7 +229,10 @@ if (cmd === "serve") await serve();
 else if (cmd === "stop") stop();
 else if (cmd === "restart") {
   stop();
-  waitForPortRelease(port, 5000);
+  // Wait for the old server to answer no more before starting the new one.
+  for (let i = 0; i < 25 && (await fetchProbe(`http://127.0.0.1:${port}/health`, 500)).ok; i++) {
+    await sleep(200);
+  }
   await serve();
 } else if (cmd === "verify") await verify();
 else if (cmd === "download") download();

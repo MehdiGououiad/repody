@@ -1,33 +1,21 @@
 "use client";
 
 import { AlertCircle, RefreshCw } from "lucide-react";
-import type { useTranslations } from "next-intl";
-
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { $api } from "@/lib/api/browser";
 
-export type ModelStatus = {
-  /** Whether the llama-server serves the model (undefined until loaded). */
-  available: boolean | undefined;
-  loaded: boolean;
-  error: boolean;
-  onRetry: () => void;
-};
-
-/** The document model is fixed (NuExtract via Repody VLM); show it and its live availability. */
-export function ProcessingSettings({
-  t,
-  status,
-}: {
-  t: ReturnType<typeof useTranslations>;
-  status: ModelStatus;
-}) {
-  const { error, loaded, available, onRetry } = status;
-  const offline = loaded && available === false;
+/** The document model is set by the platform (NuExtract on llama-server): show which one, and
+ * whether it is being served. */
+export function ProcessingSettings() {
+  const t = useTranslations("workflows.builder");
+  const config = $api.useQuery("get", "/v1/platform/config");
+  const offline = config.isSuccess && !config.data.modelAvailable;
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">
-      {error ? (
+      {config.isError ? (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/5 p-3"
@@ -41,7 +29,12 @@ export function ProcessingSettings({
               {t("extraction.configurationUnavailableHint")}
             </p>
           </div>
-          <Button variant="outline" size="sm" className="h-7 gap-1 text-[11px]" onClick={onRetry}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 gap-1 text-[11px]"
+            onClick={() => void config.refetch()}
+          >
             <RefreshCw className="h-3 w-3" />
             {t("extraction.retry")}
           </Button>
@@ -51,7 +44,7 @@ export function ProcessingSettings({
       <div className="max-w-lg space-y-1.5">
         <p className="text-xs font-semibold">{t("extraction.documentModelLabel")}</p>
         <div className="flex items-center gap-2 text-sm">
-          <span>Repody VLM</span>
+          <span className="font-mono">{config.data?.servedModel ?? "…"}</span>
           {offline ? (
             <Badge variant="danger" className="text-[10px]">
               {t("extraction.offlineBadge")}

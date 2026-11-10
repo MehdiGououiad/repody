@@ -41,16 +41,20 @@ Biome already covers, so the two linters never disagree about the same line.
   third-party framework demands (Starlette middleware, SDK adapters). Behaviour
   lives in module-level functions that take their state explicitly. A
   swappable dependency is a `typing.Protocol` with one real implementation
-  and a test fake - see `infra/storage/base.py`.
+  and a test fake - see `Store` in `backend/src/repody/infra/storage.py`.
 - **No pass-through re-exports.** Import from the module that defines a symbol.
   A barrel is acceptable only for a types-only module that is erased at compile
-  time, such as `lib/types/index.ts`.
-- **Raise `AppError` for application failures.** Services raise
-  `AppError(ErrorCode.X, message)`; one exception handler in `api/errors.py` maps it to the
-  HTTP status, `detail` and `Retry-After`. Inside `except`, raise `... from exc`.
+  time, such as `lib/types.ts`.
+- **Raise `AppError` for application failures.** Use cases raise
+  `AppError(status, message, retry_after=...)` (`backend/src/repody/app/errors.py`, plain Python
+  so the use cases stay framework-free); one handler in `backend/src/repody/main.py` answers
+  it with the status, `detail` and `Retry-After`. Inside `except`, raise `... from exc`.
 - **Shared helpers have one home.** Display formatting (durations, bytes,
-  percentages, dates) lives in `lib/utils.ts`; clipboard copy in
-  `lib/hooks/use-copy-to-clipboard.ts`; timed fetch in `lib/api/fetch-with-timeout.ts`.
+  percentages) lives in `lib/utils.ts`; dates render through
+  `components/shared/date-time.tsx`; clipboard copy in `lib/hooks/use-copy-to-clipboard.ts`.
+- **One source per contract.** Status values are Python `Literal`s; the database CHECKs, the
+  OpenAPI schema and the generated TypeScript types all come from them. The rule operators each
+  field type takes come from `GET /v1/catalog`, not a frontend copy.
 
 ## Backend Layers
 
@@ -68,10 +72,10 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 | Area | Expected shape | Review signal |
 |------|----------------|---------------|
-| Run state | Conditional UPDATEs (`app/execute.py` claim, `app/runs.py` `fail_run`) | A transition that does not match the current status changes nothing |
+| Run state | Conditional UPDATEs, all in `app/lifecycle.py` (`move_runs`, `fail_run`) | A transition that does not match the current status changes nothing |
 | Rules | Typed `Condition` models evaluated directly (`rules/evaluate.py`) | No generated expression text, no `dict` rules |
 | HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `queue.py` / `worker.py` deliver; `app/execute.py` processes | Worker claims the run, processes it, records terminal failure |
+| Worker layer | `infra/queue.py` / `worker.py` deliver; `app/execute.py` processes | Worker claims the run, processes it, records terminal failure |
 | Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
 | Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 
@@ -117,11 +121,11 @@ During day-to-day work, run the smallest command that covers the change:
 | Frontend code | `pnpm lint` and `pnpm typecheck` |
 | Unused files, exports or dependencies | `pnpm deadcode` |
 | API contract changes | `pnpm codegen:api` then `pnpm typecheck` |
-| Helm or client packaging | `pnpm deploy:check` |
+| Helm, Compose or images | `pnpm deploy:check` |
 
 ## Documentation Rules
 
-- `README.md`: product overview and two laptop paths (Mac zip vs git).
+- `README.md`: product overview and the laptop path.
 - `docs/README.md`: “I want to…” hub.
 - `docs/LOCAL.md` / `docs/CLUSTER.md`: laptop vs cluster how-tos.
 - `docs/COMMANDS.md`: canonical command list (must match `package.json`).

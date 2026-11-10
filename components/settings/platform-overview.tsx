@@ -1,4 +1,5 @@
 import { BrainCircuit, Gauge, type LucideIcon } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import type { PlatformConfig } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
 
@@ -30,42 +31,46 @@ function MetricCard({
 }
 
 /** Read-only platform configuration and document-model status (no operator actions). */
-export function PlatformOverview({ platform }: { platform: PlatformConfig }) {
-  const runtimeRows = [
-    ["Inference endpoint", platform.llamacppBaseUrl],
-    ["Served model", platform.servedModel],
-    ["Pages per document", String(platform.maxPagesPerDocument ?? "All")],
-    ["Upload limit", `${platform.maxUploadFiles} files / ${formatBytes(platform.maxUploadBytes)}`],
-    ["Run timeout", `${platform.runTimeoutMinutes} min`],
-  ];
+export async function PlatformOverview({ platform }: { platform: PlatformConfig }) {
+  const [t, locale] = await Promise.all([getTranslations("settings"), getLocale()]);
+  const rows = [
+    [t("endpoint"), platform.llamacppBaseUrl],
+    [t("servedModel"), platform.servedModel],
+    [t("pagesPerDocument"), platform.maxPagesPerDocument ?? t("allPages")],
+    [
+      t("uploadLimit"),
+      t("uploadLimitValue", {
+        files: platform.maxUploadFiles,
+        size: formatBytes(platform.maxUploadBytes, locale),
+      }),
+    ],
+    [t("runTimeout"), t("minutes", { count: platform.runTimeoutMinutes })],
+  ] as const;
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Document model"
-          value={platform.modelAvailable ? "Ready" : "Unavailable"}
+          label={t("model")}
+          value={platform.modelAvailable ? t("ready") : t("unavailable")}
           detail={platform.servedModel}
           Icon={BrainCircuit}
         />
         <MetricCard
-          label="Cache"
-          value={platform.cacheEnabled ? "Enabled" : "Disabled"}
-          detail="Redis extraction cache"
+          label={t("cache")}
+          value={platform.cacheEnabled ? t("enabled") : t("disabled")}
+          detail={t("cacheDetail")}
           Icon={Gauge}
         />
       </div>
 
       <section className="panel-elevated rounded-xl overflow-hidden">
         <div className="px-6 py-5 border-b border-border bg-surface-container-low">
-          <h2 className="font-display text-lg font-semibold">Effective runtime configuration</h2>
-          <p className="text-sm text-on-surface-variant mt-1">
-            Values currently used by the API and workers. Environment changes require a service
-            restart.
-          </p>
+          <h2 className="font-display text-lg font-semibold">{t("runtimeTitle")}</h2>
+          <p className="text-sm text-on-surface-variant mt-1">{t("runtimeHint")}</p>
         </div>
         <dl className="grid sm:grid-cols-2 xl:grid-cols-3">
-          {runtimeRows.map(([label, value]) => (
+          {rows.map(([label, value]) => (
             <div key={label} className="px-6 py-4 border-b border-r border-border/70">
               <dt className="text-[11px] uppercase tracking-wider text-on-surface-variant">
                 {label}

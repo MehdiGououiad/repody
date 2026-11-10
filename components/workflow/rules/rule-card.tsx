@@ -13,15 +13,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { resolveDocumentFields, resolveTableFields } from "@/lib/rules/document-fields";
-import type { RuleValidationResult } from "@/lib/rules/rule-preview";
-import type {
-  DocumentDef,
-  RuleCondition,
-  RuleScope,
-  RuleSeverity,
-  WorkflowRule,
-} from "@/lib/types";
+import { useCatalog } from "@/lib/hooks/use-catalog";
+import { fieldOptions, tableOptions } from "@/lib/rules/document-fields";
+import type { DocumentDef, RuleCheck, RuleScope, RuleSeverity, WorkflowRule } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ConditionBuilder } from "./condition-builder";
 import { ScopeToggle } from "./scope-toggle";
@@ -35,7 +29,7 @@ export function RuleCard({
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
-  validation?: RuleValidationResult;
+  validation?: RuleCheck;
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
 }) {
@@ -44,17 +38,9 @@ export function RuleCard({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const isCross = rule.scope === "cross";
   const canCross = documents.length >= 2;
-  const fields = resolveDocumentFields(documents, rule.appliesTo);
-  const tableFields = resolveTableFields(documents, rule.appliesTo);
-
-  const conditions: RuleCondition[] = rule.conditions ?? [
-    {
-      id: "c0",
-      left: { kind: "field", value: "" },
-      operator: "==",
-      right: { kind: "literal", value: "" },
-    },
-  ];
+  const catalog = useCatalog();
+  const fields = fieldOptions(documents, rule.appliesTo);
+  const tables = catalog ? tableOptions(documents, rule.appliesTo, catalog) : [];
 
   const switchScope = (s: RuleScope) => {
     if (s === "intra") {
@@ -81,8 +67,6 @@ export function RuleCard({
       onChange({ appliesTo: [docId] });
     }
   };
-
-  const handleConditionsChange = (next: RuleCondition[]) => onChange({ conditions: next });
 
   const ruleIssues = validation?.issues ?? [];
 
@@ -164,11 +148,11 @@ export function RuleCard({
         </p>
 
         <ConditionBuilder
-          conditions={conditions}
+          conditions={rule.conditions}
           fields={fields}
-          tableFields={tableFields}
+          tables={tables}
           checks={validation?.checks ?? []}
-          onConditionsChange={handleConditionsChange}
+          onConditionsChange={(conditions) => onChange({ conditions })}
         />
         {ruleIssues.length > 0 && (
           <ul className="text-[11px] text-danger space-y-0.5 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 list-disc pl-5">

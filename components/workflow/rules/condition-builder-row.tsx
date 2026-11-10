@@ -3,7 +3,6 @@
 import { Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -13,340 +12,119 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ConditionLeft } from "@/components/workflow/rules/condition-left";
 import { OperandPicker } from "@/components/workflow/rules/condition-operand-picker";
-import { ARITH_OPS, NO_RIGHT } from "@/lib/rules/comparison-ops";
-import {
-  comparisonOpsForTemplateType,
-  literalInputKindForTemplateType,
-  NUMBER_TEMPLATE_TYPES,
-  resolveFieldTemplateType,
-} from "@/lib/rules/condition-input-kind";
-import type { DocumentFieldOption, TableFieldOption } from "@/lib/rules/document-fields";
-import type { ArithmeticOp, ComparisonOp, RuleCondition, TableAggregateLeft } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { literal } from "@/lib/rules/conditions";
+import { type FieldOption, type TableOption, typeOf } from "@/lib/rules/document-fields";
+import { isPresenceOp, literalInputKind, operatorsFor } from "@/lib/rules/operators";
+import type { Catalog, ComparisonOp, RuleCondition } from "@/lib/types";
+
+function Slot({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[9px] uppercase tracking-wider font-semibold text-on-surface-variant">
+        {label}
+      </span>
+      {children}
+    </div>
+  );
+}
 
 export function ConditionRow({
   condition,
   fields,
-  tableFields,
+  tables,
+  catalog,
   onChange,
   onRemove,
   canRemove,
 }: {
   condition: RuleCondition;
-  fields: DocumentFieldOption[];
-  tableFields: TableFieldOption[];
-  onChange: (patch: Partial<RuleCondition>) => void;
+  fields: FieldOption[];
+  tables: TableOption[];
+  catalog: Catalog;
+  onChange: (condition: RuleCondition) => void;
   onRemove: () => void;
   canRemove: boolean;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
   const tCommon = useTranslations("common");
-  const useAggregate = Boolean(condition.tableAggregate);
-  const activeTable =
-    tableFields.find((table) => table.token === condition.tableAggregate?.tableField) ??
-    tableFields[0];
-  const hasArith = Boolean(condition.arithmeticOp) && !useAggregate;
-  const noRight = NO_RIGHT.has(condition.operator);
-  const leftTemplateType =
-    condition.left.kind === "field"
-      ? resolveFieldTemplateType(condition.left.value, fields)
-      : undefined;
-  const rightTemplateType =
-    condition.right?.kind === "field"
-      ? resolveFieldTemplateType(condition.right.value, fields)
-      : undefined;
-  // Arithmetic and aggregates produce numbers; literals are typed like the left side.
-  const leftType = useAggregate || hasArith ? "number" : leftTemplateType;
-  const canArith = !leftTemplateType || NUMBER_TEMPLATE_TYPES.has(leftTemplateType);
-  const literalInputKind = literalInputKindForTemplateType(leftType ?? rightTemplateType);
-  const comparisonOps = comparisonOpsForTemplateType(leftType).map((definition) => ({
-    value: definition.value,
-    label: t(definition.key as Parameters<typeof t>[0]),
-    noRight: definition.noRight,
-  }));
+  const { left, right, operator } = condition;
+  // Arithmetic and aggregates produce numbers; a literal is read as the left side's type.
+  const leftType = left.kind === "field" ? typeOf(left.field, fields) : "number";
+  const rightType = right?.kind === "field" ? typeOf(right.field, fields) : undefined;
+  const operators = operatorsFor(leftType, catalog);
 
-  const toggleArith = () => {
-    if (hasArith) {
-      onChange({ arithmeticOp: undefined, leftExtra: undefined });
-    } else {
-      onChange({ arithmeticOp: "+", leftExtra: { kind: "field", value: "" } });
-    }
-  };
-
-  const toggleAggregate = () => {
-    if (useAggregate) {
-      onChange({ tableAggregate: undefined, left: { kind: "field", value: "" } });
-      return;
-    }
-    const table = tableFields[0];
+  const setOperator = (next: ComparisonOp) =>
     onChange({
-      tableAggregate: {
-        fn: "sum_rows_where",
-        tableField: table?.token ?? "",
-        amountColumn: "",
-        filterColumn: "",
-        filterContains: "",
-      },
-      arithmeticOp: undefined,
-      leftExtra: undefined,
+      ...condition,
+      operator: next,
+      right: isPresenceOp(next, catalog) ? null : (right ?? literal()),
     });
-  };
-
-  const updateAggregate = (patch: Partial<TableAggregateLeft>) => {
-    if (!condition.tableAggregate) return;
-    onChange({
-      tableAggregate: {
-        ...condition.tableAggregate,
-        ...patch,
-      },
-    });
-  };
 
   return (
     <div className="flex flex-wrap items-start gap-2 p-3 rounded-lg bg-surface-container-low border border-border group">
-      <div className="flex flex-col gap-1">
-        <span className="text-[9px] uppercase tracking-wider font-semibold text-on-surface-variant">
-          {t("left")}
-        </span>
-        <div className="flex items-center gap-1">
-          {tableFields.length > 0 ? (
-            <button
-              type="button"
-              onClick={toggleAggregate}
-              className={cn(
-                "h-8 px-2 rounded border text-[10px] font-semibold uppercase tracking-wide shrink-0",
-                useAggregate
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "bg-surface-container-high border-border text-on-surface-variant hover:border-outline"
-              )}
-            >
-              {t("tableAggregate")}
-            </button>
-          ) : null}
-          {useAggregate ? (
-            <div className="flex flex-wrap items-center gap-1">
-              <Select
-                value={condition.tableAggregate?.fn ?? "sum_rows_where"}
-                onValueChange={(value) =>
-                  updateAggregate({ fn: value as TableAggregateLeft["fn"] })
-                }
-              >
-                <SelectTrigger className="h-8 w-36 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sum_rows" className="text-xs">
-                    {t("aggSumRows")}
-                  </SelectItem>
-                  <SelectItem value="sum_rows_where" className="text-xs">
-                    {t("aggSumRowsWhere")}
-                  </SelectItem>
-                  <SelectItem value="count_rows_where" className="text-xs">
-                    {t("aggCountRowsWhere")}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <Select
-                value={condition.tableAggregate?.tableField ?? ""}
-                onValueChange={(value) => {
-                  updateAggregate({
-                    tableField: value,
-                    amountColumn: "",
-                    filterColumn: "",
-                  });
-                }}
-              >
-                <SelectTrigger className="h-8 w-40 text-xs font-mono">
-                  <SelectValue placeholder={t("pickTable")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {tableFields.map((table) => (
-                    <SelectItem key={table.token} value={table.token} className="text-xs font-mono">
-                      {table.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {condition.tableAggregate?.fn !== "count_rows_where" ? (
-                <Select
-                  value={condition.tableAggregate?.amountColumn ?? ""}
-                  onValueChange={(value) => updateAggregate({ amountColumn: value })}
-                >
-                  <SelectTrigger className="h-8 w-32 text-xs font-mono">
-                    <SelectValue placeholder={t("amountColumn")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(activeTable?.columns ?? []).map((column) => (
-                      <SelectItem
-                        key={column.name}
-                        value={column.name}
-                        className="text-xs font-mono"
-                      >
-                        {column.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-              {condition.tableAggregate?.fn !== "sum_rows" ? (
-                <>
-                  <Select
-                    value={condition.tableAggregate?.filterColumn ?? ""}
-                    onValueChange={(value) => updateAggregate({ filterColumn: value })}
-                  >
-                    <SelectTrigger className="h-8 w-32 text-xs font-mono">
-                      <SelectValue placeholder={t("filterColumn")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(activeTable?.columns ?? []).map((column) => (
-                        <SelectItem
-                          key={column.name}
-                          value={column.name}
-                          className="text-xs font-mono"
-                        >
-                          {column.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    value={condition.tableAggregate?.filterContains ?? ""}
-                    onChange={(event) => updateAggregate({ filterContains: event.target.value })}
-                    placeholder={t("filterContains")}
-                    className="h-8 w-44 text-xs font-mono"
-                  />
-                </>
-              ) : null}
-            </div>
-          ) : (
-            <>
-              <OperandPicker
-                operand={condition.left}
-                fields={fields.filter((field) => !field.tableParent)}
-                onChange={(operand) => onChange({ left: operand })}
-                allowLiteral={false}
-                placeholder={t("pickField")}
-              />
-              {canArith ? (
-                <button
-                  type="button"
-                  onClick={toggleArith}
-                  className={cn(
-                    "h-8 w-8 rounded border flex items-center justify-center text-[11px] font-bold transition-colors shrink-0",
-                    hasArith
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-surface-container-high border-border text-on-surface-variant hover:border-outline"
-                  )}
-                  title={hasArith ? t("removeArith") : t("addArith")}
-                >
-                  +
-                </button>
-              ) : null}
-            </>
-          )}
-        </div>
+      <Slot label={t("left")}>
+        <ConditionLeft
+          value={left}
+          fields={fields}
+          tables={tables}
+          catalog={catalog}
+          onChange={(next) => onChange({ ...condition, left: next })}
+        />
+      </Slot>
 
-        {hasArith ? (
-          <div className="flex items-center gap-1 pl-1">
-            <Select
-              value={condition.arithmeticOp ?? "+"}
-              onValueChange={(value) => onChange({ arithmeticOp: value as ArithmeticOp })}
-            >
-              <SelectTrigger className="h-8 w-14 text-sm font-mono">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ARITH_OPS.map((op) => (
-                  <SelectItem key={op.value} value={op.value} className="font-mono text-sm">
-                    {op.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <OperandPicker
-              operand={condition.leftExtra ?? { kind: "field", value: "" }}
-              fields={fields}
-              onChange={(operand) => onChange({ leftExtra: operand })}
-              allowLiteral={false}
-              placeholder={t("pickField")}
-            />
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <span className="text-[9px] uppercase tracking-wider font-semibold text-on-surface-variant">
-          {t("operator")}
-        </span>
-        <Select
-          value={condition.operator}
-          onValueChange={(value) => {
-            const operator = value as ComparisonOp;
-            const patch: Partial<RuleCondition> = { operator };
-            if (NO_RIGHT.has(operator)) patch.right = undefined;
-            else if (!condition.right) patch.right = { kind: "literal", value: "" };
-            onChange(patch);
-          }}
-        >
+      <Slot label={t("operator")}>
+        <Select value={operator} onValueChange={(value) => setOperator(value as ComparisonOp)}>
           <SelectTrigger className="h-8 w-44 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectLabel className="text-[10px]">{t("comparison")}</SelectLabel>
-              {comparisonOps
-                .filter((op) => !op.noRight)
+              {operators
+                .filter((op) => !isPresenceOp(op.value, catalog))
                 .map((op) => (
                   <SelectItem key={op.value} value={op.value} className="text-xs font-mono">
-                    {op.label}
+                    {t(op.key)}
                   </SelectItem>
                 ))}
             </SelectGroup>
             <SelectGroup>
               <SelectLabel className="text-[10px]">{t("existence")}</SelectLabel>
-              {comparisonOps
-                .filter((op) => op.noRight)
+              {operators
+                .filter((op) => isPresenceOp(op.value, catalog))
                 .map((op) => (
                   <SelectItem key={op.value} value={op.value} className="text-xs">
-                    {op.label}
+                    {t(op.key)}
                   </SelectItem>
                 ))}
             </SelectGroup>
           </SelectContent>
         </Select>
-      </div>
+      </Slot>
 
-      {!noRight ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] uppercase tracking-wider font-semibold text-on-surface-variant">
-            {t("right")}
-          </span>
+      {right ? (
+        <Slot label={t("right")}>
           <OperandPicker
-            operand={condition.right ?? { kind: "literal", value: "" }}
-            fields={fields}
-            onChange={(operand) => onChange({ right: operand })}
-            placeholder={t("pickFieldOrValue")}
-            literalInputKind={literalInputKind}
+            operand={right}
+            fields={fields.filter((field) => field.type !== catalog.tableType)}
+            onChange={(next) => onChange({ ...condition, right: next })}
+            inputKind={literalInputKind(leftType ?? rightType, catalog)}
           />
-        </div>
+        </Slot>
       ) : null}
 
       {canRemove ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] uppercase tracking-wider text-transparent select-none">
-            {"_"}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 opacity-0 group-hover:opacity-100 text-outline hover:text-danger"
-            onClick={onRemove}
-            aria-label={tCommon("remove")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="mt-5 h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-outline hover:text-danger"
+          onClick={onRemove}
+          aria-label={tCommon("remove")}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
       ) : null}
     </div>
   );

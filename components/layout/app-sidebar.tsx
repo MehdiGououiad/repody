@@ -2,14 +2,14 @@
 
 import { LogOut, Plus, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SignOutButton } from "@/components/auth/sign-out-button";
-import { useClientPathname } from "@/lib/hooks/use-hydrated";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
-  const pathname = useClientPathname();
+  const pathname = usePathname();
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
 

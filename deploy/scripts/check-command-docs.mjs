@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,10 +21,7 @@ const skipDirs = new Set([
 ]);
 
 const missing = [];
-const anchorCache = new Map();
 const commandPattern = /\bpnpm\s+([A-Za-z][A-Za-z0-9:_-]*)/g;
-const markdownLinkPattern = /!?\[[^\]]+\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
-const headingPattern = /^#{1,6}\s+(.+?)\s*#*\s*$/gm;
 const forbiddenText = [
   { pattern: /�/, label: "Unicode replacement character" },
   { pattern: /[ÂÃ]/, label: "mojibake marker" },
@@ -87,65 +84,6 @@ for (const abs of discoverMarkdownDocs()) {
     const line = text.slice(0, match.index).split(/\r?\n/).length;
     missing.push(`${relative(root, abs)}:${line} references missing pnpm script "${command}"`);
   }
-  for (const match of text.matchAll(markdownLinkPattern)) {
-    const target = match[1];
-    if (isExternal(target)) continue;
-    const line = text.slice(0, match.index).split(/\r?\n/).length;
-    const [rawPath, rawAnchor = ""] = target.split("#", 2);
-    const linkPath = rawPath.replace(/^<|>$/g, "");
-    const anchor = rawAnchor.replace(/>$/g, "");
-    if (!linkPath && anchor) {
-      if (!markdownAnchorsFor(abs, text).has(anchor)) {
-        missing.push(`${relative(root, abs)}:${line} references missing local anchor "#${anchor}"`);
-      }
-      continue;
-    }
-    if (!linkPath) continue;
-    const decoded = decodeURIComponent(linkPath);
-    const absTarget = resolve(dirname(abs), decoded);
-    if (relative(root, absTarget).startsWith("..")) {
-      missing.push(`${relative(root, abs)}:${line} references local link outside repo "${target}"`);
-      continue;
-    }
-    if (!existsSync(absTarget)) {
-      missing.push(`${relative(root, abs)}:${line} references missing local link "${target}"`);
-      continue;
-    }
-    if (anchor && absTarget.endsWith(".md")) {
-      if (!markdownAnchorsFor(absTarget).has(anchor)) {
-        missing.push(`${relative(root, abs)}:${line} references missing local anchor "${target}"`);
-      }
-    }
-  }
-}
-
-function isExternal(target) {
-  return /^[a-z][a-z0-9+.-]*:/i.test(target) || target.startsWith("//");
-}
-
-function markdownAnchorsFor(abs, knownText = null) {
-  const cached = anchorCache.get(abs);
-  if (cached) return cached;
-  const anchors = markdownAnchors(knownText ?? readFileSync(abs, "utf8"));
-  anchorCache.set(abs, anchors);
-  return anchors;
-}
-
-function markdownAnchors(text) {
-  const anchors = new Set();
-  for (const match of text.matchAll(headingPattern)) {
-    anchors.add(markdownAnchor(match[1]));
-  }
-  return anchors;
-}
-
-function markdownAnchor(heading) {
-  return heading
-    .replace(/`([^`]+)`/g, "$1")
-    .toLowerCase()
-    .replace(/[^\p{Letter}\p{Number}\s-]/gu, "")
-    .trim()
-    .replace(/\s+/g, "-");
 }
 
 if (missing.length) {
@@ -153,4 +91,4 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log("ok: documented pnpm commands, local links, local anchors, and doc hygiene");
+console.log("ok: documented pnpm commands and doc hygiene (links: lychee in CI)");

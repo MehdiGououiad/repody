@@ -76,11 +76,11 @@ jobs:
           enable-cache: true
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: "3.13"
+          python-version: "3.14"
       - name: Install backend
-        run: uv sync --extra dev
+        run: uv sync
       - name: Lint and format check (ruff)
-        run: uv run ruff format --check src tests scripts && uv run ruff check src tests scripts
+        run: uv run ruff format --check src tests scripts alembic && uv run ruff check src tests scripts alembic
       - name: Typecheck (pyright)
         run: uv run pyright
       - name: Layer contracts (import-linter)
@@ -107,7 +107,7 @@ jobs:
           version: 12.16.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24"
+          node-version: "26"
           cache: pnpm
       - name: Install
         run: pnpm install --frozen-lockfile
@@ -117,12 +117,19 @@ jobs:
         run: pnpm lint
       - name: Typecheck
         run: pnpm typecheck
+      - name: Unit tests (Vitest)
+        run: pnpm test:web
       - name: Dead code check
         run: pnpm deadcode
       - name: OpenAPI type drift check
         run: git diff --exit-code lib/api/generated/schema.d.ts
       - name: Deploy checks
         run: pnpm deploy:check
+      - name: Markdown links and anchors
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --include-fragments --no-progress "*.md" "docs/**/*.md" "deploy/**/*.md" "e2e/**/*.md"
+          fail: true
       - name: Build
         run: pnpm build
         env:
@@ -152,7 +159,7 @@ jobs:
           version: 12.16.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24"
+          node-version: "26"
           cache: pnpm
       - name: Install frontend deps
         run: pnpm install --frozen-lockfile

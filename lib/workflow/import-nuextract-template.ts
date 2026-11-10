@@ -1,160 +1,88 @@
 /**
- * Import / export NuExtract JSON templates ↔ workflow SchemaField rows.
+ * Import a NuExtract JSON template as workflow schema fields (the API builds the template back
+ * from them: `repody/extraction/nuextract.py`).
  *
- * Official constructors (NuExtract3):
- * - leaf type strings (TYPES.md)
- * - nested objects `{ ... }`
- * - lists `["type"]`
- * - enums `["a", "b", …]` (≥2 choices)
- * - multi-enums `[["A", "B", …]]`
- * - object arrays `[{ ... }]` (one prototype object)
+ * NuExtract3 constructors: leaf type strings, nested objects `{…}`, lists `["type"]`, enums
+ * `["a", "b", …]` (≥2 choices), multi-enums `[["A", "B", …]]`, object arrays `[{…}]`.
  *
- * @see https://huggingface.co/numind/NuExtract3
  * @see https://huggingface.co/numind/NuExtract3/blob/main/TYPES.md
  */
 
-import {
-  DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  isStructureTemplateType,
-  withListTemplateType,
-} from "@/lib/nuextract-types";
-import type { SchemaField } from "@/lib/types";
-import { newSchemaField } from "@/lib/workflow/new-items";
+import { withList } from "@/lib/schema/template-types";
+import type { Catalog, SchemaField } from "@/lib/types";
+import { DEFAULT_TEMPLATE_TYPE, newSchemaField } from "@/lib/workflow/new-items";
 
 export type ImportNuextractTemplateResult =
   | { ok: true; fields: SchemaField[] }
   | { ok: false; error: "invalid_json" | "not_object" | "empty" };
 
-/** HF prose aliases -> TYPES.md names. */
+/** Prose aliases used on the model card -> TYPES.md names. */
 const TYPE_ALIASES: Record<string, string> = {
   email: "email-address",
   phone: "phone-number",
   tel: "phone-number",
 };
+const PARAMETERISED = /^[a-z][a-z-]*:[A-Za-z0-9_-]+$/;
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const isStrings = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "string");
+const choices = (values: string[]) => values.map((v) => v.trim()).filter(Boolean);
 
-function newField(partial: Pick<SchemaField, "name"> & Partial<SchemaField>): SchemaField {
-  return newSchemaField(partial);
-}
+export function importNuextractTemplate(
+  raw: string,
+  catalog: Catalog
+): ImportNuextractTemplateResult {
+  /** A leaf type the API accepts; anything else falls back to the default type. */
+  const leaf = (value: string): string => {
+    const type = TYPE_ALIASES[value.trim()] ?? value.trim();
+    const known = catalog.templateTypes.some((t) => t.value === type && t.group !== "structure");
+    return known || PARAMETERISED.test(type) ? type : DEFAULT_TEMPLATE_TYPE;
+  };
 
-function leafType(raw: string): string {
-  const value = raw.trim();
-  if (!value) return DEFAULT_NUEXTRACT_TEMPLATE_TYPE;
-  return TYPE_ALIASES[value] ?? value;
-}
+  const fieldsOf = (object: Record<string, unknown>): SchemaField[] =>
+    Object.entries(object)
+      .filter(([name]) => name.trim())
+      .map(([name, node]) => fieldOf(name.trim(), node));
 
-function fieldsFromObject(obj: Record<string, unknown>): SchemaField[] {
-  const fields: SchemaField[] = [];
-  for (const [name, value] of Object.entries(obj)) {
-    const key = name.trim();
-    if (!key) continue;
-    fields.push(fieldFromNode(key, value));
-  }
-  return fields;
-}
-
-function fieldFromNode(name: string, value: unknown): SchemaField {
-  if (typeof value === "string") {
-    return newField({ name, description: "", templateType: leafType(value) });
-  }
-
-  if (isPlainObject(value)) {
-    return newField({
-      name,
-      description: "",
-      templateType: "object",
-      children: fieldsFromObject(value),
-    });
-  }
-
-  if (Array.isArray(value)) {
-    return fieldFromArrayNode(name, value);
-  }
-
-  return newField({
-    name,
-    description: "",
-    templateType: DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  });
-}
-
-function fieldFromArrayNode(name: string, value: unknown[]): SchemaField {
-  // Official: object-array schema is a one-element list of a prototype object.
-  if (value.length > 0 && value.every((item) => isPlainObject(item))) {
-    const objectProto = value[0] as Record<string, unknown>;
-    return newField({
-      name,
-      description: "",
-      templateType: "object-array",
-      children: fieldsFromObject(objectProto),
-    });
-  }
-
-  // Official multi-enum: [["A", "B", "C"]] with ≥2 choices preferred.
-  if (
-    value.length === 1 &&
-    Array.isArray(value[0]) &&
-    (value[0] as unknown[]).every((item) => typeof item === "string")
-  ) {
-    const enumValues = (value[0] as string[]).map((item) => item.trim()).filter(Boolean);
-    return newField({
-      name,
-      description: "",
-      templateType: "multi-enum",
-      enumValues,
-    });
-  }
-
-  // Official list: ["string"] - single type string in an array.
-  if (value.length === 1 && typeof value[0] === "string") {
-    const scalar = leafType(value[0]);
-    if (!isStructureTemplateType(scalar)) {
-      return newField({
-        name,
-        description: "",
-        templateType: withListTemplateType(scalar, true),
-      });
+  const fieldOf = (name: string, node: unknown): SchemaField => {
+    if (typeof node === "string") return newSchemaField({ name, templateType: leaf(node) });
+    if (isObject(node)) {
+      return newSchemaField({ name, templateType: "object", children: fieldsOf(node) });
     }
-  }
+    if (Array.isArray(node)) {
+      const [first] = node;
+      if (node.length > 0 && node.every(isObject)) {
+        // An object array is one prototype row.
+        return newSchemaField({
+          name,
+          templateType: "object-array",
+          children: fieldsOf(first as Record<string, unknown>),
+        });
+      }
+      if (node.length === 1 && isStrings(first)) {
+        return newSchemaField({ name, templateType: "multi-enum", enumValues: choices(first) });
+      }
+      if (node.length === 1 && typeof first === "string") {
+        return newSchemaField({ name, templateType: withList(leaf(first), true, catalog) });
+      }
+      if (node.length >= 2 && isStrings(node)) {
+        return newSchemaField({ name, templateType: "enum", enumValues: choices(node) });
+      }
+    }
+    return newSchemaField({ name, templateType: DEFAULT_TEMPLATE_TYPE });
+  };
 
-  // Official enum: ["yes", "no", …] - ≥2 choice strings.
-  if (value.length >= 2 && value.every((item) => typeof item === "string")) {
-    const strings = value.map((item) => String(item).trim()).filter(Boolean);
-    return newField({
-      name,
-      description: "",
-      templateType: "enum",
-      enumValues: strings,
-    });
-  }
-
-  return newField({
-    name,
-    description: "",
-    templateType: DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-  });
-}
-
-/** Parse pasted NuExtract template JSON into schema fields. */
-export function importNuextractTemplate(raw: string): ImportNuextractTemplateResult {
   const text = raw.trim();
   if (!text) return { ok: false, error: "empty" };
-
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text) as unknown;
+    parsed = JSON.parse(text);
   } catch {
     return { ok: false, error: "invalid_json" };
   }
-
-  if (!isPlainObject(parsed)) {
-    return { ok: false, error: "not_object" };
-  }
-
-  const fields = fieldsFromObject(parsed);
-  if (fields.length === 0) return { ok: false, error: "empty" };
-  return { ok: true, fields };
+  if (!isObject(parsed)) return { ok: false, error: "not_object" };
+  const fields = fieldsOf(parsed);
+  return fields.length ? { ok: true, fields } : { ok: false, error: "empty" };
 }

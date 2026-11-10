@@ -2,17 +2,17 @@
 
 import { LogOut, Menu, Plus, ShieldCheck, X } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { useClientPathname } from "@/lib/hooks/use-hydrated";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 export function MobileNav() {
-  const pathname = useClientPathname();
+  const pathname = usePathname();
   const t = useTranslations("nav");
   const tBrand = useTranslations("brand");
   const [open, setOpen] = useState(false);
@@ -20,7 +20,7 @@ export function MobileNav() {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label={t("openMenu")}>
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
@@ -48,7 +48,7 @@ export function MobileNav() {
             size="icon"
             className="text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
             onClick={() => setOpen(false)}
-            aria-label="Close menu"
+            aria-label={t("closeMenu")}
           >
             <X className="h-4 w-4" />
           </Button>

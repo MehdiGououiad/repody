@@ -1,13 +1,11 @@
-from __future__ import annotations
-
 import asyncio
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from alembic import context
 from repody.infra import models  # noqa: F401
 from repody.infra.db import Base
 from repody.settings import get_settings
@@ -20,7 +18,7 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return get_settings().database_url
+    return get_settings().database_url.get_secret_value()
 
 
 def run_migrations_offline() -> None:

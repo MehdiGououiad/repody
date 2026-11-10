@@ -1,5 +1,5 @@
 # Repody app chart: API, web, Taskiq workers, migrations job and Ingress.
-# PostgreSQL, Redis, S3/MinIO, the OIDC provider (Keycloak) and the NuExtract endpoint
+# PostgreSQL, Redis, S3-compatible storage, the OIDC provider (Keycloak) and the NuExtract endpoint
 # are external services you point the chart at.
 
 nameOverride: ""
@@ -10,13 +10,13 @@ imagePullSecrets: []
 images:
   backend:
     repository: repody-backend
-    tag: "0.2.0"
+    tag: "1.0.0"
     # Prefer a digest in GitOps (sha256:…); when set it wins over the tag.
     digest: ""
     pullPolicy: IfNotPresent
   web:
     repository: repody-web
-    tag: "0.2.0"
+    tag: "1.0.0"
     digest: ""
     pullPolicy: IfNotPresent
 
@@ -40,7 +40,7 @@ config:
   AUDIT_MARKDOWN_PROVIDER: nuextract
   AUDIT_LIGHTONOCR_BASE_URL: https://ocr.example.com/v1
   AUDIT_LIGHTONOCR_SERVED_MODEL: lightonocr-3-4b
-  AUDIT_CORS_ORIGINS: https://app.example.com
+  # AUDIT_CORS_ORIGINS: only for browser apps on other origins (the web app is same-origin).
   AUDIT_LOG_JSON: "true"
 
 migrations:
@@ -70,11 +70,12 @@ worker:
 
 web:
   replicas: 2
-  # Auth.js against Keycloak. The browser uses AUDIT_OIDC_ISSUER; set internalIssuer when
-  # pods cannot reach that public URL (e.g. http://keycloak.auth.svc:8080/realms/repody).
+  # Better Auth against Keycloak. The browser uses AUDIT_OIDC_ISSUER; set internalIssuer when
+  # pods cannot reach that public URL (e.g. http://keycloak.auth.svc:8080/realms/repody). Keycloak
+  # must then run with KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true (https://www.keycloak.org/server/hostname).
   keycloakClientId: repody-web
   internalIssuer: ""
-  # Public URL of the web app when it differs from the request host (Auth.js AUTH_URL).
+  # Public URL of the web app when it differs from the request host (BETTER_AUTH_URL).
   authUrl: ""
   resources:
     requests: { cpu: 100m, memory: 256Mi }
@@ -96,9 +97,6 @@ ingress:
   host: app.example.com
   # Optional: expose the API on its own host (integrators call /v1/... directly).
   apiHost: api.example.com
-  # Optional: route a files host to your S3/MinIO Service for browser presigned uploads.
-  filesHost: ""
-  filesService: { name: "", port: 9000 }
   tls:
     enabled: true
     secretName: repody-tls

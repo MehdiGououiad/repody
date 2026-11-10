@@ -6,13 +6,11 @@ import { ApiInfoScreen } from "@/components/workflow/api-panel/api-panel-info";
 import { ApiRunLoadingScreen } from "@/components/workflow/api-panel/api-panel-loading";
 import { ApiRunReportScreen } from "@/components/workflow/api-panel/api-panel-report";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
-import { runErrorFromUnknown } from "@/lib/api/api-error";
-import { type RunProgress, runWorkflow } from "@/lib/api/run";
-import { reportClientError } from "@/lib/report-error";
-import type { DocumentDef, RunAuditDetail } from "@/lib/types";
+import { useRun, useStartRun } from "@/lib/api/runs";
+import { errorMessage } from "@/lib/query/get-query-client";
+import type { DocumentDef } from "@/lib/types";
 
-type Screen = "info" | "loading" | "report";
-
+/** Try the deployed workflow as an integrator would: a run started with its API key. */
 export function ApiPanel({
   workflowId,
   workflowName,
@@ -27,49 +25,43 @@ export function ApiPanel({
   documents: DocumentDef[];
 }) {
   const t = useTranslations("workflows.builder");
-  const [screen, setScreen] = useState<Screen>("info");
-  const [report, setReport] = useState<RunAuditDetail | null>(null);
-  const [filesByDocId, setFilesByDocId] = useState<Record<string, File>>({});
-  const [runProgress, setRunProgress] = useState<RunProgress | null>(null);
-  const [runError, setRunError] = useState<string | null>(null);
-  const [runErrorRunId, setRunErrorRunId] = useState<string | null>(null);
+  const [files, setFiles] = useState<Record<string, File>>({});
+  const [runId, setRunId] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(true);
+  const start = useStartRun();
+  const run = useRun(runId);
 
-  const run = async () => {
-    if (Object.keys(filesByDocId).length === 0) return;
-    setScreen("loading");
-    setRunProgress(null);
-    setRunError(null);
-    setRunErrorRunId(null);
-    try {
-      const detail = await runWorkflow(
-        workflowId,
-        { documents, filesByDocId },
-        { apiKey, onProgress: setRunProgress }
-      );
-      setReport(detail);
-      setScreen("report");
-    } catch (error) {
-      reportClientError(error, { workflowId, surface: "api-panel" });
-      const { message, runId } = runErrorFromUnknown(error);
-      setRunError(message);
-      setRunErrorRunId(runId ?? null);
-      setScreen("info");
-    }
+  const startRun = () => {
+    setRunId(null);
+    setShowReport(true);
+    start.mutate(
+      { workflowId, documents, files, apiKey },
+      { onSuccess: ({ runId: id }) => setRunId(id) }
+    );
   };
 
-  if (screen === "loading") {
-    return <ApiRunLoadingScreen workflowName={workflowName} progress={runProgress} />;
+  if (start.isPending || run.phase === "running") {
+    return (
+      <ApiRunLoadingScreen
+        workflowName={workflowName}
+        progress={run.phase === "running" ? run.progress : null}
+      />
+    );
+  }
+  if (run.phase === "done" && showReport) {
+    return <ApiRunReportScreen report={run.result} onBack={() => setShowReport(false)} />;
   }
 
-  if (screen === "report" && report) {
-    return <ApiRunReportScreen report={report} onBack={() => setScreen("info")} />;
-  }
-
+  const error = start.isError
+    ? errorMessage(start.error, t("test.errorTitle"))
+    : run.phase === "failed"
+      ? run.error
+      : null;
   return (
     <>
-      {runError ? (
+      {error ? (
         <div className="mb-4">
-          <RunErrorAlert title={t("test.errorTitle")} message={runError} runId={runErrorRunId} />
+          <RunErrorAlert title={t("test.errorTitle")} message={error} runId={runId} />
         </div>
       ) : null}
       <ApiInfoScreen
@@ -78,9 +70,9 @@ export function ApiPanel({
         apiKey={apiKey}
         apiKeyHint={apiKeyHint}
         documents={documents}
-        onRun={run}
-        filesByDocId={filesByDocId}
-        onFilesChange={setFilesByDocId}
+        onRun={startRun}
+        filesByDocId={files}
+        onFilesChange={setFiles}
       />
     </>
   );

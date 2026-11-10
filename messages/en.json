@@ -9,7 +9,9 @@
     "audits": "Audit Reports",
     "settings": "Settings",
     "newWorkflow": "New Workflow",
-    "logout": "Sign out"
+    "logout": "Sign out",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu"
   },
   "auth": {
     "signInTitle": "Sign in to Repody",
@@ -83,7 +85,22 @@
     "pagesTruncated": "Only {sent} of {total} pages analyzed",
     "queuePosition": "Queue position {position} of {depth}",
     "queueWaiting": "Waiting in queue…",
-    "queueOrdered": "Runs are processed in order. Your position updates automatically."
+    "queueOrdered": "Runs are processed in order. Your position updates automatically.",
+    "steps": {
+      "queue": "Queued for a worker",
+      "waiting": "Waiting for a worker…",
+      "document": "Document",
+      "extract": "Extract · {document}",
+      "rules": "{count, plural, one {Check # rule} other {Check # rules}}",
+      "finalize": "Save the audit report",
+      "extracted": "{count, plural, =0 {No field extracted} one {# field extracted} other {# fields extracted}}",
+      "extractFailed": "Extraction failed — the report shows why"
+    },
+    "badges": {
+      "model": "Document model",
+      "rules": "Logic rule",
+      "cached": "Cached result"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -96,7 +113,7 @@
     "recentSubmissions": "Recent audits",
     "openFailures": "Needs attention",
     "viewAll": "View all",
-    "failedRulesBadge": "issues",
+    "failedRulesBadge": "{count, plural, one {# issue} other {# issues}}",
     "live": {
       "updated": "Live · updated {time}"
     },
@@ -118,7 +135,6 @@
       "auditsWeek": "Audits this week",
       "passRate": "Pass rate",
       "failures": "Rule failures",
-      "pendingReview": "Pending review",
       "trendUp": "Up {delta} from prior period",
       "trendDown": "Down {delta} from prior period"
     },
@@ -156,7 +172,6 @@
       "exportPdf": "Export PDF",
       "exportCsv": "Export CSV",
       "language": "Language",
-      "toggleLanguage": "Switch report language",
       "runOn": "Run on",
       "via": "via",
       "api": "API",
@@ -192,7 +207,8 @@
       "totalDuration": "Total duration",
       "extractionTime": "Extraction time",
       "validationTime": "Validation time",
-      "docExtracted": "{done} / {total} extracted"
+      "docExtracted": "{done} / {total} extracted",
+      "extractionFailed": "Extraction failed"
     },
     "table": {
       "id": "Audit ID",
@@ -201,8 +217,11 @@
       "timestamp": "Timestamp",
       "rows": "Rows",
       "summary": "{count, plural, =0 {No audits} one {# audit} other {# audits}}",
-      "filtered": "{filtered, number} {of} {total, number} audits",
-      "empty": "No audits match the current filters."
+      "empty": "No audits match the current filters.",
+      "total": "{total, plural, =0 {No audits} one {# audit} other {# audits}}",
+      "page": "Page {page} of {pages}",
+      "previous": "Previous page",
+      "next": "Next page"
     },
     "filters": {
       "searchPlaceholder": "Search by ID, entity, workflow…",
@@ -210,14 +229,17 @@
       "allStatuses": "All statuses",
       "workflow": "Workflow",
       "allWorkflows": "All workflows",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "day": "Day"
     },
     "status": {
       "passed": "Passed",
       "failed": "Failed",
       "warning": "Warning",
       "failedWithRules": "Failed ({count, plural, one {# rule} other {# rules}})"
-    }
+    },
+    "eyebrow": "Reports",
+    "exportCsv": "Export CSV"
   },
   "workflows": {
     "title": "Workflows",
@@ -300,13 +322,7 @@
         "errorTitle": "Test run failed",
         "errorRunIdHint": "Run ID — share with an operator or open the audit report for details.",
         "progress": {
-          "starting": "Starting test run…",
-          "saveWorkflow": "Save workflow",
-          "saveWorkflowDetail": "Persisting your latest schema and rules on the server",
-          "startRun": "Start audit job",
-          "startRunDetail": "Creating the audit run and dispatching to workers",
-          "pollRun": "Worker processing",
-          "pollRunDetail": "Document extraction, field mapping, and rule validation"
+          "starting": "Starting test run…"
         }
       },
       "deploy": {
@@ -315,9 +331,10 @@
         "readyTitle": "Ready to deploy",
         "readyHint": "Your schema and rules are configured. Deploy to generate your live API endpoint. Callers upload one file per document slot — extraction fields are already defined in the workflow.",
         "liveTitle": "Workflow is live",
-        "liveHint": "Your API endpoint is active. Upload one file per document slot; tag each file with your configured document type names via document_types.",
+        "liveHint": "Your API endpoint is active. Upload one file per document slot; tag each file with your configured document type names via documents.",
         "apiTitle": "API & integration",
-        "liveSubmitHint": "POST returns 202 with a runId. Poll GET /api/v1/runs/{runId} for results. Reports also appear in Audit Reports."
+        "liveSubmitHint": "POST returns 202 with a runId. Poll GET /api/v1/runs/'{runId}' for results. Reports also appear in Audit Reports.",
+        "eyebrow": "API"
       },
       "ingestion": {
         "severityReject": "Reject",
@@ -331,7 +348,8 @@
         "noDocsHint": "Go to step 1 to define your document types and fields.",
         "unnamedDoc": "Document",
         "ruleCount": "{count, plural, one {# rule} other {# rules}}",
-        "fieldCount": "{count, plural, one {# field} other {# fields}}"
+        "fieldCount": "{count, plural, one {# field} other {# fields}}",
+        "fileRejected": "Use one PDF, PNG, JPEG or WebP file within the upload limit."
       },
       "extraction": {
         "documentModelLabel": "Document model",
@@ -650,8 +668,15 @@
           "pickTable": "Table field",
           "amountColumn": "Amount column",
           "filterColumn": "Filter column",
-          "filterContains": "Contains text"
-        }
+          "filterContains": "Contains text",
+          "arithmeticOp": "Arithmetic operator",
+          "kinds": {
+            "field": "Field",
+            "arithmetic": "Arithmetic",
+            "aggregate": "Table"
+          }
+        },
+        "eyebrow": "Validation"
       },
       "api": {
         "live": "Live",
@@ -662,12 +687,12 @@
         "hideKey": "Hide API key",
         "testDocumentLabel": "Test document (PDF or image)",
         "testDocumentsLabel": "Test documents (one per slot)",
-        "testUploadHint": "Upload a file for each document slot. The API uses your configured document type names in document_types, in the same order as files.",
+        "testUploadHint": "Upload a file for each document slot. The API uses your configured document type names in documents, in the same order as files.",
         "testUploadRequired": "Upload at least one file to run extraction against your schema.",
         "documentSlotsLabel": "Document slots",
-        "schemaHint": "Extraction schema and validation rules are defined in this workflow — callers send files tagged with the document type names you configured (document_types), not field definitions.",
+        "schemaHint": "Extraction schema and validation rules are defined in this workflow — callers send files tagged with the document type names you configured (documents), not field definitions.",
         "fieldsCount": "{count, plural, one {# field} other {# fields}}",
-        "pollHint": "POST returns 202 with runId. Use document_types with your configured names (e.g. [\"Invoice\"]). Poll GET /api/v1/runs/{runId} for results.",
+        "pollHint": "POST returns 202 with runId. Use documents with your configured names (e.g. [\"Invoice\"]). Poll GET /api/v1/runs/'{runId}' for results.",
         "runTest": "Run a live test",
         "runTestHint": "Execute against your configured documents and see the full extraction report",
         "processing": "Processing documents…",
@@ -686,8 +711,7 @@
         "sourceTab": "Markdown source",
         "copy": "Copy",
         "copied": "Copied",
-        "copyFailed": "Could not copy to clipboard",
-        "pageCount": "{count, plural, one {# page} other {# pages}}"
+        "copyFailed": "Could not copy to clipboard"
       },
       "jsonOutput": {
         "title": "Structured extraction JSON",
@@ -712,8 +736,12 @@
         "draftSavedDetail": "Your changes are stored on the server.",
         "deployed": "Workflow deployed",
         "deployedDetail": "Pipeline is now live in production."
+      },
+      "documents": {
+        "eyebrow": "Schema"
       }
-    }
+    },
+    "eyebrow": "Pipelines"
   },
   "health": {
     "alerts": {
@@ -722,5 +750,34 @@
         "detail": "{count, plural, one {# run} other {# runs}} still running past the timeout."
       }
     }
+  },
+  "settings": {
+    "title": "Platform",
+    "eyebrow": "Settings",
+    "description": "Runtime configuration and document model status.",
+    "model": "Document model",
+    "ready": "Ready",
+    "unavailable": "Unavailable",
+    "cache": "Cache",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "cacheDetail": "Redis extraction cache",
+    "runtimeTitle": "Effective runtime configuration",
+    "runtimeHint": "Values currently used by the API and workers. Environment changes require a service restart.",
+    "endpoint": "Inference endpoint",
+    "servedModel": "Served model",
+    "pagesPerDocument": "Pages per document",
+    "allPages": "All",
+    "uploadLimit": "Upload limit",
+    "uploadLimitValue": "{files} files / {size}",
+    "runTimeout": "Run timeout",
+    "minutes": "{count} min"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "reported": "The error was reported. You can try again or refresh the page.",
+    "section": "This section failed to load. You can try again or go back to the dashboard.",
+    "retry": "Try again",
+    "dashboard": "Dashboard"
   }
 }

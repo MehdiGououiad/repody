@@ -4,37 +4,30 @@ and in-context examples go to llama-server's chat template (``chat_template_kwar
 https://huggingface.co/numind/NuExtract3-GGUF · https://github.com/numindai/nuextract
 """
 
-from __future__ import annotations
-
 import json
 from collections.abc import Iterator
 from typing import Any
 
 from repody.extraction import render
+from repody.schemas.catalog import scalar_type
 from repody.schemas.workflow import DocumentDef, SchemaField
 
 STRUCTURED_TEMPERATURE = 0.2
 EXACT_TEMPERATURE = 0.0  # the official in-context and Markdown examples use 0
-LIST_SUFFIX = "-list"  # platform spelling of a list type: `number-list` is `["number"]`
 
 
 def page_parts(
     data: bytes, mime: str, *, max_pages: int | None
 ) -> tuple[list[dict[str, Any]], int]:
-    """``(image parts, page count)``: PDF pages at 170 DPI (official), images as uploaded.
+    """``(image parts, page count)``: PDF pages at 170 DPI and images as PNG (as the model
+    card sends them; images upright, see ``render.open_image``).
 
     All pages go in one request, as the model card sends a multi-page PDF.
     """
     if mime == "application/pdf":
         pages, total = render.pdf_pages(data, max_pages=max_pages)
         return [render.image_part(page) for page in pages], total
-    return [render.image_part(data, mime)], 1
-
-
-def _choices(field: SchemaField) -> list[str]:
-    if len(field.enum_values) < 2:
-        raise ValueError(f"{field.template_type} field {field.name!r} needs at least 2 choices")
-    return field.enum_values
+    return [render.image_part(render.open_image(data))], 1
 
 
 def template_node(field: SchemaField) -> Any:
@@ -45,11 +38,11 @@ def template_node(field: SchemaField) -> Any:
         case "object-array":
             return [template(field.children)]
         case "enum":
-            return _choices(field)
+            return field.enum_values  # at least 2 choices (SchemaField validates it)
         case "multi-enum":
-            return [_choices(field)]
-        case kind if kind.endswith(LIST_SUFFIX) and kind != LIST_SUFFIX:
-            return [kind.removesuffix(LIST_SUFFIX)]
+            return [field.enum_values]
+        case kind if scalar_type(kind) != kind:  # `number-list` is `["number"]`
+            return [scalar_type(kind)]
         case kind:
             return kind
 

@@ -13,16 +13,24 @@ export type WorkflowRule = Schema["Rule-Output"];
 export type RuleScope = WorkflowRule["scope"];
 export type RuleSeverity = WorkflowRule["severity"];
 export type RuleCondition = Schema["Condition-Output"];
-export type ConditionOperand = Schema["Operand-Output"];
-export type TableAggregateLeft = Schema["TableAggregate-Output"];
 export type ComparisonOp = RuleCondition["operator"];
-export type ArithmeticOp = NonNullable<RuleCondition["arithmeticOp"]>;
+/** The left side of a condition: a field, arithmetic on two fields, or a table aggregate. */
+export type ConditionExpression = RuleCondition["left"];
+export type FieldRef = Schema["FieldRef-Output"];
+export type LiteralValue = Schema["LiteralValue-Output"];
+export type Arithmetic = Schema["Arithmetic-Output"];
+export type Aggregate = Schema["Aggregate-Output"];
+export type ConditionOperand = FieldRef | LiteralValue;
+export type ArithmeticOp = Arithmetic["op"];
+export type AggregateFn = Aggregate["fn"];
+export type RuleCheck = Schema["RuleCheck"];
+export type Catalog = Schema["Catalog"];
+export type TemplateTypeGroup = Schema["TemplateTypeInfo"]["group"];
 
 // Runs and audit reports
 export type RunProgress = Schema["RunProgress"];
 export type RunAuditDetail = Schema["AuditDetail"];
 export type RunAuditDocument = Schema["AuditDocument"];
-export type RunAuditField = Schema["AuditField"];
 export type RunAuditRule = Schema["AuditRule"];
 /** passed | failed | skipped (a value the rule needs was not extracted). */
 export type RuleStatus = RunAuditRule["status"];
@@ -30,13 +38,10 @@ export type RunAuditMetadata = Schema["RunTimings"];
 export type RunDocumentExtractionMeta = Schema["ExtractionMeta"];
 export type Audit = Schema["AuditListItem"];
 export type AuditStatus = Audit["status"];
-export type AuditListResponse = Schema["AuditList"];
 
 // Dashboard and platform
+export type Dashboard = Schema["Dashboard"];
 export type Kpi = Schema["Kpi"];
 export type PerformancePoint = Schema["DayRuns"];
 export type SeverityShare = Schema["SeverityShare"];
-export type QueueSnapshot = Schema["QueueCounts"];
 export type PlatformConfig = Schema["PlatformConfig"];
-/** The dashboard, and whether the API answered (a down API renders an empty dashboard). */
-export type DashboardBundle = Schema["Dashboard"] & { apiLive: boolean };

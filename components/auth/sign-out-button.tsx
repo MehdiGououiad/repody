@@ -1,43 +1,39 @@
 "use client";
 
-import { signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import type { ReactNode } from "react";
-import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
+import { type ReactNode, Suspense } from "react";
+import { useAccount } from "@/components/auth/account-context";
+import { signOutToLogin } from "@/lib/auth/client";
 
-type SignOutButtonProps = {
-  className?: string;
-  children: ReactNode;
-  onSignedOut?: () => void;
-};
+type SignOutButtonProps = { className?: string; children: ReactNode; onSignedOut?: () => void };
 
-export function SignOutButton({ className, children, onSignedOut }: SignOutButtonProps) {
+/** Signs out; disabled without Keycloak sign-in (and while the account loads). */
+export function SignOutButton(props: SignOutButtonProps) {
+  return (
+    <Suspense
+      fallback={
+        <button type="button" className={props.className} disabled>
+          {props.children}
+        </button>
+      }
+    >
+      <AccountSignOutButton {...props} />
+    </Suspense>
+  );
+}
+
+function AccountSignOutButton({ className, children, onSignedOut }: SignOutButtonProps) {
   const t = useTranslations("auth");
-  const { oidcEnabled, loading } = usePlatformAuth();
-
-  if (loading) {
-    return (
-      <button type="button" className={className} disabled>
-        {children}
-      </button>
-    );
-  }
-
-  if (!oidcEnabled) {
-    return (
-      <button type="button" className={className} disabled title={t("devModeHint")}>
-        {children}
-      </button>
-    );
-  }
-
+  const account = useAccount();
   return (
     <button
       type="button"
       className={className}
+      disabled={!account}
+      title={account ? undefined : t("devModeHint")}
       onClick={() => {
         onSignedOut?.();
-        void signOut({ redirectTo: "/login" });
+        void signOutToLogin();
       }}
     >
       {children}

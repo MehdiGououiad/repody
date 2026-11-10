@@ -28,9 +28,9 @@ export function resolveExecutable(name) {
   return findExecutable(name) || name;
 }
 
-/** `[command, args]` for `uv run --directory backend [--extra dev --extra otel] …`. */
+/** `[command, args]` for `uv run --directory backend [--extra otel] …` (dev tools come from the dev group). */
 export function uvBackend(args, { dev = false } = {}) {
-  const extras = dev ? ["--extra", "dev", "--extra", "otel"] : [];
+  const extras = dev ? ["--extra", "otel"] : [];
   return [
     resolveExecutable("uv"),
     ["run", "--directory", path.join(ROOT, "backend"), ...extras, ...args],
@@ -97,41 +97,6 @@ export function setEnvKeys(filePath, sets) {
   fs.writeFileSync(filePath, body);
 }
 
-/**
- * PowerShell pipeline yielding PIDs bound to `port` with no remote end (listeners).
- * Not `-State Listen`: Windows reports some detached listeners (e.g. llama-server) with
- * state 0, which that filter and netstat both miss. PIDs 0/4 are Idle/System (TIME_WAIT).
- */
-function winListeners(ports, property) {
-  return `Get-NetTCPConnection -LocalPort ${[ports].flat().join(",")} -ErrorAction SilentlyContinue | Where-Object { $_.RemoteAddress -in '0.0.0.0','::' -and $_.OwningProcess -gt 4 } | Select-Object -ExpandProperty ${property} -Unique`;
-}
-
-function winListenerPids(port) {
-  return winListeners(port, "OwningProcess");
-}
-
-/** Ports from `ports` that have a listener (one PowerShell call on Windows). */
-export function busyPorts(ports) {
-  if (process.platform === "win32") {
-    const r = spawnSync(
-      "powershell",
-      ["-NoProfile", "-Command", winListeners(ports, "LocalPort")],
-      {
-        encoding: "utf8",
-        shell: false,
-      }
-    );
-    return new Set((r.stdout || "").split(/\r?\n/).filter(Boolean).map(Number));
-  }
-  // lsof exit 1 = nothing listening
-  return new Set(
-    ports.filter(
-      (port) =>
-        spawnSync("lsof", ["-i", `TCP:${port}`, "-sTCP:LISTEN"], { shell: false }).status === 0
-    )
-  );
-}
-
 /** Parse a .env file with Node's built-in dotenv parser (util.parseEnv); {} when missing. */
 export function parseEnvFile(filePath) {
   return fs.existsSync(filePath) ? parseEnv(fs.readFileSync(filePath, "utf8")) : {};
@@ -167,71 +132,6 @@ export async function fetchProbe(url, timeoutMs = 5000, init = {}) {
       detail: error instanceof Error ? error.message : String(error),
     };
   }
-}
-
-export function listenerInfos(port) {
-  if (process.platform !== "win32") {
-    const result = spawnSync(
-      "sh",
-      ["-c", `lsof -nP -iTCP:${port} -sTCP:LISTEN 2>/dev/null || true`],
-      {
-        encoding: "utf8",
-        shell: false,
-      }
-    );
-    return (result.stdout || "")
-      .trim()
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => ({ pid: "", name: "", commandLine: line, missing: false }));
-  }
-
-  const commandText = [
-    `$ids = ${winListenerPids(port)};`,
-    "if ($ids) { foreach ($id in $ids) {",
-    '$p = Get-CimInstance Win32_Process -Filter "ProcessId=$id" -ErrorAction SilentlyContinue;',
-    'if ($p) { Write-Output ("{0}`t{1}`t{2}" -f $id, $p.Name, $p.CommandLine) }',
-    'else { Write-Output ("{0}`t<missing process>`tpossible stale Windows socket" -f $id) }',
-    "} }",
-  ].join(" ");
-  const result = spawnSync("powershell", ["-NoProfile", "-Command", commandText], {
-    encoding: "utf8",
-    shell: false,
-  });
-  return (result.stdout || "")
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((line) => {
-      const [pid = "", name = "", commandLine = ""] = line.split("\t");
-      return { pid, name, commandLine, missing: name === "<missing process>" };
-    });
-}
-
-export function killListenerPort(port) {
-  if (process.platform === "win32") {
-    const result = spawnSync(
-      "powershell",
-      [
-        "-NoProfile",
-        "-Command",
-        `$ids = ${winListenerPids(port)}; foreach ($id in $ids) { if ($id -and $id -ne $PID) { Stop-Process -Id $id -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 200; if (Get-Process -Id $id -ErrorAction SilentlyContinue) { taskkill /PID $id /F /T | Out-Null } } }`,
-      ],
-      { encoding: "utf8", shell: false }
-    );
-    if (result.stderr?.trim()) process.stderr.write(result.stderr);
-    return;
-  }
-  spawnSync("sh", ["-c", `fuser -k ${port}/tcp 2>/dev/null || true`], { shell: false });
-}
-
-export function waitForPortRelease(port, timeoutMs = 3000) {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (!listenerInfos(port).length) return true;
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
-  }
-  return !listenerInfos(port).length;
 }
 
 /** GET `url`; body is parsed JSON when possible, else raw text. */

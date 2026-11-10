@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Gavel, GitBranch, Timer, TrendingDown, TrendingUp } from "lucide-react";
+import { CheckCircle2, Gavel, GitBranch, TrendingDown, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { ChartContainer } from "@/components/dashboard/chart-container";
@@ -11,11 +11,10 @@ const ICONS: Record<Kpi["id"], React.ElementType> = {
   auditsWeek: GitBranch,
   passRate: CheckCircle2,
   failures: Gavel,
-  pendingReview: Timer,
 };
 
 /** Where fewer is better, a drop is good news. */
-const LOWER_IS_BETTER = new Set<Kpi["id"]>(["failures", "pendingReview"]);
+const LOWER_IS_BETTER = new Set<Kpi["id"]>(["failures"]);
 
 function formatKpi(id: Kpi["id"], value: number): string {
   return id === "passRate" ? `${(value * 100).toFixed(1)}%` : String(Math.round(value));

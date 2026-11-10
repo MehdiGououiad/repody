@@ -1,59 +1,61 @@
 [project]
 name = "repody"
-version = "0.2.0"
+version = "1.0.0"
 description = "Repody — document audit platform backend"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
   # HTTP API
-  "fastapi>=0.162.0",
+  "fastapi>=0.162.3",
   "uvicorn[standard]>=0.54.0",
-  "pydantic>=2.14.2",
+  "pydantic>=2.14.3",
   "pydantic-settings>=2.16.2",
   "python-multipart>=0.0.33",
-  "sse-starlette>=3.6.0",
   # Database
   "sqlalchemy[asyncio]>=2.1.8",
   "asyncpg>=0.32.0",
   "alembic>=1.20.1",
   # Queue, cache, rate limits
-  "taskiq[opentelemetry]>=0.13.0",
+  "taskiq>=0.13.0",
   "taskiq-redis>=1.2.4",
   "redis>=8.1.0",
-  "limits[async-redis]>=5.8.0",
-  # Extraction: llama-server (OpenAI-compatible), PDF rendering (PDFium) and PNG encoding, file types
-  "openai>=3.45.0",
-  "pypdfium2>=5.14.0",
+  # limits runs on redis-py (implementation="redispy"), the one Redis client.
+  "limits>=5.8.0",
+  # Extraction: llama-server (OpenAI-compatible); PDFium and Pillow render pages and also check
+  # that an upload is the PDF or image it claims to be.
+  "openai>=3.49.0",
+  "pypdfium2>=5.15.2",
   "pillow>=13.0.0",
-  "filetype>=1.2.0",
   # Storage, auth, logs and errors
-  "boto3>=1.43.123",
+  "boto3>=1.43.127",
   "pyjwt[crypto]>=2.15.1",
   "structlog>=26.1.0",
-  "sentry-sdk[fastapi]>=2.73.0",
+  "sentry-sdk[fastapi]>=2.74.0",
+  "json-repair>=0.64.9",
 ]
 
 [project.optional-dependencies]
-dev = [
-  "ruff>=0.17.3",
-  "pyright>=1.1.414",
-  "pytest>=9.2.0",
-  "pytest-asyncio>=1.4.1.post1",
-  "pytest-html>=4.2.0",
-  "pytest-cov>=7.1.0",
-  "respx>=0.23.1",
-  "httpx>=0.28.1",
-  "import-linter>=2.15",
-]
 # OpenTelemetry agent (`opentelemetry-instrument`, see scripts/docker-entrypoint.sh): the distro
-# configures the SDK from OTEL_* env and loads every installed instrumentation.
+# configures the SDK from OTEL_* env and loads every installed instrumentation, Taskiq's own
+# included. No SQLAlchemy instrumentation: it does not support SQLAlchemy 2.1 yet. Logs are
+# structlog JSON on stdout (collected into Loki), so no logging instrumentation either.
 otel = [
+  "taskiq[opentelemetry]>=0.13.0",
   "opentelemetry-distro>=0.66b2",
   "opentelemetry-exporter-otlp-proto-http>=1.45.2",
   "opentelemetry-instrumentation-fastapi>=0.66b2",
   "opentelemetry-instrumentation-httpx>=0.66b2",
-  "opentelemetry-instrumentation-sqlalchemy>=0.66b2",
-  "opentelemetry-instrumentation-logging>=0.66b2",
 ]
+[dependency-groups]
+# Development tools (PEP 735): `uv sync` and `uv run` install them; images use --no-dev.
+dev = [
+  "ruff>=0.17.4",
+  "pyright>=1.1.414",
+  "pytest>=9.2.0",
+  "pytest-asyncio>=1.4.1.post1",
+  "httpx>=0.28.1",
+  "import-linter>=2.16",
+]
+
 [tool.uv]
 package = true
 
@@ -66,14 +68,9 @@ packages = ["src/repody"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
-src = ["src", "tests", "scripts"]
 extend-exclude = ["alembic/versions"]
 
 [tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
 line-ending = "lf"
 docstring-code-format = true
 
@@ -96,31 +93,25 @@ select = [
   "G",     # logging format
   "T20",   # no stray print()
   "TID",   # tidy imports
+  "FAST",  # FastAPI idioms
+  "PT",    # pytest style
+  "S",     # security (bandit)
   "RUF",   # ruff-specific
 ]
 ignore = [
   "E501",  # the formatter wraps code; long strings and URLs stay readable
-  "B008",  # FastAPI declares dependencies and form fields in argument defaults
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
-# Absolute imports only: a reader should know where a symbol lives without
-# resolving the current module's position in the tree.
 ban-relative-imports = "all"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/conftest.py" = ["E402"]
-# CLI entry points report progress on stdout by design.
 "scripts/**" = ["T20"]
-# Tests assert on fixture arguments that linters read as unused, and live
-# journey tests print extraction output for the operator running them.
-"tests/**" = ["ARG001", "ARG002", "ARG005"]
-"tests/live/**" = ["ARG001", "ARG002", "ARG005", "T20"]
-# Pydantic deep-copies field defaults per instance, so a list/dict default is
-# safe here. Annotating these as ClassVar would drop them from the model.
-"src/repody/schemas/*.py" = ["RUF012"]
+# Tests assert, use fixed demo credentials and unused fixture arguments by design.
+"tests/**" = ["ARG001", "ARG002", "ARG005", "S101", "S105", "S106"]
+"tests/live/**" = ["T20"]
 
-# Layer contracts: `uv run lint-imports`.
 [tool.importlinter]
 root_package = "repody"
 include_external_packages = true
@@ -140,7 +131,7 @@ layers = [
 name = "Use cases and domain are framework-free"
 type = "forbidden"
 source_modules = ["repody.app", "repody.extraction", "repody.rules", "repody.schemas", "repody.infra"]
-forbidden_modules = ["fastapi", "starlette", "sse_starlette"]
+forbidden_modules = ["fastapi", "starlette"]
 
 [[tool.importlinter.contracts]]
 name = "Rules are pure"
@@ -149,9 +140,8 @@ source_modules = ["repody.rules"]
 forbidden_modules = ["sqlalchemy", "redis", "repody.infra", "repody.settings"]
 
 [tool.pyright]
-include = ["src", "tests", "scripts"]
-exclude = ["**/__pycache__", "**/.venv", "alembic/versions"]
-pythonVersion = "3.13"
+include = ["src", "tests", "scripts", "alembic/env.py"]
+pythonVersion = "3.14"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
 venvPath = "."
@@ -161,13 +151,15 @@ venv = ".venv"
 root = "tests"
 extraPaths = ["."]  # tests import shared helpers as `tests.*` (pytest pythonpath)
 
-[tool.pytest.ini_options]
+[tool.pytest]
+# strict: unknown config keys and markers, and xfail tests that pass, are errors.
+strict = true
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "-ra", "-m", "not live"]
+addopts = ["-ra", "-m", "not live"]
 markers = [
   "unit: pure tests, no services",
   "integration: the app on Postgres and Redis, runs processed inline",

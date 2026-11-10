@@ -1,14 +1,10 @@
 import json
 
-from tests.conftest import FACTURE_PDF
-from tests.integration.helpers import condition, invoice_workflow, rule
-
 from repody.extraction import client
 from repody.infra import queue
 from repody.settings import get_settings
-
-PDF = FACTURE_PDF.read_bytes()
-FILE = {"files": ("facture.pdf", PDF, "application/pdf")}
+from tests.files import FILE, PDF
+from tests.integration.helpers import condition, invoice_workflow, rule
 
 
 async def deploy(api, *rules) -> dict[str, str]:
@@ -60,16 +56,30 @@ async def test_test_run_uses_the_posted_draft(api, model_answer):
     assert report["status"] == "failed"
 
 
-async def test_extraction_error_leaves_rules_skipped(api, monkeypatch):
-    async def broken(_payload):
+async def test_extraction_error_is_on_the_report_and_skips_rules(api, monkeypatch):
+    async def broken(_payload, **_servers):
         raise RuntimeError("llama-server is down")
 
     monkeypatch.setattr(client, "chat", broken)
     await deploy(api, rule("total", condition("total_amount", "==", "6000")))
     started = await api.post("/v1/workflows/wf-run/runs", files=FILE)
-    report = (await api.get(f"/v1/runs/{started.json()['runId']}")).json()["result"]
+    state = (await api.get(f"/v1/runs/{started.json()['runId']}")).json()
+    report = state["result"]
     assert report["ruleResults"][0]["status"] == "skipped"
     assert report["documents"][0]["fields"] == []
+    assert report["documents"][0]["extraction"]["error"].startswith("Extraction failed")
+    extract = next(s for s in state["progress"]["steps"] if s["kind"] == "extract")
+    assert extract["failed"] is True
+
+
+async def test_unreadable_answer_is_reported(api, model_answer):
+    await deploy(api)
+    model_answer["text"] = "Sorry, I cannot read this document."
+    started = await api.post("/v1/workflows/wf-run/runs", files=FILE)
+    report = (await api.get(f"/v1/runs/{started.json()['runId']}")).json()["result"]
+    assert (
+        report["documents"][0]["extraction"]["error"] == "The model's answer is not a JSON object."
+    )
 
 
 async def test_run_input_errors(api):

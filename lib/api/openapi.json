@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Repody",
-    "version": "0.2.0"
+    "version": "1.0.0"
   },
   "paths": {
     "/v1/workflows": {
@@ -180,6 +180,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "maxLength": 64,
               "title": "Workflow Id"
             }
           }
@@ -225,6 +226,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "maxLength": 64,
               "title": "Workflow Id"
             }
           }
@@ -280,6 +282,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "maxLength": 64,
               "title": "Workflow Id"
             }
           }
@@ -321,6 +324,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "maxLength": 64,
               "title": "Workflow Id"
             }
           }
@@ -355,7 +359,7 @@
           "runs"
         ],
         "summary": "Start Run",
-        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).",
+        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).\nPoll ``GET /v1/runs/{run_id}`` until its status is done or failed.\n\nA caller that is neither gets 401 whether or not the workflow exists.",
         "operationId": "start_run_v1_workflows__workflow_id__runs_post",
         "security": [
           {
@@ -412,7 +416,7 @@
           "runs"
         ],
         "summary": "Get Run",
-        "description": "Status and live progress; the audit report once the run is done.",
+        "description": "Status and live progress (with the queue position while queued); the audit report once\nthe run is done.",
         "operationId": "get_run_v1_runs__run_id__get",
         "security": [
           {
@@ -454,14 +458,13 @@
         }
       }
     },
-    "/v1/runs/{run_id}/events": {
+    "/v1/audits": {
       "get": {
         "tags": [
           "runs"
         ],
-        "summary": "Run Events",
-        "description": "Server-Sent Events: the current state first, then each progress change until done.",
-        "operationId": "run_events_v1_runs__run_id__events_get",
+        "summary": "List Audits",
+        "operationId": "list_audits_v1_audits_get",
         "security": [
           {
             "HTTPBearer": []
@@ -469,23 +472,107 @@
         ],
         "parameters": [
           {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
+            "name": "q",
+            "in": "query",
+            "required": false,
             "schema": {
               "type": "string",
-              "title": "Run Id"
+              "maxLength": 200,
+              "description": "Part of the run id or workflow name.",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Part of the run id or workflow name."
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "passed",
+                    "warning",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
+            }
+          },
+          {
+            "name": "workflowId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflowid"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Runs created that UTC day.",
+              "title": "Day"
+            },
+            "description": "Runs created that UTC day."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
             }
           }
         ],
         "responses": {
           "200": {
-            "description": "Progress events",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
-              },
-              "text/event-stream": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AuditList"
+                }
+              }
             }
           },
           "422": {
@@ -501,13 +588,13 @@
         }
       }
     },
-    "/v1/audits": {
+    "/v1/audits/export.csv": {
       "get": {
         "tags": [
           "runs"
         ],
-        "summary": "List Audits",
-        "operationId": "list_audits_v1_audits_get",
+        "summary": "Export Audits",
+        "operationId": "export_audits_v1_audits_export_csv_get",
         "security": [
           {
             "HTTPBearer": []
@@ -515,35 +602,80 @@
         ],
         "parameters": [
           {
-            "name": "limit",
+            "name": "q",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
-              "default": 50,
-              "title": "Limit"
+              "type": "string",
+              "maxLength": 200,
+              "description": "Part of the run id or workflow name.",
+              "default": "",
+              "title": "Q"
+            },
+            "description": "Part of the run id or workflow name."
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "passed",
+                    "warning",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Outcome"
             }
           },
           {
-            "name": "offset",
+            "name": "workflowId",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "integer",
-              "default": 0,
-              "title": "Offset"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Workflowid"
             }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Runs created that UTC day.",
+              "title": "Day"
+            },
+            "description": "Runs created that UTC day."
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful Response",
+            "description": "Every matching audit.",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuditList"
-                }
-              }
+              "text/csv": {}
             }
           },
           "422": {
@@ -606,6 +738,49 @@
         }
       }
     },
+    "/v1/audits/{run_id}/export.csv": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Export Audit",
+        "operationId": "export_audit_v1_audits__run_id__export_csv_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fields and rule results.",
+            "content": {
+              "text/csv": {}
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/healthz/live": {
       "get": {
         "tags": [
@@ -634,7 +809,7 @@
           "platform"
         ],
         "summary": "Ready",
-        "description": "Postgres and Redis answer.",
+        "description": "Postgres and Redis answer (checked concurrently).",
         "operationId": "ready_v1_healthz_get",
         "responses": {
           "200": {
@@ -676,6 +851,33 @@
         ]
       }
     },
+    "/v1/catalog": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Get Catalog",
+        "description": "Field types the builder offers, and which of them rules compare in order or add up.",
+        "operationId": "get_catalog_v1_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/dashboard": {
       "get": {
         "tags": [
@@ -705,6 +907,108 @@
   },
   "components": {
     "schemas": {
+      "Aggregate-Input": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "aggregate",
+            "title": "Kind",
+            "default": "aggregate"
+          },
+          "fn": {
+            "type": "string",
+            "enum": [
+              "sum_rows",
+              "sum_rows_where",
+              "count_rows_where"
+            ],
+            "title": "Fn",
+            "default": "sum_rows"
+          },
+          "table": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Table",
+            "default": ""
+          },
+          "column": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Column",
+            "default": ""
+          },
+          "filterColumn": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Filtercolumn",
+            "default": ""
+          },
+          "filterContains": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Filtercontains",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "Aggregate",
+        "description": "Sum or count the rows of an object-array field, optionally filtered by a column.\n\n``column`` and ``filter_column`` are child field names as written in the schema."
+      },
+      "Aggregate-Output": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "aggregate",
+            "title": "Kind",
+            "default": "aggregate"
+          },
+          "fn": {
+            "type": "string",
+            "enum": [
+              "sum_rows",
+              "sum_rows_where",
+              "count_rows_where"
+            ],
+            "title": "Fn",
+            "default": "sum_rows"
+          },
+          "table": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Table",
+            "default": ""
+          },
+          "column": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Column",
+            "default": ""
+          },
+          "filterColumn": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Filtercolumn",
+            "default": ""
+          },
+          "filterContains": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Filtercontains",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "fn",
+          "table",
+          "column",
+          "filterColumn",
+          "filterContains"
+        ],
+        "title": "Aggregate",
+        "description": "Sum or count the rows of an object-array field, optionally filtered by a column.\n\n``column`` and ``filter_column`` are child field names as written in the schema."
+      },
       "ApiStats": {
         "properties": {
           "apiCallsToday": {
@@ -745,6 +1049,72 @@
         "title": "ApiStats",
         "description": "Runs started with the workflow's API key."
       },
+      "Arithmetic-Input": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "arithmetic",
+            "title": "Kind",
+            "default": "arithmetic"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "+",
+              "-",
+              "*",
+              "/"
+            ],
+            "title": "Op",
+            "default": "+"
+          },
+          "left": {
+            "$ref": "#/components/schemas/FieldRef-Input"
+          },
+          "right": {
+            "$ref": "#/components/schemas/FieldRef-Input"
+          }
+        },
+        "type": "object",
+        "title": "Arithmetic",
+        "description": "``left op right`` on two number fields."
+      },
+      "Arithmetic-Output": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "arithmetic",
+            "title": "Kind",
+            "default": "arithmetic"
+          },
+          "op": {
+            "type": "string",
+            "enum": [
+              "+",
+              "-",
+              "*",
+              "/"
+            ],
+            "title": "Op",
+            "default": "+"
+          },
+          "left": {
+            "$ref": "#/components/schemas/FieldRef-Output"
+          },
+          "right": {
+            "$ref": "#/components/schemas/FieldRef-Output"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "op",
+          "left",
+          "right"
+        ],
+        "title": "Arithmetic",
+        "description": "``left op right`` on two number fields."
+      },
       "AuditDetail": {
         "properties": {
           "id": {
@@ -770,6 +1140,10 @@
           },
           "source": {
             "type": "string",
+            "enum": [
+              "test",
+              "api"
+            ],
             "title": "Source"
           },
           "createdAt": {
@@ -993,10 +1367,18 @@
           },
           "scope": {
             "type": "string",
+            "enum": [
+              "intra",
+              "cross"
+            ],
             "title": "Scope"
           },
           "severity": {
             "type": "string",
+            "enum": [
+              "reject",
+              "flag"
+            ],
             "title": "Severity"
           },
           "status": {
@@ -1062,7 +1444,11 @@
           "definition": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "contentMediaType": "application/json",
+                "contentSchema": {
+                  "$ref": "#/components/schemas/WorkflowDefinition"
+                }
               },
               {
                 "type": "null"
@@ -1079,9 +1465,11 @@
         "properties": {
           "ids": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "type": "array",
+            "maxItems": 500,
             "minItems": 1,
             "title": "Ids"
           }
@@ -1096,7 +1484,9 @@
         "properties": {
           "day": {
             "type": "string",
-            "title": "Day"
+            "format": "date",
+            "title": "Day",
+            "description": "UTC day; clients name it in their locale."
           },
           "calls": {
             "type": "integer",
@@ -1110,14 +1500,122 @@
         ],
         "title": "CallsPerDay"
       },
+      "Catalog": {
+        "properties": {
+          "templateTypes": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateTypeInfo"
+            },
+            "type": "array",
+            "title": "Templatetypes"
+          },
+          "defaultType": {
+            "type": "string",
+            "title": "Defaulttype"
+          },
+          "numberTypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Numbertypes"
+          },
+          "orderedTypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Orderedtypes"
+          },
+          "tableType": {
+            "type": "string",
+            "title": "Tabletype"
+          },
+          "operatorsByType": {
+            "additionalProperties": {
+              "items": {
+                "type": "string",
+                "enum": [
+                  "==",
+                  "!=",
+                  ">",
+                  ">=",
+                  "<",
+                  "<=",
+                  "IN",
+                  "NOT_IN",
+                  "EXISTS",
+                  "IS_EMPTY"
+                ]
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Operatorsbytype",
+            "description": "Operators each type takes (lists as `<type>-list`); other types: the default's."
+          },
+          "presenceOperators": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "==",
+                "!=",
+                ">",
+                ">=",
+                "<",
+                "<=",
+                "IN",
+                "NOT_IN",
+                "EXISTS",
+                "IS_EMPTY"
+              ]
+            },
+            "type": "array",
+            "title": "Presenceoperators",
+            "description": "Operators with no right-hand side."
+          }
+        },
+        "type": "object",
+        "required": [
+          "templateTypes",
+          "defaultType",
+          "numberTypes",
+          "orderedTypes",
+          "tableType",
+          "operatorsByType",
+          "presenceOperators"
+        ],
+        "title": "Catalog",
+        "description": "What the builder offers: field types, and which of them rules can order or add."
+      },
       "Condition-Input": {
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "left": {
-            "$ref": "#/components/schemas/Operand-Input"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FieldRef-Input"
+              },
+              {
+                "$ref": "#/components/schemas/Arithmetic-Input"
+              },
+              {
+                "$ref": "#/components/schemas/Aggregate-Input"
+              }
+            ],
+            "title": "Left",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "aggregate": "#/components/schemas/Aggregate-Input",
+                "arithmetic": "#/components/schemas/Arithmetic-Input",
+                "field": "#/components/schemas/FieldRef-Input"
+              }
+            }
           },
           "operator": {
             "type": "string",
@@ -1139,67 +1637,63 @@
           "right": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Operand-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "arithmeticOp": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "+",
-                  "-",
-                  "*",
-                  "/"
-                ]
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/FieldRef-Input"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LiteralValue-Input"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "field": "#/components/schemas/FieldRef-Input",
+                    "literal": "#/components/schemas/LiteralValue-Input"
+                  }
+                }
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Arithmeticop"
-          },
-          "leftExtra": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Operand-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "tableAggregate": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TableAggregate-Input"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Right"
           }
         },
         "type": "object",
         "required": [
-          "id",
-          "left"
+          "id"
         ],
-        "title": "Condition",
-        "description": "``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``."
+        "title": "Condition"
       },
       "Condition-Output": {
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "left": {
-            "$ref": "#/components/schemas/Operand-Output"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FieldRef-Output"
+              },
+              {
+                "$ref": "#/components/schemas/Arithmetic-Output"
+              },
+              {
+                "$ref": "#/components/schemas/Aggregate-Output"
+              }
+            ],
+            "title": "Left",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "aggregate": "#/components/schemas/Aggregate-Output",
+                "arithmetic": "#/components/schemas/Arithmetic-Output",
+                "field": "#/components/schemas/FieldRef-Output"
+              }
+            }
           },
           "operator": {
             "type": "string",
@@ -1221,49 +1715,27 @@
           "right": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Operand-Output"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "arithmeticOp": {
-            "anyOf": [
-              {
-                "type": "string",
-                "enum": [
-                  "+",
-                  "-",
-                  "*",
-                  "/"
-                ]
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/FieldRef-Output"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LiteralValue-Output"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "kind",
+                  "mapping": {
+                    "field": "#/components/schemas/FieldRef-Output",
+                    "literal": "#/components/schemas/LiteralValue-Output"
+                  }
+                }
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Arithmeticop"
-          },
-          "leftExtra": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Operand-Output"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "tableAggregate": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TableAggregate-Output"
-              },
-              {
-                "type": "null"
-              }
-            ]
+            "title": "Right"
           }
         },
         "type": "object",
@@ -1271,28 +1743,27 @@
           "id",
           "left",
           "operator",
-          "right",
-          "arithmeticOp",
-          "leftExtra",
-          "tableAggregate"
+          "right"
         ],
-        "title": "Condition",
-        "description": "``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``."
+        "title": "Condition"
       },
       "CreateWorkflow": {
         "properties": {
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name",
             "default": "Untitled workflow"
           },
           "description": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Description",
             "default": ""
           },
           "owner": {
             "type": "string",
+            "maxLength": 200,
             "title": "Owner",
             "default": ""
           }
@@ -1330,19 +1801,27 @@
           "queue": {
             "$ref": "#/components/schemas/QueueCounts"
           },
-          "audits": {
+          "recentAudits": {
             "items": {
               "$ref": "#/components/schemas/AuditListItem"
             },
             "type": "array",
-            "title": "Audits"
+            "title": "Recentaudits"
+          },
+          "failedAudits": {
+            "items": {
+              "$ref": "#/components/schemas/AuditListItem"
+            },
+            "type": "array",
+            "title": "Failedaudits"
           },
           "workflows": {
             "items": {
               "$ref": "#/components/schemas/WorkflowOut"
             },
             "type": "array",
-            "title": "Workflows"
+            "title": "Workflows",
+            "description": "The most recently edited workflows."
           }
         },
         "type": "object",
@@ -1352,7 +1831,8 @@
           "failuresBySeverity",
           "staleRuns",
           "queue",
-          "audits",
+          "recentAudits",
+          "failedAudits",
           "workflows"
         ],
         "title": "Dashboard"
@@ -1361,7 +1841,9 @@
         "properties": {
           "day": {
             "type": "string",
-            "title": "Day"
+            "format": "date",
+            "title": "Day",
+            "description": "UTC day; clients name it in their locale."
           },
           "runs": {
             "type": "integer",
@@ -1384,10 +1866,12 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "documentType": {
             "type": "string",
+            "maxLength": 200,
             "title": "Documenttype",
             "default": ""
           },
@@ -1400,6 +1884,7 @@
           },
           "extractionInstructions": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Extractioninstructions",
             "default": ""
           },
@@ -1427,10 +1912,12 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "documentType": {
             "type": "string",
+            "maxLength": 200,
             "title": "Documenttype",
             "default": ""
           },
@@ -1443,6 +1930,7 @@
           },
           "extractionInstructions": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Extractioninstructions",
             "default": ""
           },
@@ -1520,6 +2008,18 @@
               }
             ],
             "title": "Markdowntext"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error",
+            "description": "Why extraction failed or its answer was unusable."
           }
         },
         "type": "object",
@@ -1530,7 +2030,8 @@
           "pagesRendered",
           "pagesSent",
           "rawText",
-          "markdownText"
+          "markdownText",
+          "error"
         ],
         "title": "ExtractionMeta"
       },
@@ -1546,6 +2047,10 @@
           },
           "severity": {
             "type": "string",
+            "enum": [
+              "reject",
+              "flag"
+            ],
             "title": "Severity"
           }
         },
@@ -1556,6 +2061,48 @@
           "severity"
         ],
         "title": "FailingRule"
+      },
+      "FieldRef-Input": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
+          },
+          "field": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Field",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "FieldRef",
+        "description": "A schema field: ``total`` or, with several documents, ``invoice.total``."
+      },
+      "FieldRef-Output": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "field",
+            "title": "Kind",
+            "default": "field"
+          },
+          "field": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Field",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "field"
+        ],
+        "title": "FieldRef",
+        "description": "A schema field: ``total`` or, with several documents, ``invoice.total``."
       },
       "HTTPValidationError": {
         "properties": {
@@ -1609,10 +2156,12 @@
         "properties": {
           "input": {
             "type": "string",
+            "maxLength": 100000,
             "title": "Input"
           },
           "output": {
             "type": "string",
+            "maxLength": 100000,
             "title": "Output"
           }
         },
@@ -1631,8 +2180,7 @@
             "enum": [
               "auditsWeek",
               "passRate",
-              "failures",
-              "pendingReview"
+              "failures"
             ],
             "title": "Id"
           },
@@ -1665,6 +2213,7 @@
         "properties": {
           "day": {
             "type": "string",
+            "format": "date",
             "title": "Day"
           },
           "value": {
@@ -1679,41 +2228,36 @@
         ],
         "title": "KpiPoint"
       },
-      "Operand-Input": {
+      "LiteralValue-Input": {
         "properties": {
           "kind": {
             "type": "string",
-            "enum": [
-              "field",
-              "literal"
-            ],
-            "title": "Kind"
+            "const": "literal",
+            "title": "Kind",
+            "default": "literal"
           },
           "value": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Value",
             "default": ""
           }
         },
         "type": "object",
-        "required": [
-          "kind"
-        ],
-        "title": "Operand",
-        "description": "A field reference (``total`` or ``invoice.total``) or a literal typed by the user."
+        "title": "LiteralValue",
+        "description": "A value typed by the user, read as the type of the field it is compared with."
       },
-      "Operand-Output": {
+      "LiteralValue-Output": {
         "properties": {
           "kind": {
             "type": "string",
-            "enum": [
-              "field",
-              "literal"
-            ],
-            "title": "Kind"
+            "const": "literal",
+            "title": "Kind",
+            "default": "literal"
           },
           "value": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Value",
             "default": ""
           }
@@ -1723,8 +2267,8 @@
           "kind",
           "value"
         ],
-        "title": "Operand",
-        "description": "A field reference (``total`` or ``invoice.total``) or a literal typed by the user."
+        "title": "LiteralValue",
+        "description": "A value typed by the user, read as the type of the field it is compared with."
       },
       "PlatformConfig": {
         "properties": {
@@ -1787,9 +2331,15 @@
             "type": "string",
             "title": "Id"
           },
-          "label": {
+          "kind": {
             "type": "string",
-            "title": "Label"
+            "enum": [
+              "queue",
+              "extract",
+              "rules",
+              "finalize"
+            ],
+            "title": "Kind"
           },
           "status": {
             "type": "string",
@@ -1801,7 +2351,7 @@
             "title": "Status",
             "default": "pending"
           },
-          "detail": {
+          "documentType": {
             "anyOf": [
               {
                 "type": "string"
@@ -1810,7 +2360,32 @@
                 "type": "null"
               }
             ],
-            "title": "Detail"
+            "title": "Documenttype",
+            "description": "extract steps."
+          },
+          "ruleCount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rulecount",
+            "description": "rules steps."
+          },
+          "fieldsExtracted": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fieldsextracted",
+            "description": "Done extract steps."
           },
           "durationMs": {
             "anyOf": [
@@ -1827,18 +2402,28 @@
             "type": "boolean",
             "title": "Cachehit",
             "default": false
+          },
+          "failed": {
+            "type": "boolean",
+            "title": "Failed",
+            "description": "Done extract steps whose extraction failed.",
+            "default": false
           }
         },
         "type": "object",
         "required": [
           "id",
-          "label",
+          "kind",
           "status",
-          "detail",
+          "documentType",
+          "ruleCount",
+          "fieldsExtracted",
           "durationMs",
-          "cacheHit"
+          "cacheHit",
+          "failed"
         ],
-        "title": "ProgressStep"
+        "title": "ProgressStep",
+        "description": "One step of a run. Clients word it from its kind and data (no server-side text)."
       },
       "QueueCounts": {
         "properties": {
@@ -1862,10 +2447,12 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name",
             "default": ""
           },
@@ -1880,7 +2467,8 @@
           },
           "appliesTo": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "type": "array",
             "title": "Appliesto"
@@ -1913,10 +2501,12 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id"
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name",
             "default": ""
           },
@@ -1931,7 +2521,8 @@
           },
           "appliesTo": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 64
             },
             "type": "array",
             "title": "Appliesto"
@@ -2038,10 +2629,6 @@
       },
       "RunProgress": {
         "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
           "steps": {
             "items": {
               "$ref": "#/components/schemas/ProgressStep"
@@ -2075,7 +2662,6 @@
         },
         "type": "object",
         "required": [
-          "label",
           "steps",
           "queuePosition",
           "queueDepth"
@@ -2220,15 +2806,18 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id",
             "default": ""
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name"
           },
           "description": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Description",
             "default": ""
           },
@@ -2239,7 +2828,8 @@
           },
           "enumValues": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 200
             },
             "type": "array",
             "title": "Enumvalues"
@@ -2263,15 +2853,18 @@
         "properties": {
           "id": {
             "type": "string",
+            "maxLength": 64,
             "title": "Id",
             "default": ""
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name"
           },
           "description": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Description",
             "default": ""
           },
@@ -2282,7 +2875,8 @@
           },
           "enumValues": {
             "items": {
-              "type": "string"
+              "type": "string",
+              "maxLength": 200
             },
             "type": "array",
             "title": "Enumvalues"
@@ -2311,6 +2905,10 @@
         "properties": {
           "severity": {
             "type": "string",
+            "enum": [
+              "reject",
+              "flag"
+            ],
             "title": "Severity"
           },
           "share": {
@@ -2325,87 +2923,33 @@
         ],
         "title": "SeverityShare"
       },
-      "TableAggregate-Input": {
+      "TemplateTypeInfo": {
         "properties": {
-          "fn": {
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "group": {
             "type": "string",
             "enum": [
-              "sum_rows",
-              "sum_rows_where",
-              "count_rows_where"
+              "common",
+              "structure",
+              "advanced"
             ],
-            "title": "Fn"
+            "title": "Group"
           },
-          "tableField": {
-            "type": "string",
-            "title": "Tablefield",
-            "default": ""
-          },
-          "amountColumn": {
-            "type": "string",
-            "title": "Amountcolumn",
-            "default": ""
-          },
-          "filterColumn": {
-            "type": "string",
-            "title": "Filtercolumn",
-            "default": ""
-          },
-          "filterContains": {
-            "type": "string",
-            "title": "Filtercontains",
-            "default": ""
+          "listable": {
+            "type": "boolean",
+            "title": "Listable"
           }
         },
         "type": "object",
         "required": [
-          "fn"
+          "value",
+          "group",
+          "listable"
         ],
-        "title": "TableAggregate",
-        "description": "Sum or count rows of an object-array field (optionally filtered by a column)."
-      },
-      "TableAggregate-Output": {
-        "properties": {
-          "fn": {
-            "type": "string",
-            "enum": [
-              "sum_rows",
-              "sum_rows_where",
-              "count_rows_where"
-            ],
-            "title": "Fn"
-          },
-          "tableField": {
-            "type": "string",
-            "title": "Tablefield",
-            "default": ""
-          },
-          "amountColumn": {
-            "type": "string",
-            "title": "Amountcolumn",
-            "default": ""
-          },
-          "filterColumn": {
-            "type": "string",
-            "title": "Filtercolumn",
-            "default": ""
-          },
-          "filterContains": {
-            "type": "string",
-            "title": "Filtercontains",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "fn",
-          "tableField",
-          "amountColumn",
-          "filterColumn",
-          "filterContains"
-        ],
-        "title": "TableAggregate",
-        "description": "Sum or count rows of an object-array field (optionally filtered by a column)."
+        "title": "TemplateTypeInfo"
       },
       "ValidationError": {
         "properties": {
@@ -2486,16 +3030,19 @@
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name",
             "default": "Untitled workflow"
           },
           "description": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Description",
             "default": ""
           },
           "owner": {
             "type": "string",
+            "maxLength": 200,
             "title": "Owner",
             "default": ""
           }
@@ -2538,16 +3085,19 @@
           },
           "name": {
             "type": "string",
+            "maxLength": 200,
             "title": "Name",
             "default": "Untitled workflow"
           },
           "description": {
             "type": "string",
+            "maxLength": 20000,
             "title": "Description",
             "default": ""
           },
           "owner": {
             "type": "string",
+            "maxLength": 200,
             "title": "Owner",
             "default": ""
           },

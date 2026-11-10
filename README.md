@@ -14,7 +14,7 @@ flowchart LR
   Web[Next.js UI] --> API[FastAPI API]
   API --> PG[(Postgres)]
   API --> RD[(Redis)]
-  API --> S3[(S3 / MinIO)]
+  API --> S3[(S3 storage)]
   RD --> W[Taskiq Workers]
   W --> VLM[External OpenAI-compatible VLM]
   W --> S3
@@ -27,18 +27,17 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 
 | Who | What | Start |
 |-----|------|--------|
-| **Mac clients (no source)** | Zip + Hub images + host NuExtract | [docs/LOCAL.md - Mac runtime](./docs/LOCAL.md#mac-runtime-no-source) · pack with `pnpm client:pack:mac` |
 | **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
 
 ### Git path (Windows · macOS · Linux)
 
-Prerequisites: Docker Desktop, Node 24.x, Corepack pnpm 12.5.1, `llama-server` on PATH
+Prerequisites: Docker Desktop, Node 26 (LTS), Corepack pnpm 12.16.1, `llama-server` on PATH
 (`winget install ggml.llamacpp` / `brew install llama.cpp`).
 
 ```bash
 git clone https://github.com/MehdiGououiad/repody.git
 cd repody
-corepack enable
+npm install --global pnpm@12.16.1
 pnpm install
 pnpm doctor
 pnpm platform setup    # once: env files + build the images
@@ -75,7 +74,7 @@ Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS
 - Backend: FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
 - Jobs: Taskiq over Redis Streams
 - Local: Docker Compose, images built from the checkout (`pnpm platform`)
-- Storage: MinIO or S3-compatible object storage
+- Storage: any S3-compatible object storage (SeaweedFS in Compose)
 
 ## License
 

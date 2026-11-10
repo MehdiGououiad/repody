@@ -1,30 +1,37 @@
 """Runs: live progress while queued or running, and the audit report once done."""
 
-from __future__ import annotations
-
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import Field, computed_field
 
 from repody.schemas.common import CamelModel
+from repody.schemas.rule import Scope, Severity
 
+Source = Literal["test", "api"]  # a builder test run, or a run started with the API key
 RunStatus = Literal["queued", "running", "done", "failed"]  # lifecycle: repody.app.lifecycle
 Outcome = Literal["passed", "warning", "failed"]  # a done run's result
 RuleStatus = Literal["passed", "failed", "skipped"]
 
 
+StepKind = Literal["queue", "extract", "rules", "finalize"]
+
+
 class ProgressStep(CamelModel):
+    """One step of a run. Clients word it from its kind and data (no server-side text)."""
+
     id: str
-    label: str
+    kind: StepKind
     status: Literal["pending", "active", "done"] = "pending"
-    detail: str | None = None
+    document_type: str | None = Field(default=None, description="extract steps.")
+    rule_count: int | None = Field(default=None, description="rules steps.")
+    fields_extracted: int | None = Field(default=None, description="Done extract steps.")
     duration_ms: int | None = None
     cache_hit: bool = False
+    failed: bool = Field(default=False, description="Done extract steps whose extraction failed.")
 
 
 class RunProgress(CamelModel):
-    label: str
     steps: list[ProgressStep] = Field(default_factory=list)
     queue_position: int | None = Field(default=None, description="1-based, while queued.")
     queue_depth: int | None = None
@@ -38,6 +45,9 @@ class ExtractionMeta(CamelModel):
     pages_sent: int = 0
     raw_text: str | None = Field(default=None, description="The model's JSON answer.")
     markdown_text: str | None = None
+    error: str | None = Field(
+        default=None, description="Why extraction failed or its answer was unusable."
+    )
 
 
 class AuditField(CamelModel):
@@ -65,8 +75,8 @@ class AuditRule(CamelModel):
     id: str
     rule_id: str
     name: str
-    scope: str
-    severity: str
+    scope: Scope
+    severity: Severity
     status: RuleStatus
     expression: str
     detail: str
@@ -93,7 +103,7 @@ class AuditDetail(CamelModel):
     workflow_id: str
     workflow_name: str
     status: Outcome
-    source: str
+    source: Source
     created_at: datetime
     documents: list[AuditDocument]
     rule_results: list[AuditRule]
@@ -130,3 +140,17 @@ class AuditList(CamelModel):
     total: int
     limit: int
     offset: int
+
+
+class AuditFilter(CamelModel):
+    """Which audits (finished runs) to list or export."""
+
+    q: str = Field(default="", max_length=200, description="Part of the run id or workflow name.")
+    outcome: Outcome | None = None
+    workflow_id: str | None = None
+    day: date | None = Field(default=None, description="Runs created that UTC day.")
+
+
+class AuditPage(AuditFilter):
+    limit: int = Field(default=50, ge=1, le=200)
+    offset: int = Field(default=0, ge=0)

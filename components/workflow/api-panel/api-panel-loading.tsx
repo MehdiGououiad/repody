@@ -3,7 +3,7 @@
 import { Zap } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import type { RunProgress } from "@/lib/api/run";
+import type { RunProgress } from "@/lib/types";
 
 export function ApiRunLoadingScreen({
   workflowName,
@@ -34,7 +34,7 @@ export function ApiRunLoadingScreen({
           <RunProgressSteps progress={progress} />
         </div>
       ) : (
-        <p className="text-xs text-on-surface-variant">{t("parseStep")}\u2026</p>
+        <p className="text-xs text-on-surface-variant">{t("parseStep")}…</p>
       )}
     </div>
   );

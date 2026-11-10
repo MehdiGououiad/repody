@@ -3,7 +3,7 @@
 import { Check, Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
-import { setLocale } from "@/app/actions/set-locale";
+import { setLocale } from "@/app/actions/preferences";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,

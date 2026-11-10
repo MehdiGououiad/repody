@@ -71,7 +71,7 @@ envFrom:
       name: {{ include "repody.fullname" . }}-config
 {{- end }}
 
-{{/* Only the Secret keys the API and workers read (not the web's Auth.js secrets). */}}
+{{/* Only the Secret keys the API and workers read (not the web's Better Auth secrets). */}}
 {{- define "repody.backendSecretEnv" -}}
 {{- $secret := required "existingSecret is required" .Values.existingSecret -}}
 {{- range $key := list "AUDIT_DATABASE_URL" "AUDIT_REDIS_URL" "AUDIT_S3_ACCESS_KEY" "AUDIT_S3_SECRET_KEY" }}

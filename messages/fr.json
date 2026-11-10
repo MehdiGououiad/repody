@@ -9,7 +9,9 @@
     "audits": "Rapports d'audit",
     "settings": "Paramètres",
     "newWorkflow": "Nouveau workflow",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "closeMenu": "Fermer le menu",
+    "openMenu": "Ouvrir le menu"
   },
   "auth": {
     "signInTitle": "Connexion à Repody",
@@ -83,7 +85,22 @@
     "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
     "queuePosition": "Position dans la file {position} sur {depth}",
     "queueWaiting": "En attente dans la file…",
-    "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement."
+    "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement.",
+    "steps": {
+      "queue": "En attente d'un worker",
+      "waiting": "En attente d'un worker…",
+      "document": "Document",
+      "extract": "Extraction · {document}",
+      "rules": "{count, plural, one {Vérifier # règle} other {Vérifier # règles}}",
+      "finalize": "Enregistrer le rapport d'audit",
+      "extracted": "{count, plural, =0 {Aucun champ extrait} one {# champ extrait} other {# champs extraits}}",
+      "extractFailed": "Échec de l'extraction — le rapport en donne la raison"
+    },
+    "badges": {
+      "model": "Modèle de document",
+      "rules": "Règle logique",
+      "cached": "Résultat en cache"
+    }
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -96,7 +113,7 @@
     "recentSubmissions": "Audits récents",
     "openFailures": "À traiter",
     "viewAll": "Tout voir",
-    "failedRulesBadge": "problèmes",
+    "failedRulesBadge": "{count, plural, one {# problème} other {# problèmes}}",
     "live": {
       "updated": "En direct · mis à jour à {time}"
     },
@@ -118,7 +135,6 @@
       "auditsWeek": "Audits cette semaine",
       "passRate": "Taux de conformité",
       "failures": "Échecs de règles",
-      "pendingReview": "En attente de révision",
       "trendUp": "En hausse de {delta} par rapport à la période précédente",
       "trendDown": "En baisse de {delta} par rapport à la période précédente"
     },
@@ -156,7 +172,6 @@
       "exportPdf": "Exporter PDF",
       "exportCsv": "Exporter CSV",
       "language": "Langue",
-      "toggleLanguage": "Changer la langue du rapport",
       "runOn": "Exécuté le",
       "via": "via",
       "api": "API",
@@ -192,7 +207,8 @@
       "totalDuration": "Durée totale",
       "extractionTime": "Temps d'extraction",
       "validationTime": "Temps de validation",
-      "docExtracted": "{done} / {total} extrait(s)"
+      "docExtracted": "{done} / {total} extrait(s)",
+      "extractionFailed": "Échec de l'extraction"
     },
     "table": {
       "id": "ID d'audit",
@@ -201,8 +217,11 @@
       "timestamp": "Horodatage",
       "rows": "Lignes",
       "summary": "{count, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
-      "filtered": "{filtered, number} {of} {total, number} audits",
-      "empty": "Aucun audit ne correspond aux filtres."
+      "empty": "Aucun audit ne correspond aux filtres.",
+      "total": "{total, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
+      "page": "Page {page} sur {pages}",
+      "previous": "Page précédente",
+      "next": "Page suivante"
     },
     "filters": {
       "searchPlaceholder": "Rechercher par ID, entité, workflow…",
@@ -210,14 +229,17 @@
       "allStatuses": "Tous les statuts",
       "workflow": "Workflow",
       "allWorkflows": "Tous les workflows",
-      "clearAll": "Réinitialiser"
+      "clearAll": "Réinitialiser",
+      "day": "Jour"
     },
     "status": {
       "passed": "Validé",
       "failed": "Échec",
       "warning": "Avertissement",
       "failedWithRules": "Échec ({count, plural, one {# règle} other {# règles}})"
-    }
+    },
+    "eyebrow": "Rapports",
+    "exportCsv": "Exporter en CSV"
   },
   "workflows": {
     "title": "Workflows",
@@ -300,13 +322,7 @@
         "errorTitle": "Échec du test",
         "errorRunIdHint": "ID du run — partagez-le avec un opérateur ou ouvrez le rapport d'audit pour plus de détails.",
         "progress": {
-          "starting": "Démarrage du test…",
-          "saveWorkflow": "Enregistrer le workflow",
-          "saveWorkflowDetail": "Sauvegarde du schéma et des règles sur le serveur",
-          "startRun": "Lancer l'audit",
-          "startRunDetail": "Création du run et envoi aux workers",
-          "pollRun": "Traitement worker",
-          "pollRunDetail": "Extraction du document, mappage des champs et validation des règles"
+          "starting": "Démarrage du test…"
         }
       },
       "deploy": {
@@ -315,9 +331,10 @@
         "readyTitle": "Prêt pour le déploiement",
         "readyHint": "Votre schéma et vos règles sont configurés. Déployez pour générer votre point d'accès API. Les appelants envoient un fichier par emplacement document — les champs à extraire sont déjà définis dans le workflow.",
         "liveTitle": "Workflow en ligne",
-        "liveHint": "Votre point d'accès API est actif. Envoyez un fichier par emplacement ; associez chaque fichier via document_types avec les noms configurés.",
+        "liveHint": "Votre point d'accès API est actif. Envoyez un fichier par emplacement ; associez chaque fichier via documents avec les noms configurés.",
         "apiTitle": "API & intégration",
-        "liveSubmitHint": "POST renvoie 202 avec un runId. Interrogez GET /api/v1/runs/{runId} pour les résultats. Les rapports apparaissent aussi dans Rapports d'audit."
+        "liveSubmitHint": "POST renvoie 202 avec un runId. Interrogez GET /api/v1/runs/'{runId}' pour les résultats. Les rapports apparaissent aussi dans Rapports d'audit.",
+        "eyebrow": "API"
       },
       "ingestion": {
         "severityReject": "Rejeter",
@@ -331,7 +348,8 @@
         "noDocsHint": "Allez à l'étape 1 pour définir vos types de documents et champs.",
         "unnamedDoc": "Document",
         "ruleCount": "{count, plural, one {# règle} other {# règles}}",
-        "fieldCount": "{count, plural, one {# champ} other {# champs}}"
+        "fieldCount": "{count, plural, one {# champ} other {# champs}}",
+        "fileRejected": "Choisissez un fichier PDF, PNG, JPEG ou WebP dans la limite d'envoi."
       },
       "extraction": {
         "documentModelLabel": "Modèle document",
@@ -650,8 +668,15 @@
           "pickTable": "Champ tableau",
           "amountColumn": "Colonne montant",
           "filterColumn": "Colonne filtre",
-          "filterContains": "Contient le texte"
-        }
+          "filterContains": "Contient le texte",
+          "arithmeticOp": "Opérateur arithmétique",
+          "kinds": {
+            "field": "Champ",
+            "arithmetic": "Calcul",
+            "aggregate": "Tableau"
+          }
+        },
+        "eyebrow": "Validation"
       },
       "api": {
         "live": "En ligne",
@@ -662,12 +687,12 @@
         "hideKey": "Masquer la clé API",
         "testDocumentLabel": "Document de test (PDF ou image)",
         "testDocumentsLabel": "Documents de test (un par emplacement)",
-        "testUploadHint": "Téléversez un fichier par emplacement. L'API utilise vos noms de type document dans document_types, dans le même ordre que les fichiers.",
+        "testUploadHint": "Téléversez un fichier par emplacement. L'API utilise vos noms de type document dans documents, dans le même ordre que les fichiers.",
         "testUploadRequired": "Téléversez au moins un fichier pour lancer l'extraction sur votre schéma.",
         "documentSlotsLabel": "Emplacements documents",
-        "schemaHint": "Le schéma d'extraction et les règles sont définis dans ce workflow — les appelants envoient les fichiers avec les noms de type document configurés (document_types), pas les champs.",
+        "schemaHint": "Le schéma d'extraction et les règles sont définis dans ce workflow — les appelants envoient les fichiers avec les noms de type document configurés (documents), pas les champs.",
         "fieldsCount": "{count, plural, one {# champ} other {# champs}}",
-        "pollHint": "POST renvoie 202 avec runId. Utilisez document_types avec vos noms configurés (ex. [\"Facture\"]). Interrogez GET /api/v1/runs/{runId} pour les résultats.",
+        "pollHint": "POST renvoie 202 avec runId. Utilisez documents avec vos noms configurés (ex. [\"Facture\"]). Interrogez GET /api/v1/runs/'{runId}' pour les résultats.",
         "runTest": "Exécuter un test en direct",
         "runTestHint": "Exécute sur vos documents configurés et affiche le rapport d'extraction complet",
         "processing": "Traitement des documents…",
@@ -686,8 +711,7 @@
         "sourceTab": "Source Markdown",
         "copy": "Copier",
         "copied": "Copié",
-        "copyFailed": "Impossible de copier",
-        "pageCount": "{count, plural, one {# page} other {# pages}}"
+        "copyFailed": "Impossible de copier"
       },
       "jsonOutput": {
         "title": "JSON d'extraction structurée",
@@ -712,8 +736,12 @@
         "draftSavedDetail": "Vos modifications sont sauvegardées localement.",
         "deployed": "Workflow déployé",
         "deployedDetail": "Le pipeline est désormais actif en production."
+      },
+      "documents": {
+        "eyebrow": "Schéma"
       }
-    }
+    },
+    "eyebrow": "Pipelines"
   },
   "health": {
     "alerts": {
@@ -722,5 +750,34 @@
         "detail": "{count, plural, one {# exécution} other {# exécutions}} encore en cours après le délai."
       }
     }
+  },
+  "settings": {
+    "title": "Plateforme",
+    "eyebrow": "Paramètres",
+    "description": "Configuration d'exécution et état du modèle de document.",
+    "model": "Modèle de document",
+    "ready": "Prêt",
+    "unavailable": "Indisponible",
+    "cache": "Cache",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "cacheDetail": "Cache d'extraction Redis",
+    "runtimeTitle": "Configuration d'exécution effective",
+    "runtimeHint": "Valeurs utilisées par l'API et les workers. Un changement d'environnement demande un redémarrage.",
+    "endpoint": "Point d'inférence",
+    "servedModel": "Modèle servi",
+    "pagesPerDocument": "Pages par document",
+    "allPages": "Toutes",
+    "uploadLimit": "Limite d'envoi",
+    "uploadLimitValue": "{files} fichiers / {size}",
+    "runTimeout": "Délai d'exécution",
+    "minutes": "{count} min"
+  },
+  "error": {
+    "title": "Une erreur est survenue",
+    "reported": "L'erreur a été signalée. Vous pouvez réessayer ou recharger la page.",
+    "section": "Cette section n'a pas pu se charger. Vous pouvez réessayer ou revenir au tableau de bord.",
+    "retry": "Réessayer",
+    "dashboard": "Tableau de bord"
   }
 }

@@ -8,12 +8,12 @@ const API_NAMESPACE = process.env.E2E_K8S_NAMESPACE ?? "repody";
 
 const SEED_CODE = `
 import asyncio
-from repody.infra.db.base import async_session_factory
-from repody.infra.db.seed import seed_database
+from repody.app.seed import seed
+from repody.infra.db import session_factory
 
 async def main() -> None:
-    async with async_session_factory() as session:
-        await seed_database(session)
+    async with session_factory() as session:
+        await seed(session)
         await session.commit()
 
 asyncio.run(main())

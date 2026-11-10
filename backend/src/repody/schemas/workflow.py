@@ -1,16 +1,19 @@
 """A workflow: documents to extract (NuExtract schema) and rules to check."""
 
-from __future__ import annotations
+from collections import Counter
+from datetime import date, datetime
+from typing import Annotated, Literal, Self
 
-from datetime import datetime
-from typing import Literal
+from pydantic import Field, StringConstraints, model_validator
 
-from pydantic import Field, field_validator, model_validator
+from repody.schemas.catalog import DEFAULT_TYPE, TemplateType, field_key
+from repody.schemas.common import CamelModel, Id, Name, Text
+from repody.schemas.rule import Rule, Severity
 
-from repody.schemas.common import CamelModel
-from repody.schemas.rule import Rule
-
-DEFAULT_TEMPLATE_TYPE = "verbatim-string"
+# The workflow lifecycle (repody.app.lifecycle). Archived workflows are never returned, so the
+# API's status is draft or active; deploying makes a workflow active.
+WorkflowState = Literal["draft", "active", "archived"]
+WorkflowStatus = Literal["draft", "active"]
 
 
 class SchemaField(CamelModel):
@@ -21,36 +24,32 @@ class SchemaField(CamelModel):
     ``object-array`` (with ``children``).
     """
 
-    id: str = ""
-    name: str
-    description: str = ""
-    template_type: str = DEFAULT_TEMPLATE_TYPE
-    enum_values: list[str] = Field(default_factory=list)
+    id: Id = ""
+    name: Name
+    description: Text = ""
+    template_type: TemplateType = DEFAULT_TYPE
+    enum_values: list[Name] = Field(default_factory=list)
     children: list[SchemaField] = Field(default_factory=list)
 
-    @field_validator("name", "description")
-    @classmethod
-    def _strip(cls, value: str) -> str:
-        return value.strip()
-
-    @field_validator("template_type")
-    @classmethod
-    def _default_type(cls, value: str) -> str:
-        return value.strip() or DEFAULT_TEMPLATE_TYPE
+    @model_validator(mode="after")
+    def _choices(self) -> Self:
+        if self.template_type in ("enum", "multi-enum") and len(self.enum_values) < 2:
+            raise ValueError(f"{self.template_type} field {self.name!r} needs at least 2 choices.")
+        return self
 
 
 class IclExample(CamelModel):
     """A NuExtract in-context example: input text and the JSON it should produce."""
 
-    input: str
-    output: str
+    input: Annotated[str, StringConstraints(max_length=100_000)]
+    output: Annotated[str, StringConstraints(max_length=100_000)]
 
 
 class DocumentDef(CamelModel):
-    id: str
-    document_type: str = ""
+    id: Id
+    document_type: Name = ""
     schema_fields: list[SchemaField] = Field(default_factory=list, alias="schema")
-    extraction_instructions: str = ""
+    extraction_instructions: Text = ""
     markdown_extraction: bool = Field(
         default=False, description="Transcribe the document to Markdown when it has no fields."
     )
@@ -68,30 +67,31 @@ class WorkflowDefinition(CamelModel):
     rules: list[Rule] = Field(default_factory=list)
 
     @model_validator(mode="after")
-    def _unique_field_names(self) -> WorkflowDefinition:
+    def _unique_field_names(self) -> Self:
+        """Names are unique at every level, compared as rules read them (``field_key``:
+        ``Unit Price`` and ``unit_price`` are the same field)."""
+
+        def check(fields: list[SchemaField], where: str) -> None:
+            counts = Counter(field_key(f.name) for f in fields if f.name)
+            if dupes := sorted(key for key, n in counts.items() if n > 1):
+                raise ValueError(f"{where}: duplicate field name(s) {', '.join(dupes)}.")
+            for f in fields:
+                check(f.children, f"{where}.{f.name}")
+
         for doc in self.documents:
-            names = [f.name.lower() for f in doc.schema_fields if f.name]
-            dupes = sorted({n for n in names if names.count(n) > 1})
-            if dupes:
-                raise ValueError(
-                    f"{doc.document_type or 'Document'}: duplicate field name(s) {', '.join(dupes)}."
-                )
+            check(doc.schema_fields, doc.document_type or "Document")
         return self
 
 
-# Owned by the server (repody.app.lifecycle): deploying makes a workflow active.
-WorkflowStatus = Literal["draft", "active"]
-
-
 class CallsPerDay(CamelModel):
-    day: str
+    day: date = Field(description="UTC day; clients name it in their locale.")
     calls: int
 
 
 class FailingRule(CamelModel):
     name: str
     count: int
-    severity: str
+    severity: Severity
 
 
 class ApiStats(CamelModel):
@@ -104,12 +104,14 @@ class ApiStats(CamelModel):
     top_failing_rules: list[FailingRule]
 
 
-class WorkflowIn(WorkflowDefinition):
-    """What the builder saves. The status is not part of it: only deploying changes it."""
+class CreateWorkflow(CamelModel):
+    name: Name = "Untitled workflow"
+    description: Text = ""
+    owner: Name = ""
 
-    name: str = "Untitled workflow"
-    description: str = ""
-    owner: str = ""
+
+class WorkflowIn(CreateWorkflow, WorkflowDefinition):
+    """What the builder saves. The status is not part of it: only deploying changes it."""
 
 
 class WorkflowOut(WorkflowIn):
@@ -128,14 +130,8 @@ class WorkflowList(CamelModel):
     workflows: list[WorkflowOut]
 
 
-class CreateWorkflow(CamelModel):
-    name: str = "Untitled workflow"
-    description: str = ""
-    owner: str = ""
-
-
 class BulkDelete(CamelModel):
-    ids: list[str] = Field(min_length=1)
+    ids: list[Id] = Field(min_length=1, max_length=500)
 
 
 class RuleCheck(CamelModel):

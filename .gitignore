@@ -59,12 +59,13 @@ next-env.d.ts
 .ruff_cache/
 /backend/.agents/
 deploy/llamacpp/paths.local.env
-deploy/llamacpp/models/*.gguf
+deploy/llamacpp/models/
 deploy/llamacpp/logs/
 backend/.venv/
 *.tgz
 
 # local assistant tooling
+/.claude/
 /.agents/
 /skills-lock.json
 /AGENTS.md
@@ -72,3 +73,8 @@ backend/.venv/
 
 # local-only benchmark material
 /private/
+/benchmark-reports/
+# Real documents supplied for the OCR benchmark (benchmarks/ocr/real_docs.py): never committed.
+/e2e/fixtures/documents/espace-transit-facture.*
+# pnpm audit output
+/dist-security-pnpm.*

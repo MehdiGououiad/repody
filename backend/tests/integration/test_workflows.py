@@ -12,7 +12,7 @@ async def test_create_save_and_read(api):
     workflow = (await api.get(f"/v1/workflows/{created['id']}")).json()
     assert workflow["documents"][0]["schema"][0]["templateType"] == "number"
     left = workflow["rules"][0]["conditions"][0]["left"]
-    assert left == {"kind": "field", "value": "total_amount"}
+    assert left == {"kind": "field", "field": "total_amount"}
 
     listed = (await api.get("/v1/workflows")).json()["workflows"]
     assert [w["id"] for w in listed] == [created["id"]]

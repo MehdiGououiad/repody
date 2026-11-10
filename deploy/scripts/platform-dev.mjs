@@ -14,10 +14,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parseArgs } from "node:util";
 import { spawnPrefixed } from "../../scripts/log-prefix.mjs";
 import {
   BACKEND_ENV,
-  busyPorts,
   composeArgs as composeArgsFor,
   copyIfMissing,
   fetchProbe,
@@ -45,25 +45,30 @@ const FROM_SOURCE = !process.env.REPODY_BACKEND_IMAGE && !process.env.REPODY_WEB
 const BACKEND_IMAGE = process.env.REPODY_BACKEND_IMAGE || "repody-backend:dev";
 const WEB_IMAGE = process.env.REPODY_WEB_IMAGE || "repody-web:dev";
 
-const rawArgs = process.argv.slice(2);
-const flags = new Set(rawArgs.filter((a) => a.startsWith("-")));
-const command =
-  rawArgs.find((a) => !a.startsWith("-")) ||
-  (flags.has("--help") || flags.has("-h") ? "help" : "up");
+// `pnpm platform -- --flag` may forward the `--` separator itself; it is not an argument here.
+const { values: flags, positionals } = parseArgs({
+  args: process.argv.slice(2).filter((arg) => arg !== "--"),
+  allowPositionals: true,
+  options: {
+    help: { type: "boolean", short: "h" },
+    "platform-only": { type: "boolean" },
+    "no-nuextract": { type: "boolean" },
+    "no-obs": { type: "boolean" },
+    "no-pull": { type: "boolean" },
+    "no-build": { type: "boolean" },
+  },
+});
+const command = positionals[0] ?? (flags.help ? "help" : "up");
 const isDarwin = process.platform === "darwin";
 const isWin = process.platform === "win32";
 
 const opts = {
-  platformOnly: flags.has("--platform-only"),
-  withNuextract: !(
-    flags.has("--no-nuextract") ||
-    flags.has("--no-vlm") ||
-    flags.has("--platform-only")
-  ),
-  // Observability (Grafana/Loki/Tempo/Bugsink) on by default for Hub platform.
-  withObs: !(flags.has("--no-obs") || flags.has("--no-observability")),
-  skipPull: flags.has("--no-pull"),
-  skipBuild: flags.has("--no-build"),
+  platformOnly: Boolean(flags["platform-only"]),
+  withNuextract: !(flags["no-nuextract"] || flags["platform-only"]),
+  // Observability (Grafana/Loki/Tempo/Bugsink) is on by default.
+  withObs: !flags["no-obs"],
+  skipPull: Boolean(flags["no-pull"]),
+  skipBuild: Boolean(flags["no-build"]),
 };
 
 function printHelp() {
@@ -227,7 +232,7 @@ function preflight({ quietOk = false } = {}) {
     ok: toolchain.ok,
     state: toolchain.detail.replace(/^ok:\s*/i, ""),
     required: true,
-    fix: "Install Node 24 + corepack enable (pnpm 12.16.1)",
+    fix: "Install Node 26 (LTS) + npm install --global pnpm@12.16.1",
   });
 
   const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
@@ -278,25 +283,6 @@ function preflight({ quietOk = false } = {}) {
       state: ok ? "ok" : "missing",
       required: true,
       fix: "pnpm platform setup",
-    });
-  }
-
-  // Ports used by the stack + NuExtract. Not required, so a leftover stack can be restarted.
-  const ports = [
-    [3000, "UI"],
-    [8000, "API"],
-    [8080, "Keycloak"],
-    [8081, "NuExtract"],
-  ];
-  const busy = busyPorts(ports.map(([port]) => port));
-  for (const [port, label] of ports) {
-    const free = !busy.has(port);
-    rows.push({
-      name: `Port ${port}`,
-      ok: free,
-      state: free ? `free (${label})` : `in use (${label}) — pnpm platform stop if leftover`,
-      required: false,
-      fix: `Free port ${port} or: pnpm platform stop`,
     });
   }
 
@@ -392,11 +378,12 @@ async function up() {
       "--no-build",
       "postgres",
       "redis",
-      "minio",
+      "seaweedfs",
       "keycloak",
       "api",
       "web",
-      "worker"
+      "worker",
+      "scheduler"
     ),
     { inherit: true, env: composeEnv }
   );
@@ -460,12 +447,12 @@ async function dev() {
       "--wait",
       "--wait-timeout",
       "300",
-      // Named services only: --wait treats the one-shot minio-init exit as a failure.
       "postgres",
       "redis",
-      "minio",
+      "seaweedfs",
       "keycloak",
-      "worker"
+      "worker",
+      "scheduler"
     ),
     { inherit: true }
   );
@@ -540,7 +527,18 @@ function logs() {
   console.log("Tailing API + web + workers (Ctrl+C to stop)…\n");
   run(
     "docker",
-    composeArgs("--profile", "workers", "logs", "-f", "--tail", "200", "api", "web", "worker"),
+    composeArgs(
+      "--profile",
+      "workers",
+      "logs",
+      "-f",
+      "--tail",
+      "200",
+      "api",
+      "web",
+      "worker",
+      "scheduler"
+    ),
     { inherit: true, allowFail: true }
   );
 }
@@ -570,7 +568,7 @@ const commands = {
   logs,
   stop,
 };
-if (flags.has("--help") || flags.has("-h")) printHelp();
+if (flags.help) printHelp();
 else if (commands[command]) await commands[command]();
 else {
   console.error(`Unknown command: ${command}\n`);

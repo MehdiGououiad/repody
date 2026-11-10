@@ -1,12 +1,18 @@
-"""Logic rules as the workflow builder edits them and the database stores them."""
+"""Logic rules as the workflow builder edits them and the database stores them.
 
-from __future__ import annotations
+A condition compares a left-hand expression with an operand::
 
-from typing import Literal
+    left (field | arithmetic | aggregate)  operator  right (field | literal)
+
+Each kind of expression carries only the parts it needs, so a stored condition is always
+complete in shape; ``repody.rules.evaluate`` checks that its fields exist and fit.
+"""
+
+from typing import Annotated, Literal
 
 from pydantic import Field
 
-from repody.schemas.common import CamelModel
+from repody.schemas.common import CamelModel, Id, Name, Text
 
 Operator = Literal["==", "!=", ">", ">=", "<", "<=", "IN", "NOT_IN", "EXISTS", "IS_EMPTY"]
 ArithmeticOp = Literal["+", "-", "*", "/"]
@@ -14,45 +20,65 @@ AggregateFn = Literal["sum_rows", "sum_rows_where", "count_rows_where"]
 Severity = Literal["reject", "flag"]
 Scope = Literal["intra", "cross"]
 
-# Operators that test the left side alone.
-UNARY_OPERATORS = frozenset({"EXISTS", "IS_EMPTY"})
+# Operators that test the left side alone (no right-hand operand).
+PRESENCE_OPERATORS: tuple[Operator, ...] = ("EXISTS", "IS_EMPTY")
+UNARY_OPERATORS = frozenset(PRESENCE_OPERATORS)
 
 
-class Operand(CamelModel):
-    """A field reference (``total`` or ``invoice.total``) or a literal typed by the user."""
+class FieldRef(CamelModel):
+    """A schema field: ``total`` or, with several documents, ``invoice.total``."""
 
-    kind: Literal["field", "literal"]
-    value: str = ""
+    kind: Literal["field"] = "field"
+    field: Name = ""
 
 
-class TableAggregate(CamelModel):
-    """Sum or count rows of an object-array field (optionally filtered by a column)."""
+class LiteralValue(CamelModel):
+    """A value typed by the user, read as the type of the field it is compared with."""
 
-    fn: AggregateFn
-    table_field: str = ""
-    amount_column: str = ""
-    filter_column: str = ""
-    filter_contains: str = ""
+    kind: Literal["literal"] = "literal"
+    value: Text = ""
+
+
+class Arithmetic(CamelModel):
+    """``left op right`` on two number fields."""
+
+    kind: Literal["arithmetic"] = "arithmetic"
+    op: ArithmeticOp = "+"
+    left: FieldRef = Field(default_factory=FieldRef)
+    right: FieldRef = Field(default_factory=FieldRef)
+
+
+class Aggregate(CamelModel):
+    """Sum or count the rows of an object-array field, optionally filtered by a column.
+
+    ``column`` and ``filter_column`` are child field names as written in the schema.
+    """
+
+    kind: Literal["aggregate"] = "aggregate"
+    fn: AggregateFn = "sum_rows"
+    table: Name = ""
+    column: Name = ""
+    filter_column: Name = ""
+    filter_contains: Name = ""
+
+
+Operand = Annotated[FieldRef | LiteralValue, Field(discriminator="kind")]
+Expression = Annotated[FieldRef | Arithmetic | Aggregate, Field(discriminator="kind")]
 
 
 class Condition(CamelModel):
-    """``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``."""
-
-    id: str
-    left: Operand
+    id: Id
+    left: Expression = Field(default_factory=FieldRef)
     operator: Operator = "=="
     right: Operand | None = None
-    arithmetic_op: ArithmeticOp | None = None
-    left_extra: Operand | None = None
-    table_aggregate: TableAggregate | None = None
 
 
 class Rule(CamelModel):
     """A rule passes when every condition holds on the documents it applies to."""
 
-    id: str
-    name: str = ""
+    id: Id
+    name: Name = ""
     scope: Scope = "intra"
-    applies_to: list[str] = Field(default_factory=list)
+    applies_to: list[Id] = Field(default_factory=list)
     severity: Severity = "reject"
     conditions: list[Condition] = Field(default_factory=list)

@@ -1,10 +1,10 @@
 "use client";
 
 import { AlertCircle, CalendarDays, User } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { DateTime } from "@/components/shared/date-time";
 import type { Workflow } from "@/lib/types";
-import { formatDateTime } from "@/lib/utils";
 import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
 import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { BuilderTopbar } from "./builder/builder-topbar";
@@ -19,7 +19,6 @@ type BuilderMode = "new" | "edit";
 
 function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: BuilderMode }) {
   const tSteps = useTranslations("workflows.builder.steps");
-  const locale = useLocale();
   const isNew = mode === "new";
   const [nameConfirmed, setNameConfirmed] = useState(
     () => !isNew || workflow.name.trim().length > 0
@@ -37,13 +36,11 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
     deployed,
     apiKey,
     sync,
-    activeWorkflowId,
     testSession,
-    patchTestSession,
-    setTestRun,
+    setTestSession,
     handleDeploy,
     handleSaveDraft,
-    persistWorkflow,
+    saveForTestRun,
   } = useBuilderWorkflow(workflow, mode);
 
   const schemaReady = stepComplete(0, documents, rules);
@@ -78,8 +75,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                 documents={documents}
                 rules={rules}
                 onChange={setStep}
-                tSteps={tSteps}
-                testHasResults={testSession.run.phase === "done"}
+                testHasResults={testSession.runId !== null}
               />
 
               <div className="mt-6 border-t border-border pt-4 space-y-2.5 px-1">
@@ -91,7 +87,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                   <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
                     <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span className="truncate">
-                      {formatDateTime(workflow.lastRun, locale, { withYear: true })}
+                      <DateTime value={workflow.lastRun} />
                     </span>
                   </div>
                 ) : null}
@@ -115,7 +111,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                   ) : null}
                   {step === 2 ? (
                     <TestDeployStep
-                      workflowId={activeWorkflowId}
+                      workflowId={workflow.id}
                       name={name || workflow.name}
                       apiKey={apiKey}
                       apiKeyHint={workflow.apiKeyHint ?? undefined}
@@ -124,12 +120,9 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                       deployed={deployed}
                       sync={sync}
                       onDeploy={handleDeploy}
-                      onBeforeRun={() =>
-                        persistWorkflow({ navigate: false, toastOnSuccess: false })
-                      }
+                      saveForTestRun={saveForTestRun}
                       testSession={testSession}
-                      onTestSessionChange={patchTestSession}
-                      onTestRunChange={setTestRun}
+                      onTestSessionChange={setTestSession}
                     />
                   ) : null}
                 </div>

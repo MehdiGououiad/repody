@@ -31,7 +31,7 @@ config:
   AUDIT_OIDC_ENABLED: "true"
   AUDIT_OIDC_ISSUER: https://auth.example.com/realms/repody
   AUDIT_OIDC_AUDIENCE: repody-api
-  AUDIT_S3_ENDPOINT_URL: http://minio.storage.svc:9000
+  AUDIT_S3_ENDPOINT_URL: https://s3.example.com
   AUDIT_S3_BUCKET: audit-documents
   AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
   AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
@@ -52,10 +52,6 @@ ingress:
   className: nginx          # or openshift-default
   host: app.example.com
   apiHost: api.example.com
-  filesHost: files.example.com
-  filesService:
-    name: minio             # the S3/MinIO Service in this namespace
-    port: 9000
   tls:
     enabled: true
     secretName: repody-tls

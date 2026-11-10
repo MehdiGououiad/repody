@@ -1,79 +1,85 @@
-from __future__ import annotations
+"""Runs and audits: start a run, poll it, list, read and export finished runs."""
 
-import json
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from pydantic import ValidationError
-from sse_starlette import EventSourceResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import Response, StreamingResponse
+from pydantic import Json
 
-from repody.api.deps import BearerDep, OptionalUser, SessionDep, require, token_of
-from repody.app import progress, runs, workflows
+from repody.api.deps import OptionalUser, SessionDep, TokenDep, require
+from repody.app import runs, workflows
 from repody.infra.auth import api_key_matches, hash_api_key
-from repody.schemas.run import AuditDetail, AuditList, RunCreated, RunState
+from repody.schemas.run import (
+    AuditDetail,
+    AuditFilter,
+    AuditList,
+    AuditPage,
+    RunCreated,
+    RunState,
+    Source,
+)
 from repody.schemas.workflow import WorkflowDefinition
-from repody.settings import get_settings
 
 router = APIRouter(tags=["runs"])
+CSV = "text/csv; charset=utf-8"
+UNAUTHORIZED = "Use the workflow API key or sign in with run permission."
 
 
-async def _read(upload: UploadFile) -> runs.Upload:
-    limit = get_settings().max_upload_bytes
-    data = await upload.read(limit + 1)
-    if len(data) > limit:
-        raise HTTPException(413, f"{upload.filename} is larger than {limit} bytes.")
-    if not data:
-        raise HTTPException(422, f"{upload.filename} is empty.")
-    return runs.Upload(file_name=upload.filename or "document", data=data)
+def _upload(upload: UploadFile) -> runs.Upload:
+    """The request's spooled file as is: it is streamed to storage, never read whole here.
+    Starlette's multipart parser always counts the part's size."""
+    return runs.Upload(
+        file_name=upload.filename or "document", file=upload.file, size=upload.size or 0
+    )
 
 
 @router.post("/workflows/{workflow_id}/runs", status_code=202)
 async def start_run(
     workflow_id: str,
     session: SessionDep,
-    credentials: BearerDep,
+    token: TokenDep,
     user: OptionalUser,
     files: Annotated[list[UploadFile], File(description="One file per workflow document.")] = [],  # noqa: B006
     documents: Annotated[
         list[str], Form(description="Per file, in order: the workflow document id or type.")
     ] = [],  # noqa: B006
     definition: Annotated[
-        str | None, Form(description="Test runs only: an unsaved workflow definition (JSON).")
+        Json[WorkflowDefinition] | None,
+        Form(description="Test runs only: an unsaved workflow definition (JSON)."),
     ] = None,
 ) -> RunCreated:
-    """Start a run with the workflow API key (production) or as a signed-in user (test run)."""
-    wf = await workflows.load(session, workflow_id)
-    token = token_of(credentials)
-    if token and api_key_matches(token, wf.api_key_hash):
-        source, client_key = "api", hash_api_key(token)[:16]
+    """Start a run with the workflow API key (production) or as a signed-in user (test run).
+    Poll ``GET /v1/runs/{run_id}`` until its status is done or failed.
+
+    A caller that is neither gets 401 whether or not the workflow exists."""
+    wf = await workflows.find(session, workflow_id)
+    caller: tuple[Source, str] | None = None
+    if wf is not None and token and api_key_matches(token, wf.api_key_hash):
+        caller = ("api", hash_api_key(token)[:16])
     elif user is not None and user.can("run:execute"):
-        source, client_key = "test", user.subject
-    else:
-        raise HTTPException(401, "Use the workflow API key or sign in with run permission.")
-    draft = None
-    if definition and source == "test":
-        try:
-            draft = WorkflowDefinition.model_validate_json(definition)
-        except ValidationError as exc:
-            raise HTTPException(422, f"Invalid definition: {exc.errors()[0]['msg']}") from exc
+        caller = ("test", user.subject)
+    if caller is None:
+        raise HTTPException(401, UNAUTHORIZED)
+    if wf is None:
+        raise HTTPException(404, "Workflow not found.")
+    source, client_key = caller
     return await runs.start_run(
         session,
         wf,
         source=source,
-        uploads=[await _read(upload) for upload in files],
+        uploads=[_upload(upload) for upload in files],
         slots=documents,
         client_key=client_key,
-        definition=draft,
+        definition=definition if source == "test" else None,
     )
 
 
 async def require_run_reader(
-    run_id: str, session: SessionDep, credentials: BearerDep, user: OptionalUser
+    run_id: str, session: SessionDep, token: TokenDep, user: OptionalUser
 ) -> None:
-    """Users with run:read, or the API key of the run's workflow."""
+    """Users with run:read, or the API key of the run's (not archived) workflow."""
     if user is not None and user.can("run:read"):
         return
-    token = token_of(credentials)
     if token and api_key_matches(token, await runs.run_api_key_hash(session, run_id)):
         return
     raise HTTPException(401, "Use the workflow API key or sign in.")
@@ -84,40 +90,46 @@ RunReader = Depends(require_run_reader)
 
 @router.get("/runs/{run_id}", dependencies=[RunReader])
 async def get_run(run_id: str, session: SessionDep) -> RunState:
-    """Status and live progress; the audit report once the run is done."""
+    """Status and live progress (with the queue position while queued); the audit report once
+    the run is done."""
     return await runs.run_state(session, run_id)
 
 
-@router.get(
-    "/runs/{run_id}/events",
-    dependencies=[RunReader],
-    responses={200: {"content": {"text/event-stream": {}}, "description": "Progress events"}},
-)
-async def run_events(run_id: str, session: SessionDep) -> EventSourceResponse:
-    """Server-Sent Events: the current state first, then each progress change until done."""
-    state = await runs.run_state(session, run_id)
-    await session.close()
-
-    async def events():
-        yield {
-            "data": json.dumps(
-                {"progress": state.progress.model_dump() if state.progress else None}
-            )
-        }
-        if state.status in ("done", "failed"):
-            yield {"data": json.dumps({"terminal": True, "status": state.status})}
-            return
-        async for message in progress.subscribe(run_id):
-            yield {"data": message}
-
-    return EventSourceResponse(events(), ping=15)
-
-
 @router.get("/audits", dependencies=[require("run:read")])
-async def list_audits(session: SessionDep, limit: int = 50, offset: int = 0) -> AuditList:
-    return await runs.list_audits(session, limit=limit, offset=offset)
+async def list_audits(session: SessionDep, page: Annotated[AuditPage, Query()]) -> AuditList:
+    return await runs.list_audits(session, page)
+
+
+@router.get(
+    "/audits/export.csv",
+    dependencies=[require("run:read")],
+    response_class=StreamingResponse,
+    responses={200: {"content": {"text/csv": {}}, "description": "Every matching audit."}},
+)
+async def export_audits(
+    session: SessionDep, audits: Annotated[AuditFilter, Query()]
+) -> StreamingResponse:
+    return StreamingResponse(
+        runs.export_audits(session, audits),
+        media_type=CSV,
+        headers={"Content-Disposition": 'attachment; filename="audits.csv"'},
+    )
 
 
 @router.get("/audits/{run_id}", dependencies=[require("run:read")])
 async def get_audit(run_id: str, session: SessionDep) -> AuditDetail:
     return await runs.run_report(session, run_id)
+
+
+@router.get(
+    "/audits/{run_id}/export.csv",
+    dependencies=[require("run:read")],
+    response_class=Response,
+    responses={200: {"content": {"text/csv": {}}, "description": "Fields and rule results."}},
+)
+async def export_audit(run_id: str, session: SessionDep) -> Response:
+    return Response(
+        await runs.export_report(session, run_id),
+        media_type=CSV,
+        headers={"Content-Disposition": f'attachment; filename="{run_id}.csv"'},
+    )

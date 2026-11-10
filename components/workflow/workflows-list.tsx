@@ -1,110 +1,158 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  type RowSelectionState,
+  rowSelectionFeature,
+  tableFeatures,
+  useTable,
+} from "@tanstack/react-table";
 import { Activity, ChevronRight, FileEdit, Play, Trash2, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useFormatter, useTranslations } from "next-intl";
+import { useState } from "react";
 import { toast } from "sonner";
-
+import { DateTime } from "@/components/shared/date-time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { browserApi } from "@/lib/api/openapi-client";
+import { $api } from "@/lib/api/browser";
+import { errorMessage } from "@/lib/query/get-query-client";
 import type { Workflow, WorkflowStatus } from "@/lib/types";
-import { cn, formatDateTime, formatNumber, formatPercent } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
-const statusConfig: Record<
-  WorkflowStatus,
-  { variant: "success" | "outline"; Icon: typeof Play; key: WorkflowStatus }
-> = {
-  active: { variant: "success", Icon: Play, key: "active" },
-  draft: { variant: "outline", Icon: FileEdit, key: "draft" },
+const features = tableFeatures({ rowSelectionFeature });
+const COLUMNS = [{ id: "workflow" }];
+
+const STATUS: Record<WorkflowStatus, { variant: "success" | "outline"; Icon: typeof Play }> = {
+  active: { variant: "success", Icon: Play },
+  draft: { variant: "outline", Icon: FileEdit },
 };
 
-function WorkflowCheckbox({
-  checked,
-  onChange,
-  ariaLabel,
-}: {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  ariaLabel: string;
-}) {
+function Stat({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label
-      className="inline-flex items-center justify-center shrink-0 cursor-pointer"
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => e.stopPropagation()}
-    >
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        aria-label={ariaLabel}
-        className="size-4 rounded border-border text-primary focus:ring-primary/30 cursor-pointer accent-primary"
-      />
-    </label>
+    <div>
+      <div className="text-xs text-on-surface-variant uppercase tracking-wider">{label}</div>
+      <div className="text-sm font-medium mt-0.5 inline-flex items-center gap-0.5 justify-center truncate">
+        {children}
+      </div>
+    </div>
   );
 }
 
-export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow[] }) {
+function WorkflowCard({
+  workflow,
+  selected,
+  onSelect,
+}: {
+  workflow: Workflow;
+  selected: boolean;
+  onSelect: (selected: boolean) => void;
+}) {
   const t = useTranslations("workflows");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
-  const router = useRouter();
+  const format = useFormatter();
+  const { variant, Icon } = STATUS[workflow.status];
 
-  const [workflows, setWorkflows] = useState(initialWorkflows);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  return (
+    <div
+      className={cn(
+        "panel-elevated rounded-xl p-5 transition-[border-color,box-shadow] duration-200 group flex items-start gap-3",
+        selected ? "border-accent-blue ring-1 ring-accent-blue/25" : "hover:border-accent-blue/20"
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={selected}
+        onChange={(event) => onSelect(event.target.checked)}
+        aria-label={t("delete.selectWorkflow", { name: workflow.name })}
+        className="mt-1 size-4 shrink-0 rounded border-border cursor-pointer accent-primary"
+      />
+      <Link href={`/workflows/${workflow.id}/edit`} className="flex-1 min-w-0 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
+              {workflow.name}
+            </h3>
+            <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">
+              {workflow.description}
+            </p>
+          </div>
+          <Badge variant={variant} className="shrink-0">
+            <Icon className="h-3 w-3" />
+            {t(`status.${workflow.status}`)}
+          </Badge>
+        </div>
 
-  const allSelected = workflows.length > 0 && selected.size === workflows.length;
-  const someSelected = selected.size > 0;
+        <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border text-center">
+          <Stat label={t("card.lastRun")}>
+            {workflow.lastRun ? <DateTime value={workflow.lastRun} /> : "—"}
+          </Stat>
+          <Stat label={t("card.success")}>
+            {workflow.successRate > 0 ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-0.5 font-semibold",
+                  workflow.successRate > 0.95 ? "text-success" : "text-warning-strong"
+                )}
+              >
+                <TrendingUp className="h-3 w-3" />
+                {format.number(workflow.successRate, {
+                  style: "percent",
+                  maximumFractionDigits: 1,
+                })}
+              </span>
+            ) : (
+              "—"
+            )}
+          </Stat>
+          <Stat label={t("card.runs")}>
+            <Activity className="h-3 w-3 text-on-surface-variant" />
+            {format.number(workflow.totalRuns)}
+          </Stat>
+        </div>
 
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(workflows.map((w) => w.id)));
-    }
-  };
-
-  const toggleOne = (id: string, checked: boolean) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-
-  const selectedNames = useMemo(
-    () => workflows.filter((w) => selected.has(w.id)).map((w) => w.name),
-    [workflows, selected]
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-on-surface-variant">
+            {tCommon("owner")}: {workflow.owner}
+          </span>
+          <span className="inline-flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity font-medium">
+            {tCommon("open")}
+            <ChevronRight className="h-3 w-3" />
+          </span>
+        </div>
+      </Link>
+    </div>
   );
+}
 
-  const handleDelete = async () => {
-    const ids = Array.from(selected);
-    if (ids.length === 0) return;
-    setDeleting(true);
-    try {
-      const { error, response } = await browserApi.POST("/v1/workflows/bulk-delete", {
-        body: { ids },
-      });
-      if (error || !response.ok) {
-        throw new Error(`Delete failed: HTTP ${response.status}`);
-      }
-      setWorkflows((prev) => prev.filter((w) => !selected.has(w.id)));
-      setSelected(new Set());
-      toast.success(t("delete.success", { count: ids.length }));
-      router.refresh();
-    } catch {
-      toast.error(tCommon("saveFailed"));
-    } finally {
-      setDeleting(false);
-    }
-  };
+/** Workflow cards, prefetched by the page; selected ones can be deleted (archived) together. */
+export function WorkflowsList() {
+  const t = useTranslations("workflows");
+  const tCommon = useTranslations("common");
+  const queryClient = useQueryClient();
+  const { workflows } = $api.useSuspenseQuery("get", "/v1/workflows").data;
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const table = useTable({
+    features,
+    columns: COLUMNS,
+    data: workflows,
+    getRowId: (workflow) => workflow.id,
+    state: { rowSelection },
+    onRowSelectionChange: setRowSelection,
+  });
+  const selected = table.getSelectedRowModel().rows.map((row) => row.original);
+
+  const remove = $api.useMutation("post", "/v1/workflows/bulk-delete", {
+    onSuccess: (_data, { body }) => {
+      toast.success(t("delete.success", { count: body.ids.length }));
+      setRowSelection({});
+      void queryClient.invalidateQueries({ queryKey: ["get", "/v1/workflows"] });
+      void queryClient.invalidateQueries({ queryKey: ["get", "/v1/dashboard"] });
+    },
+    onError: (error) => toast.error(errorMessage(error, tCommon("saveFailed"))),
+  });
 
   if (workflows.length === 0) {
     return (
@@ -120,143 +168,54 @@ export function WorkflowsList({ initialWorkflows }: { initialWorkflows: Workflow
         <label className="inline-flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer select-none">
           <input
             type="checkbox"
-            checked={allSelected}
+            checked={table.getIsAllRowsSelected()}
             ref={(el) => {
-              if (el) el.indeterminate = someSelected && !allSelected;
+              if (el) el.indeterminate = table.getIsSomeRowsSelected();
             }}
-            onChange={toggleAll}
-            aria-label={t("delete.selectAll")}
+            onChange={table.getToggleAllRowsSelectedHandler()}
             className="size-4 rounded border-border accent-primary cursor-pointer"
           />
           {t("delete.selectAll")}
         </label>
-        {someSelected && (
+        {selected.length > 0 ? (
           <>
             <span className="text-xs text-on-surface-variant">
-              {t("delete.selected", { count: selected.size })}
+              {t("delete.selected", { count: selected.length })}
             </span>
             <Button
               type="button"
               variant="destructive"
               size="sm"
-              disabled={deleting}
+              disabled={remove.isPending}
               onClick={() => setConfirmOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />
               {t("delete.deleteSelected")}
             </Button>
           </>
-        )}
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {workflows.map((w) => {
-          const cfg = statusConfig[w.status];
-          const isSelected = selected.has(w.id);
-          return (
-            <div
-              key={w.id}
-              className={cn(
-                "panel-elevated rounded-xl p-5 transition-[border-color,box-shadow] duration-200 group flex flex-col gap-3 relative",
-                isSelected
-                  ? "border-accent-blue ring-1 ring-accent-blue/25"
-                  : "hover:border-accent-blue/20"
-              )}
-            >
-              <div className="flex items-start gap-3">
-                <WorkflowCheckbox
-                  checked={isSelected}
-                  onChange={(checked) => toggleOne(w.id, checked)}
-                  ariaLabel={t("delete.selectWorkflow", { name: w.name })}
-                />
-                <Link
-                  href={`/workflows/${w.id}/edit`}
-                  className="flex-1 min-w-0 flex flex-col gap-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
-                        {w.name}
-                      </h3>
-                      <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">
-                        {w.description}
-                      </p>
-                    </div>
-                    <Badge variant={cfg.variant} className="shrink-0">
-                      <cfg.Icon className="h-3 w-3" />
-                      {t(`status.${cfg.key}`)}
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border text-center">
-                    <div>
-                      <div className="text-xs text-on-surface-variant uppercase tracking-wider">
-                        {t("card.lastRun")}
-                      </div>
-                      <div className="text-sm font-medium mt-0.5 truncate">
-                        {w.lastRun ? formatDateTime(w.lastRun, locale, { withYear: true }) : "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-on-surface-variant uppercase tracking-wider">
-                        {t("card.success")}
-                      </div>
-                      <div
-                        className={cn(
-                          "text-sm font-semibold mt-0.5 inline-flex items-center gap-0.5 justify-center",
-                          w.successRate > 0.95
-                            ? "text-success"
-                            : w.successRate > 0
-                              ? "text-warning-strong"
-                              : "text-on-surface-variant"
-                        )}
-                      >
-                        {w.successRate > 0 ? (
-                          <>
-                            <TrendingUp className="h-3 w-3" />
-                            {formatPercent(w.successRate, 1, locale)}
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-on-surface-variant uppercase tracking-wider">
-                        {t("card.runs")}
-                      </div>
-                      <div className="text-sm font-medium mt-0.5 inline-flex items-center gap-0.5 justify-center">
-                        <Activity className="h-3 w-3 text-on-surface-variant" />
-                        {formatNumber(w.totalRuns, locale)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-on-surface-variant">
-                      {tCommon("owner")}: {w.owner}
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity font-medium">
-                      {tCommon("open")}
-                      <ChevronRight className="h-3 w-3" />
-                    </span>
-                  </div>
-                </Link>
-              </div>
-            </div>
-          );
-        })}
+        {table.getRowModel().rows.map((row) => (
+          <WorkflowCard
+            key={row.id}
+            workflow={row.original}
+            selected={row.getIsSelected()}
+            onSelect={(value) => row.toggleSelected(value)}
+          />
+        ))}
       </div>
 
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        onConfirm={handleDelete}
-        title={t("delete.confirmTitle", { count: selected.size })}
+        onConfirm={() => remove.mutate({ body: { ids: selected.map((w) => w.id) } })}
+        title={t("delete.confirmTitle", { count: selected.length })}
         description={
-          selectedNames.length <= 3
-            ? t("delete.confirmDescriptionNamed", { names: selectedNames.join(", ") })
-            : t("delete.confirmDescription", { count: selected.size })
+          selected.length <= 3
+            ? t("delete.confirmDescriptionNamed", { names: selected.map((w) => w.name).join(", ") })
+            : t("delete.confirmDescription", { count: selected.length })
         }
         confirmLabel={t("delete.confirmButton")}
       />

@@ -38,8 +38,8 @@ variable "REPODY_IMAGE_PLATFORMS" {
 variable "REPODY_BACKEND_EXTRAS" {
   default = "otel"
   validation {
-    condition     = can(regex("^[A-Za-z0-9][A-Za-z0-9._-]*(,[A-Za-z0-9][A-Za-z0-9._-]*)*$", REPODY_BACKEND_EXTRAS))
-    error_message = "REPODY_BACKEND_EXTRAS must be comma-separated Python extra names, e.g. \"otel\"."
+    condition     = can(regex("^([A-Za-z0-9][A-Za-z0-9._-]*)?$", REPODY_BACKEND_EXTRAS))
+    error_message = "REPODY_BACKEND_EXTRAS must be one optional-dependency name (\"otel\") or empty."
   }
 }
 

@@ -12,8 +12,6 @@ The client's optional escaped-math repair (``fix_dollars``) is not applied: the 
 model's own, as with ``fix_dollars=False``.
 """
 
-from __future__ import annotations
-
 from typing import Any
 
 from PIL import Image

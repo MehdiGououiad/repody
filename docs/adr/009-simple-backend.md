@@ -25,8 +25,9 @@ updated by four paths, three throttling layers and about 70 settings.
   commit, resend from maintenance, conditional claim.
 - **One upload path**: the run request is multipart (files, and for each file its workflow
   document); the API checks the bytes' type and stores the files in S3.
-- **Progress** is a Pydantic model published over Redis pub/sub and stored on the run; queue
-  position is counted when a client reads a queued run.
+- **Progress** is a Pydantic model stored on the run, which clients poll; queue position is
+  counted when a client reads a queued run. (1.0 removed the SSE stream and its Redis pub/sub:
+  runs take minutes, a 1 s poll is enough and works through every proxy.)
 - **Limits**: one per-client rate limit (`limits`), one queue cap, one run timeout.
 - **One Alembic migration** for the new schema (local databases are recreated).
 

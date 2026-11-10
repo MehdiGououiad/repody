@@ -1,88 +1,32 @@
-"use client";
-
-import { LoaderCircle, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { headers } from "next/headers";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn, signOut, useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useRef } from "react";
-import { useAuthEnforcement } from "@/components/auth/auth-enforcement";
+import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
-import { useHydrated } from "@/lib/hooks/use-hydrated";
-import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
+import { safeCallbackUrl } from "@/lib/auth/public-paths";
+import { auth, KEYCLOAK, oidcEnabled } from "@/lib/auth/server";
 
-const ERROR_KEYS: Record<string, string> = {
-  Configuration: "errorConfiguration",
-  AccessDenied: "errorAccessDenied",
-  Verification: "errorVerification",
-  OAuthSignin: "errorOAuth",
-  OAuthCallback: "errorOAuth",
-  OAuthAccountNotLinked: "errorOAuth",
-  Callback: "errorOAuth",
-  Default: "errorDefault",
-};
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string; error?: string }>;
+}) {
+  const [{ callbackUrl, error }, t] = await Promise.all([searchParams, getTranslations("auth")]);
+  const destination = safeCallbackUrl(callbackUrl);
+  // Better Auth sends sign-in failures here as `?error=<code>` (the proxy sends signed-in
+  // visitors on to `callbackUrl`).
+  const errorKey = !error ? null : error === "access_denied" ? "errorAccessDenied" : "errorOAuth";
 
-function safeCallbackUrl(raw: string | null): string {
-  if (raw?.startsWith("/") && !raw.startsWith("//")) {
-    return raw;
+  async function signInWithKeycloak() {
+    "use server";
+    const { url } = await auth.api.signInSocial({
+      body: { provider: KEYCLOAK, callbackURL: destination, errorCallbackURL: "/login" },
+      headers: await headers(),
+    });
+    if (!url) throw new Error("Keycloak sign-in did not return an authorization URL.");
+    redirect(url);
   }
-  return "/dashboard";
-}
-
-function LoginContent() {
-  const t = useTranslations("auth");
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"));
-  const errorCode = searchParams.get("error");
-  const { oidcEnabled, loading: authLoading } = usePlatformAuth();
-  const enforceAuth = useAuthEnforcement();
-  const hydrated = useHydrated();
-  const { data: session, status } = useSession();
-  const clearingSessionRef = useRef(false);
-
-  const sessionError = session?.error;
-  const sessionOk = status === "authenticated" && Boolean(session?.user) && !sessionError;
-
-  useEffect(() => {
-    if (!hydrated || status !== "authenticated") {
-      if (status !== "authenticated") {
-        clearingSessionRef.current = false;
-      }
-      return;
-    }
-    if (sessionError || !session?.user) {
-      if (clearingSessionRef.current) {
-        return;
-      }
-      clearingSessionRef.current = true;
-      void signOut({ redirectTo: `/login?callbackUrl=${encodeURIComponent(callbackUrl)}` });
-      return;
-    }
-    router.replace(callbackUrl);
-  }, [callbackUrl, hydrated, router, session?.user, sessionError, status]);
-
-  // Only block on session bootstrap. Authenticated-but-invalid is cleared in the
-  // effect above; still show the sign-in form so a stuck signOut cannot hang the UI.
-  if (!hydrated || status === "loading") {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
-        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
-        <p className="text-sm">{t("checkingAuth")}</p>
-      </div>
-    );
-  }
-
-  if (sessionOk) {
-    return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-3 px-4 text-muted-foreground">
-        <LoaderCircle className="h-6 w-6 animate-spin" aria-hidden />
-        <p className="text-sm">{t("continueToApp")}</p>
-      </div>
-    );
-  }
-
-  const errorKey = errorCode ? (ERROR_KEYS[errorCode] ?? ERROR_KEYS.Default) : null;
 
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center px-4 py-12">
@@ -106,61 +50,31 @@ function LoginContent() {
         </div>
 
         {errorKey ? (
-          <p className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+          <p
+            role="alert"
+            className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive"
+          >
             {t(errorKey)}
           </p>
         ) : null}
 
-        {authLoading ? (
-          <p className="text-center text-sm text-muted-foreground">{t("checkingAuth")}</p>
-        ) : !enforceAuth ? (
+        {oidcEnabled ? (
+          <form action={signInWithKeycloak}>
+            <Button type="submit" size="lg" className="w-full">
+              {t("continueWithKeycloak")}
+            </Button>
+          </form>
+        ) : (
           <div className="space-y-4 text-center">
             <p className="text-sm text-muted-foreground">{t("devModeOnLogin")}</p>
             <Button asChild className="w-full" size="lg">
-              <Link href="/dashboard">{t("continueToApp")}</Link>
+              <Link href={destination}>{t("continueToApp")}</Link>
             </Button>
           </div>
-        ) : !oidcEnabled ? (
-          <div className="space-y-4 text-center">
-            <p className="text-sm text-muted-foreground">{t("authServiceStarting")}</p>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              size="lg"
-              onClick={() => window.location.reload()}
-            >
-              {t("retry")}
-            </Button>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            size="lg"
-            className="w-full"
-            onClick={() => signIn("keycloak", { redirectTo: callbackUrl })}
-          >
-            {t("continueWithKeycloak")}
-          </Button>
         )}
 
         <p className="mt-6 text-center text-xs text-muted-foreground">{t("keycloakHint")}</p>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  const t = useTranslations("auth");
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-dvh items-center justify-center text-sm text-muted-foreground">
-          {t("checkingAuth")}
-        </div>
-      }
-    >
-      <LoginContent />
-    </Suspense>
   );
 }

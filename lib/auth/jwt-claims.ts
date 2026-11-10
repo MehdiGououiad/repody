@@ -1,25 +1,24 @@
 import { decodeJwt } from "jose";
 
-const APP_ROLES = new Set(["platform_admin", "admin", "operator", "viewer"]);
+/** The roles the API grants (`repody/infra/auth.py`), in its precedence order. */
+const APP_ROLES = ["platform_admin", "admin", "operator", "viewer"];
 
-export function realmRolesFromAccessToken(token: string | undefined): string[] {
+/**
+ * The app roles of a Keycloak access token, read the way the API reads them: realm roles and
+ * groups. Claims only: the API verifies the signature; a malformed token has no roles.
+ */
+export function rolesFromAccessToken(token: string | undefined): string[] {
   if (!token) return [];
-  // Claims only (the API verifies the signature); jose throws on a malformed token.
-  let realmAccess: { roles?: string[] } | undefined;
+  let claims: { realm_access?: { roles?: unknown[] }; groups?: unknown[] };
   try {
-    realmAccess = decodeJwt(token).realm_access as { roles?: string[] } | undefined;
+    claims = decodeJwt(token);
   } catch {
     return [];
   }
-  const roles = realmAccess?.roles ?? [];
-  return roles.filter((role) => APP_ROLES.has(role)).sort();
-}
-
-export function initialsFromSession(name?: string | null, email?: string | null): string {
-  const source = (name?.trim() || email?.trim() || "?").replace(/@.+$/, "");
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
+  const granted = new Set(
+    [...(claims.realm_access?.roles ?? []), ...(claims.groups ?? [])].map((role) =>
+      String(role).replace(/^\//, "")
+    )
+  );
+  return APP_ROLES.filter((role) => granted.has(role));
 }

@@ -11,22 +11,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { DialogTitle } from "@/components/ui/dialog";
-
-type Group = "navigate" | "workflows";
-
-const commands: {
-  group: Group;
-  label: Parameters<ReturnType<typeof useTranslations>>[0];
-  href: string;
-}[] = [
-  { group: "navigate", label: "nav.dashboard", href: "/dashboard" },
-  { group: "navigate", label: "nav.workflows", href: "/workflows" },
-  { group: "navigate", label: "nav.audits", href: "/audits" },
-  { group: "navigate", label: "nav.settings", href: "/settings" },
-  { group: "workflows", label: "common.newWorkflow", href: "/workflows/new" },
-];
-
-const groups: Group[] = ["navigate", "workflows"];
+import { MAIN_NAV_ITEMS } from "@/lib/navigation";
 
 export function CommandPalette({
   open,
@@ -36,8 +21,12 @@ export function CommandPalette({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const t = useTranslations();
+  const tNav = useTranslations("nav");
   const tBar = useTranslations("topbar");
+  const go = (href: string) => {
+    router.push(href);
+    onOpenChange(false);
+  };
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
@@ -45,23 +34,16 @@ export function CommandPalette({
       <CommandInput placeholder={tBar("searchPlaceholder")} />
       <CommandList>
         <CommandEmpty>{tBar("noResults")}</CommandEmpty>
-        {groups.map((group) => (
-          <CommandGroup key={group} heading={tBar(`commandGroups.${group}`)}>
-            {commands
-              .filter((command) => command.group === group)
-              .map((command) => (
-                <CommandItem
-                  key={command.href}
-                  onSelect={() => {
-                    router.push(command.href);
-                    onOpenChange(false);
-                  }}
-                >
-                  {t(command.label)}
-                </CommandItem>
-              ))}
-          </CommandGroup>
-        ))}
+        <CommandGroup heading={tBar("commandGroups.navigate")}>
+          {MAIN_NAV_ITEMS.map((item) => (
+            <CommandItem key={item.href} onSelect={() => go(item.href)}>
+              {tNav(item.labelKey)}
+            </CommandItem>
+          ))}
+        </CommandGroup>
+        <CommandGroup heading={tBar("commandGroups.workflows")}>
+          <CommandItem onSelect={() => go("/workflows/new")}>{tNav("newWorkflow")}</CommandItem>
+        </CommandGroup>
       </CommandList>
     </CommandDialog>
   );

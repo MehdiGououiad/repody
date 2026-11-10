@@ -1,5 +1,4 @@
 # Local/dev data plane. This file is the source of truth for local image pins.
-# MinIO: pgsty community fork - upstream minio/minio no longer publishes images.
 # Redis/Postgres: official Docker Library pins.
 # Docs: docs/LOCAL.md
 #
@@ -10,7 +9,7 @@ name: repody
 
 services:
   postgres:
-    image: postgres:17.11-alpine
+    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
     environment:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
@@ -18,7 +17,9 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - repody-postgres:/var/lib/postgresql/data
+      # Postgres 18 keeps its data under /var/lib/postgresql/18 (official image layout). New volume:
+      # the Postgres 17 one (repody-postgres) stays for a dump (docs/MIGRATING-1.0.md).
+      - repody-postgres-18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U audit -d repody"]
       interval: 5s
@@ -26,7 +27,7 @@ services:
       retries: 10
 
   redis:
-    image: redis:8.8.3-alpine
+    image: redis:8.10.3-alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
     ports:
       - "6379:6379"
     healthcheck:
@@ -35,40 +36,35 @@ services:
       timeout: 3s
       retries: 10
 
-  minio:
-    image: pgsty/minio:RELEASE.2026-08-04T00-00-00Z
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minio-local-dev
+  # S3-compatible object storage for uploads (SeaweedFS: master, volume, filer and S3 gateway in
+  # one process). The API creates its bucket on startup. https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "8333:8333"
     volumes:
-      - repody-minio:/data
-
-  minio-init:
-    image: pgsty/mc:RELEASE.2026-09-16T00-00-00Z
-    depends_on:
-      - minio
-    restart: on-failure
-    entrypoint: >
-      /bin/sh -c "
-      sleep 3 &&
-      mc alias set local http://minio:9000 minioadmin minio-local-dev &&
-      mc mb --ignore-existing local/audit-documents
-      "
+      - repody-seaweedfs:/data
+      - ./deploy/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 24
+      start_period: 10s
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.4
+    image: quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
       KC_HTTP_ENABLED: "true"
-      KC_HOSTNAME: localhost
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_HTTPS: "false"
+      # Hostname v2: tokens are issued for the browser URL; server-to-server endpoints (token,
+      # user info, keys) follow the host the caller used, so containers reach keycloak:8080.
+      # https://www.keycloak.org/server/hostname
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     ports:
       - "8080:8080"
     volumes:
@@ -97,9 +93,9 @@ services:
     environment:
       AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
       AUDIT_REDIS_URL: redis://redis:6379/0
-      AUDIT_S3_ENDPOINT_URL: http://minio:9000
-      AUDIT_S3_ACCESS_KEY: minioadmin
-      AUDIT_S3_SECRET_KEY: minio-local-dev
+      AUDIT_S3_ENDPOINT_URL: http://seaweedfs:8333
+      AUDIT_S3_ACCESS_KEY: repody
+      AUDIT_S3_SECRET_KEY: s3-local-dev
       AUDIT_DEPLOYMENT_ENVIRONMENT: development
       AUDIT_LLAMACPP_BASE_URL: http://host.docker.internal:8081/v1
       AUDIT_LLAMACPP_SERVED_MODEL: ${AUDIT_LLAMACPP_SERVED_MODEL:-nuextract3-q8_0}
@@ -116,17 +112,36 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
+  # Taskiq scheduler: sends the periodic maintenance task to the workers. Run exactly one.
+  scheduler:
+    profiles: [workers]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: worker
+      args:
+        BACKEND_EXTRAS: ${REPODY_BACKEND_EXTRAS:-otel}
+    command: ["taskiq", "scheduler", "repody.worker:scheduler"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      AUDIT_REDIS_URL: redis://redis:6379/0
+      AUDIT_DEPLOYMENT_ENVIRONMENT: development
+      OTEL_SDK_DISABLED: "true"
+    restart: unless-stopped
+
   # Observability (optional: docker compose --profile observability up -d)
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
   bugsink-db:
     profiles: [observability]
-    image: postgres:17.11-alpine
+    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
     environment:
       POSTGRES_USER: bugsink
       POSTGRES_PASSWORD: bugsink-local-dev
       POSTGRES_DB: bugsink
     volumes:
-      - repody-bugsink-db:/var/lib/postgresql/data
+      - repody-bugsink-db-18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U bugsink -d bugsink"]
       interval: 5s
@@ -135,7 +150,7 @@ services:
 
   bugsink:
     profiles: [observability]
-    image: bugsink/bugsink:2
+    image: bugsink/bugsink:2.6.3@sha256:d19378dc3ad8fac46b2d554019540e84d607c176b3e0774a10c55458f1288fa0
     depends_on:
       bugsink-db:
         condition: service_healthy
@@ -151,7 +166,7 @@ services:
 
   loki:
     profiles: [observability]
-    image: grafana/loki:3.7.8
+    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
     command: -config.file=/etc/loki/config.yaml
     ports:
       - "3100:3100"
@@ -161,7 +176,7 @@ services:
 
   prometheus:
     profiles: [observability]
-    image: prom/prometheus:v3.14.0
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --web.enable-remote-write-receiver
@@ -174,7 +189,7 @@ services:
 
   tempo:
     profiles: [observability]
-    image: grafana/tempo:2.10.8
+    image: grafana/tempo:2.10.10@sha256:12b0820f13ffa10ce956b6e9acc3b03f3cffded99109be6cc09d106fe56e5d38
     command: ["-config.file=/etc/tempo/config.yaml"]
     ports:
       - "3200:3200"
@@ -187,7 +202,7 @@ services:
 
   otel-collector:
     profiles: [observability]
-    image: otel/opentelemetry-collector-contrib:0.161.0
+    image: otel/opentelemetry-collector-contrib:0.165.0@sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
     command: ["--config=/etc/otel/config.yaml"]
     ports:
       - "4318:4318"
@@ -201,7 +216,7 @@ services:
   # Log collector (Grafana Alloy - successor to the EOL Promtail).
   alloy:
     profiles: [observability]
-    image: grafana/alloy:v1.21.3
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
     command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
     volumes:
       - ./deploy/observability/alloy-config.alloy:/etc/alloy/config.alloy:ro
@@ -213,7 +228,7 @@ services:
 
   grafana:
     profiles: [observability]
-    image: grafana/grafana:13.0.9
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
     ports:
       - "3030:3000"
     environment:
@@ -234,9 +249,9 @@ services:
         condition: service_started
 
 volumes:
-  repody-postgres:
-  repody-minio:
-  repody-bugsink-db:
+  repody-postgres-18:
+  repody-seaweedfs:
+  repody-bugsink-db-18:
   repody-loki:
   repody-tempo:
   repody-prometheus:

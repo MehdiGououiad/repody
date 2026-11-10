@@ -3,6 +3,7 @@
 @import "@fontsource-variable/source-sans-3/wght.css";
 @import "@fontsource-variable/jetbrains-mono/wght.css";
 @import "./theme.css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 

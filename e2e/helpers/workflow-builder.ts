@@ -2,12 +2,12 @@ import { expect, type Page } from "@playwright/test";
 
 /** Confirm the new-workflow name gate when present. */
 export async function confirmNewWorkflowGate(page: Page, name: string) {
+  // Whichever shows first: the gate (new workflow) or the builder's name field (edit).
   const gateInput = page.locator("#workflow-name");
-  const gateVisible = await gateInput
-    .waitFor({ state: "visible", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!gateVisible) return;
+  await expect(gateInput.or(page.getByPlaceholder("Workflow name…")).first()).toBeVisible({
+    timeout: 30_000,
+  });
+  if (!(await gateInput.isVisible())) return;
 
   await gateInput.fill(name);
   const continueBtn = page.getByRole("button", { name: "Continue" });

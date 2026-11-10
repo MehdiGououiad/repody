@@ -1,0 +1,27 @@
+# Version updates for every dependency source, so pinned versions and image digests stay current.
+# https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+version: 2
+updates:
+  - package-ecosystem: npm # pnpm workspace (package.json + pnpm-lock.yaml)
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+
+  - package-ecosystem: uv
+    directory: /backend
+    schedule: { interval: weekly }
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+
+  - package-ecosystem: docker # Dockerfile base images
+    directories: [/, /backend]
+    schedule: { interval: weekly }
+
+  - package-ecosystem: docker-compose # Compose images (tag + digest)
+    directory: /
+    schedule: { interval: weekly }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }

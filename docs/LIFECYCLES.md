@@ -14,7 +14,7 @@ holds each async flow as one discriminated union, so a contradictory state canno
 | [Workflow](#workflow) | draft · active · archived | `backend/src/repody/app/workflows.py` (`deploy_workflow`, `archive_workflows`) | `ck_workflows_status`; not writable by clients |
 | [Rule result](#rule-result) | passed · failed · skipped | `backend/src/repody/rules/evaluate.py` | `ck_rule_results_status` |
 | [Run progress step](#run-progress-step) | pending · active · done | `backend/src/repody/app/progress.py` (`Tracker`) | `ProgressStep.status` enum |
-| [Builder test run](#builder-test-run) | idle · running · done · failed | `components/workflow/builder/test-run-session.ts` (`TestRun`) | TypeScript union |
+| [Builder test run](#builder-test-run) | idle · running · done · failed | `lib/api/runs.ts` (`RunView`) | TypeScript union |
 | [Builder sync](#builder-sync) | idle · saving · deploying | `components/workflow/builder/use-builder-workflow.ts` (`BuilderSync`) | TypeScript union |
 
 ## Run
@@ -36,8 +36,8 @@ stateDiagram-v2
   processes race on a run (a duplicate task delivery, maintenance and a slow worker), the loser's
   update matches no row and it backs off: a final state is never overwritten.
 - `dispatched_at IS NULL` while queued means the task was never sent; maintenance resends it.
-- Clients see it as `RunState.status` (`GET /v1/runs/{id}`) and as SSE events ending with
-  `{"terminal": true, "status": "done" | "failed"}` (`lib/api/run.ts` `watchRun`).
+- Clients poll it as `RunState.status` (`GET /v1/runs/{id}`) until it is `done` or `failed`
+  (`lib/api/runs.ts` `useRun`). The server owns the timeout, so polling always ends.
 
 ## Workflow
 
@@ -66,10 +66,11 @@ any other failed rule → warning, else passed.
 
 ## Run progress step
 
-The step plan stored on a run (`runs.progress`) and pushed over SSE: queued → extract each
-document → check the rules → save the report. `Tracker.start(step)` marks earlier steps done and
-that step active; `Tracker.finish()` marks all done. It is display only: the run's status is the
-source of truth.
+The step plan stored on a run (`runs.progress`), read with the run: queued → extract each document
+(concurrently) → check the rules → save the report. Each step has a `kind` and data (document type,
+rule count, fields extracted, `failed`); clients word it in their language. `Tracker.start(id)` makes
+a step active (and the queue step done), `Tracker.finish(id, …)` marks it done, `Tracker.complete()`
+marks all done. It is display only: the run's status is the source of truth.
 
 ## Builder test run
 
@@ -83,9 +84,9 @@ stateDiagram-v2
   failed --> running: Run test
 ```
 
-`TestRun` carries only the data of its phase (`progress` while running, `result` when done,
-`error` and `runId` when failed). Progress events reach only a running test (`withProgress`), so a
-late event never reopens a finished one. The chosen test files live beside it and survive runs.
+A test run is the run id of its last start (`TestSession.runId`); `useRun` polls it and returns only
+the data of its phase (`progress` while running, `result` when done, `error` when failed). The chosen
+test files live beside it and survive runs.
 
 ## Builder sync
 

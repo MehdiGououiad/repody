@@ -1,6 +1,6 @@
-from __future__ import annotations
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Path
 
 from repody.api.deps import SessionDep, require
 from repody.app import workflows
@@ -15,6 +15,9 @@ from repody.schemas.workflow import (
 )
 
 router = APIRouter(prefix="/workflows", tags=["workflows"])
+
+# Ids are created by the server (`wf-<uuid7>`) or by the builder for a new draft.
+WorkflowId = Annotated[str, Path(max_length=64)]
 
 
 @router.get("", dependencies=[require("workflow:read")])
@@ -42,26 +45,28 @@ async def check_rules(body: WorkflowDefinition) -> RuleChecks:
 
 
 @router.get("/{workflow_id}", dependencies=[require("workflow:read")])
-async def get_workflow(workflow_id: str, session: SessionDep) -> WorkflowOut:
+async def get_workflow(workflow_id: WorkflowId, session: SessionDep) -> WorkflowOut:
     return await workflows.get_workflow(session, workflow_id)
 
 
 @router.put("/{workflow_id}", dependencies=[require("workflow:write")])
-async def save_workflow(workflow_id: str, body: WorkflowIn, session: SessionDep) -> WorkflowOut:
+async def save_workflow(
+    workflow_id: WorkflowId, body: WorkflowIn, session: SessionDep
+) -> WorkflowOut:
     workflow = await workflows.save_workflow(session, workflow_id, body)
     await session.commit()
     return workflow
 
 
 @router.delete("/{workflow_id}", status_code=204, dependencies=[require("workflow:delete")])
-async def delete_workflow(workflow_id: str, session: SessionDep) -> None:
+async def delete_workflow(workflow_id: WorkflowId, session: SessionDep) -> None:
     await workflows.load(session, workflow_id)
     await workflows.archive_workflows(session, [workflow_id])
     await session.commit()
 
 
 @router.post("/{workflow_id}/deploy", dependencies=[require("workflow:write")])
-async def deploy_workflow(workflow_id: str, session: SessionDep) -> WorkflowOut:
+async def deploy_workflow(workflow_id: WorkflowId, session: SessionDep) -> WorkflowOut:
     """Activate the workflow and issue a new API key (shown once)."""
     workflow = await workflows.deploy_workflow(session, workflow_id)
     await session.commit()

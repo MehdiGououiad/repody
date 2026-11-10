@@ -3,9 +3,9 @@
 import { Moon, Search, Sun } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { UserMenu } from "@/components/auth/user-menu";
-import { useTheme } from "@/components/providers/theme-provider";
 import { Button } from "@/components/ui/button";
 import { BackendStatus } from "./backend-status";
 import { LanguageSwitcher } from "./language-switcher";
@@ -18,7 +18,7 @@ const CommandPalette = dynamic(
 
 export function TopBar() {
   const tBar = useTranslations("topbar");
-  const { theme, toggleTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -66,8 +66,15 @@ export function TopBar() {
           <BackendStatus />
         </span>
         <LanguageSwitcher />
-        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label={tBar("toggleTheme")}>
-          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+          aria-label={tBar("toggleTheme")}
+        >
+          {/* Both icons render; CSS shows the one for the current theme (no hydration mismatch). */}
+          <Sun className="h-4 w-4 hidden dark:block" />
+          <Moon className="h-4 w-4 dark:hidden" />
         </Button>
         <UserMenu />
       </div>

@@ -6,8 +6,6 @@ each queued run inline instead of on a Taskiq worker. Live tests (``-m live``) c
 running stack at E2E_API_URL.
 """
 
-from __future__ import annotations
-
 import os
 
 # Before any `repody` import: settings are read once and cached.
@@ -28,6 +26,7 @@ import subprocess
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import BinaryIO
 
 import asyncpg
 import pytest
@@ -35,6 +34,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 
 from repody.app import execute
+from repody.app.seed import seed
 from repody.extraction import client as inference
 from repody.infra import db, queue
 from repody.infra.storage import use_store
@@ -42,18 +42,21 @@ from repody.main import create_app
 from repody.settings import get_settings
 
 BACKEND = Path(__file__).resolve().parents[1]
-FACTURE_PDF = BACKEND.parent / "e2e" / "fixtures" / "documents" / "Facture.pdf"
 
 
 class MemoryStore:
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
 
-    async def put(self, key: str, data: bytes, content_type: str) -> None:
-        self.objects[key] = data
+    async def put(self, key: str, file: BinaryIO, content_type: str) -> None:
+        self.objects[key] = file.read()
 
     async def get(self, key: str) -> bytes:
         return self.objects[key]
+
+    async def delete(self, keys: list[str]) -> None:
+        for key in keys:
+            self.objects.pop(key, None)
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
@@ -64,9 +67,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 
 @pytest.fixture(scope="session")
-async def database() -> None:
+async def database() -> AsyncIterator[None]:
     """Create ``repody_test`` once and migrate it with Alembic, as in production."""
-    url = get_settings().database_url
+    url = get_settings().database_url.get_secret_value()
     name = url.rsplit("/", 1)[1]
     admin = await asyncpg.connect(url.replace("+asyncpg", "").rsplit("/", 1)[0] + "/postgres")
     try:
@@ -76,19 +79,22 @@ async def database() -> None:
         await admin.close()
     alembic = [sys.executable, "-m", "alembic", "upgrade", "head"]
     await asyncio.to_thread(subprocess.run, alembic, cwd=BACKEND, check=True)
+    yield
+    await db.engine.dispose()
 
 
 @pytest.fixture
 def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
-    """What the fake model server answers: set ``model_answer["text"]``; ``model_answer["calls"]``
-    lists each request with the server it went to (None: the NuExtract server)."""
-    answer: dict = {"text": "{}", "calls": []}
+    """What the fake model server answers: set ``model_answer["text"]`` (and ``["truncated"]``
+    for an answer cut off at the token limit); ``model_answer["calls"]`` lists each request with
+    the server it went to (None: the NuExtract server)."""
+    answer: dict = {"text": "{}", "truncated": False, "calls": []}
 
     async def chat(
         payload: dict, *, base_url: str | None = None, api_key: str | None = None
-    ) -> str:
+    ) -> inference.Reply:
         answer["calls"].append({"request": payload, "base_url": base_url})
-        return answer["text"]
+        return inference.Reply(text=answer["text"], truncated=answer["truncated"])
 
     monkeypatch.setattr(inference, "chat", chat)
     return answer
@@ -114,4 +120,11 @@ async def api(
     ) as client:
         yield client
     use_store(None)
-    await db.engine.dispose()
+
+
+@pytest.fixture
+async def seeded(api: AsyncClient) -> None:
+    """The demo workflow and its audit (repody.app.seed) on the clean test database."""
+    async with db.session_factory() as session:
+        await seed(session)
+        await session.commit()

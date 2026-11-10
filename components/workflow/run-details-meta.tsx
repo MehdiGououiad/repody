@@ -37,11 +37,12 @@ export function RunMetadataPanel({
   metadata: RunAuditMetadata;
   className?: string;
 }) {
+  const t = useTranslations("audits.report");
   return (
     <div className={cn("grid grid-cols-2 sm:grid-cols-3 gap-2", className)}>
-      <MetaChip label="Total duration" value={formatDurationMs(metadata.durationMs)} />
-      <MetaChip label="Extraction" value={formatDurationMs(metadata.extractionMs)} />
-      <MetaChip label="Validation time" value={formatDurationMs(metadata.validationMs)} />
+      <MetaChip label={t("totalDuration")} value={formatDurationMs(metadata.durationMs)} />
+      <MetaChip label={t("extractionTime")} value={formatDurationMs(metadata.extractionMs)} />
+      <MetaChip label={t("validationTime")} value={formatDurationMs(metadata.validationMs)} />
     </div>
   );
 }

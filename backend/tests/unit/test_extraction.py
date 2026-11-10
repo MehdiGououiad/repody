@@ -4,12 +4,13 @@ import json
 
 import pypdfium2 as pdfium
 import pytest
-from PIL import Image
+from PIL import ExifTags, Image
 
-from repody.extraction import lightonocr, nuextract
-from repody.extraction.fields import leaf_values
+from repody.extraction import lightonocr, nuextract, pipeline, render
+from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
+from repody.settings import get_settings
 
 FIELDS = [
     SchemaField(name="total", description="Amount due", template_type="number"),
@@ -73,13 +74,30 @@ def test_leaf_values_keep_json_types():
             "tags": [],
         }
     )
-    values = {v.key: v for v in leaf_values(FIELDS, answer)}
+    data, error = parse_answer(answer)
+    assert error is None
+    values = {v.key: v for v in leaf_values(FIELDS, data)}
     assert values["total"].value == 6000
     assert values["vendor.name"].value == "Acme"
     assert values["lines"].value == [{"label": "x"}]
     assert values["tags"].value is None
     assert not values["tags"].extracted
-    assert all(v.value is None for v in leaf_values(FIELDS, "not json"))
+
+
+def test_slightly_malformed_answers_are_repaired_and_unusable_ones_reported():
+    data, error = parse_answer('{"total": 6000, "currency": "MAD",')  # cut off mid-object
+    assert error is None
+    assert data == {"total": 6000, "currency": "MAD"}
+    assert parse_answer("") == ({}, "The model returned no answer.")
+    assert parse_answer('["not", "an", "object"]')[1] == "The model's answer is not a JSON object."
+    assert all(v.value is None for v in leaf_values(FIELDS, {}))
+
+
+def test_unknown_template_types_are_rejected():
+    with pytest.raises(ValueError, match="Unknown template type"):
+        SchemaField(name="x", template_type="numbr")
+    assert SchemaField(name="x", template_type="region:FR").template_type == "region:FR"
+    assert SchemaField(name="x", template_type=" ").template_type == "verbatim-string"
 
 
 def _pdf(pages: int) -> bytes:
@@ -91,9 +109,12 @@ def _pdf(pages: int) -> bytes:
     return buffer.getvalue()
 
 
-def _png(width: int, height: int) -> bytes:
+def _image(fmt: str = "PNG", size: tuple[int, int] = (8, 8), *, orientation: int = 1) -> bytes:
+    """An encoded image; ``orientation`` is its EXIF orientation tag (6: rotated 90°)."""
     buffer = io.BytesIO()
-    Image.new("RGB", (width, height), "white").save(buffer, "PNG")
+    exif = Image.Exif()
+    exif[ExifTags.Base.Orientation] = orientation
+    Image.new("RGB", size, "white").save(buffer, fmt, exif=exif)
     return buffer.getvalue()
 
 
@@ -102,25 +123,71 @@ def _size(part: dict) -> tuple[int, int]:
     return Image.open(io.BytesIO(data)).size
 
 
-def test_nuextract_pages_at_170_dpi_and_images_as_uploaded():
+def test_nuextract_gets_pdf_pages_at_170_dpi_and_images_as_png():
     parts, total = nuextract.page_parts(_pdf(3), "application/pdf", max_pages=2)
-    assert total == 3 and len(parts) == 2
+    assert total == 3
+    assert len(parts) == 2
     width, height = _size(parts[0])
-    assert abs(width - 595 * 170 / 72) < 1 and abs(height - 842 * 170 / 72) < 1  # 170 DPI
-    jpeg = io.BytesIO()
-    Image.new("RGB", (10, 10)).save(jpeg, "JPEG")
-    [part], total = nuextract.page_parts(jpeg.getvalue(), "image/jpeg", max_pages=None)
-    assert total == 1
-    assert (
-        part["image_url"]["url"]
-        == "data:image/jpeg;base64," + base64.b64encode(jpeg.getvalue()).decode()
-    )
+    assert abs(width - 595 * 170 / 72) < 1
+    assert abs(height - 842 * 170 / 72) < 1
+    for fmt, mime in [("JPEG", "image/jpeg"), ("WEBP", "image/webp"), ("PNG", "image/png")]:
+        [part], total = nuextract.page_parts(_image(fmt, (10, 12)), mime, max_pages=None)
+        assert total == 1
+        assert part["image_url"]["url"].startswith("data:image/png;base64,")  # stb_image reads it
+        assert _size(part) == (10, 12)
+
+
+def test_transparent_images_are_flattened_on_white():
+    buffer = io.BytesIO()
+    Image.new("RGBA", (4, 4), (0, 0, 0, 0)).save(buffer, "PNG")  # fully transparent black
+    flat = render.open_image(buffer.getvalue())
+    assert flat.mode == "RGB"
+    assert flat.getpixel((0, 0)) == (255, 255, 255)
+
+
+def test_rotated_photos_are_sent_upright():
+    """Phone photos store their rotation in EXIF, which model servers ignore."""
+    rotated = _image("JPEG", (40, 20), orientation=6)
+    [part], _ = nuextract.page_parts(rotated, "image/jpeg", max_pages=None)
+    assert part["image_url"]["url"].startswith("data:image/png;base64,")
+    assert _size(part) == (20, 40)
+    [page], _ = lightonocr.page_parts(rotated, "image/jpeg", max_pages=None)
+    assert _size(page) == (20, 40)
 
 
 def test_lightonocr_pages_follow_the_official_client():
     [page], total = lightonocr.page_parts(_pdf(1), "application/pdf", max_pages=None)
-    assert total == 1 and max(_size(page)) == 2048  # rendered at the model's longest edge
-    [image], _ = lightonocr.page_parts(_png(800, 600), "image/png", max_pages=None)
+    assert total == 1
+    assert max(_size(page)) == 2048
+    [image], _ = lightonocr.page_parts(_image(size=(800, 600)), "image/png", max_pages=None)
     assert _size(image) == (800, 600)  # never upscaled
-    [image], _ = lightonocr.page_parts(_png(4000, 3000), "image/png", max_pages=None)
+    [image], _ = lightonocr.page_parts(_image(size=(4000, 3000)), "image/png", max_pages=None)
     assert _size(image) == (2048, 1536)
+
+
+@pytest.mark.parametrize(
+    ("data", "mime"),
+    [
+        (_pdf(1), "application/pdf"),
+        (_image("PNG"), "image/png"),
+        (_image("JPEG"), "image/jpeg"),
+        (_image("WEBP"), "image/webp"),
+        (_image("GIF"), None),  # an image, but not one the API accepts
+        (b"%PDF-1.7\nnot really a pdf", None),  # a PDF header alone is not a PDF
+        (_image("PNG")[:40], None),  # truncated
+        (b"plain text", None),
+    ],
+)
+def test_file_type_is_what_the_decoders_can_open(data: bytes, mime: str | None):
+    file = io.BytesIO(data)
+    file.seek(5)
+    assert render.file_type(file) == mime
+    assert file.tell() == 0  # rewound for storage
+
+
+def test_the_cache_key_changes_with_how_pages_are_rendered(monkeypatch):
+    request = {"model": "m"}
+    monkeypatch.setattr(get_settings(), "max_pages_per_document", None)
+    every_page = pipeline._cache_key(b"pdf", request)
+    monkeypatch.setattr(get_settings(), "max_pages_per_document", 2)
+    assert pipeline._cache_key(b"pdf", request) != every_page

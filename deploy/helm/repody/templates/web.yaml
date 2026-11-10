@@ -44,10 +44,10 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- with .Values.web.authUrl }}
-            - name: AUTH_URL
+            - name: BETTER_AUTH_URL
               value: {{ . | quote }}
             {{- end }}
-            {{- range $name, $key := dict "AUTH_SECRET" "AUTH_SECRET" "AUTH_KEYCLOAK_SECRET" "AUTH_KEYCLOAK_CLIENT_SECRET" }}
+            {{- range $name, $key := dict "BETTER_AUTH_SECRET" "AUTH_SECRET" "AUTH_KEYCLOAK_SECRET" "AUTH_KEYCLOAK_CLIENT_SECRET" }}
             - name: {{ $name }}
               valueFrom:
                 secretKeyRef: { name: {{ $.Values.existingSecret }}, key: {{ $key }} }

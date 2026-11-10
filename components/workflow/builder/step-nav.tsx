@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CheckCircle2, CircleDot, Database, Rocket, ShieldCheck } from "lucide-react";
-import type { useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -40,16 +40,15 @@ export function BuilderStepNav({
   documents,
   rules,
   onChange,
-  tSteps,
   testHasResults,
 }: {
   current: BuilderStep;
   documents: DocumentDef[];
   rules: WorkflowRule[];
   onChange: (s: BuilderStep) => void;
-  tSteps: ReturnType<typeof useTranslations>;
   testHasResults?: boolean;
 }) {
+  const tSteps = useTranslations("workflows.builder.steps");
   const steps = STEP_META.map(({ icon: Icon, key }, idx) => {
     const isActive = current === idx;
     const isDone = !isActive && stepComplete(idx as BuilderStep, documents, rules);
@@ -88,7 +87,7 @@ export function BuilderStepNav({
             {tSteps(key)}
           </p>
           <p className="text-[11px] text-on-surface-variant/70 truncate mt-0.5">
-            {tSteps(`${key}Hint` as Parameters<typeof tSteps>[0])}
+            {tSteps(`${key}Hint`)}
           </p>
         </div>
         {isActive && <CircleDot className="h-3.5 w-3.5 shrink-0 text-accent-blue" />}

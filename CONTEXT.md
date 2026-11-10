@@ -31,7 +31,7 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 sequenceDiagram
   participant UI as Next.js UI
   participant API as FastAPI /v1
-  participant Store as MinIO (S3)
+  participant Store as S3 storage
   participant Q as Redis / Taskiq
   participant W as Worker
   participant Inf as External VLM
@@ -45,7 +45,7 @@ sequenceDiagram
   Inf-->>W: structured JSON fields
   W->>W: check rules
   W->>API: persist Run / RuleResults
-  UI->>API: GET /runs/{id} (poll / SSE)
+  UI->>API: GET /runs/{id} (poll until done)
 ```
 
 ## Backend layers
@@ -76,7 +76,7 @@ backend/src/repody/
 
 ### Run pipeline
 
-One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance resends lost ones and fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES`. Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
+One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance (a Taskiq task the scheduler sends every `AUDIT_MAINTENANCE_INTERVAL_SECONDS`) resends lost ones, fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES` and purges runs past their retention. Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
 
 ## Extraction
 
@@ -103,8 +103,9 @@ Next.js 16 App Router at repo root:
 
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
-| control | `repody-api` | Workflows, runs, uploads, maintenance |
-| worker | `repody-worker` | Runs (one queue; scale by replicas) |
+| control | `repody-api` | Workflows, runs, uploads |
+| worker | `repody-worker` | Runs and the scheduled maintenance (one queue; scale by replicas) |
+| scheduler | `repody-scheduler` | Sends the periodic maintenance task (exactly one replica) |
 | edge | `repody-web` | Next.js UI |
 | data plane | Postgres, Redis, object storage | Durable state + Taskiq broker |
 | auth | External OIDC | Authentication |

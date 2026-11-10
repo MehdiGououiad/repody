@@ -37,7 +37,7 @@ function ExtractionJsonPanel({ text, className }: { text: string; className?: st
         title: t("title"),
         subtitle: t("subtitle", {
           lines: formatted.split("\n").length,
-          chars: formatted.length.toLocaleString(),
+          chars: formatted.length,
         }),
         copy: t("copy"),
         copied: t("copied"),

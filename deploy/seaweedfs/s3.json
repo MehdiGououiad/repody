@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "repody",
+      "credentials": [{ "accessKey": "repody", "secretKey": "s3-local-dev" }],
+      "actions": ["Admin", "Read", "List", "Tagging", "Write"]
+    }
+  ]
+}

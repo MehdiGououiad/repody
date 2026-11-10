@@ -1,14 +1,16 @@
 /** New, empty workflow items for the builder (every field the API returns is set). */
-import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
+import { fieldRef, literal } from "@/lib/rules/conditions";
 import type { DocumentDef, RuleCondition, SchemaField, Workflow, WorkflowRule } from "@/lib/types";
 import { shortId } from "@/lib/utils";
+
+export const DEFAULT_TEMPLATE_TYPE = "verbatim-string";
 
 export function newSchemaField(partial: Partial<SchemaField> = {}): SchemaField {
   return {
     id: `f${shortId()}`,
     name: "",
     description: "",
-    templateType: DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
+    templateType: DEFAULT_TEMPLATE_TYPE,
     enumValues: [],
     children: [],
     ...partial,
@@ -27,15 +29,7 @@ export function newDocument(): DocumentDef {
 }
 
 export function newCondition(): RuleCondition {
-  return {
-    id: shortId(),
-    left: { kind: "field", value: "" },
-    operator: "==",
-    right: { kind: "literal", value: "" },
-    arithmeticOp: null,
-    leftExtra: null,
-    tableAggregate: null,
-  };
+  return { id: shortId(), left: fieldRef(), operator: "==", right: literal() };
 }
 
 export function newRule(documents: DocumentDef[]): WorkflowRule {

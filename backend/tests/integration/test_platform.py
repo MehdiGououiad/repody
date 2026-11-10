@@ -3,7 +3,6 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import update
 
 from repody.app.maintenance import fail_stuck_runs
-from repody.app.seed import seed
 from repody.infra import db
 from repody.infra.models import Run
 
@@ -16,14 +15,13 @@ async def test_health_and_config(api):
     assert config["modelAvailable"] is False  # no llama-server in tests
 
 
-async def test_dashboard_and_maintenance(api):
-    async with db.session_factory() as session:
-        await seed(session)
-        await session.commit()
+async def test_dashboard_and_maintenance(api, seeded):
     dashboard = (await api.get("/v1/dashboard")).json()
     kpis = [k["id"] for k in dashboard["kpis"]]
-    assert kpis == ["auditsWeek", "passRate", "failures", "pendingReview"]
-    assert dashboard["audits"][0]["id"] == "AUD-2023-8902"
+    assert kpis == ["auditsWeek", "passRate", "failures"]
+    assert dashboard["recentAudits"][0]["id"] == "AUD-2023-8902"
+    assert dashboard["failedAudits"][0]["id"] == "AUD-2023-8902"
+    assert dashboard["performanceSeries"][-1]["day"] == datetime.now(UTC).date().isoformat()
     assert dashboard["workflows"][0]["id"] == "wf-invoice-audit"
 
     async with db.session_factory() as session:
@@ -38,16 +36,23 @@ async def test_dashboard_and_maintenance(api):
             )
         )
         await session.commit()
-    assert await fail_stuck_runs() == 1
+    assert len(await fail_stuck_runs()) == 1
     state = (await api.get("/v1/runs/AUD-2023-8902")).json()
     assert state["status"] == "failed"
     assert "worker stopped" in state["error"]
 
 
-async def test_one_replica_does_the_upkeep_per_interval(api):
-    from repody.app.maintenance import _claim_turn
-    from repody.infra.redis import get_redis
+async def test_maintenance_is_a_scheduled_task(api):
+    from repody.app.maintenance import upkeep
+    from repody.settings import get_settings
+    from repody.worker import MAINTENANCE_TASK, broker, scheduler
 
-    await get_redis().delete("repody:maintenance")
-    assert await _claim_turn(60) is True
-    assert await _claim_turn(60) is False  # another replica in the same interval skips
+    task = broker.find_task(MAINTENANCE_TASK)
+    assert task is not None
+    interval = get_settings().maintenance_interval_seconds
+    assert task.labels["schedule"] == [{"interval": interval}]
+    [source] = scheduler.sources
+    await source.startup()  # the scheduler process does this when it starts
+    schedules = await source.get_schedules()
+    assert [s.task_name for s in schedules] == [MAINTENANCE_TASK]
+    await upkeep()  # one pass on an empty database does nothing and does not fail

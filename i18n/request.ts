@@ -1,26 +1,17 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import { defaultLocale, LOCALE_COOKIE, type Locale, locales } from "./config";
+import { isLocale, LOCALE_COOKIE, TIME_ZONE_COOKIE } from "./config";
+import { negotiateLocale, validTimeZone } from "./negotiate";
 
-function negotiate(header: string | null): Locale {
-  if (!header) return defaultLocale;
-  for (const part of header.split(",")) {
-    const tag = part.split(";")[0].trim().toLowerCase();
-    const base = tag.split("-")[0] as Locale;
-    if ((locales as readonly string[]).includes(base)) return base;
-  }
-  return defaultLocale;
-}
-
+/** The locale chosen in the language menu (a cookie), else the browser's preference; dates in
+ * the reader's time zone (UTC until the browser has reported it). */
 export default getRequestConfig(async () => {
-  const cookieStore = await cookies();
-  const fromCookie = cookieStore.get(LOCALE_COOKIE)?.value;
-  const headerList = await headers();
-  const locale: Locale =
-    fromCookie && (locales as readonly string[]).includes(fromCookie)
-      ? (fromCookie as Locale)
-      : negotiate(headerList.get("accept-language"));
-
-  const messages = (await import(`../messages/${locale}.json`)).default;
-  return { locale, messages };
+  const [cookieStore, headerList] = await Promise.all([cookies(), headers()]);
+  const chosen = cookieStore.get(LOCALE_COOKIE)?.value;
+  const locale = isLocale(chosen) ? chosen : negotiateLocale(headerList.get("accept-language"));
+  return {
+    locale,
+    timeZone: validTimeZone(cookieStore.get(TIME_ZONE_COOKIE)?.value),
+    messages: (await import(`../messages/${locale}.json`)).default,
+  };
 });

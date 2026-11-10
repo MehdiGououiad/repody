@@ -1,91 +1,44 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Play, Rocket } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { Dispatch, SetStateAction } from "react";
 import { SectionHeading } from "@/components/layout/section-heading";
 import { Button } from "@/components/ui/button";
 import { ApiPanel } from "@/components/workflow/api-panel/api-panel";
 import { TestRunResults } from "@/components/workflow/builder/test-run-results";
-import {
-  formatUploadSize,
-  type TestRun,
-  type TestSessionState,
-  withProgress,
-} from "@/components/workflow/builder/test-run-session";
-import type { BuilderSync } from "@/components/workflow/builder/use-builder-workflow";
+import type { BuilderSync, TestSession } from "@/components/workflow/builder/use-builder-workflow";
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { RunErrorAlert } from "@/components/workflow/run-error-alert";
-import { runErrorFromUnknown } from "@/lib/api/api-error";
-import {
-  type ClientStepLabels,
-  clientProgress,
-  type RunProgress,
-  runWorkflow,
-} from "@/lib/api/run";
+import { startRun, useRun } from "@/lib/api/runs";
+import { errorMessage } from "@/lib/query/get-query-client";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
-function clientStepLabels(t: ReturnType<typeof useTranslations>): ClientStepLabels {
-  return {
-    "save-workflow": {
-      label: t("test.progress.saveWorkflow"),
-      pendingDetail: t("test.progress.saveWorkflowDetail"),
-    },
-    "start-run": {
-      label: t("test.progress.startRun"),
-      pendingDetail: t("test.progress.startRunDetail"),
-    },
-    "poll-run": {
-      label: t("test.progress.pollRun"),
-      pendingDetail: t("test.progress.pollRunDetail"),
-    },
-  };
-}
-
 function TestRunPanel({
-  workflowId,
   documents,
   rules,
-  onBeforeRun,
   session,
   onSessionChange,
-  onRunChange,
-  t,
+  saveForTestRun,
 }: {
-  workflowId: string;
   documents: DocumentDef[];
   rules: WorkflowRule[];
-  onBeforeRun?: () => Promise<string>;
-  session: TestSessionState;
-  onSessionChange: (patch: Partial<TestSessionState>) => void;
-  onRunChange: Dispatch<SetStateAction<TestRun>>;
-  t: ReturnType<typeof useTranslations>;
+  session: TestSession;
+  onSessionChange: (session: TestSession) => void;
+  saveForTestRun: () => Promise<string>;
 }) {
-  const { run, filesByDocId, uploadMeta } = session;
-  const running = run.phase === "running";
-  const hasFiles = Object.keys(filesByDocId).length > 0;
-  const stepLabels = clientStepLabels(t);
-
-  const runTest = async () => {
-    if (running) return;
-    onRunChange({ phase: "running", progress: clientProgress(stepLabels, "save-workflow") });
-    try {
-      const id = onBeforeRun ? await onBeforeRun() : workflowId;
-      const result = await runWorkflow(
-        id,
-        { documents, rules, filesByDocId },
-        {
-          clientLabels: stepLabels,
-          onProgress: (progress: RunProgress) =>
-            onRunChange((prev) => withProgress(prev, progress)),
-        }
-      );
-      onRunChange({ phase: "done", result });
-    } catch (error) {
-      const { message, runId } = runErrorFromUnknown(error);
-      onRunChange({ phase: "failed", error: message, runId: runId ?? null });
-    }
-  };
+  const t = useTranslations("workflows.builder");
+  // Save first, so the run is what the builder shows; without files the rules run on the
+  // schema's placeholder values. A failed save or start shows in the same alert.
+  const start = useMutation({
+    mutationFn: async () =>
+      startRun({ workflowId: await saveForTestRun(), documents, rules, files: session.files }),
+    onMutate: () => onSessionChange({ ...session, runId: null }),
+    onSuccess: ({ runId }) => onSessionChange({ ...session, runId }),
+  });
+  const run = useRun(session.runId);
+  const busy = start.isPending || run.phase === "running";
+  const hasFiles = Object.keys(session.files).length > 0;
 
   return (
     <div className="space-y-8 min-w-0">
@@ -97,41 +50,34 @@ function TestRunPanel({
         <IngestionSection
           documents={documents}
           rules={rules}
-          uploads={uploadMeta}
-          filesByDocId={filesByDocId}
-          onFilesChange={(files) => {
-            const docIds = new Set(documents.map((document) => document.id));
-            const nextMeta = { ...uploadMeta };
-
-            for (const id of Object.keys(nextMeta)) {
-              if (!docIds.has(id) || !(id in files)) delete nextMeta[id];
-            }
-            for (const [id, file] of Object.entries(files)) {
-              nextMeta[id] = { name: file.name, size: formatUploadSize(file.size) };
-            }
-
-            onSessionChange({ filesByDocId: files, uploadMeta: nextMeta });
-          }}
+          files={session.files}
+          onFilesChange={(files) => onSessionChange({ ...session, files })}
         />
         <Button
           className="w-full gap-2 sm:w-auto sm:min-w-[12rem]"
-          onClick={runTest}
-          disabled={running}
+          onClick={() => start.mutate()}
+          disabled={busy}
         >
-          {running ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          {running ? t("test.running") : t("test.runBtn")}
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+          {busy ? t("test.running") : t("test.runBtn")}
         </Button>
-        {!hasFiles && !running ? (
+        {!hasFiles && !busy ? (
           <p className="text-[11px] text-on-surface-variant text-center sm:text-left">
             {t("test.noFilesHint")}
           </p>
         ) : null}
+        {start.isError ? (
+          <RunErrorAlert
+            title={t("test.errorTitle")}
+            message={errorMessage(start.error, t("test.errorTitle"))}
+          />
+        ) : null}
         {run.phase === "failed" ? (
-          <RunErrorAlert title={t("test.errorTitle")} message={run.error} runId={run.runId} />
+          <RunErrorAlert title={t("test.errorTitle")} message={run.error} runId={session.runId} />
         ) : null}
       </section>
 
-      <TestRunResults run={run} />
+      <TestRunResults run={run} starting={start.isPending} />
     </div>
   );
 }
@@ -146,10 +92,9 @@ export function TestDeployStep({
   deployed,
   sync,
   onDeploy,
-  onBeforeRun,
+  saveForTestRun,
   testSession,
   onTestSessionChange,
-  onTestRunChange,
 }: {
   workflowId: string;
   name: string;
@@ -160,32 +105,34 @@ export function TestDeployStep({
   deployed: boolean;
   sync: BuilderSync;
   onDeploy: () => void;
-  onBeforeRun?: () => Promise<string>;
-  testSession: TestSessionState;
-  onTestSessionChange: (patch: Partial<TestSessionState>) => void;
-  onTestRunChange: Dispatch<SetStateAction<TestRun>>;
+  saveForTestRun: () => Promise<string>;
+  testSession: TestSession;
+  onTestSessionChange: (session: TestSession) => void;
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
+  const deployLabel =
+    sync === "deploying"
+      ? tCommon("deploying")
+      : deployed
+        ? tCommon("redeployWorkflow")
+        : tCommon("deployWorkflow");
 
   return (
     <div className="space-y-10 min-w-0">
       <TestRunPanel
-        workflowId={workflowId}
         documents={documents}
         rules={rules}
-        onBeforeRun={onBeforeRun}
         session={testSession}
         onSessionChange={onTestSessionChange}
-        onRunChange={onTestRunChange}
-        t={t}
+        saveForTestRun={saveForTestRun}
       />
 
       <hr className="border-border/80" />
 
       <section className="space-y-5 min-w-0">
         <SectionHeading
-          eyebrow="API"
+          eyebrow={t("deploy.eyebrow")}
           title={t("deploy.tabLabel")}
           description={t("deploy.sectionHint")}
         />
@@ -204,7 +151,7 @@ export function TestDeployStep({
               className="gap-2 shrink-0 w-full sm:w-auto"
             >
               <Rocket className="h-4 w-4" />
-              {sync === "deploying" ? tCommon("deploying") : tCommon("deployWorkflow")}
+              {deployLabel}
             </Button>
           </div>
         ) : (
@@ -225,7 +172,7 @@ export function TestDeployStep({
                 className="gap-1.5 h-8 text-xs shrink-0 w-full sm:w-auto"
               >
                 <Play className="h-3.5 w-3.5" />
-                {sync === "deploying" ? tCommon("deploying") : tCommon("redeployWorkflow")}
+                {deployLabel}
               </Button>
             </div>
 

@@ -1,6 +1,6 @@
 import { ArrowRight, Database, Rocket, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 const STEPS = [
@@ -9,12 +9,10 @@ const STEPS = [
   { icon: Rocket, key: "upload" as const },
 ] as const;
 
-export async function GetStartedPanel() {
-  const [t, tSteps, tCommon] = await Promise.all([
-    getTranslations("dashboard.getStarted"),
-    getTranslations("workflows.builder.steps"),
-    getTranslations("common"),
-  ]);
+export function GetStartedPanel() {
+  const t = useTranslations("dashboard.getStarted");
+  const tSteps = useTranslations("workflows.builder.steps");
+  const tCommon = useTranslations("common");
 
   return (
     <section className="panel-elevated rounded-xl border border-accent-blue/25 bg-accent-blue/5 overflow-hidden">

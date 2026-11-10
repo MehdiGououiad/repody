@@ -32,7 +32,7 @@ export function RulesPanel({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <SectionHeading title={t("title")} description={t("hint")} eyebrow="Validation" />
+        <SectionHeading title={t("title")} description={t("hint")} eyebrow={t("eyebrow")} />
         <p className="text-xs text-on-surface-variant/90 rounded-lg border border-border/70 bg-surface-container-low/80 px-3 py-2">
           {t("runsOnOcr")}
         </p>

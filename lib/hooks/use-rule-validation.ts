@@ -1,44 +1,38 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { queryKeys } from "@/lib/hooks/query-keys";
-import {
-  type RuleValidationResult,
-  resultsByRuleId,
-  validateRulesViaApi,
-} from "@/lib/rules/rule-preview";
-import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import { rulesValidationFingerprint } from "@/lib/workflow/draft-fingerprint";
+import { keepPreviousData } from "@tanstack/react-query";
+import { dequal } from "dequal";
+import { useMemo } from "react";
+import { useDebounce } from "use-debounce";
+import { $api } from "@/lib/api/browser";
+import type { DocumentDef, RuleCheck, WorkflowRule } from "@/lib/types";
 
 const DEBOUNCE_MS = 400;
 
-function useDebounced<T>(value: T, ms: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), ms);
-    return () => window.clearTimeout(timer);
-  }, [value, ms]);
-  return debounced;
-}
-
-/** Backend feedback on the draft rules (issues and readable conditions), by rule id. */
+/** API feedback on the draft rules (what blocks saving, each condition as text), by rule id.
+ * The query key is the draft itself, so an unchanged draft is never checked twice. */
 export function useRuleValidation(
   documents: DocumentDef[],
   rules: WorkflowRule[]
-): Record<string, RuleValidationResult> {
-  const fingerprint = useMemo(
-    () => rulesValidationFingerprint(documents, rules),
-    [documents, rules]
+): Record<string, RuleCheck> {
+  const [body] = useDebounce(
+    useMemo(() => ({ documents, rules }), [documents, rules]),
+    DEBOUNCE_MS,
+    { equalityFn: dequal }
   );
-  const key = useDebounced(fingerprint, DEBOUNCE_MS);
-  const { data } = useQuery({
-    queryKey: queryKeys.checkRules(key),
-    queryFn: async () => resultsByRuleId(await validateRulesViaApi(documents, rules)),
-    enabled: rules.length > 0,
-    placeholderData: keepPreviousData,
-    staleTime: Number.POSITIVE_INFINITY,
-    retry: false,
-  });
-  return rules.length > 0 ? (data ?? {}) : {};
+  const { data } = $api.useQuery(
+    "post",
+    "/v1/workflows/check-rules",
+    { body },
+    {
+      enabled: body.rules.length > 0,
+      placeholderData: keepPreviousData,
+      staleTime: Number.POSITIVE_INFINITY,
+      retry: false,
+    }
+  );
+  return useMemo(
+    () => (rules.length && data ? Object.fromEntries(data.rules.map((r) => [r.ruleId, r])) : {}),
+    [data, rules.length]
+  );
 }

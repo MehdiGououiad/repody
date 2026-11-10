@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { expect, test } from "@playwright/test";
 import { API, apiAuthHeaders } from "../helpers/api";
 
@@ -110,7 +111,8 @@ test.describe("UI wiring", () => {
   });
 
   test("audit list CSV export downloads a report", async ({ page }) => {
-    await page.goto("/audits");
+    // Searched by ID: newer runs push the seeded (2023) audit off the first page.
+    await page.goto("/audits?q=AUD-2023-8902");
     const auditLink = page.getByRole("link", { name: "AUD-2023-8902" }).first();
     await expect(auditLink).toBeVisible({ timeout: 20_000 });
 
@@ -118,6 +120,10 @@ test.describe("UI wiring", () => {
     await page.getByRole("link", { name: /Export CSV/i }).click();
     const download = await downloadPromise;
 
-    expect(download.suggestedFilename()).toMatch(/^audit-runs-\d{4}-\d{2}-\d{2}\.csv$/);
+    expect(download.suggestedFilename()).toBe("audits.csv");
+    // The export streams the filtered audits: the header, then the searched audit.
+    const csv = await fs.promises.readFile((await download.path()) ?? "", "utf8");
+    expect(csv.split("\n")[0]).toContain("id,outcome,workflow_id");
+    expect(csv).toContain("AUD-2023-8902");
   });
 });

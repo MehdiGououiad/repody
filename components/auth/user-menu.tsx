@@ -1,8 +1,9 @@
 "use client";
 
 import { LogOut, ShieldCheck, UserRound } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
+import { Suspense } from "react";
+import { useAccount } from "@/components/auth/account-context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,25 +13,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { initialsFromSession } from "@/lib/auth/jwt-claims";
-import { usePlatformAuth } from "@/lib/hooks/use-platform-auth";
+import { initials } from "@/lib/auth/account";
+import { signOutToLogin } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
 
+/** The signed-in user and sign-out; a placeholder while the account loads. */
 export function UserMenu() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="ml-1 hidden size-8 animate-pulse rounded-full bg-muted sm:block"
+          aria-hidden
+        />
+      }
+    >
+      <AccountMenu />
+    </Suspense>
+  );
+}
+
+function AccountMenu() {
   const t = useTranslations("auth");
-  const { data: session, status } = useSession();
-  const { oidcEnabled, loading: authLoading } = usePlatformAuth();
+  const account = useAccount();
 
-  if (authLoading || status === "loading") {
-    return (
-      <div
-        className="ml-1 hidden size-8 animate-pulse rounded-full bg-muted sm:block"
-        aria-hidden
-      />
-    );
-  }
-
-  if (!oidcEnabled) {
+  if (!account) {
     return (
       <div
         className="ml-1 hidden max-w-[10rem] truncate rounded-full border border-border/80 bg-surface-container-low px-2.5 py-1 text-[10px] font-medium text-muted-foreground sm:block"
@@ -41,11 +48,8 @@ export function UserMenu() {
     );
   }
 
-  const email = session?.user?.email ?? undefined;
-  const name = session?.user?.name ?? undefined;
-  const initials = initialsFromSession(name, email);
-  const roles = session?.roles ?? [];
-  const primaryRole = roles[0] ?? t("roleUnknown");
+  const { name, email } = account;
+  const primaryRole = account.roles[0] ?? t("roleUnknown");
 
   return (
     <DropdownMenu>
@@ -62,7 +66,7 @@ export function UserMenu() {
               "from-accent-blue/30 to-sidebar-accent text-xs font-semibold ring-1 ring-accent-blue/30"
             )}
           >
-            {initials}
+            {initials(account)}
           </span>
         </Button>
       </DropdownMenuTrigger>
@@ -85,7 +89,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => void signOut({ redirectTo: "/login" })}
+          onClick={() => void signOutToLogin()}
         >
           <LogOut className="mr-2 h-4 w-4" />
           {t("signOut")}

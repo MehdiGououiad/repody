@@ -1,7 +1,5 @@
 """Drop every table, migrate to head and load the demo data (local development only)."""
 
-from __future__ import annotations
-
 import asyncio
 import subprocess
 import sys

@@ -7,8 +7,6 @@ import {
   API_URL,
   AUTH_STORAGE_PATH,
   AUTH_URL,
-  KEYCLOAK_CLIENT_ID,
-  KEYCLOAK_CLIENT_SECRET,
   KEYCLOAK_PASSWORD,
   KEYCLOAK_USER,
   WEB_URL,
@@ -27,33 +25,7 @@ export async function fetchOidcEnabled(): Promise<boolean> {
   }
 }
 
-export async function fetchKeycloakToken(): Promise<string> {
-  const body = new URLSearchParams({
-    grant_type: "password",
-    client_id: KEYCLOAK_CLIENT_ID,
-    client_secret: KEYCLOAK_CLIENT_SECRET,
-    username: KEYCLOAK_USER,
-    password: KEYCLOAK_PASSWORD,
-  });
-
-  const res = await fetch(`${AUTH_URL}/realms/repody/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body,
-    signal: AbortSignal.timeout(15_000),
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Keycloak token request failed (${res.status}): ${text}`);
-  }
-
-  const json = (await res.json()) as { access_token?: string };
-  if (!json.access_token) {
-    throw new Error("Keycloak token response missing access_token");
-  }
-  return json.access_token;
-}
+export { fetchKeycloakToken } from "./keycloak-token.mjs";
 
 export function readApiToken(): string | null {
   const token = readApiTokenFromFile();
@@ -114,24 +86,15 @@ export function writeAuthArtifacts(token: string, storageStateJson: string): voi
   fs.writeFileSync(path.join(process.cwd(), AUTH_STORAGE_PATH), storageStateJson, "utf8");
 }
 
-/** Browser login via Keycloak (Auth.js CSRF + standard login form). */
+/** Browser login via Keycloak: Better Auth starts the OAuth flow, then the Keycloak form. */
 export async function loginViaKeycloak(page: Page, callbackPath = "/dashboard"): Promise<void> {
-  const callbackUrl = new URL(callbackPath, WEB_URL).href;
-
-  const csrfRes = await page.request.get("/api/auth/csrf");
-  if (!csrfRes.ok()) {
-    throw new Error(`Auth.js CSRF request failed (${csrfRes.status()})`);
-  }
-  const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
-
-  const signInRes = await page.request.post("/api/auth/signin/keycloak", {
-    form: { csrfToken, callbackUrl },
-    maxRedirects: 0,
+  const signIn = await page.request.post("/api/auth/sign-in/social", {
+    data: { provider: "keycloak", callbackURL: callbackPath },
+    headers: { origin: new URL(WEB_URL).origin },
   });
-
-  const location = signInRes.headers().location;
-  if (signInRes.status() === 302 && location) {
-    await page.goto(location);
+  const { url } = signIn.ok() ? ((await signIn.json()) as { url?: string }) : {};
+  if (url) {
+    await page.goto(url);
   } else {
     await page.goto(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
     const keycloakBtn = page.getByRole("button", { name: /Continue with Keycloak/i });

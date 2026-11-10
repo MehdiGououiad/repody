@@ -2,11 +2,11 @@
 
 import { ChevronLeft, ExternalLink } from "lucide-react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
 import { RunDetailedReportSections } from "@/components/audit/run-report/report-sections";
+import { DateTime } from "@/components/shared/date-time";
 import type { RunAuditDetail } from "@/lib/types";
-import { formatDateTime } from "@/lib/utils";
 
 export function ApiRunReportScreen({
   report,
@@ -16,7 +16,6 @@ export function ApiRunReportScreen({
   onBack: () => void;
 }) {
   const t = useTranslations("workflows.builder.api");
-  const locale = useLocale();
 
   return (
     <div className="flex flex-col gap-5">
@@ -31,7 +30,11 @@ export function ApiRunReportScreen({
 
       <RunStatusBanner
         audit={report}
-        subtitle={`${report.workflowName} · ${formatDateTime(report.createdAt, locale)}`}
+        subtitle={
+          <>
+            {report.workflowName} · <DateTime value={report.createdAt} />
+          </>
+        }
       />
 
       <Link

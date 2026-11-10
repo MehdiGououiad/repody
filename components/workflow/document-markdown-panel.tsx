@@ -2,22 +2,17 @@
 
 import { ScanText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
-
 import { DocumentMarkdownPreview } from "@/components/documents/document-markdown-preview";
 import { CopyableOutputPanel, OutputPre } from "@/components/shared/copyable-output-panel";
-import { normalizeDocumentMarkdown } from "@/lib/document-markdown/normalize";
 
 export function DocumentMarkdownPanel({ text, className }: { text: string; className?: string }) {
   const t = useTranslations("workflows.builder.documentMarkdown");
-  const normalized = useMemo(() => normalizeDocumentMarkdown(text), [text]);
+  const normalized = text.trim();
   const lineCount = normalized.split("\n").length;
-  const pageCount = (normalized.match(/^## Page \d+$/gm) ?? []).length;
   const hasTables = /\|.+\|/.test(normalized);
 
   const subtitle = [
-    t("subtitle", { lines: lineCount, chars: normalized.length.toLocaleString() }),
-    pageCount > 0 ? t("pageCount", { count: pageCount }) : null,
+    t("subtitle", { lines: lineCount, chars: normalized.length }),
     hasTables ? t("hasTables") : null,
   ]
     .filter(Boolean)

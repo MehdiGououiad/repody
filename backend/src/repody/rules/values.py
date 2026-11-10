@@ -2,32 +2,43 @@
 
 NuExtract returns each field in its template type (a JSON number for ``number``, ISO 8601
 text for ``date``, ``true``/``false`` for ``boolean``), so a value is read by the field's
-declared type. A value that does not have that type counts as missing.
+declared type. A value that does not have that type counts as missing. Dates and times are
+compared as dates and times (``2024-01-02T10:00:00+05:00`` is before ``…T06:00:00Z``), not as
+text.
 """
 
-from __future__ import annotations
-
+from collections.abc import Callable
+from datetime import date, datetime, time
 from typing import Any
 
-NUMBER_TYPES = frozenset({"number", "integer"})
-TEMPORAL_TYPES = frozenset({"date", "date-time", "time"})  # ISO text orders correctly
-ORDERED_TYPES = NUMBER_TYPES | TEMPORAL_TYPES
-TABLE_TYPE = "object-array"
+from repody.schemas.catalog import NUMBER_TYPES, field_key, is_empty
+
+__all__ = ["field_key", "is_number", "literal", "typed"]
+
+_TEMPORAL: dict[str, Callable[[str], date | datetime | time]] = {
+    "date": date.fromisoformat,
+    "date-time": datetime.fromisoformat,
+    "time": time.fromisoformat,
+}
 
 
-def field_key(name: str) -> str:
-    """Canonical name of a field: ``Total Amount`` -> ``total_amount``, ``a.b`` -> ``a__b``."""
-    return name.strip().lower().replace(" ", "_").replace(".", "__")
+def is_number(value: Any) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool)
 
 
 def typed(value: Any, field_type: str) -> Any:
     """An extracted value as its declared type, or None when it is missing or mistyped."""
-    if value is None or value in ("", [], {}):
+    if is_empty(value):
         return None
     if field_type in NUMBER_TYPES:
-        return value if isinstance(value, int | float) and not isinstance(value, bool) else None
+        return value if is_number(value) else None
     if field_type == "boolean":
         return value if isinstance(value, bool) else None
+    if parse := _TEMPORAL.get(field_type):
+        try:
+            return parse(value.strip()) if isinstance(value, str) else None
+        except ValueError:
+            return None
     return value
 
 
@@ -43,4 +54,6 @@ def literal(text: str, field_type: str | None) -> Any:
         if text.lower() not in ("true", "false"):
             raise ValueError(f"{text!r} is not true or false")
         return text.lower() == "true"
+    if field_type and (parse := _TEMPORAL.get(field_type)):
+        return parse(text)  # ValueError for text that is not ISO 8601
     return text

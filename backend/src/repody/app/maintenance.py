@@ -1,69 +1,47 @@
-"""Periodic upkeep on the API: fail runs that are stuck, resend tasks that were never sent.
+"""Periodic upkeep: fail runs that are stuck, resend tasks that were never sent, and delete runs
+past their retention.
 
-Every API replica runs the loop; a Redis key lets one of them do the work each interval."""
+The Taskiq scheduler (`taskiq scheduler repody.worker:scheduler`, one replica) sends the
+`maintenance` task every AUDIT_MAINTENANCE_INTERVAL_SECONDS; one worker runs it each time."""
 
-from __future__ import annotations
-
-import asyncio
-import contextlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import select
 
-from repody.app.runs import fail_run
+from repody.app.lifecycle import failure, move_runs, stuck_queued, stuck_running
+from repody.app.runs import purge_expired
 from repody.infra import db, queue
-from repody.infra.models import Run
-from repody.infra.redis import get_redis
-from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 
-QUEUED_LIMIT = timedelta(hours=1)
 
-
-async def fail_stuck_runs() -> int:
-    """A run still ``running`` past its timeout lost its worker; one queued for an hour
-    will not start."""
+async def fail_stuck_runs() -> list[str]:
+    """Fail running runs that lost their worker and queued runs that will not start: one
+    conditional UPDATE each, so a run a worker finishes meanwhile is left alone."""
     now = datetime.now(UTC)
-    running_limit = timedelta(minutes=get_settings().run_timeout_minutes + 1)
     async with db.session_factory() as session:
-        running = list(
-            await session.scalars(
-                select(Run.id).where(Run.status == "running", Run.started_at < now - running_limit)
-            )
+        lost = await move_runs(
+            session,
+            "failed",
+            stuck_running(now),
+            only_from="running",
+            **failure("The worker stopped before the run finished."),
         )
-        queued = list(
-            await session.scalars(
-                select(Run.id).where(Run.status == "queued", Run.created_at < now - QUEUED_LIMIT)
-            )
+        expired = await move_runs(
+            session,
+            "failed",
+            stuck_queued(now),
+            only_from="queued",
+            **failure("The run waited over an hour for a worker."),
         )
-    for run_id in running:
-        await fail_run(run_id, "The worker stopped before the run finished.", only_if="running")
-    for run_id in queued:
-        await fail_run(run_id, "The run waited over an hour for a worker.", only_if="queued")
-    return len(running) + len(queued)
+        await session.commit()
+    return lost + expired
 
 
-async def _claim_turn(interval: int) -> bool:
-    """One API replica does the upkeep per interval: the first to set the key."""
-    return bool(await get_redis().set("repody:maintenance", "1", nx=True, ex=interval))
-
-
-async def _upkeep() -> None:
+async def upkeep() -> None:
+    """One maintenance pass (a scheduled Taskiq task: one worker runs it per interval)."""
     failed = await fail_stuck_runs()
     resent = await queue.redispatch_lost()
-    if failed or resent:
-        log.info("maintenance", runs_failed=failed, runs_resent=resent)
-
-
-async def run_forever(stop: asyncio.Event) -> None:
-    interval = get_settings().maintenance_interval_seconds
-    while not stop.is_set():
-        try:
-            if await _claim_turn(interval):
-                await _upkeep()
-        except Exception:
-            log.exception("maintenance_failed")
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(stop.wait(), timeout=interval)
+    purged = await purge_expired()
+    if failed or resent or purged:
+        log.info("maintenance", runs_failed=failed, runs_resent=resent, runs_purged=purged)

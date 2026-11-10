@@ -1,223 +1,25 @@
 "use client";
 
-import {
-  AlertTriangle,
-  CheckCircle2,
-  ChevronLeft,
-  Download,
-  FileText,
-  Globe,
-  Printer,
-  ShieldCheck,
-} from "lucide-react";
+import { ChevronLeft, Download, FileText, Printer, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import Papa from "papaparse";
+import { useNow, useTranslations } from "next-intl";
 import { RunStatusBanner } from "@/components/audit/run-report/report-banner";
+import { ReportDocument } from "@/components/audit/run-report/report-document";
 import { RunDetailedRuleCard } from "@/components/audit/run-report/report-rules";
-import { formatFieldValue } from "@/components/audit/run-report/report-shared";
+import { DateTime } from "@/components/shared/date-time";
 import { byRuleStatus } from "@/components/shared/rule-status";
 import { Button } from "@/components/ui/button";
-import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
-import { DocumentExtractionMeta, RunMetadataPanel } from "@/components/workflow/run-details-meta";
-import { LOCALE_COOKIE } from "@/i18n/config";
-import { setPreferenceCookie } from "@/lib/browser-cookie";
+import { RunMetadataPanel } from "@/components/workflow/run-details-meta";
 import type { RunAuditDetail } from "@/lib/types";
-import { cn, formatDurationMs } from "@/lib/utils";
 
-function buildCsv(
-  audit: RunAuditDetail,
-  t: ReturnType<typeof useTranslations>,
-  locale: string
-): string {
-  const rows: string[][] = [
-    [`${t("printTitle")} — ${audit.id}`],
-    [`${t("runOn")}: ${new Date(audit.createdAt).toLocaleString(locale)}`],
-    [`${t("source")}: ${audit.workflowName}`],
-  ];
-  if (audit.metadata) {
-    rows.push(
-      [`${t("totalDuration")}: ${formatDurationMs(audit.metadata.durationMs)}`],
-      [`${t("extractionTime")}: ${formatDurationMs(audit.metadata.extractionMs)}`],
-      [`${t("validationTime")}: ${formatDurationMs(audit.metadata.validationMs)}`]
-    );
-  }
-  rows.push([], [t("extractedData")], [t("field"), t("value"), "Type", t("status")]);
-  for (const doc of audit.documents) {
-    rows.push([`--- ${doc.documentType} ---`]);
-    if (doc.extraction) rows.push(["Ms", String(doc.extraction.extractionMs)]);
-    for (const f of doc.fields) {
-      rows.push([
-        f.key,
-        formatFieldValue(f, locale),
-        f.type,
-        f.flagged ? t("failed") : t("passed"),
-      ]);
-    }
-  }
-  rows.push([], [t("validationRules")], ["ID", t("field"), "Scope", t("status"), t("source")]);
-  for (const r of audit.ruleResults) {
-    rows.push([r.name, r.expression, r.scope, t(r.status), r.detail]);
-  }
-  // escapeFormulae: cells starting with = + - @ cannot run as spreadsheet formulas.
-  return Papa.unparse(rows, { quotes: true, escapeFormulae: true });
-}
-
-function downloadCsv(content: string, filename: string) {
-  const blob = new Blob([`﻿${content}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function LangToggle() {
-  const locale = useLocale();
-  const t = useTranslations("audits.report");
-  const toggle = () => {
-    const next = locale === "fr" ? "en" : "fr";
-    setPreferenceCookie(LOCALE_COOKIE, next);
-    window.location.reload();
-  };
-  return (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={t("toggleLanguage")}
-      className="inline-flex items-center gap-1.5 text-xs font-medium text-on-surface-variant hover:text-on-surface border border-border rounded-lg px-3 py-1.5 transition-colors"
-    >
-      <Globe className="h-3.5 w-3.5" aria-hidden="true" />
-      {locale === "fr" ? "EN" : "FR"}
-    </button>
-  );
-}
-
-function DocExtractionCard({
-  doc,
-  t,
-  locale,
-}: {
-  doc: RunAuditDetail["documents"][number];
-  t: ReturnType<typeof useTranslations>;
-  locale: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden panel-elevated">
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-surface-container-low">
-        <FileText className="h-4 w-4 text-primary shrink-0" />
-        <div className="min-w-0 flex-1">
-          <span className="text-sm font-semibold text-on-surface">{doc.documentType}</span>
-          {doc.fileName && (
-            <p className="text-[11px] text-on-surface-variant truncate">{doc.fileName}</p>
-          )}
-        </div>
-        <span className="ml-auto text-[11px] text-on-surface-variant shrink-0">
-          {doc.fields.filter((f) => f.extracted).length} / {doc.fields.length}{" "}
-          {t("fieldsExtracted", { count: 0 }).replace("0", "").trim()}
-        </span>
-      </div>
-      {doc.extraction && (
-        <div className="px-5 py-3 border-b border-border bg-surface-container-lowest space-y-3">
-          <DocumentExtractionMeta extraction={doc.extraction} fileName={doc.fileName} />
-          <DocumentExtractionOutput extraction={doc.extraction} />
-        </div>
-      )}
-
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-surface-container-lowest">
-              <th className="text-left px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[30%]">
-                {t("field")}
-              </th>
-              <th className="text-left px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant">
-                {t("value")}
-              </th>
-              <th className="text-right px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-on-surface-variant w-[80px]">
-                {t("status")}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {doc.fields.map((field) => (
-              <tr
-                key={field.key}
-                className={cn(
-                  "transition-colors",
-                  field.flagged
-                    ? "bg-danger/4 border-l-2 border-l-danger"
-                    : "hover:bg-surface-container-lowest"
-                )}
-              >
-                <td className="px-5 py-3">
-                  <code
-                    className={cn(
-                      "text-[12px] font-mono",
-                      field.flagged ? "text-danger" : "text-primary"
-                    )}
-                  >
-                    {field.key}
-                  </code>
-                  {field.description && (
-                    <p className="text-[10px] text-on-surface-variant mt-0.5 max-w-[220px] truncate">
-                      {field.description}
-                    </p>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={cn(
-                      "font-semibold",
-                      !field.extracted
-                        ? "text-on-surface-variant"
-                        : field.flagged
-                          ? "text-danger"
-                          : "text-on-surface"
-                    )}
-                  >
-                    {formatFieldValue(field, locale)}
-                  </span>
-                </td>
-                <td className="px-5 py-3 text-right">
-                  {field.flagged ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-danger">
-                      <AlertTriangle className="h-3 w-3" />
-                    </span>
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 text-success ml-auto" />
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
+/** The full audit report of one finished run; prints as a PDF, exports as CSV (from the API). */
 export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
   const t = useTranslations("audits.report");
-  const locale = useLocale();
-  const generatedAt = new Date().toLocaleString(locale);
-
-  const handlePrint = () => window.print();
-
-  const handleCsv = () => {
-    const csv = buildCsv(audit, t, locale);
-    const ts = new Date(audit.createdAt).toISOString().slice(0, 10);
-    downloadCsv(csv, `audit-${audit.id}-${ts}.csv`);
-  };
-
-  const ts = new Date(audit.createdAt).toLocaleString(locale, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const now = useNow();
+  const ranAt = (
+    <DateTime value={audit.createdAt} format={{ dateStyle: "long", timeStyle: "short" }} />
+  );
+  const via = audit.source === "api" ? t("api") : t("interface");
 
   return (
     <div className="min-h-full page-enter">
@@ -236,44 +38,51 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
           {audit.workflowName}
         </span>
         <div className="flex-1" />
-        <LangToggle />
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handlePrint}>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}>
           <Printer className="h-3.5 w-3.5" />
           {t("exportPdf")}
         </Button>
-        <Button variant="outline" size="sm" className="gap-1.5" onClick={handleCsv}>
-          <Download className="h-3.5 w-3.5" />
-          {t("exportCsv")}
+        <Button asChild variant="outline" size="sm" className="gap-1.5">
+          <a href={`/api/v1/audits/${encodeURIComponent(audit.id)}/export.csv`} download>
+            <Download className="h-3.5 w-3.5" />
+            {t("exportCsv")}
+          </a>
         </Button>
       </div>
 
       <div className="hidden print:flex items-center justify-between mb-6 pb-4 border-b">
         <div>
           <h1 className="text-2xl font-bold">{t("printTitle")}</h1>
-          <p className="text-sm text-slate-600 print:text-slate-700">
+          <p className="text-sm text-slate-700">
             {audit.id} · {audit.workflowName}
           </p>
         </div>
-        <div className="text-right text-sm text-slate-500 print:text-slate-600">
+        <div className="text-right text-sm text-slate-600">
           <p>{t("generatedOn")}</p>
-          <p>{generatedAt}</p>
+          <p>
+            <DateTime value={now} />
+          </p>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8 space-y-8 page-enter-stagger">
         <div className="flex items-center gap-2 text-sm text-on-surface-variant">
           <span>
-            {t("runOn")} {ts}
+            {t("runOn")} {ranAt}
           </span>
           <span>·</span>
           <span className="capitalize">
-            {t("via")} {audit.source === "api" ? t("api") : t("interface")}
+            {t("via")} {via}
           </span>
         </div>
 
         <RunStatusBanner
           audit={audit}
-          subtitle={`${audit.workflowName} · ${ts}`}
+          subtitle={
+            <>
+              {audit.workflowName} · {ranAt}
+            </>
+          }
           className="rounded-2xl p-6 print:rounded-none [&_p:first-child]:text-xl"
           footer={
             <>
@@ -281,20 +90,16 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
                 {t("source")}: {audit.workflowName}
               </span>
               <span className="text-xs bg-surface-container px-3 py-1 rounded-full text-on-surface-variant capitalize">
-                {t("via")} {audit.source === "api" ? t("api") : t("interface")}
+                {t("via")} {via}
               </span>
             </>
           }
         />
 
-        {audit.metadata && (
-          <section className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-on-surface">
-              {t("runDetails")}
-            </h2>
-            <RunMetadataPanel metadata={audit.metadata} />
-          </section>
-        )}
+        <section className="space-y-3">
+          <h2 className="font-display text-lg font-semibold text-on-surface">{t("runDetails")}</h2>
+          <RunMetadataPanel metadata={audit.metadata} />
+        </section>
 
         <section className="space-y-4 print:break-before-page">
           <div className="flex items-center gap-2.5">
@@ -304,7 +109,7 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
             </h2>
           </div>
           {audit.documents.map((doc) => (
-            <DocExtractionCard key={doc.id} doc={doc} t={t} locale={locale} />
+            <ReportDocument key={doc.id} doc={doc} />
           ))}
         </section>
 
@@ -319,10 +124,6 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
             <RunDetailedRuleCard key={rule.id} rule={rule} size="md" />
           ))}
         </section>
-
-        <div className="hidden print:block text-xs text-slate-500 print:text-slate-600 pt-4 border-t text-center">
-          {audit.id} · {audit.workflowName} · {t("generatedOn")} {new Date().toLocaleString(locale)}
-        </div>
       </div>
     </div>
   );

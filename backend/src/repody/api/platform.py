@@ -1,5 +1,7 @@
-from __future__ import annotations
+import asyncio
+from collections.abc import Awaitable, Callable
 
+import structlog
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
@@ -8,9 +10,11 @@ from repody.app.dashboard import get_dashboard
 from repody.extraction.client import model_available
 from repody.infra import db
 from repody.infra.redis import get_redis
+from repody.schemas.catalog import Catalog, catalog
 from repody.schemas.platform import Dashboard, Health, PlatformConfig
 from repody.settings import get_settings
 
+log = structlog.get_logger(__name__)
 router = APIRouter(tags=["platform"])
 
 
@@ -20,29 +24,36 @@ async def live() -> Health:
     return Health(status="ok", oidc_enabled=get_settings().oidc_enabled)
 
 
+async def _answers(name: str, probe: Callable[[], Awaitable[object]]) -> bool:
+    """Whether a dependency answers within the health timeout (a failure is logged)."""
+    try:
+        async with asyncio.timeout(get_settings().health_timeout_seconds):
+            await probe()
+    except Exception as exc:
+        log.warning("health_check_failed", dependency=name, error=repr(exc))
+        return False
+    return True
+
+
+async def _database() -> None:
+    async with db.session_factory() as session:
+        await session.execute(text("SELECT 1"))
+
+
 @router.get("/healthz")
 async def ready(response: Response) -> Health:
-    """Postgres and Redis answer."""
-
-    async def check(probe) -> bool:
-        try:
-            await probe()
-            return True
-        except Exception:
-            return False
-
-    async def database() -> None:
-        async with db.session_factory() as session:
-            await session.execute(text("SELECT 1"))
-
+    """Postgres and Redis answer (checked concurrently)."""
+    database, redis = await asyncio.gather(
+        _answers("database", _database), _answers("redis", get_redis().ping)
+    )
     health = Health(
-        status="ok",
-        database=await check(database),
-        redis=await check(get_redis().ping),
+        status="ok" if database and redis else "degraded",
+        database=database,
+        redis=redis,
         oidc_enabled=get_settings().oidc_enabled,
     )
-    if not (health.database and health.redis):
-        health.status, response.status_code = "degraded", 503
+    if health.status == "degraded":
+        response.status_code = 503
     return health
 
 
@@ -59,6 +70,12 @@ async def platform_config() -> PlatformConfig:
         max_pages_per_document=settings.max_pages_per_document,
         run_timeout_minutes=settings.run_timeout_minutes,
     )
+
+
+@router.get("/catalog", dependencies=[require("workflow:read")])
+async def get_catalog() -> Catalog:
+    """Field types the builder offers, and which of them rules compare in order or add up."""
+    return catalog()
 
 
 @router.get("/dashboard", dependencies=[require("metrics:read")])

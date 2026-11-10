@@ -1,12 +1,8 @@
 {{- if .Values.ingress.enabled }}
 {{- $fullname := include "repody.fullname" . }}
-{{- $files := and .Values.ingress.filesHost .Values.ingress.filesService.name }}
 {{- $routes := list (dict "host" .Values.ingress.host "service" (printf "%s-web" $fullname) "port" 3000) }}
 {{- with .Values.ingress.apiHost }}
 {{- $routes = append $routes (dict "host" . "service" (printf "%s-api" $fullname) "port" 8000) }}
-{{- end }}
-{{- if $files }}
-{{- $routes = append $routes (dict "host" .Values.ingress.filesHost "service" .Values.ingress.filesService.name "port" .Values.ingress.filesService.port) }}
 {{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress

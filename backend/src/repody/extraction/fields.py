@@ -5,13 +5,13 @@ value is its list of rows. Values keep the JSON type the model returned; a field
 left out (or returned empty) is None.
 """
 
-from __future__ import annotations
-
-import json
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+import json_repair
+
+from repody.schemas.catalog import is_empty
 from repody.schemas.workflow import SchemaField
 
 
@@ -45,15 +45,22 @@ def leaves(
 def _clean(value: Any) -> Any:
     if isinstance(value, str):
         value = value.strip()
-    return None if value in ("", [], {}) else value
+    return None if is_empty(value) else value
 
 
-def leaf_values(fields: list[SchemaField], answer: str | None) -> list[FieldValue]:
-    """Every leaf with its value from the model's JSON ``answer``."""
-    try:
-        data = json.loads(answer or "")
-    except json.JSONDecodeError:
-        data = None
+def parse_answer(answer: str | None) -> tuple[dict[str, Any], str | None]:
+    """The model's JSON object, repaired when it is slightly malformed (a trailing comma, an
+    unclosed brace), or ``({}, why)`` when no object can be read from it."""
+    if not answer:
+        return {}, "The model returned no answer."
+    data = json_repair.loads(answer)
+    if not isinstance(data, dict):
+        return {}, "The model's answer is not a JSON object."
+    return data, None
+
+
+def leaf_values(fields: list[SchemaField], data: dict[str, Any]) -> list[FieldValue]:
+    """Every leaf with its value in the model's answer."""
     return [
         FieldValue(
             key=key, description=field.description, type=field.template_type, value=_clean(value)

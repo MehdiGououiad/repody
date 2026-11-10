@@ -1,91 +1,62 @@
-import { DEFAULT_NUEXTRACT_TEMPLATE_TYPE } from "@/lib/nuextract-types";
-import type { DocumentDef, SchemaField } from "@/lib/types";
+import { fieldKey } from "@/lib/rules/field-key";
+import type { Catalog, DocumentDef } from "@/lib/types";
 
-export type DocumentFieldOption = {
-  label: string;
-  token: string;
-  templateType: string;
-  tableParent?: string;
-};
+/** A field a rule can read: its name as rules write it, and its template type. */
+export type FieldOption = { name: string; type: string };
 
-export type TableFieldOption = {
-  label: string;
-  token: string;
-  columns: Array<{ label: string; name: string }>;
-};
+/** An object-array field, with its columns named as the schema writes them. */
+export type TableOption = { name: string; columns: FieldOption[] };
 
-/** Canonical field name, as rules name it (the backend's `field_key` also maps `.` to `__`). */
-export function fieldToken(name: string): string {
-  return name.trim().toLowerCase().replace(/\s+/g, "_");
+/** The documents a rule applies to (all of them when it names none). */
+function ruleDocuments(documents: DocumentDef[], appliesTo: string[]): DocumentDef[] {
+  return appliesTo.length ? documents.filter((doc) => appliesTo.includes(doc.id)) : documents;
 }
 
-function fieldOptionsForSchema(doc: DocumentDef, multi: boolean): DocumentFieldOption[] {
-  const fields: DocumentFieldOption[] = [];
-  for (const field of doc.schema) {
-    if (!field.name.trim()) continue;
-    const parentToken = multi
-      ? `${fieldToken(doc.documentType)}.${fieldToken(field.name)}`
-      : fieldToken(field.name);
-    fields.push({
-      label: multi ? `${doc.documentType}.${field.name}` : field.name,
-      token: parentToken,
-      templateType: field.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-    });
-    if (field.templateType === "object-array" || field.templateType === "object") {
-      for (const child of field.children ?? []) {
-        if (!child.name.trim()) continue;
-        fields.push({
-          label: multi
-            ? `${doc.documentType}.${field.name}.${child.name}`
-            : `${field.name}.${child.name}`,
-          token: `${parentToken}.${fieldToken(child.name)}`,
-          templateType: child.templateType ?? DEFAULT_NUEXTRACT_TEMPLATE_TYPE,
-          tableParent: field.templateType === "object-array" ? parentToken : undefined,
-        });
-      }
-    }
-  }
-  return fields;
+/** With several documents, fields are named `<document type>.<field>` (as the API resolves them). */
+function qualified(doc: DocumentDef, name: string, multi: boolean): string {
+  return multi ? `${doc.documentType}.${name}` : name;
 }
 
-export function resolveDocumentFields(
-  documents: DocumentDef[],
-  appliesTo: string[]
-): DocumentFieldOption[] {
-  const targets = appliesTo.length
-    ? documents.filter((doc) => appliesTo.includes(doc.id))
-    : documents;
+/** Fields a rule can compare: top-level fields and the children of object fields. */
+export function fieldOptions(documents: DocumentDef[], appliesTo: string[]): FieldOption[] {
   const multi = documents.length > 1;
-  return targets.flatMap((doc) => fieldOptionsForSchema(doc, multi));
+  return ruleDocuments(documents, appliesTo).flatMap((doc) =>
+    doc.schema
+      .filter((field) => field.name.trim())
+      .flatMap((field) =>
+        field.templateType === "object"
+          ? field.children
+              .filter((child) => child.name.trim())
+              .map((child) => ({
+                name: qualified(doc, `${field.name}.${child.name}`, multi),
+                type: child.templateType,
+              }))
+          : [{ name: qualified(doc, field.name, multi), type: field.templateType }]
+      )
+  );
 }
 
-export function resolveTableFields(
+/** Object-array fields a rule can sum or count. */
+export function tableOptions(
   documents: DocumentDef[],
-  appliesTo: string[]
-): TableFieldOption[] {
-  const targets = appliesTo.length
-    ? documents.filter((doc) => appliesTo.includes(doc.id))
-    : documents;
+  appliesTo: string[],
+  catalog: Catalog
+): TableOption[] {
   const multi = documents.length > 1;
-  const tables: TableFieldOption[] = [];
+  return ruleDocuments(documents, appliesTo).flatMap((doc) =>
+    doc.schema
+      .filter((field) => field.name.trim() && field.templateType === catalog.tableType)
+      .map((field) => ({
+        name: qualified(doc, field.name, multi),
+        columns: field.children
+          .filter((child) => child.name.trim())
+          .map((child) => ({ name: child.name, type: child.templateType })),
+      }))
+  );
+}
 
-  for (const doc of targets) {
-    for (const field of doc.schema) {
-      if (!field.name.trim() || field.templateType !== "object-array") continue;
-      const token = multi
-        ? `${fieldToken(doc.documentType)}.${fieldToken(field.name)}`
-        : fieldToken(field.name);
-      tables.push({
-        label: multi ? `${doc.documentType}.${field.name}` : field.name,
-        token,
-        columns: (field.children ?? [])
-          .filter((child: SchemaField) => child.name.trim())
-          .map((child: SchemaField) => ({
-            label: child.name,
-            name: fieldToken(child.name),
-          })),
-      });
-    }
-  }
-  return tables;
+/** The type of the field `name` refers to, matched as the API matches names. */
+export function typeOf(name: string, fields: FieldOption[]): string | undefined {
+  const key = fieldKey(name);
+  return key ? fields.find((field) => fieldKey(field.name) === key)?.type : undefined;
 }

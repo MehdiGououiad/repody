@@ -1,27 +1,21 @@
-"use client";
-
 import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { AuthSessionGuard } from "@/components/auth/auth-session-guard";
+import { getTranslations } from "next-intl/server";
+import { AccountProvider } from "@/components/auth/account-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isPublicPage } from "@/lib/auth/public-paths";
-import { useClientPathname } from "@/lib/hooks/use-hydrated";
+import type { Account } from "@/lib/auth/account";
 import { AppSidebar } from "./app-sidebar";
 import { TopBar } from "./topbar";
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const t = useTranslations("common");
-  const pathname = useClientPathname();
-  // Empty pathname = pre-hydration; keep shell minimal so /login is not wrapped
-  // in AuthSessionGuard (public pages skip the authenticated chrome).
-  const minimal = !pathname || isPublicPage(pathname);
-
-  if (minimal) {
-    return <>{children}</>;
-  }
-
+export async function AppShell({
+  account,
+  children,
+}: {
+  account: Promise<Account | null>;
+  children: React.ReactNode;
+}) {
+  const t = await getTranslations("common");
   return (
-    <AuthSessionGuard>
+    <AccountProvider value={account}>
       <TooltipProvider delayDuration={150}>
         <Link
           href="#main-content"
@@ -40,6 +34,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </TooltipProvider>
-    </AuthSessionGuard>
+    </AccountProvider>
   );
 }

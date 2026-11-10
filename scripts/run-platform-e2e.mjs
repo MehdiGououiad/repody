@@ -8,6 +8,7 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { uvBackend } from "../deploy/scripts/runtime-env.mjs";
+import { fetchKeycloakToken } from "../e2e/helpers/keycloak-token.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiURL = (process.env.E2E_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -49,30 +50,6 @@ function run(cmd, args, cwd = root, extraEnv = {}, options = {}) {
     process.exit(1);
   }
   if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-async function fetchKeycloakToken() {
-  const body = new URLSearchParams({
-    grant_type: "password",
-    client_id: process.env.E2E_KEYCLOAK_CLIENT_ID ?? "repody-web",
-    client_secret: process.env.E2E_KEYCLOAK_CLIENT_SECRET ?? "repody-web-dev-secret",
-    username: process.env.E2E_KEYCLOAK_USER ?? "operator@repody.local",
-    password: process.env.E2E_KEYCLOAK_PASSWORD ?? "repody-dev",
-  });
-  const res = await fetch(`${authURL}/realms/repody/protocol/openid-connect/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-    signal: AbortSignal.timeout(15_000),
-  });
-  if (!res.ok) {
-    throw new Error(`Keycloak token request failed: ${res.status}`);
-  }
-  const json = await res.json();
-  if (!json.access_token) {
-    throw new Error("Keycloak response missing access_token");
-  }
-  return json.access_token;
 }
 
 async function resolveAccessToken() {

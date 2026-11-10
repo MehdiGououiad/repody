@@ -27,7 +27,8 @@ test.describe("Platform smoke", () => {
   });
 
   test("audits list and seeded audit report", async ({ page }) => {
-    await page.goto("/audits");
+    // Searched by ID: newer runs push the seeded (2023) audit off the first page.
+    await page.goto("/audits?q=AUD-2023-8902");
     const auditLink = page.getByRole("link", { name: "AUD-2023-8902" }).first();
     await expect(auditLink).toBeVisible({ timeout: 20_000 });
 

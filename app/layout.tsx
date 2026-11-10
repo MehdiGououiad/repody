@@ -1,17 +1,8 @@
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
-import { isOidcConfigured } from "@/auth";
-import { AuthEnforcementProvider } from "@/components/auth/auth-enforcement";
-import { PlatformAuthProvider } from "@/components/auth/platform-auth";
-import { AppShell } from "@/components/layout/app-shell";
-import { QueryProvider } from "@/components/providers/query-provider";
-import { AuthSessionProvider } from "@/components/providers/session-provider";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { getLocale } from "next-intl/server";
+import { Providers } from "@/components/providers/providers";
 import { Toaster } from "@/components/ui/sonner";
-import type { Theme } from "@/i18n/config";
-import { defaultTheme, THEME_COOKIE } from "@/i18n/config";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,31 +11,16 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const [locale, messages, cookieStore] = await Promise.all([
-    getLocale(),
-    getMessages(),
-    cookies(),
-  ]);
-  const rawTheme = cookieStore.get(THEME_COOKIE)?.value;
-  const theme: Theme = rawTheme === "dark" || rawTheme === "light" ? rawTheme : defaultTheme;
-  const keycloakConfigured = isOidcConfigured();
-
+  const locale = await getLocale();
   return (
-    <html lang={locale} className={theme === "dark" ? "dark" : ""} style={{ colorScheme: theme }}>
+    // next-themes sets the theme class before hydration, so <html> differs from the server render.
+    <html lang={locale} suppressHydrationWarning>
       <body className="antialiased min-h-dvh bg-background text-foreground">
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <ThemeProvider initialTheme={theme}>
-            <QueryProvider>
-              <AuthSessionProvider>
-                <PlatformAuthProvider keycloakConfigured={keycloakConfigured}>
-                  <AuthEnforcementProvider enforceAuth={keycloakConfigured}>
-                    <AppShell>{children}</AppShell>
-                    <Toaster richColors closeButton position="bottom-right" />
-                  </AuthEnforcementProvider>
-                </PlatformAuthProvider>
-              </AuthSessionProvider>
-            </QueryProvider>
-          </ThemeProvider>
+        <NextIntlClientProvider>
+          <Providers>
+            {children}
+            <Toaster richColors closeButton position="bottom-right" />
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

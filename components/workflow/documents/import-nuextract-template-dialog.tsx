@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useCatalog } from "@/lib/hooks/use-catalog";
 import type { SchemaField } from "@/lib/types";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
@@ -44,10 +45,12 @@ export function ImportNuextractTemplateDialog({
   const t = useTranslations("workflows.builder.schema");
   const tCommon = useTranslations("common");
   const [raw, setRaw] = useState(EXAMPLE);
+  const catalog = useCatalog();
   const [errorKey, setErrorKey] = useState<"invalid_json" | "not_object" | "empty" | null>(null);
 
   const apply = (mode: "replace" | "append") => {
-    const result = importNuextractTemplate(raw);
+    if (!catalog) return;
+    const result = importNuextractTemplate(raw, catalog);
     if (!result.ok) {
       setErrorKey(result.error);
       return;

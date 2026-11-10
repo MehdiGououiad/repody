@@ -184,8 +184,7 @@ export function ApiInfoScreen({
         <IngestionSection
           documents={documents}
           rules={[]}
-          uploads={{}}
-          filesByDocId={filesByDocId}
+          files={filesByDocId}
           onFilesChange={onFilesChange}
         />
         {!hasFiles ? <p className="text-[11px] text-warning">{t("testUploadRequired")}</p> : null}

@@ -1,6 +1,5 @@
 #!/bin/sh
 set -e
-cd /app
 if [ "${AUDIT_RUN_MIGRATIONS_ON_STARTUP:-false}" = "true" ]; then
   alembic upgrade head
 fi

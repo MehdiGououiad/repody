@@ -8,9 +8,7 @@ Pack from the private repo, ship the zip (not git):
 
 | Command | When |
 |---------|------|
-| `pnpm client:pack:mac` | Build `dist/repody-mac-runtime-<tag>.zip` |
 
-Client (on the Mac, after unzip): `./bin/repody setup` -> `./bin/repody start` - see [LOCAL.md - Mac runtime](./LOCAL.md#mac-runtime-no-source).
 
 ---
 

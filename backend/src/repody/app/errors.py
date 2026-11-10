@@ -1,6 +1,8 @@
-"""The one application exception; ``main`` turns it into an HTTP error response."""
+"""The one application exception; ``main`` answers it as an HTTP error.
 
-from __future__ import annotations
+Plain Python on purpose: the use cases stay free of FastAPI and Starlette (import contracts in
+pyproject.toml), and the web layer maps this to a response.
+"""
 
 
 class AppError(Exception):

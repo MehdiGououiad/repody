@@ -1,25 +1,54 @@
 """Page images for the models, as OpenAI ``image_url`` content parts (base64 data URLs).
 
-PDF pages are rendered with PDFium (pypdfium2); Pillow decodes and encodes images.
-"""
+PDF pages are rendered with PDFium (pypdfium2); Pillow decodes and encodes images. The same
+decoders tell what an upload is (``file_type``): a file is a PDF or an image only if they
+can open it, whatever its name or declared type.
 
-from __future__ import annotations
+PDFium is not thread-safe (pypdfium2 docs, "Incompatibility with threading"), and documents
+are rendered in worker threads, so every PDFium call holds ``_PDFIUM``.
+"""
 
 import base64
 import io
-from typing import Any
+import threading
+from typing import Any, BinaryIO
 
 import pypdfium2 as pdfium
-from PIL import Image
+from PIL import Image, ImageOps
 
 PDF_DPI = 170  # NuExtract3's documented rendering resolution
+IMAGE_FORMATS = ("PNG", "JPEG", "WEBP")
+PDF = "application/pdf"
+
+_PDFIUM = threading.Lock()
+
+
+def file_type(file: BinaryIO) -> str | None:
+    """The MIME type of a PDF, PNG, JPEG or WebP file, or None when neither PDFium nor
+    Pillow opens it. The stream is read from the start and rewound."""
+    try:
+        file.seek(0)
+        try:
+            with Image.open(file, formats=IMAGE_FORMATS) as image:
+                image.verify()
+                return Image.MIME[image.format or ""]
+        except OSError, SyntaxError, KeyError:  # UnidentifiedImageError is an OSError
+            pass
+        file.seek(0)
+        try:
+            with _PDFIUM, pdfium.PdfDocument(file):
+                return PDF
+        except pdfium.PdfiumError:
+            return None
+    finally:
+        file.seek(0)
 
 
 def pdf_pages(
     data: bytes, *, max_pages: int | None, longest_edge: int | None = None
 ) -> tuple[list[Image.Image], int]:
     """``(rendered pages, page count)``: at 170 DPI, or fitted to ``longest_edge`` pixels."""
-    with pdfium.PdfDocument(data) as pdf:
+    with _PDFIUM, pdfium.PdfDocument(data) as pdf:
         total = len(pdf)
         pages = []
         for index in range(min(total, max_pages or total)):
@@ -31,7 +60,18 @@ def pdf_pages(
 
 
 def open_image(data: bytes) -> Image.Image:
-    return Image.open(io.BytesIO(data)).convert("RGB")
+    """An uploaded image as the model should see it: upright by its EXIF orientation (phone
+    photos), transparency on white, RGB. llama.cpp decodes images with stb_image, which ignores
+    EXIF and cannot read WebP, so images are sent re-encoded as PNG, as the NuExtract3 model card
+    sends them (lossless: the model gets exactly these pixels)."""
+    with Image.open(io.BytesIO(data)) as image:
+        upright = ImageOps.exif_transpose(image)
+        if upright.mode in ("RGBA", "LA") or "transparency" in upright.info:
+            rgba = upright.convert("RGBA")
+            page = Image.new("RGB", rgba.size, "white")
+            page.paste(rgba, mask=rgba.getchannel("A"))
+            return page
+        return upright.convert("RGB")
 
 
 def image_part(image: Image.Image | bytes, mime: str = "image/png") -> dict[str, Any]:

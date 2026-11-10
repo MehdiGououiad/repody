@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
 const subscribe = () => () => {};
@@ -12,10 +11,4 @@ export function useHydrated(): boolean {
     () => true,
     () => false
   );
-}
-
-/** The pathname once hydrated; empty before, so server and client markup match. */
-export function useClientPathname(): string {
-  const pathname = usePathname();
-  return useHydrated() ? pathname : "";
 }

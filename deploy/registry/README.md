@@ -18,23 +18,23 @@ Publish `linux/amd64` + `linux/arm64` (Apple Silicon Mac) platform images:
 ```powershell
 docker login
 $env:REPODY_IMAGE_REGISTRY="mehdigououiad"
-$env:REPODY_IMAGE_TAG="0.2.0"
+$env:REPODY_IMAGE_TAG="1.0.0"
 $env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
 pnpm images:release
 ```
 
 Images:
 
-- `mehdigououiad/repody-backend:0.2.0` (immutable tag; prefer digest in production GitOps)
-- `mehdigououiad/repody-web:0.2.0` (immutable tag; prefer digest in production GitOps)
+- `mehdigououiad/repody-backend:1.0.0` (immutable tag; prefer digest in production GitOps)
+- `mehdigououiad/repody-web:1.0.0` (immutable tag; prefer digest in production GitOps)
 
 ### Pull (any machine)
 
 Public Hub images - no login required to pull:
 
 ```bash
-docker pull mehdigououiad/repody-backend:0.2.0
-docker pull mehdigououiad/repody-web:0.2.0
+docker pull mehdigououiad/repody-backend:1.0.0
+docker pull mehdigououiad/repody-web:1.0.0
 ```
 
 Docker picks `linux/arm64` on Apple Silicon and `linux/amd64` on Intel automatically.
@@ -42,10 +42,10 @@ Docker picks `linux/arm64` on Apple Silicon and `linux/amd64` on Intel automatic
 Verify arches:
 
 ```bash
-docker buildx imagetools inspect mehdigououiad/repody-backend:0.2.0
+docker buildx imagetools inspect mehdigououiad/repody-backend:1.0.0
 ```
 
-**Run a published release locally:** `REPODY_BACKEND_IMAGE=mehdigououiad/repody-backend:0.2.0 REPODY_WEB_IMAGE=mehdigououiad/repody-web:0.2.0 pnpm platform` (plain `pnpm platform` builds from the checkout) - see [docs/LOCAL.md](../../docs/LOCAL.md).
+**Run a published release locally:** `REPODY_BACKEND_IMAGE=mehdigououiad/repody-backend:1.0.0 REPODY_WEB_IMAGE=mehdigououiad/repody-web:1.0.0 pnpm platform` (plain `pnpm platform` builds from the checkout) - see [docs/LOCAL.md](../../docs/LOCAL.md).
 
 **Helm:** set `images.backend.repository` / `images.web.repository` to these names in your values.
 

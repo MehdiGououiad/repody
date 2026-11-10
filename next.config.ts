@@ -20,22 +20,13 @@ const nextConfig: NextConfig = {
     // Proxy buffers request bodies and truncates past this size (default 10mb). Multipart
     // run submissions carry several documents of up to AUDIT_MAX_UPLOAD_BYTES (25mb) each.
     proxyClientMaxBodySize: "100mb",
-    // The /api/v1 rewrite to FastAPI also carries the run progress SSE stream (backend
-    // caps a stream at one hour); the default proxy timeout would cut it at 30s.
-    proxyTimeout: 3_600_000,
-    // lucide-react + recharts are already in Next's default optimize list.
-    optimizePackageImports: [
-      "@radix-ui/react-dialog",
-      "@radix-ui/react-dropdown-menu",
-      "@radix-ui/react-select",
-      "@radix-ui/react-tabs",
-      "@radix-ui/react-tooltip",
-      "cmdk",
-    ],
+    // A run upload goes through the /api/v1 rewrite; allow it as long as the browser does.
+    proxyTimeout: 120_000,
+    // lucide-react and recharts are already in Next's default optimize list.
+    optimizePackageImports: ["radix-ui", "cmdk"],
   },
-  // /api/v1/* is proxied at runtime by app/api/v1/[...path]/route.ts using
-  // INTERNAL_API_URL (Compose: http://api:8000, K8s: http://repody-api:8000).
-  // Do not bake BACKEND_URL into rewrites - that breaks portable Hub images.
+  // /api/v1/* is rewritten at runtime by proxy.ts to INTERNAL_API_URL (Compose: http://api:8000,
+  // K8s: http://repody-api:8000). Do not bake it into rewrites: images must stay portable.
   async redirects() {
     return [
       {

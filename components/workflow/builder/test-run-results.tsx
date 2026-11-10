@@ -16,9 +16,9 @@ import { useTranslations } from "next-intl";
 import { isRuleFailure, RuleStatusIcon, ruleStatusColor } from "@/components/shared/rule-status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import type { TestRun } from "@/components/workflow/builder/test-run-session";
 import { TestRunSummaryDetails } from "@/components/workflow/run-details-meta";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
+import type { RunView } from "@/lib/api/runs";
 import type { RunAuditDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -35,10 +35,10 @@ const statusIcon: Record<RunAuditDetail["status"], typeof CheckCircle2> = {
 };
 
 /** Results area of a test run: a placeholder until a run finishes (a failure shows above). */
-export function TestRunResults({ run }: { run: TestRun }) {
+export function TestRunResults({ run, starting }: { run: RunView; starting: boolean }) {
   const t = useTranslations("workflows.builder");
-  const tReport = useTranslations("audits.report");
-  const resultsKey = run.phase === "done" ? `done-${run.result.id}` : run.phase;
+  const phase = starting ? "running" : run.phase;
+  const resultsKey = run.phase === "done" ? `done-${run.result.id}` : phase;
 
   return (
     <section aria-live="polite" className="space-y-4 min-w-0">
@@ -48,7 +48,7 @@ export function TestRunResults({ run }: { run: TestRun }) {
       </div>
 
       <div key={resultsKey} className="panel-reveal min-w-0">
-        {run.phase === "idle" || run.phase === "failed" ? (
+        {phase === "idle" || phase === "failed" ? (
           <div className="rounded-xl border border-dashed border-border/80 bg-surface-container-low/40 px-4 py-6 text-center">
             <FlaskConical
               className="mx-auto h-6 w-6 text-on-surface-variant/35"
@@ -59,9 +59,9 @@ export function TestRunResults({ run }: { run: TestRun }) {
           </div>
         ) : null}
 
-        {run.phase === "running" ? (
+        {phase === "running" ? (
           <div className="panel-elevated rounded-xl p-4">
-            {run.progress ? (
+            {run.phase === "running" && run.progress ? (
               <RunProgressSteps progress={run.progress} />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-8">
@@ -72,21 +72,15 @@ export function TestRunResults({ run }: { run: TestRun }) {
           </div>
         ) : null}
 
-        {run.phase === "done" ? <DoneResult result={run.result} t={t} tReport={tReport} /> : null}
+        {run.phase === "done" && !starting ? <DoneResult result={run.result} /> : null}
       </div>
     </section>
   );
 }
 
-function DoneResult({
-  result,
-  t,
-  tReport,
-}: {
-  result: RunAuditDetail;
-  t: ReturnType<typeof useTranslations>;
-  tReport: ReturnType<typeof useTranslations>;
-}) {
+function DoneResult({ result }: { result: RunAuditDetail }) {
+  const t = useTranslations("workflows.builder");
+  const tReport = useTranslations("audits.report");
   const StatusIcon = statusIcon[result.status];
   return (
     <div className="space-y-4 min-w-0">

@@ -1,30 +1,23 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
+import { dequal } from "dequal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { type SetStateAction, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { toast } from "sonner";
-import {
-  emptyTestSession,
-  type TestRun,
-  type TestSessionState,
-} from "@/components/workflow/builder/test-run-session";
-import { browserApi, unwrap } from "@/lib/api/openapi-client";
-import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import type { BuilderStep } from "@/components/workflow/builder/step-nav";
+import { $api } from "@/lib/api/browser";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
+import { errorMessage } from "@/lib/query/get-query-client";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
-import { workflowDraftFingerprint } from "@/lib/workflow/draft-fingerprint";
 
-function readStoredApiKey(workflowId: string, fromWorkflow?: string | null): string {
-  if (isFullWorkflowApiKey(fromWorkflow)) return fromWorkflow;
-  if (typeof sessionStorage === "undefined") return "";
-  const stored = sessionStorage.getItem(`workflow-api-key:${workflowId}`);
-  return isFullWorkflowApiKey(stored) ? stored : "";
-}
+const AUTOSAVE_MS = 2_500;
 
-function rememberApiKey(workflowId: string, key: string | null | undefined) {
-  if (typeof sessionStorage === "undefined" || !isFullWorkflowApiKey(key)) return;
-  sessionStorage.setItem(`workflow-api-key:${workflowId}`, key);
+interface Draft {
+  name: string;
+  documents: DocumentDef[];
+  rules: WorkflowRule[];
 }
 
 /**
@@ -33,169 +26,118 @@ function rememberApiKey(workflowId: string, key: string | null | undefined) {
  */
 export type BuilderSync = "idle" | "saving" | "deploying";
 
+/** A builder test run: the files chosen per document (kept across runs) and the last run. */
+export type TestSession = { files: Record<string, File>; runId: string | null };
+
+/**
+ * The workflow being edited and what the builder does with it: save, autosave, deploy.
+ * "Unsaved" is derived, not stored: the draft deeply differs from the last saved draft, so an edit
+ * and its undo is not a change, and edits made while a save is in flight stay unsaved.
+ */
 export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "edit") {
-  const isNew = mode === "new";
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<0 | 1 | 2>(0);
-  const [name, setName] = useState(workflow.name);
-  const [documents, setDocuments] = useState<DocumentDef[]>(workflow.documents);
-  const [rules, setRules] = useState<WorkflowRule[]>(workflow.rules);
-  const [deployed, setDeployed] = useState(!!workflow.deployedAt);
-  const [apiKey, setApiKey] = useState(() => readStoredApiKey(workflow.id, workflow.apiKey));
-  const [sync, setSync] = useState<BuilderSync>("idle");
-  const [activeWorkflowId, setActiveWorkflowId] = useState(workflow.id);
-  const [testSession, setTestSession] = useState<TestSessionState>(emptyTestSession);
-  const [savedFingerprint, setSavedFingerprint] = useState(() =>
-    workflowDraftFingerprint({
-      name: workflow.name,
-      documents: workflow.documents,
-      rules: workflow.rules,
-    })
-  );
+  const [draft, setDraft] = useState<Draft>(() => ({
+    name: workflow.name,
+    documents: workflow.documents,
+    rules: workflow.rules,
+  }));
+  // What the server has: the workflow as loaded, then each saved draft.
+  const [saved, setSaved] = useState<Draft>(draft);
+  const dirty = !dequal(draft, saved);
 
-  const dirty = useMemo(
-    () => workflowDraftFingerprint({ name, documents, rules }) !== savedFingerprint,
-    [name, documents, rules, savedFingerprint]
-  );
+  const [step, setStep] = useState<BuilderStep>(0);
+  const [persisted, setPersisted] = useState(mode === "edit");
+  const [deployed, setDeployed] = useState(Boolean(workflow.deployedAt));
+  // The full key is returned once, by deploy; it is never stored (a reload shows the hint).
+  const [apiKey, setApiKey] = useState(workflow.apiKey ?? "");
+  const [testSession, setTestSession] = useState<TestSession>({ files: {}, runId: null });
 
+  const saveMutation = $api.useMutation("put", "/v1/workflows/{workflow_id}");
+  const deployMutation = $api.useMutation("post", "/v1/workflows/{workflow_id}/deploy");
+  const sync: BuilderSync = deployMutation.isPending
+    ? "deploying"
+    : saveMutation.isPending
+      ? "saving"
+      : "idle";
   useUnsavedChangesWarning(dirty);
 
-  const patchTestSession = (patch: Partial<TestSessionState>) =>
-    setTestSession((prev) => ({ ...prev, ...patch }));
-  const setTestRun = (next: SetStateAction<TestRun>) =>
-    setTestSession((prev) => ({
-      ...prev,
-      run: typeof next === "function" ? next(prev.run) : next,
-    }));
+  const update =
+    <K extends keyof Draft>(key: K) =>
+    (value: Draft[K]) =>
+      setDraft((previous) => ({ ...previous, [key]: value }));
 
-  const buildPayload = () => ({
-    name: name || workflow.name,
-    description: workflow.description,
-    owner: workflow.owner,
-    documents,
-    rules,
-  });
-
-  const persistWorkflow = async (options?: {
-    navigate?: boolean;
-    toastOnSuccess?: boolean;
-  }): Promise<string> => {
-    const id = activeWorkflowId === "new" ? workflow.id : activeWorkflowId;
-    const payload = buildPayload();
-    if (!payload.name?.trim()) {
-      throw new Error(t("toasts.nameRequired"));
+  /** Save the draft; the first save of a new workflow moves the URL to its edit page. */
+  const persist = async ({ navigate }: { navigate: boolean }): Promise<string> => {
+    const snapshot = draft;
+    if (!snapshot.name.trim()) throw new Error(t("toasts.nameRequired"));
+    await saveMutation.mutateAsync({
+      params: { path: { workflow_id: workflow.id } },
+      body: { ...snapshot, description: workflow.description, owner: workflow.owner },
+    });
+    if (!persisted) {
+      const href = `/workflows/${workflow.id}/edit`;
+      if (navigate) router.replace(href);
+      else window.history.replaceState(null, "", href);
     }
-    // The API rejects duplicate field names and rules that do not fit the schema (422).
-    await unwrap(
-      browserApi.PUT("/v1/workflows/{workflow_id}", {
-        params: { path: { workflow_id: id } },
-        body: payload,
-      })
-    );
-    if (isNew || activeWorkflowId === "new") {
-      setActiveWorkflowId(id);
-      if (options?.navigate !== false) {
-        router.replace(`/workflows/${id}/edit`);
-      } else {
-        window.history.replaceState(null, "", `/workflows/${id}/edit`);
+    setSaved(snapshot);
+    setPersisted(true);
+    void queryClient.invalidateQueries({ queryKey: ["get", "/v1/workflows"] });
+    return workflow.id;
+  };
+
+  const handleSaveDraft = async ({ silent = false } = {}) => {
+    if (sync !== "idle") return;
+    try {
+      await persist({ navigate: !silent });
+      if (!silent) {
+        toast.success(t("toasts.draftSaved"), { description: t("toasts.draftSavedDetail") });
       }
+    } catch (error) {
+      if (!silent) toast.error(errorMessage(error, tCommon("saveFailed")));
     }
-
-    if (options?.toastOnSuccess) {
-      toast.success(t("toasts.draftSaved"), {
-        description: t("toasts.draftSavedDetail"),
-      });
-    }
-    setSavedFingerprint(
-      workflowDraftFingerprint({
-        name: payload.name,
-        documents: payload.documents,
-        rules: payload.rules,
-      })
-    );
-    return id;
   };
 
   const handleDeploy = async () => {
     if (sync !== "idle") return;
-    setSync("deploying");
     try {
-      const id = await persistWorkflow({ navigate: false, toastOnSuccess: false });
-      const data = await unwrap(
-        browserApi.POST("/v1/workflows/{workflow_id}/deploy", {
-          params: { path: { workflow_id: id } },
-        })
-      );
+      const id = await persist({ navigate: false });
+      const result = await deployMutation.mutateAsync({ params: { path: { workflow_id: id } } });
       setDeployed(true);
-      const revealed = data.apiKey ?? apiKey;
-      setApiKey(revealed);
-      rememberApiKey(id, revealed);
+      setApiKey(result.apiKey ?? "");
       setStep(2);
-      setSavedFingerprint(
-        workflowDraftFingerprint({
-          name: name || workflow.name,
-          documents,
-          rules,
-        })
-      );
-      toast.success(t("toasts.deployed"), {
-        description: t("toasts.deployedDetail"),
-      });
-    } catch {
-      toast.error(tCommon("saveFailed"));
-    } finally {
-      setSync("idle");
+      toast.success(t("toasts.deployed"), { description: t("toasts.deployedDetail") });
+    } catch (error) {
+      toast.error(errorMessage(error, tCommon("saveFailed")));
     }
   };
 
-  const save = async ({ silent }: { silent: boolean }) => {
-    if (sync !== "idle") return;
-    setSync("saving");
-    try {
-      await persistWorkflow({ navigate: !silent && isNew, toastOnSuccess: !silent });
-    } catch (e) {
-      if (!silent) toast.error(e instanceof Error ? e.message : tCommon("saveFailed"));
-    } finally {
-      setSync("idle");
-    }
-  };
-
-  const handleSaveDraft = () => save({ silent: false });
-
-  const saveRef = useRef(save);
-
+  // Autosave a saved workflow shortly after the last edit, when nothing else is in flight.
+  const autosave = useEffectEvent(() => void handleSaveDraft({ silent: true }));
   useEffect(() => {
-    saveRef.current = save;
-  });
-
-  // Autosave an existing workflow 2.5 s after the last edit, when nothing else is in flight.
-  useEffect(() => {
-    if (!dirty || sync !== "idle" || isNew) return;
-    const timer = window.setTimeout(() => void saveRef.current({ silent: true }), 2500);
+    if (!persisted || !dirty || sync !== "idle") return;
+    const timer = window.setTimeout(autosave, AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [dirty, sync, isNew, name, documents, rules]);
+  }, [persisted, dirty, sync, draft]);
 
   return {
     step,
     setStep,
-    name,
-    setName,
-    documents,
-    setDocuments,
-    rules,
-    setRules,
+    ...draft,
+    setName: update("name"),
+    setDocuments: update("documents"),
+    setRules: update("rules"),
     deployed,
     apiKey,
     sync,
-    activeWorkflowId,
     testSession,
-    patchTestSession,
-    setTestRun,
+    setTestSession,
     handleDeploy,
     handleSaveDraft,
-    persistWorkflow,
+    /** Save before a test run, so it uses what the builder shows (returns the workflow id). */
+    saveForTestRun: () => persist({ navigate: false }),
   };
 }

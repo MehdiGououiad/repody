@@ -1,19 +1,20 @@
 """Workflow use cases: list, read, create, save, archive, deploy, and run statistics."""
 
-from __future__ import annotations
-
-from datetime import UTC, datetime, timedelta
+from collections import Counter
+from datetime import UTC, datetime
 from typing import NamedTuple
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.errors import AppError
+from repody.app.stats import daily_counts, last_days, midnight, pass_rate, today
 from repody.extraction.fields import leaves
 from repody.infra.auth import api_key_hint, hash_api_key, new_api_key
 from repody.infra.models import RuleResult, Run, Workflow, new_id
-from repody.rules.evaluate import condition_issue, describe, rule_issues
-from repody.rules.values import field_key
+from repody.rules.evaluate import SchemaTypes, condition_issue, describe, rule_issues
+from repody.schemas.catalog import TABLE_TYPE, field_key
 from repody.schemas.workflow import (
     ApiStats,
     CallsPerDay,
@@ -46,33 +47,24 @@ async def _run_stats(session: AsyncSession, workflow_ids: list[str]) -> dict[str
         .group_by(Run.workflow_id)
     )
     return {
-        wf_id: RunStats(total, passed / done if done else 0.0, last)
+        wf_id: RunStats(total, pass_rate(passed, done), last)
         for wf_id, total, passed, done, last in rows
     }
 
 
 async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
     api_runs = (Run.workflow_id == workflow_id) & (Run.source == "api")
-    today = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-    week = today - timedelta(days=6)
+    week = last_days(7)
     total, today_count, avg_ms = (
         await session.execute(
             select(
                 func.count(),
-                func.count().filter(Run.created_at >= today),
+                func.count().filter(Run.created_at >= midnight(today())),
                 func.avg(func.extract("epoch", Run.finished_at - Run.started_at) * 1000),
             ).where(api_runs)
         )
     ).one()
-    per_day = dict(
-        (
-            await session.execute(
-                select(func.date(Run.created_at), func.count())
-                .where(api_runs, Run.created_at >= week)
-                .group_by(func.date(Run.created_at))
-            )
-        ).all()
-    )
+    per_day = await daily_counts(session, week[0], api_runs)
     failing = await session.execute(
         select(RuleResult.name, RuleResult.severity, func.count())
         .join(Run, Run.id == RuleResult.run_id)
@@ -81,12 +73,13 @@ async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
         .order_by(func.count().desc())
         .limit(5)
     )
-    days = [(week + timedelta(days=i)).date() for i in range(7)]
     return ApiStats(
         api_calls_today=today_count,
         api_calls_total=total,
         avg_latency_ms=int(avg_ms or 0),
-        call_series=[CallsPerDay(day=d.strftime("%a"), calls=per_day.get(d, 0)) for d in days],
+        call_series=[
+            CallsPerDay(day=d, calls=per_day[d].runs if d in per_day else 0) for d in week
+        ],
         top_failing_rules=[
             FailingRule(name=name, severity=severity, count=count)
             for name, severity, count in failing
@@ -106,7 +99,7 @@ def _out(
         id=wf.id,
         name=wf.name,
         description=wf.description,
-        status="active" if wf.deployed_at else "draft",  # archived ones are never returned
+        status="active" if wf.status == "active" else "draft",  # archived ones are never returned
         owner=wf.owner,
         documents=definition.documents,
         rules=definition.rules,
@@ -120,20 +113,26 @@ def _out(
     )
 
 
-async def load(session: AsyncSession, workflow_id: str) -> Workflow:
+async def find(session: AsyncSession, workflow_id: str) -> Workflow | None:
+    """The workflow, or None when it does not exist or is archived."""
     wf = await session.get(Workflow, workflow_id)
-    if wf is None or wf.status == "archived":
+    return None if wf is None or wf.status == "archived" else wf
+
+
+async def load(session: AsyncSession, workflow_id: str) -> Workflow:
+    if (wf := await find(session, workflow_id)) is None:
         raise AppError(404, "Workflow not found.")
     return wf
 
 
-async def list_workflows(session: AsyncSession) -> list[WorkflowOut]:
-    """Cards for the workflow list: no definition, no API stats."""
+async def list_workflows(session: AsyncSession, *, limit: int | None = None) -> list[WorkflowOut]:
+    """Cards for the workflow list, most recently edited first: no definition, no API stats."""
     workflows = (
         await session.scalars(
             select(Workflow)
             .where(Workflow.status != "archived")
             .order_by(Workflow.updated_at.desc())
+            .limit(limit)
         )
     ).all()
     stats = await _run_stats(session, [wf.id for wf in workflows])
@@ -165,27 +164,43 @@ async def create_workflow(session: AsyncSession, body: CreateWorkflow) -> Workfl
     return _out(wf, definition, RunStats())
 
 
-def field_types(definition: WorkflowDefinition) -> dict[str, str]:
-    """Template type of every field a rule can name: ``field`` and ``document type.field``."""
-    types: dict[str, str] = {}
+def schema_types(definition: WorkflowDefinition) -> SchemaTypes:
+    """Every field a rule can name (``field`` and ``document type.field``) with its type,
+    and the columns of every object-array field."""
+    fields: dict[str, str] = {}
+    columns: dict[str, dict[str, str]] = {}
+    documents_with: Counter[str] = Counter()  # bare name -> how many documents have it
     for doc in definition.documents:
         for key, field, _value in leaves(doc.schema_fields):
-            types.setdefault(field_key(key), field.template_type)
-            types[field_key(f"{doc.document_type}.{key}")] = field.template_type
-    return types
+            documents_with[field_key(key)] += 1
+            for name in (field_key(key), field_key(f"{doc.document_type}.{key}")):
+                fields.setdefault(name, field.template_type)
+                if field.template_type == TABLE_TYPE:
+                    columns.setdefault(
+                        name, {field_key(c.name): c.template_type for c in field.children}
+                    )
+    # A bare name in several documents is ambiguous: rules must name the document.
+    for name, count in documents_with.items():
+        if count > 1:
+            fields.pop(name, None)
+            columns.pop(name, None)
+    return SchemaTypes(fields=fields, columns=columns)
 
 
 async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowIn) -> WorkflowOut:
     """Create or replace the workflow's definition (the builder saves all of it); its status
     does not change."""
-    types = field_types(body)
+    types = schema_types(body)
     if issues := [issue for rule in body.rules for issue in rule_issues(rule, types)]:
         raise AppError(422, "; ".join(issues))
-    wf = await session.get(Workflow, workflow_id)
-    if wf is None:
-        wf = Workflow(id=workflow_id, status="draft")
-        session.add(wf)
-    elif wf.status == "archived":
+    # Create the draft if it is new: one statement, so two first saves cannot both insert it.
+    await session.execute(
+        insert(Workflow)
+        .values(id=workflow_id, status="draft", definition={})
+        .on_conflict_do_nothing(index_elements=[Workflow.id])
+    )
+    wf = await session.get_one(Workflow, workflow_id, with_for_update=True)
+    if wf.status == "archived":
         raise AppError(404, "Workflow not found.")
     wf.name, wf.description, wf.owner = body.name, body.description, body.owner
     wf.definition = body.model_dump(include={"documents", "rules"})
@@ -194,8 +209,10 @@ async def save_workflow(session: AsyncSession, workflow_id: str, body: WorkflowI
 
 
 async def archive_workflows(session: AsyncSession, workflow_ids: list[str]) -> None:
-    for wf in await session.scalars(select(Workflow).where(Workflow.id.in_(workflow_ids))):
-        wf.status = "archived"
+    """Archive the workflows (final); their API keys stop working."""
+    await session.execute(
+        update(Workflow).where(Workflow.id.in_(workflow_ids)).values(status="archived")
+    )
 
 
 async def deploy_workflow(session: AsyncSession, workflow_id: str) -> WorkflowOut:
@@ -210,7 +227,7 @@ async def deploy_workflow(session: AsyncSession, workflow_id: str) -> WorkflowOu
 
 def check_rules(definition: WorkflowDefinition) -> list[RuleCheck]:
     """Builder feedback: issues and the readable form of every condition."""
-    types = field_types(definition)
+    types = schema_types(definition)
     return [
         RuleCheck(
             rule_id=rule.id,

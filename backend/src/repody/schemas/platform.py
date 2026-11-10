@@ -1,12 +1,12 @@
 """Health, platform configuration and the dashboard."""
 
-from __future__ import annotations
-
+from datetime import date
 from typing import Literal
 
 from pydantic import Field
 
 from repody.schemas.common import CamelModel
+from repody.schemas.rule import Severity
 from repody.schemas.run import AuditListItem
 from repody.schemas.workflow import WorkflowOut
 
@@ -30,11 +30,11 @@ class PlatformConfig(CamelModel):
 
 
 class KpiPoint(CamelModel):
-    day: str
+    day: date
     value: float
 
 
-KpiId = Literal["auditsWeek", "passRate", "failures", "pendingReview"]
+KpiId = Literal["auditsWeek", "passRate", "failures"]
 
 
 class Kpi(CamelModel):
@@ -45,13 +45,13 @@ class Kpi(CamelModel):
 
 
 class DayRuns(CamelModel):
-    day: str
+    day: date = Field(description="UTC day; clients name it in their locale.")
     runs: int
     prev_runs: int
 
 
 class SeverityShare(CamelModel):
-    severity: str
+    severity: Severity
     share: float
 
 
@@ -66,5 +66,6 @@ class Dashboard(CamelModel):
     failures_by_severity: list[SeverityShare]
     stale_runs: int
     queue: QueueCounts
-    audits: list[AuditListItem]
-    workflows: list[WorkflowOut]
+    recent_audits: list[AuditListItem]
+    failed_audits: list[AuditListItem]
+    workflows: list[WorkflowOut] = Field(description="The most recently edited workflows.")

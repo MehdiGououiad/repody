@@ -3,16 +3,14 @@
 E2E_API_URL=http://127.0.0.1:8000 uv run pytest -m live
 """
 
-from __future__ import annotations
-
 import os
 import time
 
 import httpx
 import pytest
-from tests.conftest import FACTURE_PDF
 
 from repody.app.seed import SEED_API_KEY
+from tests.files import FACTURE_PDF
 
 API = os.environ.get("E2E_API_URL", "http://127.0.0.1:8000")
 AUTH = {"Authorization": f"Bearer {SEED_API_KEY}"}
@@ -21,7 +19,11 @@ AUTH = {"Authorization": f"Bearer {SEED_API_KEY}"}
 @pytest.fixture(scope="module")
 def http():
     with httpx.Client(base_url=API, timeout=30) as client:
-        if client.get("/v1/healthz").status_code != 200:
+        try:
+            healthy = client.get("/v1/healthz").status_code == 200
+        except httpx.TransportError:  # nothing listening
+            healthy = False
+        if not healthy:
             pytest.skip(f"no healthy stack at {API}")
         yield client
 

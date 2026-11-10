@@ -3,7 +3,7 @@
 import { FileText, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { RunAuditDetail } from "@/lib/types";
-import { RunFieldsList } from "./report-fields";
+import { ReportDocument } from "./report-document";
 import { RunRuleResultsDetailed } from "./report-rules";
 
 /** Extracted fields, then rule results: the report body shown inside other panels. */
@@ -18,7 +18,11 @@ export function RunDetailedReportSections({ audit }: { audit: RunAuditDetail }) 
             {t("extractedData")}
           </h3>
         </div>
-        <RunFieldsList audit={audit} />
+        <div className="space-y-4">
+          {audit.documents.map((doc) => (
+            <ReportDocument key={doc.id} doc={doc} />
+          ))}
+        </div>
       </section>
 
       <section className="space-y-3">

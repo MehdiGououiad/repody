@@ -1,50 +1,55 @@
-"""Process one run on a worker: claim, extract each document, check the rules, save the report.
+"""Process one run on a worker: claim, extract the documents, check the rules, save the report.
 
-A document whose extraction fails is logged and left without fields (its rules are skipped);
-any other error, or running past AUDIT_RUN_TIMEOUT_MINUTES, fails the run.
+Documents are extracted concurrently (bounded by AUDIT_INFERENCE_CONCURRENCY). A document
+whose extraction fails keeps its error on the report and has no values (its rules are
+skipped); any other error, or running past AUDIT_RUN_TIMEOUT_MINUTES, fails the run.
 """
-
-from __future__ import annotations
 
 import asyncio
 import time
 from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from repody.app.lifecycle import move_run
-from repody.app.progress import FINALIZE_STEP, RULES_STEP, Tracker, extract_step, publish
-from repody.app.runs import fail_run
+from repody.app.lifecycle import fail_run, move_run
+from repody.app.progress import FINALIZE_STEP, RULES_STEP, Tracker, extract_step
 from repody.extraction.pipeline import extract
 from repody.infra import db
 from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, new_id
 from repody.infra.storage import get_store
 from repody.rules.evaluate import RuleOutcome, evaluate_rules
-from repody.rules.values import field_key
-from repody.schemas.run import Outcome, RunProgress
-from repody.schemas.workflow import WorkflowDefinition
+from repody.schemas.catalog import field_key
+from repody.schemas.run import ExtractionMeta, Outcome, RunProgress
+from repody.schemas.workflow import DocumentDef, WorkflowDefinition
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 
 FAILURE_MESSAGE = "The run failed while processing. The worker logs have the details."
+EXTRACTION_FAILED = (
+    "Extraction failed: the model server did not answer or the file could not be read."
+)
 
 
 async def process_run(run_id: str) -> None:
+    """The ``process_run`` task: run it to the end, or mark it failed."""
     minutes = get_settings().run_timeout_minutes
-    structlog.contextvars.bind_contextvars(run_id=run_id)
-    try:
-        async with asyncio.timeout(minutes * 60):
-            await _process(run_id)
-    except TimeoutError:
-        await fail_run(run_id, f"The run took longer than {minutes} minutes.", only_if="running")
-    except Exception:
-        log.exception("run_processing_failed")
-        await fail_run(run_id, FAILURE_MESSAGE)
-    finally:
-        structlog.contextvars.unbind_contextvars("run_id")
+    with structlog.contextvars.bound_contextvars(run_id=run_id):
+        deadline = asyncio.timeout(minutes * 60)
+        try:
+            async with deadline:
+                await _process(run_id)
+        except TimeoutError:
+            if not deadline.expired():  # a timeout of its own (database, network), not ours
+                log.exception("run_processing_failed")
+                await fail_run(run_id, FAILURE_MESSAGE)
+                return
+            message = f"The run took longer than {minutes} minutes."
+            await fail_run(run_id, message, only_if="running")
+        except Exception:
+            log.exception("run_processing_failed")
+            await fail_run(run_id, FAILURE_MESSAGE)
 
 
 async def _claim(run_id: str) -> bool:
@@ -59,20 +64,26 @@ async def _process(run_id: str) -> None:
         log.info("run_already_claimed")
         return
     async with db.session_factory() as session:
-        run = await session.scalar(
-            select(Run)
-            .where(Run.id == run_id)
-            .options(selectinload(Run.documents).selectinload(RunDocument.fields))
+        run = await session.get_one(
+            Run, run_id, options=[selectinload(Run.documents).selectinload(RunDocument.fields)]
         )
-        assert run is not None
         definition = WorkflowDefinition.model_validate(run.definition)
         tracker = Tracker(run_id, RunProgress.model_validate(run.progress))
         # End the read transaction: the connection goes back to the pool while the model works
         # (minutes); the loaded objects stay usable and their changes are saved by the last commit.
         await session.commit()
 
-        await _extract_documents(run, definition, tracker)
-        await tracker.start(RULES_STEP, "Checking the rules…")
+        docs_by_id = {doc.id: doc for doc in definition.documents}
+        durations = await asyncio.gather(
+            *(
+                _extract_document(run_doc, doc, tracker)
+                for run_doc in run.documents
+                if (doc := docs_by_id.get(run_doc.document_id)) and doc.wants_extraction
+            )
+        )
+        run.extraction_ms = sum(durations)
+
+        await tracker.start(RULES_STEP)
         started = time.perf_counter()
         results = evaluate_rules(
             definition.rules,
@@ -82,10 +93,10 @@ async def _process(run_id: str) -> None:
                 for field in doc.fields
             ],
             doc_types_by_id={doc.id: doc.document_type for doc in definition.documents},
-            multi_document=sum(bool(doc.schema_fields) for doc in definition.documents) > 1,
         )
         run.validation_ms = int((time.perf_counter() - started) * 1000)
-        await tracker.start(FINALIZE_STEP, "Saving the audit report…")
+        await tracker.finish(RULES_STEP)
+        await tracker.start(FINALIZE_STEP)
 
         _flag_fields(run.documents, results)
         session.add_all(_rule_row(run_id, i, result) for i, result in enumerate(results))
@@ -95,7 +106,7 @@ async def _process(run_id: str) -> None:
         run.fields_extracted = sum(
             field.value is not None for doc in run.documents for field in doc.fields
         )
-        run.progress = tracker.finish()
+        run.progress = tracker.complete()
         outcome = _outcome(results)
         if not await move_run(
             session, run_id, "done", outcome=outcome, finished_at=datetime.now(UTC)
@@ -105,41 +116,41 @@ async def _process(run_id: str) -> None:
             log.warning("run_finished_elsewhere")
             return
         await session.commit()
-    await publish(run_id, {"terminal": True, "status": "done"})
     log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
 
 
-async def _extract_documents(run: Run, definition: WorkflowDefinition, tracker: Tracker) -> None:
-    """Extract every uploaded document into its fields (one per schema leaf)."""
-    docs_by_id = {doc.id: doc for doc in definition.documents}
-    for run_doc in run.documents:
-        doc = docs_by_id.get(run_doc.document_id)
-        if doc is None or not doc.wants_extraction:
-            continue
-        step_id = extract_step(doc.id)
-        await tracker.start(step_id, f"Extracting {doc.document_type or 'document'}…")
-        try:
-            data = await get_store().get(run_doc.storage_key)
-            values, meta = await extract(doc, data, run_doc.mime_type)
-        except Exception:
-            log.exception("document_extraction_failed", document_id=doc.id)
-            continue
-        run_doc.extraction = meta.model_dump()
-        run.extraction_ms += meta.extraction_ms
-        run_doc.fields = [
-            ExtractedField(
-                id=new_id("fld"),
-                position=position,
-                key=value.key,
-                description=value.description,
-                type=value.type,
-                value=value.value,
-            )
-            for position, value in enumerate(values)
-        ]
-        if step := tracker.step(step_id):
-            step.duration_ms, step.cache_hit = meta.extraction_ms, meta.cache_hit
-            step.detail = f"{meta.fields_extracted} field(s) in {meta.extraction_ms} ms"
+async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker) -> int:
+    """Extract one uploaded document into its fields (one per schema leaf); its duration in ms."""
+    step_id = extract_step(doc.id)
+    await tracker.start(step_id)
+    try:
+        data = await get_store().get(run_doc.storage_key)
+        values, meta = await extract(doc, data, run_doc.mime_type)
+    except Exception:
+        log.exception("document_extraction_failed", document_id=doc.id)
+        run_doc.extraction = ExtractionMeta(error=EXTRACTION_FAILED).model_dump()
+        await tracker.finish(step_id, failed=True)
+        return 0
+    run_doc.extraction = meta.model_dump()
+    run_doc.fields = [
+        ExtractedField(
+            id=new_id("fld"),
+            position=position,
+            key=value.key,
+            description=value.description,
+            type=value.type,
+            value=value.value,
+        )
+        for position, value in enumerate(values)
+    ]
+    await tracker.finish(
+        step_id,
+        duration_ms=meta.extraction_ms,
+        cache_hit=meta.cache_hit,
+        fields_extracted=meta.fields_extracted,
+        failed=meta.error is not None,
+    )
+    return meta.extraction_ms
 
 
 def _outcome(results: list[RuleOutcome]) -> Outcome:

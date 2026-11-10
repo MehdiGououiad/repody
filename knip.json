@@ -4,20 +4,15 @@
     "app/**/{page,layout,error,global-error,not-found,route,default,template,loading}.tsx",
     "app/**/route.ts",
     "app/actions/*.ts",
-    "auth.ts",
     "e2e/**/*.spec.ts",
+    "e2e/*.setup.ts",
+    "**/*.test.ts",
     "e2e/helpers/*.mjs",
     "scripts/*.mjs",
     "deploy/scripts/**/*.mjs"
   ],
-  "project": ["**/*.{ts,tsx,mjs}"],
+  "project": ["**/*.{ts,tsx,mjs,css}"],
   "ignore": ["components/ui/**"],
-  "ignoreDependencies": [
-    "tw-animate-css",
-    "tailwindcss",
-    "@fontsource-variable/source-sans-3",
-    "@fontsource-variable/jetbrains-mono"
-  ],
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["helm", "tasklist", "trivy", "uv"]
 }

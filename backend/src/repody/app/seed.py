@@ -1,14 +1,13 @@
 """Demo data for development: one deployed invoice workflow and one finished audit."""
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.infra.auth import api_key_hint, hash_api_key
 from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, Workflow
-from repody.schemas.rule import Condition, Operand, Rule
+from repody.schemas.rule import Arithmetic, Condition, FieldRef, Rule
 from repody.schemas.workflow import DocumentDef, SchemaField, WorkflowDefinition
 
 SEED_WORKFLOW_ID = "wf-invoice-audit"
@@ -34,10 +33,8 @@ _MATH_RULE = Rule(
     conditions=[
         Condition(
             id="c1",
-            left=Operand(kind="field", value="subtotal"),
-            arithmetic_op="+",
-            left_extra=Operand(kind="field", value="tax"),
-            right=Operand(kind="field", value="total_amount"),
+            left=Arithmetic(op="+", left=FieldRef(field="subtotal"), right=FieldRef(field="tax")),
+            right=FieldRef(field="total_amount"),
         )
     ],
 )
@@ -51,8 +48,8 @@ def _fields(rows: list[tuple[str, str, str, str]]) -> list[SchemaField]:
 
 
 async def seed(session: AsyncSession) -> None:
-    if await session.get(Workflow, SEED_WORKFLOW_ID) is not None:
-        return
+    """Load the demo workflow and its audit once. Several API replicas may start together:
+    the workflow insert skips an existing row, and only the replica that inserted it goes on."""
     definition = WorkflowDefinition(
         documents=[
             DocumentDef(id="doc-invoice", document_type="Invoice", schema=_fields(_INVOICE_FIELDS)),
@@ -60,8 +57,9 @@ async def seed(session: AsyncSession) -> None:
         ],
         rules=[_MATH_RULE],
     )
-    session.add(
-        Workflow(
+    created = await session.scalar(
+        insert(Workflow)
+        .values(
             id=SEED_WORKFLOW_ID,
             name="Invoice Audit Pipeline",
             description="Multi-vendor invoice extraction with math and cross-reference checks.",
@@ -72,8 +70,11 @@ async def seed(session: AsyncSession) -> None:
             api_key_hash=hash_api_key(SEED_API_KEY),
             api_key_hint=api_key_hint(SEED_API_KEY),
         )
+        .on_conflict_do_nothing(index_elements=[Workflow.id])
+        .returning(Workflow.id)
     )
-    await session.flush()
+    if created is None:
+        return
     finished = datetime(2023, 10, 24, 14, 32, 5, tzinfo=UTC)
     run = Run(
         id="AUD-2023-8902",

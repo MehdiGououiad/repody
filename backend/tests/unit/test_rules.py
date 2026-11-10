@@ -1,6 +1,7 @@
 import pytest
 
 from repody.rules.evaluate import (
+    SchemaTypes,
     check,
     condition_issue,
     describe,
@@ -9,20 +10,34 @@ from repody.rules.evaluate import (
     field_values,
     rule_issues,
 )
+from repody.rules.tables import sum_rows
 from repody.rules.values import field_key, literal, typed
-from repody.schemas.rule import Condition, Operand, Rule, TableAggregate
+from repody.schemas.rule import (
+    Aggregate,
+    Arithmetic,
+    Condition,
+    Expression,
+    FieldRef,
+    LiteralValue,
+    Operand,
+    Rule,
+)
 
 
-def field(name: str) -> Operand:
-    return Operand(kind="field", value=name)
+def field(name: str) -> FieldRef:
+    return FieldRef(field=name)
 
 
-def text(value: str) -> Operand:
-    return Operand(kind="literal", value=value)
+def text(value: str) -> LiteralValue:
+    return LiteralValue(value=value)
 
 
-def cond(left: Operand, op: str = "==", right: Operand | None = None, **extra) -> Condition:
-    return Condition(id="c", left=left, operator=op, right=right, **extra)  # type: ignore[arg-type]
+def plus(a: str, b: str) -> Arithmetic:
+    return Arithmetic(op="+", left=field(a), right=field(b))
+
+
+def cond(left: Expression, op: str = "==", right: Operand | None = None) -> Condition:
+    return Condition(id="c", left=left, operator=op, right=right)  # type: ignore[arg-type]
 
 
 def test_values_follow_the_declared_type():
@@ -35,9 +50,9 @@ def test_values_follow_the_declared_type():
     assert literal("6000", "number") == 6000.0
     assert literal(" true ", "boolean") is True
     assert literal("FAC-42", "string") == "FAC-42"
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert"):
         literal("six", "number")
-    assert field_key("Total Amount") == "total_amount"
+    assert field_key("Total  Amount") == "total_amount"
     assert field_key("Invoice.Total") == "invoice__total"
 
 
@@ -51,14 +66,10 @@ TEXT = {"name": ("Acme", "string"), "label": ("Acme Corp", "string")}
     [
         (cond(field("ttc"), "==", text("6000")), NUMBERS, True),
         (cond(field("ttc"), ">", text("6000")), NUMBERS, False),
+        (cond(plus("ht", "tva"), "==", field("ttc")), NUMBERS, True),
         (
-            cond(field("ht"), "==", field("ttc"), arithmetic_op="+", left_extra=field("tva")),
-            NUMBERS,
-            True,
-        ),
-        (
-            cond(field("a"), "==", text("0.3"), arithmetic_op="+", left_extra=text("0.1")),
-            {"a": (0.2, "number")},
+            cond(plus("a", "b"), "==", text("0.3")),
+            {"a": (0.2, "number"), "b": (0.1, "number")},
             True,
         ),
         (cond(field("q"), "==", text("0.0001")), {"q": (0.0001, "number")}, True),
@@ -72,6 +83,7 @@ TEXT = {"name": ("Acme", "string"), "label": ("Acme Corp", "string")}
         (cond(field("po"), "IS_EMPTY"), {"po": (None, "string")}, True),
         (cond(field("ttc"), "==", text("1")), {"ttc": (None, "number")}, None),
         (cond(field("ttc"), "==", text("6000")), {"ttc": ("6 000,00", "number")}, None),
+        (cond(plus("ht", "x"), "==", text("1")), {**NUMBERS, "x": (None, "number")}, None),
     ],
 )
 def test_check(condition, values, expected):
@@ -81,35 +93,47 @@ def test_check(condition, values, expected):
 def test_unknown_field_and_bad_literal():
     with pytest.raises(LookupError):
         check(cond(field("nope"), "==", text("1")), {})
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="could not convert"):
         check(cond(field("ttc"), "==", text("six")), NUMBERS)
-    text_sum = cond(field("a"), "==", text("1"), arithmetic_op="+", left_extra=field("b"))
     with pytest.raises(TypeError, match="arithmetic needs number fields"):
-        check(text_sum, {"a": ("5000", "verbatim-string"), "b": ("1000", "verbatim-string")})
+        check(
+            cond(plus("a", "b"), "==", text("1")),
+            {"a": ("5000", "verbatim-string"), "b": ("1000", "verbatim-string")},
+        )
 
 
-def test_table_aggregates():
-    rows = [
-        {"label": "Card payment", "amount": -10.5},
-        {"label": "Card refund", "amount": 4.5},
-        {"label": "Transfer", "amount": 100},
-        {"label": "Card fee", "amount": "n/a"},  # not a number: not summed
-    ]
-    values = {"lines": (rows, "object-array")}
+ROWS = [
+    {"Label": "Card payment", "Unit Price": -10.5},
+    {"Label": "Card refund", "Unit Price": 4.5},
+    {"Label": "Transfer", "Unit Price": 100},
+    {"Label": "Card fee", "Unit Price": "n/a"},  # not a number: not summed
+]
 
-    def agg(fn: str, **columns: str) -> Condition:
-        aggregate = TableAggregate(fn=fn, table_field="lines", **columns)  # type: ignore[arg-type]
-        return cond(field(""), "==", text("0"), table_aggregate=aggregate)
 
-    total = agg("sum_rows", amount_column="amount")
-    cards = agg(
-        "sum_rows_where", amount_column="amount", filter_column="label", filter_contains="CARD"
+def test_table_aggregates_read_columns_by_their_schema_name():
+    values = {"lines": (ROWS, "object-array")}
+    total = Aggregate(fn="sum_rows", table="lines", column="Unit Price")
+    cards = Aggregate(
+        fn="sum_rows_where",
+        table="lines",
+        column="Unit Price",
+        filter_column="Label",
+        filter_contains="CARD",
     )
-    count = agg("count_rows_where", filter_column="label", filter_contains="card")
-    assert check(total.model_copy(update={"right": text("94")}), values)
-    assert check(cards.model_copy(update={"right": text("-6")}), values)
-    assert check(count.model_copy(update={"right": text("3")}), values)
-    assert describe(count) == 'count_rows_where(lines, label, contains "card") == 0'
+    count = Aggregate(
+        fn="count_rows_where", table="lines", filter_column="Label", filter_contains="card"
+    )
+    assert check(cond(total, "==", text("94")), values)
+    assert check(cond(cards, "==", text("-6")), values)
+    assert check(cond(count, "==", text("3")), values)
+    assert (
+        describe(cond(count, "==", text("0")))
+        == 'count_rows_where(lines, Label, contains "card") == 0'
+    )
+
+
+def test_a_column_spelled_differently_by_the_model_still_matches():
+    assert sum_rows([{"unit_price": 2}, {"UNIT PRICE": 3}], "Unit Price") == 5
 
 
 def test_rule_outcome_flags_only_failing_conditions():
@@ -132,13 +156,10 @@ def test_rule_skipped_when_value_missing():
     assert evaluate_rule(rule, {"ttc": (1, "number")}).status == "passed"
 
 
-TYPES = {
-    "ttc": "number",
-    "name": "verbatim-string",
-    "due": "date",
-    "lines": "object-array",
-}
-LINES_COUNT = TableAggregate(fn="count_rows_where", table_field="ttc")
+SCHEMA = SchemaTypes(
+    fields={"ttc": "number", "name": "verbatim-string", "due": "date", "lines": "object-array"},
+    columns={"lines": {"label": "verbatim-string", "unit_price": "number"}},
+)
 
 
 @pytest.mark.parametrize(
@@ -159,24 +180,50 @@ LINES_COUNT = TableAggregate(fn="count_rows_where", table_field="ttc")
             "Unknown field missing: it is not in the document schemas.",
         ),
         (
-            cond(field("name"), "==", text("1"), arithmetic_op="+", left_extra=field("ttc")),
+            cond(plus("name", "ttc"), "==", text("1")),
             "Arithmetic needs number fields; name is not a number.",
         ),
         (
-            cond(field(""), "==", text("1"), table_aggregate=LINES_COUNT),
+            cond(Aggregate(fn="count_rows_where", table="ttc"), "==", text("1")),
             "ttc is not an object-array field.",
         ),
+        (
+            cond(Aggregate(table="lines", column="Unit Price"), ">", text("0")),
+            None,
+        ),
+        (
+            cond(Aggregate(table="lines", column="Label"), ">", text("0")),
+            "Sums need a number column; Label is verbatim-string.",
+        ),
+        (
+            cond(Aggregate(table="lines", column="Price"), ">", text("0")),
+            "Unknown column Price in lines.",
+        ),
+        (cond(Aggregate(table="lines"), ">", text("0")), "Choose the column to sum."),
     ],
 )
 def test_authoring_issues(condition, issue):
-    assert condition_issue(condition, TYPES) == issue
+    assert condition_issue(condition, SCHEMA) == issue
 
 
 def test_rule_issues_are_labelled():
     assert rule_issues(Rule(id="r", name="Empty")) == ["Empty: Add at least one condition."]
-    incomplete = cond(field("ttc"), "==", text("1"), arithmetic_op="+")
+    incomplete = cond(Arithmetic(left=field("ttc")), "==", text("1"))
     rule = Rule(id="r", name="Sum", conditions=[incomplete])
-    assert rule_issues(rule) == ["Sum: Condition 1: Choose the second operand of the arithmetic."]
+    assert rule_issues(rule) == ["Sum: Condition 1: Choose both fields of the arithmetic."]
+
+
+def test_conditions_round_trip_in_the_wire_shape():
+    wire = {
+        "id": "c",
+        "left": {"kind": "arithmetic", "op": "+", "left": {"kind": "field", "field": "ht"},
+                 "right": {"kind": "field", "field": "tva"}},
+        "operator": "==",
+        "right": {"kind": "field", "field": "ttc"},
+    }  # fmt: skip
+    condition = Condition.model_validate(wire)
+    assert isinstance(condition.left, Arithmetic)
+    assert condition.model_dump() == wire
 
 
 def test_cross_document_namespace():
@@ -192,9 +239,60 @@ def test_cross_document_namespace():
         applies_to=["inv", "po"],
         conditions=[cond(field("invoice.total"), "==", field("purchase order.total"))],
     )
-    values = field_values(rows, rule=cross, doc_types_by_id=types, multi_document=True)
+    values = field_values(rows, rule=cross, doc_types_by_id=types)
     assert values["invoice__total"] == (6000, "number")
     assert "total" not in values  # ambiguous across the two documents
     assert values["vendor"] == ("Acme", "verbatim-string")  # only one document has it
-    [outcome] = evaluate_rules([cross], rows, doc_types_by_id=types, multi_document=True)
+    [outcome] = evaluate_rules([cross], rows, doc_types_by_id=types)
     assert outcome.status == "passed"
+
+
+# --- Fixed in 1.0 (each was a silent wrong answer) ---
+
+
+def test_in_with_one_value_is_membership_not_a_substring_or_an_error():
+    numbers = {"n": (5.0, "number")}
+    words = {"w": ("apple", "verbatim-string")}
+    assert check(cond(field("n"), "IN", text("5")), numbers) is True
+    assert check(cond(field("n"), "NOT_IN", text("6")), numbers) is True
+    assert check(cond(field("w"), "IN", text("pineapple")), words) is False
+    assert check(cond(field("w"), "IN", text("pear, apple")), words) is True
+
+
+def test_dates_and_times_compare_as_dates_not_text():
+    when = {"t": ("2024-01-02T10:00:00+05:00", "date-time")}  # 05:00 UTC
+    assert check(cond(field("t"), ">", text("2024-01-02T06:00:00Z")), when) is False
+    assert check(cond(field("t"), "<", text("2024-01-02T06:00:00+00:00")), when) is True
+    assert check(cond(field("t"), ">", text("2023-12-31")), {"t": ("2024-01-01", "date")})
+    assert typed("not a date", "date") is None  # mistyped counts as missing
+    with pytest.raises(ValueError, match="Invalid isoformat"):
+        literal("banana", "date")
+    assert condition_issue(cond(field("d"), ">", text("banana")), SchemaTypes(fields={"d": "date"}))
+
+
+def test_list_fields_only_take_presence_checks():
+    schema = SchemaTypes(fields={"tags": "verbatim-string-list", "kinds": "multi-enum"})
+    for name in ("tags", "kinds"):
+        assert condition_issue(cond(field(name), "==", text("a")), schema)
+        assert condition_issue(cond(field(name), "IN", text("a")), schema)
+        assert condition_issue(cond(field(name), "EXISTS"), schema) is None
+
+
+def test_an_aggregate_over_a_table_not_extracted_is_unknown():
+    count = cond(Aggregate(fn="count_rows_where", table="lines"), "==", text("0"))
+    total = cond(Aggregate(fn="sum_rows", table="lines", column="amount"), "==", text("0"))
+    missing = {"lines": (None, "object-array")}
+    assert check(count, missing) is None  # skipped, not "0 rows: passed"
+    assert check(total, missing) is None
+
+
+def test_prefixed_names_resolve_with_one_document_and_bare_names_when_unique():
+    rule = Rule(id="r", conditions=[cond(field("Invoice.total"), "==", text("5"))])
+    rows = [("total", 5.0, "Invoice", "number")]
+    values = field_values(rows, rule=rule, doc_types_by_id={"d1": "Invoice"})
+    assert {"invoice__total", "total"} <= values.keys()
+    assert evaluate_rule(rule, values).status == "passed"
+    two = [("total", 5.0, "Invoice", "number"), ("total", 6.0, "Receipt", "number")]
+    values = field_values(two, rule=rule, doc_types_by_id={"d1": "Invoice", "d2": "Receipt"})
+    assert "total" not in values  # ambiguous: name the document
+    assert values["receipt__total"] == (6.0, "number")

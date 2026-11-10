@@ -1,85 +1,43 @@
 "use client";
 
+import { useTable } from "@tanstack/react-table";
 import { Inbox } from "lucide-react";
-import Link from "next/link";
-import { useLocale, useTranslations } from "next-intl";
-import { AuditStatusBadge } from "@/components/shared/audit-status-badge";
+import { useTranslations } from "next-intl";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  AUDIT_COLUMN_CLASSES,
+  auditTableFeatures,
+  useAuditColumns,
+} from "@/components/audit/audit-columns";
+import { DataTable } from "@/components/ui/data-table";
 import type { Audit } from "@/lib/types";
-import { formatDateTime, formatNumber } from "@/lib/utils";
 
-interface RecentAuditsTableProps {
-  audits: Audit[];
-  title?: string;
-  limit?: number;
-  /** Compose header actions (e.g. view-all link) instead of boolean flags. */
-  actions?: React.ReactNode;
-}
-
-export function RecentAuditsTable({ audits, title, limit, actions }: RecentAuditsTableProps) {
-  const locale = useLocale();
+/** The dashboard's latest audits, with the columns of the audits page. */
+export function RecentAuditsTable({ audits }: { audits: Audit[] }) {
   const t = useTranslations("audits.table");
   const tDashboard = useTranslations("dashboard.recent");
-  const heading = title ?? tDashboard("title");
-
-  const rows = limit ? audits.slice(0, limit) : audits;
+  const table = useTable({
+    features: auditTableFeatures,
+    columns: useAuditColumns(),
+    data: audits,
+    getRowId: (audit) => audit.id,
+    manualPagination: true,
+  });
 
   return (
     <div className="panel-elevated rounded-xl overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <h3 className="font-display text-sm font-semibold">{heading}</h3>
-        {actions}
+        <h3 className="font-display text-sm font-semibold">{tDashboard("title")}</h3>
       </div>
-      {rows.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-12 text-on-surface-variant">
-          <Inbox className="h-6 w-6 opacity-50" aria-hidden="true" />
-          <p className="text-sm">{t("empty")}</p>
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-1/5">{t("id")}</TableHead>
-              <TableHead className="w-1/5">{t("status")}</TableHead>
-              <TableHead className="w-1/5">{t("workflow")}</TableHead>
-              <TableHead className="w-1/5">{t("timestamp")}</TableHead>
-              <TableHead className="text-right">{t("rows")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell>
-                  <Link
-                    href={`/audits/${a.id}`}
-                    className="font-mono text-xs text-primary-stitch hover:underline"
-                    style={{ color: "var(--primary-stitch)" }}
-                  >
-                    {a.id}
-                  </Link>
-                </TableCell>
-                <TableCell>
-                  <AuditStatusBadge status={a.status} failedCount={a.failedRules} />
-                </TableCell>
-                <TableCell className="text-on-surface-variant text-sm">{a.workflowName}</TableCell>
-                <TableCell className="text-on-surface-variant text-sm tabular-nums">
-                  {formatDateTime(a.timestamp, locale)}
-                </TableCell>
-                <TableCell className="text-right font-mono text-xs tabular-nums">
-                  {a.rows == null ? "—" : formatNumber(a.rows, locale)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <DataTable
+        table={table}
+        columnClassName={AUDIT_COLUMN_CLASSES}
+        empty={
+          <span className="inline-flex flex-col items-center gap-2">
+            <Inbox className="h-6 w-6 opacity-50" aria-hidden="true" />
+            {t("empty")}
+          </span>
+        }
+      />
     </div>
   );
 }

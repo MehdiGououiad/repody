@@ -1,18 +1,20 @@
 # syntax=docker/dockerfile:1
 # Built by docker-bake.hcl (`pnpm images:build`). Backend origin and Bugsink server DSN are
 # runtime env (INTERNAL_API_URL / BACKEND_URL / BUGSINK_DSN), never build args.
-FROM node:24-alpine AS deps
+FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm (pnpm docs).
+RUN npm install --global pnpm@12.16.1
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
 
-FROM node:24-alpine AS builder
+FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-RUN corepack enable && corepack prepare pnpm@12.16.1 --activate
+# Node 25+ no longer bundles corepack; install the pinned pnpm with npm (pnpm docs).
+RUN npm install --global pnpm@12.16.1
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time.
 ARG NEXT_PUBLIC_BUGSINK_DSN=
 ENV NEXT_PUBLIC_BUGSINK_DSN=${NEXT_PUBLIC_BUGSINK_DSN}
@@ -21,7 +23,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm build
 
-FROM node:24-alpine AS runner
+FROM node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

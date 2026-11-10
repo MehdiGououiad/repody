@@ -27,10 +27,8 @@ const nextConfigs = [...nextVitals, ...nextTs];
 
 export default defineConfig([
   ...nextConfigs,
-  {
-    settings: { react: { version: "19" } },
-    rules: disableBiomeOwnedRules(nextConfigs),
-  },
+  // eslint-config-next 16.4+ detects the React version under ESLint 10 (no settings override).
+  { rules: disableBiomeOwnedRules(nextConfigs) },
   globalIgnores([
     ".next/**",
     "**/.next/**",

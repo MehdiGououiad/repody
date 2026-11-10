@@ -2,7 +2,10 @@
 
 import { ListOrdered, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { QueueSnapshot } from "@/lib/types";
+import type { Dashboard } from "@/lib/types";
+
+type QueueSnapshot = Dashboard["queue"];
+
 import { cn } from "@/lib/utils";
 
 const EMPTY_QUEUE: QueueSnapshot = { queuedRuns: 0, runningRuns: 0 };

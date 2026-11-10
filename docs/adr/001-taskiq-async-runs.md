@@ -18,7 +18,7 @@ Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the 
 - API enqueues via `app/run/dispatch.py` after the Postgres dispatch outbox commits
 - Workers run `python -m repody.taskiq.worker` (Taskiq CLI, async tasks)
 - Durable dispatch replay remains in Postgres (`run_dispatch_outbox`)
-- Redis (`AUDIT_REDIS_URL`) is already required for rate limits, SSE, and extraction cache
+- Redis (`AUDIT_REDIS_URL`) is already required for rate limits and the extraction cache
 
 ## Consequences
 
@@ -31,7 +31,7 @@ Use **Taskiq** with **Redis Streams** (`taskiq-redis.RedisStreamBroker`) as the 
 
 **Negative**
 
-- No bundled workflow UI (run status remains in Postgres + SSE/polling)
+- No bundled workflow UI (run status remains in Postgres, polled by clients)
 - Queue depth observability is Redis/metrics-based, not a dedicated workflow dashboard
 - Workers and API must share a reachable Redis
 

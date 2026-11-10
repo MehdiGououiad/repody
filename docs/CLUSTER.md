@@ -13,7 +13,7 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 |---------|----------------|---------------|
 | PostgreSQL | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/)) | `AUDIT_DATABASE_URL` in the Secret |
 | Redis | Managed Redis/Valkey, or an operator | `AUDIT_REDIS_URL` in the Secret |
-| S3 object storage | S3, MinIO operator, ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
+| S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
 | OIDC provider | Keycloak (operator or managed), realm [`deploy/keycloak/realm-repody.json`](../deploy/keycloak/realm-repody.json) | `config.AUDIT_OIDC_ISSUER`, `web.keycloakClientId` |
 | Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_LLAMACPP_BASE_URL` |
 | Secrets | External Secrets Operator + Vault | `existingSecret` |
@@ -40,7 +40,7 @@ ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example
 | `AUDIT_DATABASE_URL` | API, workers, migrations (`postgresql+asyncpg://…`) |
 | `AUDIT_REDIS_URL` | API, workers |
 | `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers |
-| `AUTH_SECRET` | web (Auth.js session encryption) |
+| `AUTH_SECRET` | web (Better Auth session encryption, as `BETTER_AUTH_SECRET`) |
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
 | `AUDIT_LLAMACPP_API_KEY` | workers, optional bearer token for the inference endpoint |
 | `BUGSINK_DSN` | optional error tracking |
@@ -152,4 +152,4 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 | `ImagePullBackOff` | Pull secret; repository includes the registry host |
 | Run stuck `queued` | Redis; worker replicas; `runs.dispatched_at` NULL means not yet sent |
 | Run stuck `running` | Worker logs; model endpoint; maintenance fails it after `AUDIT_RUN_TIMEOUT_MINUTES` |
-| Progress not live (SSE) | Redis reachable (`redisOk` in readiness); proxy buffering off for `/api/v1/runs/*/events` |
+| Progress not updating | The worker is running and reaches Postgres; `GET /api/v1/runs/{id}` answers |

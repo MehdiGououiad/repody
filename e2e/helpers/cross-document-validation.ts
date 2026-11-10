@@ -125,7 +125,7 @@ export async function addCrossDocumentTotalRule(page: Page, ruleName: string) {
   await page.getByRole("option", { name: "Facture 2.total_amount" }).click();
 
   await expect(
-    ruleCard.getByText(/facture_1.total_amount == facture_2.total_amount/i)
+    ruleCard.getByText(/Facture 1.total_amount == Facture 2.total_amount/)
   ).toBeVisible();
 }
 
@@ -136,7 +136,11 @@ export async function uploadDocumentsForCrossTest(
   await goToTestDeployStep(page);
 
   for (const { docLabel, filePath } of files) {
-    const card = page.locator(".panel-elevated").filter({ hasText: docLabel }).first();
+    // The card titled with this document (another card's rules may mention its fields).
+    const card = page
+      .locator(".panel-elevated")
+      .filter({ has: page.getByText(docLabel, { exact: true }) })
+      .first();
     const input = card.locator('input[type="file"]');
     await input.setInputFiles(filePath);
     await expect(card.getByText(path.basename(filePath))).toBeVisible({ timeout: 10_000 });

@@ -110,6 +110,9 @@ export interface paths {
         /**
          * Start Run
          * @description Start a run with the workflow API key (production) or as a signed-in user (test run).
+         *     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed.
+         *
+         *     A caller that is neither gets 401 whether or not the workflow exists.
          */
         post: operations["start_run_v1_workflows__workflow_id__runs_post"];
         delete?: never;
@@ -127,29 +130,10 @@ export interface paths {
         };
         /**
          * Get Run
-         * @description Status and live progress; the audit report once the run is done.
+         * @description Status and live progress (with the queue position while queued); the audit report once
+         *     the run is done.
          */
         get: operations["get_run_v1_runs__run_id__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/runs/{run_id}/events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Run Events
-         * @description Server-Sent Events: the current state first, then each progress change until done.
-         */
-        get: operations["run_events_v1_runs__run_id__events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -175,6 +159,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/audits/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Audits */
+        get: operations["export_audits_v1_audits_export_csv_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audits/{run_id}": {
         parameters: {
             query?: never;
@@ -184,6 +185,23 @@ export interface paths {
         };
         /** Get Audit */
         get: operations["get_audit_v1_audits__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/audits/{run_id}/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Export Audit */
+        get: operations["export_audit_v1_audits__run_id__export_csv_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -221,7 +239,7 @@ export interface paths {
         };
         /**
          * Ready
-         * @description Postgres and Redis answer.
+         * @description Postgres and Redis answer (checked concurrently).
          */
         get: operations["ready_v1_healthz_get"];
         put?: never;
@@ -241,6 +259,26 @@ export interface paths {
         };
         /** Platform Config */
         get: operations["platform_config_v1_platform_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Catalog
+         * @description Field types the builder offers, and which of them rules compare in order or add up.
+         */
+        get: operations["get_catalog_v1_catalog_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -271,6 +309,84 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
+         * Aggregate
+         * @description Sum or count the rows of an object-array field, optionally filtered by a column.
+         *
+         *     ``column`` and ``filter_column`` are child field names as written in the schema.
+         */
+        "Aggregate-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "aggregate";
+            /**
+             * Fn
+             * @default sum_rows
+             * @enum {string}
+             */
+            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
+            /**
+             * Table
+             * @default
+             */
+            table: string;
+            /**
+             * Column
+             * @default
+             */
+            column: string;
+            /**
+             * Filtercolumn
+             * @default
+             */
+            filterColumn: string;
+            /**
+             * Filtercontains
+             * @default
+             */
+            filterContains: string;
+        };
+        /**
+         * Aggregate
+         * @description Sum or count the rows of an object-array field, optionally filtered by a column.
+         *
+         *     ``column`` and ``filter_column`` are child field names as written in the schema.
+         */
+        "Aggregate-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "aggregate";
+            /**
+             * Fn
+             * @default sum_rows
+             * @enum {string}
+             */
+            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
+            /**
+             * Table
+             * @default
+             */
+            table: string;
+            /**
+             * Column
+             * @default
+             */
+            column: string;
+            /**
+             * Filtercolumn
+             * @default
+             */
+            filterColumn: string;
+            /**
+             * Filtercontains
+             * @default
+             */
+            filterContains: string;
+        };
+        /**
          * ApiStats
          * @description Runs started with the workflow's API key.
          */
@@ -286,6 +402,44 @@ export interface components {
             /** Topfailingrules */
             topFailingRules: components["schemas"]["FailingRule"][];
         };
+        /**
+         * Arithmetic
+         * @description ``left op right`` on two number fields.
+         */
+        "Arithmetic-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "arithmetic";
+            /**
+             * Op
+             * @default +
+             * @enum {string}
+             */
+            op: "+" | "-" | "*" | "/";
+            left?: components["schemas"]["FieldRef-Input"];
+            right?: components["schemas"]["FieldRef-Input"];
+        };
+        /**
+         * Arithmetic
+         * @description ``left op right`` on two number fields.
+         */
+        "Arithmetic-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "arithmetic";
+            /**
+             * Op
+             * @default +
+             * @enum {string}
+             */
+            op: "+" | "-" | "*" | "/";
+            left: components["schemas"]["FieldRef-Output"];
+            right: components["schemas"]["FieldRef-Output"];
+        };
         /** AuditDetail */
         AuditDetail: {
             /** Id */
@@ -299,8 +453,11 @@ export interface components {
              * @enum {string}
              */
             status: "passed" | "warning" | "failed";
-            /** Source */
-            source: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "test" | "api";
             /**
              * Createdat
              * Format: date-time
@@ -394,10 +551,16 @@ export interface components {
             ruleId: string;
             /** Name */
             name: string;
-            /** Scope */
-            scope: string;
-            /** Severity */
-            severity: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "intra" | "cross";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "reject" | "flag";
             /**
              * Status
              * @enum {string}
@@ -437,50 +600,72 @@ export interface components {
         };
         /** CallsPerDay */
         CallsPerDay: {
-            /** Day */
+            /**
+             * Day
+             * Format: date
+             * @description UTC day; clients name it in their locale.
+             */
             day: string;
             /** Calls */
             calls: number;
         };
         /**
-         * Condition
-         * @description ``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``.
+         * Catalog
+         * @description What the builder offers: field types, and which of them rules can order or add.
          */
+        Catalog: {
+            /** Templatetypes */
+            templateTypes: components["schemas"]["TemplateTypeInfo"][];
+            /** Defaulttype */
+            defaultType: string;
+            /** Numbertypes */
+            numberTypes: string[];
+            /** Orderedtypes */
+            orderedTypes: string[];
+            /** Tabletype */
+            tableType: string;
+            /**
+             * Operatorsbytype
+             * @description Operators each type takes (lists as `<type>-list`); other types: the default's.
+             */
+            operatorsByType: {
+                [key: string]: ("==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY")[];
+            };
+            /**
+             * Presenceoperators
+             * @description Operators with no right-hand side.
+             */
+            presenceOperators: ("==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY")[];
+        };
+        /** Condition */
         "Condition-Input": {
             /** Id */
             id: string;
-            left: components["schemas"]["Operand-Input"];
+            /** Left */
+            left?: components["schemas"]["FieldRef-Input"] | components["schemas"]["Arithmetic-Input"] | components["schemas"]["Aggregate-Input"];
             /**
              * Operator
              * @default ==
              * @enum {string}
              */
             operator: "==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY";
-            right?: components["schemas"]["Operand-Input"] | null;
-            /** Arithmeticop */
-            arithmeticOp?: ("+" | "-" | "*" | "/") | null;
-            leftExtra?: components["schemas"]["Operand-Input"] | null;
-            tableAggregate?: components["schemas"]["TableAggregate-Input"] | null;
+            /** Right */
+            right?: (components["schemas"]["FieldRef-Input"] | components["schemas"]["LiteralValue-Input"]) | null;
         };
-        /**
-         * Condition
-         * @description ``left [arithmetic_op left_extra] operator right``; ``table_aggregate`` replaces ``left``.
-         */
+        /** Condition */
         "Condition-Output": {
             /** Id */
             id: string;
-            left: components["schemas"]["Operand-Output"];
+            /** Left */
+            left: components["schemas"]["FieldRef-Output"] | components["schemas"]["Arithmetic-Output"] | components["schemas"]["Aggregate-Output"];
             /**
              * Operator
              * @default ==
              * @enum {string}
              */
             operator: "==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY";
-            right: components["schemas"]["Operand-Output"] | null;
-            /** Arithmeticop */
-            arithmeticOp: ("+" | "-" | "*" | "/") | null;
-            leftExtra: components["schemas"]["Operand-Output"] | null;
-            tableAggregate: components["schemas"]["TableAggregate-Output"] | null;
+            /** Right */
+            right: (components["schemas"]["FieldRef-Output"] | components["schemas"]["LiteralValue-Output"]) | null;
         };
         /** CreateWorkflow */
         CreateWorkflow: {
@@ -511,14 +696,23 @@ export interface components {
             /** Staleruns */
             staleRuns: number;
             queue: components["schemas"]["QueueCounts"];
-            /** Audits */
-            audits: components["schemas"]["AuditListItem"][];
-            /** Workflows */
+            /** Recentaudits */
+            recentAudits: components["schemas"]["AuditListItem"][];
+            /** Failedaudits */
+            failedAudits: components["schemas"]["AuditListItem"][];
+            /**
+             * Workflows
+             * @description The most recently edited workflows.
+             */
             workflows: components["schemas"]["WorkflowOut"][];
         };
         /** DayRuns */
         DayRuns: {
-            /** Day */
+            /**
+             * Day
+             * Format: date
+             * @description UTC day; clients name it in their locale.
+             */
             day: string;
             /** Runs */
             runs: number;
@@ -609,6 +803,11 @@ export interface components {
             rawText: string | null;
             /** Markdowntext */
             markdownText: string | null;
+            /**
+             * Error
+             * @description Why extraction failed or its answer was unusable.
+             */
+            error: string | null;
         };
         /** FailingRule */
         FailingRule: {
@@ -616,8 +815,43 @@ export interface components {
             name: string;
             /** Count */
             count: number;
-            /** Severity */
-            severity: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "reject" | "flag";
+        };
+        /**
+         * FieldRef
+         * @description A schema field: ``total`` or, with several documents, ``invoice.total``.
+         */
+        "FieldRef-Input": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "field";
+            /**
+             * Field
+             * @default
+             */
+            field: string;
+        };
+        /**
+         * FieldRef
+         * @description A schema field: ``total`` or, with several documents, ``invoice.total``.
+         */
+        "FieldRef-Output": {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "field";
+            /**
+             * Field
+             * @default
+             */
+            field: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -663,7 +897,7 @@ export interface components {
              * Id
              * @enum {string}
              */
-            id: "auditsWeek" | "passRate" | "failures" | "pendingReview";
+            id: "auditsWeek" | "passRate" | "failures";
             /** Value */
             value: number;
             /** Previous */
@@ -673,21 +907,24 @@ export interface components {
         };
         /** KpiPoint */
         KpiPoint: {
-            /** Day */
+            /**
+             * Day
+             * Format: date
+             */
             day: string;
             /** Value */
             value: number;
         };
         /**
-         * Operand
-         * @description A field reference (``total`` or ``invoice.total``) or a literal typed by the user.
+         * LiteralValue
+         * @description A value typed by the user, read as the type of the field it is compared with.
          */
-        "Operand-Input": {
+        "LiteralValue-Input": {
             /**
-             * Kind
+             * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "field" | "literal";
+            kind: "literal";
             /**
              * Value
              * @default
@@ -695,15 +932,15 @@ export interface components {
             value: string;
         };
         /**
-         * Operand
-         * @description A field reference (``total`` or ``invoice.total``) or a literal typed by the user.
+         * LiteralValue
+         * @description A value typed by the user, read as the type of the field it is compared with.
          */
-        "Operand-Output": {
+        "LiteralValue-Output": {
             /**
-             * Kind
+             * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            kind: "field" | "literal";
+            kind: "literal";
             /**
              * Value
              * @default
@@ -729,20 +966,39 @@ export interface components {
             /** Runtimeoutminutes */
             runTimeoutMinutes: number;
         };
-        /** ProgressStep */
+        /**
+         * ProgressStep
+         * @description One step of a run. Clients word it from its kind and data (no server-side text).
+         */
         ProgressStep: {
             /** Id */
             id: string;
-            /** Label */
-            label: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "queue" | "extract" | "rules" | "finalize";
             /**
              * Status
              * @default pending
              * @enum {string}
              */
             status: "pending" | "active" | "done";
-            /** Detail */
-            detail: string | null;
+            /**
+             * Documenttype
+             * @description extract steps.
+             */
+            documentType: string | null;
+            /**
+             * Rulecount
+             * @description rules steps.
+             */
+            ruleCount: number | null;
+            /**
+             * Fieldsextracted
+             * @description Done extract steps.
+             */
+            fieldsExtracted: number | null;
             /** Durationms */
             durationMs: number | null;
             /**
@@ -750,6 +1006,12 @@ export interface components {
              * @default false
              */
             cacheHit: boolean;
+            /**
+             * Failed
+             * @description Done extract steps whose extraction failed.
+             * @default false
+             */
+            failed: boolean;
         };
         /** QueueCounts */
         QueueCounts: {
@@ -846,8 +1108,6 @@ export interface components {
         };
         /** RunProgress */
         RunProgress: {
-            /** Label */
-            label: string;
             /** Steps */
             steps: components["schemas"]["ProgressStep"][];
             /**
@@ -970,72 +1230,25 @@ export interface components {
         };
         /** SeverityShare */
         SeverityShare: {
-            /** Severity */
-            severity: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "reject" | "flag";
             /** Share */
             share: number;
         };
-        /**
-         * TableAggregate
-         * @description Sum or count rows of an object-array field (optionally filtered by a column).
-         */
-        "TableAggregate-Input": {
+        /** TemplateTypeInfo */
+        TemplateTypeInfo: {
+            /** Value */
+            value: string;
             /**
-             * Fn
+             * Group
              * @enum {string}
              */
-            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
-            /**
-             * Tablefield
-             * @default
-             */
-            tableField: string;
-            /**
-             * Amountcolumn
-             * @default
-             */
-            amountColumn: string;
-            /**
-             * Filtercolumn
-             * @default
-             */
-            filterColumn: string;
-            /**
-             * Filtercontains
-             * @default
-             */
-            filterContains: string;
-        };
-        /**
-         * TableAggregate
-         * @description Sum or count rows of an object-array field (optionally filtered by a column).
-         */
-        "TableAggregate-Output": {
-            /**
-             * Fn
-             * @enum {string}
-             */
-            fn: "sum_rows" | "sum_rows_where" | "count_rows_where";
-            /**
-             * Tablefield
-             * @default
-             */
-            tableField: string;
-            /**
-             * Amountcolumn
-             * @default
-             */
-            amountColumn: string;
-            /**
-             * Filtercolumn
-             * @default
-             */
-            filterColumn: string;
-            /**
-             * Filtercontains
-             * @default
-             */
-            filterContains: string;
+            group: "common" | "structure" | "advanced";
+            /** Listable */
+            listable: boolean;
         };
         /** ValidationError */
         ValidationError: {
@@ -1460,41 +1673,15 @@ export interface operations {
             };
         };
     };
-    run_events_v1_runs__run_id__events_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                run_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Progress events */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                    "text/event-stream": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_audits_v1_audits_get: {
         parameters: {
             query?: {
+                /** @description Part of the run id or workflow name. */
+                q?: string;
+                outcome?: ("passed" | "warning" | "failed") | null;
+                workflowId?: string | null;
+                /** @description Runs created that UTC day. */
+                day?: string | null;
                 limit?: number;
                 offset?: number;
             };
@@ -1511,6 +1698,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_audits_v1_audits_export_csv_get: {
+        parameters: {
+            query?: {
+                /** @description Part of the run id or workflow name. */
+                q?: string;
+                outcome?: ("passed" | "warning" | "failed") | null;
+                workflowId?: string | null;
+                /** @description Runs created that UTC day. */
+                day?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every matching audit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
                 };
             };
             /** @description Validation Error */
@@ -1542,6 +1765,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_audit_v1_audits__run_id__export_csv_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Fields and rule results. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
                 };
             };
             /** @description Validation Error */
@@ -1611,6 +1865,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformConfig"];
+                };
+            };
+        };
+    };
+    get_catalog_v1_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Catalog"];
                 };
             };
         };

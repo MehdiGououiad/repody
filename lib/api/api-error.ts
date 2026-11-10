@@ -18,18 +18,13 @@ export function apiErrorMessage(body: unknown): string {
     .join("; ");
 }
 
-/** A run that failed after it started (the run id is shown so it can be looked up). */
-export class RunWorkflowError extends Error {
-  readonly runId?: string;
+/** A failed API call, with its HTTP status so callers can tell "not found" from an outage. */
+export class ApiError extends Error {
+  readonly status: number;
 
-  constructor(message: string, runId?: string) {
+  constructor(message: string, status: number) {
     super(message);
-    this.name = "RunWorkflowError";
-    this.runId = runId;
+    this.name = "ApiError";
+    this.status = status;
   }
-}
-
-export function runErrorFromUnknown(error: unknown): { message: string; runId?: string } {
-  if (error instanceof RunWorkflowError) return { message: error.message, runId: error.runId };
-  return { message: error instanceof Error ? error.message : "Something went wrong." };
 }

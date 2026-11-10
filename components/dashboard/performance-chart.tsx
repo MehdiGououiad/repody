@@ -2,7 +2,7 @@
 
 import { BarChart3 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useId, useMemo, useState } from "react";
 import {
   Bar,
@@ -18,8 +18,21 @@ import { ChartContainer } from "@/components/dashboard/chart-container";
 import { Button } from "@/components/ui/button";
 import type { PerformancePoint } from "@/lib/types";
 
-export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
+export function PerformanceChart({ data: points }: { data: PerformancePoint[] }) {
   const t = useTranslations("dashboard.performance");
+  const format = useFormatter();
+  // Days are UTC dates; each bar is named by its weekday in the reader's locale.
+  const data = useMemo(
+    () =>
+      points.map((point) => ({
+        ...point,
+        label: format.dateTime(new Date(`${point.day}T00:00:00Z`), {
+          weekday: "short",
+          timeZone: "UTC",
+        }),
+      })),
+    [points, format]
+  );
   const router = useRouter();
   const [compare, setCompare] = useState(false);
   const chartId = useId();
@@ -31,7 +44,7 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
     ? data.reduce((max, d, i) => (d.runs > data[max].runs ? i : max), 0)
     : 0;
   const totalRuns = useMemo(() => data.reduce((sum, point) => sum + point.runs, 0), [data]);
-  const peakDay = data[peakIdx]?.day ?? "";
+  const peakDay = data[peakIdx]?.label ?? "";
   const peakRuns = data[peakIdx]?.runs ?? 0;
 
   if (data.length === 0) {
@@ -88,14 +101,13 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
             barGap={4}
             margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
             onClick={(e) => {
-              if (e?.activeLabel) {
-                router.push(`/audits?day=${e.activeLabel}`);
-              }
+              const point = data[Number(e?.activeIndex)];
+              if (point) router.push(`/audits?day=${point.day}`);
             }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis
-              dataKey="day"
+              dataKey="label"
               tickLine={false}
               axisLine={false}
               tick={{ fontSize: 11, fill: "var(--on-surface-variant)" }}
@@ -115,7 +127,7 @@ export function PerformanceChart({ data }: { data: PerformancePoint[] }) {
                 color: "var(--foreground)",
               }}
               formatter={(value, name) => [
-                Number(value).toLocaleString(),
+                format.number(Number(value)),
                 name === "runs" ? t("runs") : t("previousPeriod"),
               ]}
             />

@@ -3,7 +3,6 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/layout/section-heading";
-import { usePlatformConfig } from "@/lib/hooks/use-catalog-queries";
 import type { DocumentDef } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { newDocument } from "@/lib/workflow/new-items";
@@ -17,15 +16,6 @@ export function DocumentsSection({
   onChange: (docs: DocumentDef[]) => void;
 }) {
   const t = useTranslations("workflows.builder");
-  const config = usePlatformConfig();
-
-  const modelStatus = {
-    available: config.data?.modelAvailable,
-    loaded: config.isFetched,
-    error: config.isError,
-    onRetry: () => void config.refetch(),
-  };
-
   const updateDoc = (id: string, patch: Partial<DocumentDef>) =>
     onChange(documents.map((d) => (d.id === id ? { ...d, ...patch } : d)));
   const removeDoc = (id: string) => onChange(documents.filter((d) => d.id !== id));
@@ -36,7 +26,7 @@ export function DocumentsSection({
       <SectionHeading
         title={t("docSource.title")}
         description={t("docSource.hint")}
-        eyebrow="Schema"
+        eyebrow={t("documents.eyebrow")}
       />
 
       <div className="space-y-3">
@@ -48,7 +38,6 @@ export function DocumentsSection({
             canRemove={documents.length > 1}
             onChange={(patch) => updateDoc(doc.id, patch)}
             onRemove={() => removeDoc(doc.id)}
-            modelStatus={modelStatus}
           />
         ))}
       </div>

@@ -12,7 +12,7 @@ export function RunStatusBanner({
   footer,
 }: {
   audit: RunAuditDetail;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   className?: string;
   footer?: React.ReactNode;
 }) {
