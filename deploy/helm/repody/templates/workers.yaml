@@ -32,6 +32,8 @@ spec:
           args: [taskiq, worker, "repody.worker:broker", --workers, "1", --max-async-tasks, {{ $worker.concurrency | quote }}]
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           {{- include "repody.backendEnvFrom" . | nindent 10 }}
           env:
             {{- include "repody.backendSecretEnv" . | nindent 12 }}
@@ -39,6 +41,8 @@ spec:
               value: repody-worker
           resources:
             {{- toYaml $worker.resources | nindent 12 }}
+      volumes:
+        - { name: tmp, emptyDir: {} }
 ---
 # Sends the periodic maintenance task to the workers (Taskiq scheduler). Exactly one replica:
 # two would send every scheduled task twice.
@@ -70,6 +74,8 @@ spec:
           args: [taskiq, scheduler, "repody.worker:scheduler"]
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
           {{- include "repody.backendEnvFrom" . | nindent 10 }}
           env:
             {{- include "repody.backendSecretEnv" . | nindent 12 }}
@@ -78,3 +84,5 @@ spec:
           resources:
             requests: { cpu: 10m, memory: 128Mi }
             limits: { memory: 256Mi }
+      volumes:
+        - { name: tmp, emptyDir: {} }

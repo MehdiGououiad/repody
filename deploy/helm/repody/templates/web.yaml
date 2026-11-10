@@ -25,6 +25,9 @@ spec:
           imagePullPolicy: {{ .Values.images.web.pullPolicy }}
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: next-cache, mountPath: /app/.next/cache }
           ports:
             - name: http
               containerPort: 3000
@@ -67,6 +70,9 @@ spec:
             periodSeconds: 20
           resources:
             {{- toYaml .Values.web.resources | nindent 12 }}
+      volumes:
+        - { name: tmp, emptyDir: {} }
+        - { name: next-cache, emptyDir: {} }
 ---
 apiVersion: v1
 kind: Service

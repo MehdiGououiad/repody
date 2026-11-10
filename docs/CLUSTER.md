@@ -14,13 +14,33 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 | PostgreSQL | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/)) | `AUDIT_DATABASE_URL` in the Secret |
 | Redis | Managed Redis/Valkey, or an operator | `AUDIT_REDIS_URL` in the Secret |
 | S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
-| OIDC provider | Keycloak (operator or managed), realm [`deploy/keycloak/realm-repody.json`](../deploy/keycloak/realm-repody.json) | `config.AUDIT_OIDC_ISSUER`, `web.keycloakClientId` |
+| OIDC provider | Keycloak (operator or managed), configured as in [Keycloak in production](#keycloak-in-production) | `config.AUDIT_OIDC_ISSUER`, `config.AUDIT_OIDC_AUDIENCE`, `web.keycloakClientId` |
 | Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_LLAMACPP_BASE_URL` |
 | Secrets | External Secrets Operator + Vault | `existingSecret` |
 
 The pods run with the restricted security context (`runAsNonRoot`, `RuntimeDefault` seccomp,
-no capabilities, no pinned UID), which fits Kubernetes PSA **restricted** and OpenShift
-**restricted-v2** without a custom SCC.
+no capabilities, no pinned UID, read-only root filesystem with `emptyDir` volumes for `/tmp` and
+the Next.js cache), which fits Kubernetes PSA **restricted** and OpenShift **restricted-v2**
+without a custom SCC.
+
+### Keycloak in production
+
+`deploy/keycloak/realm-repody.json` is the **development** realm: demo users with a shared
+password, fixed client secrets and the `repody-e2e` service account. Never import it into a
+production Keycloak. Create the realm with:
+
+| Setting | Value |
+|---------|-------|
+| Realm roles | `viewer`, `operator`, `admin` (and `platform_admin` if used); assign them to users or groups |
+| Client `repody-web` | Confidential; standard flow only (no direct access grants); PKCE `S256`; a generated secret (into the runtime Secret as `AUTH_KEYCLOAK_CLIENT_SECRET`) |
+| Redirect URI | Exactly `https://<app host>/api/auth/callback/keycloak` (no wildcards); web origin `+` |
+| Scopes | Full scope off; map the realm roles above to the client (Client scopes → Dedicated scope → Scope) so access tokens carry them |
+| Audience | An audience mapper adding `repody-api` to access tokens, and `config.AUDIT_OIDC_AUDIENCE: repody-api` (required in production: the API refuses tokens meant for other clients) |
+| Hostname | Keycloak hostname v2 with `KC_HOSTNAME` set to its public URL; when the web pods reach it in-cluster (`web.internalIssuer`), also `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true` |
+
+The API accepts only access tokens (`typ: Bearer`) signed by the realm, for that audience.
+The e2e tests' service account (`repody-e2e`, client credentials, operator role) belongs only in
+a test realm.
 
 ## Install
 

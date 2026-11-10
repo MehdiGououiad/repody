@@ -10,6 +10,10 @@ scan:
     - e2e/report
     - e2e/test-results
     - "**/.runtime"
+    # Local-only material (git-ignored): model weights, private fixtures, worktrees.
+    - deploy/llamacpp/models
+    - private
+    - .claude
   skip-files:
     - "**/*.pdf"
 

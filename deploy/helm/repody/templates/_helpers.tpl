@@ -55,10 +55,13 @@ topologySpreadConstraints:
 {{- end }}
 {{- end }}
 
+{{/* Every container: no privileges, and a read-only root filesystem (writable paths are
+emptyDir volumes: /tmp everywhere, the Next.js cache on the web pods). */}}
 {{- define "repody.containerSecurityContext" -}}
 allowPrivilegeEscalation: false
 capabilities:
   drop: [ALL]
+readOnlyRootFilesystem: true
 runAsNonRoot: true
 seccompProfile:
   type: RuntimeDefault
