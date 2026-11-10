@@ -342,7 +342,9 @@ async function up() {
   );
 
   if (FROM_SOURCE && !opts.skipBuild) buildImages();
-  // Local images are never pulled: a registry has no repody-*:dev.
+  // Our images (pull_policy on their services): never pulled when built here (a registry has
+  // no repody-*:dev) or with --no-pull. Third-party images (Postgres, Keycloak, ...) are pulled
+  // when missing: `up --pull` applies to every service, so it stays "missing".
   const pull = FROM_SOURCE || opts.skipPull ? "never" : "missing";
   const composeEnv = {
     REPODY_BACKEND_IMAGE: BACKEND_IMAGE,
@@ -374,7 +376,7 @@ async function up() {
       "--wait-timeout",
       "180",
       "--pull",
-      pull,
+      "missing",
       "--no-build",
       "postgres",
       "redis",
