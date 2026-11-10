@@ -34,7 +34,10 @@ RUN apk upgrade --no-cache \
   && rm -f /usr/local/bin/npm /usr/local/bin/npx \
   && addgroup -g 10001 -S repody \
   && adduser -u 10001 -S -G repody -H -s /sbin/nologin repody
-ENV PORT=3000
+# Listen on every interface (Next.js standalone binds to $HOSTNAME, which Docker sets to the
+# container id): probes and port mappings reach it.
+ENV PORT=3000 \
+    HOSTNAME=0.0.0.0
 COPY --from=builder --chown=10001:10001 /app/.next/standalone ./
 COPY --from=builder --chown=10001:10001 /app/.next/static ./.next/static
 USER 10001:10001
