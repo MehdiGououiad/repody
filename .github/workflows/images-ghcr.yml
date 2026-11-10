@@ -17,14 +17,27 @@ permissions:
   contents: read
   packages: write
   id-token: write
+  actions: read  # read the CI result of the released commit
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
+      - name: Require a green CI run on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          conclusion="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --commit "${GITHUB_SHA}" \
+            --status completed --limit 1 --json conclusion --jq '.[0].conclusion // "none"')"
+          if [ "${conclusion}" != "success" ]; then
+            echo "::error::CI on ${GITHUB_SHA} is '${conclusion}': release a commit whose CI passed."
+            exit 1
+          fi
 
       - name: Resolve image coordinates
         id: images

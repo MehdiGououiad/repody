@@ -31,7 +31,7 @@ jobs:
         with:
           python-version: "3.14"
       - name: Install backend
-        run: uv sync
+        run: uv sync --locked
       - name: Live API pytest
         run: uv run pytest tests/live -v -m live --tb=short
         env:
