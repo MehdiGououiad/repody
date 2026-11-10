@@ -50,12 +50,14 @@ FROM runtime-base AS app-runtime
 
 WORKDIR /app
 
-COPY --from=build --chown=repody:repody /opt/venv /opt/venv
-COPY --chown=repody:repody alembic.ini ./
-COPY --chown=repody:repody alembic/ ./alembic/
-COPY --chown=repody:repody --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+# Root owns the code (read-only to the app); the app user only runs it.
+COPY --from=build /opt/venv /opt/venv
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
+COPY --chmod=755 scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
 
-USER repody
+# Numeric, so Kubernetes `runAsNonRoot` can verify the user is not root (a name cannot be).
+USER 10001:10001
 
 FROM app-runtime AS backend
 
