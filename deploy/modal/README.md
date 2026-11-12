@@ -121,9 +121,11 @@ AUDIT_LLAMACPP_BASE_URL=https://<workspace>--repody-nuextract-vllm-serve.<region
 AUDIT_LLAMACPP_API_KEY=wk-….ws-…         # the token id, a dot, the token secret
 AUDIT_LLAMACPP_SERVED_MODEL=numind/NuExtract3
 AUDIT_LLAMACPP_PROBE=false
+AUDIT_MAX_PAGES_PER_DOCUMENT=99
 ```
 
-Documents of up to 99 pages fit one request (the card's `--limit-mm-per-prompt`).
+A request takes at most 99 pages (the card's `--limit-mm-per-prompt`). Set
+`AUDIT_MAX_PAGES_PER_DOCUMENT=99` so a longer PDF is cut to its first 99 pages instead of failing.
 
 `modal deploy` prints the app's dashboard link. To get the URL itself:
 `python -c "import modal; print(modal.Cls.from_name('repody-nuextract','Vllm')().serve.get_web_url())"`.

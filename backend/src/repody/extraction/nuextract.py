@@ -1,7 +1,8 @@
-"""NuExtract3 requests, as ``chat.completions.create`` arguments: the template, instructions
-and in-context examples go to llama-server's chat template (``chat_template_kwargs``).
+"""NuExtract3 requests, as ``chat.completions.create`` arguments, as the model card's vLLM
+examples send them: the template, instructions and mode go to the chat template
+(``chat_template_kwargs``), in-context examples as ``developer`` messages.
 
-https://huggingface.co/numind/NuExtract3-GGUF · https://github.com/numindai/nuextract
+https://huggingface.co/numind/NuExtract3 ("vLLM inference") · https://github.com/numindai/nuextract
 """
 
 import json
@@ -12,8 +13,10 @@ from repody.extraction import render
 from repody.schemas.catalog import scalar_type
 from repody.schemas.workflow import DocumentDef, SchemaField
 
+# The card's non-thinking mode ("temperature = 0.2"), used by its extraction and in-context
+# examples; its document-to-Markdown example uses 1.
 STRUCTURED_TEMPERATURE = 0.2
-EXACT_TEMPERATURE = 0.0  # the official in-context and Markdown examples use 0
+MARKDOWN_TEMPERATURE = 1.0
 
 
 def page_parts(
@@ -82,7 +85,7 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
         kwargs["instructions"] = text
     return {
         "model": model,
-        "temperature": EXACT_TEMPERATURE if examples else STRUCTURED_TEMPERATURE,
+        "temperature": STRUCTURED_TEMPERATURE,
         "messages": [
             *(
                 {
@@ -103,7 +106,7 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
 def markdown_request(model: str) -> dict[str, Any]:
     return {
         "model": model,
-        "temperature": EXACT_TEMPERATURE,
+        "temperature": MARKDOWN_TEMPERATURE,
         "messages": [{"role": "user", "content": []}],
         "extra_body": {"chat_template_kwargs": {"mode": "markdown", "enable_thinking": False}},
     }

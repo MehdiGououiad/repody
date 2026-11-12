@@ -45,15 +45,15 @@ def file_type(file: BinaryIO) -> str | None:
 
 
 def pdf_pages(
-    data: bytes, *, max_pages: int | None, longest_edge: int | None = None
+    data: bytes, *, max_pages: int | None, dpi: int = PDF_DPI
 ) -> tuple[list[Image.Image], int]:
-    """``(rendered pages, page count)``: at 170 DPI, or fitted to ``longest_edge`` pixels."""
+    """``(rendered pages, page count)`` at ``dpi`` (NuExtract3's 170 by default)."""
     with _PDFIUM, pdfium.PdfDocument(data) as pdf:
         total = len(pdf)
         pages = []
         for index in range(min(total, max_pages or total)):
             page = pdf[index]
-            scale = longest_edge / max(page.get_size()) if longest_edge else PDF_DPI / 72
+            scale = dpi / 72  # PDF points are 1/72 inch
             # `scale` is documented as a float; its default (1) makes type checkers read it as int.
             pages.append(page.render(scale=scale).to_pil())  # pyright: ignore[reportArgumentType]
     return pages, total

@@ -163,5 +163,5 @@ async def test_markdown_with_lightonocr(api, model_answer, monkeypatch):
     assert call["base_url"] == settings.lightonocr_base_url
     request = call["request"]
     assert request["model"] == settings.lightonocr_served_model
-    assert (request["temperature"], request["top_p"]) == (0.2, 1.0)
+    assert (request["max_tokens"], request["temperature"], request["top_p"]) == (4096, 0.2, 0.9)
     assert [part["type"] for part in request["messages"][0]["content"]] == ["image_url"]

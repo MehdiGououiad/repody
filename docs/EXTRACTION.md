@@ -57,25 +57,25 @@ config:
 Put `AUDIT_LLAMACPP_API_KEY` (and `AUDIT_LIGHTONOCR_API_KEY`) in the runtime secret when the
 endpoint requires auth.
 
-### NuExtract3 requests (model card)
+### NuExtract3 requests ([model card](https://huggingface.co/numind/NuExtract3), vLLM examples)
 
 | Input | Behaviour |
 |-------|-----------|
 | PDF | Every page as PNG at **170 DPI** (the card's PDF example), all pages in one request |
 | Image | The uploaded PNG/JPEG/WebP as it is |
-| Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2**, or **0** with in-context examples |
+| Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples |
 | `instructions` | The document's notes, then a `Field guidance:` list built from the field descriptions |
 | In-context examples | `developer` messages, input then expected output |
-| Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **0** |
+| Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **1** (the card's document-to-Markdown example) |
 
-### LightOnOCR-3 requests (model card and official client)
+### LightOnOCR-3 requests (optional, `AUDIT_MARKDOWN_PROVIDER=lightonocr`; model card)
 
 | Input | Behaviour |
 |-------|-----------|
-| PDF | Each page rendered at **2048 px** on its longest edge, one request per page |
-| Image | Downscaled to 2048 px on its longest edge when larger (never upscaled) |
-| Request | The image alone (transcription mode), `enable_thinking: false`, temperature **0.2**, top_p **1.0** |
-| Output | The model's Markdown as it comes (the client's optional escaped-math repair is not applied) |
+| PDF | Each page rendered at **400 DPI**, then `thumbnail((2048, 2048))`, one request per page (the [card](https://huggingface.co/lightonai/LightOnOCR-3-4B)'s vLLM example) |
+| Image | The same `thumbnail((2048, 2048))`: downscaled when larger, never upscaled |
+| Request | The image alone (transcription mode), `enable_thinking: false`, `max_tokens` **4096**, temperature **0.2**, top_p **0.9** |
+| Output | The model's Markdown as it comes |
 
 ### Endpoint check
 

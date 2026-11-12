@@ -52,7 +52,7 @@ def test_structured_request():
         extraction_icl_examples=[IclExample(input="Total 5", output='{"total": 5}')],
     )
     request = structured_request(doc, "nuextract")
-    assert request["temperature"] == 0.0  # in-context examples
+    assert request["temperature"] == 0.2  # the card's in-context example
     assert request["messages"][0]["role"] == "developer"
     assert request["messages"][-1] == {"role": "user", "content": []}
     kwargs = request["extra_body"]["chat_template_kwargs"]
@@ -61,7 +61,12 @@ def test_structured_request():
         "French invoice.\n\nField guidance:\n- total: Amount due\n- vendor.name: Legal name"
     )
     assert instructions(DocumentDef(id="d")) == ""
-    assert markdown_request("m")["extra_body"]["chat_template_kwargs"]["mode"] == "markdown"
+    markdown = markdown_request("m")
+    assert markdown["extra_body"]["chat_template_kwargs"] == {
+        "mode": "markdown",
+        "enable_thinking": False,
+    }
+    assert markdown["temperature"] == 1.0  # the card's document-to-Markdown example
 
 
 def test_leaf_values_keep_json_types():
@@ -155,7 +160,7 @@ def test_rotated_photos_are_sent_upright():
     assert _size(page) == (20, 40)
 
 
-def test_lightonocr_pages_follow_the_official_client():
+def test_lightonocr_pages_follow_the_model_card():
     [page], total = lightonocr.page_parts(_pdf(1), "application/pdf", max_pages=None)
     assert total == 1
     assert max(_size(page)) == 2048

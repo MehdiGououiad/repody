@@ -59,7 +59,7 @@ def _cache_key(data: bytes, request: dict[str, Any]) -> str:
     rendering = {
         "max_pages": get_settings().max_pages_per_document,
         "pdf_dpi": render.PDF_DPI,
-        "lightonocr_edge": lightonocr.LONGEST_EDGE,
+        "lightonocr": (lightonocr.PDF_DPI, lightonocr.LONGEST_EDGE),
     }
     meta = json.dumps({"request": request, "rendering": rendering}, sort_keys=True)
     return f"extract:{hashlib.sha256(data + meta.encode()).hexdigest()}"
