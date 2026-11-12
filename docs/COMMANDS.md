@@ -2,16 +2,6 @@
 
 Deploy follows **official upstream docs** - see [LOCAL.md](./LOCAL.md) (laptop) and [CLUSTER.md](./CLUSTER.md) (production).
 
-## Mac client (no source)
-
-Pack from the private repo, ship the zip (not git):
-
-| Command | When |
-|---------|------|
-
-
----
-
 ## Develop (daily) - vendors / contributors (git checkout)
 
 Build the images from this checkout (`repody-*:dev`, cached), start the platform, and (by default) **host NuExtract** (`repody:vlm`). To run a published release instead: `REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… pnpm platform`.
@@ -30,7 +20,7 @@ Build the images from this checkout (`repody-*:dev`, cached), start the platform
 | `pnpm doctor` | Toolchain only (Node/pnpm) - prefer `pnpm platform doctor` |
 | `pnpm db:migrate` | Apply Alembic migrations |
 
-Guides: [LOCAL.md](./LOCAL.md) (Mac section + all OSes) · [README.md](./README.md) (docs hub).
+Guides: [LOCAL.md](./LOCAL.md) · [README.md](./README.md) (docs hub).
 
 ### Document models
 

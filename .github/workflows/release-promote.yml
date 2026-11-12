@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Published image tag (e.g. v1.2.3)
+        description: Published image tag (e.g. 1.2.3, from the git tag v1.2.3)
         required: true
         type: string
       registry:

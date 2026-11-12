@@ -7,7 +7,7 @@ Cluster / OpenShift: [CLUSTER.md](./CLUSTER.md). Commands: [COMMANDS.md](./COMMA
 
 ## Contributor path
 
-Full checkout for daily work on **Windows · macOS · Linux** (`pnpm platform`).
+Full checkout for daily work on **Windows · Linux** (`pnpm platform`).
 
 ### What you get
 
@@ -28,9 +28,9 @@ Images pull as public multi-arch - no Hub login required.
    ```bash
    npm install --global pnpm@12.16.1   # Node 25+ no longer bundles corepack
    ```
-3. **llama-server** on PATH (NuExtract):
-   - macOS: `brew install llama.cpp`
-   - Windows: `winget install ggml.llamacpp`
+3. **llama-server** on PATH (NuExtract): `winget install ggml.llamacpp` on Windows, or
+   [llama.cpp's build](https://github.com/ggml-org/llama.cpp) on Linux. Or skip it and use the
+   Modal endpoint ([deploy/modal/README.md](../deploy/modal/README.md)).
 4. **NuExtract GGUFs** - download from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF), set `LLAMACPP_MODEL` + `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env` ([deploy/llamacpp/README.md](../deploy/llamacpp/README.md)).
 5. Disk / RAM for the images (~2–4 GB, plus build cache) and GGUFs.
 
@@ -78,9 +78,6 @@ Same checks run at the start of `pnpm platform`. Required for the default path:
 
 ---
 
-On Apple Silicon, `brew install llama.cpp`; Docker selects `linux/arm64` images automatically.
-
----
 
 ## Sign in and verify
 
@@ -182,7 +179,7 @@ Engineering reference: [DEVELOPMENT.md](./DEVELOPMENT.md).
 | `pnpm doctor` fails on Docker | Start Docker Desktop; wait until ready |
 | `llama-server` missing | Install llama.cpp; open a new terminal |
 | Pull slow / timeout | Retry `pnpm platform setup`; check network |
-| Wrong arch image | Re-pull; confirm `linux/arm64` on Apple Silicon |
+| Wrong arch image | Re-pull; confirm the image's arch matches the machine (`linux/amd64` or `linux/arm64`) |
 | Login / redirect loops | Open **http://localhost:3000** (not 127.0.0.1) |
 | OCR / NuExtract not ready | Set GGUF paths; `pnpm llamacpp:serve`; `pnpm platform status` |
 | Port in use | `pnpm platform stop` |

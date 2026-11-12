@@ -1,6 +1,6 @@
 // Local dev - ship Docker container logs + host-run API log file to Loki.
 // Grafana Alloy replaces Promtail (EOL). Docs: https://grafana.com/docs/alloy/latest/
-// Requires the Docker socket mount (Docker Desktop on Windows/macOS/Linux).
+// Requires the Docker socket mount.
 
 discovery.docker "containers" {
   host             = "unix:///var/run/docker.sock"

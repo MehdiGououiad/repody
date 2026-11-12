@@ -28,7 +28,7 @@ AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
 ### Local development
 
 ```powershell
-winget install llama.cpp   # or brew install llama.cpp on macOS
+winget install llama.cpp
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
 pnpm llamacpp:serve
 pnpm llamacpp:verify

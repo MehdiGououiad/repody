@@ -29,10 +29,10 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 |-----|------|--------|
 | **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
 
-### Git path (Windows · macOS · Linux)
+### Git path (Windows · Linux)
 
-Prerequisites: Docker Desktop, Node 26 (LTS), Corepack pnpm 12.16.1, `llama-server` on PATH
-(`winget install ggml.llamacpp` / `brew install llama.cpp`).
+Prerequisites: Docker Desktop, Node 26 (LTS), pnpm 12.16.1 (`npm install --global pnpm@12.16.1`),
+`llama-server` on PATH (`winget install ggml.llamacpp`).
 
 ```bash
 git clone https://github.com/MehdiGououiad/repody.git

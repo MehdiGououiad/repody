@@ -32,10 +32,12 @@ if (!expectedPnpm) {
   }
 
   if (!actualPnpm) {
-    failures.push(`pnpm ${expectedPnpm} is required. Run: corepack enable`);
+    failures.push(
+      `pnpm ${expectedPnpm} is required. Run: npm install --global pnpm@${expectedPnpm}`
+    );
   } else if (actualPnpm !== expectedPnpm) {
     failures.push(
-      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: corepack enable`
+      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: npm install --global pnpm@${expectedPnpm}`
     );
   }
 }

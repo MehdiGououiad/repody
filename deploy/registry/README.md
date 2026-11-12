@@ -13,7 +13,7 @@ Repody does not ship Argo CD for client production.
 
 ## Docker Hub (portable multi-arch)
 
-Publish `linux/amd64` + `linux/arm64` (Apple Silicon Mac) platform images:
+Publish `linux/amd64` + `linux/arm64` images:
 
 ```powershell
 docker login
@@ -37,7 +37,7 @@ docker pull mehdigououiad/repody-backend:1.0.0
 docker pull mehdigououiad/repody-web:1.0.0
 ```
 
-Docker picks `linux/arm64` on Apple Silicon and `linux/amd64` on Intel automatically.
+Docker picks `linux/arm64` or `linux/amd64` for the machine automatically.
 
 Verify arches:
 
@@ -51,9 +51,9 @@ docker buildx imagetools inspect mehdigououiad/repody-backend:1.0.0
 
 **Portability boundary:** these images cover API, UI, and workers. Document-model
 inference (NuExtract on llama-server) is **external** by design
-([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)). On a Mac
-you still run or point at an inference endpoint separately - that is what makes
-the platform portable across Windows, Linux, and macOS.
+([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)): any machine
+runs these images and points at an inference endpoint, such as the Modal one
+([deploy/modal/README.md](../modal/README.md)).
 
 ## GHCR
 

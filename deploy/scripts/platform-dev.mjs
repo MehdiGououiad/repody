@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Repody local platform CLI (Windows + macOS + Linux).
+ * Repody local platform CLI (Windows and Linux).
  *
  *   pnpm platform setup     # once
  *   pnpm platform           # build images from this checkout + start stack + host NuExtract
@@ -36,7 +36,6 @@ const AUTH_ENV = path.join(ROOT, ".env.local");
 const COMPOSE_ENV_EXAMPLE = path.join(ROOT, "deploy/env/compose.env.example");
 const AUTH_ENV_EXAMPLE = path.join(ROOT, "deploy/env.auth.example");
 const LLAMA_PATHS = path.join(ROOT, "deploy/llamacpp/paths.local.env");
-const LLAMA_MAC_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.mac.env.example");
 const LLAMA_EXAMPLE = path.join(ROOT, "deploy/llamacpp/paths.local.env.example");
 // The stack runs the code of this checkout: images are built locally (Docker caches the
 // layers, so an unchanged tree rebuilds in seconds). Set both variables to run published
@@ -59,7 +58,6 @@ const { values: flags, positionals } = parseArgs({
   },
 });
 const command = positionals[0] ?? (flags.help ? "help" : "up");
-const isDarwin = process.platform === "darwin";
 const isWin = process.platform === "win32";
 
 const opts = {
@@ -73,7 +71,7 @@ const opts = {
 
 function printHelp() {
   console.log(`
-Repody platform CLI (same on Windows, macOS, Linux)
+Repody platform CLI (same on Windows and Linux)
 
 Flow (new PC):
   1) pnpm install && pnpm doctor
@@ -112,7 +110,6 @@ function composeArgs(...parts) {
 }
 
 function llamaInstallHint() {
-  if (isDarwin) return "brew install llama.cpp";
   if (isWin) return "winget install ggml.llamacpp   (or put llama-server on PATH)";
   return "install llama.cpp so llama-server is on PATH";
 }
@@ -120,8 +117,7 @@ function llamaInstallHint() {
 function copyEnvFiles() {
   copyIfMissing(COMPOSE_ENV_EXAMPLE, BACKEND_ENV);
   copyIfMissing(AUTH_ENV_EXAMPLE, AUTH_ENV);
-  const llamaSrc = isDarwin && fs.existsSync(LLAMA_MAC_EXAMPLE) ? LLAMA_MAC_EXAMPLE : LLAMA_EXAMPLE;
-  copyIfMissing(llamaSrc, LLAMA_PATHS);
+  copyIfMissing(LLAMA_EXAMPLE, LLAMA_PATHS);
 }
 
 /** Point backend/.env at the host model and toggle OTEL for this run (setup / up only). */
@@ -166,7 +162,7 @@ function checkToolchain() {
     shell: false,
     env: {
       ...process.env,
-      // So plain `node … doctor` still sees pnpm when Corepack/PATH is set.
+      // So plain `node … doctor` still sees pnpm on PATH.
       npm_config_user_agent:
         process.env.npm_config_user_agent ||
         (() => {
