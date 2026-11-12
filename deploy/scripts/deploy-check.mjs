@@ -2,17 +2,34 @@
 /**
  * Deploy assets check with the standard tools:
  *   helm lint, helm template | kubeconform (Kubernetes schemas), kubectl kustomize,
- *   docker buildx bake --print (bake variable validation), and the docs link check.
+ *   docker buildx bake --print (bake variable validation), docker compose config for the
+ *   Dokploy stack (every required variable from deploy/dokploy/env.example), and the docs link check.
  *
  * kubeconform runs from its official image when the binary is not installed.
  */
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 const CHART = "deploy/helm/repody";
 const PRODUCTION_VALUES = `${CHART}/values-production.yaml.example`;
 
-function run(cmd, args, input) {
-  return spawnSync(cmd, args, { encoding: "utf8", input, maxBuffer: 64 * 1024 * 1024 });
+function run(cmd, args, input, env) {
+  return spawnSync(cmd, args, {
+    encoding: "utf8",
+    input,
+    env: env ? { ...process.env, ...env } : process.env,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+}
+
+/** deploy/dokploy/env.example as variables, blanks filled, so `${VAR:?}` can resolve. */
+function dokployEnv() {
+  const entries = readFileSync("deploy/dokploy/env.example", "utf8")
+    .split(/\r?\n/)
+    .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
+    .map((line) => line.split(/=(.*)/s, 2))
+    .map(([key, value]) => [key, value || "deploy-check"]);
+  return Object.fromEntries(entries);
 }
 
 function kubeconform(manifests) {
@@ -41,6 +58,16 @@ const steps = [
   ],
   ["kustomize CloudNativePG", () => run("kubectl", ["kustomize", "deploy/managed/cloudnativepg"])],
   ["bake --print", () => run("docker", ["buildx", "bake", "-f", "docker-bake.hcl", "--print"])],
+  [
+    "compose config (Dokploy stack)",
+    () =>
+      run(
+        "docker",
+        ["compose", "-f", "deploy/dokploy/compose.yaml", "config", "-q"],
+        undefined,
+        dokployEnv()
+      ),
+  ],
   ["docs links and commands", () => run("node", ["deploy/scripts/check-command-docs.mjs"])],
 ];
 

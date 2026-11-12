@@ -1,0 +1,299 @@
+# Repody production stack for Dokploy (Docker Compose type, Isolated Deployments on).
+# Setup, domains, the Cloudflare Tunnel and backups: deploy/dokploy/README.md.
+#
+# - Images are the signed releases from GHCR (pnpm images:release / the images-ghcr workflow),
+#   pinned by REPODY_VERSION. Nothing is built on the server.
+# - No ports are published: Dokploy's Traefik reaches web and keycloak on the stack's network,
+#   and the Cloudflare Tunnel reaches Traefik. Everything else stays internal.
+# - Data lives in named volumes, so Dokploy's Volume Backups can copy them to S3.
+# - Every variable comes from the Environment tab (Dokploy writes it to .env beside this file);
+#   ${VAR:?} fails the deploy when a required one is missing. See env.example.
+# - NuExtract3 runs outside the VPS (deploy/modal/README.md); workers call it over HTTPS.
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+x-backend: &backend
+  <<: *hardening
+  image: ${REPODY_REGISTRY:?}/repody-backend:${REPODY_VERSION:?}
+  read_only: true
+  tmpfs:
+    - /tmp
+
+x-backend-env: &backend-env
+  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_LOG_JSON: "true"
+  AUDIT_DATABASE_URL: postgresql+asyncpg://repody:${POSTGRES_PASSWORD:?}@postgres:5432/repody
+  AUDIT_REDIS_URL: redis://redis:6379/0
+  AUDIT_S3_ENDPOINT_URL: http://seaweedfs:8333
+  AUDIT_S3_ACCESS_KEY: repody
+  AUDIT_S3_SECRET_KEY: ${S3_SECRET_KEY:?}
+  AUDIT_OIDC_ENABLED: "true"
+  # Tokens carry the public issuer; the API fetches the keys from Keycloak on the stack network.
+  AUDIT_OIDC_ISSUER: https://${AUTH_HOST:?}/realms/repody
+  AUDIT_OIDC_JWKS_URL: http://keycloak:8080/realms/repody/protocol/openid-connect/certs
+  AUDIT_OIDC_AUDIENCE: repody-api
+  # NuExtract3 on Modal (deploy/modal/README.md): the token is the Modal Proxy Token.
+  AUDIT_LLAMACPP_BASE_URL: ${MODAL_URL:?}/v1
+  AUDIT_LLAMACPP_API_KEY: ${MODAL_PROXY_TOKEN:?}
+  AUDIT_LLAMACPP_SERVED_MODEL: numind/NuExtract3
+  AUDIT_LLAMACPP_PROBE: "false"
+  AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
+  # Requests in flight to the model, per process: the vLLM server takes 4 at once (MAX_INPUTS).
+  AUDIT_INFERENCE_CONCURRENCY: "4"
+  # A cold model start right after a Modal deploy takes up to ~8.5 minutes (deploy/modal/README.md).
+  AUDIT_INFERENCE_TIMEOUT_SECONDS: "600"
+  AUDIT_RUN_TIMEOUT_MINUTES: "12"
+  # No extraction cache: it would share Redis (and its noeviction limit) with the run queue.
+  AUDIT_EXTRACTION_CACHE_TTL_SECONDS: "0"
+  AUDIT_RUN_MIGRATIONS_ON_STARTUP: "false"
+  AUDIT_SEED_ON_STARTUP: "false"
+  OTEL_SDK_DISABLED: "true"
+  SENTRY_DSN: ${BUGSINK_DSN:-}
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    # Sized for one small VPS; the official image's default shm (64 MB) is too small for parallel
+    # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size").
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=100"]
+    shm_size: 256mb
+    environment:
+      POSTGRES_USER: repody
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      POSTGRES_DB: repody
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?}
+    configs:
+      - source: postgres-init
+        target: /docker-entrypoint-initdb.d/10-keycloak.sh
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repody -d repody"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 1G }
+
+  redis:
+    <<: *hardening
+    image: redis:8.10.3-alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
+    # The run queue (Taskiq streams) lives here: append-only persistence, and no eviction, so a
+    # full Redis refuses writes instead of dropping queued runs.
+    command:
+      ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits: { memory: 384M }
+
+  # Uploaded documents (S3 API). https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
+  seaweedfs:
+    <<: *hardening
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
+    configs:
+      - source: seaweedfs-s3
+        target: /etc/seaweedfs/s3.json
+    volumes:
+      - seaweedfs-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 24
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  # Optimized Keycloak with the production realm baked in (deploy/keycloak/Dockerfile).
+  # Behind Traefik and the tunnel: https://www.keycloak.org/server/reverseproxy
+  keycloak:
+    <<: *hardening
+    image: ${REPODY_REGISTRY:?}/repody-keycloak:${REPODY_VERSION:?}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_PROXY_TRUSTED_ADDRESSES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # Sign-in pages on the public host; the admin console only on its own host (behind
+      # Cloudflare Access). Containers reach keycloak:8080 directly (backchannel).
+      KC_HOSTNAME: https://${AUTH_HOST:?}
+      KC_HOSTNAME_ADMIN: https://${KEYCLOAK_ADMIN_HOST:?}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      # The temporary admin for the first sign-in to the admin console (replace it, then remove).
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_BOOTSTRAP_ADMIN:-bootstrap-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_BOOTSTRAP_PASSWORD:?}
+      # Realm placeholders (deploy/keycloak/realm-repody.production.json), read on first import.
+      REPODY_APP_URL: https://${APP_HOST:?}
+      AUTH_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:?}
+      REPODY_ADMIN_EMAIL: ${REPODY_ADMIN_EMAIL:?}
+      REPODY_ADMIN_INITIAL_PASSWORD: ${REPODY_ADMIN_INITIAL_PASSWORD:?}
+    expose:
+      - "8080"
+    healthcheck:
+      # The image ships no curl: an HTTP request over bash's /dev/tcp to the management port.
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/9000 &&
+          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"status": "UP"' <&3
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    deploy:
+      resources:
+        # Keycloak's container guide: at least 750 MB; the JVM takes 70% of the limit.
+        limits: { memory: 1536M }
+
+  # Applies the database migrations, then exits; the api and workers start after it.
+  migrate:
+    <<: *backend
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+
+  api:
+    <<: *backend
+    command: ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: repody-api
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/v1/healthz', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { memory: 768M }
+
+  worker:
+    <<: *backend
+    # Up to AUDIT_WORKER_CONCURRENCY runs at once; their model calls share the 4 slots above.
+    command:
+      - sh
+      - -c
+      - exec taskiq worker repody.worker:broker --workers 1 --max-async-tasks ${AUDIT_WORKER_CONCURRENCY:-4}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: repody-worker
+    stop_grace_period: 4m
+    deploy:
+      resources:
+        limits: { memory: 1536M }
+
+  # Sends the periodic maintenance task to the workers. Exactly one.
+  scheduler:
+    <<: *backend
+    command: ["taskiq", "scheduler", "repody.worker:scheduler"]
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *backend-env
+      OTEL_SERVICE_NAME: repody-scheduler
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  web:
+    <<: *hardening
+    image: ${REPODY_REGISTRY:?}/repody-web:${REPODY_VERSION:?}
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    depends_on:
+      api:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    environment:
+      BETTER_AUTH_URL: https://${APP_HOST:?}
+      BETTER_AUTH_SECRET: ${AUTH_SECRET:?}
+      AUDIT_OIDC_ENABLED: "true"
+      AUTH_KEYCLOAK_ID: repody-web
+      AUTH_KEYCLOAK_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:?}
+      # The browser is sent to the public issuer; server calls stay on the stack network.
+      AUTH_KEYCLOAK_ISSUER: https://${AUTH_HOST:?}/realms/repody
+      AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
+      INTERNAL_API_URL: http://api:8000
+      BUGSINK_DSN: ${BUGSINK_DSN:-}
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/auth/ok"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+configs:
+  # Creates Keycloak's database and role on the first start of an empty Postgres volume.
+  postgres-init:
+    content: |
+      #!/bin/sh
+      set -eu
+      psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<SQL
+      CREATE ROLE keycloak LOGIN PASSWORD '$$KEYCLOAK_DB_PASSWORD';
+      CREATE DATABASE keycloak OWNER keycloak;
+      SQL
+  # One S3 identity, for the backend.
+  seaweedfs-s3:
+    content: |
+      {"identities": [{"name": "repody",
+        "credentials": [{"accessKey": "repody", "secretKey": "${S3_SECRET_KEY:?}"}],
+        "actions": ["Admin", "Read", "List", "Tagging", "Write"]}]}
+
+volumes:
+  postgres-data:
+  redis-data:
+  seaweedfs-data:

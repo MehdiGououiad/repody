@@ -1,0 +1,92 @@
+{
+  "realm": "repody",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "platform_admin"
+      },
+      {
+        "name": "admin"
+      },
+      {
+        "name": "operator"
+      },
+      {
+        "name": "viewer"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "repody-web",
+      "name": "Repody Web",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "${AUTH_KEYCLOAK_CLIENT_SECRET}",
+      "rootUrl": "${REPODY_APP_URL}",
+      "redirectUris": ["${REPODY_APP_URL}/api/auth/callback/keycloak"],
+      "webOrigins": ["${REPODY_APP_URL}"],
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect",
+      "fullScopeAllowed": false,
+      "protocolMappers": [
+        {
+          "name": "repody-api-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "repody-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "false"
+          }
+        }
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${REPODY_APP_URL}/*"
+      }
+    },
+    {
+      "clientId": "repody-api",
+      "name": "Repody API",
+      "enabled": true,
+      "bearerOnly": true,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "${REPODY_ADMIN_EMAIL}",
+      "email": "${REPODY_ADMIN_EMAIL}",
+      "firstName": "Platform",
+      "lastName": "Admin",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${REPODY_ADMIN_INITIAL_PASSWORD}",
+          "temporary": true
+        }
+      ],
+      "realmRoles": ["platform_admin"]
+    }
+  ],
+  "scopeMappings": [
+    {
+      "client": "repody-web",
+      "roles": ["platform_admin", "admin", "operator", "viewer"]
+    }
+  ]
+}

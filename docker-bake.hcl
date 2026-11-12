@@ -29,6 +29,10 @@ variable "REPODY_WEB_IMAGE_TAG" {
   default = REPODY_IMAGE_TAG
 }
 
+variable "REPODY_KEYCLOAK_IMAGE_TAG" {
+  default = REPODY_IMAGE_TAG
+}
+
 # Comma-separated, e.g. linux/amd64,linux/arm64. Empty = builder's host platform.
 variable "REPODY_IMAGE_PLATFORMS" {
   default = ""
@@ -53,7 +57,7 @@ function "image" {
 }
 
 group "default" {
-  targets = ["backend", "web"]
+  targets = ["backend", "web", "keycloak"]
 }
 
 # Filled by docker/metadata-action in CI (OCI labels); empty locally.
@@ -83,4 +87,11 @@ target "web" {
     NEXT_PUBLIC_BUGSINK_DSN = NEXT_PUBLIC_BUGSINK_DSN
   }
   tags = [image("repody-web", REPODY_WEB_IMAGE_TAG)]
+}
+
+# Production Keycloak: optimized build with the realm baked in (deploy/keycloak/Dockerfile).
+target "keycloak" {
+  inherits = ["_common"]
+  context  = "deploy/keycloak"
+  tags     = [image("repody-keycloak", REPODY_KEYCLOAK_IMAGE_TAG)]
 }

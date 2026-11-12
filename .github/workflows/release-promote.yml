@@ -40,7 +40,7 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           registry="${REGISTRY:-ghcr.io/${GITHUB_REPOSITORY_OWNER,,}}"
-          for target in backend web; do
+          for target in backend web keycloak; do
             cosign verify "${registry}/repody-${target}:${TAG}" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
               --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@"

@@ -89,6 +89,8 @@ jobs:
             backend.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
             web.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache
             web.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache,mode=max
+            keycloak.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-keycloak:buildcache
+            keycloak.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-keycloak:buildcache,mode=max
 
       - name: Install cosign
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
@@ -103,7 +105,7 @@ jobs:
           mkdir -p dist
           {
             echo "images:"
-            for target in backend web; do
+            for target in backend web keycloak; do
               digest=$(jq -r --arg t "$target" '.[$t]["containerimage.digest"]' <<<"$METADATA")
               cosign sign --yes "${REGISTRY}/repody-${target}@${digest}"
               printf '  %s:\n    repository: %s/repody-%s\n    tag: "%s"\n    digest: %s\n' \
