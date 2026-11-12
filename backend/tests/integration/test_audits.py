@@ -158,10 +158,10 @@ async def test_progress_steps_are_data_not_text(api, model_answer):
     )
     run_id = await run(api, model_answer, {"total_amount": 1}, workflow_id="wf-a")
     steps = (await api.get(f"/v1/runs/{run_id}")).json()["progress"]["steps"]
-    assert [s["kind"] for s in steps] == ["queue", "extract", "rules", "finalize"]
-    assert steps[1]["documentType"] == "Invoice"
-    assert steps[1]["fieldsExtracted"] == 1
-    assert steps[2]["ruleCount"] == 1
+    assert [s["kind"] for s in steps] == ["queue", "model", "extract", "rules", "finalize"]
+    assert steps[2]["documentType"] == "Invoice"
+    assert steps[2]["fieldsExtracted"] == 1
+    assert steps[3]["ruleCount"] == 1
     assert all("label" not in s for s in steps)
 
 

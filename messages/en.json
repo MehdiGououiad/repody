@@ -88,7 +88,14 @@
     "queueOrdered": "Runs are processed in order. Your position updates automatically.",
     "steps": {
       "queue": "Queued for a worker",
+      "model": "Wake the model",
+      "modelWaking": "GPU waking up",
+      "modelReady": "Model ready",
+      "modelStarted": "GPU started",
+      "modelWakingHint": "No documents for a little while, so the GPU went to sleep to save cost. It is starting again from a snapshot: usually 5 to 15 seconds, once. The runs right after are fast.",
+      "modelStartedHint": "The GPU was asleep; it stays awake for a minute after the last document.",
       "waiting": "Waiting for a worker…",
+      "complete": "All steps done",
       "document": "Document",
       "extract": "Extract · {document}",
       "rules": "{count, plural, one {Check # rule} other {Check # rules}}",
@@ -97,8 +104,6 @@
       "extractFailed": "Extraction failed — the report shows why"
     },
     "badges": {
-      "model": "Document model",
-      "rules": "Logic rule",
       "cached": "Cached result"
     }
   },

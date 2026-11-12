@@ -5,6 +5,8 @@ parallel slots), so documents and pages can be sent concurrently without queuein
 """
 
 import asyncio
+import contextlib
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,6 +14,10 @@ import openai
 from openai import AsyncOpenAI
 
 from repody.settings import get_settings
+
+# A model server that is up answers its model list in well under this; one that scales to zero
+# (Modal) holds the request while its container starts.
+WAKE_PROBE_SECONDS = 2.0
 
 _clients: dict[tuple[str, str], AsyncOpenAI] = {}
 _slots: dict[str, asyncio.Semaphore] = {}  # requests in flight, per server
@@ -44,6 +50,25 @@ async def chat(request: dict[str, Any]) -> Reply:
     return Reply(
         text=(choice.message.content or "").strip(), truncated=choice.finish_reason == "length"
     )
+
+
+async def wake(on_asleep: Callable[[], Awaitable[None]]) -> bool:
+    """Wait until the NuExtract server is up, calling ``on_asleep`` first if it is starting
+    (it scales to zero after idle time); True when it was asleep. Errors are left to the
+    extraction requests, which report them on the document."""
+    settings = get_settings()
+    client = _client(settings.llamacpp_base_url, settings.llamacpp_api_key.get_secret_value())
+    try:
+        await client.with_options(timeout=WAKE_PROBE_SECONDS, max_retries=0).models.list()
+        return False
+    except openai.APITimeoutError:
+        pass
+    except openai.APIError:
+        return False
+    await on_asleep()
+    with contextlib.suppress(openai.APIError):
+        await client.with_options(max_retries=0).models.list()  # the inference timeout
+    return True
 
 
 async def model_available() -> bool | None:

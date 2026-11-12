@@ -13,7 +13,8 @@ import structlog
 from sqlalchemy.orm import selectinload
 
 from repody.app.lifecycle import fail_run, move_run
-from repody.app.progress import FINALIZE_STEP, RULES_STEP, Tracker, extract_step
+from repody.app.progress import FINALIZE_STEP, MODEL_STEP, RULES_STEP, Tracker, extract_step
+from repody.extraction import client
 from repody.extraction.pipeline import extract
 from repody.infra import db
 from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, new_id
@@ -73,6 +74,8 @@ async def _process(run_id: str) -> None:
         # (minutes); the loaded objects stay usable and their changes are saved by the last commit.
         await session.commit()
 
+        if tracker.has(MODEL_STEP):
+            await _wake_model(tracker)
         docs_by_id = {doc.id: doc for doc in definition.documents}
         durations = await asyncio.gather(
             *(
@@ -117,6 +120,16 @@ async def _process(run_id: str) -> None:
             return
         await session.commit()
     log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
+
+
+async def _wake_model(tracker: Tracker) -> None:
+    """The model step: the server answers at once, or it was asleep and this waits for it."""
+    await tracker.start(MODEL_STEP)
+    started = time.perf_counter()
+    asleep = await client.wake(lambda: tracker.update(MODEL_STEP, cold_start=True))
+    duration_ms = int((time.perf_counter() - started) * 1000)
+    log.info("model_ready", cold_start=asleep, ms=duration_ms)
+    await tracker.finish(MODEL_STEP, cold_start=asleep, duration_ms=duration_ms)
 
 
 async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker) -> int:

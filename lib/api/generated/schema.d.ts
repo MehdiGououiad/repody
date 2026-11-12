@@ -977,7 +977,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "queue" | "extract" | "rules" | "finalize";
+            kind: "queue" | "model" | "extract" | "rules" | "finalize";
             /**
              * Status
              * @default pending
@@ -1012,6 +1012,12 @@ export interface components {
              * @default false
              */
             failed: boolean;
+            /**
+             * Coldstart
+             * @description model step: the model server was asleep (no requests for a while) and is starting, or started for this run.
+             * @default false
+             */
+            coldStart: boolean;
         };
         /** QueueCounts */
         QueueCounts: {

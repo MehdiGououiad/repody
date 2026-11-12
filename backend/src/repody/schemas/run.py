@@ -14,7 +14,7 @@ Outcome = Literal["passed", "warning", "failed"]  # a done run's result
 RuleStatus = Literal["passed", "failed", "skipped"]
 
 
-StepKind = Literal["queue", "extract", "rules", "finalize"]
+StepKind = Literal["queue", "model", "extract", "rules", "finalize"]
 
 
 class ProgressStep(CamelModel):
@@ -29,6 +29,11 @@ class ProgressStep(CamelModel):
     duration_ms: int | None = None
     cache_hit: bool = False
     failed: bool = Field(default=False, description="Done extract steps whose extraction failed.")
+    cold_start: bool = Field(
+        default=False,
+        description="model step: the model server was asleep (no requests for a while) and is "
+        "starting, or started for this run.",
+    )
 
 
 class RunProgress(CamelModel):

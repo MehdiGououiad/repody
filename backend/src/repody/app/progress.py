@@ -15,6 +15,7 @@ from repody.schemas.run import ProgressStep, RunProgress
 from repody.schemas.workflow import WorkflowDefinition
 
 QUEUE_STEP = "queue"
+MODEL_STEP = "model"
 RULES_STEP = "rules"
 FINALIZE_STEP = "finalize"
 
@@ -24,13 +25,16 @@ def extract_step(document_id: str) -> str:
 
 
 def plan(definition: WorkflowDefinition, document_ids_with_files: set[str]) -> RunProgress:
-    """Queued -> extract each document -> check the rules -> save the report."""
+    """Queued -> model ready (it may be asleep) -> extract each document -> check the rules ->
+    save the report."""
     steps = [ProgressStep(id=QUEUE_STEP, kind="queue", status="active")]
-    steps += [
+    extracts = [
         ProgressStep(id=extract_step(doc.id), kind="extract", document_type=doc.document_type)
         for doc in definition.documents
         if doc.id in document_ids_with_files and doc.wants_extraction
     ]
+    if extracts:
+        steps += [ProgressStep(id=MODEL_STEP, kind="model"), *extracts]
     if definition.rules:
         steps.append(ProgressStep(id=RULES_STEP, kind="rules", rule_count=len(definition.rules)))
     steps.append(ProgressStep(id=FINALIZE_STEP, kind="finalize"))
@@ -77,6 +81,16 @@ class Tracker:
             queue.status = "done"
         if step := self._step(step_id):
             step.status = "active"
+        await self._save()
+
+    def has(self, step_id: str) -> bool:
+        return self._step(step_id) is not None
+
+    async def update(self, step_id: str, **values: Any) -> None:
+        """Set ``values`` on a step without finishing it."""
+        if step := self._step(step_id):
+            for name, value in values.items():
+                setattr(step, name, value)
         await self._save()
 
     async def finish(self, step_id: str, **values: Any) -> None:

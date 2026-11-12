@@ -88,7 +88,14 @@
     "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement.",
     "steps": {
       "queue": "En attente d'un worker",
+      "model": "Réveil du modèle",
+      "modelWaking": "Démarrage du GPU",
+      "modelReady": "Modèle prêt",
+      "modelStarted": "GPU démarré",
+      "modelWakingHint": "Aucun document depuis un moment : le GPU s'est mis en veille pour réduire les coûts. Il redémarre depuis un instantané, en 5 à 15 secondes, une seule fois. Les exécutions suivantes sont rapides.",
+      "modelStartedHint": "Le GPU était en veille ; il reste actif une minute après le dernier document.",
       "waiting": "En attente d'un worker…",
+      "complete": "Toutes les étapes sont terminées",
       "document": "Document",
       "extract": "Extraction · {document}",
       "rules": "{count, plural, one {Vérifier # règle} other {Vérifier # règles}}",
@@ -97,8 +104,6 @@
       "extractFailed": "Échec de l'extraction — le rapport en donne la raison"
     },
     "badges": {
-      "model": "Modèle de document",
-      "rules": "Règle logique",
       "cached": "Résultat en cache"
     }
   },

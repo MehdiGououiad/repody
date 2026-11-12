@@ -86,8 +86,14 @@ async def database() -> AsyncIterator[None]:
 @pytest.fixture
 def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """What the fake model server answers: set ``model_answer["text"]`` (and ``["truncated"]``
-    for an answer cut off at the token limit); ``model_answer["calls"]`` lists each request."""
-    answer: dict = {"text": "{}", "truncated": False, "calls": []}
+    for an answer cut off at the token limit, ``["asleep"]`` for a server that has to start);
+    ``model_answer["calls"]`` lists each request."""
+    answer: dict = {"text": "{}", "truncated": False, "asleep": False, "calls": []}
+
+    async def wake(on_asleep) -> bool:
+        if answer["asleep"]:
+            await on_asleep()
+        return answer["asleep"]
 
     async def chat(
         payload: dict,
@@ -96,6 +102,7 @@ def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
         return inference.Reply(text=answer["text"], truncated=answer["truncated"])
 
     monkeypatch.setattr(inference, "chat", chat)
+    monkeypatch.setattr(inference, "wake", wake)
     return answer
 
 

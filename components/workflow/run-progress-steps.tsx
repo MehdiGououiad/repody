@@ -1,6 +1,18 @@
 "use client";
 
-import { Brain, CheckCircle2, Circle, Clock, Code, Loader2, Sparkles, XCircle } from "lucide-react";
+import {
+  Check,
+  Clock,
+  Cpu,
+  FileCheck2,
+  ListChecks,
+  type LucideIcon,
+  ScanText,
+  Sparkles,
+  Users,
+  X,
+} from "lucide-react";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import type { RunProgress } from "@/lib/types";
@@ -8,40 +20,18 @@ import { cn, formatDurationMs } from "@/lib/utils";
 
 type Step = RunProgress["steps"][number];
 
-function StepIcon({ step }: { step: Step }) {
-  if (step.status === "done" && step.failed) {
-    return <XCircle className="h-4 w-4 text-danger shrink-0" />;
-  }
-  if (step.status === "done") return <CheckCircle2 className="h-4 w-4 text-success shrink-0" />;
-  if (step.status === "active") {
-    return <Loader2 className="h-4 w-4 text-accent-blue animate-spin shrink-0" />;
-  }
-  return <Circle className="h-4 w-4 text-on-surface-variant/40 shrink-0" />;
-}
+/** A start from the snapshot takes 5–15 s (deploy/modal/README.md): the bar eases towards it. */
+const COLD_START_ESTIMATE_S = 15;
 
-function Badge({
-  tone,
-  icon: Icon,
-  children,
-}: {
-  tone: "blue" | "neutral" | "success";
-  icon: typeof Brain;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
-        tone === "blue" && "bg-accent-blue/10 text-accent-blue",
-        tone === "neutral" && "bg-surface-container text-on-surface-variant",
-        tone === "success" && "bg-success/10 text-success"
-      )}
-    >
-      <Icon className="h-3 w-3" />
-      {children}
-    </span>
-  );
-}
+const KIND_ICON: Record<Step["kind"], LucideIcon> = {
+  queue: Users,
+  model: Cpu,
+  extract: ScanText,
+  rules: ListChecks,
+  finalize: FileCheck2,
+};
+
+const spring = { type: "spring", stiffness: 420, damping: 28 } as const;
 
 /** Milliseconds since the active step started (restarts when another step becomes active). */
 function useElapsed(activeStepId: string | undefined): number {
@@ -51,11 +41,147 @@ function useElapsed(activeStepId: string | undefined): number {
     const started = Date.now();
     const timer = window.setInterval(
       () => setElapsed({ id: activeStepId, ms: Date.now() - started }),
-      500
+      250
     );
     return () => window.clearInterval(timer);
   }, [activeStepId]);
   return elapsed.id === activeStepId ? elapsed.ms : 0;
+}
+
+/** The step's dot on the rail: a ring, a pulsing dot while it runs, a tick or a cross. */
+function Node({ step }: { step: Step }) {
+  const failed = step.status === "done" && step.failed;
+  return (
+    <span className="relative flex size-6 shrink-0 items-center justify-center">
+      {step.status === "active" ? (
+        <motion.span
+          className="absolute inset-0 rounded-full bg-accent-blue/30"
+          animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
+          transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY, ease: "easeOut" }}
+        />
+      ) : null}
+      <motion.span
+        className={cn(
+          "relative flex size-6 items-center justify-center rounded-full border-2 transition-colors duration-300",
+          step.status === "pending" && "border-border bg-surface-container-lowest",
+          step.status === "active" && "border-accent-blue bg-accent-blue/10",
+          step.status === "done" && !failed && "border-success bg-success",
+          failed && "border-danger bg-danger"
+        )}
+        animate={{ scale: step.status === "active" ? 1.08 : 1 }}
+        transition={spring}
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {step.status === "done" ? (
+            <motion.span
+              key="done"
+              initial={{ scale: 0, rotate: -45 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={spring}
+            >
+              {failed ? (
+                <X className="size-3.5 text-white" strokeWidth={3} />
+              ) : (
+                <Check className="size-3.5 text-white" strokeWidth={3} />
+              )}
+            </motion.span>
+          ) : step.status === "active" ? (
+            <motion.span
+              key="active"
+              className="size-2 rounded-full bg-accent-blue"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0 }}
+            />
+          ) : null}
+        </AnimatePresence>
+      </motion.span>
+    </span>
+  );
+}
+
+/** The rail between two steps, filling downwards once the step above is done. */
+function Connector({ done }: { done: boolean }) {
+  return (
+    <span className="absolute left-[11px] top-7 bottom-[-6px] w-0.5 overflow-hidden rounded-full bg-border">
+      <motion.span
+        className="block h-full w-full origin-top bg-success"
+        initial={false}
+        animate={{ scaleY: done ? 1 : 0 }}
+        transition={{ duration: 0.45, ease: "easeInOut" }}
+      />
+    </span>
+  );
+}
+
+/** Work in progress with no known end: a highlight sweeping across a thin track. */
+function Sweep() {
+  return (
+    <span className="relative mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent-blue/10">
+      <motion.span
+        className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-accent-blue to-transparent"
+        initial={{ x: "-100%" }}
+        animate={{ x: "300%" }}
+        transition={{ duration: 1.3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+      />
+    </span>
+  );
+}
+
+/** The GPU starting after idle time: what is happening, why, and how long it usually takes. */
+function ColdStart({ elapsedMs }: { elapsedMs: number }) {
+  const t = useTranslations("runProgress");
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: "auto" }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+      className="overflow-hidden"
+    >
+      <div className="mt-2 rounded-lg border border-accent-blue/25 bg-gradient-to-br from-accent-blue/10 to-transparent p-3">
+        <div className="flex items-center gap-3">
+          <div className="relative flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-blue/15">
+            <motion.span
+              className="absolute inset-0 rounded-lg border-2 border-accent-blue/40"
+              animate={{ opacity: [0.2, 1, 0.2] }}
+              transition={{ duration: 1.6, repeat: Number.POSITIVE_INFINITY }}
+            />
+            <Cpu className="size-5 text-accent-blue" />
+          </div>
+          <div className="flex items-end gap-0.5" aria-hidden>
+            {Array.from({ length: 10 }, (_, i) => i).map((i) => (
+              <motion.span
+                key={i}
+                className="w-1 rounded-full bg-accent-blue"
+                animate={{ height: [4, 16, 4], opacity: [0.35, 1, 0.35] }}
+                transition={{
+                  duration: 1.1,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: i * 0.09,
+                  ease: "easeInOut",
+                }}
+              />
+            ))}
+          </div>
+          <span className="ml-auto text-[11px] font-semibold tabular-nums text-accent-blue">
+            {formatDurationMs(elapsedMs)}
+          </span>
+        </div>
+        <p className="mt-2.5 text-[11px] leading-relaxed text-on-surface-variant">
+          {t("steps.modelWakingHint")}
+        </p>
+        <span className="mt-2.5 block h-1.5 w-full overflow-hidden rounded-full bg-accent-blue/10">
+          <motion.span
+            className="block h-full rounded-full bg-accent-blue"
+            initial={{ width: "4%" }}
+            animate={{ width: "92%" }}
+            transition={{ duration: COLD_START_ESTIMATE_S, ease: [0.1, 0.6, 0.3, 1] }}
+          />
+        </span>
+      </div>
+    </motion.div>
+  );
 }
 
 export function RunProgressSteps({
@@ -66,15 +192,20 @@ export function RunProgressSteps({
   className?: string;
 }) {
   const t = useTranslations("runProgress");
-  const doneCount = progress.steps.filter((s) => s.status === "done").length;
-  const activeSteps = progress.steps.filter((s) => s.status === "active");
+  const steps = progress.steps;
+  const doneCount = steps.filter((s) => s.status === "done").length;
+  const activeSteps = steps.filter((s) => s.status === "active");
   const elapsedMs = useElapsed(activeSteps[0]?.id);
-  const queued = progress.steps.some((s) => s.kind === "queue" && s.status !== "done");
+  const queued = steps.some((s) => s.kind === "queue" && s.status !== "done");
 
   const title = (step: Step) => {
     switch (step.kind) {
       case "queue":
         return t("steps.queue");
+      case "model":
+        if (step.status === "done")
+          return step.coldStart ? t("steps.modelStarted") : t("steps.modelReady");
+        return step.coldStart ? t("steps.modelWaking") : t("steps.model");
       case "extract":
         return t("steps.extract", { document: step.documentType || t("steps.document") });
       case "rules":
@@ -83,98 +214,165 @@ export function RunProgressSteps({
         return t("steps.finalize");
     }
   };
-  const current = activeSteps.length ? activeSteps.map(title).join(" · ") : t("steps.waiting");
+  const allDone = steps.length > 0 && doneCount === steps.length;
+  const current = activeSteps.length
+    ? activeSteps.map(title).join(" · ")
+    : allDone
+      ? t("steps.complete")
+      : t("steps.waiting");
 
   return (
-    <div className={cn("space-y-3", className)}>
-      {queued ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-on-surface">
-          <p className="font-medium">
-            {progress.queuePosition != null && progress.queueDepth != null
-              ? t("queuePosition", { position: progress.queuePosition, depth: progress.queueDepth })
-              : t("queueWaiting")}
-          </p>
-          <p className="text-on-surface-variant mt-1 leading-snug">{t("queueOrdered")}</p>
-        </div>
-      ) : null}
-      <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-3 py-2.5">
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <p className="text-on-surface font-medium truncate">{current}</p>
-          <span className="text-on-surface-variant/70 shrink-0 tabular-nums">
-            {doneCount}/{progress.steps.length}
+    <MotionConfig reducedMotion="user">
+      <div className={cn("space-y-3", className)}>
+        <AnimatePresence initial={false}>
+          {queued ? (
+            <motion.div
+              key="queue"
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              className="overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-on-surface"
+            >
+              <p className="font-medium">
+                {progress.queuePosition != null && progress.queueDepth != null
+                  ? t("queuePosition", {
+                      position: progress.queuePosition,
+                      depth: progress.queueDepth,
+                    })
+                  : t("queueWaiting")}
+              </p>
+              <p className="mt-1 leading-snug text-on-surface-variant">{t("queueOrdered")}</p>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+
+        <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="relative h-4 min-w-0 flex-1 overflow-hidden">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.p
+                  key={current}
+                  className="truncate font-medium text-on-surface"
+                  initial={{ y: 14, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -14, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                >
+                  {current}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+            <span className="shrink-0 tabular-nums text-on-surface-variant/70">
+              {doneCount}/{steps.length}
+            </span>
+          </div>
+          <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent-blue/10">
+            <motion.span
+              className="block h-full rounded-full bg-accent-blue"
+              initial={false}
+              animate={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}
+              transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            />
           </span>
         </div>
+
+        <ol className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
+          {steps.map((step, index) => {
+            const Icon = KIND_ICON[step.kind];
+            const active = step.status === "active";
+            const failed = step.status === "done" && step.failed;
+            return (
+              <motion.li
+                key={step.id}
+                layout="position"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="relative flex gap-3 pb-1.5"
+              >
+                {index < steps.length - 1 ? <Connector done={step.status === "done"} /> : null}
+                <Node step={step} />
+                <div
+                  className={cn(
+                    "min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 transition-colors duration-300",
+                    active ? "border-accent-blue/25 bg-accent-blue/5" : "border-transparent"
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p
+                      className={cn(
+                        "flex items-center gap-1.5 text-xs leading-snug",
+                        active && "font-semibold text-on-surface",
+                        step.status === "done" && "text-on-surface",
+                        step.status === "pending" && "text-on-surface-variant/70"
+                      )}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-3.5 shrink-0",
+                          active ? "text-accent-blue" : "text-on-surface-variant"
+                        )}
+                      />
+                      {title(step)}
+                    </p>
+                    <AnimatePresence mode="wait" initial={false}>
+                      {step.durationMs ? (
+                        <motion.span
+                          key="took"
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="inline-flex shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-on-surface-variant"
+                        >
+                          <Clock className="size-3" />
+                          {formatDurationMs(step.durationMs)}
+                        </motion.span>
+                      ) : step.id === activeSteps[0]?.id ? (
+                        <motion.span
+                          key="running"
+                          exit={{ opacity: 0 }}
+                          className="inline-flex shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-accent-blue"
+                        >
+                          <Clock className="size-3" />
+                          {formatDurationMs(elapsedMs)}
+                        </motion.span>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+
+                  {step.kind === "model" && step.status === "done" && step.coldStart ? (
+                    <p className="mt-0.5 text-[10px] leading-relaxed text-on-surface-variant/90">
+                      {t("steps.modelStartedHint")}
+                    </p>
+                  ) : null}
+                  {step.kind === "extract" && step.status === "done" ? (
+                    <p
+                      className={cn(
+                        "mt-0.5 flex items-center gap-1 text-[10px] leading-relaxed",
+                        failed ? "text-danger" : "text-on-surface-variant/90"
+                      )}
+                    >
+                      {step.cacheHit ? <Sparkles className="size-3 text-success" /> : null}
+                      {failed
+                        ? t("steps.extractFailed")
+                        : t("steps.extracted", { count: step.fieldsExtracted ?? 0 })}
+                      {step.cacheHit ? ` · ${t("badges.cached")}` : null}
+                    </p>
+                  ) : null}
+
+                  <AnimatePresence initial={false}>
+                    {step.kind === "model" && active && step.coldStart ? (
+                      <ColdStart key="cold" elapsedMs={elapsedMs} />
+                    ) : null}
+                  </AnimatePresence>
+                  {active && !(step.kind === "model" && step.coldStart) && step.kind !== "queue" ? (
+                    <Sweep />
+                  ) : null}
+                </div>
+              </motion.li>
+            );
+          })}
+        </ol>
       </div>
-      <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
-        {progress.steps.map((step) => (
-          <li
-            key={step.id}
-            className={cn(
-              "rounded-lg px-2.5 py-2 border border-transparent",
-              step.status === "active" && "bg-accent-blue/5 border-accent-blue/20",
-              step.status === "done" && "opacity-90"
-            )}
-          >
-            <div className="flex items-start gap-2.5">
-              <StepIcon step={step} />
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex items-start justify-between gap-2">
-                  <p
-                    className={cn(
-                      "text-xs leading-snug",
-                      step.status === "active"
-                        ? "text-on-surface font-semibold"
-                        : "text-on-surface-variant"
-                    )}
-                  >
-                    {title(step)}
-                  </p>
-                  {step.durationMs ? (
-                    <span className="inline-flex items-center gap-0.5 shrink-0 text-[10px] tabular-nums text-on-surface-variant">
-                      <Clock className="h-3 w-3" />
-                      {formatDurationMs(step.durationMs)}
-                    </span>
-                  ) : step.id === activeSteps[0]?.id ? (
-                    <span className="inline-flex items-center gap-0.5 shrink-0 text-[10px] tabular-nums text-accent-blue">
-                      <Clock className="h-3 w-3" />
-                      {formatDurationMs(elapsedMs)}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-1">
-                  {step.kind === "extract" ? (
-                    <Badge tone="blue" icon={Brain}>
-                      {t("badges.model")}
-                    </Badge>
-                  ) : null}
-                  {step.kind === "rules" ? (
-                    <Badge tone="neutral" icon={Code}>
-                      {t("badges.rules")}
-                    </Badge>
-                  ) : null}
-                  {step.cacheHit ? (
-                    <Badge tone="success" icon={Sparkles}>
-                      {t("badges.cached")}
-                    </Badge>
-                  ) : null}
-                </div>
-                {step.kind === "extract" && step.status === "done" ? (
-                  <p
-                    className={cn(
-                      "text-[10px] leading-relaxed",
-                      step.failed ? "text-danger" : "text-on-surface-variant/90"
-                    )}
-                  >
-                    {step.failed
-                      ? t("steps.extractFailed")
-                      : t("steps.extracted", { count: step.fieldsExtracted ?? 0 })}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </MotionConfig>
   );
 }

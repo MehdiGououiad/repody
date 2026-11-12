@@ -2342,6 +2342,7 @@
             "type": "string",
             "enum": [
               "queue",
+              "model",
               "extract",
               "rules",
               "finalize"
@@ -2415,6 +2416,12 @@
             "title": "Failed",
             "description": "Done extract steps whose extraction failed.",
             "default": false
+          },
+          "coldStart": {
+            "type": "boolean",
+            "title": "Coldstart",
+            "description": "model step: the model server was asleep (no requests for a while) and is starting, or started for this run.",
+            "default": false
           }
         },
         "type": "object",
@@ -2427,7 +2434,8 @@
           "fieldsExtracted",
           "durationMs",
           "cacheHit",
-          "failed"
+          "failed",
+          "coldStart"
         ],
         "title": "ProgressStep",
         "description": "One step of a run. Clients word it from its kind and data (no server-side text)."

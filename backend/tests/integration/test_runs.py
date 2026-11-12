@@ -42,6 +42,20 @@ async def test_api_run_extracts_and_checks_rules(api, model_answer):
     assert (await api.get(f"/v1/audits/{run_id}")).json()["id"] == run_id
 
 
+async def test_a_sleeping_model_is_a_step_of_its_own(api, model_answer):
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000})
+    for asleep in (True, False):
+        model_answer["asleep"] = asleep
+        started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+        steps = (await api.get(f"/v1/runs/{started.json()['runId']}", headers=auth)).json()[
+            "progress"
+        ]["steps"]
+        assert [s["kind"] for s in steps] == ["queue", "model", "extract", "finalize"]
+        assert steps[1]["status"] == "done"
+        assert steps[1]["coldStart"] is asleep
+
+
 async def test_test_run_uses_the_posted_draft(api, model_answer):
     await deploy(api)
     draft = invoice_workflow(rule("total", condition("total_amount", "==", "1")))
