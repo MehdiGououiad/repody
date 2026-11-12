@@ -3,23 +3,28 @@ import { Slot } from "radix-ui";
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
+/** One primary action per view (accent); everything else is secondary or ghost. */
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex shrink-0 cursor-pointer select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,color,box-shadow,scale] duration-150 ease-out enabled:active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-card text-foreground hover:bg-muted",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-muted hover:text-foreground",
-        link: "text-primary underline-offset-4 hover:underline active:scale-100",
+        default: "bg-accent text-on-accent hover:bg-accent-hover",
+        secondary: "bg-raised text-ink shadow-[0_0_0_1px_var(--line-strong)] hover:bg-hover",
+        outline: "bg-raised text-ink shadow-[0_0_0_1px_var(--line-strong)] hover:bg-hover",
+        ghost: "text-ink-2 hover:bg-hover hover:text-ink",
+        destructive: "bg-fail text-white hover:opacity-90",
+        danger: "bg-fail text-white hover:opacity-90",
+        success: "bg-pass text-white hover:opacity-90",
+        link: "h-auto px-0 text-accent-ink underline-offset-4 hover:underline enabled:active:scale-100",
       },
       size: {
-        default: "min-h-11 h-11 px-4 py-2",
-        sm: "min-h-9 h-9 rounded-md px-3 text-xs",
-        lg: "min-h-12 h-12 rounded-md px-6",
-        icon: "min-h-11 min-w-11 h-11 w-11",
+        default: "h-8 px-3",
+        md: "h-8 px-3",
+        sm: "h-7 px-2.5 text-xs",
+        lg: "h-9 px-4",
+        icon: "size-8",
+        "icon-sm": "size-7",
       },
     },
     defaultVariants: { variant: "default", size: "default" },

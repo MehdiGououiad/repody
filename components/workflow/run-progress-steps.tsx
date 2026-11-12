@@ -55,7 +55,7 @@ function Node({ step }: { step: Step }) {
     <span className="relative flex size-6 shrink-0 items-center justify-center">
       {step.status === "active" ? (
         <motion.span
-          className="absolute inset-0 rounded-full bg-accent-blue/30"
+          className="absolute inset-0 rounded-full bg-accent/30"
           animate={{ scale: [1, 1.7], opacity: [0.6, 0] }}
           transition={{ duration: 1.4, repeat: Number.POSITIVE_INFINITY, ease: "easeOut" }}
         />
@@ -63,10 +63,10 @@ function Node({ step }: { step: Step }) {
       <motion.span
         className={cn(
           "relative flex size-6 items-center justify-center rounded-full border-2 transition-colors duration-300",
-          step.status === "pending" && "border-border bg-surface-container-lowest",
-          step.status === "active" && "border-accent-blue bg-accent-blue/10",
-          step.status === "done" && !failed && "border-success bg-success",
-          failed && "border-danger bg-danger"
+          step.status === "pending" && "border-line bg-panel",
+          step.status === "active" && "border-accent bg-accent/10",
+          step.status === "done" && !failed && "border-pass bg-pass",
+          failed && "border-fail bg-fail"
         )}
         animate={{ scale: step.status === "active" ? 1.08 : 1 }}
         transition={spring}
@@ -88,7 +88,7 @@ function Node({ step }: { step: Step }) {
           ) : step.status === "active" ? (
             <motion.span
               key="active"
-              className="size-2 rounded-full bg-accent-blue"
+              className="size-2 rounded-full bg-accent"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
@@ -103,9 +103,9 @@ function Node({ step }: { step: Step }) {
 /** The rail between two steps, filling downwards once the step above is done. */
 function Connector({ done }: { done: boolean }) {
   return (
-    <span className="absolute left-[11px] top-7 bottom-[-6px] w-0.5 overflow-hidden rounded-full bg-border">
+    <span className="absolute left-[11px] top-7 bottom-[-6px] w-0.5 overflow-hidden rounded-full bg-line">
       <motion.span
-        className="block h-full w-full origin-top bg-success"
+        className="block h-full w-full origin-top bg-pass"
         initial={false}
         animate={{ scaleY: done ? 1 : 0 }}
         transition={{ duration: 0.45, ease: "easeInOut" }}
@@ -117,9 +117,9 @@ function Connector({ done }: { done: boolean }) {
 /** Work in progress with no known end: a highlight sweeping across a thin track. */
 function Sweep() {
   return (
-    <span className="relative mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent-blue/10">
+    <span className="relative mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent/10">
       <motion.span
-        className="absolute inset-y-0 w-1/3 rounded-full bg-gradient-to-r from-transparent via-accent-blue to-transparent"
+        className="absolute inset-y-0 w-1/3 rounded-full    "
         initial={{ x: "-100%" }}
         animate={{ x: "300%" }}
         transition={{ duration: 1.3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
@@ -139,21 +139,21 @@ function ColdStart({ elapsedMs }: { elapsedMs: number }) {
       transition={{ duration: 0.3, ease: "easeOut" }}
       className="overflow-hidden"
     >
-      <div className="mt-2 rounded-lg border border-accent-blue/25 bg-gradient-to-br from-accent-blue/10 to-transparent p-3">
+      <div className="mt-2 rounded-lg border border-accent/25 p-3">
         <div className="flex items-center gap-3">
-          <div className="relative flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-blue/15">
+          <div className="relative flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent/15">
             <motion.span
-              className="absolute inset-0 rounded-lg border-2 border-accent-blue/40"
+              className="absolute inset-0 rounded-lg border-2 border-accent/40"
               animate={{ opacity: [0.2, 1, 0.2] }}
               transition={{ duration: 1.6, repeat: Number.POSITIVE_INFINITY }}
             />
-            <Cpu className="size-5 text-accent-blue" />
+            <Cpu className="size-5 text-accent-ink" />
           </div>
           <div className="flex items-end gap-0.5" aria-hidden>
             {Array.from({ length: 10 }, (_, i) => i).map((i) => (
               <motion.span
                 key={i}
-                className="w-1 rounded-full bg-accent-blue"
+                className="w-1 rounded-full bg-accent"
                 animate={{ height: [4, 16, 4], opacity: [0.35, 1, 0.35] }}
                 transition={{
                   duration: 1.1,
@@ -164,16 +164,14 @@ function ColdStart({ elapsedMs }: { elapsedMs: number }) {
               />
             ))}
           </div>
-          <span className="ml-auto text-[11px] font-semibold tabular-nums text-accent-blue">
+          <span className="ml-auto text-2xs font-semibold tabular-nums text-accent-ink">
             {formatDurationMs(elapsedMs)}
           </span>
         </div>
-        <p className="mt-2.5 text-[11px] leading-relaxed text-on-surface-variant">
-          {t("steps.modelWakingHint")}
-        </p>
-        <span className="mt-2.5 block h-1.5 w-full overflow-hidden rounded-full bg-accent-blue/10">
+        <p className="mt-2.5 text-2xs leading-relaxed text-ink-3">{t("steps.modelWakingHint")}</p>
+        <span className="mt-2.5 block h-1.5 w-full overflow-hidden rounded-full bg-accent/10">
           <motion.span
-            className="block h-full rounded-full bg-accent-blue"
+            className="block h-full rounded-full bg-accent"
             initial={{ width: "4%" }}
             animate={{ width: "92%" }}
             transition={{ duration: COLD_START_ESTIMATE_S, ease: [0.1, 0.6, 0.3, 1] }}
@@ -231,7 +229,7 @@ export function RunProgressSteps({
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              className="overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-on-surface"
+              className="overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-ink"
             >
               <p className="font-medium">
                 {progress.queuePosition != null && progress.queueDepth != null
@@ -241,18 +239,18 @@ export function RunProgressSteps({
                     })
                   : t("queueWaiting")}
               </p>
-              <p className="mt-1 leading-snug text-on-surface-variant">{t("queueOrdered")}</p>
+              <p className="mt-1 leading-snug text-ink-3">{t("queueOrdered")}</p>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        <div className="rounded-lg border border-accent-blue/20 bg-accent-blue/5 px-3 py-2.5">
+        <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5">
           <div className="flex items-center justify-between gap-2 text-xs">
             <div className="relative h-4 min-w-0 flex-1 overflow-hidden">
               <AnimatePresence mode="popLayout" initial={false}>
                 <motion.p
                   key={current}
-                  className="truncate font-medium text-on-surface"
+                  className="truncate font-medium text-ink"
                   initial={{ y: 14, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -14, opacity: 0 }}
@@ -262,13 +260,13 @@ export function RunProgressSteps({
                 </motion.p>
               </AnimatePresence>
             </div>
-            <span className="shrink-0 tabular-nums text-on-surface-variant/70">
+            <span className="shrink-0 tabular-nums text-ink-3/70">
               {doneCount}/{steps.length}
             </span>
           </div>
-          <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent-blue/10">
+          <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent/10">
             <motion.span
-              className="block h-full rounded-full bg-accent-blue"
+              className="block h-full rounded-full bg-accent"
               initial={false}
               animate={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}
               transition={{ type: "spring", stiffness: 120, damping: 20 }}
@@ -295,22 +293,22 @@ export function RunProgressSteps({
                 <div
                   className={cn(
                     "min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 transition-colors duration-300",
-                    active ? "border-accent-blue/25 bg-accent-blue/5" : "border-transparent"
+                    active ? "border-accent/25 bg-accent/5" : "border-transparent"
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p
                       className={cn(
                         "flex items-center gap-1.5 text-xs leading-snug",
-                        active && "font-semibold text-on-surface",
-                        step.status === "done" && "text-on-surface",
-                        step.status === "pending" && "text-on-surface-variant/70"
+                        active && "font-semibold text-ink",
+                        step.status === "done" && "text-ink",
+                        step.status === "pending" && "text-ink-3/70"
                       )}
                     >
                       <Icon
                         className={cn(
                           "size-3.5 shrink-0",
-                          active ? "text-accent-blue" : "text-on-surface-variant"
+                          active ? "text-accent-ink" : "text-ink-3"
                         )}
                       />
                       {title(step)}
@@ -321,7 +319,7 @@ export function RunProgressSteps({
                           key="took"
                           initial={{ opacity: 0, y: 4 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="inline-flex shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-on-surface-variant"
+                          className="inline-flex shrink-0 items-center gap-0.5 text-2xs tabular-nums text-ink-3"
                         >
                           <Clock className="size-3" />
                           {formatDurationMs(step.durationMs)}
@@ -330,7 +328,7 @@ export function RunProgressSteps({
                         <motion.span
                           key="running"
                           exit={{ opacity: 0 }}
-                          className="inline-flex shrink-0 items-center gap-0.5 text-[10px] tabular-nums text-accent-blue"
+                          className="inline-flex shrink-0 items-center gap-0.5 text-2xs tabular-nums text-accent-ink"
                         >
                           <Clock className="size-3" />
                           {formatDurationMs(elapsedMs)}
@@ -340,18 +338,18 @@ export function RunProgressSteps({
                   </div>
 
                   {step.kind === "model" && step.status === "done" && step.coldStart ? (
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-on-surface-variant/90">
+                    <p className="mt-0.5 text-2xs leading-relaxed text-ink-3/90">
                       {t("steps.modelStartedHint")}
                     </p>
                   ) : null}
                   {step.kind === "extract" && step.status === "done" ? (
                     <p
                       className={cn(
-                        "mt-0.5 flex items-center gap-1 text-[10px] leading-relaxed",
-                        failed ? "text-danger" : "text-on-surface-variant/90"
+                        "mt-0.5 flex items-center gap-1 text-2xs leading-relaxed",
+                        failed ? "text-fail-ink" : "text-ink-3/90"
                       )}
                     >
-                      {step.cacheHit ? <Sparkles className="size-3 text-success" /> : null}
+                      {step.cacheHit ? <Sparkles className="size-3 text-pass-ink" /> : null}
                       {failed
                         ? t("steps.extractFailed")
                         : t("steps.extracted", { count: step.fieldsExtracted ?? 0 })}

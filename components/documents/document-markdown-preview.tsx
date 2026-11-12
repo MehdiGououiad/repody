@@ -12,9 +12,9 @@ export function DocumentMarkdownPreview({ text, className }: { text: string; cla
     <article
       className={cn(
         "prose prose-sm max-w-none dark:prose-invert",
-        "prose-headings:text-on-surface prose-p:text-on-surface prose-strong:text-on-surface",
-        "prose-a:text-primary prose-li:marker:text-primary prose-th:text-on-surface",
-        "prose-table:block prose-table:overflow-x-auto prose-pre:bg-surface-container-low",
+        "prose-headings:text-ink prose-p:text-ink prose-strong:text-ink",
+        "prose-a:text-ink prose-li:marker:text-ink prose-th:text-ink",
+        "prose-table:block prose-table:overflow-x-auto prose-pre:bg-raised",
         className
       )}
     >

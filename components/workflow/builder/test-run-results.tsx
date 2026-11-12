@@ -23,9 +23,9 @@ import type { RunAuditDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const statusColor: Record<RunAuditDetail["status"], string> = {
-  passed: "border-success/40 bg-success/5 text-success",
-  failed: "border-danger/40 bg-danger/5 text-danger",
-  warning: "border-warning/40 bg-warning/5 text-warning",
+  passed: "border-pass/40 bg-pass/5 text-pass-ink",
+  failed: "border-fail/40 bg-fail/5 text-fail-ink",
+  warning: "border-warn/40 bg-warn/5 text-warn-ink",
 };
 
 const statusIcon: Record<RunAuditDetail["status"], typeof CheckCircle2> = {
@@ -43,30 +43,27 @@ export function TestRunResults({ run, starting }: { run: RunView; starting: bool
   return (
     <section aria-live="polite" className="space-y-4 min-w-0">
       <div>
-        <h3 className="text-sm font-semibold text-on-surface">{t("test.resultsTitle")}</h3>
-        <p className="text-xs text-on-surface-variant mt-0.5">{t("test.resultsHint")}</p>
+        <h3 className="text-sm font-semibold text-ink">{t("test.resultsTitle")}</h3>
+        <p className="text-xs text-ink-3 mt-0.5">{t("test.resultsHint")}</p>
       </div>
 
-      <div key={resultsKey} className="panel-reveal min-w-0">
+      <div key={resultsKey} className="min-w-0">
         {phase === "idle" || phase === "failed" ? (
-          <div className="rounded-xl border border-dashed border-border/80 bg-surface-container-low/40 px-4 py-6 text-center">
-            <FlaskConical
-              className="mx-auto h-6 w-6 text-on-surface-variant/35"
-              aria-hidden="true"
-            />
-            <p className="mt-2 text-sm text-on-surface-variant">{t("test.idle")}</p>
-            <p className="mt-1 text-xs text-on-surface-variant/70">{t("test.idleHint")}</p>
+          <div className="rounded-xl border border-dashed border-line/80 bg-raised/40 px-4 py-6 text-center">
+            <FlaskConical className="mx-auto h-6 w-6 text-ink-3/35" aria-hidden="true" />
+            <p className="mt-2 text-sm text-ink-3">{t("test.idle")}</p>
+            <p className="mt-1 text-xs text-ink-3/70">{t("test.idleHint")}</p>
           </div>
         ) : null}
 
         {phase === "running" ? (
-          <div className="panel-elevated rounded-xl p-4">
+          <div className="rounded-xl p-4">
             {run.phase === "running" && run.progress ? (
               <RunProgressSteps progress={run.progress} />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-8">
-                <Loader2 className="h-7 w-7 animate-spin text-accent-blue" />
-                <p className="text-sm text-on-surface-variant">{t("test.progress.starting")}</p>
+                <Loader2 className="h-7 w-7 animate-spin text-accent-ink" />
+                <p className="text-sm text-ink-3">{t("test.progress.starting")}</p>
               </div>
             )}
           </div>
@@ -86,7 +83,7 @@ function DoneResult({ result }: { result: RunAuditDetail }) {
     <div className="space-y-4 min-w-0">
       <div
         className={cn(
-          "panel-elevated rounded-xl p-4 flex flex-wrap items-center gap-3",
+          "rounded-xl p-4 flex flex-wrap items-center gap-3",
           statusColor[result.status]
         )}
       >
@@ -108,13 +105,11 @@ function DoneResult({ result }: { result: RunAuditDetail }) {
 
       <TestRunSummaryDetails result={result} />
 
-      <div className="panel-elevated rounded-xl overflow-hidden min-w-0">
-        <div className="px-4 py-2.5 bg-surface-container-low border-b border-border">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-            {t("test.ruleResults")}
-          </p>
+      <div className="rounded-xl overflow-hidden min-w-0">
+        <div className="px-4 py-2.5 bg-raised border-b border-line">
+          <p className="text-2xs font-semibold text-ink-3">{t("test.ruleResults")}</p>
         </div>
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-line">
           {result.ruleResults.map((rule) => {
             const failedRule = isRuleFailure(rule.status);
 
@@ -126,23 +121,23 @@ function DoneResult({ result }: { result: RunAuditDetail }) {
                 />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <Code className="h-3 w-3 text-on-surface-variant shrink-0" />
-                    <span className="text-xs font-semibold text-on-surface">{rule.name}</span>
+                    <Code className="h-3 w-3 text-ink-3 shrink-0" />
+                    <span className="text-xs font-semibold text-ink">{rule.name}</span>
                     {failedRule && rule.severity === "reject" ? (
-                      <Badge variant="danger" className="text-[9px] px-1">
+                      <Badge variant="danger" className="text-2xs px-1">
                         {tReport("reject")}
                       </Badge>
                     ) : null}
                     {rule.status === "skipped" ? (
-                      <Badge variant="secondary" className="text-[9px] px-1">
+                      <Badge variant="secondary" className="text-2xs px-1">
                         {tReport(rule.status)}
                       </Badge>
                     ) : null}
                   </div>
                   <p
                     className={cn(
-                      "text-[11px] mt-0.5 leading-relaxed break-words",
-                      failedRule ? "text-danger-strong" : "text-on-surface-variant"
+                      "text-2xs mt-0.5 leading-relaxed break-words",
+                      failedRule ? "text-fail-ink" : "text-ink-3"
                     )}
                   >
                     {rule.detail}
@@ -152,9 +147,7 @@ function DoneResult({ result }: { result: RunAuditDetail }) {
             );
           })}
           {result.ruleResults.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-on-surface-variant text-center">
-              {t("test.noRules")}
-            </p>
+            <p className="px-4 py-6 text-sm text-ink-3 text-center">{t("test.noRules")}</p>
           ) : null}
         </div>
       </div>

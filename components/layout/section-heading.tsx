@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
+/** The title of a builder step: one quiet heading and a one-line hint. */
 export function SectionHeading({
   title,
   description,
-  eyebrow,
   className,
 }: {
   title: string;
@@ -12,18 +12,9 @@ export function SectionHeading({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-1.5", className)}>
-      {eyebrow ? (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-blue">
-          {eyebrow}
-        </p>
-      ) : null}
-      <h2 className="font-display text-xl md:text-2xl font-semibold text-on-surface tracking-tight leading-tight">
-        {title}
-      </h2>
-      {description ? (
-        <p className="text-sm text-on-surface-variant leading-relaxed max-w-2xl">{description}</p>
-      ) : null}
+    <div className={cn("flex flex-col gap-1", className)}>
+      <h2 className="text-lg font-semibold text-ink">{title}</h2>
+      {description ? <p className="max-w-2xl text-sm text-ink-3">{description}</p> : null}
     </div>
   );
 }

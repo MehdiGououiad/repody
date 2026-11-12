@@ -45,7 +45,7 @@ export function TemplateTypeSelect({
   const text = useTypeText();
   const scalar = scalarType(value);
   const list = isListType(value);
-  if (!catalog) return <div className="h-9 rounded-md bg-surface-container-low animate-pulse" />;
+  if (!catalog) return <div className="h-9 rounded-md bg-raised animate-pulse" />;
 
   const known = catalog.templateTypes.some((type) => type.value === scalar);
   const groups = GROUPS.filter((group) => structures || group !== "structure");
@@ -56,7 +56,7 @@ export function TemplateTypeSelect({
         className={cn(
           "text-xs min-w-0 w-full",
           detailed &&
-            "h-auto min-h-8 py-1 border-transparent bg-transparent shadow-none focus:bg-card gap-2"
+            "h-auto min-h-8 py-1 border-transparent bg-transparent shadow-none focus:bg-panel gap-2"
         )}
       >
         {detailed ? (
@@ -66,7 +66,7 @@ export function TemplateTypeSelect({
               <span className="w-full truncate font-medium leading-tight">
                 {text(value, "label")}
               </span>
-              <span className="w-full truncate text-[10px] text-on-surface-variant leading-tight">
+              <span className="w-full truncate text-2xs text-ink-3 leading-tight">
                 {text(value, "description")}
                 {list ? ` · ${t("listModeSuffix")}` : ""}
               </span>
@@ -79,7 +79,7 @@ export function TemplateTypeSelect({
       <SelectContent className="max-h-80 w-72">
         {groups.map((group) => (
           <SelectGroup key={group}>
-            <SelectLabel className="text-[10px]">{t(`typeGroups.${group}`)}</SelectLabel>
+            <SelectLabel className="text-2xs">{t(`typeGroups.${group}`)}</SelectLabel>
             {catalog.templateTypes
               .filter((type) => type.group === group)
               .map((type) => (
@@ -94,7 +94,7 @@ export function TemplateTypeSelect({
                       {text(type.value, "label")}
                     </span>
                     {detailed ? (
-                      <span className="text-[10px] text-on-surface-variant leading-snug">
+                      <span className="text-2xs text-ink-3 leading-snug">
                         {text(type.value, "description")}
                       </span>
                     ) : null}
@@ -127,15 +127,12 @@ export function ListToggle({
   if (!catalog || !listable) return null;
   return (
     <label
-      className={cn(
-        "flex items-center gap-1.5 text-[10px] text-on-surface-variant cursor-pointer",
-        className
-      )}
+      className={cn("flex items-center gap-1.5 text-2xs text-ink-3 cursor-pointer", className)}
       title={t("listModeHint")}
     >
       <input
         type="checkbox"
-        className="size-3.5 rounded border-border text-primary focus-visible:ring-2 focus-visible:ring-ring/30"
+        className="size-3.5 rounded border-line text-ink focus-visible:ring-2 focus-visible:ring-focus/30"
         checked={isListType(value)}
         onChange={(event) => onChange(withList(value, event.target.checked, catalog))}
       />

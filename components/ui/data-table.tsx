@@ -40,7 +40,7 @@ export function DataTable<TFeatures extends TableFeatures, TData extends RowData
       <TableBody>
         {rows.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={columnCount} className="py-12 text-center text-on-surface-variant">
+            <TableCell colSpan={columnCount} className="py-12 text-center text-ink-3">
               {empty}
             </TableCell>
           </TableRow>

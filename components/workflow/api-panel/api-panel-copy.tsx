@@ -15,8 +15,8 @@ export function CopyButton({ text, className }: { text: string; className?: stri
       onClick={() => void copy(text)}
       aria-label={copied ? tCommon("copied") : tCommon("copy")}
       className={cn(
-        "inline-flex items-center gap-1 text-[10px] font-mono transition-colors shrink-0",
-        copied ? "text-success" : "text-on-surface-variant hover:text-on-surface",
+        "inline-flex items-center gap-1 text-2xs font-mono transition-colors shrink-0",
+        copied ? "text-pass-ink" : "text-ink-3 hover:text-ink",
         className
       )}
     >

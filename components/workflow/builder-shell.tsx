@@ -47,7 +47,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
   const showNameGate = isNew && !nameConfirmed;
 
   return (
-    <div className="flex flex-col page-enter" style={{ height: "calc(100vh - 64px)" }}>
+    <div className="flex flex-col " style={{ height: "calc(100vh - 64px)" }}>
       <BuilderTopbar
         name={name}
         deployed={deployed}
@@ -69,7 +69,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
       ) : (
         <>
           <div className="flex flex-1 overflow-hidden min-h-0">
-            <aside className="hidden md:flex w-52 xl:w-60 border-r border-border/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-surface-container-lowest/80 backdrop-blur-sm">
+            <aside className="hidden md:flex w-52 xl:w-60 border-r border-line/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-panel/80 ">
               <BuilderStepNav
                 current={step}
                 documents={documents}
@@ -78,13 +78,13 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                 testHasResults={testSession.runId !== null}
               />
 
-              <div className="mt-6 border-t border-border pt-4 space-y-2.5 px-1">
-                <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
+              <div className="mt-6 border-t border-line pt-4 space-y-2.5 px-1">
+                <div className="flex items-center gap-2 text-2xs text-ink-3">
                   <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                   <span className="truncate">{workflow.owner}</span>
                 </div>
                 {workflow.lastRun ? (
-                  <div className="flex items-center gap-2 text-[11px] text-on-surface-variant">
+                  <div className="flex items-center gap-2 text-2xs text-ink-3">
                     <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     <span className="truncate">
                       <DateTime value={workflow.lastRun} />
@@ -92,7 +92,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                   </div>
                 ) : null}
                 {!schemaReady && step > 0 ? (
-                  <div className="flex items-start gap-1.5 text-[11px] text-warning">
+                  <div className="flex items-start gap-1.5 text-2xs text-warn-ink">
                     <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
                     <span>{tSteps("schemaIncomplete")}</span>
                   </div>
@@ -102,7 +102,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
 
             <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
               <div key={step} className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 min-w-0">
-                <div className="mx-auto w-full max-w-4xl page-enter min-w-0">
+                <div className="mx-auto w-full max-w-4xl min-w-0">
                   {step === 0 ? (
                     <DocumentsSection documents={documents} onChange={setDocuments} />
                   ) : null}

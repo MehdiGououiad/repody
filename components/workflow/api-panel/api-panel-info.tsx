@@ -19,11 +19,11 @@ import { cn } from "@/lib/utils";
 
 function EndpointRow({ method, url }: { method: "POST" | "GET"; url: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-surface-container-lowest border border-border px-3 py-2">
-      <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded font-mono shrink-0 w-10 text-center">
+    <div className="flex items-center gap-2 rounded-lg bg-panel border border-line px-3 py-2">
+      <span className="text-2xs font-semibold text-ink bg-accent/10 px-1.5 py-0.5 rounded font-mono shrink-0 w-10 text-center">
         {method}
       </span>
-      <code translate="no" className="flex-1 text-[11px] font-mono text-on-surface truncate">
+      <code translate="no" className="flex-1 text-2xs font-mono text-ink truncate">
         {url}
       </code>
       <CopyButton text={url} />
@@ -76,37 +76,31 @@ export function ApiInfoScreen({
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Badge variant="success" className="gap-1.5">
-          <span className="size-1.5 rounded-full bg-success animate-pulse" />
+          <span className="size-1.5 rounded-full bg-pass animate-pulse" />
           {t("live")}
         </Badge>
-        <span className="text-xs text-on-surface-variant">
-          {t("isDeployed", { name: workflowName })}
-        </span>
+        <span className="text-xs text-ink-3">{t("isDeployed", { name: workflowName })}</span>
       </div>
 
-      <div className="panel-elevated rounded-xl overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-border flex items-center gap-2 bg-surface-container-low">
-          <Zap className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-            {t("endpointLabel")}
-          </span>
+      <div className="rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-line flex items-center gap-2 bg-raised">
+          <Zap className="h-3.5 w-3.5 text-ink" />
+          <span className="text-2xs font-semibold text-ink-3">{t("endpointLabel")}</span>
         </div>
         <div className="p-4 space-y-2.5">
           <EndpointRow method="POST" url={endpoint} />
           <EndpointRow method="GET" url={runStateEndpoint(endpoint)} />
-          <p className="text-[11px] text-on-surface-variant leading-relaxed">{t("pollHint")}</p>
-          <div className="flex items-center gap-2 rounded-lg bg-surface-container-lowest border border-border px-3 py-2">
-            <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wide shrink-0">
-              {t("keyLabel")}
-            </span>
-            <code translate="no" className="flex-1 text-[11px] font-mono text-on-surface truncate">
+          <p className="text-2xs text-ink-3 leading-relaxed">{t("pollHint")}</p>
+          <div className="flex items-center gap-2 rounded-lg bg-panel border border-line px-3 py-2">
+            <span className="text-2xs font-semibold text-ink-3 shrink-0">{t("keyLabel")}</span>
+            <code translate="no" className="flex-1 text-2xs font-mono text-ink truncate">
               {displayKey}
             </code>
             <button
               type="button"
               onClick={() => setShowKey((value) => !value)}
               aria-label={showKey ? t("hideKey") : t("showKey")}
-              className="text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
+              className="text-ink-3 hover:text-ink transition-colors shrink-0"
             >
               {showKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
             </button>
@@ -116,14 +110,12 @@ export function ApiInfoScreen({
       </div>
 
       {slots.length > 0 ? (
-        <div className="panel-elevated rounded-xl overflow-hidden">
-          <div className="px-4 py-2.5 border-b border-border bg-surface-container-low">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-              {t("documentSlotsLabel")}
-            </span>
+        <div className="rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-line bg-raised">
+            <span className="text-2xs font-semibold text-ink-3">{t("documentSlotsLabel")}</span>
           </div>
           <div className="p-4 space-y-2">
-            <p className="text-xs text-on-surface-variant leading-relaxed">{t("schemaHint")}</p>
+            <p className="text-xs text-ink-3 leading-relaxed">{t("schemaHint")}</p>
             <ul className="space-y-2">
               {slots.map((doc, index) => {
                 const fieldCount = doc.schema.filter((field) => field.name.trim()).length;
@@ -131,18 +123,14 @@ export function ApiInfoScreen({
                 return (
                   <li
                     key={doc.id}
-                    className="rounded-lg border border-border bg-surface-container-lowest px-3 py-2 text-xs"
+                    className="rounded-lg border border-line bg-panel px-3 py-2 text-xs"
                   >
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-mono text-[10px] text-on-surface-variant shrink-0">
-                        {index + 1}.
-                      </span>
-                      <span className="font-semibold text-on-surface truncate">
+                      <span className="font-mono text-2xs text-ink-3 shrink-0">{index + 1}.</span>
+                      <span className="font-semibold text-ink truncate">
                         {doc.documentType.trim()}
                       </span>
-                      <span className="text-on-surface-variant">
-                        {t("fieldsCount", { count: fieldCount })}
-                      </span>
+                      <span className="text-ink-3">{t("fieldsCount", { count: fieldCount })}</span>
                     </div>
                   </li>
                 );
@@ -152,9 +140,9 @@ export function ApiInfoScreen({
         </div>
       ) : null}
 
-      <div className="panel-elevated rounded-xl overflow-hidden">
+      <div className="rounded-xl overflow-hidden">
         <div
-          className="flex items-center border-b border-border"
+          className="flex items-center border-b border-line"
           role="tablist"
           aria-label={t("endpointLabel")}
         >
@@ -166,10 +154,10 @@ export function ApiInfoScreen({
               aria-selected={activeTab === tab}
               onClick={() => setActiveTab(tab)}
               className={cn(
-                "px-4 py-2 text-xs font-medium transition-colors uppercase tracking-wide",
+                "px-4 py-2 text-xs font-medium transition-colors  ",
                 activeTab === tab
-                  ? "border-b-2 border-primary text-primary"
-                  : "text-on-surface-variant hover:text-on-surface"
+                  ? "border-b-2 border-accent text-ink"
+                  : "text-ink-3 hover:text-ink"
               )}
             >
               {tab}
@@ -178,19 +166,17 @@ export function ApiInfoScreen({
           <div className="flex-1" />
           <CopyButton text={snippets[activeTab]} className="mr-4" />
         </div>
-        <pre className="p-4 text-[11px] font-mono text-on-surface overflow-x-auto leading-relaxed bg-surface-container-lowest whitespace-pre-wrap break-all">
+        <pre className="p-4 text-2xs font-mono text-ink overflow-x-auto leading-relaxed bg-panel whitespace-pre-wrap break-all">
           <code translate="no">{snippets[activeTab]}</code>
         </pre>
       </div>
 
-      <div className="panel-elevated rounded-xl p-4 space-y-3 min-w-0">
+      <div className="rounded-xl p-4 space-y-3 min-w-0">
         <div>
-          <Label className="text-xs font-semibold text-on-surface-variant">
+          <Label className="text-xs font-semibold text-ink-3">
             {slots.length > 1 ? t("testDocumentsLabel") : t("testDocumentLabel")}
           </Label>
-          <p className="text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-            {t("testUploadHint")}
-          </p>
+          <p className="text-2xs text-ink-3 mt-1 leading-relaxed">{t("testUploadHint")}</p>
         </div>
         <IngestionSection
           documents={documents}
@@ -198,21 +184,21 @@ export function ApiInfoScreen({
           files={filesByDocId}
           onFilesChange={onFilesChange}
         />
-        {!hasFiles ? <p className="text-[11px] text-warning">{t("testUploadRequired")}</p> : null}
-        {!hasFullKey ? <p className="text-[11px] text-warning">{t("keyUnavailable")}</p> : null}
+        {!hasFiles ? <p className="text-2xs text-warn-ink">{t("testUploadRequired")}</p> : null}
+        {!hasFullKey ? <p className="text-2xs text-warn-ink">{t("keyUnavailable")}</p> : null}
       </div>
       <button
         type="button"
         onClick={onRun}
         disabled={!canRun}
-        className="group flex items-center justify-between w-full rounded-xl border-2 border-dashed border-accent-blue/40 bg-accent-blue/5 hover:bg-accent-blue/10 hover:border-accent-blue/70 transition-[border-color,background-color] px-5 py-4 disabled:opacity-50 disabled:pointer-events-none"
+        className="group flex items-center justify-between w-full rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 hover:bg-accent/10 hover:border-accent/70 transition-[border-color,background-color] px-5 py-4 disabled:opacity-50 disabled:pointer-events-none"
       >
         <div className="text-left">
-          <p className="text-sm font-semibold text-primary">{t("runTest")}</p>
-          <p className="text-xs text-on-surface-variant mt-0.5">{t("runTestHint")}</p>
+          <p className="text-sm font-semibold text-ink">{t("runTest")}</p>
+          <p className="text-xs text-ink-3 mt-0.5">{t("runTestHint")}</p>
         </div>
-        <div className="size-9 rounded-full bg-primary/15 group-hover:bg-primary/25 flex items-center justify-center transition-colors shrink-0 ml-4">
-          <Play className="h-4 w-4 text-primary" />
+        <div className="size-9 rounded-full bg-accent/15 group-hover:bg-accent/25 flex items-center justify-center transition-colors shrink-0 ml-4">
+          <Play className="h-4 w-4 text-ink" />
         </div>
       </button>
     </div>

@@ -19,9 +19,9 @@ export default function RouteError({
   }, [error]);
 
   return (
-    <div className="panel-elevated rounded-xl px-6 py-10 text-center space-y-4 max-w-lg mx-auto">
-      <h2 className="text-base font-semibold text-on-surface">{t("title")}</h2>
-      <p className="text-sm text-on-surface-variant">{t("section")}</p>
+    <div className="rounded-xl px-6 py-10 text-center space-y-4 max-w-lg mx-auto">
+      <h2 className="text-base font-semibold text-ink">{t("title")}</h2>
+      <p className="text-sm text-ink-3">{t("section")}</p>
       <div className="flex items-center justify-center gap-2">
         <Button type="button" size="sm" onClick={() => reset()}>
           {t("retry")}

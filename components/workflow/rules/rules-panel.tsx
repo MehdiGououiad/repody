@@ -33,7 +33,7 @@ export function RulesPanel({
     <div className="space-y-4">
       <div className="space-y-2">
         <SectionHeading title={t("title")} description={t("hint")} eyebrow={t("eyebrow")} />
-        <p className="text-xs text-on-surface-variant/90 rounded-lg border border-border/70 bg-surface-container-low/80 px-3 py-2">
+        <p className="text-xs text-ink-3/90 rounded-lg border border-line/70 bg-raised/80 px-3 py-2">
           {t("runsOnOcr")}
         </p>
       </div>
@@ -42,14 +42,14 @@ export function RulesPanel({
         <p className="text-sm font-semibold">
           {t("active")} ({rules.length})
         </p>
-        <Badge variant="secondary" className="text-[10px]">
+        <Badge variant="secondary" className="text-2xs">
           {intraCount} {t("scopeIntraShort")} · {crossCount} {t("scopeCrossShort")}
         </Badge>
       </div>
 
       <div className="space-y-3">
         {rules.length === 0 ? (
-          <div className="border-2 border-dashed border-outline-variant rounded-xl py-12 text-center text-sm text-on-surface-variant">
+          <div className="border-2 border-dashed border-line rounded-xl py-12 text-center text-sm text-ink-3">
             {t("emptyActive")}
           </div>
         ) : (

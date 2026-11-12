@@ -3,43 +3,41 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
-import { PageHeader } from "@/components/layout/page-header";
-import { PageShell } from "@/components/layout/page-shell";
+import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { WorkflowsList } from "@/components/workflow/workflows-list";
 import { $server } from "@/lib/api/server";
 import { getQueryClient } from "@/lib/query/get-query-client";
 
+export async function generateMetadata() {
+  return { title: (await getTranslations("nav"))("workflows") };
+}
+
 export default async function WorkflowsPage() {
-  const [t, tNav] = await Promise.all([getTranslations("workflows"), getTranslations("nav")]);
+  const tNav = await getTranslations("nav");
   const queryClient = getQueryClient();
   // Started, not awaited: the list streams in when the API answers.
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/workflows"));
 
   return (
-    <PageShell>
-      <PageHeader
-        title={t("title")}
-        description={t("description")}
-        eyebrow={t("eyebrow")}
-        actions={
-          <Button asChild>
-            <Link href="/workflows/new">
-              <Plus className="h-4 w-4" />
-              {tNav("newWorkflow")}
-            </Link>
-          </Button>
-        }
-      />
+    <Page
+      title={tNav("workflows")}
+      bleed
+      actions={
+        <Button asChild size="sm">
+          <Link href="/workflows/new">
+            <Plus />
+            {tNav("newWorkflow")}
+          </Link>
+        </Button>
+      }
+    >
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <Suspense
-          fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 h-48 animate-pulse" />
-          }
-        >
+        <Suspense fallback={<Skeleton.Lines count={6} className="p-4" />}>
           <WorkflowsList />
         </Suspense>
       </HydrationBoundary>
-    </PageShell>
+    </Page>
   );
 }

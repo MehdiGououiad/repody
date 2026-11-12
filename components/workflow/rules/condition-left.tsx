@@ -144,7 +144,7 @@ export function ConditionLeft({
           onValueChange={(kind) =>
             kind && onChange(switchKind(value, kind as ConditionExpression["kind"], tables))
           }
-          className="inline-flex rounded border border-border p-0.5"
+          className="inline-flex rounded border border-line p-0.5"
           aria-label={t("left")}
         >
           {available.map((kind) => (
@@ -152,9 +152,9 @@ export function ConditionLeft({
               key={kind}
               value={kind}
               className={cn(
-                "h-7 px-2 rounded text-[10px] font-semibold uppercase tracking-wide",
-                "text-on-surface-variant hover:text-on-surface",
-                "data-[state=on]:bg-primary/10 data-[state=on]:text-primary"
+                "h-7 px-2 rounded text-2xs font-semibold  ",
+                "text-ink-3 hover:text-ink",
+                "data-[state=on]:bg-accent/10 data-[state=on]:text-ink"
               )}
             >
               {t(`kinds.${kind}`)}

@@ -44,8 +44,8 @@ function TestRunPanel({
     <div className="space-y-8 min-w-0">
       <section className="space-y-4 min-w-0">
         <div>
-          <h3 className="text-sm font-semibold text-on-surface">{t("test.uploadTitle")}</h3>
-          <p className="text-xs text-on-surface-variant mt-0.5">{t("test.uploadHint")}</p>
+          <h3 className="text-sm font-semibold text-ink">{t("test.uploadTitle")}</h3>
+          <p className="text-xs text-ink-3 mt-0.5">{t("test.uploadHint")}</p>
         </div>
         <IngestionSection
           documents={documents}
@@ -62,9 +62,7 @@ function TestRunPanel({
           {busy ? t("test.running") : t("test.runBtn")}
         </Button>
         {!hasFiles && !busy ? (
-          <p className="text-[11px] text-on-surface-variant text-center sm:text-left">
-            {t("test.noFilesHint")}
-          </p>
+          <p className="text-2xs text-ink-3 text-center sm:text-left">{t("test.noFilesHint")}</p>
         ) : null}
         {start.isError ? (
           <RunErrorAlert
@@ -128,7 +126,7 @@ export function TestDeployStep({
         saveForTestRun={saveForTestRun}
       />
 
-      <hr className="border-border/80" />
+      <hr className="border-line/80" />
 
       <section className="space-y-5 min-w-0">
         <SectionHeading
@@ -138,12 +136,10 @@ export function TestDeployStep({
         />
 
         {!deployed ? (
-          <div className="panel-elevated rounded-xl border-dashed p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="rounded-xl border-dashed p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-on-surface">{t("deploy.readyTitle")}</p>
-              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                {t("deploy.readyHint")}
-              </p>
+              <p className="text-sm font-semibold text-ink">{t("deploy.readyTitle")}</p>
+              <p className="text-xs text-ink-3 mt-1 leading-relaxed">{t("deploy.readyHint")}</p>
             </div>
             <Button
               onClick={onDeploy}
@@ -156,13 +152,11 @@ export function TestDeployStep({
           </div>
         ) : (
           <>
-            <div className="panel-elevated rounded-xl border-success/30 bg-success/5 p-4 flex flex-wrap items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+            <div className="rounded-xl border-pass/30 bg-pass/5 p-4 flex flex-wrap items-center gap-3">
+              <CheckCircle2 className="h-5 w-5 text-pass-ink shrink-0" />
               <div className="flex-1 min-w-[12rem]">
-                <p className="text-sm font-semibold text-success">{t("deploy.liveTitle")}</p>
-                <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-                  {t("deploy.liveHint")}
-                </p>
+                <p className="text-sm font-semibold text-pass-ink">{t("deploy.liveTitle")}</p>
+                <p className="text-xs text-ink-3 mt-0.5 leading-relaxed">{t("deploy.liveHint")}</p>
               </div>
               <Button
                 variant="outline"
@@ -177,9 +171,7 @@ export function TestDeployStep({
             </div>
 
             <div className="min-w-0">
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant mb-3">
-                {t("deploy.apiTitle")}
-              </h3>
+              <h3 className="text-2xs font-semibold text-ink-3 mb-3">{t("deploy.apiTitle")}</h3>
               <ApiPanel
                 workflowId={workflowId}
                 workflowName={name}
@@ -188,9 +180,7 @@ export function TestDeployStep({
                 documents={documents}
               />
             </div>
-            <p className="text-[11px] text-on-surface-variant leading-relaxed">
-              {t("deploy.liveSubmitHint")}
-            </p>
+            <p className="text-2xs text-ink-3 leading-relaxed">{t("deploy.liveSubmitHint")}</p>
           </>
         )}
       </section>

@@ -64,35 +64,33 @@ export function BuilderStepNav({
         className={cn(
           "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-[background-color,color,box-shadow]",
           isActive
-            ? "bg-accent-blue/12 text-on-surface ring-1 ring-accent-blue/20"
+            ? "bg-accent/12 text-ink ring-1 ring-accent/20"
             : isBlocked
-              ? "opacity-40 cursor-not-allowed text-on-surface-variant"
-              : "text-on-surface-variant hover:bg-surface-bright hover:text-on-surface"
+              ? "opacity-40 cursor-not-allowed text-ink-3"
+              : "text-ink-3 hover:bg-panel hover:text-ink"
         )}
       >
         <div
           className={cn(
-            "size-6 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors",
+            "size-6 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold transition-colors",
             isActive
-              ? "bg-accent-blue text-primary-stitch shadow-[0_0_16px_-4px_var(--accent-blue-glow)]"
+              ? "bg-accent text-primary-stitch shadow-[0_0_16px_-4px_var(--accent-blue-glow)]"
               : isDone
-                ? "bg-success text-white"
-                : "bg-surface-container-high text-on-surface-variant"
+                ? "bg-pass text-white"
+                : "bg-selected text-ink-3"
           )}
         >
           {isDone ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={cn("text-[13px] font-medium truncate", isActive && "text-on-surface")}>
+          <p className={cn("text-sm font-medium truncate", isActive && "text-ink")}>
             {tSteps(key)}
           </p>
-          <p className="text-[11px] text-on-surface-variant/70 truncate mt-0.5">
-            {tSteps(`${key}Hint`)}
-          </p>
+          <p className="text-2xs text-ink-3/70 truncate mt-0.5">{tSteps(`${key}Hint`)}</p>
         </div>
-        {isActive && <CircleDot className="h-3.5 w-3.5 shrink-0 text-accent-blue" />}
+        {isActive && <CircleDot className="h-3.5 w-3.5 shrink-0 text-accent-ink" />}
         {!isActive && idx === 2 && testHasResults && (
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-pass-ink" />
         )}
       </button>
     );
@@ -102,20 +100,18 @@ export function BuilderStepNav({
 
   return (
     <div className="flex flex-col gap-1 h-full">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant px-3 mb-2">
-        {tSteps("navTitle")}
-      </p>
+      <p className="text-2xs font-semibold text-ink-3 px-3 mb-2">{tSteps("navTitle")}</p>
       {steps}
-      <div className="mt-auto pt-4 border-t border-border px-3">
-        <div className="flex items-center justify-between text-[11px] text-on-surface-variant mb-1.5">
+      <div className="mt-auto pt-4 border-t border-line px-3">
+        <div className="flex items-center justify-between text-2xs text-ink-3 mb-1.5">
           <span>{tSteps("progress")}</span>
           <span className="font-semibold">
             {done}/{STEP_META.length}
           </span>
         </div>
-        <div className="w-full h-1 rounded-full bg-surface-container-high overflow-hidden">
+        <div className="w-full h-1 rounded-full bg-selected overflow-hidden">
           <div
-            className="h-full rounded-full bg-accent-blue transition-[width] duration-500"
+            className="h-full rounded-full bg-accent transition-[width] duration-500"
             style={{ width: `${(done / STEP_META.length) * 100}%` }}
           />
         </div>

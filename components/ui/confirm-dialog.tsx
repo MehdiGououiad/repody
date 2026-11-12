@@ -1,6 +1,5 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +22,7 @@ interface ConfirmDialogProps {
   destructive?: boolean;
 }
 
+/** Says what will happen and that it cannot be undone; the action button names the action. */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -33,37 +33,26 @@ export function ConfirmDialog({
   cancelLabel,
   destructive = true,
 }: ConfirmDialogProps) {
-  const tCommon = useTranslations("common");
-
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
-  };
-
+  const t = useTranslations("common");
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <div className="flex items-start gap-3">
-            {destructive && (
-              <div className="size-9 rounded-full bg-danger/10 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-4 w-4 text-danger" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <DialogTitle>{title ?? tCommon("confirmDelete")}</DialogTitle>
-              <DialogDescription className="mt-1">
-                {description ?? tCommon("deleteWarning")}
-              </DialogDescription>
-            </div>
-          </div>
+      <DialogContent className="max-w-sm" showClose={false}>
+        <DialogHeader className="pe-0">
+          <DialogTitle>{title ?? t("confirmDelete")}</DialogTitle>
+          <DialogDescription>{description ?? t("deleteWarning")}</DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {cancelLabel ?? tCommon("cancel")}
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            {cancelLabel ?? t("cancel")}
           </Button>
-          <Button variant={destructive ? "destructive" : "default"} onClick={handleConfirm}>
-            {confirmLabel ?? (destructive ? tCommon("delete") : tCommon("confirm"))}
+          <Button
+            variant={destructive ? "destructive" : "default"}
+            onClick={() => {
+              onConfirm();
+              onOpenChange(false);
+            }}
+          >
+            {confirmLabel ?? (destructive ? t("delete") : t("confirm"))}
           </Button>
         </DialogFooter>
       </DialogContent>

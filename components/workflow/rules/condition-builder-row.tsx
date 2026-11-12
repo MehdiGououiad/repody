@@ -22,9 +22,7 @@ import type { Catalog, ComparisonOp, RuleCondition } from "@/lib/types";
 function Slot({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[9px] uppercase tracking-wider font-semibold text-on-surface-variant">
-        {label}
-      </span>
+      <span className="text-2xs font-semibold text-ink-3">{label}</span>
       {children}
     </div>
   );
@@ -63,7 +61,7 @@ export function ConditionRow({
     });
 
   return (
-    <div className="flex flex-wrap items-start gap-2 p-3 rounded-lg bg-surface-container-low border border-border group">
+    <div className="flex flex-wrap items-start gap-2 p-3 rounded-lg bg-raised border border-line group">
       <Slot label={t("left")}>
         <ConditionLeft
           value={left}
@@ -81,7 +79,7 @@ export function ConditionRow({
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
-              <SelectLabel className="text-[10px]">{t("comparison")}</SelectLabel>
+              <SelectLabel className="text-2xs">{t("comparison")}</SelectLabel>
               {operators
                 .filter((op) => !isPresenceOp(op.value, catalog))
                 .map((op) => (
@@ -91,7 +89,7 @@ export function ConditionRow({
                 ))}
             </SelectGroup>
             <SelectGroup>
-              <SelectLabel className="text-[10px]">{t("existence")}</SelectLabel>
+              <SelectLabel className="text-2xs">{t("existence")}</SelectLabel>
               {operators
                 .filter((op) => isPresenceOp(op.value, catalog))
                 .map((op) => (
@@ -119,7 +117,7 @@ export function ConditionRow({
         <Button
           variant="ghost"
           size="icon"
-          className="mt-5 h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-outline hover:text-danger"
+          className="mt-5 h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-outline hover:text-fail-ink"
           onClick={onRemove}
           aria-label={tCommon("remove")}
         >

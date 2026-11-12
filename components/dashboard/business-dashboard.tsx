@@ -1,101 +1,111 @@
 "use client";
 
-import { AlertTriangle, ArrowUpRight } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { GetStartedPanel } from "@/components/dashboard/get-started-panel";
-import { HealthStrip } from "@/components/dashboard/health-strip";
-import { QueueLiveBadge } from "@/components/dashboard/queue-live-badge";
-import { RecentAuditsTable } from "@/components/dashboard/recent-audits-table";
-import { WorkflowSummaryList } from "@/components/dashboard/workflow-summary-list";
-import { Badge } from "@/components/ui/badge";
+import { RunRows, When } from "@/components/audit/run-row";
+import { VolumeChart } from "@/components/dashboard/volume-chart";
+import { Section } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
+import { StatusGlyph } from "@/components/ui/status-glyph";
 import { $api } from "@/lib/api/browser";
-import type { Audit } from "@/lib/types";
+import type { Dashboard, Kpi } from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 const REFRESH_MS = 30_000;
+const frame = "overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--line)]";
 
-const KpiCard = dynamic(
-  () => import("@/components/dashboard/kpi-card").then((m) => ({ default: m.KpiCard })),
-  { loading: () => <div className="panel-elevated rounded-xl h-[120px] animate-pulse" /> }
-);
-const PerformanceChart = dynamic(
-  () =>
-    import("@/components/dashboard/performance-chart").then((m) => ({
-      default: m.PerformanceChart,
-    })),
-  { loading: () => <div className="panel-elevated rounded-xl h-[360px] animate-pulse" /> }
-);
-const ViolationsBreakdown = dynamic(
-  () =>
-    import("@/components/dashboard/violations-breakdown").then((m) => ({
-      default: m.ViolationsBreakdown,
-    })),
-  { loading: () => <div className="panel-elevated rounded-xl h-[280px] animate-pulse" /> }
-);
+/** Where fewer is better, a drop is good news. */
+const LOWER_IS_BETTER = new Set<Kpi["id"]>(["failures"]);
 
-function AttentionRow({ audits }: { audits: Audit[] }) {
-  const t = useTranslations("dashboard");
-  if (audits.length === 0) return null;
+function Stat({ metric }: { metric: Kpi }) {
+  const t = useTranslations("dashboard.kpi");
+  const format = useFormatter();
+  const percent = metric.id === "passRate";
+  const show = (v: number) =>
+    percent
+      ? format.number(v, { style: "percent", maximumFractionDigits: 1 })
+      : format.number(Math.round(v));
+  const change = metric.value - metric.previous;
+  const good = LOWER_IS_BETTER.has(metric.id) ? change <= 0 : change >= 0;
+  const delta = percent
+    ? t("deltaPoints", {
+        delta: format.number(Math.abs(change) * 100, { maximumFractionDigits: 1 }),
+      })
+    : format.number(Math.abs(Math.round(change)));
   return (
-    <div className="panel-elevated rounded-xl border-danger/25 bg-danger/5 px-5 py-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-danger" />
-          <p className="text-sm font-semibold text-danger">{t("openFailures")}</p>
-        </div>
-        <Button
-          asChild
-          variant="ghost"
-          size="sm"
-          className="h-7 text-xs text-danger hover:text-danger gap-1"
-        >
-          <Link href="/audits?outcome=failed">
-            {t("viewAll")}
-            <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        {audits.map((audit) => (
-          <Link
-            key={audit.id}
-            href={`/audits/${audit.id}`}
-            className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg bg-card border border-danger/20 hover:border-danger/40 transition-colors group"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-on-surface truncate group-hover:text-danger transition-colors">
-                {audit.workflowName}
-              </p>
-              <p className="text-[11px] text-on-surface-variant truncate">{audit.id}</p>
-            </div>
-            <Badge variant="danger" className="text-[10px] shrink-0">
-              {t("failedRulesBadge", { count: audit.failedRules })}
-            </Badge>
-          </Link>
-        ))}
-      </div>
+    <div className="flex flex-col gap-1 px-5 py-4 first:ps-0 max-sm:px-0">
+      <span className="text-xs text-ink-3">{t(metric.id)}</span>
+      <span className="text-2xl font-semibold tabular-nums text-ink">{show(metric.value)}</span>
+      <span className="text-xs tabular-nums text-ink-3">
+        {change === 0 ? (
+          t("same")
+        ) : (
+          <>
+            <span className={good ? "text-pass-ink" : "text-fail-ink"}>
+              {change > 0 ? "+" : "−"}
+              {delta}
+            </span>{" "}
+            {t("vsLastWeek")}
+          </>
+        )}
+      </span>
     </div>
   );
 }
 
-function LiveIndicator({ updatedAt }: { updatedAt: number }) {
-  const t = useTranslations("dashboard.live");
-  const format = useFormatter();
-  if (!updatedAt) return null;
+function GetStarted() {
+  const t = useTranslations("dashboard.getStarted");
+  const tSteps = useTranslations("workflows.builder.steps");
+  const steps = ["extract", "rules", "upload"] as const;
   return (
-    <p className="text-[11px] text-on-surface-variant flex items-center gap-2">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
-      </span>
-      {t("updated", { time: format.dateTime(updatedAt, { hour: "2-digit", minute: "2-digit" }) })}
-    </p>
+    <section className={cn(frame, "flex flex-col gap-4 p-5 md:flex-row md:items-center")}>
+      <div className="flex-1">
+        <h2 className="text-sm font-semibold text-ink">{t("title")}</h2>
+        <ol className="mt-3 flex flex-col gap-2 md:flex-row md:gap-6">
+          {steps.map((key, i) => (
+            <li key={key} className="flex items-center gap-2 text-sm text-ink-2">
+              <span className="flex size-5 items-center justify-center rounded-full bg-selected text-2xs font-semibold tabular-nums text-ink-2">
+                {i + 1}
+              </span>
+              {tSteps(key)}
+            </li>
+          ))}
+        </ol>
+      </div>
+      <Button asChild>
+        <Link href="/workflows/new">{t("cta")}</Link>
+      </Button>
+    </section>
   );
 }
 
-/** The dashboard, prefetched by the page and refreshed every 30 s while it is open. */
+function Pulse({ data, updatedAt }: { data: Dashboard; updatedAt: number }) {
+  const t = useTranslations("dashboard");
+  const { runningRuns, queuedRuns } = data.queue;
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-3">
+      <span className="flex items-center gap-1.5">
+        <StatusGlyph status={runningRuns ? "running" : "live"} />
+        {runningRuns || queuedRuns
+          ? t("queueLive.counts", { running: runningRuns, queued: queuedRuns })
+          : t("queueLive.idle")}
+      </span>
+      {updatedAt ? (
+        <span>
+          {t("live.updatedPrefix")} <When value={new Date(updatedAt).toISOString()} />
+        </span>
+      ) : null}
+      {data.staleRuns ? (
+        <Link href="/audits" className="flex items-center gap-1.5 text-warn-ink hover:underline">
+          <StatusGlyph status="warning" />
+          {t("stale", { count: data.staleRuns })}
+        </Link>
+      ) : null}
+    </div>
+  );
+}
+
+/** The overview, prefetched by the page and refreshed every 30 s while it is open. */
 export function BusinessDashboard() {
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
@@ -103,55 +113,89 @@ export function BusinessDashboard() {
     refetchInterval: REFRESH_MS,
     staleTime: REFRESH_MS,
   });
+  const runsThisWeek = data.kpis.find((k) => k.id === "auditsWeek")?.value ?? 0;
 
-  const auditsThisWeek = data.kpis.find((k) => k.id === "auditsWeek")?.value ?? 0;
   return (
-    <div className="space-y-6">
-      {data.workflows.length === 0 || auditsThisWeek === 0 ? <GetStartedPanel /> : null}
-      <HealthStrip staleRuns={data.staleRuns} />
+    <div className="flex flex-col gap-10">
+      <Pulse data={data} updatedAt={dataUpdatedAt} />
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <LiveIndicator updatedAt={dataUpdatedAt} />
-        <QueueLiveBadge queue={data.queue} />
-      </div>
+      {data.workflows.length === 0 || runsThisWeek === 0 ? <GetStarted /> : null}
 
-      <section className="space-y-3">
-        <h2 className="font-display text-base font-semibold text-on-surface">
-          {t("auditActivity")}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-          {data.kpis.map((metric) => (
-            <KpiCard key={metric.id} metric={metric} />
-          ))}
+      <Section
+        title={t("openFailures")}
+        hint={data.failedAudits.length ? t("needsReviewHint") : undefined}
+        actions={
+          data.failedAudits.length ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/audits?outcome=failed">{tCommon("viewAll")}</Link>
+            </Button>
+          ) : null
+        }
+      >
+        {data.failedAudits.length ? (
+          <div className={frame}>
+            <RunRows audits={data.failedAudits} />
+          </div>
+        ) : (
+          <p className="flex items-center gap-2 text-sm text-ink-3">
+            <StatusGlyph status="passed" />
+            {t("nothingToReview")}
+          </p>
+        )}
+      </Section>
+
+      <section className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 divide-line sm:grid-cols-3 sm:divide-x">
+            {data.kpis.map((metric) => (
+              <Stat key={metric.id} metric={metric} />
+            ))}
+          </div>
+          <VolumeChart data={data.performanceSeries} />
         </div>
+        <Section title={t("violations.title")} hint={t("violations.hint")}>
+          {data.failuresBySeverity.length ? (
+            <ul className="flex flex-col gap-3">
+              {data.failuresBySeverity.map((item) => (
+                <li key={item.severity} className="flex flex-col gap-1.5">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-ink-2">{t(`violations.${item.severity}`)}</span>
+                    <span className="tabular-nums text-ink-3">{Math.round(item.share * 100)}%</span>
+                  </div>
+                  <span className="h-1 overflow-hidden rounded-full bg-selected">
+                    <span
+                      className={cn(
+                        "block h-full rounded-full",
+                        item.severity === "reject" ? "bg-fail" : "bg-warn"
+                      )}
+                      style={{ width: `${item.share * 100}%` }}
+                    />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-ink-3">{t("violations.none")}</p>
+          )}
+        </Section>
       </section>
 
-      <AttentionRow audits={data.failedAudits} />
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2">
-          <PerformanceChart data={data.performanceSeries} />
-        </div>
-        <ViolationsBreakdown items={data.failuresBySeverity} />
-      </div>
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-base font-semibold text-on-surface">
-            {t("recentSubmissions")}
-          </h2>
-          <Link
-            href="/audits"
-            className="text-xs text-primary hover:underline flex items-center gap-1"
-          >
-            {tCommon("viewAll")}
-            <ArrowUpRight className="h-3 w-3" />
-          </Link>
-        </div>
-        <RecentAuditsTable audits={data.recentAudits} />
-      </section>
-
-      <WorkflowSummaryList workflows={data.workflows} />
+      <Section
+        title={t("recentSubmissions")}
+        actions={
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/audits">{tCommon("viewAll")}</Link>
+          </Button>
+        }
+      >
+        {data.recentAudits.length ? (
+          <div className={frame}>
+            <RunRows audits={data.recentAudits} />
+          </div>
+        ) : (
+          <p className="text-sm text-ink-3">{t("noRuns")}</p>
+        )}
+      </Section>
     </div>
   );
 }

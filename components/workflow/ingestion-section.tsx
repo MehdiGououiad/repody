@@ -28,22 +28,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Collapsible
-      defaultOpen
-      className="rounded-lg border border-border bg-surface-container-lowest overflow-hidden"
-    >
-      <CollapsibleTrigger className="group w-full flex items-center justify-between px-3 py-2 text-left hover:bg-surface-container-low transition-colors">
+    <Collapsible defaultOpen className="rounded-lg border border-line bg-panel overflow-hidden">
+      <CollapsibleTrigger className="group w-full flex items-center justify-between px-3 py-2 text-left hover:bg-raised transition-colors">
         <span className="flex items-center gap-2">
-          <Icon className="h-3.5 w-3.5 text-on-surface-variant" />
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-            {title}
-          </span>
+          <Icon className="h-3.5 w-3.5 text-ink-3" />
+          <span className="text-2xs font-semibold text-ink-3">{title}</span>
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-on-surface-variant transition-transform group-data-[state=open]:rotate-180" />
+        <ChevronDown className="h-3.5 w-3.5 text-ink-3 transition-transform group-data-[state=open]:rotate-180" />
       </CollapsibleTrigger>
-      <CollapsibleContent className="px-3 pb-2 divide-y divide-border">
-        {children}
-      </CollapsibleContent>
+      <CollapsibleContent className="px-3 pb-2 divide-y divide-line">{children}</CollapsibleContent>
     </Collapsible>
   );
 }
@@ -76,20 +69,20 @@ function DocUploadCard({
   });
 
   return (
-    <div className="rounded-xl panel-elevated overflow-hidden">
-      <div className="flex items-center gap-3 px-4 py-3 bg-surface-container-low border-b border-border">
-        <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-          <FileText className="h-4 w-4 text-primary" />
+    <div className="rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3 bg-raised border-b border-line">
+        <div className="size-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0">
+          <FileText className="h-4 w-4 text-ink" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-on-surface truncate">{docName}</p>
-          <p className="text-[11px] text-on-surface-variant">
+          <p className="text-sm font-semibold text-ink truncate">{docName}</p>
+          <p className="text-2xs text-ink-3">
             {t("fieldCount", { count: namedFields.length })}
             {docRules.length > 0 && ` · ${t("ruleCount", { count: docRules.length })}`}
           </p>
         </div>
         {file ? (
-          <Badge variant="success" className="gap-1 text-[10px] shrink-0">
+          <Badge variant="success" className="gap-1 text-2xs shrink-0">
             {t("fileReady")}
           </Badge>
         ) : null}
@@ -100,13 +93,11 @@ function DocUploadCard({
           <Section icon={Tag} title={t("fieldsToExtract")}>
             {namedFields.map((f) => (
               <div key={f.id} className="py-1.5 flex items-start gap-2">
-                <code className="text-[11px] font-mono text-primary bg-primary/8 px-1.5 py-0.5 rounded shrink-0">
+                <code className="text-2xs font-mono text-ink bg-accent/8 px-1.5 py-0.5 rounded shrink-0">
                   {f.name}
                 </code>
                 {f.description ? (
-                  <span className="text-[11px] text-on-surface-variant leading-relaxed">
-                    {f.description}
-                  </span>
+                  <span className="text-2xs text-ink-3 leading-relaxed">{f.description}</span>
                 ) : null}
               </div>
             ))}
@@ -118,15 +109,15 @@ function DocUploadCard({
             {docRules.map((r) => (
               <div key={r.id} className="py-1.5 flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-medium text-on-surface truncate">{r.name}</p>
-                  <p className="text-[10px] text-on-surface-variant font-mono truncate mt-0.5">
+                  <p className="text-2xs font-medium text-ink truncate">{r.name}</p>
+                  <p className="text-2xs text-ink-3 font-mono truncate mt-0.5">
                     {r.conditions.flatMap(conditionFields).join(", ")}
                   </p>
                 </div>
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide shrink-0",
-                    r.severity === "reject" ? "text-danger" : "text-warning"
+                    "inline-flex items-center gap-1 text-2xs font-semibold shrink-0",
+                    r.severity === "reject" ? "text-fail-ink" : "text-warn-ink"
                   )}
                 >
                   <AlertTriangle className="h-2.5 w-2.5" />
@@ -138,16 +129,16 @@ function DocUploadCard({
         ) : null}
 
         {file ? (
-          <div className="flex items-center gap-3 p-3 rounded-lg border border-success/40 bg-success/5">
-            <FileText className="h-4 w-4 text-success shrink-0" />
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-pass/40 bg-pass/5">
+            <FileText className="h-4 w-4 text-pass-ink shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-on-surface truncate">{file.name}</p>
-              <p className="text-xs text-on-surface-variant">{formatBytes(file.size, locale)}</p>
+              <p className="text-sm font-medium text-ink truncate">{file.name}</p>
+              <p className="text-xs text-ink-3">{formatBytes(file.size, locale)}</p>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-on-surface-variant hover:text-danger"
+              className="h-7 w-7 text-ink-3 hover:text-fail-ink"
               onClick={() => onFileChange(null)}
               aria-label={tCommon("remove")}
             >
@@ -160,19 +151,17 @@ function DocUploadCard({
               className: cn(
                 "rounded-lg border-2 border-dashed p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-colors focus-visible:outline-2 focus-visible:outline-ring",
                 isDragActive
-                  ? "border-primary bg-primary/5"
-                  : "border-outline-variant hover:border-outline hover:bg-surface-container-low"
+                  ? "border-accent bg-accent/5"
+                  : "border-line hover:border-line-strong hover:bg-raised"
               ),
             })}
           >
             <input {...getInputProps({ name: `upload-${doc.id}` })} />
-            <Upload className="h-5 w-5 text-on-surface-variant mb-2" aria-hidden="true" />
-            <p className="text-xs font-medium text-on-surface">
-              {t("uploadPrompt", { name: docName })}
-            </p>
-            <p className="text-[10px] text-on-surface-variant mt-1">{t("fileHint")}</p>
+            <Upload className="h-5 w-5 text-ink-3 mb-2" aria-hidden="true" />
+            <p className="text-xs font-medium text-ink">{t("uploadPrompt", { name: docName })}</p>
+            <p className="text-2xs text-ink-3 mt-1">{t("fileHint")}</p>
             {fileRejections.length > 0 ? (
-              <p role="alert" className="text-[11px] text-danger mt-2">
+              <p role="alert" className="text-2xs text-fail-ink mt-2">
                 {t("fileRejected")}
               </p>
             ) : null}
@@ -202,7 +191,7 @@ export function IngestionSection({
 
   if (named.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-48 text-center text-on-surface-variant gap-2">
+      <div className="flex flex-col items-center justify-center h-48 text-center text-ink-3 gap-2">
         <FileText className="h-8 w-8 opacity-30" />
         <p className="text-sm">{t("noDocs")}</p>
         <p className="text-xs">{t("noDocsHint")}</p>

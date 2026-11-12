@@ -39,7 +39,7 @@ export function FieldSelect({
       <SelectTrigger
         className={cn(
           "h-8 text-xs w-40 font-mono",
-          stale && "border-danger text-danger",
+          stale && "border-fail text-fail-ink",
           className
         )}
       >
@@ -47,18 +47,18 @@ export function FieldSelect({
       </SelectTrigger>
       <SelectContent>
         {stale ? (
-          <SelectItem value={value} className="text-xs font-mono text-danger">
+          <SelectItem value={value} className="text-xs font-mono text-fail-ink">
             {value}
           </SelectItem>
         ) : null}
         {options.map((option) => (
           <SelectItem key={option.name} value={option.name} className="text-xs font-mono">
             {option.name}
-            <span className="ml-2 text-[10px] text-on-surface-variant">{option.type}</span>
+            <span className="ml-2 text-2xs text-ink-3">{option.type}</span>
           </SelectItem>
         ))}
         {options.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-on-surface-variant italic">{t("noFields")}</div>
+          <div className="px-3 py-2 text-xs text-ink-3 italic">{t("noFields")}</div>
         ) : null}
       </SelectContent>
     </Select>
@@ -103,7 +103,7 @@ export function OperandPicker({
     <Button
       variant="ghost"
       size="sm"
-      className="h-8 text-[10px] text-on-surface-variant px-2"
+      className="h-8 text-2xs text-ink-3 px-2"
       onClick={() => onChange(next)}
     >
       {label}

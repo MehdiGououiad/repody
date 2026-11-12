@@ -1,17 +1,17 @@
 {
   "brand": {
-    "name": "Repody",
-    "tagline": "Agent Platform"
+    "name": "Repody"
   },
   "nav": {
-    "dashboard": "Dashboard",
+    "dashboard": "Overview",
     "workflows": "Workflows",
-    "audits": "Audit Reports",
+    "audits": "Runs",
     "settings": "Settings",
-    "newWorkflow": "New Workflow",
+    "newWorkflow": "New workflow",
     "logout": "Sign out",
     "closeMenu": "Close menu",
-    "openMenu": "Open menu"
+    "openMenu": "Open menu",
+    "main": "Main"
   },
   "auth": {
     "signInTitle": "Sign in to Repody",
@@ -42,14 +42,20 @@
     "errorDefault": "Sign-in failed. Try again."
   },
   "topbar": {
-    "searchPlaceholder": "Search audits, workflows…",
+    "searchPlaceholder": "Search or jump to…",
     "language": "Language",
     "toggleTheme": "Toggle theme",
     "commandGroups": {
       "navigate": "Navigate",
       "workflows": "Workflows"
     },
-    "noResults": "No results found."
+    "noResults": "No results found.",
+    "search": "Search",
+    "theme": {
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System"
+    }
   },
   "common": {
     "exportCsv": "Export CSV",
@@ -60,17 +66,17 @@
     "open": "Open",
     "owner": "Owner",
     "viewAll": "View all",
-    "deployWorkflow": "Deploy workflow",
-    "redeployWorkflow": "Re-deploy",
+    "deployWorkflow": "Publish",
+    "redeployWorkflow": "Publish again",
     "of": "of",
     "skipToContent": "Skip to main content",
     "neverRun": "Never run",
-    "newWorkflow": "New Workflow",
+    "newWorkflow": "New workflow",
     "copy": "Copy",
     "copied": "Copied",
     "backendLabel": "API",
     "backendOnline": "Backend online ({ms}ms)",
-    "backendOffline": "Backend offline — start Docker or run uvicorn",
+    "backendOffline": "API unreachable",
     "backendChecking": "Checking API…",
     "saving": "Saving…",
     "deploying": "Deploying…",
@@ -108,23 +114,24 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
+    "title": "Overview",
     "description": "Audit outcomes, compliance trends, and workflows at a glance.",
     "pageDescription": "Live view of audits, pass rates, and workflows that need attention.",
     "auditActivity": "This week",
-    "offlineTitle": "Connect to see live data",
-    "offlineHint": "Start the platform to load audits and metrics. You can still create workflows offline.",
-    "offlineCta": "Create workflow",
-    "recentSubmissions": "Recent audits",
-    "openFailures": "Needs attention",
+    "offlineTitle": "The API is unreachable",
+    "offlineHint": "Runs and numbers appear once the API answers. Workflows can still be edited.",
+    "offlineCta": "Open workflows",
+    "recentSubmissions": "Recent runs",
+    "openFailures": "Needs review",
     "viewAll": "View all",
     "failedRulesBadge": "{count, plural, one {# issue} other {# issues}}",
     "live": {
-      "updated": "Live · updated {time}"
+      "updated": "Live · updated {time}",
+      "updatedPrefix": "Updated"
     },
     "queueLive": {
-      "counts": "{running} running · {queued} queued",
-      "idle": "No runs in queue"
+      "counts": "{running} running, {queued} queued",
+      "idle": "No runs in progress"
     },
     "workflows": {
       "title": "Your workflows",
@@ -137,11 +144,14 @@
       "title": "Recent Audits"
     },
     "kpi": {
-      "auditsWeek": "Audits this week",
+      "auditsWeek": "Runs this week",
       "passRate": "Pass rate",
       "failures": "Rule failures",
       "trendUp": "Up {delta} from prior period",
-      "trendDown": "Down {delta} from prior period"
+      "trendDown": "Down {delta} from prior period",
+      "deltaPoints": "{delta} pts",
+      "vsLastWeek": "vs last week",
+      "same": "Same as last week"
     },
     "performance": {
       "title": "Audit volume",
@@ -153,46 +163,53 @@
       "emptyTitle": "No audit volume yet",
       "emptyHint": "Run workflows to populate daily audit counts.",
       "summary": "{total} audits this period. Peak day {peakDay} with {peakRuns} audits.",
-      "peakDay": "Peak day"
+      "peakDay": "Peak day",
+      "summaryShort": "{total, plural, one {# run} other {# runs}} in the last 7 days",
+      "barLabel": "{day}: {count, plural, =0 {no runs} one {# run} other {# runs}}"
     },
     "violations": {
       "title": "Failures by severity",
-      "hint": "Share of this week's rule failures.",
+      "hint": "This week",
       "reject": "Reject",
       "flag": "Flag",
-      "none": "No failures this week."
+      "none": "No rule failed this week"
     },
     "getStarted": {
-      "title": "Get your first audit running",
+      "title": "Set up your first workflow",
       "description": "Follow the same three steps as the workflow builder — define fields, add rules, then test and deploy.",
       "stepLabel": "Step {number}",
-      "footerHint": "Completed audits and pass rates will appear on this dashboard."
-    }
+      "footerHint": "Completed audits and pass rates will appear on this dashboard.",
+      "cta": "Create a workflow"
+    },
+    "needsReviewHint": "Runs whose rules failed, oldest first.",
+    "nothingToReview": "Nothing needs review",
+    "noRuns": "No runs yet",
+    "stale": "{count, plural, one {# run stopped responding} other {# runs stopped responding}}"
   },
   "audits": {
-    "title": "Audit Reports",
+    "title": "Runs",
     "description": "Browse, filter, and triage every workflow run.",
     "report": {
       "backToAudits": "Audits",
-      "exportPdf": "Export PDF",
-      "exportCsv": "Export CSV",
+      "exportPdf": "Print",
+      "exportCsv": "CSV",
       "language": "Language",
       "runOn": "Run on",
       "via": "via",
       "api": "API",
       "interface": "Interface",
       "source": "Source",
-      "extractedData": "Extracted data",
-      "validationRules": "Validation rules",
+      "extractedData": "Fields",
+      "validationRules": "Rules",
       "passed": "Passed",
       "failed": "Failed",
       "skipped": "Skipped",
-      "fieldsExtracted": "{count} fields extracted",
-      "rulesPassed": "{passed} / {total} rules passed",
+      "fieldsExtracted": "{count, plural, one {# field} other {# fields}}",
+      "rulesPassed": "{passed} of {total} rules passed",
       "rulesFailed": "{count} failed",
-      "allRulesPassed": "All rules passed",
-      "validationFailed": "Validation failed",
-      "reviewRequired": "Review required",
+      "allRulesPassed": "Passed",
+      "validationFailed": "Rejected",
+      "reviewRequired": "Needs review",
       "value": "Extracted value",
       "field": "Field",
       "status": "Status",
@@ -212,8 +229,13 @@
       "totalDuration": "Total duration",
       "extractionTime": "Extraction time",
       "validationTime": "Validation time",
-      "docExtracted": "{done} / {total} extracted",
-      "extractionFailed": "Extraction failed"
+      "docExtracted": "{done} of {total} found",
+      "extractionFailed": "The document could not be read",
+      "viaApi": "via API",
+      "viaTest": "test run",
+      "notFound": "Not found",
+      "modelOutput": "Model output",
+      "pagesTruncated": "Only {sent} of {total} pages were read"
     },
     "table": {
       "id": "Audit ID",
@@ -222,35 +244,43 @@
       "timestamp": "Timestamp",
       "rows": "Rows",
       "summary": "{count, plural, =0 {No audits} one {# audit} other {# audits}}",
-      "empty": "No audits match the current filters.",
-      "total": "{total, plural, =0 {No audits} one {# audit} other {# audits}}",
+      "empty": "No matching runs",
+      "total": "{total, plural, =0 {No runs} one {# run} other {# runs}}",
       "page": "Page {page} of {pages}",
       "previous": "Previous page",
       "next": "Next page"
     },
     "filters": {
-      "searchPlaceholder": "Search by ID, entity, workflow…",
+      "searchPlaceholder": "Search runs",
       "status": "Status",
-      "allStatuses": "All statuses",
+      "allStatuses": "All",
       "workflow": "Workflow",
       "allWorkflows": "All workflows",
-      "clearAll": "Clear all",
+      "clearAll": "Clear filters",
       "day": "Day"
     },
     "status": {
       "passed": "Passed",
       "failed": "Failed",
-      "warning": "Warning",
+      "warning": "Needs review",
       "failedWithRules": "Failed ({count, plural, one {# rule} other {# rules}})"
     },
     "eyebrow": "Reports",
-    "exportCsv": "Export CSV"
+    "exportCsv": "Export CSV",
+    "row": {
+      "failedRules": "{count, plural, one {# rule failed} other {# rules failed}}",
+      "fields": "{count, plural, one {# field} other {# fields}}"
+    },
+    "emptyTitle": "No runs yet",
+    "emptyHint": "Runs appear here when a workflow processes documents, from a test or the API.",
+    "emptyCta": "Open workflows",
+    "emptyFilteredHint": "No run matches these filters."
   },
   "workflows": {
     "title": "Workflows",
     "description": "Your data extraction and validation pipelines.",
     "status": {
-      "active": "Active",
+      "active": "Live",
       "draft": "Draft"
     },
     "card": {
@@ -746,7 +776,19 @@
         "eyebrow": "Schema"
       }
     },
-    "eyebrow": "Pipelines"
+    "eyebrow": "Pipelines",
+    "row": {
+      "runs": "{count, plural, one {# run} other {# runs}}",
+      "neverRun": "Never run"
+    },
+    "columns": {
+      "name": "Name",
+      "runs": "Runs",
+      "passRate": "Pass rate",
+      "lastRun": "Last run"
+    },
+    "emptyTitle": "No workflows yet",
+    "emptyHint": "A workflow names the documents you receive, the fields to read from them, and the rules they must pass."
   },
   "health": {
     "alerts": {
@@ -757,7 +799,7 @@
     }
   },
   "settings": {
-    "title": "Platform",
+    "title": "Settings",
     "eyebrow": "Settings",
     "description": "Runtime configuration and document model status.",
     "model": "Document model",
@@ -768,8 +810,8 @@
     "enabled": "Enabled",
     "disabled": "Disabled",
     "cacheDetail": "Redis extraction cache",
-    "runtimeTitle": "Effective runtime configuration",
-    "runtimeHint": "Values currently used by the API and workers. Environment changes require a service restart.",
+    "runtimeTitle": "Limits",
+    "runtimeHint": "Set by the deployment's environment; a restart applies changes.",
     "endpoint": "Inference endpoint",
     "servedModel": "Served model",
     "pagesPerDocument": "Pages per document",
@@ -777,7 +819,16 @@
     "uploadLimit": "Upload limit",
     "uploadLimitValue": "{files} files / {size}",
     "runTimeout": "Run timeout",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "modelTitle": "Document model",
+    "modelHint": "The model that reads documents.",
+    "brandTitle": "Brand",
+    "brandHint": "Set per deployment with the REPODY_BRAND_* variables of the web container.",
+    "brandName": "Product name",
+    "brandBase": "Base colour",
+    "brandAccent": "Accent colour",
+    "brandContrast": "Contrast",
+    "brandRadius": "Corner radius"
   },
   "error": {
     "title": "Something went wrong",

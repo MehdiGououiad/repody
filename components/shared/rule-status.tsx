@@ -14,9 +14,9 @@ const ICON: Record<RuleStatus, LucideIcon> = {
 };
 
 const COLOR: Record<RuleStatus, string> = {
-  passed: "text-success",
-  failed: "text-danger",
-  skipped: "text-on-surface-variant",
+  passed: "text-pass-ink",
+  failed: "text-fail-ink",
+  skipped: "text-ink-3",
 };
 
 export function RuleStatusIcon({ status, ...props }: { status: RuleStatus } & LucideProps) {

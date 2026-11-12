@@ -6,29 +6,21 @@ import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
-function TabsList({ className, ref, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+/** Compact text tabs, the active one on a quiet raised step. Switching is instant. */
+function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      ref={ref}
-      className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
-        className
-      )}
+      className={cn("inline-flex items-center gap-0.5 text-ink-3", className)}
       {...props}
     />
   );
 }
 
-function TabsTrigger({
-  className,
-  ref,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
-      ref={ref}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1 text-sm font-medium ring-offset-background transition-[color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+        "inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-100 hover:text-ink disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-selected data-[state=active]:text-ink [&_svg]:size-3.5",
         className
       )}
       {...props}
@@ -36,21 +28,8 @@ function TabsTrigger({
   );
 }
 
-function TabsContent({
-  className,
-  ref,
-  ...props
-}: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return (
-    <TabsPrimitive.Content
-      ref={ref}
-      className={cn(
-        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        className
-      )}
-      {...props}
-    />
-  );
+function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  return <TabsPrimitive.Content className={cn("outline-none", className)} {...props} />;
 }
 
 export { Tabs, TabsContent, TabsList, TabsTrigger };

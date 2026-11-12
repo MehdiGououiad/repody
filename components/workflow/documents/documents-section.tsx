@@ -46,8 +46,8 @@ export function DocumentsSection({
         type="button"
         onClick={addDoc}
         className={cn(
-          "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent-blue/30",
-          "text-sm text-on-surface-variant hover:border-accent-blue/60 hover:text-on-surface hover:bg-accent-blue/5 transition-[border-color,color,background-color]"
+          "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/30",
+          "text-sm text-ink-3 hover:border-accent/60 hover:text-ink hover:bg-accent/5 transition-[border-color,color,background-color]"
         )}
       >
         <Plus className="h-4 w-4" />

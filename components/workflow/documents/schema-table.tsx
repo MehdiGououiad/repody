@@ -20,13 +20,12 @@ import { newSchemaField } from "@/lib/workflow/new-items";
 const ROW_GRID =
   "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,2fr)_auto_2rem] md:gap-0";
 const CELL =
-  "flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-border";
-const MOBILE_LABEL =
-  "text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant md:sr-only";
+  "flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-line";
+const MOBILE_LABEL = "text-2xs font-semibold text-ink-3 md:sr-only";
 const HEADER_CELL =
-  "min-w-0 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant border-r border-border break-words leading-snug";
+  "min-w-0 px-3 py-2 text-2xs font-semibold text-ink-3 border-r border-line break-words leading-snug";
 const INLINE_INPUT =
-  "text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input";
+  "text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-panel focus-visible:border-line-strong";
 
 function SchemaFieldRow({
   field,
@@ -43,12 +42,9 @@ function SchemaFieldRow({
   const tCommon = useTranslations("common");
 
   return (
-    <div className="border-b border-border last:border-b-0 md:border-b-0">
+    <div className="border-b border-line last:border-b-0 md:border-b-0">
       <div
-        className={cn(
-          "group flex flex-col gap-3 p-3 hover:bg-surface-bright transition-colors",
-          ROW_GRID
-        )}
+        className={cn("group flex flex-col gap-3 p-3 hover:bg-panel transition-colors", ROW_GRID)}
       >
         <div className={CELL}>
           <span className={MOBILE_LABEL}>{t("name")}</span>
@@ -60,10 +56,10 @@ function SchemaFieldRow({
             className={cn(
               "font-mono",
               INLINE_INPUT,
-              duplicate && "border-danger text-danger focus-visible:border-danger"
+              duplicate && "border-fail text-fail-ink focus-visible:border-fail"
             )}
           />
-          {duplicate ? <p className="text-[10px] text-danger">{t("duplicateName")}</p> : null}
+          {duplicate ? <p className="text-2xs text-fail-ink">{t("duplicateName")}</p> : null}
         </div>
         <div className={CELL}>
           <span className={MOBILE_LABEL}>{t("type")}</span>
@@ -93,7 +89,7 @@ function SchemaFieldRow({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-outline hover:text-danger md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
+            className="h-7 w-7 text-outline hover:text-fail-ink md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
             onClick={onRemove}
             aria-label={tCommon("delete")}
           >
@@ -135,8 +131,8 @@ export function SchemaTable({
         onImport={(fields, mode) => onChange(mode === "append" ? [...schema, ...fields] : fields)}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <p className="text-[11px] text-on-surface-variant flex items-start gap-1.5 min-w-0">
-          <Sparkles className="h-3 w-3 text-accent-blue shrink-0 mt-0.5" />
+        <p className="text-2xs text-ink-3 flex items-start gap-1.5 min-w-0">
+          <Sparkles className="h-3 w-3 text-accent-ink shrink-0 mt-0.5" />
           <span className="min-w-0">{t("description")}</span>
         </p>
         <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
@@ -161,25 +157,20 @@ export function SchemaTable({
         <button
           type="button"
           onClick={add}
-          className="w-full border-2 border-dashed border-outline-variant rounded-lg py-8 text-center text-xs text-on-surface-variant hover:border-primary/40 hover:bg-primary/5 transition-colors"
+          className="w-full border-2 border-dashed border-line rounded-lg py-8 text-center text-xs text-ink-3 hover:border-accent/40 hover:bg-accent/5 transition-colors"
         >
           {t("empty")}
         </button>
       ) : (
-        <div className="border border-border rounded-lg overflow-hidden min-w-0">
-          <div
-            className={cn(
-              "hidden md:grid bg-surface-container-low border-b border-border",
-              ROW_GRID
-            )}
-          >
+        <div className="border border-line rounded-lg overflow-hidden min-w-0">
+          <div className={cn("hidden md:grid bg-raised border-b border-line", ROW_GRID)}>
             <div className={HEADER_CELL}>{t("name")}</div>
             <div className={HEADER_CELL}>{t("type")}</div>
             <div className={HEADER_CELL}>{t("intent")}</div>
             <div className={cn(HEADER_CELL, "md:text-center")}>{t("listModeLabel")}</div>
             <div className="sr-only">{tCommon("delete")}</div>
           </div>
-          <div className="md:divide-y md:divide-border">
+          <div className="md:divide-y md:divide-line">
             {schema.map((field) => (
               <SchemaFieldRow
                 key={field.id}

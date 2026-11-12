@@ -20,7 +20,7 @@ export function ApiRunLoadingScreen({
       <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-6 px-4 text-center">
         <div className="relative size-16">
           <motion.span
-            className="absolute inset-0 rounded-full bg-primary/15"
+            className="absolute inset-0 rounded-full bg-accent/15"
             animate={{ scale: [1, 1.35], opacity: [0.7, 0] }}
             transition={{ duration: 1.6, repeat: Number.POSITIVE_INFINITY, ease: "easeOut" }}
           />
@@ -54,21 +54,19 @@ export function ApiRunLoadingScreen({
             animate={{ scale: [1, 1.12, 1] }}
             transition={{ duration: 1.6, repeat: Number.POSITIVE_INFINITY }}
           >
-            <Zap className="h-6 w-6 text-primary" />
+            <Zap className="h-6 w-6 text-ink" />
           </motion.div>
         </div>
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
-          <p className="text-sm font-semibold text-on-surface">{t("processing")}</p>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {t("processingHint", { name: workflowName })}
-          </p>
+          <p className="text-sm font-semibold text-ink">{t("processing")}</p>
+          <p className="mt-1 text-xs text-ink-3">{t("processingHint", { name: workflowName })}</p>
         </motion.div>
         {progress ? (
           <div className="w-full max-w-md text-left">
             <RunProgressSteps progress={progress} />
           </div>
         ) : (
-          <p className="text-xs text-on-surface-variant">{t("parseStep")}…</p>
+          <p className="text-xs text-ink-3">{t("parseStep")}…</p>
         )}
       </div>
     </MotionConfig>

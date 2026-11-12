@@ -3,19 +3,23 @@ import { getTranslations } from "next-intl/server";
 import type { SearchParams } from "nuqs/server";
 import { Suspense } from "react";
 import { AuditList } from "@/components/audit/audit-list";
-import { PageHeader } from "@/components/layout/page-header";
-import { PageShell } from "@/components/layout/page-shell";
+import { Page } from "@/components/layout/page";
+import { Skeleton } from "@/components/ui/skeleton";
 import { $server } from "@/lib/api/server";
 import { auditsQuery, loadAuditSearchParams } from "@/lib/audits/search-params";
 import { getQueryClient } from "@/lib/query/get-query-client";
+
+export async function generateMetadata() {
+  return { title: (await getTranslations("nav"))("audits") };
+}
 
 export default async function AuditsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const [t, search] = await Promise.all([
-    getTranslations("audits"),
+  const [tNav, search] = await Promise.all([
+    getTranslations("nav"),
     loadAuditSearchParams(searchParams),
   ]);
   const queryClient = getQueryClient();
@@ -26,13 +30,12 @@ export default async function AuditsPage({
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/workflows"));
 
   return (
-    <PageShell>
-      <PageHeader title={t("title")} description={t("description")} eyebrow={t("eyebrow")} />
+    <Page title={tNav("audits")} bleed>
       <HydrationBoundary state={dehydrate(queryClient)}>
-        <Suspense fallback={<div className="panel-elevated rounded-xl h-96 animate-pulse" />}>
+        <Suspense fallback={<Skeleton.Lines count={10} className="p-4" />}>
           <AuditList />
         </Suspense>
       </HydrationBoundary>
-    </PageShell>
+    </Page>
   );
 }

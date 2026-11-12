@@ -31,7 +31,7 @@ export function DocumentCard({
   const namedFieldNames = doc.schema.filter((f) => f.name.trim()).map((f) => f.name.trim());
 
   return (
-    <div className="panel-elevated rounded-xl overflow-hidden">
+    <div className="rounded-xl overflow-hidden">
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
@@ -39,27 +39,27 @@ export function DocumentCard({
         title={tCommon("confirmDelete")}
         description={`${doc.documentType || t("docSource.documentTypePlaceholder")} — ${tCommon("deleteWarning")}`}
       />
-      <div className="flex w-full items-center gap-3 px-5 py-4 select-none hover:bg-surface-bright transition-colors">
+      <div className="flex w-full items-center gap-3 px-5 py-4 select-none hover:bg-panel transition-colors">
         <button
           type="button"
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left text-on-surface"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left text-ink"
           onClick={() => setOpen((v: boolean) => !v)}
           aria-expanded={open}
           aria-controls={`doc-panel-${doc.id}`}
         >
-          <div className="size-8 rounded-lg bg-accent-blue/15 ring-1 ring-accent-blue/20 flex items-center justify-center shrink-0">
-            <FileText className="h-4 w-4 text-primary" />
+          <div className="size-8 rounded-lg bg-accent/15 ring-1 ring-accent/20 flex items-center justify-center shrink-0">
+            <FileText className="h-4 w-4 text-ink" />
           </div>
 
           <div className="flex-1 min-w-0">
             <span className="text-sm font-semibold">
               {doc.documentType || (
-                <span className="text-on-surface-variant font-normal">
+                <span className="text-ink-3 font-normal">
                   {t("docSource.unnamedDoc")} {index + 1}
                 </span>
               )}
             </span>
-            <p className="text-[11px] text-on-surface-variant mt-0.5 truncate">
+            <p className="text-2xs text-ink-3 mt-0.5 truncate">
               {namedFieldNames.length > 0
                 ? `${t("schema.fieldCount", { count: namedFieldNames.length })} · ${namedFieldNames.join(", ")}`
                 : t("schema.emptyShort")}
@@ -67,9 +67,9 @@ export function DocumentCard({
           </div>
 
           {open ? (
-            <ChevronDown className="h-4 w-4 text-on-surface-variant" />
+            <ChevronDown className="h-4 w-4 text-ink-3" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-on-surface-variant" />
+            <ChevronRight className="h-4 w-4 text-ink-3" />
           )}
         </button>
 
@@ -77,7 +77,7 @@ export function DocumentCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-outline hover:text-danger"
+            className="h-7 w-7 text-outline hover:text-fail-ink"
             onClick={() => setConfirmOpen(true)}
             aria-label={tCommon("delete")}
           >
@@ -87,7 +87,7 @@ export function DocumentCard({
       </div>
 
       {open ? (
-        <div id={`doc-panel-${doc.id}`} className="px-5 pb-5 pt-2 space-y-4 border-t border-border">
+        <div id={`doc-panel-${doc.id}`} className="px-5 pb-5 pt-2 space-y-4 border-t border-line">
           <div className="max-w-sm space-y-1.5">
             <Label htmlFor={`doc-type-${doc.id}`} className="text-xs font-semibold">
               {t("docSource.documentTypeLabel")}
@@ -101,7 +101,7 @@ export function DocumentCard({
               placeholder={t("docSource.documentTypePlaceholder")}
               className="h-9"
             />
-            <p className="text-[11px] text-on-surface-variant">{t("docSource.documentTypeHint")}</p>
+            <p className="text-2xs text-ink-3">{t("docSource.documentTypeHint")}</p>
           </div>
 
           <div className="space-y-1.5">
@@ -115,11 +115,9 @@ export function DocumentCard({
               onChange={(e) => onChange({ extractionInstructions: e.target.value })}
               placeholder={t("docSource.extractionInstructionsPlaceholder")}
               rows={3}
-              className="flex min-h-[72px] w-full rounded-md border border-input bg-card px-3 py-2 text-xs shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 focus-visible:border-ring"
+              className="flex min-h-[72px] w-full rounded-md border border-line-strong bg-panel px-3 py-2 text-xs placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/30 focus-visible:border-ring"
             />
-            <p className="text-[11px] text-on-surface-variant">
-              {t("docSource.extractionInstructionsHint")}
-            </p>
+            <p className="text-2xs text-ink-3">{t("docSource.extractionInstructionsHint")}</p>
           </div>
 
           <SchemaTable schema={doc.schema} onChange={(schema) => onChange({ schema })} />

@@ -71,14 +71,14 @@ export function RuleCard({
   const ruleIssues = validation?.issues ?? [];
 
   return (
-    <div className="panel-elevated rounded-xl p-4 group space-y-4 border-border">
+    <div className="rounded-xl p-4 group space-y-4 border-line">
       <div className="flex items-center gap-2">
         <Input
           value={rule.name}
           onChange={(e) => onChange({ name: e.target.value })}
           placeholder={t("ruleName")}
           aria-label={t("ruleName")}
-          className="h-8 text-sm font-semibold border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input px-2 -ml-2"
+          className="h-8 text-sm font-semibold border-transparent bg-transparent shadow-none focus-visible:bg-panel focus-visible:border-line-strong px-2 -ml-2"
         />
         <Button
           variant="ghost"
@@ -100,19 +100,17 @@ export function RuleCard({
 
       <div className="flex flex-wrap items-end gap-4">
         <div className="space-y-1">
-          <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
-            {t("appliesTo")}
-          </p>
+          <p className="text-2xs font-semibold text-ink-3">{t("appliesTo")}</p>
           <ScopeToggle scope={rule.scope} onChange={switchScope} canCross={canCross} />
         </div>
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
+        <p className="text-2xs font-semibold text-ink-3">
           {isCross ? t("selectTwoDocs") : t("selectOneDoc")}
         </p>
         {documents.length === 0 ? (
-          <p className="text-[11px] text-on-surface-variant italic">{t("noDocsYet")}</p>
+          <p className="text-2xs text-ink-3 italic">{t("noDocsYet")}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {documents.map((doc, idx) => {
@@ -125,14 +123,14 @@ export function RuleCard({
                   aria-pressed={isSelected}
                   onClick={() => toggleDoc(doc.id)}
                   className={cn(
-                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-colors",
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-2xs font-medium transition-colors",
                     isSelected
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-transparent text-on-surface-variant border-border hover:border-outline"
+                      ? "bg-accent text-on-accent border-accent"
+                      : "bg-transparent text-ink-3 border-line hover:border-line-strong"
                   )}
                 >
                   {isCross && isSelected && (
-                    <span className="text-[9px] opacity-70">{pos === 0 ? "A" : "B"}</span>
+                    <span className="text-2xs opacity-70">{pos === 0 ? "A" : "B"}</span>
                   )}
                   {doc.documentType || `${t("unnamedDoc")} ${idx + 1}`}
                 </button>
@@ -143,9 +141,7 @@ export function RuleCard({
       </div>
 
       <div className="space-y-1.5">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant">
-          {t("expressionLabel")}
-        </p>
+        <p className="text-2xs font-semibold text-ink-3">{t("expressionLabel")}</p>
 
         <ConditionBuilder
           conditions={rule.conditions}
@@ -155,7 +151,7 @@ export function RuleCard({
           onConditionsChange={(conditions) => onChange({ conditions })}
         />
         {ruleIssues.length > 0 && (
-          <ul className="text-[11px] text-danger space-y-0.5 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 list-disc pl-5">
+          <ul className="text-2xs text-fail-ink space-y-0.5 rounded-lg border border-fail/30 bg-fail/5 px-3 py-2 list-disc pl-5">
             {ruleIssues.map((issue) => (
               <li key={issue}>{issue}</li>
             ))}
@@ -164,26 +160,24 @@ export function RuleCard({
       </div>
 
       <div className="flex items-center gap-3">
-        <p className="text-[10px] uppercase tracking-wider font-semibold text-on-surface-variant shrink-0">
-          {t("onFail")}
-        </p>
+        <p className="text-2xs font-semibold text-ink-3 shrink-0">{t("onFail")}</p>
         <Select
           value={rule.severity}
           onValueChange={(v) => onChange({ severity: v as RuleSeverity })}
         >
-          <SelectTrigger className="h-7 w-[160px] text-[11px]">
+          <SelectTrigger className="h-7 w-[160px] text-2xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="reject" className="text-xs">
               <span className="inline-flex items-center gap-1.5">
-                <AlertOctagon className="h-3 w-3 text-danger" />
+                <AlertOctagon className="h-3 w-3 text-fail-ink" />
                 {t("severityReject")}
               </span>
             </SelectItem>
             <SelectItem value="flag" className="text-xs">
               <span className="inline-flex items-center gap-1.5">
-                <AlertTriangle className="h-3 w-3 text-warning-strong" />
+                <AlertTriangle className="h-3 w-3 text-warn-ink" />
                 {t("severityFlag")}
               </span>
             </SelectItem>

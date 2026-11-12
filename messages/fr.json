@@ -1,17 +1,17 @@
 {
   "brand": {
-    "name": "Repody",
-    "tagline": "Plateforme d'agents"
+    "name": "Repody"
   },
   "nav": {
-    "dashboard": "Tableau de bord",
+    "dashboard": "Vue d'ensemble",
     "workflows": "Workflows",
-    "audits": "Rapports d'audit",
+    "audits": "Exécutions",
     "settings": "Paramètres",
     "newWorkflow": "Nouveau workflow",
     "logout": "Se déconnecter",
     "closeMenu": "Fermer le menu",
-    "openMenu": "Ouvrir le menu"
+    "openMenu": "Ouvrir le menu",
+    "main": "Principal"
   },
   "auth": {
     "signInTitle": "Connexion à Repody",
@@ -42,14 +42,20 @@
     "errorDefault": "Échec de la connexion. Réessayez."
   },
   "topbar": {
-    "searchPlaceholder": "Rechercher des audits, workflows…",
+    "searchPlaceholder": "Rechercher ou aller à…",
     "language": "Langue",
     "toggleTheme": "Changer de thème",
     "commandGroups": {
       "navigate": "Naviguer",
       "workflows": "Workflows"
     },
-    "noResults": "Aucun résultat."
+    "noResults": "Aucun résultat.",
+    "search": "Rechercher",
+    "theme": {
+      "light": "Clair",
+      "dark": "Sombre",
+      "system": "Système"
+    }
   },
   "common": {
     "exportCsv": "Exporter en CSV",
@@ -60,8 +66,8 @@
     "open": "Ouvrir",
     "owner": "Propriétaire",
     "viewAll": "Tout voir",
-    "deployWorkflow": "Déployer le workflow",
-    "redeployWorkflow": "Redéployer",
+    "deployWorkflow": "Publier",
+    "redeployWorkflow": "Republier",
     "of": "sur",
     "skipToContent": "Aller au contenu principal",
     "neverRun": "Jamais exécuté",
@@ -70,7 +76,7 @@
     "copied": "Copié",
     "backendLabel": "API",
     "backendOnline": "API en ligne ({ms} ms)",
-    "backendOffline": "API hors ligne — lancez Docker ou uvicorn",
+    "backendOffline": "API injoignable",
     "backendChecking": "Vérification de l'API…",
     "saving": "Enregistrement…",
     "deploying": "Déploiement…",
@@ -108,23 +114,24 @@
     }
   },
   "dashboard": {
-    "title": "Tableau de bord",
+    "title": "Vue d'ensemble",
     "description": "Résultats d'audit, tendances de conformité et workflows en un coup d'œil.",
     "pageDescription": "Vue en direct des audits, taux de réussite et workflows à suivre.",
     "auditActivity": "Cette semaine",
-    "offlineTitle": "Connectez-vous pour voir les données en direct",
-    "offlineHint": "Démarrez la plateforme pour charger audits et métriques. Vous pouvez toujours créer des workflows hors ligne.",
-    "offlineCta": "Créer un workflow",
-    "recentSubmissions": "Audits récents",
-    "openFailures": "À traiter",
+    "offlineTitle": "L'API est injoignable",
+    "offlineHint": "Les exécutions et les chiffres s'affichent dès que l'API répond. Les workflows restent modifiables.",
+    "offlineCta": "Ouvrir les workflows",
+    "recentSubmissions": "Exécutions récentes",
+    "openFailures": "À examiner",
     "viewAll": "Tout voir",
     "failedRulesBadge": "{count, plural, one {# problème} other {# problèmes}}",
     "live": {
-      "updated": "En direct · mis à jour à {time}"
+      "updated": "En direct · mis à jour à {time}",
+      "updatedPrefix": "Mis à jour"
     },
     "queueLive": {
-      "counts": "{running} en cours · {queued} en file",
-      "idle": "Aucun run en file"
+      "counts": "{running} en cours, {queued} en attente",
+      "idle": "Aucune exécution en cours"
     },
     "workflows": {
       "title": "Vos workflows",
@@ -137,11 +144,14 @@
       "title": "Audits récents"
     },
     "kpi": {
-      "auditsWeek": "Audits cette semaine",
-      "passRate": "Taux de conformité",
+      "auditsWeek": "Exécutions cette semaine",
+      "passRate": "Taux de réussite",
       "failures": "Échecs de règles",
       "trendUp": "En hausse de {delta} par rapport à la période précédente",
-      "trendDown": "En baisse de {delta} par rapport à la période précédente"
+      "trendDown": "En baisse de {delta} par rapport à la période précédente",
+      "deltaPoints": "{delta} pts",
+      "vsLastWeek": "par rapport à la semaine dernière",
+      "same": "Comme la semaine dernière"
     },
     "performance": {
       "title": "Volume d'audits",
@@ -153,46 +163,53 @@
       "emptyTitle": "Aucun volume d'audit pour l'instant",
       "emptyHint": "Exécutez des workflows pour alimenter les comptages quotidiens.",
       "summary": "{total} audits sur la période. Pic le {peakDay} avec {peakRuns} audits.",
-      "peakDay": "Jour de pic"
+      "peakDay": "Jour de pic",
+      "summaryShort": "{total, plural, one {# exécution} other {# exécutions}} ces 7 derniers jours",
+      "barLabel": "{day} : {count, plural, =0 {aucune exécution} one {# exécution} other {# exécutions}}"
     },
     "violations": {
       "title": "Échecs par gravité",
-      "hint": "Part des échecs de règles cette semaine.",
+      "hint": "Cette semaine",
       "reject": "Rejet",
       "flag": "Signalement",
-      "none": "Aucun échec cette semaine."
+      "none": "Aucune règle en échec cette semaine"
     },
     "getStarted": {
-      "title": "Lancez votre premier audit",
+      "title": "Créez votre premier workflow",
       "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
       "stepLabel": "Étape {number}",
-      "footerHint": "Les audits terminés et les taux de réussite apparaîtront sur ce tableau de bord."
-    }
+      "footerHint": "Les audits terminés et les taux de réussite apparaîtront sur ce tableau de bord.",
+      "cta": "Créer un workflow"
+    },
+    "needsReviewHint": "Exécutions dont des règles ont échoué, les plus anciennes d'abord.",
+    "nothingToReview": "Rien à examiner",
+    "noRuns": "Aucune exécution",
+    "stale": "{count, plural, one {# exécution ne répond plus} other {# exécutions ne répondent plus}}"
   },
   "audits": {
-    "title": "Rapports d'audit",
+    "title": "Exécutions",
     "description": "Parcourir, filtrer et trier chaque exécution.",
     "report": {
       "backToAudits": "Audits",
-      "exportPdf": "Exporter PDF",
-      "exportCsv": "Exporter CSV",
+      "exportPdf": "Imprimer",
+      "exportCsv": "CSV",
       "language": "Langue",
       "runOn": "Exécuté le",
       "via": "via",
       "api": "API",
       "interface": "Interface",
       "source": "Source",
-      "extractedData": "Données extraites",
-      "validationRules": "Règles de validation",
+      "extractedData": "Champs",
+      "validationRules": "Règles",
       "passed": "Validée",
       "failed": "Échouée",
       "skipped": "Ignorée",
-      "fieldsExtracted": "{count} champs extraits",
-      "rulesPassed": "{passed} / {total} règles validées",
+      "fieldsExtracted": "{count, plural, one {# champ} other {# champs}}",
+      "rulesPassed": "{passed} règles sur {total} respectées",
       "rulesFailed": "{count} échouée(s)",
-      "allRulesPassed": "Toutes les règles validées",
-      "validationFailed": "Validation échouée",
-      "reviewRequired": "Révision requise",
+      "allRulesPassed": "Conforme",
+      "validationFailed": "Rejeté",
+      "reviewRequired": "À examiner",
       "value": "Valeur extraite",
       "field": "Champ",
       "status": "Statut",
@@ -212,8 +229,13 @@
       "totalDuration": "Durée totale",
       "extractionTime": "Temps d'extraction",
       "validationTime": "Temps de validation",
-      "docExtracted": "{done} / {total} extrait(s)",
-      "extractionFailed": "Échec de l'extraction"
+      "docExtracted": "{done} sur {total} trouvés",
+      "extractionFailed": "Le document n'a pas pu être lu",
+      "viaApi": "via l'API",
+      "viaTest": "test",
+      "notFound": "Introuvable",
+      "modelOutput": "Sortie du modèle",
+      "pagesTruncated": "Seules {sent} pages sur {total} ont été lues"
     },
     "table": {
       "id": "ID d'audit",
@@ -222,35 +244,43 @@
       "timestamp": "Horodatage",
       "rows": "Lignes",
       "summary": "{count, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
-      "empty": "Aucun audit ne correspond aux filtres.",
-      "total": "{total, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
+      "empty": "Aucune exécution correspondante",
+      "total": "{total, plural, =0 {Aucune exécution} one {# exécution} other {# exécutions}}",
       "page": "Page {page} sur {pages}",
       "previous": "Page précédente",
       "next": "Page suivante"
     },
     "filters": {
-      "searchPlaceholder": "Rechercher par ID, entité, workflow…",
+      "searchPlaceholder": "Rechercher",
       "status": "Statut",
-      "allStatuses": "Tous les statuts",
+      "allStatuses": "Toutes",
       "workflow": "Workflow",
       "allWorkflows": "Tous les workflows",
-      "clearAll": "Réinitialiser",
+      "clearAll": "Effacer les filtres",
       "day": "Jour"
     },
     "status": {
-      "passed": "Validé",
-      "failed": "Échec",
-      "warning": "Avertissement",
+      "passed": "Réussie",
+      "failed": "Échouée",
+      "warning": "À examiner",
       "failedWithRules": "Échec ({count, plural, one {# règle} other {# règles}})"
     },
     "eyebrow": "Rapports",
-    "exportCsv": "Exporter en CSV"
+    "exportCsv": "Exporter en CSV",
+    "row": {
+      "failedRules": "{count, plural, one {# règle en échec} other {# règles en échec}}",
+      "fields": "{count, plural, one {# champ} other {# champs}}"
+    },
+    "emptyTitle": "Aucune exécution",
+    "emptyHint": "Les exécutions apparaissent ici quand un workflow traite des documents, en test ou via l'API.",
+    "emptyCta": "Ouvrir les workflows",
+    "emptyFilteredHint": "Aucune exécution ne correspond à ces filtres."
   },
   "workflows": {
     "title": "Workflows",
     "description": "Vos pipelines d'extraction et de validation.",
     "status": {
-      "active": "Actif",
+      "active": "En ligne",
       "draft": "Brouillon"
     },
     "card": {
@@ -746,7 +776,19 @@
         "eyebrow": "Schéma"
       }
     },
-    "eyebrow": "Pipelines"
+    "eyebrow": "Pipelines",
+    "row": {
+      "runs": "{count, plural, one {# exécution} other {# exécutions}}",
+      "neverRun": "Jamais exécuté"
+    },
+    "columns": {
+      "name": "Nom",
+      "runs": "Exécutions",
+      "passRate": "Réussite",
+      "lastRun": "Dernière"
+    },
+    "emptyTitle": "Aucun workflow",
+    "emptyHint": "Un workflow nomme les documents que vous recevez, les champs à y lire et les règles qu'ils doivent respecter."
   },
   "health": {
     "alerts": {
@@ -757,7 +799,7 @@
     }
   },
   "settings": {
-    "title": "Plateforme",
+    "title": "Paramètres",
     "eyebrow": "Paramètres",
     "description": "Configuration d'exécution et état du modèle de document.",
     "model": "Modèle de document",
@@ -768,8 +810,8 @@
     "enabled": "Activé",
     "disabled": "Désactivé",
     "cacheDetail": "Cache d'extraction Redis",
-    "runtimeTitle": "Configuration d'exécution effective",
-    "runtimeHint": "Valeurs utilisées par l'API et les workers. Un changement d'environnement demande un redémarrage.",
+    "runtimeTitle": "Limites",
+    "runtimeHint": "Définies par l'environnement du déploiement ; un redémarrage applique les changements.",
     "endpoint": "Point d'inférence",
     "servedModel": "Modèle servi",
     "pagesPerDocument": "Pages par document",
@@ -777,7 +819,16 @@
     "uploadLimit": "Limite d'envoi",
     "uploadLimitValue": "{files} fichiers / {size}",
     "runTimeout": "Délai d'exécution",
-    "minutes": "{count} min"
+    "minutes": "{count} min",
+    "modelTitle": "Modèle de documents",
+    "modelHint": "Le modèle qui lit les documents.",
+    "brandTitle": "Marque",
+    "brandHint": "Définie par déploiement avec les variables REPODY_BRAND_* du conteneur web.",
+    "brandName": "Nom du produit",
+    "brandBase": "Couleur de base",
+    "brandAccent": "Couleur d'accent",
+    "brandContrast": "Contraste",
+    "brandRadius": "Rayon des coins"
   },
   "error": {
     "title": "Une erreur est survenue",

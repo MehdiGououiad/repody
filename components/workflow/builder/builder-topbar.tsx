@@ -30,10 +30,10 @@ export function BuilderTopbar({
   const tCommon = useTranslations("common");
 
   return (
-    <div className="h-14 border-b border-border/80 flex items-center gap-3 px-4 md:px-6 bg-card/80 backdrop-blur-md shrink-0 z-10">
+    <div className="h-14 border-b border-line/80 flex items-center gap-3 px-4 md:px-6 bg-panel/80 shrink-0 z-10">
       <Link
         href="/workflows"
-        className="hidden sm:flex items-center gap-1 text-xs text-on-surface-variant hover:text-on-surface transition-colors shrink-0"
+        className="hidden sm:flex items-center gap-1 text-xs text-ink-3 hover:text-ink transition-colors shrink-0"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
         {t("backToWorkflows")}
@@ -44,19 +44,16 @@ export function BuilderTopbar({
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder={t("namePlaceholder")}
-        className="h-8 max-w-xs text-sm font-display font-semibold border-transparent bg-transparent shadow-none focus-visible:bg-card focus-visible:border-input px-2 -ml-2"
+        className="h-8 max-w-xs text-sm font-semibold border-transparent bg-transparent shadow-none focus-visible:bg-panel focus-visible:border-line-strong px-2 -ml-2"
       />
 
       {deployed ? (
-        <Badge variant="success" className="hidden sm:flex gap-1 text-[10px] shrink-0">
+        <Badge variant="success" className="hidden sm:flex gap-1 text-2xs shrink-0">
           <Check className="h-3 w-3" />
           {t("statusLive")}
         </Badge>
       ) : (
-        <Badge
-          variant="outline"
-          className="hidden sm:flex text-[10px] shrink-0 text-on-surface-variant"
-        >
+        <Badge variant="outline" className="hidden sm:flex text-2xs shrink-0 text-ink-3">
           {t("statusDraft")}
         </Badge>
       )}

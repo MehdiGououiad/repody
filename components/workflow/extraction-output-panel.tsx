@@ -1,6 +1,5 @@
 "use client";
 
-import { Braces } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 
@@ -27,12 +26,6 @@ function ExtractionJsonPanel({ text, className }: { text: string; className?: st
   return (
     <CopyableOutputPanel
       className={className}
-      headerClassName="from-primary/5"
-      icon={
-        <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-          <Braces className="h-4 w-4 text-primary" />
-        </div>
-      }
       labels={{
         title: t("title"),
         subtitle: t("subtitle", {

@@ -16,16 +16,9 @@ function MetaChip({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "rounded-lg border border-border bg-surface-container-low px-3 py-2",
-        className
-      )}
-    >
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">
-        {label}
-      </p>
-      <p className="text-xs font-medium text-on-surface mt-0.5">{value}</p>
+    <div className={cn("rounded-lg border border-line bg-raised px-3 py-2", className)}>
+      <p className="text-2xs font-semibold text-ink-3">{label}</p>
+      <p className="text-xs font-medium text-ink mt-0.5">{value}</p>
     </div>
   );
 }
@@ -57,28 +50,28 @@ export function DocumentExtractionMeta({
   const t = useTranslations("runProgress");
 
   return (
-    <div className="flex flex-wrap gap-2 text-[11px] text-on-surface-variant">
+    <div className="flex flex-wrap gap-2 text-2xs text-ink-3">
       {fileName && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5">
           <FileSearch className="h-3 w-3" />
           {fileName}
         </span>
       )}
       {extraction.cacheHit && (
-        <span className="inline-flex items-center gap-1 rounded-full bg-success/10 text-success px-2 py-0.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-pass/10 text-pass-ink px-2 py-0.5">
           <Sparkles className="h-3 w-3" />
           Cached
         </span>
       )}
       {extraction.pagesSent < extraction.pagesRendered ? (
-        <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-2 py-0.5">
+        <span className="inline-flex items-center gap-1 rounded-full bg-warn/10 text-warn-ink px-2 py-0.5">
           {t("pagesTruncated", {
             sent: extraction.pagesSent,
             total: extraction.pagesRendered,
           })}
         </span>
       ) : null}
-      <span className="inline-flex items-center gap-1 rounded-full bg-surface-container px-2 py-0.5 tabular-nums">
+      <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5 tabular-nums">
         <Clock className="h-3 w-3" />
         {formatDurationMs(extraction.extractionMs)} · {extraction.fieldsExtracted} field(s)
       </span>
@@ -107,16 +100,14 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
         </div>
       )}
       {result.documents.some((d) => d.fields.length > 0) && (
-        <div className="rounded-xl panel-elevated overflow-hidden">
-          <div className="px-4 py-2.5 bg-surface-container-low border-b border-border">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-              Extracted fields
-            </p>
+        <div className="rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 bg-raised border-b border-line">
+            <p className="text-2xs font-semibold text-ink-3">Extracted fields</p>
           </div>
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-line">
             {result.documents.map((doc) => (
               <div key={doc.id} className="px-4 py-3 space-y-2">
-                <p className="text-xs font-semibold text-on-surface">{doc.documentType}</p>
+                <p className="text-xs font-semibold text-ink">{doc.documentType}</p>
                 {doc.extraction && (
                   <DocumentExtractionMeta extraction={doc.extraction} fileName={doc.fileName} />
                 )}
@@ -126,11 +117,11 @@ export function TestRunSummaryDetails({ result }: { result: RunAuditDetail }) {
                       key={field.key}
                       className="flex items-baseline justify-between gap-3 text-xs"
                     >
-                      <code className="font-mono text-primary shrink-0">{field.key}</code>
+                      <code className="font-mono text-ink shrink-0">{field.key}</code>
                       <span
                         className={cn(
                           "font-semibold text-right truncate",
-                          field.flagged ? "text-danger" : "text-on-surface"
+                          field.flagged ? "text-fail-ink" : "text-ink"
                         )}
                       >
                         {field.extracted ? formatExtractedFieldValue(field.value, locale) : "—"}

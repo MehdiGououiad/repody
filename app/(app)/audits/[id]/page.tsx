@@ -11,6 +11,11 @@ const RunAuditReport = dynamic(
   { loading: () => <RunAuditReportLoader /> }
 );
 
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const audit = await fetchAudit((await params).id);
+  return { title: audit ? audit.workflowName : undefined };
+}
+
 export default async function AuditDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 

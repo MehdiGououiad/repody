@@ -23,14 +23,14 @@ export default function GlobalError({
 
   return (
     <html lang={french ? "fr" : "en"}>
-      <body className="min-h-screen flex items-center justify-center p-6 bg-surface text-on-surface">
+      <body className="min-h-screen flex items-center justify-center p-6 bg-panel text-ink">
         <div className="max-w-md text-center space-y-4">
           <h1 className="text-lg font-semibold">{t.title}</h1>
-          <p className="text-sm text-on-surface-variant">{t.reported}</p>
+          <p className="text-sm text-ink-3">{t.reported}</p>
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-on-primary"
+            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-primary"
           >
             {t.retry}
           </button>

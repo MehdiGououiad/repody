@@ -21,13 +21,13 @@ function ConditionPreview({
   const t = useTranslations("workflows.builder.rules.conditions");
   if (checks.some(Boolean)) {
     return (
-      <div className="rounded-lg border border-border bg-surface-container-lowest px-3 py-2 space-y-1.5">
-        <p className="text-[10px] text-on-surface-variant">{t("separateChecksHint")}</p>
+      <div className="rounded-lg border border-line bg-panel px-3 py-2 space-y-1.5">
+        <p className="text-2xs text-ink-3">{t("separateChecksHint")}</p>
         {conditions.map((condition, index) =>
           checks[index] ? (
             <div key={condition.id} className="flex items-start gap-2">
-              <Code2 className="h-3.5 w-3.5 text-on-surface-variant mt-0.5 shrink-0" />
-              <code className="text-[11px] font-mono text-on-surface-variant break-all">
+              <Code2 className="h-3.5 w-3.5 text-ink-3 mt-0.5 shrink-0" />
+              <code className="text-2xs font-mono text-ink-3 break-all">
                 {t("checkN", { n: index + 1 })}: {checks[index]}
               </code>
             </div>
@@ -38,7 +38,7 @@ function ConditionPreview({
   }
   if (conditions.some(isTouched)) {
     return (
-      <p className="text-[11px] text-danger rounded-lg border border-danger/30 bg-danger/5 px-3 py-2">
+      <p className="text-2xs text-fail-ink rounded-lg border border-fail/30 bg-fail/5 px-3 py-2">
         {t("expressionIncomplete")}
       </p>
     );
@@ -61,7 +61,7 @@ export function ConditionBuilder({
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
   const catalog = useCatalog();
-  if (!catalog) return <div className="h-14 rounded-lg bg-surface-container-low animate-pulse" />;
+  if (!catalog) return <div className="h-14 rounded-lg bg-raised animate-pulse" />;
 
   return (
     <div className="space-y-2">
@@ -80,11 +80,9 @@ export function ConditionBuilder({
           />
           {index < conditions.length - 1 ? (
             <div className="flex items-center gap-2 py-1 pl-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant px-2">
-                {t("alsoCheck")}
-              </span>
-              <div className="h-px flex-1 bg-border" />
+              <div className="h-px flex-1 bg-line" />
+              <span className="text-2xs font-semibold text-ink-3 px-2">{t("alsoCheck")}</span>
+              <div className="h-px flex-1 bg-line" />
             </div>
           ) : null}
         </div>

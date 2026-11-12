@@ -1,90 +1,133 @@
 "use client";
 
-import { LogOut, Plus, ShieldCheck } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { SignOutButton } from "@/components/auth/sign-out-button";
+import { useEffect, useState } from "react";
+import { UserMenu } from "@/components/auth/user-menu";
+import { Kbd } from "@/components/ui/kbd";
 import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
+import { useBrand } from "@/lib/theme/brand-context";
 import { cn } from "@/lib/utils";
+import { BackendStatus } from "./backend-status";
 
-export function AppSidebar() {
+const CommandPalette = dynamic(
+  () => import("./command-palette").then((m) => ({ default: m.CommandPalette })),
+  { ssr: false }
+);
+
+/** The brand: the client's logo when set, else a simple mark and the product name. */
+export function BrandMark() {
+  const brand = useBrand();
+  if (brand.logoUrl) {
+    // biome-ignore lint/performance/noImgElement: a client's logo comes from any URL.
+    return <img src={brand.logoUrl} alt={brand.name} className="h-5 w-auto max-w-[140px]" />;
+  }
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <span
+        aria-hidden
+        className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-accent text-2xs font-semibold text-on-accent"
+      >
+        {brand.name.slice(0, 1).toUpperCase()}
+      </span>
+      <span className="truncate text-sm font-semibold text-ink">{brand.name}</span>
+    </span>
+  );
+}
+
+/** ⌘K or / opens the command palette from anywhere outside a text field. */
+function useCommandPalette() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing =
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.isContentEditable);
+      if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing)) {
+        e.preventDefault();
+        setOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  return [open, setOpen] as const;
+}
+
+export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
-  const tBrand = useTranslations("brand");
+  const tBar = useTranslations("topbar");
+  const [paletteOpen, setPaletteOpen] = useCommandPalette();
 
   return (
-    <aside className="hidden md:flex fixed left-0 top-0 z-40 h-screen w-[248px] flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border py-6 overflow-hidden">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-30"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 120% 80% at -20% 0%, rgba(196,163,90,0.18), transparent 55%)",
-        }}
-      />
-
-      <div className="relative px-6 mb-8 flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-accent-blue/15 ring-1 ring-accent-blue/25 flex items-center justify-center text-accent-blue shadow-[0_0_24px_-6px_var(--accent-blue-glow)]">
-          <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-        </div>
-        <div>
-          <p className="font-display text-xl font-semibold tracking-tight leading-none">
-            {tBrand("name")}
-          </p>
-          <p className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/55 mt-1.5">
-            {tBrand("tagline")}
-          </p>
-        </div>
-      </div>
-
-      <div className="relative px-4 mb-6">
+    <div className="flex h-full flex-col gap-4 px-2 py-3">
+      <div className="flex h-7 items-center justify-between gap-2 ps-2">
+        <BrandMark />
         <Link
           href="/workflows/new"
-          className="group w-full bg-accent-blue text-primary-stitch py-2.5 px-3 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 hover:brightness-110 transition-[filter,box-shadow] shadow-[0_8px_24px_-12px_var(--accent-blue-glow)]"
-          style={{ color: "var(--primary-stitch)" }}
+          onClick={onNavigate}
+          aria-label={t("newWorkflow")}
+          title={t("newWorkflow")}
+          className="flex size-7 shrink-0 items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink"
         >
-          <Plus
-            className="h-4 w-4 transition-transform group-hover:rotate-90 duration-300"
-            aria-hidden="true"
-          />
-          {t("newWorkflow")}
+          <Plus className="size-4" aria-hidden />
         </Link>
       </div>
 
-      <nav className="relative flex-1 flex flex-col gap-0.5 px-2" aria-label={tBrand("name")}>
+      <button
+        type="button"
+        onClick={() => setPaletteOpen(true)}
+        className="flex h-7 w-full cursor-pointer items-center gap-2 rounded-md px-2 text-sm text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink-2"
+      >
+        <Search className="size-3.5 shrink-0" aria-hidden />
+        <span className="flex-1 text-start">{tBar("search")}</span>
+        <Kbd>⌘K</Kbd>
+      </button>
+
+      <nav className="flex flex-col gap-px" aria-label={t("main")}>
         {MAIN_NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
           const active = isNavActive(pathname, href);
           return (
             <Link
               key={href}
               href={href}
+              onClick={onNavigate}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-[background-color,color,transform] duration-200",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-inner"
-                  : "text-sidebar-foreground/65 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground hover:translate-x-0.5"
+                "flex h-7 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors duration-100",
+                active ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
               )}
             >
-              {active ? (
-                <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-accent-blue shadow-[0_0_12px_var(--accent-blue-glow)]" />
-              ) : null}
               <Icon
-                className={cn("h-4 w-4 shrink-0", active && "text-accent-blue")}
-                aria-hidden="true"
+                className={cn("size-3.5 shrink-0", active ? "text-ink" : "text-ink-3")}
+                strokeWidth={2}
+                aria-hidden
               />
-              <span>{t(labelKey)}</span>
+              {t(labelKey)}
             </Link>
           );
         })}
       </nav>
 
-      <div className="relative mt-auto px-2 pt-4 border-t border-sidebar-border/80">
-        <SignOutButton className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/55 hover:bg-sidebar-accent/45 hover:text-sidebar-foreground transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed">
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          <span>{t("logout")}</span>
-        </SignOutButton>
+      <div className="mt-auto flex flex-col gap-1">
+        <BackendStatus />
+        <UserMenu />
       </div>
+
+      {paletteOpen ? <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} /> : null}
+    </div>
+  );
+}
+
+export function AppSidebar() {
+  return (
+    <aside className="hidden w-[232px] shrink-0 md:block">
+      <SidebarContent />
     </aside>
   );
 }

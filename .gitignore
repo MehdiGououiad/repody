@@ -65,7 +65,8 @@ backend/.venv/
 *.tgz
 
 # local assistant tooling
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.agents/
 /skills-lock.json
 /AGENTS.md

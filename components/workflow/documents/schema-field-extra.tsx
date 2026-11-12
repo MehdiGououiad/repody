@@ -11,7 +11,7 @@ import {
 import type { SchemaField } from "@/lib/types";
 import { newSchemaField } from "@/lib/workflow/new-items";
 
-const FIELD_LABEL = "text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant";
+const FIELD_LABEL = "text-2xs font-semibold text-ink-3";
 
 /** The choices of an enum or multi-enum; an empty last row adds the next choice. */
 function EnumValuesEditor({
@@ -25,7 +25,7 @@ function EnumValuesEditor({
   const rows = values.length > 0 ? values : [""];
 
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-border/80 bg-surface-container-low/40 p-3">
+    <div className="space-y-2 rounded-lg border border-dashed border-line/80 bg-raised/40 p-3">
       <p className={FIELD_LABEL}>{t("enumValuesLabel")}</p>
       {rows.map((value, index) => (
         // Choices are edited in place and never reordered: the position is their identity.
@@ -45,7 +45,7 @@ function EnumValuesEditor({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-outline hover:text-danger"
+            className="h-8 w-8 shrink-0 text-outline hover:text-fail-ink"
             onClick={() => onChange(rows.filter((_, i) => i !== index))}
             aria-label={t("removeEnumValue")}
           >
@@ -57,7 +57,7 @@ function EnumValuesEditor({
         type="button"
         variant="ghost"
         size="sm"
-        className="h-7 text-[11px]"
+        className="h-7 text-2xs"
         onClick={() => onChange([...rows.filter((v) => v.trim()), ""])}
       >
         <Plus className="h-3 w-3" />
@@ -83,18 +83,18 @@ function ChildrenEditor({
     onChange(fields.map((child) => (child.id === id ? { ...child, ...patch } : child)));
 
   return (
-    <div className="space-y-3 rounded-xl border border-primary/15 bg-primary/[0.03] p-3 sm:p-4">
+    <div className="space-y-3 rounded-xl border border-accent/15 bg-accent/[0.03] p-3 sm:p-4">
       <div className="space-y-1">
-        <p className="text-[11px] font-semibold tracking-wide text-on-surface">
+        <p className="text-2xs font-semibold text-ink">
           {table ? t("rowColumnsLabel") : t("objectFieldsLabel")}
         </p>
-        <p className="text-[11px] leading-snug text-on-surface-variant">
+        <p className="text-2xs leading-snug text-ink-3">
           {table ? t("rowColumnsHint") : t("objectFieldsHint")}
         </p>
       </div>
 
       {fields.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border/80 bg-card/50 px-3 py-4 text-center text-[11px] text-on-surface-variant">
+        <p className="rounded-lg border border-dashed border-line/80 bg-panel/50 px-3 py-4 text-center text-2xs text-ink-3">
           {table ? t("rowColumnsEmpty") : t("objectFieldsEmpty")}
         </p>
       ) : (
@@ -102,7 +102,7 @@ function ChildrenEditor({
           {fields.map((child, index) => (
             <li
               key={child.id}
-              className="rounded-lg border border-border/70 bg-card p-3 shadow-sm shadow-black/[0.02]"
+              className="rounded-lg border border-line/70 bg-panel p-3 shadow-black/[0.02]"
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className={FIELD_LABEL}>
@@ -114,7 +114,7 @@ function ChildrenEditor({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-outline hover:text-danger"
+                  className="h-7 w-7 text-outline hover:text-fail-ink"
                   onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
                   aria-label={table ? t("removeRowColumn") : t("removeObjectField")}
                 >
@@ -152,7 +152,7 @@ function ChildrenEditor({
               <ListToggle
                 value={child.templateType}
                 onChange={(templateType) => update(child.id, { templateType })}
-                className="mt-2 text-[11px]"
+                className="mt-2 text-2xs"
               />
               {!table ? (
                 <SchemaFieldExtraConfig
@@ -169,7 +169,7 @@ function ChildrenEditor({
         type="button"
         variant="outline"
         size="sm"
-        className="h-8 w-full text-[11px] sm:w-auto"
+        className="h-8 w-full text-2xs sm:w-auto"
         onClick={() => onChange([...fields, newSchemaField()])}
       >
         <Plus className="h-3.5 w-3.5" />

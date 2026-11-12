@@ -74,13 +74,13 @@ export function ImportNuextractTemplateDialog({
             setErrorKey(null);
           }}
           spellCheck={false}
-          className="min-h-64 w-full rounded-md border border-border bg-surface-container-low px-3 py-2 font-mono text-xs leading-relaxed text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="min-h-64 w-full rounded-md border border-line bg-raised px-3 py-2 font-mono text-xs leading-relaxed text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
           aria-label={t("importTemplateTitle")}
         />
         {errorKey ? (
-          <p className="text-xs text-danger">{t(`importTemplateError.${errorKey}`)}</p>
+          <p className="text-xs text-fail-ink">{t(`importTemplateError.${errorKey}`)}</p>
         ) : (
-          <p className="text-[11px] text-on-surface-variant">{t("importTemplateHint")}</p>
+          <p className="text-2xs text-ink-3">{t("importTemplateHint")}</p>
         )}
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>

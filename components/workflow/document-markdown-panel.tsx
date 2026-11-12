@@ -1,6 +1,5 @@
 "use client";
 
-import { ScanText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { DocumentMarkdownPreview } from "@/components/documents/document-markdown-preview";
 import { CopyableOutputPanel, OutputPre } from "@/components/shared/copyable-output-panel";
@@ -21,12 +20,6 @@ export function DocumentMarkdownPanel({ text, className }: { text: string; class
   return (
     <CopyableOutputPanel
       className={className}
-      headerClassName="from-accent-blue/5"
-      icon={
-        <div className="size-8 rounded-lg bg-accent-blue/10 flex items-center justify-center shrink-0">
-          <ScanText className="h-4 w-4 text-accent-blue" />
-        </div>
-      }
       labels={{
         title: t("title"),
         subtitle,

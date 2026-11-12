@@ -10,12 +10,12 @@ export default function UnauthorizedPage() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+      <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-fail/10 text-fail-ink ring-1 ring-destructive/20">
         <ShieldOff className="h-8 w-8" aria-hidden />
       </div>
       <div className="max-w-md space-y-2">
         <h1 className="text-2xl font-semibold tracking-tight">{t("forbiddenTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{t("forbiddenBody")}</p>
+        <p className="text-sm text-ink-3">{t("forbiddenBody")}</p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-3">
         <Button asChild variant="default">

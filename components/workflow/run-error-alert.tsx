@@ -18,22 +18,22 @@ export function RunErrorAlert({
   return (
     <div
       role="alert"
-      className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2.5 text-left space-y-1"
+      className="rounded-lg border border-fail/40 bg-fail/5 px-3 py-2.5 text-left space-y-1"
     >
-      <p className="text-xs font-semibold text-danger">{title}</p>
-      <p className="text-xs text-danger-strong leading-relaxed">{message}</p>
+      <p className="text-xs font-semibold text-fail-ink">{title}</p>
+      <p className="text-xs text-fail-ink leading-relaxed">{message}</p>
       {runId ? (
-        <div className="mt-2 pt-2 border-t border-danger/20 space-y-1.5">
-          <p className="text-[10px] text-on-surface-variant">{t("test.errorRunIdHint")}</p>
+        <div className="mt-2 pt-2 border-t border-fail/20 space-y-1.5">
+          <p className="text-2xs text-ink-3">{t("test.errorRunIdHint")}</p>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <code className="text-[11px] font-mono bg-surface-container px-2 py-1 rounded break-all text-on-surface">
+            <code className="text-2xs font-mono bg-raised px-2 py-1 rounded break-all text-ink">
               {runId}
             </code>
             <CopyButton text={runId} />
             <Link
               href={`/audits/${runId}`}
               target="_blank"
-              className="text-[10px] font-medium text-accent-blue hover:underline"
+              className="text-2xs font-medium text-accent-ink hover:underline"
             >
               {t("test.viewReport")}
             </Link>
