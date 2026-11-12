@@ -1,31 +1,25 @@
 # Document extraction
 
-Repody extracts each workflow document with a vision-language model on an OpenAI-compatible server
-(llama-server locally, any OpenAI-compatible endpoint in Kubernetes). Workers call it over HTTP; the
-backend image ships no model weights.
+Repody extracts every workflow document with **NuExtract3** on an OpenAI-compatible server: vLLM with
+the full model in production ([deploy/modal/README.md](../deploy/modal/README.md)), or llama-server
+with a GGUF locally. Workers call it over HTTP, and the backend image ships no model weights.
 
-| Documents | Model | Code | Official docs | Local server |
-|---|---|---|---|---|
-| With fields (structured JSON) | NuExtract3 | `extraction/nuextract.py`, `render.py` | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) | `pnpm llamacpp:serve` :8081 |
-| Without fields (Markdown), default | NuExtract3, markdown mode | `extraction/nuextract.py` | same | same |
-| Without fields, `AUDIT_MARKDOWN_PROVIDER=lightonocr` | LightOnOCR-3-4B | `extraction/lightonocr.py` | [lightonai/LightOnOCR-3-4B](https://huggingface.co/lightonai/LightOnOCR-3-4B), [client](https://github.com/lightonai/LightOnOCR) | `pnpm lightonocr:serve` :8082 |
+| Documents | Mode | Code | Official docs |
+|---|---|---|---|
+| With fields | Structured JSON | `extraction/nuextract.py`, `render.py` | [numind/NuExtract3](https://huggingface.co/numind/NuExtract3) (vLLM); [GGUF](https://huggingface.co/numind/NuExtract3-GGUF) for llama-server |
+| Without fields | Markdown | `extraction/nuextract.py` | same |
 
 NuExtract's structured JSON is stored as `extraction.rawText`; the leaf rows in `extracted_fields`
 are derived for the UI and the rules. Markdown is stored as `extraction.markdownText`.
 
 ### What you configure
 
-Only wiring and limits; requests follow the model cards (`extraction/nuextract.py`, `lightonocr.py`).
+Only wiring and limits; requests follow the model card (`extraction/nuextract.py`).
 
 ```env
 AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1
 AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q8_0
 AUDIT_LLAMACPP_API_KEY=
-
-# Optional: LightOnOCR-3 for Markdown
-AUDIT_MARKDOWN_PROVIDER=nuextract          # or lightonocr
-AUDIT_LIGHTONOCR_BASE_URL=http://127.0.0.1:8082/v1
-AUDIT_LIGHTONOCR_SERVED_MODEL=lightonocr-3-4b
 
 AUDIT_INFERENCE_TIMEOUT_SECONDS=180
 AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
@@ -38,7 +32,6 @@ winget install llama.cpp   # or brew install llama.cpp on macOS
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
 pnpm llamacpp:serve
 pnpm llamacpp:verify
-pnpm lightonocr:serve      # only with AUDIT_MARKDOWN_PROVIDER=lightonocr
 ```
 
 Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md).
@@ -51,31 +44,20 @@ Set the endpoints in the chart's `config` (`deploy/helm/repody/values.yaml`):
 config:
   AUDIT_LLAMACPP_BASE_URL: https://your-inference-host/v1
   AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
-  AUDIT_MARKDOWN_PROVIDER: nuextract
 ```
 
-Put `AUDIT_LLAMACPP_API_KEY` (and `AUDIT_LIGHTONOCR_API_KEY`) in the runtime secret when the
-endpoint requires auth.
+Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires auth.
 
 ### NuExtract3 requests ([model card](https://huggingface.co/numind/NuExtract3), vLLM examples)
 
 | Input | Behaviour |
 |-------|-----------|
 | PDF | Every page as PNG at **170 DPI** (the card's PDF example), all pages in one request |
-| Image | The uploaded PNG/JPEG/WebP as it is |
+| Image | The uploaded PNG/JPEG/WebP, turned upright by its EXIF orientation and sent as PNG (the same pixels) |
 | Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples |
 | `instructions` | The document's notes, then a `Field guidance:` list built from the field descriptions |
 | In-context examples | `developer` messages, input then expected output |
 | Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **1** (the card's document-to-Markdown example) |
-
-### LightOnOCR-3 requests (optional, `AUDIT_MARKDOWN_PROVIDER=lightonocr`; model card)
-
-| Input | Behaviour |
-|-------|-----------|
-| PDF | Each page rendered at **400 DPI**, then `thumbnail((2048, 2048))`, one request per page (the [card](https://huggingface.co/lightonai/LightOnOCR-3-4B)'s vLLM example) |
-| Image | The same `thumbnail((2048, 2048))`: downscaled when larger, never upscaled |
-| Request | The image alone (transcription mode), `enable_thinking: false`, `max_tokens` **4096**, temperature **0.2**, top_p **0.9** |
-| Output | The model's Markdown as it comes |
 
 ### Endpoint check
 

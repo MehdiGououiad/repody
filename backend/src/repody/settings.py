@@ -5,7 +5,7 @@ serialises local variables); code reads them with ``get_secret_value()`` where i
 """
 
 from functools import lru_cache
-from typing import Annotated, Literal, Self
+from typing import Annotated, Self
 
 from pydantic import (
     BeforeValidator,
@@ -81,12 +81,6 @@ class Settings(BaseSettings):
     # Documents and pages beyond it wait their turn.
     inference_concurrency: PositiveInt = 1
 
-    # Markdown transcription (documents without fields): NuExtract's markdown mode, or
-    # LightOnOCR-3 on its own OpenAI-compatible server (llama-server or vLLM).
-    markdown_provider: Literal["nuextract", "lightonocr"] = "nuextract"
-    lightonocr_base_url: str = "http://127.0.0.1:8082/v1"
-    lightonocr_api_key: SecretStr = SecretStr("local")
-    lightonocr_served_model: str = "lightonocr-3-4b"
     max_pages_per_document: PositiveInt | None = None
     extraction_cache_ttl_seconds: NonNegativeInt = 0  # 0 disables the Redis extraction cache
 

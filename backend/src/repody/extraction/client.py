@@ -32,14 +32,11 @@ def _client(base_url: str, api_key: str) -> AsyncOpenAI:
     return _clients[base_url, api_key]
 
 
-async def chat(
-    request: dict[str, Any], *, base_url: str | None = None, api_key: str | None = None
-) -> Reply:
-    """The first choice of ``chat.completions.create(**request)``, sent to the NuExtract
-    server unless another ``base_url`` is given."""
+async def chat(request: dict[str, Any]) -> Reply:
+    """The first choice of ``chat.completions.create(**request)`` from the NuExtract server."""
     settings = get_settings()
-    base_url = base_url or settings.llamacpp_base_url
-    client = _client(base_url, api_key or settings.llamacpp_api_key.get_secret_value())
+    base_url = settings.llamacpp_base_url
+    client = _client(base_url, settings.llamacpp_api_key.get_secret_value())
     slots = _slots.setdefault(base_url, asyncio.Semaphore(get_settings().inference_concurrency))
     async with slots:
         response = await client.chat.completions.create(**request)

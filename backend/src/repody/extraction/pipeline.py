@@ -1,11 +1,10 @@
 """Extract one document: page images -> the model -> one value per field, or Markdown.
 
-Documents with fields go to NuExtract (structured mode). Documents without fields are transcribed to
-Markdown by AUDIT_MARKDOWN_PROVIDER: NuExtract's markdown mode (all pages in one request) or
-LightOnOCR-3 (one request per page).
+Everything goes to NuExtract3, all pages in one request: documents with fields in structured
+mode, documents without fields in its Markdown mode.
 
-Answers are cached in Redis by document bytes, request (provider, model, template, instructions,
-examples) and rendering (page limit, resolution) when AUDIT_EXTRACTION_CACHE_TTL_SECONDS > 0.
+Answers are cached in Redis by document bytes, request (model, template, instructions, examples)
+and rendering (page limit, resolution) when AUDIT_EXTRACTION_CACHE_TTL_SECONDS > 0.
 The cache is optional: when Redis fails, the model is asked and the failure logged.
 """
 
@@ -19,7 +18,7 @@ import structlog
 from pydantic import BaseModel
 from redis.exceptions import RedisError
 
-from repody.extraction import client, lightonocr, nuextract, render
+from repody.extraction import client, nuextract, render
 from repody.extraction.fields import FieldValue, leaf_values, parse_answer
 from repody.infra.redis import get_redis
 from repody.schemas.run import ExtractionMeta
@@ -40,27 +39,17 @@ class _Answer(BaseModel):
     pages_sent: int = 0
 
 
-def _uses_lightonocr(doc: DocumentDef) -> bool:
-    return not doc.schema_fields and get_settings().markdown_provider == "lightonocr"
-
-
 def _request(doc: DocumentDef) -> dict[str, Any]:
     """The request that decides the answer, without the page images."""
-    settings = get_settings()
+    model = get_settings().llamacpp_served_model
     if doc.schema_fields:
-        return nuextract.structured_request(doc, settings.llamacpp_served_model)
-    if _uses_lightonocr(doc):
-        return lightonocr.request(settings.lightonocr_served_model)
-    return nuextract.markdown_request(settings.llamacpp_served_model)
+        return nuextract.structured_request(doc, model)
+    return nuextract.markdown_request(model)
 
 
 def _cache_key(data: bytes, request: dict[str, Any]) -> str:
     """Everything that decides the answer: the file, the request, and how pages are rendered."""
-    rendering = {
-        "max_pages": get_settings().max_pages_per_document,
-        "pdf_dpi": render.PDF_DPI,
-        "lightonocr": (lightonocr.PDF_DPI, lightonocr.LONGEST_EDGE),
-    }
+    rendering = {"max_pages": get_settings().max_pages_per_document, "pdf_dpi": render.PDF_DPI}
     meta = json.dumps({"request": request, "rendering": rendering}, sort_keys=True)
     return f"extract:{hashlib.sha256(data + meta.encode()).hexdigest()}"
 
@@ -71,36 +60,16 @@ def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[st
 
 
 async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any]) -> _Answer:
-    settings = get_settings()
-    max_pages = settings.max_pages_per_document
-    if _uses_lightonocr(doc):
-        # One request per page, as LightOn's client does; pages joined by a blank line.
-        parts, total = await asyncio.to_thread(
-            lightonocr.page_parts, data, mime, max_pages=max_pages
-        )
-        replies = await asyncio.gather(
-            *(
-                client.chat(
-                    _with_pages(request, [part]),
-                    base_url=settings.lightonocr_base_url,
-                    api_key=settings.lightonocr_api_key.get_secret_value(),
-                )
-                for part in parts
-            )
-        )
-    else:
-        parts, total = await asyncio.to_thread(
-            nuextract.page_parts, data, mime, max_pages=max_pages
-        )
-        replies = [await client.chat(_with_pages(request, parts))]
-    text = "\n\n".join(reply.text for reply in replies)
-    truncated = any(reply.truncated for reply in replies)
-    pages = {"pages_rendered": total, "pages_sent": len(parts), "truncated": truncated}
+    parts, total = await asyncio.to_thread(
+        nuextract.page_parts, data, mime, max_pages=get_settings().max_pages_per_document
+    )
+    reply = await client.chat(_with_pages(request, parts))
+    pages = {"pages_rendered": total, "pages_sent": len(parts), "truncated": reply.truncated}
     if doc.schema_fields:
-        return _Answer(answer=text, **pages)
-    if not text:
+        return _Answer(answer=reply.text, **pages)
+    if not reply.text:
         raise RuntimeError("The model returned no Markdown for the document.")
-    return _Answer(markdown=text[:MAX_TEXT_CHARS], **pages)
+    return _Answer(markdown=reply.text[:MAX_TEXT_CHARS], **pages)
 
 
 async def _cached(key: str) -> _Answer | None:
@@ -153,7 +122,7 @@ async def extract(
     log.info(
         "document_extracted",
         document_type=doc.document_type,
-        model="lightonocr" if _uses_lightonocr(doc) else "nuextract",
+        model="nuextract",
         ms=elapsed,
         cache_hit=meta.cache_hit,
         fields=meta.fields_extracted,

@@ -86,14 +86,13 @@ async def database() -> AsyncIterator[None]:
 @pytest.fixture
 def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """What the fake model server answers: set ``model_answer["text"]`` (and ``["truncated"]``
-    for an answer cut off at the token limit); ``model_answer["calls"]`` lists each request with
-    the server it went to (None: the NuExtract server)."""
+    for an answer cut off at the token limit); ``model_answer["calls"]`` lists each request."""
     answer: dict = {"text": "{}", "truncated": False, "calls": []}
 
     async def chat(
-        payload: dict, *, base_url: str | None = None, api_key: str | None = None
+        payload: dict,
     ) -> inference.Reply:
-        answer["calls"].append({"request": payload, "base_url": base_url})
+        answer["calls"].append({"request": payload})
         return inference.Reply(text=answer["text"], truncated=answer["truncated"])
 
     monkeypatch.setattr(inference, "chat", chat)

@@ -6,7 +6,7 @@ import pypdfium2 as pdfium
 import pytest
 from PIL import ExifTags, Image
 
-from repody.extraction import lightonocr, nuextract, pipeline, render
+from repody.extraction import nuextract, pipeline, render
 from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
@@ -156,18 +156,6 @@ def test_rotated_photos_are_sent_upright():
     [part], _ = nuextract.page_parts(rotated, "image/jpeg", max_pages=None)
     assert part["image_url"]["url"].startswith("data:image/png;base64,")
     assert _size(part) == (20, 40)
-    [page], _ = lightonocr.page_parts(rotated, "image/jpeg", max_pages=None)
-    assert _size(page) == (20, 40)
-
-
-def test_lightonocr_pages_follow_the_model_card():
-    [page], total = lightonocr.page_parts(_pdf(1), "application/pdf", max_pages=None)
-    assert total == 1
-    assert max(_size(page)) == 2048
-    [image], _ = lightonocr.page_parts(_image(size=(800, 600)), "image/png", max_pages=None)
-    assert _size(image) == (800, 600)  # never upscaled
-    [image], _ = lightonocr.page_parts(_image(size=(4000, 3000)), "image/png", max_pages=None)
-    assert _size(image) == (2048, 1536)
 
 
 @pytest.mark.parametrize(

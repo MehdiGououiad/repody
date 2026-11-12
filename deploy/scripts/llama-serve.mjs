@@ -1,22 +1,18 @@
 #!/usr/bin/env node
 /**
- * Host llama-servers for Repody's models (OpenAI-compatible, detached).
+ * Host llama-server for NuExtract3 (OpenAI-compatible, detached).
  *
- *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract|lightonocr]
+ *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract]
  *
- * nuextract  (default) NuExtract3, AUDIT_LLAMACPP_* — https://huggingface.co/numind/NuExtract3-GGUF
- * lightonocr LightOnOCR-3 for Markdown, AUDIT_LIGHTONOCR_* when AUDIT_MARKDOWN_PROVIDER=lightonocr —
- *            https://huggingface.co/prithivMLmods/LightOnOCR-3-4B-GGUF (llama.cpp) and
- *            https://huggingface.co/lightonai/LightOnOCR-3-4B (thinking off)
+ * NuExtract3, AUDIT_LLAMACPP_* — https://huggingface.co/numind/NuExtract3-GGUF
  *
- * Only what the model cards and llama.cpp need: the weights, the served name, --jinja (the chat
- * templates take chat_template_kwargs), a context per request and, for LightOnOCR, thinking off.
- * Everything else is llama.cpp's default, including image resolution, batch sizes, flash attention
- * and GPU offload.
+ * Only what the model card and llama.cpp need: the weights, the served name, --jinja (the chat
+ * template takes chat_template_kwargs) and a context per request. Everything else is llama.cpp's
+ * default, including image resolution, batch sizes, flash attention and GPU offload.
  *
  * Settings come from deploy/llamacpp/paths.local.env, overridable by process env:
- *   LLAMACPP_*   NuExtract3: EXE, MODEL, MMPROJ, MODEL_ALIAS, PORT, CONTEXT, PARALLEL, DEVICE, GPU_LAYERS
- *   LIGHTONOCR_* LightOnOCR: HF (repo:quant), or MODEL + MMPROJ; MODEL_ALIAS, PORT, CONTEXT, PARALLEL, DEVICE
+ *   LLAMACPP_* EXE, MODEL, MMPROJ (or HF repo:quant), MODEL_ALIAS, PORT, CONTEXT, PARALLEL, DEVICE,
+ *   GPU_LAYERS
  */
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -46,18 +42,6 @@ const MODELS = {
     context: "32768",
     backendEnv: "AUDIT_LLAMACPP",
   },
-  lightonocr: {
-    title: "LightOnOCR-3",
-    prefix: "LIGHTONOCR",
-    hf: "prithivMLmods/LightOnOCR-3-4B-GGUF:Q8_0",
-    port: "8082",
-    alias: "lightonocr-3-4b",
-    context: "16384",
-    // The LightOnOCR-3 card serves with thinking off (vLLM --default-chat-template-kwargs);
-    // llama.cpp's equivalent is --reasoning off.
-    extraArgs: ["--reasoning", "off"],
-    backendEnv: "AUDIT_LIGHTONOCR",
-  },
 };
 
 const name = process.argv[3] || "nuextract";
@@ -75,7 +59,7 @@ const pidFile = path.join(LOG_DIR, `${name}-llama-server.pid`);
 /** The weights: local files (MODEL + MMPROJ), or a Hugging Face repo:quant that llama.cpp fetches. */
 function weightArgs() {
   if (get("MODEL")) return ["-m", get("MODEL"), "--mmproj", get("MMPROJ")];
-  return ["-hf", get("HF", spec.hf ?? "")];
+  return ["-hf", get("HF")];
 }
 
 function buildArgs() {
@@ -83,7 +67,6 @@ function buildArgs() {
     ...weightArgs(),
     ...["--host", "0.0.0.0", "--port", String(port), "-a", alias, "--jinja"],
     ...["-c", get("CONTEXT", spec.context), "-np", get("PARALLEL", "1")],
-    ...(spec.extraArgs ?? []),
   ];
   if (get("GPU_LAYERS")) args.push("-ngl", get("GPU_LAYERS"));
   if (get("DEVICE")) args.push("--device", get("DEVICE"));
@@ -96,7 +79,7 @@ function missingPaths() {
   if (get("MODEL")) {
     if (!fs.existsSync(get("MODEL"))) missing.push(`${spec.prefix}_MODEL`);
     if (!get("MMPROJ") || !fs.existsSync(get("MMPROJ"))) missing.push(`${spec.prefix}_MMPROJ`);
-  } else if (!get("HF", spec.hf ?? "")) {
+  } else if (!get("HF")) {
     missing.push(`${spec.prefix}_MODEL and ${spec.prefix}_MMPROJ`);
   }
   return missing;
@@ -194,7 +177,7 @@ function stop() {
   console.log(`Stopped ${spec.title} on :${port} (if it was running).`);
 }
 
-/** NuExtract3 GGUFs into deploy/llamacpp/models (LightOnOCR is fetched by llama.cpp's -hf). */
+/** NuExtract3 GGUFs into deploy/llamacpp/models. */
 function download() {
   if (!spec.hfRepo) {
     console.log(
@@ -238,7 +221,7 @@ else if (cmd === "restart") {
 else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract|lightonocr]"
+    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract]"
   );
   process.exit(2);
 }

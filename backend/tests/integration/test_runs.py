@@ -149,19 +149,4 @@ async def test_markdown_with_nuextract(api, model_answer):
     document = await run_markdown(api)
     assert document["extraction"]["markdownText"] == "# FACTURE"
     [call] = model_answer["calls"]
-    assert call["base_url"] is None  # the NuExtract server
     assert call["request"]["extra_body"]["chat_template_kwargs"]["mode"] == "markdown"
-
-
-async def test_markdown_with_lightonocr(api, model_answer, monkeypatch):
-    settings = get_settings()
-    monkeypatch.setattr(settings, "markdown_provider", "lightonocr")
-    model_answer["text"] = "# FACTURE"
-    document = await run_markdown(api)
-    assert document["extraction"]["markdownText"] == "# FACTURE"
-    [call] = model_answer["calls"]  # one page, one request
-    assert call["base_url"] == settings.lightonocr_base_url
-    request = call["request"]
-    assert request["model"] == settings.lightonocr_served_model
-    assert (request["max_tokens"], request["temperature"], request["top_p"]) == (4096, 0.2, 0.9)
-    assert [part["type"] for part in request["messages"][0]["content"]] == ["image_url"]

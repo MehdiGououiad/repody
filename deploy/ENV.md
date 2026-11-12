@@ -50,10 +50,6 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_LLAMACPP_BASE_URL` | `http://127.0.0.1:8081/v1` | OpenAI-compatible llama-server serving NuExtract |
 | `AUDIT_LLAMACPP_API_KEY` | `local` | Bearer token for the endpoint (secret) |
 | `AUDIT_LLAMACPP_SERVED_MODEL` | `nuextract3-q8_0` | Model id from `/v1/models` |
-| `AUDIT_MARKDOWN_PROVIDER` | `nuextract` | Markdown for documents without fields: `nuextract` or `lightonocr` |
-| `AUDIT_LIGHTONOCR_BASE_URL` | `http://127.0.0.1:8082/v1` | OpenAI-compatible server for LightOnOCR-3 (`pnpm lightonocr:serve`) |
-| `AUDIT_LIGHTONOCR_API_KEY` | `local` | Bearer token for that endpoint (secret) |
-| `AUDIT_LIGHTONOCR_SERVED_MODEL` | `lightonocr-3-4b` | LightOnOCR model id from `/v1/models` |
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | `180` | Per model call; must fit in the run timeout |
 | `AUDIT_LLAMACPP_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to llama-server `--parallel`; documents and pages are sent concurrently up to it |

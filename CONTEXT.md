@@ -56,7 +56,7 @@ backend/src/repody/
 ├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
 ├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance,
 │                      lifecycle (the only code that changes a run's status)
-├── extraction/        NuExtract / LightOnOCR requests, page rendering, model client, field values
+├── extraction/        NuExtract requests, page rendering, model client, field values
 ├── rules/             Typed conditions and their evaluation
 ├── schemas/           Pydantic models (API and stored workflow definition)
 ├── infra/             auth (Keycloak JWT, roles, API keys), queue (Taskiq), models, db,
