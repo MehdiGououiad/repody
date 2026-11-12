@@ -1,18 +1,25 @@
-import { ShieldCheck } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
+import { StatusGlyph } from "@/components/ui/status-glyph";
 import { safeCallbackUrl } from "@/lib/auth/public-paths";
 import { auth, KEYCLOAK, oidcEnabled } from "@/lib/auth/server";
+import { currentBrand } from "@/lib/theme/brand";
 
+export async function generateMetadata() {
+  return { title: (await getTranslations("auth"))("signIn") };
+}
+
+/** Sign-in: the brand, one sentence, one action. The credentials page itself is Keycloak's. */
 export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ callbackUrl?: string; error?: string }>;
 }) {
   const [{ callbackUrl, error }, t] = await Promise.all([searchParams, getTranslations("auth")]);
+  const brand = currentBrand();
   const destination = safeCallbackUrl(callbackUrl);
   // Better Auth sends sign-in failures here as `?error=<code>` (the proxy sends signed-in
   // visitors on to `callbackUrl`).
@@ -29,35 +36,31 @@ export default async function LoginPage({
   }
 
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center px-4 py-12">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(196,163,90,0.22), transparent 60%)",
-        }}
-      />
-      <div className="relative w-full max-w-md rounded-xl border border-line/80 bg-panel/90 p-8  ">
-        <div className="mb-8 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-accent/15 ring-1 ring-accent/25 text-accent-ink shadow-[0_0_32px_-8px_var(--accent-blue-glow)]">
-            <ShieldCheck className="h-7 w-7" aria-hidden />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">{t("signInTitle")}</h1>
-            <p className="text-sm text-ink-3">{t("signInSubtitle")}</p>
-          </div>
-        </div>
-
-        {errorKey ? (
-          <p
-            role="alert"
-            className="mb-4 rounded-lg border border-fail/30 bg-fail/10 px-3 py-2 text-center text-sm text-fail-ink"
+    <main className="flex min-h-dvh items-center justify-center bg-canvas px-4">
+      <div className="flex w-full max-w-sm flex-col gap-6 pb-[10vh]">
+        {brand.logoUrl ? (
+          // biome-ignore lint/performance/noImgElement: a client's logo comes from any URL.
+          <img src={brand.logoUrl} alt={brand.name} className="h-7 w-auto self-start" />
+        ) : (
+          <span
+            aria-hidden
+            className="flex size-8 items-center justify-center rounded-md bg-accent text-sm font-semibold text-on-accent"
           >
+            {brand.name.slice(0, 1).toUpperCase()}
+          </span>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <h1 className="text-xl font-semibold text-ink">
+            {t("signInTitle", { name: brand.name })}
+          </h1>
+          <p className="text-sm text-ink-3">{t("signInSubtitle")}</p>
+        </div>
+        {errorKey ? (
+          <p role="alert" className="flex items-start gap-2 text-sm text-fail-ink">
+            <StatusGlyph status="failed" className="mt-0.5" />
             {t(errorKey)}
           </p>
         ) : null}
-
         {oidcEnabled ? (
           <form action={signInWithKeycloak}>
             <Button type="submit" size="lg" className="w-full">
@@ -65,16 +68,14 @@ export default async function LoginPage({
             </Button>
           </form>
         ) : (
-          <div className="space-y-4 text-center">
+          <div className="flex flex-col gap-3">
             <p className="text-sm text-ink-3">{t("devModeOnLogin")}</p>
-            <Button asChild className="w-full" size="lg">
+            <Button asChild size="lg" className="w-full">
               <Link href={destination}>{t("continueToApp")}</Link>
             </Button>
           </div>
         )}
-
-        <p className="mt-6 text-center text-xs text-ink-3">{t("keycloakHint")}</p>
       </div>
-    </div>
+    </main>
   );
 }

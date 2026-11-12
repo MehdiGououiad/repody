@@ -1,10 +1,9 @@
 "use client";
 
-import { FileJson2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { FileJson2, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ImportNuextractTemplateDialog } from "@/components/workflow/documents/import-nuextract-template-dialog";
 import { SchemaFieldExtraConfig } from "@/components/workflow/documents/schema-field-extra";
 import {
@@ -16,16 +15,12 @@ import type { SchemaField } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { newSchemaField } from "@/lib/workflow/new-items";
 
-/** Desktop table columns; minmax(0,…) lets cells shrink without overlapping neighbors. */
-const ROW_GRID =
-  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,2fr)_auto_2rem] md:gap-0";
-const CELL =
-  "flex flex-col gap-1 min-w-0 md:justify-center md:px-2 md:py-1 md:border-r md:border-line";
-const MOBILE_LABEL = "text-2xs font-semibold text-ink-3 md:sr-only";
-const HEADER_CELL =
-  "min-w-0 px-3 py-2 text-2xs font-semibold text-ink-3 border-r border-line break-words leading-snug";
-const INLINE_INPUT =
-  "text-xs h-9 min-w-0 w-full border-transparent bg-transparent shadow-none focus-visible:bg-panel focus-visible:border-line-strong";
+const GRID =
+  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_88px_28px] md:items-center md:gap-2";
+
+/** A cell input that looks like text until hovered or focused. */
+const CELL_INPUT =
+  "h-8 w-full min-w-0 rounded-md bg-transparent px-2 text-sm text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none";
 
 function SchemaFieldRow({
   field,
@@ -40,68 +35,51 @@ function SchemaFieldRow({
 }) {
   const t = useTranslations("workflows.builder.schema");
   const tCommon = useTranslations("common");
-
   return (
-    <div className="border-b border-line last:border-b-0 md:border-b-0">
-      <div
-        className={cn("group flex flex-col gap-3 p-3 hover:bg-panel transition-colors", ROW_GRID)}
-      >
-        <div className={CELL}>
-          <span className={MOBILE_LABEL}>{t("name")}</span>
-          <Input
+    <li className="group">
+      <div className={cn("flex flex-col gap-1 px-2 py-1.5 md:py-1", GRID)}>
+        <div className="min-w-0">
+          <input
             value={field.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder={t("namePlaceholder")}
+            aria-label={t("name")}
             aria-invalid={duplicate}
-            className={cn(
-              "font-mono",
-              INLINE_INPUT,
-              duplicate && "border-fail text-fail-ink focus-visible:border-fail"
-            )}
+            className={cn(CELL_INPUT, "font-mono text-xs", duplicate && "text-fail-ink")}
           />
-          {duplicate ? <p className="text-2xs text-fail-ink">{t("duplicateName")}</p> : null}
+          {duplicate ? <p className="px-2 text-xs text-fail-ink">{t("duplicateName")}</p> : null}
         </div>
-        <div className={CELL}>
-          <span className={MOBILE_LABEL}>{t("type")}</span>
-          <TemplateTypeSelect
-            detailed
-            value={field.templateType}
-            onChange={(templateType) => onUpdate({ templateType })}
-          />
-        </div>
-        <div className={cn(CELL, "md:flex-row md:items-center")}>
-          <span className={MOBILE_LABEL}>{t("intent")}</span>
-          <Input
-            value={field.description}
-            onChange={(e) => onUpdate({ description: e.target.value })}
-            placeholder={t("descriptionPlaceholder")}
-            className={INLINE_INPUT}
-          />
-        </div>
-        <div className={cn(CELL, "md:items-center")}>
-          <ListToggle
-            value={field.templateType}
-            onChange={(templateType) => onUpdate({ templateType })}
-            className="justify-end md:justify-center whitespace-nowrap"
-          />
-        </div>
-        <div className="flex justify-end md:items-center md:justify-center md:self-stretch">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-outline hover:text-fail-ink md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100"
-            onClick={onRemove}
-            aria-label={tCommon("delete")}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </div>
+        <TemplateTypeSelect
+          value={field.templateType}
+          onChange={(templateType) => onUpdate({ templateType })}
+        />
+        <input
+          value={field.description}
+          onChange={(e) => onUpdate({ description: e.target.value })}
+          placeholder={t("descriptionPlaceholder")}
+          aria-label={t("intent")}
+          className={CELL_INPUT}
+        />
+        <ListToggle
+          value={field.templateType}
+          onChange={(templateType) => onUpdate({ templateType })}
+        />
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+          onClick={onRemove}
+          aria-label={tCommon("delete")}
+        >
+          <X />
+        </Button>
       </div>
       <SchemaFieldExtraConfig field={field} onUpdate={onUpdate} />
-    </div>
+    </li>
   );
 }
 
+/** The fields to read from a document: name, how the value is written, what it is. */
 export function SchemaTable({
   schema,
   onChange,
@@ -110,67 +88,39 @@ export function SchemaTable({
   onChange: (schema: SchemaField[]) => void;
 }) {
   const t = useTranslations("workflows.builder.schema");
-  const tCommon = useTranslations("common");
   const [importOpen, setImportOpen] = useState(false);
   // Names that address the same field (the API matches names by `field_key`).
   const duplicates = useMemo(() => {
     const keys = schema.map((field) => fieldKey(field.name)).filter(Boolean);
     return new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
   }, [schema]);
-
   const update = (id: string, patch: Partial<SchemaField>) =>
     onChange(schema.map((f) => (f.id === id ? { ...f, ...patch } : f)));
   const add = () => onChange([...schema, newSchemaField()]);
 
   return (
-    <div className="space-y-2">
+    <div className="flex flex-col gap-2">
       <ImportNuextractTemplateDialog
         open={importOpen}
         onOpenChange={setImportOpen}
         hasExistingFields={schema.some((f) => f.name.trim())}
         onImport={(fields, mode) => onChange(mode === "append" ? [...schema, ...fields] : fields)}
       />
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <p className="text-2xs text-ink-3 flex items-start gap-1.5 min-w-0">
-          <Sparkles className="h-3 w-3 text-accent-ink shrink-0 mt-0.5" />
-          <span className="min-w-0">{t("description")}</span>
-        </p>
-        <div className="flex shrink-0 items-center gap-1 self-end sm:self-auto">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs"
-            onClick={() => setImportOpen(true)}
-          >
-            <FileJson2 className="h-3 w-3" />
-            {t("importTemplate")}
-          </Button>
-          <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={add}>
-            <Plus className="h-3 w-3" />
-            {t("addField")}
-          </Button>
-        </div>
-      </div>
-
-      {schema.length === 0 ? (
-        <button
-          type="button"
-          onClick={add}
-          className="w-full border-2 border-dashed border-line rounded-lg py-8 text-center text-xs text-ink-3 hover:border-accent/40 hover:bg-accent/5 transition-colors"
+      <div className="overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--line)]">
+        <div
+          className={cn(
+            "hidden h-8 border-b border-line bg-raised px-2 text-xs font-medium text-ink-3",
+            GRID
+          )}
         >
-          {t("empty")}
-        </button>
-      ) : (
-        <div className="border border-line rounded-lg overflow-hidden min-w-0">
-          <div className={cn("hidden md:grid bg-raised border-b border-line", ROW_GRID)}>
-            <div className={HEADER_CELL}>{t("name")}</div>
-            <div className={HEADER_CELL}>{t("type")}</div>
-            <div className={HEADER_CELL}>{t("intent")}</div>
-            <div className={cn(HEADER_CELL, "md:text-center")}>{t("listModeLabel")}</div>
-            <div className="sr-only">{tCommon("delete")}</div>
-          </div>
-          <div className="md:divide-y md:divide-line">
+          <span className="px-2">{t("name")}</span>
+          <span className="px-2">{t("type")}</span>
+          <span className="px-2">{t("intent")}</span>
+          <span className="px-2 text-center">{t("listModeLabel")}</span>
+          <span />
+        </div>
+        {schema.length ? (
+          <ul className="divide-y divide-line">
             {schema.map((field) => (
               <SchemaFieldRow
                 key={field.id}
@@ -180,9 +130,21 @@ export function SchemaTable({
                 onRemove={() => onChange(schema.filter((f) => f.id !== field.id))}
               />
             ))}
-          </div>
+          </ul>
+        ) : (
+          <p className="px-4 py-6 text-sm text-ink-3">{t("empty")}</p>
+        )}
+        <div className="flex items-center gap-1 border-t border-line px-2 py-1">
+          <Button variant="ghost" size="sm" onClick={add}>
+            <Plus />
+            {t("addField")}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}>
+            <FileJson2 />
+            {t("importTemplate")}
+          </Button>
         </div>
-      )}
+      </div>
     </div>
   );
 }

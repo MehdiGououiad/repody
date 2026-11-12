@@ -1,6 +1,7 @@
 "use client";
 
 import { useMessages, useTranslations } from "next-intl";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -8,8 +9,8 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCatalog } from "@/lib/hooks/use-catalog";
 import { isListType, scalarType, withList } from "@/lib/schema/template-types";
 import type { TemplateTypeGroup } from "@/lib/types";
@@ -31,55 +32,42 @@ export function TemplateTypeSelect({
   value,
   onChange,
   structures = true,
-  detailed = false,
+  className,
 }: {
   value: string;
   onChange: (value: string) => void;
   /** Offer object, table and enum types (table columns are scalars only). */
   structures?: boolean;
-  /** Show each type's description (the wide schema table). */
   detailed?: boolean;
+  className?: string;
 }) {
   const t = useTranslations("workflows.builder.schema");
   const catalog = useCatalog();
   const text = useTypeText();
   const scalar = scalarType(value);
   const list = isListType(value);
-  if (!catalog) return <div className="h-9 rounded-md bg-raised animate-pulse" />;
-
+  if (!catalog) return <Skeleton className="h-8" />;
   const known = catalog.templateTypes.some((type) => type.value === scalar);
   const groups = GROUPS.filter((group) => structures || group !== "structure");
 
   return (
     <Select value={scalar} onValueChange={(next) => onChange(withList(next, list, catalog))}>
       <SelectTrigger
+        aria-label={t("type")}
         className={cn(
-          "text-xs min-w-0 w-full",
-          detailed &&
-            "h-auto min-h-8 py-1 border-transparent bg-transparent shadow-none focus:bg-panel gap-2"
+          "bg-transparent shadow-none hover:bg-hover hover:shadow-none data-[state=open]:bg-hover",
+          className
         )}
       >
-        {detailed ? (
-          <>
-            <SelectValue className="sr-only" aria-label={text(value, "label")} />
-            <span className="flex min-w-0 flex-1 flex-col items-start text-left overflow-hidden">
-              <span className="w-full truncate font-medium leading-tight">
-                {text(value, "label")}
-              </span>
-              <span className="w-full truncate text-2xs text-ink-3 leading-tight">
-                {text(value, "description")}
-                {list ? ` · ${t("listModeSuffix")}` : ""}
-              </span>
-            </span>
-          </>
-        ) : (
-          <SelectValue />
-        )}
+        <span className="truncate">
+          {text(value, "label")}
+          {list ? <span className="text-ink-3"> · {t("listModeSuffix")}</span> : null}
+        </span>
       </SelectTrigger>
-      <SelectContent className="max-h-80 w-72">
+      <SelectContent className="w-72">
         {groups.map((group) => (
           <SelectGroup key={group}>
-            <SelectLabel className="text-2xs">{t(`typeGroups.${group}`)}</SelectLabel>
+            <SelectLabel>{t(`typeGroups.${group}`)}</SelectLabel>
             {catalog.templateTypes
               .filter((type) => type.group === group)
               .map((type) => (
@@ -87,17 +75,11 @@ export function TemplateTypeSelect({
                   key={type.value}
                   value={type.value}
                   textValue={text(type.value, "label")}
-                  className="py-2"
+                  className="h-auto items-start py-1.5"
                 >
-                  <span className="flex flex-col gap-0.5">
-                    <span className="text-xs font-medium leading-tight">
-                      {text(type.value, "label")}
-                    </span>
-                    {detailed ? (
-                      <span className="text-2xs text-ink-3 leading-snug">
-                        {text(type.value, "description")}
-                      </span>
-                    ) : null}
+                  <span className="flex flex-col">
+                    <span className="text-sm text-ink">{text(type.value, "label")}</span>
+                    <span className="text-xs text-ink-3">{text(type.value, "description")}</span>
                   </span>
                 </SelectItem>
               ))}
@@ -124,19 +106,20 @@ export function ListToggle({
   const listable = catalog?.templateTypes.find(
     (type) => type.value === scalarType(value)
   )?.listable;
-  if (!catalog || !listable) return null;
+  if (!catalog || !listable) return <span className="hidden md:block" />;
   return (
-    <label
-      className={cn("flex items-center gap-1.5 text-2xs text-ink-3 cursor-pointer", className)}
+    <div
+      className={cn("flex items-center gap-2 px-2 text-sm text-ink-3 md:justify-center", className)}
       title={t("listModeHint")}
     >
-      <input
-        type="checkbox"
-        className="size-3.5 rounded border-line text-ink focus-visible:ring-2 focus-visible:ring-focus/30"
+      <Checkbox
+        aria-label={t("listModeLabel")}
         checked={isListType(value)}
-        onChange={(event) => onChange(withList(value, event.target.checked, catalog))}
+        onCheckedChange={(on) => onChange(withList(value, on === true, catalog))}
       />
-      {t("listModeLabel")}
-    </label>
+      <span className="md:sr-only" aria-hidden>
+        {t("listModeLabel")}
+      </span>
+    </div>
   );
 }

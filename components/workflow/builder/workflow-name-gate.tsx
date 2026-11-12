@@ -1,10 +1,10 @@
 "use client";
 
-import { ArrowRight, GitBranch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+/** A new workflow starts with its name: one field, one action. */
 export function WorkflowNameGate({
   name,
   onNameChange,
@@ -16,38 +16,30 @@ export function WorkflowNameGate({
 }) {
   const t = useTranslations("workflows.builder.nameGate");
   const trimmed = name.trim();
-
   return (
-    <div className="flex flex-1 items-center justify-center p-6 md:p-10">
-      <div className="w-full max-w-md space-y-6 text-center">
-        <div className="mx-auto size-14 rounded-xl bg-accent/10 ring-1 ring-accent/20 flex items-center justify-center">
-          <GitBranch className="h-7 w-7 text-accent-ink" aria-hidden="true" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-ink">{t("title")}</h1>
-          <p className="text-sm text-ink-3 leading-relaxed">{t("hint")}</p>
-        </div>
-        <div className="space-y-3 text-left">
-          <label htmlFor="workflow-name" className="text-xs font-semibold text-ink-3">
-            {t("label")}
-          </label>
-          <Input
-            id="workflow-name"
-            value={name}
-            onChange={(e) => onNameChange(e.target.value)}
-            placeholder={t("placeholder")}
-            className="h-11 text-base font-semibold"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && trimmed) onContinue();
-            }}
-          />
-        </div>
-        <Button size="lg" className="w-full gap-2" disabled={!trimmed} onClick={onContinue}>
-          {t("continue")}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
+    <form
+      className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-5 px-6 pb-[12vh]"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (trimmed) onContinue();
+      }}
+    >
+      <div className="flex flex-col gap-1.5">
+        <h1 className="text-xl font-semibold text-ink">{t("title")}</h1>
+        <p className="text-sm text-ink-3">{t("hint")}</p>
       </div>
-    </div>
+      <Input
+        id="workflow-name"
+        aria-label={t("label")}
+        value={name}
+        onChange={(e) => onNameChange(e.target.value)}
+        placeholder={t("placeholder")}
+        className="h-10 text-base"
+        autoFocus
+      />
+      <Button type="submit" size="lg" disabled={!trimmed} className="self-start">
+        {t("continue")}
+      </Button>
+    </form>
   );
 }

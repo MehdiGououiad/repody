@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ToggleGroup } from "radix-ui";
 import { Input } from "@/components/ui/input";
+import { Segmented } from "@/components/ui/segmented";
 import {
   Select,
   SelectContent,
@@ -20,7 +20,6 @@ import type {
   Catalog,
   ConditionExpression,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 const KINDS = ["field", "arithmetic", "aggregate"] as const;
 const ARITHMETIC_OPS: { value: ArithmeticOp; label: string }[] = [
@@ -64,12 +63,12 @@ function AggregateEditor({
   return (
     <div className="flex flex-wrap items-center gap-1">
       <Select value={value.fn} onValueChange={(fn) => patch({ fn: fn as AggregateFn })}>
-        <SelectTrigger className="h-8 w-36 text-xs">
+        <SelectTrigger className="w-36">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           {AGGREGATES.map((option) => (
-            <SelectItem key={option.value} value={option.value} className="text-xs">
+            <SelectItem key={option.value} value={option.value}>
               {t(option.key)}
             </SelectItem>
           ))}
@@ -103,7 +102,7 @@ function AggregateEditor({
             value={value.filterContains}
             onChange={(event) => patch({ filterContains: event.target.value })}
             placeholder={t("filterContains")}
-            className="h-8 w-44 text-xs font-mono"
+            className="w-44 font-mono text-xs"
           />
         </>
       ) : null}
@@ -138,29 +137,12 @@ export function ConditionLeft({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {available.length > 1 ? (
-        <ToggleGroup.Root
-          type="single"
+        <Segmented
+          label={t("left")}
           value={value.kind}
-          onValueChange={(kind) =>
-            kind && onChange(switchKind(value, kind as ConditionExpression["kind"], tables))
-          }
-          className="inline-flex rounded border border-line p-0.5"
-          aria-label={t("left")}
-        >
-          {available.map((kind) => (
-            <ToggleGroup.Item
-              key={kind}
-              value={kind}
-              className={cn(
-                "h-7 px-2 rounded text-2xs font-semibold  ",
-                "text-ink-3 hover:text-ink",
-                "data-[state=on]:bg-accent/10 data-[state=on]:text-ink"
-              )}
-            >
-              {t(`kinds.${kind}`)}
-            </ToggleGroup.Item>
-          ))}
-        </ToggleGroup.Root>
+          onChange={(kind) => onChange(switchKind(value, kind, tables))}
+          options={available.map((kind) => ({ value: kind, label: t(`kinds.${kind}`) }))}
+        />
       ) : null}
       {value.kind === "field" ? (
         <FieldRefPicker value={value} fields={scalars} onChange={onChange} />
@@ -176,12 +158,12 @@ export function ConditionLeft({
             value={value.op}
             onValueChange={(op) => onChange({ ...value, op: op as ArithmeticOp })}
           >
-            <SelectTrigger className="h-8 w-14 text-sm font-mono" aria-label={t("arithmeticOp")}>
+            <SelectTrigger className="w-14 font-mono" aria-label={t("arithmeticOp")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {ARITHMETIC_OPS.map((op) => (
-                <SelectItem key={op.value} value={op.value} className="font-mono text-sm">
+                <SelectItem key={op.value} value={op.value} className="font-mono">
                   {op.label}
                 </SelectItem>
               ))}

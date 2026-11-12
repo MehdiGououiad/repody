@@ -33,13 +33,18 @@ export function FieldSelect({
   const t = useTranslations("workflows.builder.rules.conditions");
   // A stored name that no longer fits (renamed field, changed type) still shows, so the rule's
   // check error points at something visible.
-  const stale = value && !options.some((option) => option.name === value);
+  // An unqualified name (`total`) still matches its qualified option (`Invoice.total`): the
+  // API reads both, and a rule written before a second document was added keeps working.
+  const match =
+    options.find((option) => option.name === value) ??
+    options.find((option) => option.name.endsWith(`.${value}`));
+  const stale = value && !match;
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={match?.name ?? value} onValueChange={onChange}>
       <SelectTrigger
         className={cn(
-          "h-8 text-xs w-40 font-mono",
-          stale && "border-fail text-fail-ink",
+          "w-40 font-mono text-xs",
+          stale && "text-fail-ink shadow-[inset_0_0_0_1px_var(--fail)]",
           className
         )}
       >
@@ -47,18 +52,18 @@ export function FieldSelect({
       </SelectTrigger>
       <SelectContent>
         {stale ? (
-          <SelectItem value={value} className="text-xs font-mono text-fail-ink">
+          <SelectItem value={value} className="font-mono text-xs text-fail-ink">
             {value}
           </SelectItem>
         ) : null}
         {options.map((option) => (
-          <SelectItem key={option.name} value={option.name} className="text-xs font-mono">
+          <SelectItem key={option.name} value={option.name} className="font-mono text-xs">
             {option.name}
-            <span className="ml-2 text-2xs text-ink-3">{option.type}</span>
+            <span className="ms-auto ps-3 font-sans text-xs text-ink-4">{option.type}</span>
           </SelectItem>
         ))}
         {options.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-ink-3 italic">{t("noFields")}</div>
+          <div className="px-2 py-1.5 text-sm text-ink-3">{t("noFields")}</div>
         ) : null}
       </SelectContent>
     </Select>
@@ -100,12 +105,7 @@ export function OperandPicker({
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
   const switchButton = (label: string, next: ConditionOperand) => (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-8 text-2xs text-ink-3 px-2"
-      onClick={() => onChange(next)}
-    >
+    <Button variant="ghost" size="sm" className="text-ink-3" onClick={() => onChange(next)}>
       {label}
     </Button>
   );

@@ -1,14 +1,12 @@
 "use client";
 
-import { AlertCircle, CalendarDays, User } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { DateTime } from "@/components/shared/date-time";
+import { Button } from "@/components/ui/button";
 import type { Workflow } from "@/lib/types";
-import { BuilderMobileSteps } from "./builder/builder-mobile-steps";
-import { BuilderStepFooter } from "./builder/builder-step-footer";
 import { BuilderTopbar } from "./builder/builder-topbar";
-import { type BuilderStep, BuilderStepNav, stepComplete } from "./builder/step-nav";
+import { type BuilderStep, BuilderTabs, stepBlocked, stepComplete } from "./builder/step-nav";
 import { TestDeployStep } from "./builder/test-run-panel";
 import { useBuilderWorkflow } from "./builder/use-builder-workflow";
 import { WorkflowNameGate } from "./builder/workflow-name-gate";
@@ -23,7 +21,6 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
   const [nameConfirmed, setNameConfirmed] = useState(
     () => !isNew || workflow.name.trim().length > 0
   );
-
   const {
     step,
     setStep,
@@ -42,12 +39,11 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
     handleSaveDraft,
     saveForTestRun,
   } = useBuilderWorkflow(workflow, mode);
-
   const schemaReady = stepComplete(0, documents, rules);
-  const showNameGate = isNew && !nameConfirmed;
+  const next = (step + 1) as BuilderStep;
 
   return (
-    <div className="flex flex-col " style={{ height: "calc(100vh - 64px)" }}>
+    <div className="flex h-full flex-col">
       <BuilderTopbar
         name={name}
         deployed={deployed}
@@ -57,8 +53,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
         onSaveDraft={() => handleSaveDraft()}
         onDeploy={handleDeploy}
       />
-
-      {showNameGate ? (
+      {isNew && !nameConfirmed ? (
         <WorkflowNameGate
           name={name}
           onNameChange={setName}
@@ -68,77 +63,57 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
         />
       ) : (
         <>
-          <div className="flex flex-1 overflow-hidden min-h-0">
-            <aside className="hidden md:flex w-52 xl:w-60 border-r border-line/80 flex-col gap-0 p-3 shrink-0 overflow-y-auto bg-panel/80 ">
-              <BuilderStepNav
-                current={step}
-                documents={documents}
-                rules={rules}
-                onChange={setStep}
-                testHasResults={testSession.runId !== null}
-              />
+          <BuilderTabs
+            current={step}
+            documents={documents}
+            rules={rules}
+            tested={testSession.runId !== null}
+            onChange={setStep}
+          />
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="mx-auto w-full max-w-[1100px] px-4 py-6 md:px-8 md:py-8">
+              {step === 0 ? (
+                <DocumentsSection documents={documents} onChange={setDocuments} />
+              ) : null}
+              {step === 1 ? (
+                <RulesPanel rules={rules} documents={documents} onChange={setRules} />
+              ) : null}
+              {step === 2 ? (
+                <TestDeployStep
+                  workflowId={workflow.id}
+                  name={name || workflow.name}
+                  apiKey={apiKey}
+                  apiKeyHint={workflow.apiKeyHint ?? undefined}
+                  documents={documents}
+                  rules={rules}
+                  deployed={deployed}
+                  sync={sync}
+                  onDeploy={handleDeploy}
+                  saveForTestRun={saveForTestRun}
+                  testSession={testSession}
+                  onTestSessionChange={setTestSession}
+                />
+              ) : null}
 
-              <div className="mt-6 border-t border-line pt-4 space-y-2.5 px-1">
-                <div className="flex items-center gap-2 text-2xs text-ink-3">
-                  <User className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{workflow.owner}</span>
+              {step < 2 ? (
+                <div className="mt-10 flex flex-wrap items-center justify-end gap-3 border-t border-line pt-5">
+                  {stepBlocked(next, documents, rules) ? (
+                    <p className="text-sm text-ink-3">{tSteps("continueBlockedSchema")}</p>
+                  ) : step === 1 && !stepComplete(1, documents, rules) ? (
+                    <p className="text-sm text-ink-3">{tSteps("continueRulesOptional")}</p>
+                  ) : null}
+                  <Button
+                    variant="secondary"
+                    disabled={stepBlocked(next, documents, rules)}
+                    onClick={() => setStep(next)}
+                  >
+                    {tSteps(step === 0 ? "continueToRules" : "continueToTest")}
+                    <ArrowRight />
+                  </Button>
                 </div>
-                {workflow.lastRun ? (
-                  <div className="flex items-center gap-2 text-2xs text-ink-3">
-                    <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">
-                      <DateTime value={workflow.lastRun} />
-                    </span>
-                  </div>
-                ) : null}
-                {!schemaReady && step > 0 ? (
-                  <div className="flex items-start gap-1.5 text-2xs text-warn-ink">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" aria-hidden="true" />
-                    <span>{tSteps("schemaIncomplete")}</span>
-                  </div>
-                ) : null}
-              </div>
-            </aside>
-
-            <main className="flex flex-1 flex-col min-w-0 overflow-hidden">
-              <div key={step} className="flex-1 overflow-y-auto p-5 md:p-6 lg:p-8 min-w-0">
-                <div className="mx-auto w-full max-w-4xl min-w-0">
-                  {step === 0 ? (
-                    <DocumentsSection documents={documents} onChange={setDocuments} />
-                  ) : null}
-                  {step === 1 ? (
-                    <RulesPanel rules={rules} documents={documents} onChange={setRules} />
-                  ) : null}
-                  {step === 2 ? (
-                    <TestDeployStep
-                      workflowId={workflow.id}
-                      name={name || workflow.name}
-                      apiKey={apiKey}
-                      apiKeyHint={workflow.apiKeyHint ?? undefined}
-                      documents={documents}
-                      rules={rules}
-                      deployed={deployed}
-                      sync={sync}
-                      onDeploy={handleDeploy}
-                      saveForTestRun={saveForTestRun}
-                      testSession={testSession}
-                      onTestSessionChange={setTestSession}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              <BuilderStepFooter
-                step={step}
-                documents={documents}
-                rules={rules}
-                onBack={() => setStep((step - 1) as BuilderStep)}
-                onContinue={() => setStep((step + 1) as BuilderStep)}
-              />
-            </main>
+              ) : null}
+            </div>
           </div>
-
-          <BuilderMobileSteps step={step} documents={documents} rules={rules} onChange={setStep} />
         </>
       )}
     </div>
@@ -150,7 +125,7 @@ export function NewWorkflowBuilder({ workflow }: { workflow: Workflow }) {
   return <BuilderShellCore key={workflow.id} workflow={workflow} mode="new" />;
 }
 
-/** Edit an existing workflow with optional server-fetched rule library. */
+/** Edit an existing workflow. */
 export function EditWorkflowBuilder({ workflow }: { workflow: Workflow }) {
   return <BuilderShellCore key={workflow.id} workflow={workflow} mode="edit" />;
 }

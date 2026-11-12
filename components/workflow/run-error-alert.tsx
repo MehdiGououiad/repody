@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CopyButton } from "@/components/workflow/api-panel/api-panel-copy";
+import { StatusGlyph } from "@/components/ui/status-glyph";
 
+/** What went wrong with a run, in plain words, and where to look next. */
 export function RunErrorAlert({
   title,
   message,
@@ -14,32 +15,26 @@ export function RunErrorAlert({
   runId?: string | null;
 }) {
   const t = useTranslations("workflows.builder");
-
   return (
-    <div
-      role="alert"
-      className="rounded-lg border border-fail/40 bg-fail/5 px-3 py-2.5 text-left space-y-1"
-    >
-      <p className="text-xs font-semibold text-fail-ink">{title}</p>
-      <p className="text-xs text-fail-ink leading-relaxed">{message}</p>
-      {runId ? (
-        <div className="mt-2 pt-2 border-t border-fail/20 space-y-1.5">
-          <p className="text-2xs text-ink-3">{t("test.errorRunIdHint")}</p>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <code className="text-2xs font-mono bg-raised px-2 py-1 rounded break-all text-ink">
-              {runId}
-            </code>
-            <CopyButton text={runId} />
+    <div role="alert" className="flex gap-3 rounded-lg bg-fail-wash/60 px-4 py-3">
+      <StatusGlyph status="failed" className="mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-ink">{title}</p>
+        <p className="mt-0.5 break-words text-sm text-ink-2">{message}</p>
+        {runId ? (
+          <p className="mt-2 text-xs text-ink-3">
+            <span className="font-mono">{runId}</span>
+            {" · "}
             <Link
               href={`/audits/${runId}`}
               target="_blank"
-              className="text-2xs font-medium text-accent-ink hover:underline"
+              className="text-accent-ink hover:underline"
             >
               {t("test.viewReport")}
             </Link>
-          </div>
-        </div>
-      ) : null}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

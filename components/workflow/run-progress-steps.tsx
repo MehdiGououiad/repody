@@ -229,7 +229,7 @@ export function RunProgressSteps({
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              className="overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-xs text-ink"
+              className="overflow-hidden rounded-lg bg-warn-wash px-3 py-2.5 text-sm text-ink"
             >
               <p className="font-medium">
                 {progress.queuePosition != null && progress.queueDepth != null
@@ -239,12 +239,12 @@ export function RunProgressSteps({
                     })
                   : t("queueWaiting")}
               </p>
-              <p className="mt-1 leading-snug text-ink-3">{t("queueOrdered")}</p>
+              <p className="mt-0.5 text-xs text-ink-3">{t("queueOrdered")}</p>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        <div className="rounded-lg border border-accent/20 bg-accent/5 px-3 py-2.5">
+        <div className="rounded-lg px-1 py-1">
           <div className="flex items-center justify-between gap-2 text-xs">
             <div className="relative h-4 min-w-0 flex-1 overflow-hidden">
               <AnimatePresence mode="popLayout" initial={false}>

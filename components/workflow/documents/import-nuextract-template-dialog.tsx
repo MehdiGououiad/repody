@@ -1,6 +1,5 @@
 "use client";
 
-import { FileJson2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,8 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { fieldClassName } from "@/components/ui/input";
 import { useCatalog } from "@/lib/hooks/use-catalog";
 import type { SchemaField } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
 const EXAMPLE = `{
@@ -74,25 +75,27 @@ export function ImportNuextractTemplateDialog({
             setErrorKey(null);
           }}
           spellCheck={false}
-          className="min-h-64 w-full rounded-md border border-line bg-raised px-3 py-2 font-mono text-xs leading-relaxed text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/30"
+          className={cn(
+            fieldClassName,
+            "min-h-64 w-full resize-y px-3 py-2 font-mono text-xs leading-relaxed"
+          )}
           aria-label={t("importTemplateTitle")}
         />
         {errorKey ? (
           <p className="text-xs text-fail-ink">{t(`importTemplateError.${errorKey}`)}</p>
         ) : (
-          <p className="text-2xs text-ink-3">{t("importTemplateHint")}</p>
+          <p className="text-xs text-ink-3">{t("importTemplateHint")}</p>
         )}
-        <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
+        <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           {hasExistingFields ? (
-            <Button type="button" variant="outline" onClick={() => apply("append")}>
+            <Button type="button" variant="secondary" onClick={() => apply("append")}>
               {t("importTemplateAppend")}
             </Button>
           ) : null}
           <Button type="button" onClick={() => apply("replace")}>
-            <FileJson2 className="h-3.5 w-3.5" />
             {hasExistingFields ? t("importTemplateReplace") : t("importTemplateApply")}
           </Button>
         </DialogFooter>

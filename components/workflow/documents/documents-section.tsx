@@ -3,11 +3,12 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SectionHeading } from "@/components/layout/section-heading";
+import { Button } from "@/components/ui/button";
 import type { DocumentDef } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { newDocument } from "@/lib/workflow/new-items";
 import { DocumentCard } from "./document-card";
 
+/** The documents a workflow receives, each with the fields to read from it. */
 export function DocumentsSection({
   documents,
   onChange,
@@ -18,18 +19,11 @@ export function DocumentsSection({
   const t = useTranslations("workflows.builder");
   const updateDoc = (id: string, patch: Partial<DocumentDef>) =>
     onChange(documents.map((d) => (d.id === id ? { ...d, ...patch } : d)));
-  const removeDoc = (id: string) => onChange(documents.filter((d) => d.id !== id));
-  const addDoc = () => onChange([...documents, newDocument()]);
 
   return (
-    <div className="space-y-4">
-      <SectionHeading
-        title={t("docSource.title")}
-        description={t("docSource.hint")}
-        eyebrow={t("documents.eyebrow")}
-      />
-
-      <div className="space-y-3">
+    <div className="flex flex-col gap-8">
+      <SectionHeading title={t("docSource.title")} description={t("docSource.hint")} />
+      <div className="flex flex-col gap-12">
         {documents.map((doc, i) => (
           <DocumentCard
             key={doc.id}
@@ -37,22 +31,18 @@ export function DocumentsSection({
             index={i}
             canRemove={documents.length > 1}
             onChange={(patch) => updateDoc(doc.id, patch)}
-            onRemove={() => removeDoc(doc.id)}
+            onRemove={() => onChange(documents.filter((d) => d.id !== doc.id))}
           />
         ))}
       </div>
-
-      <button
-        type="button"
-        onClick={addDoc}
-        className={cn(
-          "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/30",
-          "text-sm text-ink-3 hover:border-accent/60 hover:text-ink hover:bg-accent/5 transition-[border-color,color,background-color]"
-        )}
+      <Button
+        variant="secondary"
+        className="self-start"
+        onClick={() => onChange([...documents, newDocument()])}
       >
-        <Plus className="h-4 w-4" />
+        <Plus />
         {t("docSource.addDocument")}
-      </button>
+      </Button>
     </div>
   );
 }

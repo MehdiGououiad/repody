@@ -6,8 +6,8 @@ import { useHydrated } from "@/lib/hooks/use-hydrated";
 import en from "@/messages/en.json";
 import fr from "@/messages/fr.json";
 
-/** Replaces the root layout when it fails, so there is no translation provider here: the text
- * comes straight from the message files, in the browser's language. */
+/** Replaces the root layout when it fails: no translation provider and no brand stylesheet
+ * here, so the text comes straight from the message files and the colours are system ones. */
 export default function GlobalError({
   error,
   reset,
@@ -22,15 +22,25 @@ export default function GlobalError({
   const t = (french ? fr : en).error;
 
   return (
-    <html lang={french ? "fr" : "en"}>
-      <body className="min-h-screen flex items-center justify-center p-6 bg-panel text-ink">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-lg font-semibold">{t.title}</h1>
-          <p className="text-sm text-ink-3">{t.reported}</p>
+    <html lang={french ? "fr" : "en"} style={{ colorScheme: "light dark" }}>
+      <body
+        style={{
+          margin: 0,
+          minHeight: "100dvh",
+          display: "grid",
+          placeItems: "center",
+          font: "14px/1.5 ui-sans-serif, system-ui, sans-serif",
+          background: "Canvas",
+          color: "CanvasText",
+        }}
+      >
+        <div style={{ maxWidth: 360, padding: 24 }}>
+          <h1 style={{ fontSize: 18, fontWeight: 600, margin: "0 0 6px" }}>{t.title}</h1>
+          <p style={{ margin: "0 0 16px", opacity: 0.7 }}>{t.reported}</p>
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-on-primary"
+            style={{ font: "inherit", fontWeight: 500, padding: "6px 12px", cursor: "pointer" }}
           >
             {t.retry}
           </button>

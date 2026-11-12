@@ -1,11 +1,12 @@
 "use client";
 
-import { Check, CheckCircle2, CircleDot, Database, Rocket, ShieldCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { StatusGlyph } from "@/components/ui/status-glyph";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import { cn } from "@/lib/utils";
 
 export type BuilderStep = 0 | 1 | 2;
+
+export const STEP_KEYS = ["extract", "rules", "upload"] as const;
 
 export function stepComplete(
   step: BuilderStep,
@@ -18,7 +19,7 @@ export function stepComplete(
   return false;
 }
 
-/** A later step is blocked until step 0 (schema) is complete. */
+/** Rules and testing wait until a document has a name and a field. */
 export function stepBlocked(
   step: BuilderStep,
   documents: DocumentDef[],
@@ -27,95 +28,45 @@ export function stepBlocked(
   return (step === 1 || step === 2) && !stepComplete(0, documents, rules);
 }
 
-export const BUILDER_STEP_META = [
-  { icon: Database, key: "extract" as const },
-  { icon: ShieldCheck, key: "rules" as const },
-  { icon: Rocket, key: "upload" as const },
-] as const;
-
-const STEP_META = BUILDER_STEP_META;
-
-export function BuilderStepNav({
+/** The builder's steps as tabs, each with its status glyph; a blocked step says why. */
+export function BuilderTabs({
   current,
   documents,
   rules,
+  tested,
   onChange,
-  testHasResults,
 }: {
   current: BuilderStep;
   documents: DocumentDef[];
   rules: WorkflowRule[];
-  onChange: (s: BuilderStep) => void;
-  testHasResults?: boolean;
+  tested: boolean;
+  onChange: (step: BuilderStep) => void;
 }) {
-  const tSteps = useTranslations("workflows.builder.steps");
-  const steps = STEP_META.map(({ icon: Icon, key }, idx) => {
-    const isActive = current === idx;
-    const isDone = !isActive && stepComplete(idx as BuilderStep, documents, rules);
-    const isBlocked = stepBlocked(idx as BuilderStep, documents, rules);
-
-    return (
-      <button
-        key={key}
-        type="button"
-        onClick={() => !isBlocked && onChange(idx as BuilderStep)}
-        disabled={isBlocked}
-        title={isBlocked ? tSteps("blockedHint") : undefined}
-        className={cn(
-          "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-[background-color,color,box-shadow]",
-          isActive
-            ? "bg-accent/12 text-ink ring-1 ring-accent/20"
-            : isBlocked
-              ? "opacity-40 cursor-not-allowed text-ink-3"
-              : "text-ink-3 hover:bg-panel hover:text-ink"
-        )}
-      >
-        <div
-          className={cn(
-            "size-6 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold transition-colors",
-            isActive
-              ? "bg-accent text-primary-stitch shadow-[0_0_16px_-4px_var(--accent-blue-glow)]"
-              : isDone
-                ? "bg-pass text-white"
-                : "bg-selected text-ink-3"
-          )}
-        >
-          {isDone ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className={cn("text-sm font-medium truncate", isActive && "text-ink")}>
-            {tSteps(key)}
-          </p>
-          <p className="text-2xs text-ink-3/70 truncate mt-0.5">{tSteps(`${key}Hint`)}</p>
-        </div>
-        {isActive && <CircleDot className="h-3.5 w-3.5 shrink-0 text-accent-ink" />}
-        {!isActive && idx === 2 && testHasResults && (
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-pass-ink" />
-        )}
-      </button>
-    );
-  });
-
-  const done = STEP_META.filter((_, i) => stepComplete(i as BuilderStep, documents, rules)).length;
-
+  const t = useTranslations("workflows.builder.steps");
   return (
-    <div className="flex flex-col gap-1 h-full">
-      <p className="text-2xs font-semibold text-ink-3 px-3 mb-2">{tSteps("navTitle")}</p>
-      {steps}
-      <div className="mt-auto pt-4 border-t border-line px-3">
-        <div className="flex items-center justify-between text-2xs text-ink-3 mb-1.5">
-          <span>{tSteps("progress")}</span>
-          <span className="font-semibold">
-            {done}/{STEP_META.length}
-          </span>
-        </div>
-        <div className="w-full h-1 rounded-full bg-selected overflow-hidden">
-          <div
-            className="h-full rounded-full bg-accent transition-[width] duration-500"
-            style={{ width: `${(done / STEP_META.length) * 100}%` }}
-          />
-        </div>
-      </div>
-    </div>
+    <nav
+      aria-label={t("navTitle")}
+      className="flex h-10 shrink-0 items-center gap-0.5 overflow-x-auto border-b border-line bg-panel px-3 md:px-4"
+    >
+      {STEP_KEYS.map((key, i) => {
+        const step = i as BuilderStep;
+        const blocked = stepBlocked(step, documents, rules);
+        const done = step === 2 ? tested : stepComplete(step, documents, rules);
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={blocked}
+            aria-current={current === step ? "step" : undefined}
+            title={blocked ? t("blockedHint") : undefined}
+            onClick={() => onChange(step)}
+            className="flex h-7 shrink-0 cursor-pointer items-center gap-2 rounded-md px-2.5 text-sm font-medium text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-transparent aria-[current=step]:bg-selected aria-[current=step]:text-ink"
+          >
+            <StatusGlyph status={done ? "passed" : "waiting"} />
+            {t(key)}
+          </button>
+        );
+      })}
+    </nav>
   );
 }

@@ -35,14 +35,14 @@ export function LiteralValueInput({
   if (inputKind === "boolean") {
     return (
       <Select value={value || "true"} onValueChange={onChange}>
-        <SelectTrigger className="h-8 text-xs w-32">
+        <SelectTrigger className="w-32">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="true" className="text-xs font-mono">
+          <SelectItem value="true" className="font-mono text-xs">
             true
           </SelectItem>
-          <SelectItem value="false" className="text-xs font-mono">
+          <SelectItem value="false" className="font-mono text-xs">
             false
           </SelectItem>
         </SelectContent>
@@ -56,7 +56,7 @@ export function LiteralValueInput({
       onChange={(event) => onChange(event.target.value)}
       placeholder={t(PLACEHOLDERS[inputKind])}
       step={inputKind === "number" ? "any" : undefined}
-      className={cn("h-8 text-xs font-mono", inputKind === "datetime-local" ? "w-48" : "w-40")}
+      className={cn("font-mono text-xs", inputKind === "datetime-local" ? "w-48" : "w-40")}
     />
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,15 +19,7 @@ import { type FieldOption, type TableOption, typeOf } from "@/lib/rules/document
 import { isPresenceOp, literalInputKind, operatorsFor } from "@/lib/rules/operators";
 import type { Catalog, ComparisonOp, RuleCondition } from "@/lib/types";
 
-function Slot({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-2xs font-semibold text-ink-3">{label}</span>
-      {children}
-    </div>
-  );
-}
-
+/** One condition, read left to right: what is checked, how, against what. */
 export function ConditionRow({
   condition,
   fields,
@@ -52,7 +44,6 @@ export function ConditionRow({
   const leftType = left.kind === "field" ? typeOf(left.field, fields) : "number";
   const rightType = right?.kind === "field" ? typeOf(right.field, fields) : undefined;
   const operators = operatorsFor(leftType, catalog);
-
   const setOperator = (next: ComparisonOp) =>
     onChange({
       ...condition,
@@ -61,67 +52,58 @@ export function ConditionRow({
     });
 
   return (
-    <div className="flex flex-wrap items-start gap-2 p-3 rounded-lg bg-raised border border-line group">
-      <Slot label={t("left")}>
-        <ConditionLeft
-          value={left}
-          fields={fields}
-          tables={tables}
-          catalog={catalog}
-          onChange={(next) => onChange({ ...condition, left: next })}
-        />
-      </Slot>
-
-      <Slot label={t("operator")}>
-        <Select value={operator} onValueChange={(value) => setOperator(value as ComparisonOp)}>
-          <SelectTrigger className="h-8 w-44 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectLabel className="text-2xs">{t("comparison")}</SelectLabel>
-              {operators
-                .filter((op) => !isPresenceOp(op.value, catalog))
-                .map((op) => (
-                  <SelectItem key={op.value} value={op.value} className="text-xs font-mono">
-                    {t(op.key)}
-                  </SelectItem>
-                ))}
-            </SelectGroup>
-            <SelectGroup>
-              <SelectLabel className="text-2xs">{t("existence")}</SelectLabel>
-              {operators
-                .filter((op) => isPresenceOp(op.value, catalog))
-                .map((op) => (
-                  <SelectItem key={op.value} value={op.value} className="text-xs">
-                    {t(op.key)}
-                  </SelectItem>
-                ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </Slot>
-
+    <div className="group flex flex-wrap items-center gap-1.5">
+      <ConditionLeft
+        value={left}
+        fields={fields}
+        tables={tables}
+        catalog={catalog}
+        onChange={(next) => onChange({ ...condition, left: next })}
+      />
+      <Select value={operator} onValueChange={(value) => setOperator(value as ComparisonOp)}>
+        <SelectTrigger className="w-auto min-w-32" aria-label={t("operator")}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            <SelectLabel>{t("comparison")}</SelectLabel>
+            {operators
+              .filter((op) => !isPresenceOp(op.value, catalog))
+              .map((op) => (
+                <SelectItem key={op.value} value={op.value}>
+                  {t(op.key)}
+                </SelectItem>
+              ))}
+          </SelectGroup>
+          <SelectGroup>
+            <SelectLabel>{t("existence")}</SelectLabel>
+            {operators
+              .filter((op) => isPresenceOp(op.value, catalog))
+              .map((op) => (
+                <SelectItem key={op.value} value={op.value}>
+                  {t(op.key)}
+                </SelectItem>
+              ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
       {right ? (
-        <Slot label={t("right")}>
-          <OperandPicker
-            operand={right}
-            fields={fields.filter((field) => field.type !== catalog.tableType)}
-            onChange={(next) => onChange({ ...condition, right: next })}
-            inputKind={literalInputKind(leftType ?? rightType, catalog)}
-          />
-        </Slot>
+        <OperandPicker
+          operand={right}
+          fields={fields.filter((field) => field.type !== catalog.tableType)}
+          onChange={(next) => onChange({ ...condition, right: next })}
+          inputKind={literalInputKind(leftType ?? rightType, catalog)}
+        />
       ) : null}
-
       {canRemove ? (
         <Button
           variant="ghost"
-          size="icon"
-          className="mt-5 h-8 w-8 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 text-outline hover:text-fail-ink"
+          size="icon-sm"
+          className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
           onClick={onRemove}
           aria-label={tCommon("remove")}
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <X />
         </Button>
       ) : null}
     </div>

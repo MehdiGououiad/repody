@@ -45,7 +45,7 @@ function EnumValuesEditor({
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 shrink-0 text-outline hover:text-fail-ink"
+            className="h-8 w-8 shrink-0 text-ink-4 hover:text-fail-ink"
             onClick={() => onChange(rows.filter((_, i) => i !== index))}
             aria-label={t("removeEnumValue")}
           >
@@ -114,7 +114,7 @@ function ChildrenEditor({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 text-outline hover:text-fail-ink"
+                  className="h-7 w-7 text-ink-4 hover:text-fail-ink"
                   onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
                   aria-label={table ? t("removeRowColumn") : t("removeObjectField")}
                 >
