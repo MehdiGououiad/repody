@@ -7,6 +7,7 @@
 | **Laptop with git** (vendor / contributor) | [LOCAL.md](./LOCAL.md) |
 | See every `pnpm` command | [COMMANDS.md](./COMMANDS.md) |
 | Deploy to Kubernetes | [CLUSTER.md](./CLUSTER.md) |
+| NuExtract3 on a serverless GPU (vLLM on Modal, free tier) | [../deploy/modal/README.md](../deploy/modal/README.md) |
 | Understand product / architecture (map, request flow, layers) | [../CONTEXT.md](../CONTEXT.md) |
 | Document extraction / VLM / OCR | [EXTRACTION.md](./EXTRACTION.md) |
 | Run, workflow and builder states (state machines) | [LIFECYCLES.md](./LIFECYCLES.md) |

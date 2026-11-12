@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     llamacpp_api_key: SecretStr = SecretStr("local")
     llamacpp_served_model: str = "nuextract3-q8_0"
     inference_timeout_seconds: float = Field(default=180.0, ge=10)
+    # Whether /platform/config asks the model server if it is up. Off for an endpoint that scales
+    # to zero: the question would start it (and bill it); the model then shows as on demand.
+    llamacpp_probe: bool = True
     # Requests in flight per model server: set to its parallel slots (llama-server --parallel).
     # Documents and pages beyond it wait their turn.
     inference_concurrency: PositiveInt = 1

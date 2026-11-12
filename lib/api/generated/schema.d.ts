@@ -954,7 +954,7 @@ export interface components {
             /** Llamacppbaseurl */
             llamacppBaseUrl: string;
             /** Modelavailable */
-            modelAvailable: boolean;
+            modelAvailable: boolean | null;
             /** Cacheenabled */
             cacheEnabled: boolean;
             /** Maxuploadbytes */

@@ -49,9 +49,12 @@ async def chat(
     )
 
 
-async def model_available() -> bool:
-    """Whether the NuExtract server answers and serves the configured model."""
+async def model_available() -> bool | None:
+    """Whether the NuExtract server answers and serves the configured model; None when it is not
+    asked (AUDIT_LLAMACPP_PROBE=false, an endpoint that scales to zero)."""
     settings = get_settings()
+    if not settings.llamacpp_probe:
+        return None
     client = _client(settings.llamacpp_base_url, settings.llamacpp_api_key.get_secret_value())
     try:
         models = await client.with_options(timeout=5, max_retries=0).models.list()

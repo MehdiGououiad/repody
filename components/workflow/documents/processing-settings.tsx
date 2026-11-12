@@ -11,7 +11,8 @@ import { $api } from "@/lib/api/browser";
 export function ProcessingSettings() {
   const t = useTranslations("workflows.builder");
   const config = $api.useQuery("get", "/v1/platform/config");
-  const offline = config.isSuccess && !config.data.modelAvailable;
+  // null: not probed (an endpoint that scales to zero starts on the first run).
+  const offline = config.isSuccess && config.data.modelAvailable === false;
 
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface-container-low/50 p-4">

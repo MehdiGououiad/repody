@@ -2281,7 +2281,14 @@
             "title": "Llamacppbaseurl"
           },
           "modelAvailable": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Modelavailable"
           },
           "cacheEnabled": {

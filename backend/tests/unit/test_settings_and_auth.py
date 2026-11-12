@@ -93,3 +93,12 @@ def test_uvicorn_logs_go_through_the_json_formatter():
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         assert logging.getLogger(name).handlers == []
         assert logging.getLogger(name).propagate
+
+
+async def test_scale_to_zero_model_server_is_not_probed(monkeypatch, fresh_settings):
+    """The platform page does not ask an endpoint that scales to zero whether it is up: the
+    question would start it (and bill it)."""
+    from repody.extraction import client
+
+    monkeypatch.setenv("AUDIT_LLAMACPP_PROBE", "false")
+    assert await client.model_available() is None

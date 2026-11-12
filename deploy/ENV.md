@@ -55,6 +55,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_LIGHTONOCR_API_KEY` | `local` | Bearer token for that endpoint (secret) |
 | `AUDIT_LIGHTONOCR_SERVED_MODEL` | `lightonocr-3-4b` | LightOnOCR model id from `/v1/models` |
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | `180` | Per model call; must fit in the run timeout |
+| `AUDIT_LLAMACPP_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to llama-server `--parallel`; documents and pages are sent concurrently up to it |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
 | `AUDIT_EXTRACTION_CACHE_TTL_SECONDS` | `0` | Cache model answers in Redis (`0` = off) |

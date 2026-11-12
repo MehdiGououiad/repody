@@ -758,6 +758,7 @@
     "model": "Document model",
     "ready": "Ready",
     "unavailable": "Unavailable",
+    "onDemand": "On demand",
     "cache": "Cache",
     "enabled": "Enabled",
     "disabled": "Disabled",

@@ -3,6 +3,9 @@
 Repody's models run on the official **llama-server** binary (`winget install llama.cpp`), each on its
 own OpenAI-compatible port. Platform wiring: `docs/EXTRACTION.md`.
 
+No GPU on the server? Run the full NuExtract3 on vLLM on Modal, scaling to zero, inside the free tier:
+[`deploy/modal/README.md`](../modal/README.md).
+
 | Model | Used for | Port | Weights |
 |---|---|---|---|
 | NuExtract3 | Field extraction, and Markdown by default | 8081 | [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF) |

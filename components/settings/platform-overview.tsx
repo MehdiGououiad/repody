@@ -52,7 +52,13 @@ export async function PlatformOverview({ platform }: { platform: PlatformConfig 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label={t("model")}
-          value={platform.modelAvailable ? t("ready") : t("unavailable")}
+          value={
+            platform.modelAvailable === null
+              ? t("onDemand")
+              : platform.modelAvailable
+                ? t("ready")
+                : t("unavailable")
+          }
           detail={platform.servedModel}
           Icon={BrainCircuit}
         />
