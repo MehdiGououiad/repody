@@ -3,7 +3,7 @@
  * Deploy assets check with the standard tools:
  *   helm lint, helm template | kubeconform (Kubernetes schemas), kubectl kustomize,
  *   docker buildx bake --print (bake variable validation), docker compose config for the
- *   Dokploy stack (every required variable from deploy/dokploy/env.example), and the docs link check.
+ *   VPS stack (every required variable from deploy/vps/env.example), and the docs link check.
  *
  * kubeconform runs from its official image when the binary is not installed.
  */
@@ -22,14 +22,15 @@ function run(cmd, args, input, env) {
   });
 }
 
-/** deploy/dokploy/env.example as variables, blanks filled, so `${VAR:?}` can resolve. */
-function dokployEnv() {
-  const entries = readFileSync("deploy/dokploy/env.example", "utf8")
+/** deploy/vps/env.example as variables, blanks filled, so `${VAR:?}` can resolve. */
+function stackEnv() {
+  const entries = readFileSync("deploy/vps/env.example", "utf8")
     .split(/\r?\n/)
     .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line))
     .map((line) => line.split(/=(.*)/s, 2))
     .map(([key, value]) => [key, value || "deploy-check"]);
-  return Object.fromEntries(entries);
+  // Each deploy writes REPODY_VERSION to release.env beside .env.
+  return { ...Object.fromEntries(entries), REPODY_VERSION: "0.0.0" };
 }
 
 function kubeconform(manifests) {
@@ -59,13 +60,13 @@ const steps = [
   ["kustomize CloudNativePG", () => run("kubectl", ["kustomize", "deploy/managed/cloudnativepg"])],
   ["bake --print", () => run("docker", ["buildx", "bake", "-f", "docker-bake.hcl", "--print"])],
   [
-    "compose config (Dokploy stack)",
+    "compose config (VPS stack)",
     () =>
       run(
         "docker",
-        ["compose", "-f", "deploy/dokploy/compose.yaml", "config", "-q"],
+        ["compose", "-f", "deploy/vps/compose.yaml", "config", "-q"],
         undefined,
-        dokployEnv()
+        stackEnv()
       ),
   ],
   ["docs links and commands", () => run("node", ["deploy/scripts/check-command-docs.mjs"])],

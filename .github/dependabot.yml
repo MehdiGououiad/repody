@@ -19,7 +19,7 @@ updates:
     schedule: { interval: weekly }
 
   - package-ecosystem: docker-compose # Compose images (tag + digest)
-    directories: [/, /deploy/dokploy]
+    directories: [/, /deploy/vps]
     schedule: { interval: weekly }
 
   - package-ecosystem: github-actions

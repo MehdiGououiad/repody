@@ -1,14 +1,17 @@
-# Repody production stack for Dokploy (Docker Compose type, Isolated Deployments on).
-# Setup, domains, the Cloudflare Tunnel and backups: deploy/dokploy/README.md.
+# Repody production stack for one VPS: Docker Compose, deployed by .github/workflows/deploy.yml over
+# Tailscale, reached through a Cloudflare Tunnel. Server setup and backups: deploy/vps/README.md.
 #
-# - Images are the signed releases from GHCR (pnpm images:release / the images-ghcr workflow),
-#   pinned by REPODY_VERSION. Nothing is built on the server.
-# - No ports are published: Dokploy's Traefik reaches web and keycloak on the stack's network,
-#   and the Cloudflare Tunnel reaches Traefik. Everything else stays internal.
-# - Data lives in named volumes, so Dokploy's Volume Backups can copy them to S3.
-# - Every variable comes from the Environment tab (Dokploy writes it to .env beside this file);
-#   ${VAR:?} fails the deploy when a required one is missing. See env.example.
+#   docker compose --env-file .env --env-file release.env up -d --wait
+#
+# - Images are the signed releases from GHCR (the images-ghcr workflow), pinned by REPODY_VERSION
+#   (release.env, written by each deploy). Nothing is built on the server.
+# - No ports are published. cloudflared connects out to Cloudflare and forwards each public
+#   hostname to web or keycloak on the stack network; everything else stays internal.
+# - Secrets live only on the server (.env, mode 600, never in git or CI); ${VAR:?} stops the
+#   deploy when one is missing. See env.example.
 # - NuExtract3 runs outside the VPS (deploy/modal/README.md); workers call it over HTTPS.
+
+name: repody
 
 x-hardening: &hardening
   restart: unless-stopped
@@ -119,7 +122,7 @@ services:
         limits: { memory: 512M }
 
   # Optimized Keycloak with the production realm baked in (deploy/keycloak/Dockerfile).
-  # Behind Traefik and the tunnel: https://www.keycloak.org/server/reverseproxy
+  # Behind the tunnel: https://www.keycloak.org/server/reverseproxy
   keycloak:
     <<: *hardening
     image: ${REPODY_REGISTRY:?}/repody-keycloak:${REPODY_VERSION:?}
@@ -240,6 +243,22 @@ services:
     deploy:
       resources:
         limits: { memory: 256M }
+
+  # The only way in: an outbound connection to Cloudflare. Public hostnames and the services they
+  # reach are set on the tunnel in Cloudflare (deploy/vps/README.md, "Cloudflare Tunnel").
+  # https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
+  cloudflared:
+    <<: *hardening
+    image: cloudflare/cloudflared:2026.11.0@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?}
+    depends_on:
+      web:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits: { memory: 128M }
 
   web:
     <<: *hardening

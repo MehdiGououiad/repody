@@ -1,0 +1,100 @@
+name: Deploy
+
+# Deploys a published release to the VPS (deploy/vps/README.md):
+#   1. the three images of that version must carry this repository's release signature (cosign);
+#   2. the runner joins the tailnet as an ephemeral tag:ci node, with workload identity federation
+#      (no Tailscale secret: https://tailscale.com/kb/1276/tailscale-github-action);
+#   3. over Tailscale SSH it sends compose.yaml, pulls with this run's short-lived token (logged
+#      out right after), and starts the stack, waiting for every health check;
+#   4. the public app answers through Cloudflare.
+# Secrets stay on the server (/opt/repody/.env); this workflow never reads them.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release to deploy (e.g. 1.0.0, published from the git tag v1.0.0)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      packages: read # pull the private images on the server, with this run's token
+      id-token: write # Tailscale workload identity federation
+    env:
+      VERSION: ${{ inputs.version }}
+      HOST: ${{ vars.DEPLOY_HOST }}
+      APP_HOST: ${{ vars.APP_HOST }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check the inputs
+        run: |
+          [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version must look like 1.2.3"; exit 1; }
+          [[ -n "${HOST}" && -n "${APP_HOST}" ]] || { echo "::error::set the DEPLOY_HOST and APP_HOST variables on the production environment"; exit 1; }
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      - name: Verify the release signatures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          registry="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          for target in backend web keycloak; do
+            cosign verify "${registry}/repody-${target}:${VERSION}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@" \
+              > /dev/null
+            echo "signed: repody-${target}:${VERSION}"
+          done
+          docker logout ghcr.io
+
+      - name: Join the tailnet
+        uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          audience: ${{ secrets.TS_AUDIENCE }}
+          tags: tag:ci
+          ping: ${{ vars.DEPLOY_HOST }}
+
+      - name: Deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          remote() { tailscale ssh "deploy@${HOST}" "$@"; }
+          compose="docker compose --env-file .env --env-file release.env"
+
+          remote 'test -s /opt/repody/.env' || { echo "::error::/opt/repody/.env is missing on the server"; exit 1; }
+          remote 'cat > /opt/repody/compose.yaml' < deploy/vps/compose.yaml
+          printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote 'cat > /opt/repody/release.env'
+
+          # The token is valid for this run only, and the login is removed once the images are pulled.
+          printf '%s' "${GH_TOKEN}" | remote "docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin > /dev/null \
+            && cd /opt/repody && ${compose} pull --quiet; status=\$?; docker logout ghcr.io > /dev/null; exit \$status"
+
+          remote "cd /opt/repody && ${compose} up -d --wait --wait-timeout 600 --remove-orphans"
+          remote "cd /opt/repody && ${compose} ps --format 'table {{.Service}}\t{{.Status}}'"
+
+      - name: Check the public app
+        run: |
+          for _ in $(seq 1 12); do
+            curl -fsS --max-time 10 "https://${APP_HOST}/api/auth/ok" && exit 0
+            sleep 10
+          done
+          echo "::error::https://${APP_HOST} does not answer"
+          exit 1
