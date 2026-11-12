@@ -8,10 +8,28 @@ import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/workflow/api-panel/api-panel-copy";
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
-import { buildWorkflowRunSnippets, workflowDocumentSlots } from "@/lib/api/workflow-run-snippets";
+import {
+  buildWorkflowRunSnippets,
+  runStateEndpoint,
+  workflowDocumentSlots,
+} from "@/lib/api/workflow-run-snippets";
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import type { DocumentDef } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+function EndpointRow({ method, url }: { method: "POST" | "GET"; url: string }) {
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-surface-container-lowest border border-border px-3 py-2">
+      <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded font-mono shrink-0 w-10 text-center">
+        {method}
+      </span>
+      <code translate="no" className="flex-1 text-[11px] font-mono text-on-surface truncate">
+        {url}
+      </code>
+      <CopyButton text={url} />
+    </div>
+  );
+}
 
 export function ApiInfoScreen({
   workflowId,
@@ -74,15 +92,9 @@ export function ApiInfoScreen({
           </span>
         </div>
         <div className="p-4 space-y-2.5">
-          <div className="flex items-center gap-2 rounded-lg bg-surface-container-lowest border border-border px-3 py-2">
-            <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded font-mono shrink-0">
-              POST
-            </span>
-            <code translate="no" className="flex-1 text-[11px] font-mono text-on-surface truncate">
-              {endpoint}
-            </code>
-            <CopyButton text={endpoint} />
-          </div>
+          <EndpointRow method="POST" url={endpoint} />
+          <EndpointRow method="GET" url={runStateEndpoint(endpoint)} />
+          <p className="text-[11px] text-on-surface-variant leading-relaxed">{t("pollHint")}</p>
           <div className="flex items-center gap-2 rounded-lg bg-surface-container-lowest border border-border px-3 py-2">
             <span className="text-[10px] font-semibold text-on-surface-variant uppercase tracking-wide shrink-0">
               {t("keyLabel")}
@@ -136,7 +148,6 @@ export function ApiInfoScreen({
                 );
               })}
             </ul>
-            <p className="text-[11px] text-on-surface-variant leading-relaxed">{t("pollHint")}</p>
           </div>
         </div>
       ) : null}

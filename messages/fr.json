@@ -692,7 +692,7 @@
         "documentSlotsLabel": "Emplacements documents",
         "schemaHint": "Le schéma d'extraction et les règles sont définis dans ce workflow — les appelants envoient les fichiers avec les noms de type document configurés (documents), pas les champs.",
         "fieldsCount": "{count, plural, one {# champ} other {# champs}}",
-        "pollHint": "POST renvoie 202 avec runId. Utilisez documents avec vos noms configurés (ex. [\"Facture\"]). Interrogez GET /api/v1/runs/'{runId}' pour les résultats.",
+        "pollHint": "POST lance une exécution et renvoie 202 avec son runId. Interrogez-la en GET avec la même clé jusqu'à ce que status soit done (le rapport est dans result : son status vaut passed, warning ou failed, et documents[].fields contient les valeurs) ou failed (voir error). La première exécution après quelques minutes d'inactivité prend jusqu'à 15 s, le temps que le modèle démarre.",
         "runTest": "Exécuter un test en direct",
         "runTestHint": "Exécute sur vos documents configurés et affiche le rapport d'extraction complet",
         "processing": "Traitement des documents…",

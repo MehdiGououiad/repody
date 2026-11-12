@@ -692,7 +692,7 @@
         "documentSlotsLabel": "Document slots",
         "schemaHint": "Extraction schema and validation rules are defined in this workflow — callers send files tagged with the document type names you configured (documents), not field definitions.",
         "fieldsCount": "{count, plural, one {# field} other {# fields}}",
-        "pollHint": "POST returns 202 with runId. Use documents with your configured names (e.g. [\"Invoice\"]). Poll GET /api/v1/runs/'{runId}' for results.",
+        "pollHint": "POST starts a run and returns 202 with its runId. GET it with the same key until status is done (the report is in result: its status is passed, warning or failed, and documents[].fields holds the values) or failed (see error). The first run after a few idle minutes takes up to 15 s while the model starts.",
         "runTest": "Run a live test",
         "runTestHint": "Execute against your configured documents and see the full extraction report",
         "processing": "Processing documents…",
