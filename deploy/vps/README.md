@@ -78,24 +78,36 @@ Then join with a tag and turn on [Tailscale SSH](https://tailscale.com/kb/1193/t
 tailscale up --ssh --advertise-tags=tag:repody-server
 ```
 
-In the Tailscale admin console's access controls, declare the tags, allow CI and you onto the
-server's SSH, and nothing else:
+In the Tailscale admin console's **Access controls**, use this policy, then tag the server
+`tag:repody-server` (Machines → ⋯ → **Edit tags**) and turn off its key expiry (⋯ → **Disable key
+expiry**):
 
 ```json
 {
-  "tagOwners": { "tag:ci": ["autogroup:admin"], "tag:repody-server": ["autogroup:admin"] },
+  "tagOwners": {
+    "tag:repody-server": ["autogroup:admin"],
+    "tag:ci": ["autogroup:admin"]
+  },
   "grants": [
-    { "src": ["tag:ci", "autogroup:admin"], "dst": ["tag:repody-server"], "ip": ["22"] }
+    { "src": ["autogroup:member"], "dst": ["*"], "ip": ["*"] },
+    { "src": ["tag:ci"], "dst": ["tag:repody-server"], "ip": ["22"] }
   ],
   "ssh": [
-    { "action": "accept", "src": ["tag:ci"], "dst": ["tag:repody-server"], "users": ["deploy"] },
-    { "action": "check", "src": ["autogroup:admin"], "dst": ["tag:repody-server"], "users": ["deploy", "root"] }
+    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:self"], "users": ["autogroup:nonroot", "root"] },
+    { "action": "accept", "src": ["autogroup:admin"], "dst": ["tag:repody-server"], "users": ["deploy", "root"] },
+    { "action": "accept", "src": ["tag:ci"], "dst": ["tag:repody-server"], "users": ["deploy"] }
+  ],
+  "sshTests": [
+    { "src": "tag:ci", "dst": ["tag:repody-server"], "accept": ["deploy"], "deny": ["root"] }
   ]
 }
 ```
 
-A rule from a tagged device, like CI, must be `accept`, because Tailscale's `check` (a fresh
-sign-in) is for people. Once `tailscale ssh deploy@<server>` works from your machine, you no
+CI's ephemeral nodes reach only the server's SSH, and only as `deploy`. The `sshTests` make Tailscale
+refuse any policy that would let CI become root. A rule from a tagged device must be `accept`:
+Tailscale's `check` (a fresh sign-in) is for people.
+
+Once `tailscale ssh deploy@<server>` works from your machine, you no
 longer need OpenSSH from the internet.
 
 **Firewall.** Only the tailnet may reach the server:
@@ -137,8 +149,10 @@ the deploy with its name.
 
 ## 4. GitHub
 
-1. Create a [Tailscale federated identity](https://tailscale.com/kb/1276/tailscale-github-action)
-   for this repository, with the **Auth Keys → Write** scope and the tag `tag:ci`.
+1. Create a [Tailscale federated identity](https://tailscale.com/kb/1581/workload-identity-federation)
+   (Settings → Trust credentials → Credential → OpenID Connect): issuer **GitHub**, subject
+   `repo:<owner>/<repo>:environment:production`, scope **Auth Keys → Write** with the tag `tag:ci`.
+   Only this repository's production deploys can then join the tailnet.
 2. In the repository, create the environment **`production`** (Settings → Environments):
    - secrets `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE`, from the federated identity;
    - variables `DEPLOY_HOST` (the server's Tailscale name, for example `repody-vps`) and `APP_HOST`
