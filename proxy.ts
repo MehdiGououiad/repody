@@ -2,11 +2,13 @@ import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { backendOrigin } from "@/lib/api/backend-origin";
-import { isPublicApi, isPublicPage, safeCallbackUrl } from "@/lib/auth/public-paths";
+import {
+  acceptsWorkflowKey,
+  isPublicApi,
+  isPublicPage,
+  safeCallbackUrl,
+} from "@/lib/auth/public-paths";
 import { accessToken, oidcEnabled } from "@/lib/auth/server";
-
-/** The run API also accepts a workflow API key, which the caller sends itself. */
-const WORKFLOW_RUN_PATH = /^\/api\/v1\/workflows\/[^/]+\/runs$/;
 
 type Token = Awaited<ReturnType<typeof accessToken>>;
 
@@ -71,8 +73,8 @@ export default async function proxy(request: NextRequest) {
   if (isPublicApi(path)) {
     return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
   }
-  if (WORKFLOW_RUN_PATH.test(path) && request.headers.get("authorization")?.trim()) {
-    return toBackend(request); // the caller's workflow API key
+  if (acceptsWorkflowKey(request.method, path) && request.headers.get("authorization")?.trim()) {
+    return toBackend(request); // the caller's workflow API key, checked by the API
   }
 
   // Signed in means a session whose Keycloak token is still valid (or was just refreshed).
