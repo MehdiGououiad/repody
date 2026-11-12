@@ -48,7 +48,7 @@ jobs:
           if [ -n "${INPUT_TAG}" ]; then
             tag="${INPUT_TAG}"
           elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            tag="${GITHUB_REF_NAME}"
+            tag="${GITHUB_REF_NAME#v}"  # v1.2.3 publishes 1.2.3, the chart's tag form
           else
             tag="${GITHUB_SHA::12}"
           fi
