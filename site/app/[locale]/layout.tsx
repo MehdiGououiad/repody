@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/json-ld";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { SiteTheme } from "@/components/theme-toggle";
 import { dict } from "@/content";
 import { isLocale, LOCALES, SITE } from "@/lib/site";
 import { siteStylesheet } from "@/lib/theme";
-import { SiteTheme } from "@/components/theme-toggle";
 import "../globals.css";
 
 const inter = Inter({ subsets: ["latin"], axes: ["opsz"], variable: "--font-inter" });
@@ -53,21 +53,21 @@ export default async function LocaleLayout({
       </head>
       <body>
         <SiteTheme>
-        <JsonLd
-          data={{
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            name: SITE.name,
-            url: SITE.url,
-            logo: `${SITE.url}/icon.svg`,
-            email: SITE.contactEmail,
-            areaServed: "MA",
-            description: t.common.footer.tagline,
-          }}
-        />
-        <SiteHeader locale={locale} t={t.common} />
-        <main id="main">{children}</main>
-        <SiteFooter locale={locale} t={t.common} />
+          <JsonLd
+            data={{
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: SITE.name,
+              url: SITE.url,
+              logo: `${SITE.url}/icon.svg`,
+              email: SITE.contactEmail,
+              areaServed: "MA",
+              description: t.common.footer.tagline,
+            }}
+          />
+          <SiteHeader locale={locale} t={t.common} />
+          <main id="main">{children}</main>
+          <SiteFooter locale={locale} t={t.common} />
         </SiteTheme>
       </body>
     </html>

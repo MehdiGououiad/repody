@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Dark follows the theme switch (next-themes puts `.dark` on <html>), not only the system. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* The product's token contract (app/globals.css), written by lib/theme.ts into the page. */
 @theme inline {
   --color-canvas: var(--canvas);

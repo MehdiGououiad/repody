@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ButtonLink } from "@/components/ui";
 import { SiteTheme } from "@/components/theme-toggle";
+import { ButtonLink } from "@/components/ui";
 import { siteStylesheet } from "@/lib/theme";
 import "./globals.css";
 
@@ -19,17 +19,17 @@ export default function GlobalNotFound() {
       <body>
         <SiteTheme>
           <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col justify-center gap-6 px-5">
-          <p className="font-mono text-sm text-ink-4">404</p>
-          <h1 className="text-headline font-semibold text-ink">
-            Cette page n'existe pas.
-            <span className="block text-ink-3">This page does not exist.</span>
-          </h1>
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href="/fr/">Accueil</ButtonLink>
-            <ButtonLink href="/en/" variant="secondary">
-              Home
-            </ButtonLink>
-          </div>
+            <p className="font-mono text-sm text-ink-4">404</p>
+            <h1 className="text-headline font-semibold text-ink">
+              Cette page n'existe pas.
+              <span className="block text-ink-3">This page does not exist.</span>
+            </h1>
+            <div className="flex flex-wrap gap-3">
+              <ButtonLink href="/fr/">Accueil</ButtonLink>
+              <ButtonLink href="/en/" variant="secondary">
+                Home
+              </ButtonLink>
+            </div>
           </main>
         </SiteTheme>
       </body>

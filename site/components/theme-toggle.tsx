@@ -20,7 +20,11 @@ const noop = () => () => {};
 export function ThemeToggle({ toLight, toDark }: { toLight: string; toDark: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   // The theme is known only in the browser: the server renders a neutral button.
-  const mounted = useSyncExternalStore(noop, () => true, () => false);
+  const mounted = useSyncExternalStore(
+    noop,
+    () => true,
+    () => false
+  );
   const dark = mounted && resolvedTheme === "dark";
   const label = dark ? toLight : toDark;
   return (
