@@ -18,6 +18,8 @@ export const fr = {
     demo: "Demander une démo",
     playground: "Essayer le playground gratuitement",
     playgroundShort: "Playground",
+    toLight: "Passer en mode clair",
+    toDark: "Passer en mode sombre",
     seePlatform: "Voir la plateforme",
     learnMore: "En savoir plus",
     menu: "Menu",

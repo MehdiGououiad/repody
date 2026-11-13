@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/site-header";
 import { dict } from "@/content";
 import { isLocale, LOCALES, SITE } from "@/lib/site";
 import { siteStylesheet } from "@/lib/theme";
+import { SiteTheme } from "@/components/theme-toggle";
 import "../globals.css";
 
 const inter = Inter({ subsets: ["latin"], axes: ["opsz"], variable: "--font-inter" });
@@ -42,11 +43,16 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
   const t = dict(locale);
   return (
-    <html lang={locale === "fr" ? "fr-MA" : "en"} className={`${inter.variable} ${mono.variable}`}>
+    <html
+      lang={locale === "fr" ? "fr-MA" : "en"}
+      className={`${inter.variable} ${mono.variable}`}
+      suppressHydrationWarning // next-themes sets the theme class before React hydrates
+    >
       <head>
         <style>{siteStylesheet()}</style>
       </head>
       <body>
+        <SiteTheme>
         <JsonLd
           data={{
             "@context": "https://schema.org",
@@ -62,6 +68,7 @@ export default async function LocaleLayout({
         <SiteHeader locale={locale} t={t.common} />
         <main id="main">{children}</main>
         <SiteFooter locale={locale} t={t.common} />
+        </SiteTheme>
       </body>
     </html>
   );
