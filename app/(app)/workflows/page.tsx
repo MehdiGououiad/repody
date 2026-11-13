@@ -29,7 +29,7 @@ export default async function WorkflowsPage() {
         <Button variant="primary" render={<Link href="/workflows/new" />}>
           <Plus />
           {tNav("newWorkflow")}
-          <Kbd className="ms-1 bg-[oklch(1_0_0/0.16)] text-on-accent shadow-none">C</Kbd>
+          <Kbd className="ms-1">C</Kbd>
         </Button>
       }
     >

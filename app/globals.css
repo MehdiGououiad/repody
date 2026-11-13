@@ -97,6 +97,25 @@
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
+/* A section or card label: small monospace capitals, the lab-notebook voice of the interface. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Ruled paper: faint horizontal lines every 28px, for open canvases (sign-in, empty states). */
+@utility bg-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0 27px,
+    color-mix(in oklab, var(--line) 55%, transparent) 27px 28px
+  );
+}
+
 @layer base {
   * {
     border-color: var(--line);

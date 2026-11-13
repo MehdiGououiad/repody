@@ -10,8 +10,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        // Ink: black on the light theme, white on the dark one; a shortcut inside follows it.
         primary:
-          "bg-accent text-on-accent shadow-[inset_0_1px_0_oklch(1_0_0/0.14),0_1px_2px_var(--shadow-color)] hover:bg-accent-hover",
+          "bg-ink text-panel shadow-[0_1px_2px_var(--shadow-color)] hover:bg-ink-2 [&_kbd]:bg-panel/15 [&_kbd]:text-panel [&_kbd]:shadow-none",
         secondary:
           "bg-raised text-ink shadow-[0_0_0_1px_var(--line-strong),0_1px_2px_var(--shadow-color)] hover:bg-hover",
         ghost: "text-ink-2 hover:bg-hover hover:text-ink data-open:bg-selected data-open:text-ink",

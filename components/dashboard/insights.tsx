@@ -27,8 +27,8 @@ export function CardHeader({
   return (
     <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-2.5">
       <div className="min-w-0">
-        <h2 className="text-[13px] font-semibold text-ink">{title}</h2>
-        {hint ? <p className="text-xs text-ink-4">{hint}</p> : null}
+        <h2 className="eyebrow text-ink-2">{title}</h2>
+        {hint ? <p className="mt-0.5 text-xs text-ink-4">{hint}</p> : null}
       </div>
       {action}
     </div>

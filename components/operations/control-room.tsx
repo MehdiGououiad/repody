@@ -8,6 +8,7 @@ import { useFormatter, useNow, useTranslations } from "next-intl";
 import { When } from "@/components/audit/run-row";
 import { CardHeader, card } from "@/components/dashboard/insights";
 import { AnimatedNumber } from "@/components/shared/animated-number";
+import { Figure } from "@/components/shared/figure";
 import { Button } from "@/components/ui/button";
 import { confirmAction } from "@/components/ui/overlays";
 import { StatusGlyph } from "@/components/ui/status-glyph";
@@ -38,33 +39,6 @@ function Pulse({ tone = "accent" }: { tone?: "accent" | "pass" | "fail" | "idle"
       ) : null}
       <span className={cn("relative size-2 rounded-full", color)} />
     </span>
-  );
-}
-
-function Tile({
-  label,
-  value,
-  tone,
-  children,
-}: {
-  label: string;
-  value: React.ReactNode;
-  tone?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1 px-4 py-3.5">
-      <span className="text-xs text-ink-3">{label}</span>
-      <span
-        className={cn(
-          "flex items-center gap-2 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink",
-          tone
-        )}
-      >
-        {value}
-      </span>
-      {children ? <span className="text-xs text-ink-4">{children}</span> : null}
-    </div>
   );
 }
 
@@ -346,7 +320,7 @@ export function ControlRoom() {
   return (
     <div className="flex flex-col gap-4">
       <div className={cn(card, "grid grid-cols-2 divide-x divide-line md:grid-cols-5")}>
-        <Tile
+        <Figure
           label={t("model")}
           value={
             <>
@@ -354,10 +328,9 @@ export function ControlRoom() {
               <span className="truncate text-[15px]">{model.text}</span>
             </>
           }
-        >
-          {platform?.servedModel}
-        </Tile>
-        <Tile
+          foot={platform?.servedModel}
+        />
+        <Figure
           label={t("running")}
           value={
             <>
@@ -366,29 +339,32 @@ export function ControlRoom() {
             </>
           }
         />
-        <Tile
+        <Figure
           label={t("queued")}
           value={<AnimatedNumber value={data.queue.queuedRuns} format={integer} />}
         />
-        <Tile
+        <Figure
           label={t("stale")}
           value={<AnimatedNumber value={data.staleRuns} format={integer} />}
           tone={data.staleRuns ? "text-warn-ink" : undefined}
-        >
-          {data.staleRuns ? (
-            <Button
-              variant="secondary"
-              size="xs"
-              className="mt-1"
-              onClick={() => recover.mutateAsync({})}
-            >
-              {t("recover")}
-            </Button>
-          ) : null}
-        </Tile>
-        <Tile label={t("median")} value={formatDurationMs(data.timing.medianMs)}>
-          {t("p95")} {formatDurationMs(data.timing.p95Ms)}
-        </Tile>
+          foot={
+            data.staleRuns ? (
+              <Button
+                variant="secondary"
+                size="xs"
+                className="mt-1"
+                onClick={() => recover.mutate({})}
+              >
+                {t("recover")}
+              </Button>
+            ) : null
+          }
+        />
+        <Figure
+          label={t("median")}
+          value={formatDurationMs(data.timing.medianMs)}
+          foot={`${t("p95")} ${formatDurationMs(data.timing.p95Ms)}`}
+        />
       </div>
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <InFlight runs={data.active} />

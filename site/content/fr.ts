@@ -16,6 +16,8 @@ export const fr = {
       telecom: "Télécom",
     },
     demo: "Demander une démo",
+    playground: "Essayer le playground gratuitement",
+    playgroundShort: "Playground",
     seePlatform: "Voir la plateforme",
     learnMore: "En savoir plus",
     menu: "Menu",

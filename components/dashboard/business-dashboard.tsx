@@ -7,6 +7,7 @@ import { useCallback, useRef } from "react";
 import { When } from "@/components/audit/run-row";
 import { ListKeysHint, useListKeys } from "@/components/layout/list-keys";
 import { AnimatedNumber } from "@/components/shared/animated-number";
+import { Figure } from "@/components/shared/figure";
 import { Sparkline } from "@/components/shared/sparkline";
 import { Button } from "@/components/ui/button";
 import { StatusGlyph } from "@/components/ui/status-glyph";
@@ -92,40 +93,6 @@ function Delta({ metric }: { metric: Kpi }) {
   );
 }
 
-function Stat({
-  label,
-  value,
-  format,
-  tone,
-  foot,
-  chart,
-}: {
-  label: string;
-  value: number;
-  format: (value: number) => string;
-  tone?: string;
-  foot: React.ReactNode;
-  chart?: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-end justify-between gap-3 px-4 py-3.5">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-xs text-ink-3">{label}</span>
-        <span
-          className={cn(
-            "text-[22px] font-semibold leading-tight tracking-[-0.02em] text-ink",
-            tone
-          )}
-        >
-          <AnimatedNumber value={value} format={format} />
-        </span>
-        <span className="truncate">{foot}</span>
-      </div>
-      {chart}
-    </div>
-  );
-}
-
 function StatStrip({ data }: { data: Dashboard }) {
   const t = useTranslations("dashboard.stats");
   const format = useFormatter();
@@ -150,28 +117,25 @@ function StatStrip({ data }: { data: Dashboard }) {
       )}
     >
       {runs ? (
-        <Stat
+        <Figure
           label={t("runs")}
-          value={runs.value}
-          format={integer}
+          value={<AnimatedNumber value={runs.value} format={integer} />}
           foot={<Delta metric={runs} />}
           chart={<Sparkline values={runs.series.map((p) => p.value)} />}
         />
       ) : null}
       {rate ? (
-        <Stat
+        <Figure
           label={t("passRate")}
-          value={rate.value}
-          format={percent}
+          value={<AnimatedNumber value={rate.value} format={percent} />}
           tone={rate.value < 0.8 && runs?.value ? "text-warn-ink" : undefined}
           foot={<Delta metric={rate} />}
           chart={<Sparkline values={rate.series.map((p) => p.value)} className="text-pass" />}
         />
       ) : null}
-      <Stat
+      <Figure
         label={t("toReview")}
-        value={toReview}
-        format={integer}
+        value={<AnimatedNumber value={toReview} format={integer} />}
         tone={toReview ? "text-fail-ink" : undefined}
         foot={
           <Link
@@ -186,10 +150,9 @@ function StatStrip({ data }: { data: Dashboard }) {
         }
         chart={<Sparkline values={week.map((d) => d.warning + d.failed)} className="text-fail" />}
       />
-      <Stat
+      <Figure
         label={t("duration")}
-        value={data.timing.medianMs}
-        format={duration}
+        value={<AnimatedNumber value={data.timing.medianMs} format={duration} />}
         foot={
           <span className="text-xs tabular-nums text-ink-4">
             {t("p95", { value: formatDurationMs(data.timing.p95Ms) })} ·{" "}
@@ -197,10 +160,9 @@ function StatStrip({ data }: { data: Dashboard }) {
           </span>
         }
       />
-      <Stat
+      <Figure
         label={t("api")}
-        value={sources ? data.sources.api / sources : 0}
-        format={percent}
+        value={<AnimatedNumber value={sources ? data.sources.api / sources : 0} format={percent} />}
         foot={
           <span className="text-xs tabular-nums text-ink-4">
             {t("apiSplit", { api: data.sources.api, test: data.sources.test })}
