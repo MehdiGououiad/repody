@@ -283,6 +283,13 @@ services:
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
       INTERNAL_API_URL: http://api:8000
       BUGSINK_DSN: ${BUGSINK_DSN:-}
+      # The client's brand (lib/theme/brand.ts); unset values keep Repody's.
+      REPODY_BRAND_NAME: ${REPODY_BRAND_NAME:-}
+      REPODY_BRAND_LOGO_URL: ${REPODY_BRAND_LOGO_URL:-}
+      REPODY_BRAND_BASE: ${REPODY_BRAND_BASE:-}
+      REPODY_BRAND_ACCENT: ${REPODY_BRAND_ACCENT:-}
+      REPODY_BRAND_CONTRAST: ${REPODY_BRAND_CONTRAST:-}
+      REPODY_BRAND_RADIUS: ${REPODY_BRAND_RADIUS:-}
     expose:
       - "3000"
     healthcheck:

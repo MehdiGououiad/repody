@@ -24,8 +24,8 @@ export type ThemeInput = {
   contrast: number;
 };
 
-export type Mode = "light" | "dark";
-export type ThemeTokens = Record<string, string>;
+type Mode = "light" | "dark";
+type ThemeTokens = Record<string, string>;
 
 const toOklch = (color: string): Oklch => {
   const parsed = parse(color);
@@ -41,8 +41,11 @@ const css = (l: number, c: number, h: number, alpha?: number): string =>
 
 /** The colour moved in lightness (darker or lighter) until it reaches `ratio` against `bg`. */
 function withContrast(color: Oklch, bg: string, ratio: number, direction: -1 | 1): Oklch {
+  // Measured on the colour as it will be written (clamped into the gamut), with a small margin
+  // so rounding in the stylesheet never lands it under the ratio.
+  const shown = (c: Oklch) => formatHex(clampChroma(c, "oklch") as Oklch);
   let current = { ...color };
-  for (let i = 0; i < 40 && wcagContrast(formatHex(current), bg) < ratio; i++) {
+  for (let i = 0; i < 40 && wcagContrast(shown(current), bg) < ratio + 0.05; i++) {
     current = { ...current, l: Math.min(Math.max(current.l + direction * 0.02, 0), 1) };
   }
   return current;
@@ -69,9 +72,15 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
   const alpha = (a: number) => css(inkL, inkC, h, a);
   const panelHex = formatHex({ mode: "oklch", l: surface.panel, c: surfaceC, h });
 
-  const accentFill = light ? accent : { ...accent, l: Math.max(accent.l, 0.6) };
-  const fillHex = formatHex(accentFill);
-  const onAccent = wcagContrast("#ffffff", fillHex) >= 4.5 ? "oklch(1 0 0)" : css(0.2, inkC, h);
+  // The fill of primary buttons: text on it reaches 4.5:1 with white or near-black, and when a
+  // mid-lightness accent allows neither, the fill darkens until white text does.
+  const darkText = { mode: "oklch" as const, l: 0.2, c: inkC, h };
+  let accentFill: Oklch = light ? accent : { ...accent, l: Math.max(accent.l, 0.6) };
+  const readable = (text: string) => wcagContrast(text, formatHex(accentFill)) >= 4.5;
+  if (!readable("#ffffff") && !readable(formatHex(darkText))) {
+    accentFill = withContrast(accentFill, "#ffffff", 4.5, -1);
+  }
+  const onAccent = readable("#ffffff") ? "oklch(1 0 0)" : css(darkText.l, darkText.c, h);
   const accentInk = withContrast(accentFill, panelHex, 4.5, light ? -1 : 1);
 
   // Status colours sit inside the palette: one lightness, toned-down chroma.

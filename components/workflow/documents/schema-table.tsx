@@ -5,7 +5,11 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ImportNuextractTemplateDialog } from "@/components/workflow/documents/import-nuextract-template-dialog";
-import { SchemaFieldExtraConfig } from "@/components/workflow/documents/schema-field-extra";
+import {
+  CELL_INPUT,
+  FIELD_GRID as GRID,
+  SchemaFieldExtraConfig,
+} from "@/components/workflow/documents/schema-field-extra";
 import {
   ListToggle,
   TemplateTypeSelect,
@@ -14,13 +18,6 @@ import { fieldKey } from "@/lib/rules/field-key";
 import type { SchemaField } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { newSchemaField } from "@/lib/workflow/new-items";
-
-const GRID =
-  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_88px_28px] md:items-center md:gap-2";
-
-/** A cell input that looks like text until hovered or focused. */
-const CELL_INPUT =
-  "h-8 w-full min-w-0 rounded-md bg-transparent px-2 text-sm text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none";
 
 function SchemaFieldRow({
   field,

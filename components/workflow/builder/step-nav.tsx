@@ -6,7 +6,7 @@ import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
 export type BuilderStep = 0 | 1 | 2;
 
-export const STEP_KEYS = ["extract", "rules", "upload"] as const;
+const STEP_KEYS = ["extract", "rules", "upload"] as const;
 
 export function stepComplete(
   step: BuilderStep,

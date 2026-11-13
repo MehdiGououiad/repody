@@ -25,7 +25,7 @@ export function When({ value }: { value: string }) {
 }
 
 /** One run in a list: status glyph, workflow, what failed, how many fields, when. */
-export function RunRow({ audit }: { audit: Audit }) {
+function RunRow({ audit }: { audit: Audit }) {
   const t = useTranslations("audits");
   const format = useFormatter();
   return (

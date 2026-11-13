@@ -2,7 +2,7 @@
 
 import { createContext, type ReactNode, useContext } from "react";
 
-export type PublicBrand = { name: string; logoUrl: string | null };
+type PublicBrand = { name: string; logoUrl: string | null };
 
 const BrandContext = createContext<PublicBrand>({ name: "Repody", logoUrl: null });
 

@@ -36,8 +36,10 @@
     "language": "Langue",
     "toggleTheme": "Changer de thème",
     "commandGroups": {
-      "navigate": "Naviguer",
-      "workflows": "Workflows"
+      "navigate": "Aller à",
+      "workflows": "Workflows",
+      "actions": "Actions",
+      "runs": "Exécutions récentes"
     },
     "noResults": "Aucun résultat.",
     "search": "Rechercher",

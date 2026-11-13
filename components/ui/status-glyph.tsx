@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-export type GlyphStatus =
+type GlyphStatus =
   | "waiting"
   | "running"
   | "passed"

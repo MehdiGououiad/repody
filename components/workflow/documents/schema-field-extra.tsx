@@ -1,19 +1,35 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   ListToggle,
   TemplateTypeSelect,
 } from "@/components/workflow/documents/template-type-select";
 import type { SchemaField } from "@/lib/types";
+import { cn } from "@/lib/utils";
 import { newSchemaField } from "@/lib/workflow/new-items";
 
-const FIELD_LABEL = "text-2xs font-semibold text-ink-3";
+/** The fields table grid; nested rows (object fields, table columns) share it. */
+export const FIELD_GRID =
+  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_88px_28px] md:items-center md:gap-2";
 
-/** The choices of an enum or multi-enum; an empty last row adds the next choice. */
+/** A cell input that looks like text until hovered or focused. */
+export const CELL_INPUT =
+  "h-8 w-full min-w-0 rounded-md bg-transparent px-2 text-sm text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none";
+
+/** Nested content hangs off its field on a rail, indented one step. */
+function Nested({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="ms-4 mb-2 flex flex-col gap-0.5 border-s border-line ps-3 md:ms-6">
+      <span className="px-2 pt-1 text-xs text-ink-3">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+/** The choices of an enum or multi-enum. */
 function EnumValuesEditor({
   values,
   onChange,
@@ -23,47 +39,46 @@ function EnumValuesEditor({
 }) {
   const t = useTranslations("workflows.builder.schema");
   const rows = values.length > 0 ? values : [""];
-
   return (
-    <div className="space-y-2 rounded-lg border border-dashed border-line/80 bg-raised/40 p-3">
-      <p className={FIELD_LABEL}>{t("enumValuesLabel")}</p>
-      {rows.map((value, index) => (
-        // Choices are edited in place and never reordered: the position is their identity.
-        // biome-ignore lint/suspicious/noArrayIndexKey: index is the row identity
-        <div key={`enum-${index}`} className="flex items-center gap-2">
-          <Input
-            value={value}
-            onChange={(e) => {
-              const next = [...rows];
-              next[index] = e.target.value;
-              onChange(next.filter((row, i) => row.trim() || i < next.length - 1));
-            }}
-            placeholder={t("enumValuePlaceholder")}
-            className="h-8 text-xs"
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-ink-4 hover:text-fail-ink"
-            onClick={() => onChange(rows.filter((_, i) => i !== index))}
-            aria-label={t("removeEnumValue")}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      ))}
+    <Nested label={t("enumValuesLabel")}>
+      <ul className="flex flex-col">
+        {rows.map((value, index) => (
+          // Choices are edited in place and never reordered: the position is their identity.
+          // biome-ignore lint/suspicious/noArrayIndexKey: index is the row identity
+          <li key={`enum-${index}`} className="group flex max-w-sm items-center gap-1">
+            <input
+              value={value}
+              onChange={(e) => {
+                const next = [...rows];
+                next[index] = e.target.value;
+                onChange(next.filter((row, i) => row.trim() || i < next.length - 1));
+              }}
+              placeholder={t("enumValuePlaceholder")}
+              aria-label={t("enumValuesLabel")}
+              className={CELL_INPUT}
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+              onClick={() => onChange(rows.filter((_, i) => i !== index))}
+              aria-label={t("removeEnumValue")}
+            >
+              <X />
+            </Button>
+          </li>
+        ))}
+      </ul>
       <Button
-        type="button"
         variant="ghost"
         size="sm"
-        className="h-7 text-2xs"
+        className="self-start"
         onClick={() => onChange([...rows.filter((v) => v.trim()), ""])}
       >
-        <Plus className="h-3 w-3" />
+        <Plus />
         {t("addEnumValue")}
       </Button>
-    </div>
+    </Nested>
   );
 }
 
@@ -83,77 +98,49 @@ function ChildrenEditor({
     onChange(fields.map((child) => (child.id === id ? { ...child, ...patch } : child)));
 
   return (
-    <div className="space-y-3 rounded-xl border border-accent/15 bg-accent/[0.03] p-3 sm:p-4">
-      <div className="space-y-1">
-        <p className="text-2xs font-semibold text-ink">
-          {table ? t("rowColumnsLabel") : t("objectFieldsLabel")}
-        </p>
-        <p className="text-2xs leading-snug text-ink-3">
-          {table ? t("rowColumnsHint") : t("objectFieldsHint")}
-        </p>
-      </div>
-
+    <Nested label={table ? t("rowColumnsLabel") : t("objectFieldsLabel")}>
       {fields.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-line/80 bg-panel/50 px-3 py-4 text-center text-2xs text-ink-3">
+        <p className="px-2 py-1 text-sm text-ink-4">
           {table ? t("rowColumnsEmpty") : t("objectFieldsEmpty")}
         </p>
       ) : (
-        <ul className="space-y-2">
-          {fields.map((child, index) => (
-            <li
-              key={child.id}
-              className="rounded-lg border border-line/70 bg-panel p-3 shadow-black/[0.02]"
-            >
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <span className={FIELD_LABEL}>
-                  {table
-                    ? t("rowColumnIndex", { index: index + 1 })
-                    : t("objectFieldIndex", { index: index + 1 })}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-ink-4 hover:text-fail-ink"
-                  onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
-                  aria-label={table ? t("removeRowColumn") : t("removeObjectField")}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="space-y-1 min-w-0">
-                  <span className={FIELD_LABEL}>{t("name")}</span>
-                  <Input
-                    value={child.name}
-                    onChange={(e) => update(child.id, { name: e.target.value })}
-                    placeholder={t("namePlaceholder")}
-                    className="h-9 font-mono text-xs"
-                  />
-                </label>
-                <div className="space-y-1 min-w-0">
-                  <span className={FIELD_LABEL}>{t("type")}</span>
-                  <TemplateTypeSelect
-                    value={child.templateType}
-                    structures={!table}
-                    onChange={(templateType) => update(child.id, { templateType })}
-                  />
-                </div>
-              </div>
-              <label className="mt-2 block space-y-1">
-                <span className={FIELD_LABEL}>{t("intent")}</span>
-                <Input
+        <ul className="flex flex-col">
+          {fields.map((child) => (
+            <li key={child.id} className="group">
+              <div className={cn("flex flex-col gap-1 py-0.5", FIELD_GRID)}>
+                <input
+                  value={child.name}
+                  onChange={(e) => update(child.id, { name: e.target.value })}
+                  placeholder={t("namePlaceholder")}
+                  aria-label={t("name")}
+                  className={cn(CELL_INPUT, "font-mono text-xs")}
+                />
+                <TemplateTypeSelect
+                  value={child.templateType}
+                  structures={!table}
+                  onChange={(templateType) => update(child.id, { templateType })}
+                />
+                <input
                   value={child.description}
                   onChange={(e) => update(child.id, { description: e.target.value })}
                   placeholder={t("descriptionPlaceholder")}
-                  className="h-9 text-xs"
+                  aria-label={t("intent")}
+                  className={CELL_INPUT}
                 />
-              </label>
-              <ListToggle
-                value={child.templateType}
-                onChange={(templateType) => update(child.id, { templateType })}
-                className="mt-2 text-2xs"
-              />
+                <ListToggle
+                  value={child.templateType}
+                  onChange={(templateType) => update(child.id, { templateType })}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+                  onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
+                  aria-label={table ? t("removeRowColumn") : t("removeObjectField")}
+                >
+                  <X />
+                </Button>
+              </div>
               {!table ? (
                 <SchemaFieldExtraConfig
                   field={child}
@@ -164,18 +151,16 @@ function ChildrenEditor({
           ))}
         </ul>
       )}
-
       <Button
-        type="button"
-        variant="outline"
+        variant="ghost"
         size="sm"
-        className="h-8 w-full text-2xs sm:w-auto"
+        className="self-start"
         onClick={() => onChange([...fields, newSchemaField()])}
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus />
         {table ? t("addRowColumn") : t("addObjectField")}
       </Button>
-    </div>
+    </Nested>
   );
 }
 
@@ -190,23 +175,19 @@ export function SchemaFieldExtraConfig({
   const type = field.templateType;
   if (type === "enum" || type === "multi-enum") {
     return (
-      <div className="px-3 pb-3">
-        <EnumValuesEditor
-          values={field.enumValues}
-          onChange={(enumValues) => onUpdate({ enumValues })}
-        />
-      </div>
+      <EnumValuesEditor
+        values={field.enumValues}
+        onChange={(enumValues) => onUpdate({ enumValues })}
+      />
     );
   }
   if (type === "object" || type === "object-array") {
     return (
-      <div className="px-3 pb-3">
-        <ChildrenEditor
-          fields={field.children}
-          onChange={(children) => onUpdate({ children })}
-          mode={type}
-        />
-      </div>
+      <ChildrenEditor
+        fields={field.children}
+        onChange={(children) => onUpdate({ children })}
+        mode={type}
+      />
     );
   }
   return null;

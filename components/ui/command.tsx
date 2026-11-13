@@ -17,14 +17,20 @@ function Command({ className, ...props }: React.ComponentProps<typeof CommandPri
 
 /** The command palette: no entrance animation, it is used dozens of times a day. */
 function CommandDialog({
+  title,
   children,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Root> & { children: React.ReactNode }) {
+}: React.ComponentProps<typeof DialogPrimitive.Root> & {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <DialogPrimitive.Root {...props}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/20 dark:bg-black/45" />
         <DialogPrimitive.Content className="fixed start-1/2 top-[14vh] z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 overflow-hidden rounded-xl bg-overlay shadow-pop rtl:translate-x-1/2">
+          <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="sr-only">{title}</DialogPrimitive.Description>
           <Command>{children}</Command>
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>
