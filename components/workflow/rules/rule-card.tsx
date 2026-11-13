@@ -1,16 +1,12 @@
 "use client";
 
+import { Toggle } from "@ui-sdk/react/toggle";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { BareInput } from "@/components/ui/input";
+import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
+import { confirmAction } from "@/components/ui/overlays";
 import {
   Select,
   SelectContent,
@@ -19,9 +15,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusGlyph } from "@/components/ui/status-glyph";
+import { docColor } from "@/lib/doc-color";
 import { useCatalog } from "@/lib/hooks/use-catalog";
 import { fieldOptions, tableOptions } from "@/lib/rules/document-fields";
-import type { DocumentDef, RuleCheck, RuleScope, RuleSeverity, WorkflowRule } from "@/lib/types";
+import type {
+  DocumentDef,
+  RuleCheck,
+  RuleScope,
+  RuleSeverity,
+  RunAuditRule,
+  WorkflowRule,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ConditionBuilder } from "./condition-builder";
 import { ScopeToggle } from "./scope-toggle";
@@ -33,18 +37,20 @@ export function RuleCard({
   rule,
   documents,
   validation,
+  result,
   onChange,
   onRemove,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
   validation?: RuleCheck;
+  /** This rule's result in the last extraction of the samples. */
+  result?: RunAuditRule;
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
 }) {
   const t = useTranslations("workflows.builder.rules");
   const tCommon = useTranslations("common");
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const isCross = rule.scope === "cross";
   const catalog = useCatalog();
   const fields = fieldOptions(documents, rule.appliesTo);
@@ -77,47 +83,66 @@ export function RuleCard({
   };
 
   return (
-    <section className="overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--line)]">
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        onConfirm={onRemove}
-        title={t("removeTitle", { name: rule.name || t("newLogicName") })}
-        description={tCommon("deleteWarning")}
-        confirmLabel={tCommon("remove")}
-      />
-      <header className="flex h-11 items-center gap-2 border-b border-line bg-raised px-3">
+    <section className="overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]">
+      <header className="flex h-10 items-center gap-2 border-b border-line bg-raised px-3">
         <StatusGlyph
           status={issues.length ? "warning" : "passed"}
           label={issues.length ? t("hasIssues") : t("valid")}
         />
-        <input
+        <BareInput
           value={rule.name}
           onChange={(e) => onChange({ name: e.target.value })}
           placeholder={t("ruleName")}
           aria-label={t("ruleName")}
-          className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-sm font-medium text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none"
+          className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[13px] font-semibold text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none"
         />
+        {result ? (
+          <span
+            title={result.detail || undefined}
+            className={cn(
+              "hidden h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium lg:inline-flex",
+              result.status === "passed" && "bg-pass-wash text-pass-ink",
+              result.status === "failed" && "bg-fail-wash text-fail-ink",
+              result.status === "skipped" && "bg-selected text-ink-3"
+            )}
+          >
+            <StatusGlyph
+              status={result.status === "skipped" ? "waiting" : result.status}
+              className="size-3"
+            />
+            {t(`onSample.${result.status}`)}
+          </span>
+        ) : null}
         <ScopeToggle scope={rule.scope} onChange={switchScope} canCross={documents.length >= 2} />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={t("ruleActions")}>
-              <MoreHorizontal />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              onSelect={() => setConfirmOpen(true)}
-              className="text-fail-ink focus:text-fail-ink [&_svg]:text-fail-ink"
-            >
+        <Menu
+          onAction={async () => {
+            const yes = await confirmAction({
+              title: t("removeTitle", { name: rule.name || t("newLogicName") }),
+              description: tCommon("deleteWarning"),
+              confirmLabel: tCommon("remove"),
+              cancelLabel: tCommon("cancel"),
+              danger: true,
+            });
+            if (yes) onRemove();
+          }}
+        >
+          <MenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm" aria-label={t("ruleActions")}>
+                <MoreHorizontal />
+              </Button>
+            }
+          />
+          <MenuContent align="end">
+            <MenuItem value="remove" danger>
               <Trash2 />
               {t("removeRule")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </MenuItem>
+          </MenuContent>
+        </Menu>
       </header>
 
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-3 p-3.5">
         <div className="flex gap-3">
           <span className={LABEL}>{isCross ? t("selectTwoDocs") : t("selectOneDoc")}</span>
           {documents.length === 0 ? (
@@ -128,23 +153,23 @@ export function RuleCard({
                 const pos = rule.appliesTo.indexOf(doc.id);
                 const selected = pos !== -1;
                 return (
-                  <button
-                    type="button"
+                  <Toggle
                     key={doc.id}
-                    aria-pressed={selected}
-                    onClick={() => toggleDoc(doc.id)}
+                    pressed={selected}
+                    onPressedChange={() => toggleDoc(doc.id)}
                     className={cn(
-                      "flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm transition-colors duration-100",
+                      "flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] transition-colors duration-100",
                       selected
-                        ? "bg-accent-wash text-accent-ink"
+                        ? cn(docColor(idx).wash, docColor(idx).ink, "font-medium")
                         : "text-ink-3 shadow-[inset_0_0_0_1px_var(--line-strong)] hover:text-ink"
                     )}
                   >
+                    <span className={cn("size-1.5 rounded-full", docColor(idx).dot)} aria-hidden />
                     {isCross && selected ? (
                       <span className="text-xs font-semibold">{pos === 0 ? "A" : "B"}</span>
                     ) : null}
                     {doc.documentType || `${t("unnamedDoc")} ${idx + 1}`}
-                  </button>
+                  </Toggle>
                 );
               })}
             </div>
@@ -175,9 +200,11 @@ export function RuleCard({
           <span className={cn(LABEL, "pt-0")}>{t("onFail")}</span>
           <Select
             value={rule.severity}
-            onValueChange={(v) => onChange({ severity: v as RuleSeverity })}
+            onValueChange={(v: string | null) =>
+              v !== null && onChange({ severity: v as RuleSeverity })
+            }
           >
-            <SelectTrigger className="w-auto min-w-44">
+            <SelectTrigger className="w-auto min-w-44" aria-label={t("onFail")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

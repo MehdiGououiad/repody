@@ -1,11 +1,11 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "@ui-sdk/react/toast";
 import { dequal } from "dequal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useEffectEvent, useState } from "react";
-import { toast } from "sonner";
 import type { BuilderStep } from "@/components/workflow/builder/step-nav";
 import { $api } from "@/lib/api/browser";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
@@ -25,6 +25,11 @@ interface Draft {
  * save and a double click never issues two API keys. See docs/LIFECYCLES.md.
  */
 export type BuilderSync = "idle" | "saving" | "deploying";
+
+/** What the header says about the draft: in flight, on the server, edited, or refused. */
+export type SaveState =
+  | { kind: "saving" | "deploying" | "saved" | "unsaved" }
+  | { kind: "failed"; reason: string };
 
 /** A builder test run: the files chosen per document (kept across runs) and the last run. */
 export type TestSession = { files: Record<string, File>; runId: string | null };
@@ -55,6 +60,8 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   // The full key is returned once, by deploy; it is never stored (a reload shows the hint).
   const [apiKey, setApiKey] = useState(workflow.apiKey ?? "");
   const [testSession, setTestSession] = useState<TestSession>({ files: {}, runId: null });
+  // Why the last save was refused (a rule half written, say), until a save goes through.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const saveMutation = $api.useMutation("put", "/v1/workflows/{workflow_id}");
   const deployMutation = $api.useMutation("post", "/v1/workflows/{workflow_id}/deploy");
@@ -63,6 +70,14 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     : saveMutation.isPending
       ? "saving"
       : "idle";
+  const saveState: SaveState =
+    sync !== "idle"
+      ? { kind: sync }
+      : !dirty
+        ? { kind: "saved" }
+        : saveError
+          ? { kind: "failed", reason: saveError }
+          : { kind: "unsaved" };
   useUnsavedChangesWarning(dirty);
 
   const update =
@@ -84,6 +99,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
       else window.history.replaceState(null, "", href);
     }
     setSaved(snapshot);
+    setSaveError(null);
     setPersisted(true);
     void queryClient.invalidateQueries({ queryKey: ["get", "/v1/workflows"] });
     return workflow.id;
@@ -97,7 +113,9 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
         toast.success(t("toasts.draftSaved"), { description: t("toasts.draftSavedDetail") });
       }
     } catch (error) {
-      if (!silent) toast.error(errorMessage(error, tCommon("saveFailed")));
+      const reason = errorMessage(error, tCommon("saveFailed"));
+      setSaveError(reason);
+      if (!silent) toast.error(reason);
     }
   };
 
@@ -133,6 +151,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     deployed,
     apiKey,
     sync,
+    saveState,
     testSession,
     setTestSession,
     handleDeploy,

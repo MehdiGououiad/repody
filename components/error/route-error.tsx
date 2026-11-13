@@ -30,8 +30,8 @@ export default function RouteError({
         <Button size="sm" onClick={() => reset()}>
           {t("retry")}
         </Button>
-        <Button asChild size="sm" variant="ghost">
-          <Link href="/dashboard">{t("dashboard")}</Link>
+        <Button size="sm" variant="ghost" render={<Link href="/dashboard" />}>
+          {t("dashboard")}
         </Button>
       </div>
     </div>

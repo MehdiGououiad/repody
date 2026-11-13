@@ -7,8 +7,8 @@ import {
   Select,
   SelectContent,
   SelectGroup,
+  SelectGroupLabel,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -60,13 +60,18 @@ export function ConditionRow({
         catalog={catalog}
         onChange={(next) => onChange({ ...condition, left: next })}
       />
-      <Select value={operator} onValueChange={(value) => setOperator(value as ComparisonOp)}>
+      <Select
+        value={operator}
+        onValueChange={(value: string | null) =>
+          value !== null && setOperator(value as ComparisonOp)
+        }
+      >
         <SelectTrigger className="w-auto min-w-32" aria-label={t("operator")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup>
-            <SelectLabel>{t("comparison")}</SelectLabel>
+            <SelectGroupLabel>{t("comparison")}</SelectGroupLabel>
             {operators
               .filter((op) => !isPresenceOp(op.value, catalog))
               .map((op) => (
@@ -76,7 +81,7 @@ export function ConditionRow({
               ))}
           </SelectGroup>
           <SelectGroup>
-            <SelectLabel>{t("existence")}</SelectLabel>
+            <SelectGroupLabel>{t("existence")}</SelectGroupLabel>
             {operators
               .filter((op) => isPresenceOp(op.value, catalog))
               .map((op) => (
@@ -99,7 +104,7 @@ export function ConditionRow({
         <Button
           variant="ghost"
           size="icon-sm"
-          className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+          className="text-ink-4 hover:text-fail-ink pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100"
           onClick={onRemove}
           aria-label={tCommon("remove")}
         >

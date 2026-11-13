@@ -11,12 +11,14 @@ from repody.infra.models import Run
 
 
 class DayCounts(NamedTuple):
-    """Runs created on a day, how many finished, and how many of those passed or failed."""
+    """Runs created on a day, how many finished, and how many of those passed, need review
+    (warning) or failed."""
 
     runs: int = 0
     done: int = 0
     passed: int = 0
     failed: int = 0
+    warning: int = 0
 
 
 def today() -> date:
@@ -49,6 +51,7 @@ async def daily_counts(
             func.count().filter(Run.status == "done"),
             func.count().filter(Run.outcome == "passed"),
             func.count().filter(Run.outcome == "failed"),
+            func.count().filter(Run.outcome == "warning"),
         )
         .where(Run.created_at >= midnight(since), *where)
         .group_by(func.date(Run.created_at))

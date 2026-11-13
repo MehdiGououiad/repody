@@ -5,16 +5,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBackdrop,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { fieldClassName } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/input";
 import { useCatalog } from "@/lib/hooks/use-catalog";
 import type { SchemaField } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
 const EXAMPLE = `{
@@ -63,39 +64,49 @@ export function ImportNuextractTemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogBackdrop />
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>{t("importTemplateTitle")}</DialogTitle>
           <DialogDescription>{t("importTemplateDescription")}</DialogDescription>
         </DialogHeader>
-        <textarea
-          value={raw}
-          onChange={(e) => {
-            setRaw(e.target.value);
-            setErrorKey(null);
-          }}
-          spellCheck={false}
-          className={cn(
-            fieldClassName,
-            "min-h-64 w-full resize-y px-3 py-2 font-mono text-xs leading-relaxed"
+        <DialogBody className="flex flex-col gap-2">
+          <Textarea
+            value={raw}
+            onChange={(e) => {
+              setRaw(e.target.value);
+              setErrorKey(null);
+            }}
+            spellCheck={false}
+            className="min-h-64 font-mono text-xs"
+            aria-label={t("importTemplateTitle")}
+          />
+          {errorKey ? (
+            <p className="text-xs text-fail-ink">{t(`importTemplateError.${errorKey}`)}</p>
+          ) : (
+            <p className="text-xs text-ink-3">{t("importTemplateHint")}</p>
           )}
-          aria-label={t("importTemplateTitle")}
-        />
-        {errorKey ? (
-          <p className="text-xs text-fail-ink">{t(`importTemplateError.${errorKey}`)}</p>
-        ) : (
-          <p className="text-xs text-ink-3">{t("importTemplateHint")}</p>
-        )}
+        </DialogBody>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
             {tCommon("cancel")}
           </Button>
           {hasExistingFields ? (
-            <Button type="button" variant="secondary" onClick={() => apply("append")}>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!catalog}
+              onClick={() => apply("append")}
+            >
               {t("importTemplateAppend")}
             </Button>
           ) : null}
-          <Button type="button" onClick={() => apply("replace")}>
+          <Button
+            type="button"
+            variant="primary"
+            disabled={!catalog}
+            onClick={() => apply("replace")}
+          >
             {hasExistingFields ? t("importTemplateReplace") : t("importTemplateApply")}
           </Button>
         </DialogFooter>

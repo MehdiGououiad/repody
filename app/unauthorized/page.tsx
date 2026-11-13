@@ -16,11 +16,11 @@ export default function UnauthorizedPage() {
           <p className="text-sm text-ink-3">{t("forbiddenBody")}</p>
         </div>
         <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/dashboard">{t("backToDashboard")}</Link>
+          <Button variant="primary" render={<Link href="/dashboard" />}>
+            {t("backToDashboard")}
           </Button>
-          <Button asChild variant="ghost">
-            <Link href="/login">{t("switchAccount")}</Link>
+          <Button variant="ghost" render={<Link href="/login" />}>
+            {t("switchAccount")}
           </Button>
         </div>
       </div>

@@ -1,16 +1,13 @@
 {
-  "brand": {
-    "name": "Repody"
-  },
   "nav": {
     "dashboard": "Overview",
     "workflows": "Workflows",
     "audits": "Runs",
     "settings": "Settings",
     "newWorkflow": "New workflow",
-    "logout": "Sign out",
     "openMenu": "Open menu",
-    "main": "Main"
+    "main": "Main",
+    "operations": "Control room"
   },
   "auth": {
     "signInTitle": "Sign in to {name}",
@@ -56,13 +53,10 @@
     "remove": "Remove",
     "edit": "Edit",
     "open": "Open",
-    "owner": "Owner",
     "viewAll": "View all",
     "deployWorkflow": "Publish",
     "redeployWorkflow": "Publish again",
-    "of": "of",
     "skipToContent": "Skip to main content",
-    "neverRun": "Never run",
     "newWorkflow": "New workflow",
     "copy": "Copy",
     "copied": "Copied",
@@ -72,7 +66,6 @@
     "saveFailed": "Could not save workflow",
     "delete": "Delete",
     "confirm": "Confirm",
-    "confirmDelete": "Confirm deletion",
     "deleteWarning": "This action cannot be undone.",
     "retry": "Retry",
     "copyFailed": "Could not copy"
@@ -109,23 +102,9 @@
     "offlineTitle": "The API is unreachable",
     "offlineHint": "Runs and numbers appear once the API answers. Workflows can still be edited.",
     "offlineCta": "Open workflows",
-    "recentSubmissions": "Recent runs",
-    "openFailures": "Needs review",
     "viewAll": "View all",
-    "live": {
-      "updatedPrefix": "Updated"
-    },
-    "queueLive": {
-      "counts": "{running} running, {queued} queued",
-      "idle": "No runs in progress"
-    },
     "workflows": {
-      "title": "Your workflows",
-      "viewAll": "All workflows",
       "neverRun": "Not run yet"
-    },
-    "recent": {
-      "title": "Recent Audits"
     },
     "kpi": {
       "auditsWeek": "Runs this week",
@@ -135,32 +114,70 @@
       "vsLastWeek": "vs last week",
       "same": "Same as last week"
     },
-    "performance": {
-      "title": "Audit volume",
-      "hint": "Click a day to filter audit runs.",
-      "runs": "Audits",
-      "emptyTitle": "No audit volume yet",
-      "emptyHint": "Run workflows to populate daily audit counts.",
-      "summary": "{total} audits this period. Peak day {peakDay} with {peakRuns} audits.",
-      "summaryShort": "{total, plural, one {# run} other {# runs}} in the last 7 days",
-      "barLabel": "{day}: {count, plural, =0 {no runs} one {# run} other {# runs}}"
-    },
-    "violations": {
-      "title": "Failures by severity",
-      "hint": "This week",
-      "reject": "Reject",
-      "flag": "Flag",
-      "none": "No rule failed this week"
-    },
     "getStarted": {
       "title": "Set up your first workflow",
       "description": "Follow the same three steps as the workflow builder — define fields, add rules, then test and deploy.",
       "cta": "Create a workflow"
     },
-    "needsReviewHint": "Runs whose rules failed, oldest first.",
     "nothingToReview": "Nothing needs review",
-    "noRuns": "No runs yet",
-    "stale": "{count, plural, one {# run stopped responding} other {# runs stopped responding}}"
+    "stale": "{count, plural, one {# run stopped responding} other {# runs stopped responding}}",
+    "queueTitle": "To review",
+    "queueHint": "Rejected runs and runs to check, newest first.",
+    "toReview": "to review",
+    "pulse": {
+      "running": "{count, plural, =0 {Nothing running} one {# running} other {# running}}",
+      "queued": "{count, plural, one {# queued} other {# queued}}",
+      "modelAwake": "Model awake",
+      "modelAsleep": "Model asleep",
+      "modelDown": "Model unreachable",
+      "updated": "Updated"
+    },
+    "stats": {
+      "runs": "Runs · 7 days",
+      "passRate": "Pass rate",
+      "toReview": "To review · 7 days",
+      "duration": "Median duration",
+      "p95": "p95 {value}",
+      "extraction": "extraction {value}",
+      "api": "Through the API",
+      "apiSplit": "{api} API · {test} tests",
+      "reviewSplit": "{failed} rejected · {warning} to check"
+    },
+    "volume": {
+      "title": "Volume · 14 days",
+      "hint": "Each day by outcome. Click a day for its runs.",
+      "passed": "Passed",
+      "warning": "To review",
+      "failed": "Failed",
+      "bar": "{day}: {runs, plural, =0 {no runs} one {# run} other {# runs}}"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "empty": "No runs yet."
+    },
+    "workflowsTable": {
+      "title": "Workflows",
+      "activity": "7 days",
+      "runs": "Runs",
+      "passRate": "Pass rate",
+      "duration": "Duration",
+      "lastRun": "Last run"
+    },
+    "hours": {
+      "title": "Activity by hour",
+      "hint": "Runs per hour over the last 7 days, in your local time.",
+      "less": "Less",
+      "more": "More",
+      "cell": "{day} {hour}:00: {runs, plural, =0 {no runs} one {# run} other {# runs}}",
+      "peak": "Peak: {day} around {hour}:00"
+    },
+    "documents": {
+      "title": "Documents read",
+      "hint": "Last 7 days.",
+      "documents": "{count, plural, one {# document} other {# documents}}",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "empty": "No documents read this week."
+    }
   },
   "audits": {
     "title": "Runs",
@@ -170,7 +187,6 @@
       "exportCsv": "CSV",
       "language": "Language",
       "api": "API",
-      "interface": "Interface",
       "source": "Source",
       "extractedData": "Fields",
       "validationRules": "Rules",
@@ -178,16 +194,15 @@
       "failed": "Failed",
       "skipped": "Skipped",
       "fieldsExtracted": "{count, plural, one {# field} other {# fields}}",
-      "rulesPassed": "{passed} of {total} rules passed",
+      "rulesPassed": "{passed} of {total, plural, one {# rule passed} other {# rules passed}}",
       "allRulesPassed": "Passed",
       "validationFailed": "Rejected",
       "reviewRequired": "Needs review",
       "value": "Extracted value",
       "field": "Field",
       "status": "Status",
-      "affectedFields": "Affected fields",
-      "intra": "Intra-doc",
-      "cross": "Cross-doc",
+      "intra": "Within a document",
+      "cross": "Across two documents",
       "reject": "Reject",
       "flag": "Flag",
       "info": "Info",
@@ -196,16 +211,22 @@
       "viaApi": "via API",
       "viaTest": "test run",
       "notFound": "Not found",
-      "modelOutput": "Model output",
-      "pagesTruncated": "Only {sent} of {total} pages were read"
+      "pagesTruncated": "Only {sent} of {total} pages were read",
+      "timing": {
+        "model": "Model and queue",
+        "extraction": "Extraction",
+        "rules": "Rules"
+      },
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "page": "Page {page}",
+      "copyId": "Copy the id",
+      "copied": "Id copied",
+      "noPreview": "No preview",
+      "resize": "Resize the document",
+      "next": "Next run",
+      "rawOutput": "Raw model output"
     },
     "table": {
-      "id": "Audit ID",
-      "status": "Status",
-      "workflow": "Workflow",
-      "timestamp": "Timestamp",
-      "rows": "Rows",
-      "summary": "{count, plural, =0 {No audits} one {# audit} other {# audits}}",
       "empty": "No matching runs",
       "total": "{total, plural, =0 {No runs} one {# run} other {# runs}}",
       "page": "Page {page} of {pages}",
@@ -218,23 +239,35 @@
       "allStatuses": "All",
       "workflow": "Workflow",
       "clearAll": "Clear filters",
-      "day": "Day"
+      "day": "Day",
+      "clearSearch": "Clear the search",
+      "remove": "Remove filter",
+      "review": "To review"
     },
     "status": {
       "passed": "Passed",
       "failed": "Failed",
       "warning": "Needs review"
     },
-    "eyebrow": "Reports",
     "exportCsv": "Export CSV",
     "row": {
-      "failedRules": "{count, plural, one {# rule failed} other {# rules failed}}",
-      "fields": "{count, plural, one {# field} other {# fields}}"
+      "fields": "{count, plural, one {# field} other {# fields}}",
+      "noFields": "Nothing extracted",
+      "source": {
+        "api": "API",
+        "test": "Test"
+      },
+      "files": "{count, plural, one {# file} other {# files}}"
     },
     "emptyTitle": "No runs yet",
     "emptyHint": "Runs appear here when a workflow processes documents, from a test or the API.",
     "emptyCta": "Open workflows",
-    "emptyFilteredHint": "No run matches these filters."
+    "emptyFilteredHint": "No run matches these filters.",
+    "groups": {
+      "today": "Today",
+      "yesterday": "Yesterday"
+    },
+    "live": "Updated live"
   },
   "workflows": {
     "title": "Workflows",
@@ -243,57 +276,34 @@
       "active": "Live",
       "draft": "Draft"
     },
-    "card": {
-      "lastRun": "Last run",
-      "success": "Success",
-      "runs": "Runs"
-    },
     "delete": {
       "selectAll": "Select all",
       "selectWorkflow": "Select {name}",
       "selected": "{count} selected",
       "deleteSelected": "Delete selected",
-      "confirmTitle": "Delete {count} workflow(s)?",
-      "confirmDescription": "This will permanently remove {count} workflow(s) from your list. Runs and audit history are kept.",
+      "confirmTitle": "Delete {count, plural, one {# workflow} other {# workflows}}?",
+      "confirmDescription": "{count, plural, one {# workflow leaves} other {# workflows leave}} your list. Runs and audit history are kept.",
       "confirmDescriptionNamed": "Delete: {names}. Runs and audit history are kept.",
       "confirmButton": "Delete",
-      "success": "{count} workflow(s) deleted",
-      "empty": "No workflows yet. Create one to get started."
+      "success": "{count, plural, one {# workflow deleted} other {# workflows deleted}}",
+      "select": "select"
     },
     "builder": {
       "steps": {
         "navTitle": "Steps",
-        "progress": "Completed",
         "blockedHint": "Name a document and add a field first",
         "extract": "Documents",
         "rules": "Rules",
-        "upload": "Test and publish",
-        "uploadHint": "Upload a sample → extract → validate in one run",
-        "back": "Back",
-        "continueToRules": "Next: rules",
-        "continueToTest": "Next: test and publish",
         "continueBlockedSchema": "Name a document and add at least one field to continue.",
-        "continueRulesOptional": "Rules are optional; a workflow can only extract.",
-        "finalStepHint": "Check the workflow on real documents, then publish it to call it from your systems."
+        "publish": "Publish",
+        "extraction": "Extraction"
       },
       "namePlaceholder": "Untitled workflow",
-      "nameGate": {
-        "title": "Name your workflow",
-        "hint": "Choose a clear name your team will recognize before configuring documents and rules.",
-        "label": "Workflow name",
-        "placeholder": "e.g. Invoice compliance check",
-        "continue": "Continue"
-      },
       "backToWorkflows": "Workflows",
       "statusLive": "Live",
       "statusDraft": "Draft",
       "test": {
-        "tabLabel": "Test run",
-        "uploadTitle": "Test",
-        "uploadHint": "Run the workflow on sample files. Nothing is published.",
-        "runBtn": "Run test",
         "running": "Running…",
-        "noFilesHint": "Without files, rules run on empty values.",
         "idle": "No test run yet",
         "status": {
           "passed": "All checks passed",
@@ -302,7 +312,6 @@
         },
         "fieldsExtracted": "fields extracted",
         "rulesPassed": "rules passed",
-        "ruleResults": "Rule-by-rule results",
         "viewReport": "Open report",
         "openFullReport": "Open report",
         "errorTitle": "The test did not run",
@@ -314,8 +323,7 @@
         "tabLabel": "Publish",
         "readyHint": "Publishing creates an API key; documents sent to it run this workflow.",
         "liveTitle": "Live",
-        "liveHint": "Send documents to the endpoint below with the workflow's key.",
-        "eyebrow": "API"
+        "liveHint": "Send documents to the endpoint below with the workflow's key."
       },
       "ingestion": {
         "severityReject": "Reject",
@@ -323,13 +331,9 @@
         "fileHint": "PDF, PNG, JPEG, WebP",
         "noDocsHint": "Name a document in the Documents step first.",
         "unnamedDoc": "Document",
-        "ruleCount": "{count, plural, one {# rule} other {# rules}}",
         "fieldCount": "{count, plural, one {# field} other {# fields}}",
         "fileRejected": "Use one PDF, PNG, JPEG or WebP file within the upload limit.",
         "dropPrompt": "Drop a file or click to choose"
-      },
-      "extraction": {
-        "retry": "Retry"
       },
       "docSource": {
         "title": "Documents",
@@ -362,9 +366,7 @@
           "empty": "No fields found in the template."
         },
         "objectFieldsLabel": "Nested fields",
-        "objectFieldsHint": "Fields inside this nested object.",
         "objectFieldsEmpty": "No nested fields yet. Add one for each property to extract.",
-        "objectFieldIndex": "Field {index}",
         "addObjectField": "Add nested field",
         "removeObjectField": "Remove nested field",
         "namePlaceholder": "e.g. invoice_number",
@@ -382,9 +384,7 @@
         "addEnumValue": "Add value",
         "removeEnumValue": "Remove value",
         "rowColumnsLabel": "Columns per row",
-        "rowColumnsHint": "Each column is a cell in the repeating table row (name, type, and what to look for).",
         "rowColumnsEmpty": "No columns yet. Add one for each cell in the table row (e.g. description, quantity, amount).",
-        "rowColumnIndex": "Column {index}",
         "addRowColumn": "Add column",
         "removeRowColumn": "Remove column",
         "duplicateName": "Name must be unique",
@@ -578,7 +578,13 @@
           }
         },
         "empty": "No fields yet. Add one to describe what should be extracted from the document.",
-        "fieldCount": "{count, plural, one {# field} other {# fields}}"
+        "fieldCount": "{count, plural, one {# field} other {# fields}}",
+        "addDescription": "Add a description: where is the value?",
+        "valueColumn": "Extracted value",
+        "notFound": "Not found",
+        "stale": "Extract again",
+        "missingHint": "Not found: say where the value is.",
+        "removeField": "Remove {name}"
       },
       "rules": {
         "title": "Rules",
@@ -643,12 +649,16 @@
             "aggregate": "Table"
           }
         },
-        "eyebrow": "Validation",
         "removeTitle": "Remove {name}?",
         "removeRule": "Remove rule",
         "ruleActions": "Rule actions",
         "hasIssues": "This rule has problems",
-        "valid": "Ready"
+        "valid": "Ready",
+        "onSample": {
+          "passed": "Holds on the sample",
+          "failed": "Fails on the sample",
+          "skipped": "Not evaluated: a value is missing"
+        }
       },
       "api": {
         "live": "Live",
@@ -690,13 +700,6 @@
         "copied": "Copied",
         "copyFailed": "Could not copy to clipboard"
       },
-      "dryRun": {
-        "title": "Dry-run preview",
-        "running": "Running…",
-        "idle": "Adjust the schema or rules to trigger a preview.",
-        "passed": "{count} Passed",
-        "failed": "{count} Failed"
-      },
       "toasts": {
         "nameRequired": "Enter a workflow name before running a test.",
         "draftSaved": "Draft saved",
@@ -704,36 +707,43 @@
         "deployed": "Workflow deployed",
         "deployedDetail": "Pipeline is now live in production."
       },
-      "documents": {
-        "eyebrow": "Schema"
+      "nameLabel": "Workflow name",
+      "workbench": {
+        "samplePrompt": "Drop a sample of this document",
+        "sampleHint": "PDF, PNG, JPEG or WebP. It stays in your browser until you extract.",
+        "replace": "Replace",
+        "removeSample": "Remove the sample",
+        "extract": "Extract",
+        "extracting": "Extracting…",
+        "extractHint": "Reads the sample with the draft as it is on screen.",
+        "needSample": "Add a sample to extract.",
+        "addDocument": "Document",
+        "resize": "Resize the sample",
+        "found": "{found} of {total} found"
       },
-      "nameLabel": "Workflow name"
+      "saved": "Saved",
+      "publish": {
+        "lastExtraction": "Last extraction",
+        "noExtraction": "No extraction yet: drop a sample in the Extraction step."
+      },
+      "unsaved": "Unsaved changes",
+      "notSaved": "Not saved"
     },
-    "eyebrow": "Pipelines",
     "row": {
-      "runs": "{count, plural, one {# run} other {# runs}}",
       "neverRun": "Never run"
     },
     "columns": {
       "name": "Name",
-      "runs": "Runs",
       "passRate": "Pass rate",
-      "lastRun": "Last run"
+      "lastRun": "Last run",
+      "documents": "Documents"
     },
     "emptyTitle": "No workflows yet",
-    "emptyHint": "A workflow names the documents you receive, the fields to read from them, and the rules they must pass."
-  },
-  "health": {
-    "alerts": {
-      "stale": {
-        "title": "Runs stuck in progress",
-        "detail": "{count, plural, one {# run} other {# runs}} still running past the timeout."
-      }
-    }
+    "emptyHint": "A workflow names the documents you receive, the fields to read from them, and the rules they must pass.",
+    "count": "{count, plural, one {# workflow} other {# workflows}}"
   },
   "settings": {
     "title": "Settings",
-    "eyebrow": "Settings",
     "description": "Runtime configuration and document model status.",
     "model": "Document model",
     "ready": "Ready",
@@ -760,13 +770,76 @@
     "brandBase": "Base colour",
     "brandAccent": "Accent colour",
     "brandContrast": "Contrast",
-    "brandRadius": "Corner radius"
+    "brandRadius": "Corner radius",
+    "palette": "Generated palette",
+    "paletteHint": "What the theme engine derives from the brand.",
+    "documents": "Document colours",
+    "status": "Statuses",
+    "actions": "Actions"
   },
   "error": {
     "title": "Something went wrong",
-    "reported": "The error was reported. You can try again or refresh the page.",
     "section": "This section failed to load. You can try again or go back to the dashboard.",
     "retry": "Try again",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "notFoundTitle": "Nothing here",
+    "notFoundHint": "The link is wrong, or what it pointed to was removed.",
+    "runs": "Runs",
+    "reported": "The error was reported. You can try again or refresh the page."
+  },
+  "shell": {
+    "toReview": "To review",
+    "running": "{count, plural, one {# running} other {# running}}",
+    "recentWorkflows": "Recent workflows",
+    "collapse": "Collapse sidebar",
+    "expand": "Show sidebar",
+    "create": "Create",
+    "search": "Search",
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsHint": "What the keyboard does on this page.",
+    "goTo": "Go to {page}",
+    "noShortcuts": "No shortcuts here.",
+    "then": "then",
+    "keys": {
+      "move": "move",
+      "open": "open",
+      "search": "search"
+    }
+  },
+  "operations": {
+    "title": "Control room",
+    "live": "Live",
+    "inFlight": "In flight",
+    "inFlightHint": "Queued and running runs, with their current step.",
+    "nothingInFlight": "Nothing running. New runs show up here as soon as they are sent.",
+    "errors": "Errors · 24 h",
+    "errorsHint": "Runs that could not finish.",
+    "noErrors": "No errors in the last 24 hours.",
+    "throughput": "Throughput · 24 h",
+    "throughputHint": "Runs finished per hour.",
+    "model": "Model",
+    "modelAwake": "Awake",
+    "modelAsleep": "Asleep, starts on demand",
+    "modelDown": "Unreachable",
+    "queue": "Queue",
+    "running": "Running",
+    "queued": "Queued",
+    "stale": "Not responding",
+    "median": "Median duration",
+    "p95": "p95",
+    "waiting": "Waiting for",
+    "open": "Open",
+    "done": "Finished",
+    "failed": "Errored",
+    "cancel": "Stop",
+    "cancelTitle": "Stop this run?",
+    "cancelHint": "It fails with your name on it. Files already sent stay with the run.",
+    "cancelled": "Run stopped",
+    "recover": "Release stuck runs",
+    "recovered": "{count, plural, =0 {No stuck runs} one {# run released} other {# runs released}}",
+    "stuckHint": "Past its time limit: the worker is not answering. Maintenance releases it automatically, or stop it now.",
+    "keep": "Keep running",
+    "cancelFailed": "Could not stop the run",
+    "recoverFailed": "Could not release the stuck runs"
   }
 }

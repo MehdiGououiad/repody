@@ -60,6 +60,8 @@ async def test_a_viewer_reads_but_cannot_change_or_run(api, as_user):
     assert (await viewer.delete("/v1/workflows/wf-a")).status_code == 403
     assert (await viewer.post("/v1/workflows/wf-a/runs", files=FILE)).status_code == 401
     assert (await viewer.get("/v1/dashboard")).status_code == 403
+    assert (await viewer.post("/v1/runs/run-any/cancel")).status_code == 403
+    assert (await viewer.post("/v1/operations/recover")).status_code == 403
 
 
 async def test_anonymous_callers_cannot_tell_which_workflows_exist(api, as_user):

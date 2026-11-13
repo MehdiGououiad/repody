@@ -80,3 +80,24 @@ def image_part(image: Image.Image | bytes, mime: str = "image/png") -> dict[str,
         image, mime = buffer.getvalue(), "image/png"
     url = f"data:{mime};base64,{base64.b64encode(image).decode()}"
     return {"type": "image_url", "image_url": {"url": url}}
+
+
+SCREEN_DPI = 110  # pages shown beside a report: sharp on screen, a fraction of the model's size
+
+
+def page_preview(data: bytes, mime: str, index: int) -> bytes | None:
+    """Page ``index`` (from 0) of an uploaded PDF or image as WebP for the screen, or None when
+    the document has no such page."""
+    if mime == PDF:
+        with _PDFIUM, pdfium.PdfDocument(data) as pdf:
+            if not 0 <= index < len(pdf):
+                return None
+            # See pdf_pages: `scale` is a float the type checker reads as int.
+            image = pdf[index].render(scale=SCREEN_DPI / 72).to_pil()  # pyright: ignore[reportArgumentType]
+    elif index == 0:
+        image = open_image(data)
+    else:
+        return None
+    buffer = io.BytesIO()
+    image.save(buffer, format="WEBP", quality=82)
+    return buffer.getvalue()

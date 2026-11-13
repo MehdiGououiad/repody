@@ -182,21 +182,10 @@ function ColdStart({ elapsedMs }: { elapsedMs: number }) {
   );
 }
 
-export function RunProgressSteps({
-  progress,
-  className,
-}: {
-  progress: RunProgress;
-  className?: string;
-}) {
+/** A step's name in the reader's language: "Waking the model", "Extract · Invoice"… */
+export function useStepTitle() {
   const t = useTranslations("runProgress");
-  const steps = progress.steps;
-  const doneCount = steps.filter((s) => s.status === "done").length;
-  const activeSteps = steps.filter((s) => s.status === "active");
-  const elapsedMs = useElapsed(activeSteps[0]?.id);
-  const queued = steps.some((s) => s.kind === "queue" && s.status !== "done");
-
-  const title = (step: Step) => {
+  return (step: Step) => {
     switch (step.kind) {
       case "queue":
         return t("steps.queue");
@@ -212,6 +201,23 @@ export function RunProgressSteps({
         return t("steps.finalize");
     }
   };
+}
+
+export function RunProgressSteps({
+  progress,
+  className,
+}: {
+  progress: RunProgress;
+  className?: string;
+}) {
+  const t = useTranslations("runProgress");
+  const steps = progress.steps;
+  const doneCount = steps.filter((s) => s.status === "done").length;
+  const activeSteps = steps.filter((s) => s.status === "active");
+  const elapsedMs = useElapsed(activeSteps[0]?.id);
+  const queued = steps.some((s) => s.kind === "queue" && s.status !== "done");
+
+  const title = useStepTitle();
   const allDone = steps.length > 0 && doneCount === steps.length;
   const current = activeSteps.length
     ? activeSteps.map(title).join(" · ")

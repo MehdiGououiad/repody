@@ -6,7 +6,7 @@ as on the workflow cards.
 
 from datetime import UTC, date, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,21 +14,135 @@ from repody.app.lifecycle import stuck_running
 from repody.app.runs import audit_item
 from repody.app.stats import DayCounts, daily_counts, last_days, midnight, pass_rate
 from repody.app.workflows import list_workflows
-from repody.infra.models import RuleResult, Run
+from repody.infra.models import RuleResult, Run, RunDocument
 from repody.schemas.platform import (
     Dashboard,
     DayRuns,
+    DocumentStats,
+    DocumentTypeCount,
+    DurationStats,
+    HourRuns,
     Kpi,
     KpiId,
     KpiPoint,
     QueueCounts,
     SeverityShare,
+    SourceCounts,
+    WorkflowActivity,
 )
 from repody.schemas.run import AuditListItem
 
 RECENT_AUDITS = 8
-FAILED_AUDITS = 3
+FAILED_AUDITS = 6
 WORKFLOWS = 6
+TOP = 5
+
+
+def _duration_ms() -> ColumnElement[float]:
+    """A finished run's time from start to finish, in milliseconds."""
+    return cast(func.extract("epoch", Run.finished_at - Run.started_at) * 1000, Float)
+
+
+def _ms(value: float | None) -> int:
+    return round(value or 0)
+
+
+async def timing(session: AsyncSession, since: datetime) -> DurationStats:
+    duration = _duration_ms()
+    median, p95, extraction = (
+        await session.execute(
+            select(
+                func.percentile_cont(0.5).within_group(duration),
+                func.percentile_cont(0.95).within_group(duration),
+                func.percentile_cont(0.5).within_group(Run.extraction_ms),
+            ).where(Run.status == "done", Run.created_at >= since, Run.started_at.is_not(None))
+        )
+    ).one()
+    return DurationStats(
+        median_ms=_ms(median), p95_ms=_ms(p95), extraction_median_ms=_ms(extraction)
+    )
+
+
+async def _sources(session: AsyncSession, since: datetime) -> SourceCounts:
+    api, test = (
+        await session.execute(
+            select(
+                func.count().filter(Run.source == "api"),
+                func.count().filter(Run.source == "test"),
+            ).where(Run.created_at >= since)
+        )
+    ).one()
+    return SourceCounts(api=api, test=test)
+
+
+async def _hourly(session: AsyncSession, since: datetime) -> list[HourRuns]:
+    hour = func.extract("hour", Run.created_at)
+    rows = await session.execute(
+        select(func.date(Run.created_at), hour, func.count())
+        .where(Run.created_at >= since)
+        .group_by(func.date(Run.created_at), hour)
+    )
+    return [HourRuns(day=day, hour=int(h), runs=runs) for day, h, runs in rows]
+
+
+async def _documents(session: AsyncSession, since: datetime) -> DocumentStats:
+    pages = func.coalesce(func.sum(RunDocument.extraction["pagesRendered"].as_integer()), 0)
+    rows = (
+        await session.execute(
+            select(RunDocument.document_type, func.count(), pages)
+            .join(Run, Run.id == RunDocument.run_id)
+            .where(Run.created_at >= since)
+            .group_by(RunDocument.document_type)
+            .order_by(func.count().desc(), RunDocument.document_type)
+        )
+    ).all()
+    by_type = [
+        DocumentTypeCount(document_type=doc_type or "—", documents=count, pages=page_count)
+        for doc_type, count, page_count in rows
+    ]
+    return DocumentStats(
+        documents=sum(t.documents for t in by_type),
+        pages=sum(t.pages for t in by_type),
+        by_type=by_type[:TOP],
+    )
+
+
+async def _workflow_activity(
+    session: AsyncSession, week: list[date], workflow_ids: list[str]
+) -> list[WorkflowActivity]:
+    if not workflow_ids:
+        return []
+    since = midnight(week[0])
+    per_day = await session.execute(
+        select(Run.workflow_id, func.date(Run.created_at), func.count())
+        .where(Run.workflow_id.in_(workflow_ids), Run.created_at >= since)
+        .group_by(Run.workflow_id, func.date(Run.created_at))
+    )
+    counts: dict[str, dict[date, int]] = {}
+    for wf_id, day, count in per_day:
+        counts.setdefault(wf_id, {})[day] = count
+    medians = dict(
+        (
+            await session.execute(
+                select(Run.workflow_id, func.percentile_cont(0.5).within_group(_duration_ms()))
+                .where(
+                    Run.workflow_id.in_(workflow_ids),
+                    Run.status == "done",
+                    Run.created_at >= since,
+                    Run.started_at.is_not(None),
+                )
+                .group_by(Run.workflow_id)
+            )
+        ).all()
+    )
+    return [
+        WorkflowActivity(
+            workflow_id=wf_id,
+            runs=[counts.get(wf_id, {}).get(d, 0) for d in week],
+            median_ms=_ms(medians.get(wf_id)),
+        )
+        for wf_id in workflow_ids
+    ]
 
 
 def _rate(days: list[DayCounts]) -> float:
@@ -49,11 +163,18 @@ def _kpi(
 async def _audits(session: AsyncSession, *, failed: bool, limit: int) -> list[AuditListItem]:
     query = select(Run).where(Run.status == "done")
     if failed:
-        query = query.where(Run.outcome == "failed")
+        # The review queue: rejected runs and runs that need a person (warning).
+        query = query.where(Run.outcome.in_(("failed", "warning")))
     return [
         audit_item(run)
         for run in await session.scalars(
-            query.order_by(Run.created_at.desc()).limit(limit).options(selectinload(Run.workflow))
+            query.order_by(Run.created_at.desc())
+            .limit(limit)
+            .options(
+                selectinload(Run.workflow),
+                selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
+                selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
+            )
         )
     ]
 
@@ -85,6 +206,8 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
         ).all()
     )
     total_failures = sum(failures.values())
+    since = midnight(week[0])
+    workflows = await list_workflows(session, limit=WORKFLOWS)
     return Dashboard(
         kpis=[
             _kpi(
@@ -110,9 +233,14 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
             ),
         ],
         performance_series=[
-            DayRuns(day=d, runs=now.runs, prev_runs=before.runs)
-            for d, now, before in zip(week, this_week, last_week, strict=True)
+            DayRuns(day=d, runs=c.runs, passed=c.passed, warning=c.warning, failed=c.failed)
+            for d, c in ((d, daily.get(d, DayCounts())) for d in both_weeks)
         ],
+        timing=await timing(session, since),
+        sources=await _sources(session, since),
+        hourly=await _hourly(session, since),
+        documents=await _documents(session, since),
+        workflow_activity=await _workflow_activity(session, week, [w.id for w in workflows]),
         failures_by_severity=[
             SeverityShare(severity=severity, share=count / total_failures)
             for severity, count in failures.items()
@@ -121,5 +249,5 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
         queue=QueueCounts(queued_runs=queued, running_runs=running),
         recent_audits=await _audits(session, failed=False, limit=RECENT_AUDITS),
         failed_audits=await _audits(session, failed=True, limit=FAILED_AUDITS),
-        workflows=await list_workflows(session, limit=WORKFLOWS),
+        workflows=workflows,
     )

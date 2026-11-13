@@ -63,15 +63,20 @@ export default async function LoginPage({
         ) : null}
         {oidcEnabled ? (
           <form action={signInWithKeycloak}>
-            <Button type="submit" size="lg" className="w-full">
+            <Button type="submit" variant="primary" size="md" className="w-full">
               {t("continueWithKeycloak")}
             </Button>
           </form>
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-ink-3">{t("devModeOnLogin")}</p>
-            <Button asChild size="lg" className="w-full">
-              <Link href={destination}>{t("continueToApp")}</Link>
+            <Button
+              variant="primary"
+              size="md"
+              className="w-full"
+              render={<Link href={destination} />}
+            >
+              {t("continueToApp")}
             </Button>
           </div>
         )}

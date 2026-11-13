@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { BusinessDashboard } from "@/components/dashboard/business-dashboard";
 import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { $server } from "@/lib/api/server";
 import { getQueryClient } from "@/lib/query/get-query-client";
@@ -23,12 +24,12 @@ export default async function DashboardPage() {
   return (
     <Page
       title={tNav("dashboard")}
+      className="max-w-[1440px] py-5"
       actions={
-        <Button asChild size="sm">
-          <Link href="/workflows/new">
-            <Plus />
-            {tCommon("newWorkflow")}
-          </Link>
+        <Button variant="primary" render={<Link href="/workflows/new" />}>
+          <Plus />
+          {tCommon("newWorkflow")}
+          <Kbd className="ms-1 bg-[oklch(1_0_0/0.16)] text-on-accent shadow-none">C</Kbd>
         </Button>
       }
     >

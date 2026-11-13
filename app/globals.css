@@ -1,5 +1,5 @@
+@layer ui-sdk;
 @import "tailwindcss";
-@import "tw-animate-css";
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
@@ -38,6 +38,30 @@
   --color-fail: var(--fail);
   --color-fail-ink: var(--fail-ink);
   --color-fail-wash: var(--fail-wash);
+  --color-doc-1: var(--doc-1);
+  --color-doc-1-ink: var(--doc-1-ink);
+  --color-doc-1-wash: var(--doc-1-wash);
+  --color-doc-2: var(--doc-2);
+  --color-doc-2-ink: var(--doc-2-ink);
+  --color-doc-2-wash: var(--doc-2-wash);
+  --color-doc-3: var(--doc-3);
+  --color-doc-3-ink: var(--doc-3-ink);
+  --color-doc-3-wash: var(--doc-3-wash);
+  --color-doc-4: var(--doc-4);
+  --color-doc-4-ink: var(--doc-4-ink);
+  --color-doc-4-wash: var(--doc-4-wash);
+  --color-doc-5: var(--doc-5);
+  --color-doc-5-ink: var(--doc-5-ink);
+  --color-doc-5-wash: var(--doc-5-wash);
+  --color-doc-6: var(--doc-6);
+  --color-doc-6-ink: var(--doc-6-ink);
+  --color-doc-6-wash: var(--doc-6-wash);
+  --color-doc-7: var(--doc-7);
+  --color-doc-7-ink: var(--doc-7-ink);
+  --color-doc-7-wash: var(--doc-7-wash);
+  --color-doc-8: var(--doc-8);
+  --color-doc-8-ink: var(--doc-8-ink);
+  --color-doc-8-wash: var(--doc-8-wash);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -134,5 +158,27 @@
   tr,
   .print-keep {
     break-inside: avoid;
+  }
+}
+
+/* An extracted value landing in the builder: a short status wash, then nothing. */
+@keyframes wash-pass {
+  from {
+    background-color: var(--pass-wash);
+  }
+}
+@keyframes wash-warn {
+  from {
+    background-color: var(--warn-wash);
+  }
+}
+
+/* The active step of a run in the control room: a highlight sweeping across its segment. */
+@keyframes sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 200% 0;
   }
 }

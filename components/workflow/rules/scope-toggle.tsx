@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Segmented } from "@/components/ui/segmented";
+import { SegmentedControl, SegmentedControlOption } from "@/components/ui/segmented-control";
 import type { RuleScope } from "@/lib/types";
 
 /** Whether a rule checks one document or compares two. */
@@ -16,19 +16,19 @@ export function ScopeToggle({
 }) {
   const t = useTranslations("workflows.builder.rules");
   return (
-    <Segmented
-      label={t("appliesTo")}
+    <SegmentedControl
+      aria-label={t("appliesTo")}
       value={scope}
-      onChange={onChange}
-      options={[
-        { value: "intra", label: t("scopeIntraShort") },
-        {
-          value: "cross",
-          label: t("scopeCrossShort"),
-          disabled: !canCross,
-          title: canCross ? undefined : t("crossRequiresTwoDocs"),
-        },
-      ]}
-    />
+      onValueChange={(next) => next && onChange(next as RuleScope)}
+    >
+      <SegmentedControlOption value="intra">{t("scopeIntraShort")}</SegmentedControlOption>
+      <SegmentedControlOption
+        value="cross"
+        disabled={!canCross}
+        title={canCross ? undefined : t("crossRequiresTwoDocs")}
+      >
+        {t("scopeCrossShort")}
+      </SegmentedControlOption>
+    </SegmentedControl>
   );
 }

@@ -193,6 +193,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/runs/{run_id}/documents/{document_id}/pages/{page}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Document Page
+         * @description Page ``page`` (from 1) of a document uploaded to the run, rendered for the report.
+         */
+        get: operations["get_document_page_v1_runs__run_id__documents__document_id__pages__page__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/audits/{run_id}/export.csv": {
         parameters: {
             query?: never;
@@ -267,6 +287,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/operations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Operations
+         * @description The control room: runs in flight with their progress, recent failures, throughput.
+         */
+        get: operations["operations_v1_operations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/operations/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover
+         * @description Run the stuck-run check now (maintenance also runs it on its schedule).
+         */
+        post: operations["recover_v1_operations_recover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel
+         * @description Stop a queued or running run. 409 when it has already finished.
+         */
+        post: operations["cancel_v1_runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/catalog": {
         parameters: {
             query?: never;
@@ -308,6 +388,40 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActiveRun */
+        ActiveRun: {
+            /** Id */
+            id: string;
+            /** Workflowid */
+            workflowId: string;
+            /** Workflowname */
+            workflowName: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "failed";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "test" | "api";
+            /** Files */
+            files: string[];
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Startedat */
+            startedAt: string | null;
+            progress: components["schemas"]["RunProgress"] | null;
+            /**
+             * Stuck
+             * @description Past its time limit: the worker is gone; maintenance fails it, or cancel it now.
+             */
+            stuck: boolean;
+        };
         /**
          * Aggregate
          * @description Sum or count the rows of an object-array field, optionally filtered by a column.
@@ -534,14 +648,31 @@ export interface components {
             /** Workflowname */
             workflowName: string;
             /**
+             * Source
+             * @enum {string}
+             */
+            source: "test" | "api";
+            /**
              * Timestamp
              * Format: date-time
              */
             timestamp: string;
+            /** Durationms */
+            durationMs: number;
             /** Rows */
             rows: number;
             /** Failedrules */
             failedRules: number;
+            /**
+             * Files
+             * @description The uploaded files' names, in workflow order.
+             */
+            files: string[];
+            /**
+             * Firstfailedrule
+             * @description The name of the first failed rule, to say why at a glance.
+             */
+            firstFailedRule: string | null;
         };
         /** AuditRule */
         AuditRule: {
@@ -689,8 +820,21 @@ export interface components {
         Dashboard: {
             /** Kpis */
             kpis: components["schemas"]["Kpi"][];
-            /** Performanceseries */
+            /**
+             * Performanceseries
+             * @description The last 14 UTC days, oldest first.
+             */
             performanceSeries: components["schemas"]["DayRuns"][];
+            timing: components["schemas"]["DurationStats"];
+            sources: components["schemas"]["SourceCounts"];
+            /**
+             * Hourly
+             * @description Runs per UTC hour, the last 7 days (hours with runs).
+             */
+            hourly: components["schemas"]["HourRuns"][];
+            documents: components["schemas"]["DocumentStats"];
+            /** Workflowactivity */
+            workflowActivity: components["schemas"]["WorkflowActivity"][];
             /** Failuresbyseverity */
             failuresBySeverity: components["schemas"]["SeverityShare"][];
             /** Staleruns */
@@ -716,8 +860,12 @@ export interface components {
             day: string;
             /** Runs */
             runs: number;
-            /** Prevruns */
-            prevRuns: number;
+            /** Passed */
+            passed: number;
+            /** Warning */
+            warning: number;
+            /** Failed */
+            failed: number;
         };
         /** DocumentDef */
         "DocumentDef-Input": {
@@ -769,6 +917,39 @@ export interface components {
             /** Extractioniclexamples */
             extractionIclExamples: components["schemas"]["IclExample"][];
         };
+        /**
+         * DocumentStats
+         * @description Documents read in the last 7 days, and their pages.
+         */
+        DocumentStats: {
+            /** Documents */
+            documents: number;
+            /** Pages */
+            pages: number;
+            /** Bytype */
+            byType: components["schemas"]["DocumentTypeCount"][];
+        };
+        /** DocumentTypeCount */
+        DocumentTypeCount: {
+            /** Documenttype */
+            documentType: string;
+            /** Documents */
+            documents: number;
+            /** Pages */
+            pages: number;
+        };
+        /**
+         * DurationStats
+         * @description Finished runs of the last 7 days, from start to finish.
+         */
+        DurationStats: {
+            /** Medianms */
+            medianMs: number;
+            /** P95Ms */
+            p95Ms: number;
+            /** Extractionmedianms */
+            extractionMedianMs: number;
+        };
         /** ExtractionMeta */
         ExtractionMeta: {
             /**
@@ -808,6 +989,27 @@ export interface components {
              * @description Why extraction failed or its answer was unusable.
              */
             error: string | null;
+        };
+        /** FailedRun */
+        FailedRun: {
+            /** Id */
+            id: string;
+            /** Workflowid */
+            workflowId: string;
+            /** Workflowname */
+            workflowName: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "test" | "api";
+            /** Error */
+            error: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
         };
         /** FailingRule */
         FailingRule: {
@@ -881,6 +1083,35 @@ export interface components {
              */
             oidcEnabled: boolean;
         };
+        /** HourRuns */
+        HourRuns: {
+            /**
+             * Day
+             * Format: date
+             * @description UTC day.
+             */
+            day: string;
+            /**
+             * Hour
+             * @description UTC hour; clients shift it to their time zone.
+             */
+            hour: number;
+            /** Runs */
+            runs: number;
+        };
+        /** HourThroughput */
+        HourThroughput: {
+            /**
+             * Hour
+             * Format: date-time
+             * @description The start of the UTC hour.
+             */
+            hour: string;
+            /** Done */
+            done: number;
+            /** Failed */
+            failed: number;
+        };
         /**
          * IclExample
          * @description A NuExtract in-context example: input text and the JSON it should produce.
@@ -946,6 +1177,28 @@ export interface components {
              * @default
              */
             value: string;
+        };
+        /**
+         * Operations
+         * @description The control room: what runs now, what broke, how fast the platform works.
+         */
+        Operations: {
+            queue: components["schemas"]["QueueCounts"];
+            /** Staleruns */
+            staleRuns: number;
+            /** Active */
+            active: components["schemas"]["ActiveRun"][];
+            /**
+             * Errors
+             * @description Runs that failed (not judged) in the last 24 hours.
+             */
+            errors: components["schemas"]["FailedRun"][];
+            /**
+             * Throughput
+             * @description The last 24 UTC hours, oldest first.
+             */
+            throughput: components["schemas"]["HourThroughput"][];
+            timing: components["schemas"]["DurationStats"];
         };
         /** PlatformConfig */
         PlatformConfig: {
@@ -1025,6 +1278,14 @@ export interface components {
             queuedRuns: number;
             /** Runningruns */
             runningRuns: number;
+        };
+        /**
+         * Recovered
+         * @description Runs a recovery pass failed: running ones that lost their worker, queued ones too old.
+         */
+        Recovered: {
+            /** Failed */
+            failed: string[];
         };
         /**
          * Rule
@@ -1244,6 +1505,16 @@ export interface components {
             /** Share */
             share: number;
         };
+        /**
+         * SourceCounts
+         * @description Runs of the last 7 days by who started them.
+         */
+        SourceCounts: {
+            /** Api */
+            api: number;
+            /** Test */
+            test: number;
+        };
         /** TemplateTypeInfo */
         TemplateTypeInfo: {
             /** Value */
@@ -1268,6 +1539,18 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** WorkflowActivity */
+        WorkflowActivity: {
+            /** Workflowid */
+            workflowId: string;
+            /**
+             * Runs
+             * @description Runs per UTC day, the last 7 days, oldest first.
+             */
+            runs: number[];
+            /** Medianms */
+            medianMs: number;
         };
         /**
          * WorkflowDefinition
@@ -1684,7 +1967,8 @@ export interface operations {
             query?: {
                 /** @description Part of the run id or workflow name. */
                 q?: string;
-                outcome?: ("passed" | "warning" | "failed") | null;
+                /** @description One outcome, or "review" for warning and failed runs. */
+                outcome?: ("passed" | "warning" | "failed" | "review") | null;
                 workflowId?: string | null;
                 /** @description Runs created that UTC day. */
                 day?: string | null;
@@ -1722,7 +2006,8 @@ export interface operations {
             query?: {
                 /** @description Part of the run id or workflow name. */
                 q?: string;
-                outcome?: ("passed" | "warning" | "failed") | null;
+                /** @description One outcome, or "review" for warning and failed runs. */
+                outcome?: ("passed" | "warning" | "failed" | "review") | null;
                 workflowId?: string | null;
                 /** @description Runs created that UTC day. */
                 day?: string | null;
@@ -1771,6 +2056,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuditDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_document_page_v1_runs__run_id__documents__document_id__pages__page__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                document_id: string;
+                page: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The page, for the screen. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/webp": unknown;
                 };
             };
             /** @description Validation Error */
@@ -1871,6 +2189,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlatformConfig"];
+                };
+            };
+        };
+    };
+    operations_v1_operations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Operations"];
+                };
+            };
+        };
+    };
+    recover_v1_operations_recover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recovered"];
+                };
+            };
+        };
+    };
+    cancel_v1_runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

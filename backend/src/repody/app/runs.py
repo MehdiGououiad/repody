@@ -1,5 +1,6 @@
 """Run use cases: start a run with its files, read its state, list, export and purge audits."""
 
+import asyncio
 import csv
 import json
 import math
@@ -20,11 +21,12 @@ from sqlalchemy.orm import contains_eager, selectinload
 from repody.app.errors import AppError
 from repody.app.progress import plan, with_queue_position
 from repody.app.stats import midnight
-from repody.extraction.render import file_type
+from repody.extraction.render import file_type, page_preview
 from repody.infra import db, queue
-from repody.infra.models import Run, RunDocument, Workflow, new_id
+from repody.infra.models import RuleResult, Run, RunDocument, Workflow, new_id
 from repody.infra.storage import get_store
 from repody.schemas.run import (
+    REVIEW_OUTCOMES,
     AuditDetail,
     AuditDocument,
     AuditFilter,
@@ -217,11 +219,7 @@ def _outcome(run: Run) -> Outcome:
 
 
 def _report(run: Run) -> AuditDetail:
-    duration = (
-        int((run.finished_at - run.started_at).total_seconds() * 1000)
-        if run.started_at and run.finished_at
-        else 0
-    )
+    duration = _duration_ms(run)
     return AuditDetail(
         id=run.id,
         workflow_id=run.workflow_id,
@@ -264,6 +262,20 @@ async def run_report(session: AsyncSession, run_id: str) -> AuditDetail:
     return _report(run)
 
 
+async def document_page(session: AsyncSession, run_id: str, document_id: str, page: int) -> bytes:
+    """One page of a run's uploaded document, as WebP for the report."""
+    doc = await session.scalar(
+        select(RunDocument).where(RunDocument.run_id == run_id, RunDocument.id == document_id)
+    )
+    if doc is None:
+        raise AppError(404, "Document not found.")
+    data = await get_store().get(doc.storage_key)
+    image = await asyncio.to_thread(page_preview, data, doc.mime_type, page)
+    if image is None:
+        raise AppError(404, "Page not found.")
+    return image
+
+
 async def run_api_key_hash(session: AsyncSession, run_id: str) -> str | None:
     """Hash of the API key of the run's workflow; None for an unknown run, a workflow without
     a key, or an archived workflow (its key no longer works)."""
@@ -282,11 +294,17 @@ def _audits(audits: AuditFilter) -> Select[Run]:
     query = (
         select(Run)
         .join(Run.workflow)
-        .options(contains_eager(Run.workflow))
+        .options(
+            contains_eager(Run.workflow),
+            selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
+            selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
+        )
         .where(Run.status == "done")
         .order_by(Run.created_at.desc(), Run.id.desc())
     )
-    if audits.outcome:
+    if audits.outcome == "review":
+        query = query.where(Run.outcome.in_(REVIEW_OUTCOMES))
+    elif audits.outcome:
         query = query.where(Run.outcome == audits.outcome)
     if audits.workflow_id:
         query = query.where(Run.workflow_id == audits.workflow_id)
@@ -299,15 +317,27 @@ def _audits(audits: AuditFilter) -> Select[Run]:
     return query
 
 
+def _duration_ms(run: Run) -> int:
+    if run.started_at and run.finished_at:
+        return int((run.finished_at - run.started_at).total_seconds() * 1000)
+    return 0
+
+
 def audit_item(run: Run) -> AuditListItem:
+    """Needs the run's documents and rule results loaded (``_audits`` does)."""
+    failed = next((r.name for r in run.rule_results if r.status == "failed"), None)
     return AuditListItem(
         id=run.id,
         status=_outcome(run),
         workflow_id=run.workflow_id,
         workflow_name=run.workflow.name,
+        source=run.source,
         timestamp=run.created_at,
+        duration_ms=_duration_ms(run),
         rows=run.fields_extracted,
         failed_rules=run.rules_failed,
+        files=[doc.file_name for doc in run.documents if doc.file_name],
+        first_failed_rule=failed,
     )
 
 

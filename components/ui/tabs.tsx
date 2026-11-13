@@ -1,26 +1,57 @@
 "use client";
 
-import { Tabs as TabsPrimitive } from "radix-ui";
+import {
+  Tabs,
+  TabsIndicator,
+  TabsList as TabsListPrimitive,
+  TabsPanel,
+  TabsTab as TabsTabPrimitive,
+} from "@ui-sdk/react/tabs";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, partClass } from "@/lib/utils";
 
-const Tabs = TabsPrimitive.Root;
-
-/** Compact text tabs, the active one on a quiet raised step. Switching is instant. */
-function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
+/** A row of tabs with one indicator that glides to the selected tab. */
+function TabsList({
+  className,
+  children,
+  variant = "plain",
+  ...props
+}: Omit<React.ComponentProps<typeof TabsListPrimitive>, "children"> & {
+  children: React.ReactNode;
+  /** `segmented`: a track with a raised thumb, for a few steps or views. */
+  variant?: "plain" | "segmented";
+}) {
   return (
-    <TabsPrimitive.List
-      className={cn("inline-flex items-center gap-0.5 text-ink-3", className)}
+    <TabsListPrimitive
+      className={partClass(
+        cn(
+          "relative isolate flex items-center gap-0.5",
+          variant === "segmented" && "rounded-lg bg-selected p-0.5"
+        ),
+        className
+      )}
       {...props}
-    />
+    >
+      {children}
+      <TabsIndicator
+        className={cn(
+          "absolute start-0 top-0 -z-10 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) rounded-md transition-[translate,width,height] duration-200 ease-out motion-reduce:transition-none",
+          variant === "segmented"
+            ? "bg-overlay shadow-[0_0_0_1px_var(--line),0_1px_2px_var(--shadow-color)]"
+            : "bg-selected"
+        )}
+      />
+    </TabsListPrimitive>
   );
 }
 
-function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTab({ className, ...props }: React.ComponentProps<typeof TabsTabPrimitive>) {
   return (
-    <TabsPrimitive.Trigger
-      className={cn(
-        "inline-flex h-7 cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-sm font-medium transition-colors duration-100 hover:text-ink disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-selected data-[state=active]:text-ink [&_svg]:size-3.5",
+    <TabsTabPrimitive
+      className={partClass(
+        cn(
+          "relative z-0 inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-ink-3 outline-none transition-colors duration-150 hover:text-ink focus-visible:shadow-[0_0_0_2px_var(--focus)] data-selected:text-ink [&_svg]:size-3.5"
+        ),
         className
       )}
       {...props}
@@ -28,8 +59,4 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
   );
 }
 
-function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("outline-none", className)} {...props} />;
-}
-
-export { Tabs, TabsContent, TabsList, TabsTrigger };
+export { Tabs, TabsList, TabsPanel, TabsTab };

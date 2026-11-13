@@ -3,6 +3,7 @@
 import { Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { BareInput } from "@/components/ui/input";
 import {
   ListToggle,
   TemplateTypeSelect,
@@ -13,11 +14,11 @@ import { newSchemaField } from "@/lib/workflow/new-items";
 
 /** The fields table grid; nested rows (object fields, table columns) share it. */
 export const FIELD_GRID =
-  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_88px_28px] md:items-center md:gap-2";
+  "md:grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,2fr)_28px_28px] md:items-center md:gap-2";
 
 /** A cell input that looks like text until hovered or focused. */
 export const CELL_INPUT =
-  "h-8 w-full min-w-0 rounded-md bg-transparent px-2 text-sm text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none";
+  "h-7 w-full min-w-0 rounded-md bg-transparent px-2 text-[13px] text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none";
 
 /** Nested content hangs off its field on a rail, indented one step. */
 function Nested({ label, children }: { label: string; children: React.ReactNode }) {
@@ -46,7 +47,7 @@ function EnumValuesEditor({
           // Choices are edited in place and never reordered: the position is their identity.
           // biome-ignore lint/suspicious/noArrayIndexKey: index is the row identity
           <li key={`enum-${index}`} className="group flex max-w-sm items-center gap-1">
-            <input
+            <BareInput
               value={value}
               onChange={(e) => {
                 const next = [...rows];
@@ -60,7 +61,7 @@ function EnumValuesEditor({
             <Button
               variant="ghost"
               size="icon-sm"
-              className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+              className="text-ink-4 hover:text-fail-ink pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100"
               onClick={() => onChange(rows.filter((_, i) => i !== index))}
               aria-label={t("removeEnumValue")}
             >
@@ -108,7 +109,7 @@ function ChildrenEditor({
           {fields.map((child) => (
             <li key={child.id} className="group">
               <div className={cn("flex flex-col gap-1 py-0.5", FIELD_GRID)}>
-                <input
+                <BareInput
                   value={child.name}
                   onChange={(e) => update(child.id, { name: e.target.value })}
                   placeholder={t("namePlaceholder")}
@@ -120,7 +121,7 @@ function ChildrenEditor({
                   structures={!table}
                   onChange={(templateType) => update(child.id, { templateType })}
                 />
-                <input
+                <BareInput
                   value={child.description}
                   onChange={(e) => update(child.id, { description: e.target.value })}
                   placeholder={t("descriptionPlaceholder")}
@@ -134,7 +135,7 @@ function ChildrenEditor({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  className="text-ink-4 hover:text-fail-ink md:opacity-0 md:group-focus-within:opacity-100 md:group-hover:opacity-100"
+                  className="text-ink-4 hover:text-fail-ink pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100"
                   onClick={() => onChange(fields.filter((row) => row.id !== child.id))}
                   aria-label={table ? t("removeRowColumn") : t("removeObjectField")}
                 >

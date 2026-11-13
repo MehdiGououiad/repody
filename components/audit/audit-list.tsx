@@ -1,22 +1,27 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download, Search, X } from "lucide-react";
+import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
+import { ChevronLeft, ChevronRight, Download, ListFilter, X } from "lucide-react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useQueryStates } from "nuqs";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import { RunRows } from "@/components/audit/run-row";
+import { RunGroups } from "@/components/audit/run-row";
+import { ListKeysHint, useListKeys } from "@/components/layout/list-keys";
 import { Button } from "@/components/ui/button";
+import { SearchInput } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Menu,
+  MenuCheck,
+  MenuContent,
+  MenuGroup,
+  MenuGroupLabel,
+  MenuTrigger,
+} from "@/components/ui/menu";
+import { SegmentedControl, SegmentedControlOption } from "@/components/ui/segmented-control";
 import { StatusGlyph } from "@/components/ui/status-glyph";
+import { Tooltip } from "@/components/ui/tooltip";
 import { $api } from "@/lib/api/browser";
 import {
   auditSearchParams,
@@ -27,48 +32,69 @@ import {
 } from "@/lib/audits/search-params";
 import { cn } from "@/lib/utils";
 
+const LIVE_MS = 10_000;
+
+/** The search box: debounced into the URL, and reset when the URL changes from elsewhere
+ * (Clear filters, back), never while the person types. */
 function SearchField({ value, onChange }: { value: string; onChange: (q: string) => void }) {
   const t = useTranslations("audits.filters");
   const [text, setText] = useState(value);
-  const commit = useDebouncedCallback(onChange, 250);
+  const [sent, setSent] = useState(value);
+  const [seen, setSeen] = useState(value);
+  if (value !== seen) {
+    setSeen(value);
+    if (value !== sent) {
+      setSent(value);
+      setText(value);
+    }
+  }
+  const commit = useDebouncedCallback((q: string) => {
+    setSent(q);
+    onChange(q);
+  }, 250);
   return (
-    <label className="flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-ink-3 transition-colors duration-100 focus-within:bg-hover hover:bg-hover sm:max-w-xs">
-      <Search className="size-3.5 shrink-0" aria-hidden />
-      <span className="sr-only">{t("searchPlaceholder")}</span>
-      <input
-        type="search"
-        autoComplete="off"
-        value={text}
-        onChange={(event) => {
-          setText(event.target.value);
-          commit(event.target.value);
-        }}
-        placeholder={t("searchPlaceholder")}
-        className="h-full min-w-0 flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-ink-4 focus-visible:outline-none"
-      />
-    </label>
+    <SearchInput
+      label={t("searchPlaceholder")}
+      clearLabel={t("clearSearch")}
+      value={text}
+      onValueChange={(next: string) => {
+        setText(next);
+        commit(next);
+      }}
+    />
   );
 }
 
-/** Every finished run, searched, filtered and paged by the API; the filters live in the URL. */
+/** Every finished run, live, filtered and paged by the API; the filters live in the URL. */
 export function AuditList() {
   const t = useTranslations("audits");
   const format = useFormatter();
-  // URL changes run in a transition: the current page stays while the next one loads.
+  const listRef = useRef<HTMLDivElement>(null);
+  useListKeys(listRef);
   const [loading, startTransition] = useTransition();
   const [search, setSearch] = useQueryStates(auditSearchParams, {
     history: "replace",
     startTransition,
   });
-  const { audits, total } = $api.useSuspenseQuery("get", "/v1/audits", {
-    params: { query: auditsQuery(search) },
-  }).data;
+  const { audits, total } = $api.useSuspenseQuery(
+    "get",
+    "/v1/audits",
+    { params: { query: auditsQuery(search) } },
+    { refetchInterval: search.page === 1 ? LIVE_MS : false }
+  ).data;
   const { workflows } = $api.useSuspenseQuery("get", "/v1/workflows").data;
   const filter = (patch: Partial<typeof search>) => void setSearch({ ...patch, page: 1 });
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtered = Boolean(search.outcome || search.workflow || search.day || search.q);
 
   const chips: { key: string; label: string; clear: () => void }[] = [];
+  if (search.outcome === "review") {
+    chips.push({
+      key: "outcome",
+      label: t("filters.review"),
+      clear: () => filter({ outcome: null }),
+    });
+  }
   if (search.workflow) {
     chips.push({
       key: "workflow",
@@ -85,98 +111,112 @@ export function AuditList() {
   }
 
   return (
-    <div className="flex flex-col">
-      <div className="sticky top-11 z-10 flex flex-wrap items-center gap-1 border-b border-line bg-panel px-3 py-1.5 md:px-4">
-        <fieldset
-          className="flex items-center gap-0.5 m-0 min-w-0 border-0 p-0"
+    <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col">
+      <div className="sticky top-[41px] z-10 flex items-center gap-1.5 border-b border-line bg-panel/90 px-3 py-1.5 backdrop-blur-md md:px-4">
+        <SegmentedControl
           aria-label={t("filters.status")}
+          value={search.outcome === "review" ? null : (search.outcome ?? "all")}
+          onValueChange={(value) =>
+            filter({
+              outcome: value === "all" || !value ? null : (value as (typeof OUTCOMES)[number]),
+            })
+          }
         >
-          {[null, ...OUTCOMES].map((outcome) => (
-            <button
-              key={outcome ?? "all"}
-              type="button"
-              aria-pressed={search.outcome === outcome}
-              onClick={() => filter({ outcome })}
-              className="flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-sm font-medium text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink aria-pressed:bg-selected aria-pressed:text-ink"
-            >
-              {outcome ? <StatusGlyph status={outcome} /> : null}
-              {outcome ? t(`status.${outcome}`) : t("filters.allStatuses")}
-            </button>
+          <SegmentedControlOption value="all">{t("filters.allStatuses")}</SegmentedControlOption>
+          {OUTCOMES.map((outcome) => (
+            <SegmentedControlOption key={outcome} value={outcome}>
+              <StatusGlyph status={outcome} />
+              <span className="max-sm:sr-only">{t(`status.${outcome}`)}</span>
+            </SegmentedControlOption>
           ))}
-        </fieldset>
-        <span className="mx-1 hidden h-4 w-px bg-line sm:block" aria-hidden />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="text-sm">
-              {t("filters.workflow")}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="max-h-80 w-64">
-            <DropdownMenuLabel>{t("filters.workflow")}</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {workflows.map((workflow) => (
-              <DropdownMenuCheckboxItem
-                key={workflow.id}
-                checked={search.workflow === workflow.id}
-                onCheckedChange={(on) => filter({ workflow: on ? workflow.id : null })}
-              >
-                <span className="truncate">{workflow.name}</span>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        </SegmentedControl>
+        <Menu>
+          <MenuTrigger
+            render={
+              <Button variant="ghost" size="sm">
+                <ListFilter />
+                {t("filters.workflow")}
+              </Button>
+            }
+          />
+          <MenuContent align="start" className="max-h-80 w-64">
+            <MenuGroup>
+              <MenuGroupLabel>{t("filters.workflow")}</MenuGroupLabel>
+              {workflows.map((workflow) => (
+                <MenuCheck
+                  key={workflow.id}
+                  value={workflow.id}
+                  checked={search.workflow === workflow.id}
+                  closeOnSelect
+                  onCheckedChange={(on) => filter({ workflow: on ? workflow.id : null })}
+                >
+                  <span className="truncate">{workflow.name}</span>
+                </MenuCheck>
+              ))}
+            </MenuGroup>
+          </MenuContent>
+        </Menu>
         {chips.map((chip) => (
-          <button
+          <ButtonPrimitive
             key={chip.key}
-            type="button"
             onClick={chip.clear}
-            className="flex h-6 cursor-pointer items-center gap-1 rounded-md bg-selected ps-2 pe-1.5 text-xs font-medium text-ink-2 transition-colors duration-100 hover:text-ink"
+            className="flex h-6 cursor-pointer items-center gap-1 rounded-md bg-accent-wash ps-2 pe-1.5 text-xs font-medium text-accent-ink transition-opacity duration-100 hover:opacity-80"
           >
             {chip.label}
             <X className="size-3" aria-hidden />
-            <span className="sr-only">{t("filters.clearAll")}</span>
-          </button>
+            <span className="sr-only">{t("filters.remove")}</span>
+          </ButtonPrimitive>
         ))}
         <div className="ms-auto flex flex-1 items-center justify-end gap-1">
           <SearchField value={search.q} onChange={(q) => filter({ q })} />
-          <Button asChild variant="ghost" size="icon-sm" title={t("exportCsv")}>
-            <a href={auditsExportHref(search)} download aria-label={t("exportCsv")}>
+          <Tooltip label={t("exportCsv")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("exportCsv")}
+              render={<a href={auditsExportHref(search)} download />}
+            >
               <Download />
-            </a>
-          </Button>
+            </Button>
+          </Tooltip>
         </div>
       </div>
 
-      <div className={cn("transition-opacity duration-150", loading && "opacity-60")}>
+      <div
+        ref={listRef}
+        className={cn("flex-1 transition-opacity duration-150", loading && "opacity-60")}
+      >
         {audits.length ? (
-          <RunRows audits={audits} />
+          <RunGroups audits={audits} stickyTop="top-[82px]" />
         ) : (
-          <div className="flex flex-col items-center gap-3 px-6 py-20 text-center">
-            <p className="text-sm font-medium text-ink">
+          <div className="flex flex-col items-center gap-2 px-6 py-24 text-center">
+            <p className="text-[13px] font-medium text-ink">
               {filtered ? t("table.empty") : t("emptyTitle")}
             </p>
-            <p className="max-w-sm text-sm text-ink-3">
+            <p className="max-w-sm text-[13px] text-ink-3">
               {filtered ? t("emptyFilteredHint") : t("emptyHint")}
             </p>
             {filtered ? (
               <Button
-                variant="secondary"
-                size="sm"
+                className="mt-2"
                 onClick={() => filter({ outcome: null, workflow: null, day: null, q: "" })}
               >
                 {t("filters.clearAll")}
               </Button>
             ) : (
-              <Button asChild size="sm">
-                <Link href="/workflows">{t("emptyCta")}</Link>
+              <Button className="mt-2" variant="primary" render={<Link href="/workflows" />}>
+                {t("emptyCta")}
               </Button>
             )}
           </div>
         )}
       </div>
 
-      <div className="flex h-11 items-center justify-between gap-2 border-t border-line px-4 text-xs text-ink-3 md:px-5">
-        <span className="tabular-nums">{t("table.total", { total })}</span>
+      <div className="sticky bottom-0 flex h-9 items-center justify-between gap-2 border-t border-line bg-panel/90 px-4 text-xs text-ink-3 backdrop-blur-md md:px-5">
+        <span className="flex items-center gap-3 tabular-nums">
+          {t("table.total", { total })}
+          <ListKeysHint />
+        </span>
         {pages > 1 ? (
           <div className="flex items-center gap-1">
             <span className="me-1 tabular-nums">
@@ -184,7 +224,7 @@ export function AuditList() {
             </span>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-xs"
               onClick={() => void setSearch({ page: search.page - 1 })}
               disabled={search.page <= 1}
               aria-label={t("table.previous")}
@@ -193,7 +233,7 @@ export function AuditList() {
             </Button>
             <Button
               variant="ghost"
-              size="icon-sm"
+              size="icon-xs"
               onClick={() => void setSearch({ page: search.page + 1 })}
               disabled={search.page >= pages}
               aria-label={t("table.next")}

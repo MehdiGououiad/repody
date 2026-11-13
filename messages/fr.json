@@ -1,16 +1,13 @@
 {
-  "brand": {
-    "name": "Repody"
-  },
   "nav": {
     "dashboard": "Vue d'ensemble",
     "workflows": "Workflows",
     "audits": "Exécutions",
     "settings": "Paramètres",
     "newWorkflow": "Nouveau workflow",
-    "logout": "Se déconnecter",
     "openMenu": "Ouvrir le menu",
-    "main": "Principal"
+    "main": "Principal",
+    "operations": "Salle de contrôle"
   },
   "auth": {
     "signInTitle": "Se connecter à {name}",
@@ -56,13 +53,10 @@
     "remove": "Supprimer",
     "edit": "Modifier",
     "open": "Ouvrir",
-    "owner": "Propriétaire",
     "viewAll": "Tout voir",
     "deployWorkflow": "Publier",
     "redeployWorkflow": "Republier",
-    "of": "sur",
     "skipToContent": "Aller au contenu principal",
-    "neverRun": "Jamais exécuté",
     "newWorkflow": "Nouveau workflow",
     "copy": "Copier",
     "copied": "Copié",
@@ -72,7 +66,6 @@
     "saveFailed": "Impossible d'enregistrer le workflow",
     "delete": "Supprimer",
     "confirm": "Confirmer",
-    "confirmDelete": "Confirmer la suppression",
     "deleteWarning": "Cette action est irréversible.",
     "retry": "Réessayer",
     "copyFailed": "Copie impossible"
@@ -109,23 +102,9 @@
     "offlineTitle": "L'API est injoignable",
     "offlineHint": "Les exécutions et les chiffres s'affichent dès que l'API répond. Les workflows restent modifiables.",
     "offlineCta": "Ouvrir les workflows",
-    "recentSubmissions": "Exécutions récentes",
-    "openFailures": "À examiner",
     "viewAll": "Tout voir",
-    "live": {
-      "updatedPrefix": "Mis à jour"
-    },
-    "queueLive": {
-      "counts": "{running} en cours, {queued} en attente",
-      "idle": "Aucune exécution en cours"
-    },
     "workflows": {
-      "title": "Vos workflows",
-      "viewAll": "Tous les workflows",
       "neverRun": "Pas encore exécuté"
-    },
-    "recent": {
-      "title": "Audits récents"
     },
     "kpi": {
       "auditsWeek": "Exécutions cette semaine",
@@ -135,32 +114,70 @@
       "vsLastWeek": "par rapport à la semaine dernière",
       "same": "Comme la semaine dernière"
     },
-    "performance": {
-      "title": "Volume d'audits",
-      "hint": "Cliquez sur un jour pour filtrer les exécutions.",
-      "runs": "Audits",
-      "emptyTitle": "Aucun volume d'audit pour l'instant",
-      "emptyHint": "Exécutez des workflows pour alimenter les comptages quotidiens.",
-      "summary": "{total} audits sur la période. Pic le {peakDay} avec {peakRuns} audits.",
-      "summaryShort": "{total, plural, one {# exécution} other {# exécutions}} ces 7 derniers jours",
-      "barLabel": "{day} : {count, plural, =0 {aucune exécution} one {# exécution} other {# exécutions}}"
-    },
-    "violations": {
-      "title": "Échecs par gravité",
-      "hint": "Cette semaine",
-      "reject": "Rejet",
-      "flag": "Signalement",
-      "none": "Aucune règle en échec cette semaine"
-    },
     "getStarted": {
       "title": "Créez votre premier workflow",
       "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
       "cta": "Créer un workflow"
     },
-    "needsReviewHint": "Exécutions dont des règles ont échoué, les plus anciennes d'abord.",
     "nothingToReview": "Rien à examiner",
-    "noRuns": "Aucune exécution",
-    "stale": "{count, plural, one {# exécution ne répond plus} other {# exécutions ne répondent plus}}"
+    "stale": "{count, plural, one {# exécution ne répond plus} other {# exécutions ne répondent plus}}",
+    "queueTitle": "À examiner",
+    "queueHint": "Exécutions rejetées ou à vérifier, les plus récentes d’abord.",
+    "toReview": "à examiner",
+    "pulse": {
+      "running": "{count, plural, =0 {Aucune exécution en cours} one {# en cours} other {# en cours}}",
+      "queued": "{count, plural, one {# en attente} other {# en attente}}",
+      "modelAwake": "Modèle éveillé",
+      "modelAsleep": "Modèle en veille",
+      "modelDown": "Modèle injoignable",
+      "updated": "Mis à jour"
+    },
+    "stats": {
+      "runs": "Exécutions · 7 jours",
+      "passRate": "Taux de réussite",
+      "toReview": "À examiner · 7 jours",
+      "duration": "Durée médiane",
+      "p95": "p95 {value}",
+      "extraction": "extraction {value}",
+      "api": "Via l’API",
+      "apiSplit": "{api} API · {test} tests",
+      "reviewSplit": "{failed} rejetées · {warning} à vérifier"
+    },
+    "volume": {
+      "title": "Volume · 14 jours",
+      "hint": "Chaque jour par résultat. Cliquez sur un jour pour ses exécutions.",
+      "passed": "Réussies",
+      "warning": "À examiner",
+      "failed": "Échouées",
+      "bar": "{day} : {runs, plural, =0 {aucune exécution} one {# exécution} other {# exécutions}}"
+    },
+    "activity": {
+      "title": "Activité récente",
+      "empty": "Aucune exécution pour l’instant."
+    },
+    "workflowsTable": {
+      "title": "Workflows",
+      "activity": "7 jours",
+      "runs": "Exécutions",
+      "passRate": "Réussite",
+      "duration": "Durée",
+      "lastRun": "Dernière"
+    },
+    "hours": {
+      "title": "Heures d’activité",
+      "hint": "Exécutions par heure, 7 derniers jours, à votre heure locale.",
+      "less": "Moins",
+      "more": "Plus",
+      "cell": "{day} {hour} h : {runs, plural, =0 {aucune exécution} one {# exécution} other {# exécutions}}",
+      "peak": "Pic : {day} vers {hour} h"
+    },
+    "documents": {
+      "title": "Documents lus",
+      "hint": "7 derniers jours.",
+      "documents": "{count, plural, one {# document} other {# documents}}",
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "empty": "Aucun document lu cette semaine."
+    }
   },
   "audits": {
     "title": "Exécutions",
@@ -170,7 +187,6 @@
       "exportCsv": "CSV",
       "language": "Langue",
       "api": "API",
-      "interface": "Interface",
       "source": "Source",
       "extractedData": "Champs",
       "validationRules": "Règles",
@@ -178,16 +194,15 @@
       "failed": "Échouée",
       "skipped": "Ignorée",
       "fieldsExtracted": "{count, plural, one {# champ} other {# champs}}",
-      "rulesPassed": "{passed} règles sur {total} respectées",
+      "rulesPassed": "{passed} sur {total, plural, one {# règle respectée} other {# règles respectées}}",
       "allRulesPassed": "Conforme",
       "validationFailed": "Rejeté",
       "reviewRequired": "À examiner",
       "value": "Valeur extraite",
       "field": "Champ",
       "status": "Statut",
-      "affectedFields": "Champs concernés",
-      "intra": "Intra-doc",
-      "cross": "Inter-doc",
+      "intra": "Dans un document",
+      "cross": "Entre deux documents",
       "reject": "Rejeter",
       "flag": "Signaler",
       "info": "Info",
@@ -196,16 +211,22 @@
       "viaApi": "via l'API",
       "viaTest": "test",
       "notFound": "Introuvable",
-      "modelOutput": "Sortie du modèle",
-      "pagesTruncated": "Seules {sent} pages sur {total} ont été lues"
+      "pagesTruncated": "Seulement {sent, plural, one {# page analysée} other {# pages analysées}} sur {total}",
+      "timing": {
+        "model": "Modèle et file",
+        "extraction": "Extraction",
+        "rules": "Règles"
+      },
+      "pages": "{count, plural, one {# page} other {# pages}}",
+      "page": "Page {page}",
+      "copyId": "Copier l’identifiant",
+      "copied": "Identifiant copié",
+      "noPreview": "Aperçu indisponible",
+      "resize": "Redimensionner le document",
+      "next": "Exécution suivante",
+      "rawOutput": "Sortie brute du modèle"
     },
     "table": {
-      "id": "ID d'audit",
-      "status": "Statut",
-      "workflow": "Workflow",
-      "timestamp": "Horodatage",
-      "rows": "Lignes",
-      "summary": "{count, plural, =0 {Aucun audit} one {# audit} other {# audits}}",
       "empty": "Aucune exécution correspondante",
       "total": "{total, plural, =0 {Aucune exécution} one {# exécution} other {# exécutions}}",
       "page": "Page {page} sur {pages}",
@@ -218,23 +239,35 @@
       "allStatuses": "Toutes",
       "workflow": "Workflow",
       "clearAll": "Effacer les filtres",
-      "day": "Jour"
+      "day": "Jour",
+      "clearSearch": "Effacer la recherche",
+      "remove": "Retirer le filtre",
+      "review": "À examiner"
     },
     "status": {
       "passed": "Réussie",
       "failed": "Échouée",
       "warning": "À examiner"
     },
-    "eyebrow": "Rapports",
     "exportCsv": "Exporter en CSV",
     "row": {
-      "failedRules": "{count, plural, one {# règle en échec} other {# règles en échec}}",
-      "fields": "{count, plural, one {# champ} other {# champs}}"
+      "fields": "{count, plural, one {# champ} other {# champs}}",
+      "noFields": "Aucun champ extrait",
+      "source": {
+        "api": "API",
+        "test": "Test"
+      },
+      "files": "{count, plural, one {# fichier} other {# fichiers}}"
     },
     "emptyTitle": "Aucune exécution",
     "emptyHint": "Les exécutions apparaissent ici quand un workflow traite des documents, en test ou via l'API.",
     "emptyCta": "Ouvrir les workflows",
-    "emptyFilteredHint": "Aucune exécution ne correspond à ces filtres."
+    "emptyFilteredHint": "Aucune exécution ne correspond à ces filtres.",
+    "groups": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier"
+    },
+    "live": "Mis à jour en direct"
   },
   "workflows": {
     "title": "Workflows",
@@ -243,57 +276,34 @@
       "active": "En ligne",
       "draft": "Brouillon"
     },
-    "card": {
-      "lastRun": "Dernière exécution",
-      "success": "Succès",
-      "runs": "Exécutions"
-    },
     "delete": {
       "selectAll": "Tout sélectionner",
       "selectWorkflow": "Sélectionner {name}",
-      "selected": "{count} sélectionné(s)",
+      "selected": "{count, plural, one {# sélectionné} other {# sélectionnés}}",
       "deleteSelected": "Supprimer la sélection",
-      "confirmTitle": "Supprimer {count} workflow(s) ?",
-      "confirmDescription": "Cela retirera {count} workflow(s) de votre liste. Les exécutions et l'historique d'audit sont conservés.",
+      "confirmTitle": "Supprimer {count, plural, one {# workflow} other {# workflows}} ?",
+      "confirmDescription": "{count, plural, one {# workflow quitte} other {# workflows quittent}} votre liste. Les exécutions et l’historique d’audit sont conservés.",
       "confirmDescriptionNamed": "Supprimer : {names}. Les exécutions et l'historique d'audit sont conservés.",
       "confirmButton": "Supprimer",
-      "success": "{count} workflow(s) supprimé(s)",
-      "empty": "Aucun workflow. Créez-en un pour commencer."
+      "success": "{count, plural, one {# workflow supprimé} other {# workflows supprimés}}",
+      "select": "sélectionner"
     },
     "builder": {
       "steps": {
         "navTitle": "Étapes",
-        "progress": "Complété",
         "blockedHint": "Nommez un document et ajoutez un champ d'abord",
         "extract": "Documents",
         "rules": "Règles",
-        "upload": "Tester et publier",
-        "uploadHint": "Échantillon → extraction → validation en une passe",
-        "back": "Retour",
-        "continueToRules": "Suite : règles",
-        "continueToTest": "Suite : tester et publier",
         "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer.",
-        "continueRulesOptional": "Les règles sont facultatives ; un workflow peut seulement extraire.",
-        "finalStepHint": "Vérifiez le workflow sur de vrais documents, puis publiez-le pour l'appeler depuis vos systèmes."
+        "publish": "Publier",
+        "extraction": "Extraction"
       },
       "namePlaceholder": "Workflow sans titre",
-      "nameGate": {
-        "title": "Nommez votre workflow",
-        "hint": "Choisissez un nom clair que votre équipe reconnaîtra avant de configurer les documents et les règles.",
-        "label": "Nom du workflow",
-        "placeholder": "ex. Contrôle conformité factures",
-        "continue": "Continuer"
-      },
       "backToWorkflows": "Workflows",
       "statusLive": "En ligne",
       "statusDraft": "Brouillon",
       "test": {
-        "tabLabel": "Test",
-        "uploadTitle": "Test",
-        "uploadHint": "Exécutez le workflow sur des fichiers d'exemple. Rien n'est publié.",
-        "runBtn": "Lancer le test",
         "running": "En cours…",
-        "noFilesHint": "Sans fichier, les règles portent sur des valeurs vides.",
         "idle": "Aucun test effectué",
         "status": {
           "passed": "Toutes les vérifications sont passées",
@@ -302,7 +312,6 @@
         },
         "fieldsExtracted": "champs extraits",
         "rulesPassed": "règles validées",
-        "ruleResults": "Résultats règle par règle",
         "viewReport": "Ouvrir le rapport",
         "openFullReport": "Ouvrir le rapport",
         "errorTitle": "Le test n'a pas pu s'exécuter",
@@ -314,8 +323,7 @@
         "tabLabel": "Publier",
         "readyHint": "La publication crée une clé d'API ; les documents envoyés exécutent ce workflow.",
         "liveTitle": "En ligne",
-        "liveHint": "Envoyez des documents au point d'accès ci-dessous avec la clé du workflow.",
-        "eyebrow": "API"
+        "liveHint": "Envoyez des documents au point d'accès ci-dessous avec la clé du workflow."
       },
       "ingestion": {
         "severityReject": "Rejeter",
@@ -323,13 +331,9 @@
         "fileHint": "PDF, PNG, JPEG, WebP",
         "noDocsHint": "Nommez d'abord un document à l'étape Documents.",
         "unnamedDoc": "Document",
-        "ruleCount": "{count, plural, one {# règle} other {# règles}}",
         "fieldCount": "{count, plural, one {# champ} other {# champs}}",
         "fileRejected": "Choisissez un fichier PDF, PNG, JPEG ou WebP dans la limite d'envoi.",
         "dropPrompt": "Déposez un fichier ou cliquez pour choisir"
-      },
-      "extraction": {
-        "retry": "Réessayer"
       },
       "docSource": {
         "title": "Documents",
@@ -362,9 +366,7 @@
           "empty": "Aucun champ trouvé dans le modèle."
         },
         "objectFieldsLabel": "Champs imbriqués",
-        "objectFieldsHint": "Champs à l'intérieur de cet objet imbriqué.",
         "objectFieldsEmpty": "Aucun champ imbriqué. Ajoutez-en un pour chaque propriété à extraire.",
-        "objectFieldIndex": "Champ {index}",
         "addObjectField": "Ajouter un champ imbriqué",
         "removeObjectField": "Retirer le champ imbriqué",
         "namePlaceholder": "ex. numero_facture",
@@ -382,9 +384,7 @@
         "addEnumValue": "Ajouter une valeur",
         "removeEnumValue": "Retirer la valeur",
         "rowColumnsLabel": "Colonnes par ligne",
-        "rowColumnsHint": "Chaque colonne est une cellule de la ligne répétée (nom, type et ce qu'il faut trouver).",
         "rowColumnsEmpty": "Aucune colonne. Ajoutez-en une pour chaque cellule (ex. prestation, quantité, montant).",
-        "rowColumnIndex": "Colonne {index}",
         "addRowColumn": "Ajouter une colonne",
         "removeRowColumn": "Retirer la colonne",
         "duplicateName": "Le nom doit être unique",
@@ -578,7 +578,13 @@
           }
         },
         "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait.",
-        "fieldCount": "{count, plural, one {# champ} other {# champs}}"
+        "fieldCount": "{count, plural, one {# champ} other {# champs}}",
+        "addDescription": "Ajouter une description : où trouver la valeur ?",
+        "valueColumn": "Valeur extraite",
+        "notFound": "Introuvable",
+        "stale": "À réextraire",
+        "missingHint": "Introuvable : précisez où la valeur se trouve.",
+        "removeField": "Retirer {name}"
       },
       "rules": {
         "title": "Règles",
@@ -643,12 +649,16 @@
             "aggregate": "Tableau"
           }
         },
-        "eyebrow": "Validation",
         "removeTitle": "Supprimer {name} ?",
         "removeRule": "Supprimer la règle",
         "ruleActions": "Actions de la règle",
         "hasIssues": "Cette règle a des problèmes",
-        "valid": "Prête"
+        "valid": "Prête",
+        "onSample": {
+          "passed": "Respectée sur l’exemple",
+          "failed": "Échoue sur l’exemple",
+          "skipped": "Non évaluée : valeur manquante"
+        }
       },
       "api": {
         "live": "En ligne",
@@ -690,13 +700,6 @@
         "copied": "Copié",
         "copyFailed": "Impossible de copier"
       },
-      "dryRun": {
-        "title": "Aperçu du test",
-        "running": "Exécution…",
-        "idle": "Modifiez le schéma ou les règles pour déclencher un aperçu.",
-        "passed": "{count} validées",
-        "failed": "{count} échouées"
-      },
       "toasts": {
         "nameRequired": "Saisissez un nom de workflow avant de lancer un test.",
         "draftSaved": "Brouillon enregistré",
@@ -704,36 +707,43 @@
         "deployed": "Workflow déployé",
         "deployedDetail": "Le pipeline est désormais actif en production."
       },
-      "documents": {
-        "eyebrow": "Schéma"
+      "nameLabel": "Nom du workflow",
+      "workbench": {
+        "samplePrompt": "Déposez un exemple de ce document",
+        "sampleHint": "PDF, PNG, JPEG ou WebP. Il reste dans votre navigateur jusqu’à l’extraction.",
+        "replace": "Remplacer",
+        "removeSample": "Retirer l’exemple",
+        "extract": "Extraire",
+        "extracting": "Extraction…",
+        "extractHint": "Lit l’exemple avec le brouillon tel qu’il est à l’écran.",
+        "needSample": "Ajoutez un exemple pour extraire.",
+        "addDocument": "Document",
+        "resize": "Redimensionner l’exemple",
+        "found": "{found} sur {total} trouvés"
       },
-      "nameLabel": "Nom du workflow"
+      "saved": "Enregistré",
+      "publish": {
+        "lastExtraction": "Dernière extraction",
+        "noExtraction": "Aucune extraction pour l’instant : déposez un exemple à l’étape Extraction."
+      },
+      "unsaved": "Modifications non enregistrées",
+      "notSaved": "Non enregistré"
     },
-    "eyebrow": "Pipelines",
     "row": {
-      "runs": "{count, plural, one {# exécution} other {# exécutions}}",
       "neverRun": "Jamais exécuté"
     },
     "columns": {
       "name": "Nom",
-      "runs": "Exécutions",
       "passRate": "Réussite",
-      "lastRun": "Dernière"
+      "lastRun": "Dernière",
+      "documents": "Documents"
     },
     "emptyTitle": "Aucun workflow",
-    "emptyHint": "Un workflow nomme les documents que vous recevez, les champs à y lire et les règles qu'ils doivent respecter."
-  },
-  "health": {
-    "alerts": {
-      "stale": {
-        "title": "Exécutions bloquées",
-        "detail": "{count, plural, one {# exécution} other {# exécutions}} encore en cours après le délai."
-      }
-    }
+    "emptyHint": "Un workflow nomme les documents que vous recevez, les champs à y lire et les règles qu'ils doivent respecter.",
+    "count": "{count, plural, one {# workflow} other {# workflows}}"
   },
   "settings": {
     "title": "Paramètres",
-    "eyebrow": "Paramètres",
     "description": "Configuration d'exécution et état du modèle de document.",
     "model": "Modèle de document",
     "ready": "Prêt",
@@ -760,13 +770,76 @@
     "brandBase": "Couleur de base",
     "brandAccent": "Couleur d'accent",
     "brandContrast": "Contraste",
-    "brandRadius": "Rayon des coins"
+    "brandRadius": "Rayon des coins",
+    "palette": "Palette générée",
+    "paletteHint": "Ce que le moteur de thème calcule à partir de la marque.",
+    "documents": "Couleurs des documents",
+    "status": "Statuts",
+    "actions": "Actions"
   },
   "error": {
     "title": "Une erreur est survenue",
-    "reported": "L'erreur a été signalée. Vous pouvez réessayer ou recharger la page.",
     "section": "Cette section n'a pas pu se charger. Vous pouvez réessayer ou revenir au tableau de bord.",
     "retry": "Réessayer",
-    "dashboard": "Tableau de bord"
+    "dashboard": "Tableau de bord",
+    "notFoundTitle": "Rien ici",
+    "notFoundHint": "Le lien est erroné, ou ce qu’il désignait a été supprimé.",
+    "runs": "Exécutions",
+    "reported": "L'erreur a été signalée. Vous pouvez réessayer ou recharger la page."
+  },
+  "shell": {
+    "toReview": "À examiner",
+    "running": "{count, plural, one {# en cours} other {# en cours}}",
+    "recentWorkflows": "Workflows récents",
+    "collapse": "Réduire la barre latérale",
+    "expand": "Afficher la barre latérale",
+    "create": "Créer",
+    "search": "Rechercher",
+    "shortcuts": "Raccourcis clavier",
+    "shortcutsHint": "Ce que le clavier fait sur cette page.",
+    "goTo": "Aller à {page}",
+    "noShortcuts": "Aucun raccourci ici.",
+    "then": "puis",
+    "keys": {
+      "move": "naviguer",
+      "open": "ouvrir",
+      "search": "rechercher"
+    }
+  },
+  "operations": {
+    "title": "Salle de contrôle",
+    "live": "En direct",
+    "inFlight": "En cours",
+    "inFlightHint": "Exécutions en file ou en traitement, avec leur étape.",
+    "nothingInFlight": "Aucune exécution en cours. Les nouvelles apparaissent ici dès leur envoi.",
+    "errors": "Erreurs · 24 h",
+    "errorsHint": "Exécutions qui n’ont pas pu aller au bout.",
+    "noErrors": "Aucune erreur ces dernières 24 heures.",
+    "throughput": "Débit · 24 h",
+    "throughputHint": "Exécutions terminées par heure.",
+    "model": "Modèle",
+    "modelAwake": "Éveillé",
+    "modelAsleep": "En veille, démarre à la demande",
+    "modelDown": "Injoignable",
+    "queue": "File",
+    "running": "En traitement",
+    "queued": "En attente",
+    "stale": "Sans réponse",
+    "median": "Durée médiane",
+    "p95": "p95",
+    "waiting": "En attente depuis",
+    "open": "Ouvrir",
+    "done": "Terminées",
+    "failed": "En erreur",
+    "cancel": "Arrêter",
+    "cancelTitle": "Arrêter cette exécution ?",
+    "cancelHint": "Elle passe en erreur avec votre nom. Les fichiers déjà envoyés restent liés à l’exécution.",
+    "cancelled": "Exécution arrêtée",
+    "recover": "Libérer les exécutions bloquées",
+    "recovered": "{count, plural, =0 {Aucune exécution bloquée} one {# exécution libérée} other {# exécutions libérées}}",
+    "stuckHint": "Dépassée de son délai : le worker ne répond plus. La maintenance la libère automatiquement, ou arrêtez-la maintenant.",
+    "keep": "Laisser tourner",
+    "cancelFailed": "Impossible d’arrêter l’exécution",
+    "recoverFailed": "Impossible de libérer les exécutions bloquées"
   }
 }

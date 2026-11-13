@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile
 from fastapi.responses import Response, StreamingResponse
 from pydantic import Json
 
@@ -119,6 +119,23 @@ async def export_audits(
 @router.get("/audits/{run_id}", dependencies=[require("run:read")])
 async def get_audit(run_id: str, session: SessionDep) -> AuditDetail:
     return await runs.run_report(session, run_id)
+
+
+@router.get(
+    "/runs/{run_id}/documents/{document_id}/pages/{page}",
+    dependencies=[require("run:read")],
+    response_class=Response,
+    responses={200: {"content": {"image/webp": {}}, "description": "The page, for the screen."}},
+)
+async def get_document_page(
+    run_id: str, document_id: str, page: Annotated[int, Path(ge=1, le=999)], session: SessionDep
+) -> Response:
+    """Page ``page`` (from 1) of a document uploaded to the run, rendered for the report."""
+    image = await runs.document_page(session, run_id, document_id, page - 1)
+    # A run's files never change: the browser keeps the page for the session.
+    return Response(
+        image, media_type="image/webp", headers={"Cache-Control": "private, max-age=86400"}
+    )
 
 
 @router.get(

@@ -1,52 +1,96 @@
 "use client";
 
+import { Resizable, ResizableHandle, ResizablePanel } from "@ui-sdk/react/resizable";
+import { useShortcut } from "@ui-sdk/react/shortcuts";
 import { Download, Printer } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ReportBody, ReportVerdict } from "@/components/audit/report";
-import { Page } from "@/components/layout/page";
+import { DocumentViewer } from "@/components/audit/document-viewer";
+import { ReportBody, ReportVerdict, TimingBar } from "@/components/audit/report";
+import { Crumb, Page } from "@/components/layout/page";
+import { CopyIconButton } from "@/components/shared/copyable-output-panel";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import type { RunAuditDetail } from "@/lib/types";
 
-/** One finished run's report; prints as a PDF, exports as CSV (from the API). */
+/** One finished run: the documents on one side, the verdict, rules and fields on the other. */
 export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
   const t = useTranslations("audits.report");
   const tNav = useTranslations("nav");
+  const router = useRouter();
+  const wide = useMediaQuery("(min-width: 1024px)");
+  useShortcut("escape", () => router.push("/audits"), { description: tNav("audits") });
+
+  const report = (
+    <div className="flex flex-col gap-6 px-5 py-5 md:px-6">
+      <div className="flex flex-col gap-4">
+        <ReportVerdict audit={audit} />
+        <div className="flex items-center gap-1 ps-8">
+          <code className="font-mono text-xs text-ink-4">{audit.id}</code>
+          <CopyIconButton
+            text={audit.id}
+            label={t("copyId")}
+            copiedLabel={t("copied")}
+            failedLabel={t("copyId")}
+          />
+        </div>
+        <div className="ps-8">
+          <TimingBar audit={audit} />
+        </div>
+      </div>
+      <ReportBody audit={audit} />
+    </div>
+  );
+
   return (
     <Page
-      trail={
-        <>
-          <Link href="/audits" className="text-ink-3 transition-colors duration-100 hover:text-ink">
-            {tNav("audits")}
-          </Link>
-          <span className="text-ink-4" aria-hidden>
-            /
-          </span>
-        </>
-      }
+      trail={<Crumb href="/audits">{tNav("audits")}</Crumb>}
       title={<span className="truncate">{audit.workflowName}</span>}
+      bleed
       actions={
-        <div className="no-print flex items-center gap-1">
-          <Button variant="ghost" size="sm" onClick={() => window.print()}>
-            <Printer />
-            {t("exportPdf")}
-          </Button>
-          <Button asChild variant="ghost" size="sm">
-            <a href={`/api/v1/audits/${encodeURIComponent(audit.id)}/export.csv`} download>
+        <div className="no-print flex items-center gap-0.5">
+          <Tooltip label={t("exportPdf")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("exportPdf")}
+              onClick={() => window.print()}
+            >
+              <Printer />
+            </Button>
+          </Tooltip>
+          <Tooltip label={t("exportCsv")}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("exportCsv")}
+              render={
+                <a href={`/api/v1/audits/${encodeURIComponent(audit.id)}/export.csv`} download />
+              }
+            >
               <Download />
-              {t("exportCsv")}
-            </a>
-          </Button>
+            </Button>
+          </Tooltip>
         </div>
       }
     >
-      <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-1">
-          <ReportVerdict audit={audit} />
-          <p className="ps-8 font-mono text-xs text-ink-4">{audit.id}</p>
-        </div>
-        <ReportBody audit={audit} />
-      </div>
+      {wide ? (
+        <Resizable className="h-[calc(100dvh-3.25rem)]">
+          <ResizablePanel defaultSize={44} minSize={28} className="min-w-0 border-e border-line">
+            <DocumentViewer audit={audit} />
+          </ResizablePanel>
+          <ResizableHandle
+            aria-label={t("resize")}
+            className="relative w-px bg-line outline-none transition-colors duration-150 after:absolute after:inset-y-0 after:-inset-x-1.5 hover:bg-accent focus-visible:bg-accent data-dragging:bg-accent"
+          />
+          <ResizablePanel minSize={36} className="min-w-0 overflow-y-auto overscroll-contain">
+            {report}
+          </ResizablePanel>
+        </Resizable>
+      ) : (
+        report
+      )}
     </Page>
   );
 }

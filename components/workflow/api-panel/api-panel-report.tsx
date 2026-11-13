@@ -23,15 +23,13 @@ export function ApiRunReportScreen({
           <ChevronLeft />
           {t("backToApi")}
         </Button>
-        <Button asChild variant="ghost" size="sm">
-          <Link href={`/audits/${report.id}`}>
-            {t("viewFullReport")}
-            <ArrowUpRight />
-          </Link>
+        <Button variant="ghost" size="sm" render={<Link href={`/audits/${report.id}`} />}>
+          {t("viewFullReport")}
+          <ArrowUpRight />
         </Button>
       </div>
       <ReportVerdict audit={report} />
-      <ReportBody audit={report} compact />
+      <ReportBody audit={report} />
     </div>
   );
 }

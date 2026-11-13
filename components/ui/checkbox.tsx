@@ -1,27 +1,32 @@
 "use client";
 
+import { CheckboxIndicator, Checkbox as CheckboxPrimitive } from "@ui-sdk/react/checkbox";
 import { Check, Minus } from "lucide-react";
-import { Checkbox as CheckboxPrimitive } from "radix-ui";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
+import { partClass } from "@/lib/utils";
 
-function Checkbox({ className, ...props }: React.ComponentProps<typeof CheckboxPrimitive.Root>) {
+function Checkbox({
+  className,
+  ...props
+}: Omit<React.ComponentProps<typeof CheckboxPrimitive>, "children">) {
   return (
-    <CheckboxPrimitive.Root
-      className={cn(
-        "peer relative flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[4px] bg-field shadow-[inset_0_0_0_1px_var(--ink-4)] transition-[background-color,box-shadow] duration-100 before:absolute before:-inset-2 data-[state=checked]:bg-accent data-[state=indeterminate]:bg-accent data-[state=checked]:shadow-none data-[state=indeterminate]:shadow-none disabled:cursor-not-allowed disabled:opacity-50",
+    <CheckboxPrimitive
+      className={partClass(
+        "inline-flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[4px] bg-field text-on-accent shadow-[inset_0_0_0_1px_var(--line-strong)] outline-none transition-[background-color,box-shadow] duration-100 hover:shadow-[inset_0_0_0_1px_var(--ink-4)] focus-visible:shadow-[0_0_0_2px_var(--focus)] data-checked:bg-accent data-checked:shadow-none data-indeterminate:bg-accent data-indeterminate:shadow-none data-disabled:opacity-45",
         className
       )}
       {...props}
     >
-      <CheckboxPrimitive.Indicator className="text-on-accent">
-        {props.checked === "indeterminate" ? (
-          <Minus className="size-3" strokeWidth={3} />
-        ) : (
-          <Check className="size-3" strokeWidth={3} />
-        )}
-      </CheckboxPrimitive.Indicator>
-    </CheckboxPrimitive.Root>
+      {(state) => (
+        <CheckboxIndicator className="flex transition-[scale,opacity] duration-150 ease-out data-starting-style:scale-50 data-starting-style:opacity-0">
+          {state.indeterminate ? (
+            <Minus className="size-2.5" strokeWidth={3.5} />
+          ) : (
+            <Check className="size-2.5" strokeWidth={3.5} />
+          )}
+        </CheckboxIndicator>
+      )}
+    </CheckboxPrimitive>
   );
 }
 

@@ -1,11 +1,11 @@
 "use client";
 
+import { toast } from "@ui-sdk/react/toast";
 import { Check, Copy } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { useCopyToClipboard } from "@/lib/hooks/use-copy-to-clipboard";
 import { cn } from "@/lib/utils";
 
@@ -38,10 +38,9 @@ export function CopyIconButton({
     <Button
       type="button"
       variant="ghost"
-      size="icon-sm"
+      size="icon-xs"
       className={className}
       aria-label={copied ? copiedLabel : label}
-      title={copied ? copiedLabel : label}
       onClick={async () => {
         if (!(await copy(text))) toast.error(failedLabel);
       }}
@@ -49,9 +48,9 @@ export function CopyIconButton({
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={copied ? "copied" : "copy"}
-          initial={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
-          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-          exit={{ opacity: 0, scale: 0.25, filter: "blur(4px)" }}
+          initial={{ opacity: 0, scale: 0.4 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.4 }}
           transition={{ type: "spring", duration: 0.3, bounce: 0 }}
           className="flex"
         >
@@ -84,13 +83,13 @@ export function CopyableOutputPanel({
       className={cn("overflow-hidden rounded-md shadow-[0_0_0_1px_var(--line)]", className)}
     >
       <div className="flex h-9 items-center gap-2 border-b border-line ps-1.5 pe-1">
-        <TabsList>
-          <TabsTrigger value="preview" className="h-6 px-2 text-xs">
+        <TabsList aria-label={labels.title}>
+          <TabsTab value="preview" className="h-6 px-2 text-xs">
             {labels.previewTab}
-          </TabsTrigger>
-          <TabsTrigger value="source" className="h-6 px-2 text-xs">
+          </TabsTab>
+          <TabsTab value="source" className="h-6 px-2 text-xs">
             {labels.sourceTab}
-          </TabsTrigger>
+          </TabsTab>
         </TabsList>
         <span className="ms-auto truncate text-xs text-ink-4">{labels.subtitle}</span>
         <CopyIconButton
@@ -100,8 +99,8 @@ export function CopyableOutputPanel({
           failedLabel={labels.copyFailed}
         />
       </div>
-      <TabsContent value="preview">{preview}</TabsContent>
-      <TabsContent value="source">{source}</TabsContent>
+      <TabsPanel value="preview">{preview}</TabsPanel>
+      <TabsPanel value="source">{source}</TabsPanel>
     </Tabs>
   );
 }

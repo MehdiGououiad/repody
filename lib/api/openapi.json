@@ -494,7 +494,8 @@
                   "enum": [
                     "passed",
                     "warning",
-                    "failed"
+                    "failed",
+                    "review"
                   ],
                   "type": "string"
                 },
@@ -502,8 +503,10 @@
                   "type": "null"
                 }
               ],
+              "description": "One outcome, or \"review\" for warning and failed runs.",
               "title": "Outcome"
-            }
+            },
+            "description": "One outcome, or \"review\" for warning and failed runs."
           },
           {
             "name": "workflowId",
@@ -624,7 +627,8 @@
                   "enum": [
                     "passed",
                     "warning",
-                    "failed"
+                    "failed",
+                    "review"
                   ],
                   "type": "string"
                 },
@@ -632,8 +636,10 @@
                   "type": "null"
                 }
               ],
+              "description": "One outcome, or \"review\" for warning and failed runs.",
               "title": "Outcome"
-            }
+            },
+            "description": "One outcome, or \"review\" for warning and failed runs."
           },
           {
             "name": "workflowId",
@@ -723,6 +729,70 @@
                   "$ref": "#/components/schemas/AuditDetail"
                 }
               }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/{run_id}/documents/{document_id}/pages/{page}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Document Page",
+        "description": "Page ``page`` (from 1) of a document uploaded to the run, rendered for the report.",
+        "operationId": "get_document_page_v1_runs__run_id__documents__document_id__pages__page__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          },
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Document Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 999,
+              "minimum": 1,
+              "title": "Page"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page, for the screen.",
+            "content": {
+              "image/webp": {}
             }
           },
           "422": {
@@ -851,6 +921,101 @@
         ]
       }
     },
+    "/v1/operations": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Operations",
+        "description": "The control room: runs in flight with their progress, recent failures, throughput.",
+        "operationId": "operations_v1_operations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Operations"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/operations/recover": {
+      "post": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Recover",
+        "description": "Run the stuck-run check now (maintenance also runs it on its schedule).",
+        "operationId": "recover_v1_operations_recover_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Recovered"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Cancel",
+        "description": "Stop a queued or running run. 409 when it has already finished.",
+        "operationId": "cancel_v1_runs__run_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/catalog": {
       "get": {
         "tags": [
@@ -907,6 +1072,93 @@
   },
   "components": {
     "schemas": {
+      "ActiveRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "type": "string",
+            "title": "Workflowname"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "done",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "test",
+              "api"
+            ],
+            "title": "Source"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "startedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Startedat"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunProgress"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stuck": {
+            "type": "boolean",
+            "title": "Stuck",
+            "description": "Past its time limit: the worker is gone; maintenance fails it, or cancel it now."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "status",
+          "source",
+          "files",
+          "createdAt",
+          "startedAt",
+          "progress",
+          "stuck"
+        ],
+        "title": "ActiveRun"
+      },
       "Aggregate-Input": {
         "properties": {
           "kind": {
@@ -1325,10 +1577,22 @@
             "type": "string",
             "title": "Workflowname"
           },
+          "source": {
+            "type": "string",
+            "enum": [
+              "test",
+              "api"
+            ],
+            "title": "Source"
+          },
           "timestamp": {
             "type": "string",
             "format": "date-time",
             "title": "Timestamp"
+          },
+          "durationMs": {
+            "type": "integer",
+            "title": "Durationms"
           },
           "rows": {
             "type": "integer",
@@ -1337,6 +1601,26 @@
           "failedRules": {
             "type": "integer",
             "title": "Failedrules"
+          },
+          "files": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Files",
+            "description": "The uploaded files' names, in workflow order."
+          },
+          "firstFailedRule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstfailedrule",
+            "description": "The name of the first failed rule, to say why at a glance."
           }
         },
         "type": "object",
@@ -1345,9 +1629,13 @@
           "status",
           "workflowId",
           "workflowName",
+          "source",
           "timestamp",
+          "durationMs",
           "rows",
-          "failedRules"
+          "failedRules",
+          "files",
+          "firstFailedRule"
         ],
         "title": "AuditListItem"
       },
@@ -1785,7 +2073,32 @@
               "$ref": "#/components/schemas/DayRuns"
             },
             "type": "array",
-            "title": "Performanceseries"
+            "title": "Performanceseries",
+            "description": "The last 14 UTC days, oldest first."
+          },
+          "timing": {
+            "$ref": "#/components/schemas/DurationStats"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/SourceCounts"
+          },
+          "hourly": {
+            "items": {
+              "$ref": "#/components/schemas/HourRuns"
+            },
+            "type": "array",
+            "title": "Hourly",
+            "description": "Runs per UTC hour, the last 7 days (hours with runs)."
+          },
+          "documents": {
+            "$ref": "#/components/schemas/DocumentStats"
+          },
+          "workflowActivity": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowActivity"
+            },
+            "type": "array",
+            "title": "Workflowactivity"
           },
           "failuresBySeverity": {
             "items": {
@@ -1828,6 +2141,11 @@
         "required": [
           "kpis",
           "performanceSeries",
+          "timing",
+          "sources",
+          "hourly",
+          "documents",
+          "workflowActivity",
           "failuresBySeverity",
           "staleRuns",
           "queue",
@@ -1849,16 +2167,26 @@
             "type": "integer",
             "title": "Runs"
           },
-          "prevRuns": {
+          "passed": {
             "type": "integer",
-            "title": "Prevruns"
+            "title": "Passed"
+          },
+          "warning": {
+            "type": "integer",
+            "title": "Warning"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
           }
         },
         "type": "object",
         "required": [
           "day",
           "runs",
-          "prevRuns"
+          "passed",
+          "warning",
+          "failed"
         ],
         "title": "DayRuns"
       },
@@ -1959,6 +2287,80 @@
         ],
         "title": "DocumentDef"
       },
+      "DocumentStats": {
+        "properties": {
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "byType": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentTypeCount"
+            },
+            "type": "array",
+            "title": "Bytype"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documents",
+          "pages",
+          "byType"
+        ],
+        "title": "DocumentStats",
+        "description": "Documents read in the last 7 days, and their pages."
+      },
+      "DocumentTypeCount": {
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "title": "Documenttype"
+          },
+          "documents": {
+            "type": "integer",
+            "title": "Documents"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          }
+        },
+        "type": "object",
+        "required": [
+          "documentType",
+          "documents",
+          "pages"
+        ],
+        "title": "DocumentTypeCount"
+      },
+      "DurationStats": {
+        "properties": {
+          "medianMs": {
+            "type": "integer",
+            "title": "Medianms"
+          },
+          "p95Ms": {
+            "type": "integer",
+            "title": "P95Ms"
+          },
+          "extractionMedianMs": {
+            "type": "integer",
+            "title": "Extractionmedianms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "medianMs",
+          "p95Ms",
+          "extractionMedianMs"
+        ],
+        "title": "DurationStats",
+        "description": "Finished runs of the last 7 days, from start to finish."
+      },
       "ExtractionMeta": {
         "properties": {
           "extractionMs": {
@@ -2034,6 +2436,49 @@
           "error"
         ],
         "title": "ExtractionMeta"
+      },
+      "FailedRun": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "workflowName": {
+            "type": "string",
+            "title": "Workflowname"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "test",
+              "api"
+            ],
+            "title": "Source"
+          },
+          "error": {
+            "type": "string",
+            "title": "Error"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "workflowId",
+          "workflowName",
+          "source",
+          "error",
+          "createdAt"
+        ],
+        "title": "FailedRun"
       },
       "FailingRule": {
         "properties": {
@@ -2152,6 +2597,59 @@
         ],
         "title": "Health"
       },
+      "HourRuns": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day",
+            "description": "UTC day."
+          },
+          "hour": {
+            "type": "integer",
+            "maximum": 23.0,
+            "minimum": 0.0,
+            "title": "Hour",
+            "description": "UTC hour; clients shift it to their time zone."
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "hour",
+          "runs"
+        ],
+        "title": "HourRuns"
+      },
+      "HourThroughput": {
+        "properties": {
+          "hour": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Hour",
+            "description": "The start of the UTC hour."
+          },
+          "done": {
+            "type": "integer",
+            "title": "Done"
+          },
+          "failed": {
+            "type": "integer",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hour",
+          "done",
+          "failed"
+        ],
+        "title": "HourThroughput"
+      },
       "IclExample": {
         "properties": {
           "input": {
@@ -2269,6 +2767,54 @@
         ],
         "title": "LiteralValue",
         "description": "A value typed by the user, read as the type of the field it is compared with."
+      },
+      "Operations": {
+        "properties": {
+          "queue": {
+            "$ref": "#/components/schemas/QueueCounts"
+          },
+          "staleRuns": {
+            "type": "integer",
+            "title": "Staleruns"
+          },
+          "active": {
+            "items": {
+              "$ref": "#/components/schemas/ActiveRun"
+            },
+            "type": "array",
+            "title": "Active"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/FailedRun"
+            },
+            "type": "array",
+            "title": "Errors",
+            "description": "Runs that failed (not judged) in the last 24 hours."
+          },
+          "throughput": {
+            "items": {
+              "$ref": "#/components/schemas/HourThroughput"
+            },
+            "type": "array",
+            "title": "Throughput",
+            "description": "The last 24 UTC hours, oldest first."
+          },
+          "timing": {
+            "$ref": "#/components/schemas/DurationStats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "queue",
+          "staleRuns",
+          "active",
+          "errors",
+          "throughput",
+          "timing"
+        ],
+        "title": "Operations",
+        "description": "The control room: what runs now, what broke, how fast the platform works."
       },
       "PlatformConfig": {
         "properties": {
@@ -2457,6 +3003,23 @@
           "runningRuns"
         ],
         "title": "QueueCounts"
+      },
+      "Recovered": {
+        "properties": {
+          "failed": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Failed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "failed"
+        ],
+        "title": "Recovered",
+        "description": "Runs a recovery pass failed: running ones that lost their worker, queued ones too old."
       },
       "Rule-Input": {
         "properties": {
@@ -2938,6 +3501,25 @@
         ],
         "title": "SeverityShare"
       },
+      "SourceCounts": {
+        "properties": {
+          "api": {
+            "type": "integer",
+            "title": "Api"
+          },
+          "test": {
+            "type": "integer",
+            "title": "Test"
+          }
+        },
+        "type": "object",
+        "required": [
+          "api",
+          "test"
+        ],
+        "title": "SourceCounts",
+        "description": "Runs of the last 7 days by who started them."
+      },
       "TemplateTypeInfo": {
         "properties": {
           "value": {
@@ -3005,6 +3587,33 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WorkflowActivity": {
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "title": "Workflowid"
+          },
+          "runs": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Runs",
+            "description": "Runs per UTC day, the last 7 days, oldest first."
+          },
+          "medianMs": {
+            "type": "integer",
+            "title": "Medianms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "workflowId",
+          "runs",
+          "medianMs"
+        ],
+        "title": "WorkflowActivity"
       },
       "WorkflowDefinition": {
         "properties": {

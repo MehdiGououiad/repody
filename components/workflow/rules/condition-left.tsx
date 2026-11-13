@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
-import { Segmented } from "@/components/ui/segmented";
+import { SegmentedControl, SegmentedControlOption } from "@/components/ui/segmented-control";
 import {
   Select,
   SelectContent,
@@ -62,8 +62,11 @@ function AggregateEditor({
 
   return (
     <div className="flex flex-wrap items-center gap-1">
-      <Select value={value.fn} onValueChange={(fn) => patch({ fn: fn as AggregateFn })}>
-        <SelectTrigger className="w-36">
+      <Select
+        value={value.fn}
+        onValueChange={(fn: string | null) => fn !== null && patch({ fn: fn as AggregateFn })}
+      >
+        <SelectTrigger className="w-36" aria-label={t("kinds.aggregate")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -137,12 +140,19 @@ export function ConditionLeft({
   return (
     <div className="flex flex-wrap items-center gap-1">
       {available.length > 1 ? (
-        <Segmented
-          label={t("left")}
+        <SegmentedControl
+          aria-label={t("left")}
           value={value.kind}
-          onChange={(kind) => onChange(switchKind(value, kind, tables))}
-          options={available.map((kind) => ({ value: kind, label: t(`kinds.${kind}`) }))}
-        />
+          onValueChange={(kind) =>
+            kind && onChange(switchKind(value, kind as typeof value.kind, tables))
+          }
+        >
+          {available.map((kind) => (
+            <SegmentedControlOption key={kind} value={kind}>
+              {t(`kinds.${kind}`)}
+            </SegmentedControlOption>
+          ))}
+        </SegmentedControl>
       ) : null}
       {value.kind === "field" ? (
         <FieldRefPicker value={value} fields={scalars} onChange={onChange} />
@@ -156,7 +166,9 @@ export function ConditionLeft({
           />
           <Select
             value={value.op}
-            onValueChange={(op) => onChange({ ...value, op: op as ArithmeticOp })}
+            onValueChange={(op: string | null) =>
+              op !== null && onChange({ ...value, op: op as ArithmeticOp })
+            }
           >
             <SelectTrigger className="w-14 font-mono" aria-label={t("arithmeticOp")}>
               <SelectValue />

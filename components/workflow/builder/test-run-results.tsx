@@ -42,14 +42,16 @@ export function TestRunResults({ run, starting }: { run: RunView; starting: bool
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <ReportVerdict audit={run.result} />
-              <Button asChild variant="ghost" size="sm">
-                <Link href={`/audits/${run.result.id}`} target="_blank">
-                  {t("openFullReport")}
-                  <ArrowUpRight />
-                </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href={`/audits/${run.result.id}`} target="_blank" />}
+              >
+                {t("openFullReport")}
+                <ArrowUpRight />
               </Button>
             </div>
-            <ReportBody audit={run.result} compact />
+            <ReportBody audit={run.result} />
           </motion.div>
         ) : null}
       </AnimatePresence>

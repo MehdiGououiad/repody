@@ -29,6 +29,8 @@ export default defineConfig([
   ...nextConfigs,
   // eslint-config-next 16.4+ detects the React version under ESLint 10 (no settings override).
   { rules: disableBiomeOwnedRules(nextConfigs) },
+  // Biome's performance/noImgElement reports the same thing, with a reason at each allowed use.
+  { rules: { "@next/next/no-img-element": "off" } },
   globalIgnores([
     ".next/**",
     "**/.next/**",
@@ -42,6 +44,8 @@ export default defineConfig([
     "deploy/**",
     "e2e/**",
     "scripts/**",
+    // The marketing site is its own project (site/package.json), linted by Biome.
+    "site/**",
     "lib/api/openapi.json",
     "lib/api/generated/**",
   ]),

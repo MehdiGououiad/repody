@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Awaitable, Callable
+from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Response
@@ -7,11 +8,14 @@ from sqlalchemy import text
 
 from repody.api.deps import SessionDep, require
 from repody.app.dashboard import get_dashboard
+from repody.app.maintenance import fail_stuck_runs
+from repody.app.operations import cancel_run, get_operations
 from repody.extraction.client import model_available
 from repody.infra import db
+from repody.infra.auth import User
 from repody.infra.redis import get_redis
 from repody.schemas.catalog import Catalog, catalog
-from repody.schemas.platform import Dashboard, Health, PlatformConfig
+from repody.schemas.platform import Dashboard, Health, Operations, PlatformConfig, Recovered
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -70,6 +74,26 @@ async def platform_config() -> PlatformConfig:
         max_pages_per_document=settings.max_pages_per_document,
         run_timeout_minutes=settings.run_timeout_minutes,
     )
+
+
+@router.get("/operations", dependencies=[require("run:read")])
+async def operations(session: SessionDep) -> Operations:
+    """The control room: runs in flight with their progress, recent failures, throughput."""
+    return await get_operations(session)
+
+
+@router.post("/operations/recover")
+async def recover(_user: Annotated[User, require("run:execute")]) -> Recovered:
+    """Run the stuck-run check now (maintenance also runs it on its schedule)."""
+    return Recovered(failed=await fail_stuck_runs())
+
+
+@router.post("/runs/{run_id}/cancel", status_code=204)
+async def cancel(
+    run_id: str, session: SessionDep, user: Annotated[User, require("run:execute")]
+) -> None:
+    """Stop a queued or running run. 409 when it has already finished."""
+    await cancel_run(session, run_id, user.subject)
 
 
 @router.get("/catalog", dependencies=[require("workflow:read")])

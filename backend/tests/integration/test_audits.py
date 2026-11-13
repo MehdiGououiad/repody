@@ -77,11 +77,13 @@ async def test_audits_are_filtered_paged_and_exported_without_a_row_limit(api, m
     failed = [
         await run(api, model_answer, {"total_amount": 2}, workflow_id="wf-a") for _ in range(3)
     ]
-    passed = await run(api, model_answer, {}, workflow_id="wf-b")
+    passed = await run(api, model_answer, {"total_amount": 1}, workflow_id="wf-b")
 
     page = (await api.get("/v1/audits", params={"limit": 2})).json()
     assert (page["total"], len(page["audits"])) == (4, 2)
     assert (await api.get("/v1/audits", params={"outcome": "passed"})).json()["total"] == 1
+    # "review" is every run a person must look at: rejected or flagged.
+    assert (await api.get("/v1/audits", params={"outcome": "review"})).json()["total"] == 3
     by_name = (await api.get("/v1/audits", params={"q": "receipt"})).json()
     assert [a["id"] for a in by_name["audits"]] == [passed]
     by_workflow = (await api.get("/v1/audits", params={"workflowId": "wf-a"})).json()
@@ -172,3 +174,39 @@ async def test_catalog(api):
     assert types["object-array"]["listable"] is False
     assert catalog["tableType"] == "object-array"
     assert set(catalog["numberTypes"]) == {"integer", "number"}
+
+
+async def test_a_report_shows_the_pages_of_its_documents(api, model_answer):
+    await api.put("/v1/workflows/wf-a", json=invoice_workflow())
+    run_id = await run(api, model_answer, {"total_amount": 1}, workflow_id="wf-a")
+    document = (await api.get(f"/v1/audits/{run_id}")).json()["documents"][0]["id"]
+
+    page = await api.get(f"/v1/runs/{run_id}/documents/{document}/pages/1")
+    assert page.status_code == 200
+    assert page.headers["content-type"] == "image/webp"
+    assert page.content[8:12] == b"WEBP"
+    assert (await api.get(f"/v1/runs/{run_id}/documents/{document}/pages/2")).status_code == 404
+    assert (await api.get(f"/v1/runs/{run_id}/documents/doc-x/pages/1")).status_code == 404
+
+
+async def test_the_dashboard_counts_outcomes_hours_and_documents(api, model_answer):
+    await api.put(
+        "/v1/workflows/wf-a",
+        json=invoice_workflow(rule("total", condition("total_amount", "==", "1"))),
+    )
+    for answer in ({"total_amount": 2}, {"total_amount": 2, "tva": 4}, {"total_amount": 1}):
+        await run(api, model_answer, answer, workflow_id="wf-a")
+
+    board = (await api.get("/v1/dashboard")).json()
+    today = board["performanceSeries"][-1]
+    assert len(board["performanceSeries"]) == 14
+    assert (today["runs"], today["passed"], today["failed"]) == (3, 1, 2)
+    assert board["sources"] == {"api": 0, "test": 3}
+    assert board["documents"]["documents"] == 3
+    assert board["documents"]["pages"] == 3
+    assert board["documents"]["byType"][0]["documentType"] == "Invoice"
+    assert sum(h["runs"] for h in board["hourly"]) == 3
+    assert board["timing"]["medianMs"] > 0
+    activity = next(a for a in board["workflowActivity"] if a["workflowId"] == "wf-a")
+    assert activity["runs"][-1] == 3
+    assert len(activity["runs"]) == 7

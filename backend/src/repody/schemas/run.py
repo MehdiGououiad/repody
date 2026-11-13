@@ -11,6 +11,9 @@ from repody.schemas.rule import Scope, Severity
 Source = Literal["test", "api"]  # a builder test run, or a run started with the API key
 RunStatus = Literal["queued", "running", "done", "failed"]  # lifecycle: repody.app.lifecycle
 Outcome = Literal["passed", "warning", "failed"]  # a done run's result
+# A filter on outcomes: one outcome, or "review" for every run a person must look at.
+OutcomeFilter = Literal["passed", "warning", "failed", "review"]
+REVIEW_OUTCOMES: tuple[Outcome, ...] = ("warning", "failed")
 RuleStatus = Literal["passed", "failed", "skipped"]
 
 
@@ -135,9 +138,15 @@ class AuditListItem(CamelModel):
     status: Outcome
     workflow_id: str
     workflow_name: str
+    source: Source
     timestamp: datetime
+    duration_ms: int
     rows: int
     failed_rules: int
+    files: list[str] = Field(description="The uploaded files' names, in workflow order.")
+    first_failed_rule: str | None = Field(
+        default=None, description="The name of the first failed rule, to say why at a glance."
+    )
 
 
 class AuditList(CamelModel):
@@ -151,7 +160,9 @@ class AuditFilter(CamelModel):
     """Which audits (finished runs) to list or export."""
 
     q: str = Field(default="", max_length=200, description="Part of the run id or workflow name.")
-    outcome: Outcome | None = None
+    outcome: OutcomeFilter | None = Field(
+        default=None, description='One outcome, or "review" for warning and failed runs.'
+    )
     workflow_id: str | None = None
     day: date | None = Field(default=None, description="Runs created that UTC day.")
 

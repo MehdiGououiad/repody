@@ -28,6 +28,9 @@ describe("theme generation", () => {
         expect(wcagContrast(hex(theme["--ink-2"]), panel)).toBeGreaterThanOrEqual(4.5);
         expect(wcagContrast(hex(theme["--accent-ink"]), panel)).toBeGreaterThanOrEqual(4.5);
         expect(wcagContrast(hex(theme["--fail-ink"]), panel)).toBeGreaterThanOrEqual(4.5);
+        for (let i = 1; i <= 8; i++) {
+          expect(wcagContrast(hex(theme[`--doc-${i}-ink`]), panel)).toBeGreaterThanOrEqual(4.5);
+        }
         // Text on the accent fill picks white or near-black, whichever reads.
         expect(
           wcagContrast(hex(theme["--on-accent"]), hex(theme["--accent"]))
@@ -35,6 +38,12 @@ describe("theme generation", () => {
       });
     }
   }
+
+  it("draws dark mode on true black for OLED screens", () => {
+    const theme = generateTheme(BRANDS[0], "dark");
+    expect(hex(theme["--canvas"])).toBe("#000000");
+    expect(wcagContrast(hex(theme["--panel"]), "#000000")).toBeLessThan(1.3);
+  });
 
   it("writes both modes and the radius scale", () => {
     const css = themeStylesheet(BRANDS[0], 6);

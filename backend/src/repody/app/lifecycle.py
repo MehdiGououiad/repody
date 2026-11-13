@@ -104,10 +104,20 @@ async def fail_run(run_id: str, error: str, *, only_if: RunStatus | None = None)
     return failed
 
 
+def _running_limit() -> timedelta:
+    return timedelta(minutes=get_settings().run_timeout_minutes) + RUNNING_GRACE
+
+
 def stuck_running(now: datetime) -> ColumnElement[bool]:
     """Running runs past their timeout and the grace minute: their worker is gone."""
-    limit = timedelta(minutes=get_settings().run_timeout_minutes) + RUNNING_GRACE
-    return (Run.status == "running") & (Run.started_at < now - limit)
+    return (Run.status == "running") & (Run.started_at < now - _running_limit())
+
+
+def is_stuck(run: Run, now: datetime) -> bool:
+    """The same test as ``stuck_running`` and ``stuck_queued``, on a loaded run."""
+    if run.status == "running":
+        return run.started_at is not None and run.started_at < now - _running_limit()
+    return run.status == "queued" and run.created_at < now - QUEUED_LIMIT
 
 
 def stuck_queued(now: datetime) -> ColumnElement[bool]:

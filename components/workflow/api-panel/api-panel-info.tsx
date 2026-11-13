@@ -4,7 +4,7 @@ import { Eye, EyeOff, Play } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import { CopyButton } from "@/components/workflow/api-panel/api-panel-copy";
 import { IngestionSection } from "@/components/workflow/ingestion-section";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
@@ -97,21 +97,21 @@ export function ApiInfoScreen({
 
       <Tabs defaultValue="curl" className={FRAME}>
         <div className="flex h-9 items-center border-b border-line ps-1.5 pe-1">
-          <TabsList>
+          <TabsList aria-label="Code">
             {(["curl", "python", "js"] as const).map((tab) => (
-              <TabsTrigger key={tab} value={tab} className="h-6 px-2 text-xs">
+              <TabsTab key={tab} value={tab} className="h-6 px-2 text-xs">
                 {t(`lang.${tab}`)}
-              </TabsTrigger>
+              </TabsTab>
             ))}
           </TabsList>
         </div>
         {(["curl", "python", "js"] as const).map((tab) => (
-          <TabsContent key={tab} value={tab} className="relative">
+          <TabsPanel key={tab} value={tab} className="relative">
             <pre className="max-h-96 overflow-auto overscroll-contain bg-field p-4 pe-12 font-mono text-xs leading-relaxed text-ink-2">
               <code translate="no">{snippets[tab]}</code>
             </pre>
             <CopyButton text={snippets[tab]} className="absolute end-2 top-2" />
-          </TabsContent>
+          </TabsPanel>
         ))}
       </Tabs>
 

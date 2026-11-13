@@ -1,23 +1,43 @@
 "use client";
 
-import { X } from "lucide-react";
-import { Dialog as DialogPrimitive } from "radix-ui";
+import {
+  Dialog,
+  DialogBackdrop as DialogBackdropPrimitive,
+  DialogClose,
+  DialogContent as DialogContentPrimitive,
+  DialogDescription as DialogDescriptionPrimitive,
+  DialogTitle as DialogTitlePrimitive,
+  DialogTrigger,
+} from "@ui-sdk/react/dialog";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, partClass } from "@/lib/utils";
 
-const Dialog = DialogPrimitive.Root;
-const DialogTrigger = DialogPrimitive.Trigger;
-const DialogPortal = DialogPrimitive.Portal;
-const DialogClose = DialogPrimitive.Close;
+export const backdropClass =
+  "fixed inset-0 z-50 bg-[oklch(0.15_0_0/0.32)] transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0 data-ending-style:duration-120 motion-reduce:transition-none";
 
-function DialogOverlay({
+export const dialogSurface =
+  "fixed start-1/2 top-[14vh] z-50 flex max-h-[76vh] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl bg-overlay text-ink shadow-pop outline-none transition-[opacity,scale] duration-200 ease-out data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-ending-style:duration-120 motion-reduce:transition-none rtl:translate-x-1/2";
+
+function DialogBackdrop({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: React.ComponentProps<typeof DialogBackdropPrimitive>) {
+  return <DialogBackdropPrimitive className={partClass(backdropClass, className)} {...props} />;
+}
+
+function DialogContent({
+  className,
+  size = "md",
+  ...props
+}: React.ComponentProps<typeof DialogContentPrimitive> & { size?: "sm" | "md" | "lg" }) {
   return (
-    <DialogPrimitive.Overlay
-      className={cn(
-        "fixed inset-0 z-50 bg-black/30 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:animate-in data-[state=open]:fade-in-0 dark:bg-black/55",
+    <DialogContentPrimitive
+      className={partClass(
+        cn(
+          dialogSurface,
+          size === "sm" && "w-[min(420px,calc(100vw-2rem))]",
+          size === "lg" && "w-[min(760px,calc(100vw-2rem))]"
+        ),
         className
       )}
       {...props}
@@ -25,47 +45,10 @@ function DialogOverlay({
   );
 }
 
-/** Centred, 200ms in from 0.97 scale, faster out. Scrolls inside, never the page behind. */
-function DialogContent({
-  className,
-  children,
-  showClose = true,
-  ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & { showClose?: boolean }) {
+function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogTitlePrimitive>) {
   return (
-    <DialogPortal>
-      <DialogOverlay />
-      <DialogPrimitive.Content
-        className={cn(
-          "fixed start-1/2 top-[12vh] z-50 grid max-h-[76vh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 gap-4 overflow-y-auto overscroll-contain rounded-xl bg-overlay p-5 text-ink shadow-pop duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.98] data-[state=closed]:duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.97] rtl:translate-x-1/2 motion-reduce:zoom-in-100",
-          className
-        )}
-        {...props}
-      >
-        {children}
-        {showClose ? (
-          <DialogPrimitive.Close className="absolute end-3 top-3 flex size-7 cursor-pointer items-center justify-center rounded-md text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink">
-            <X className="size-4" aria-hidden />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        ) : null}
-      </DialogPrimitive.Content>
-    </DialogPortal>
-  );
-}
-
-function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex flex-col gap-1 pe-8", className)} {...props} />;
-}
-
-function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return <div className={cn("flex flex-row justify-end gap-2 pt-1", className)} {...props} />;
-}
-
-function DialogTitle({ className, ...props }: React.ComponentProps<typeof DialogPrimitive.Title>) {
-  return (
-    <DialogPrimitive.Title
-      className={cn("text-base font-semibold text-ink", className)}
+    <DialogTitlePrimitive
+      className={partClass("text-[15px] font-semibold text-ink", className)}
       {...props}
     />
   );
@@ -74,19 +57,45 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
 function DialogDescription({
   className,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
-  return <DialogPrimitive.Description className={cn("text-sm text-ink-3", className)} {...props} />;
+}: React.ComponentProps<typeof DialogDescriptionPrimitive>) {
+  return (
+    <DialogDescriptionPrimitive
+      className={partClass("mt-1 text-[13px] text-ink-3", className)}
+      {...props}
+    />
+  );
+}
+
+/** Title block, body and footer: the three zones every dialog uses. */
+function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
+  return <div className={cn("px-5 pt-4 pb-3", className)} {...props} />;
+}
+
+function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
+  return <div className={cn("min-h-0 flex-1 overflow-y-auto px-5 pb-4", className)} {...props} />;
+}
+
+function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-end gap-2 border-t border-line bg-raised px-5 py-3",
+        className
+      )}
+      {...props}
+    />
+  );
 }
 
 export {
   Dialog,
+  DialogBackdrop,
+  DialogBody,
   DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogOverlay,
-  DialogPortal,
   DialogTitle,
   DialogTrigger,
 };

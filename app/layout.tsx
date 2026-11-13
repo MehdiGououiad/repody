@@ -3,7 +3,6 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
 import { Providers } from "@/components/providers/providers";
-import { Toaster } from "@/components/ui/sonner";
 import { currentBrand } from "@/lib/theme/brand";
 import { BrandProvider } from "@/lib/theme/brand-context";
 import { themeStylesheet } from "@/lib/theme/generate";
@@ -31,10 +30,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body className="min-h-dvh">
         <NextIntlClientProvider>
           <BrandProvider brand={{ name: brand.name, logoUrl: brand.logoUrl }}>
-            <Providers>
-              {children}
-              <Toaster />
-            </Providers>
+            <Providers>{children}</Providers>
           </BrandProvider>
         </NextIntlClientProvider>
       </body>

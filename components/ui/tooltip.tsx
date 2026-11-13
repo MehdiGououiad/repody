@@ -1,54 +1,37 @@
 "use client";
 
-import { Tooltip as TooltipPrimitive } from "radix-ui";
+import {
+  TooltipContent,
+  Tooltip as TooltipRoot,
+  TooltipShortcut,
+  TooltipTrigger,
+} from "@ui-sdk/react/tooltip";
 import type * as React from "react";
-import { cn } from "@/lib/utils";
 
-function TooltipProvider({
-  delayDuration = 400,
-  skipDelayDuration = 300,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
-  return (
-    <TooltipPrimitive.Provider
-      delayDuration={delayDuration}
-      skipDelayDuration={skipDelayDuration}
-      {...props}
-    />
-  );
-}
-
-function Tooltip(props: React.ComponentProps<typeof TooltipPrimitive.Root>) {
-  return (
-    <TooltipProvider>
-      <TooltipPrimitive.Root {...props} />
-    </TooltipProvider>
-  );
-}
-
-const TooltipTrigger = TooltipPrimitive.Trigger;
-
-/** Delayed in, instant once one is open (skipDelayDuration), quick out. */
-function TooltipContent({
-  className,
-  sideOffset = 6,
+/** A short hint, with the shortcut that does the same thing. Tooltips in a row open at once. */
+export function Tooltip({
+  label,
+  shortcut,
   children,
-  ...props
-}: React.ComponentProps<typeof TooltipPrimitive.Content>) {
+  side = "bottom",
+}: {
+  label: string;
+  shortcut?: string;
+  children: React.ReactElement<Record<string, unknown>>;
+  side?: "top" | "bottom" | "left" | "right";
+}) {
   return (
-    <TooltipPrimitive.Portal>
-      <TooltipPrimitive.Content
-        sideOffset={sideOffset}
-        className={cn(
-          "z-50 max-w-xs origin-(--radix-tooltip-content-transform-origin) rounded-md bg-overlay px-2 py-1 text-xs text-ink shadow-pop data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-[0.97] motion-reduce:animate-none",
-          className
-        )}
-        {...props}
+    <TooltipRoot delay={400}>
+      <TooltipTrigger render={children} />
+      <TooltipContent
+        side={side}
+        className="z-[70] flex origin-(--transform-origin) items-center gap-2 rounded-md bg-ink px-2 py-1 text-xs font-medium text-panel shadow-pop transition-[opacity,scale] duration-120 data-instant:transition-none data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:opacity-0 motion-reduce:transition-none"
       >
-        {children}
-      </TooltipPrimitive.Content>
-    </TooltipPrimitive.Portal>
+        {label}
+        {shortcut ? (
+          <TooltipShortcut className="text-2xs tabular-nums opacity-60">{shortcut}</TooltipShortcut>
+        ) : null}
+      </TooltipContent>
+    </TooltipRoot>
   );
 }
-
-export { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger };

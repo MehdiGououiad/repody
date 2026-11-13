@@ -5,13 +5,14 @@ export function cn(...inputs: ClassValue[]): string {
   return twMerge(clsx(inputs));
 }
 
-/** A run duration: "850ms", "4.2s", "3m 5s" (units are universal, no locale needed). */
+/** A run duration: "850ms", "4.2s", "3m 5s", "6h 29m" (units are universal, no locale needed). */
 export function formatDurationMs(ms: number | null | undefined): string {
   if (ms == null) return "—";
   if (ms < 1000) return `${ms}ms`;
   const s = ms / 1000;
   if (s < 60) return `${s.toFixed(1)}s`;
-  return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${Math.floor(s % 60)}s`;
+  return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
 /** Byte size with Intl unit formatting, e.g. "512 byte", "300 kB", "25 MB". */
@@ -39,4 +40,13 @@ export function formatExtractedFieldValue(value: unknown, locale: string): strin
   if (typeof value === "number") return new Intl.NumberFormat(locale).format(value);
   if (typeof value === "string") return value;
   return JSON.stringify(value);
+}
+
+type StateClass<S> = string | ((state: S) => string | undefined) | undefined;
+
+/** Our classes first, then the caller's: ui-sdk parts accept a class name or a function of state. */
+export function partClass<S>(base: string, className: StateClass<S>): StateClass<S> {
+  return typeof className === "function"
+    ? (state: S) => cn(base, className(state))
+    : cn(base, className);
 }

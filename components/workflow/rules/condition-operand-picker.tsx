@@ -40,8 +40,12 @@ export function FieldSelect({
     options.find((option) => option.name.endsWith(`.${value}`));
   const stale = value && !match;
   return (
-    <Select value={match?.name ?? value} onValueChange={onChange}>
+    <Select
+      value={match?.name ?? value}
+      onValueChange={(next: string | null) => next !== null && onChange(next)}
+    >
       <SelectTrigger
+        aria-label={placeholder}
         className={cn(
           "w-40 font-mono text-xs",
           stale && "text-fail-ink shadow-[inset_0_0_0_1px_var(--fail)]",

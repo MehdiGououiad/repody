@@ -56,18 +56,21 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
   const accent = toOklch(input.accent);
   const k = Math.min(Math.max((input.contrast - 30) / 70, 0), 1);
   const h = base.h ?? 0;
-  const surfaceC = Math.min(base.c, 0.03);
+  // Dark surfaces stay almost neutral: a tinted black reads as grey-blue on OLED panels.
+  const surfaceC = Math.min(base.c, 0.03) * (mode === "dark" ? 0.35 : 1);
   const inkC = Math.min(base.c, 0.02);
   const light = mode === "light";
 
   // Surfaces step up in lightness: canvas (behind the chrome), panel (where work happens, the
   // brightest), raised (inside a panel), overlay (menus, dialogs), field (inputs, inset).
+  // Dark is AMOLED: true black behind the chrome, near-black panels a step up, elevation by
+  // lightness and hairlines (shadows vanish on black), and off-white text that does not bloom.
   const surface = light
     ? { canvas: 0.966 - 0.012 * k, panel: 0.995, raised: 0.976, overlay: 1, field: 0.988 }
-    : { canvas: 0.168 - 0.012 * k, panel: 0.2, raised: 0.226, overlay: 0.24, field: 0.182 };
+    : { canvas: 0, panel: 0.145, raised: 0.175, overlay: 0.205, field: 0.12 };
   const ink = light
     ? [0.235 - 0.06 * k, 0.43 - 0.07 * k, 0.56 - 0.06 * k, 0.7 - 0.05 * k]
-    : [0.94 + 0.04 * k, 0.78 + 0.05 * k, 0.62 + 0.05 * k, 0.48 + 0.05 * k];
+    : [0.93 + 0.03 * k, 0.76 + 0.04 * k, 0.6 + 0.04 * k, 0.47 + 0.04 * k];
   const inkL = light ? 0.18 : 0.98; // translucent ink: lines, hover and selection washes
   const alpha = (a: number) => css(inkL, inkC, h, a);
   const panelHex = formatHex({ mode: "oklch", l: surface.panel, c: surfaceC, h });
@@ -85,7 +88,7 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
 
   // Status colours sit inside the palette: one lightness, toned-down chroma.
   const status = (hue: number) => {
-    const fill = light ? { l: 0.56, c: 0.14 } : { l: 0.7, c: 0.14 };
+    const fill = light ? { l: 0.56, c: 0.14 } : { l: 0.7, c: 0.12 };
     const inkTone = withContrast(
       { mode: "oklch", l: fill.l, c: fill.c, h: hue },
       panelHex,
@@ -102,6 +105,17 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
   const warn = status(70);
   const fail = status(25);
 
+  // Document colours: eight hues around the wheel from the accent's, at the status tone, so each
+  // document of a workflow keeps one colour across the builder, rules, runs and report.
+  const documents = Array.from({ length: 8 }, (_, i) => status(((accent.h ?? 250) + i * 45) % 360));
+  const documentTokens = Object.fromEntries(
+    documents.flatMap((d, i) => [
+      [`--doc-${i + 1}`, d.fill],
+      [`--doc-${i + 1}-ink`, d.ink],
+      [`--doc-${i + 1}-wash`, d.wash],
+    ])
+  );
+
   return {
     "--canvas": css(surface.canvas, surfaceC, h),
     "--panel": css(surface.panel, surfaceC * 0.6, h),
@@ -112,10 +126,10 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
     "--ink-2": css(ink[1], inkC, h),
     "--ink-3": css(ink[2], inkC, h),
     "--ink-4": css(ink[3], inkC, h),
-    "--line": alpha(light ? 0.075 + 0.04 * k : 0.07 + 0.04 * k),
-    "--line-strong": alpha(light ? 0.13 + 0.06 * k : 0.12 + 0.06 * k),
-    "--hover": alpha(light ? 0.035 : 0.045),
-    "--selected": alpha(light ? 0.065 : 0.08),
+    "--line": alpha(light ? 0.075 + 0.04 * k : 0.09 + 0.04 * k),
+    "--line-strong": alpha(light ? 0.13 + 0.06 * k : 0.15 + 0.06 * k),
+    "--hover": alpha(light ? 0.035 : 0.05),
+    "--selected": alpha(light ? 0.065 : 0.09),
     "--accent": css(accentFill.l, accentFill.c, accentFill.h ?? 0),
     "--accent-hover": css(accentFill.l + (light ? -0.05 : 0.05), accentFill.c, accentFill.h ?? 0),
     "--accent-ink": css(accentInk.l, accentInk.c, accentInk.h ?? 0),
@@ -131,7 +145,8 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
     "--fail": fail.fill,
     "--fail-ink": fail.ink,
     "--fail-wash": fail.wash,
-    "--shadow-color": light ? css(0.2, inkC, h, 0.1) : "oklch(0 0 0 / 0.45)",
+    ...documentTokens,
+    "--shadow-color": light ? css(0.2, inkC, h, 0.1) : "oklch(0 0 0 / 0.8)",
     // Charts: the accent leads, neutral steps follow.
     "--chart-1": css(accentFill.l, accentFill.c, accentFill.h ?? 0),
     "--chart-2": css(ink[2], inkC, h),

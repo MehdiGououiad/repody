@@ -5,6 +5,7 @@ import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
+import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkflowsList } from "@/components/workflow/workflows-list";
 import { $server } from "@/lib/api/server";
@@ -25,11 +26,10 @@ export default async function WorkflowsPage() {
       title={tNav("workflows")}
       bleed
       actions={
-        <Button asChild size="sm">
-          <Link href="/workflows/new">
-            <Plus />
-            {tNav("newWorkflow")}
-          </Link>
+        <Button variant="primary" render={<Link href="/workflows/new" />}>
+          <Plus />
+          {tNav("newWorkflow")}
+          <Kbd className="ms-1 bg-[oklch(1_0_0/0.16)] text-on-accent shadow-none">C</Kbd>
         </Button>
       }
     >

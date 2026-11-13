@@ -1,13 +1,14 @@
 "use client";
 
+import { Toggle } from "@ui-sdk/react/toggle";
+import { List } from "lucide-react";
 import { useMessages, useTranslations } from "next-intl";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
   SelectGroup,
+  SelectGroupLabel,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -46,16 +47,19 @@ export function TemplateTypeSelect({
   const text = useTypeText();
   const scalar = scalarType(value);
   const list = isListType(value);
-  if (!catalog) return <Skeleton className="h-8" />;
+  if (!catalog) return <Skeleton className="h-7" />;
   const known = catalog.templateTypes.some((type) => type.value === scalar);
   const groups = GROUPS.filter((group) => structures || group !== "structure");
 
   return (
-    <Select value={scalar} onValueChange={(next) => onChange(withList(next, list, catalog))}>
+    <Select
+      value={scalar}
+      onValueChange={(next: string | null) => next && onChange(withList(next, list, catalog))}
+    >
       <SelectTrigger
         aria-label={t("type")}
         className={cn(
-          "bg-transparent shadow-none hover:bg-hover hover:shadow-none data-[state=open]:bg-hover",
+          "w-full bg-transparent shadow-none hover:bg-hover hover:shadow-none data-open:bg-hover",
           className
         )}
       >
@@ -67,31 +71,35 @@ export function TemplateTypeSelect({
       <SelectContent className="w-72">
         {groups.map((group) => (
           <SelectGroup key={group}>
-            <SelectLabel>{t(`typeGroups.${group}`)}</SelectLabel>
+            <SelectGroupLabel>{t(`typeGroups.${group}`)}</SelectGroupLabel>
             {catalog.templateTypes
               .filter((type) => type.group === group)
               .map((type) => (
                 <SelectItem
                   key={type.value}
                   value={type.value}
-                  textValue={text(type.value, "label")}
+                  label={text(type.value, "label")}
                   className="h-auto items-start py-1.5"
                 >
                   <span className="flex flex-col">
-                    <span className="text-sm text-ink">{text(type.value, "label")}</span>
+                    <span className="text-[13px] text-ink">{text(type.value, "label")}</span>
                     <span className="text-xs text-ink-3">{text(type.value, "description")}</span>
                   </span>
                 </SelectItem>
               ))}
           </SelectGroup>
         ))}
-        {known ? null : <SelectItem value={scalar}>{scalar}</SelectItem>}
+        {known ? null : (
+          <SelectItem value={scalar} label={scalar}>
+            {scalar}
+          </SelectItem>
+        )}
       </SelectContent>
     </Select>
   );
 }
 
-/** The "list of" toggle for leaf types (structures cannot be lists). */
+/** "List of": a small toggle beside the type, for leaf types (structures cannot be lists). */
 export function ListToggle({
   value,
   onChange,
@@ -106,20 +114,19 @@ export function ListToggle({
   const listable = catalog?.templateTypes.find(
     (type) => type.value === scalarType(value)
   )?.listable;
-  if (!catalog || !listable) return <span className="hidden md:block" />;
+  if (!catalog || !listable) return <span className={className} />;
   return (
-    <div
-      className={cn("flex items-center gap-2 px-2 text-sm text-ink-3 md:justify-center", className)}
+    <Toggle
+      pressed={isListType(value)}
+      onPressedChange={(on) => onChange(withList(value, on, catalog))}
+      aria-label={t("listModeLabel")}
       title={t("listModeHint")}
+      className={cn(
+        "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-4 transition-colors duration-100 hover:bg-hover hover:text-ink-2 data-pressed:bg-accent-wash data-pressed:text-accent-ink [&_svg]:size-3.5",
+        className
+      )}
     >
-      <Checkbox
-        aria-label={t("listModeLabel")}
-        checked={isListType(value)}
-        onCheckedChange={(on) => onChange(withList(value, on === true, catalog))}
-      />
-      <span className="md:sr-only" aria-hidden>
-        {t("listModeLabel")}
-      </span>
-    </div>
+      <List aria-hidden />
+    </Toggle>
   );
 }

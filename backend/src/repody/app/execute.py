@@ -110,7 +110,13 @@ async def _process(run_id: str) -> None:
             field.value is not None for doc in run.documents for field in doc.fields
         )
         run.progress = tracker.complete()
-        outcome = _outcome(results)
+        outcome = run_outcome(
+            results,
+            extraction_complete=all(
+                doc.extraction and not doc.extraction.get("error") for doc in run.documents
+            )
+            and (run.fields_extracted > 0 or not any(doc.fields for doc in run.documents)),
+        )
         if not await move_run(
             session, run_id, "done", outcome=outcome, finished_at=datetime.now(UTC)
         ):
@@ -166,11 +172,13 @@ async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tra
     return meta.extraction_ms
 
 
-def _outcome(results: list[RuleOutcome]) -> Outcome:
+def run_outcome(results: list[RuleOutcome], *, extraction_complete: bool) -> Outcome:
+    """Failed when a rejecting rule fails; needs review when another rule fails, or when the
+    model read nothing or a document could not be read: a run is never green on no evidence."""
     failed = [r for r in results if r.status == "failed"]
     if any(r.rule.severity == "reject" for r in failed):
         return "failed"
-    return "warning" if failed else "passed"
+    return "warning" if failed or not extraction_complete else "passed"
 
 
 def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> None:

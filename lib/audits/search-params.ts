@@ -9,11 +9,13 @@ import {
 
 export const PAGE_SIZE = 25;
 export const OUTCOMES = ["passed", "warning", "failed"] as const;
+/** One outcome, or "review": every run a person must look at (flagged or rejected). */
+export const OUTCOME_FILTERS = [...OUTCOMES, "review"] as const;
 
 /** The audits page's filters and page, as URL search params (shared by server and client). */
 export const auditSearchParams = {
   q: parseAsString.withDefault(""),
-  outcome: parseAsStringLiteral(OUTCOMES),
+  outcome: parseAsStringLiteral(OUTCOME_FILTERS),
   workflow: parseAsString,
   day: parseAsIsoDate,
   page: parseAsInteger.withDefault(1),

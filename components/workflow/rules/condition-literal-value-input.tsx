@@ -34,8 +34,11 @@ export function LiteralValueInput({
 
   if (inputKind === "boolean") {
     return (
-      <Select value={value || "true"} onValueChange={onChange}>
-        <SelectTrigger className="w-32">
+      <Select
+        value={value || "true"}
+        onValueChange={(next: string | null) => next !== null && onChange(next)}
+      >
+        <SelectTrigger className="w-32" aria-label={t("right")}>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
