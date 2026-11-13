@@ -1,8 +1,9 @@
 import type { Locale } from "@/lib/site";
 
 /**
- * A real screen of the product in a quiet window frame, in the reader's language and colour
- * scheme. The images are captured from the running product (1440 × 900 at 2×, WebP).
+ * A real screen of the product in a quiet window frame, in the reader's language and theme (the
+ * header's switch). Captured from the running product by scripts/capture-site-screens.mjs
+ * (1440 × 900 at 2×, WebP).
  */
 export function Screenshot({
   name,
@@ -28,19 +29,21 @@ export function Screenshot({
         <span className="size-2.5 rounded-full bg-line-strong" />
         <span className="size-2.5 rounded-full bg-line-strong" />
       </div>
-      <picture>
-        <source srcSet={`${base}-dark.webp`} media="(prefers-color-scheme: dark)" />
+      {/* Both themes, the one the page shows displayed (an image display:none is not fetched). */}
+      {(["light", "dark"] as const).map((theme) => (
+        // biome-ignore lint/performance/noImgElement: a static export serves these WebP files as is.
         <img
-          src={`${base}-light.webp`}
+          key={theme}
+          src={`${base}-${theme}.webp`}
           alt={alt}
           width={2000}
           height={1250}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
-          className="block h-auto w-full"
+          className={`h-auto w-full ${theme === "dark" ? "hidden dark:block" : "block dark:hidden"}`}
         />
-      </picture>
+      ))}
     </figure>
   );
 }
