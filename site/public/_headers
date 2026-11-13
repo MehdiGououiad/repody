@@ -1,0 +1,13 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Fingerprinted by Next: safe to cache for a year.
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/screens/*
+  Cache-Control: public, max-age=604800

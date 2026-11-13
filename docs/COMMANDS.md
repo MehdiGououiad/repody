@@ -85,6 +85,18 @@ Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
 Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 
+## Marketing site (repody.com)
+
+A separate project in `site/` (own lockfile), a static export served by Cloudflare Workers.
+Plan and structure: [docs/site/plan.md](site/plan.md).
+
+| Command (in `site/`) | When |
+|---------|------|
+| `pnpm install` | Once |
+| `pnpm dev` | Local preview on http://localhost:3200 |
+| `pnpm build` | Static export to `site/out/` |
+| `pnpm deploy` | Build and deploy with Wrangler (also done by `.github/workflows/site.yml` on master) |
+
 ## Model serve (advanced / standalone)
 
 Usually started by `pnpm platform`. Manual:

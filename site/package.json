@@ -8,7 +8,8 @@
     "dev": "next dev -p 3200",
     "prebuild": "node scripts/sync-shared.mjs",
     "build": "next build",
-    "typecheck": "node scripts/sync-shared.mjs && tsc --noEmit"
+    "typecheck": "node scripts/sync-shared.mjs && tsc --noEmit",
+    "deploy": "pnpm build && wrangler deploy"
   },
   "dependencies": {
     "culori": "^4.0.2",
@@ -25,6 +26,7 @@
     "@types/react": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
     "tailwindcss": "^4.3.5",
-    "typescript": "npm:@typescript/typescript6@^6.0.2"
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "wrangler": "^4.161.0"
   }
 }
