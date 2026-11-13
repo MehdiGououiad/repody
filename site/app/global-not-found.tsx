@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ButtonLink } from "@/components/ui";
+import { SiteTheme } from "@/components/theme-toggle";
 import { siteStylesheet } from "@/lib/theme";
 import "./globals.css";
 
@@ -11,12 +12,13 @@ export const metadata: Metadata = { title: "404 · Repody", robots: { index: fal
 /** Any unknown address, in both languages: the reader's language is not known here. */
 export default function GlobalNotFound() {
   return (
-    <html lang="fr" className={inter.variable}>
+    <html lang="fr" className={inter.variable} suppressHydrationWarning>
       <head>
         <style>{siteStylesheet()}</style>
       </head>
       <body>
-        <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col justify-center gap-6 px-5">
+        <SiteTheme>
+          <main className="mx-auto flex min-h-dvh max-w-[640px] flex-col justify-center gap-6 px-5">
           <p className="font-mono text-sm text-ink-4">404</p>
           <h1 className="text-headline font-semibold text-ink">
             Cette page n'existe pas.
@@ -28,7 +30,8 @@ export default function GlobalNotFound() {
               Home
             </ButtonLink>
           </div>
-        </main>
+          </main>
+        </SiteTheme>
       </body>
     </html>
   );

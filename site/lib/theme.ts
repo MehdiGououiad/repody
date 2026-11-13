@@ -12,16 +12,17 @@ const block = (selector: string, tokens: Record<string, string>) =>
     .map(([name, value]) => `${name}:${value}`)
     .join(";")}}`;
 
-/** The same tokens as the product, light by default and dark when the reader's system is. */
+/** The same tokens as the product: light, and dark under `.dark` (the reader's system until they
+ * choose, see components/theme-toggle.tsx). */
 export function siteStylesheet(): string {
   const radius = {
-    "--radius-sm": "4px",
-    "--radius-md": "6px",
-    "--radius-lg": "8px",
-    "--radius-xl": "12px",
+    "--radius-sm": "2px",
+    "--radius-md": "4px",
+    "--radius-lg": "6px",
+    "--radius-xl": "10px",
   };
   return [
     block(":root", { ...radius, ...generateTheme(REPODY_BRAND, "light"), "color-scheme": "light" }),
-    `@media (prefers-color-scheme: dark){${block(":root", { ...generateTheme(REPODY_BRAND, "dark"), "color-scheme": "dark" })}}`,
+    block(".dark", { ...generateTheme(REPODY_BRAND, "dark"), "color-scheme": "dark" }),
   ].join("");
 }

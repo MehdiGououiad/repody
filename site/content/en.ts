@@ -20,6 +20,8 @@ export const en: Dict = {
     demo: "Request a demo",
     playground: "Try the playground for free",
     playgroundShort: "Playground",
+    toLight: "Switch to light mode",
+    toDark: "Switch to dark mode",
     seePlatform: "See the platform",
     learnMore: "Learn more",
     menu: "Menu",

@@ -4,6 +4,7 @@ import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/content";
 import { href, type Locale, type PageKey, SITE } from "@/lib/site";
 
@@ -84,6 +85,7 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dict["common"] })
           >
             {other}
           </Link>
+          <ThemeToggle toLight={t.toLight} toDark={t.toDark} />
           <a
             href={SITE.playgroundUrl}
             className="hidden h-8 items-center rounded-[4px] px-3 text-sm font-medium text-ink shadow-[0_0_0_1px_var(--line-strong)] transition-colors duration-100 hover:bg-hover md:inline-flex"
