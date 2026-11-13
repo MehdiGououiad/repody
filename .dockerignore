@@ -25,6 +25,7 @@ docs/
 scripts/
 src/
 e2e/
+site/
 .github/
 .agents/
 .cursor/

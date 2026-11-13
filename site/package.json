@@ -1,0 +1,30 @@
+{
+  "name": "repody-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "node scripts/sync-shared.mjs",
+    "predev": "node scripts/sync-shared.mjs",
+    "dev": "next dev -p 3200",
+    "prebuild": "node scripts/sync-shared.mjs",
+    "build": "next build",
+    "typecheck": "node scripts/sync-shared.mjs && tsc --noEmit"
+  },
+  "dependencies": {
+    "culori": "^4.0.2",
+    "lucide-react": "^1.71.0",
+    "motion": "^14.13.0",
+    "next": "16.4.6",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/culori": "^4.0.1",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "tailwindcss": "^4.3.5",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  }
+}

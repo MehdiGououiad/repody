@@ -1,0 +1,10 @@
+# The marketing site is its own project: its own lockfile, so Next treats site/ as the root.
+packages:
+  - "."
+
+minimumReleaseAge: 0
+
+allowBuilds:
+  "@parcel/watcher": true
+  "@tailwindcss/oxide": true
+  sharp: true

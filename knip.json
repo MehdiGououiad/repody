@@ -12,7 +12,7 @@
     "deploy/scripts/**/*.mjs"
   ],
   "project": ["**/*.{ts,tsx,mjs,css}"],
-  "ignore": ["components/ui/**"],
+  "ignore": ["components/ui/**", "site/**"],
   "ignoreExportsUsedInFile": true,
   "ignoreBinaries": ["helm", "tasklist", "trivy", "uv"]
 }

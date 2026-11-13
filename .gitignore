@@ -79,3 +79,9 @@ backend/.venv/
 /e2e/fixtures/documents/espace-transit-facture.*
 # pnpm audit output
 /dist-security-pnpm.*
+
+# repody.com: its own project (dependencies, build, synced files)
+/site/node_modules/
+/site/out/
+/site/.next/
+/site/lib/shared/
