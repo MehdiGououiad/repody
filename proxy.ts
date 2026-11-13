@@ -9,6 +9,13 @@ import {
   safeCallbackUrl,
 } from "@/lib/auth/public-paths";
 import { accessToken, oidcEnabled } from "@/lib/auth/server";
+import {
+  demoMode,
+  VISITOR_COOKIE,
+  VISITOR_COOKIE_SECONDS,
+  VISITOR_HEADER,
+  visitorId,
+} from "@/lib/auth/visitor";
 
 type Token = Awaited<ReturnType<typeof accessToken>>;
 
@@ -65,8 +72,39 @@ function redirectToLogin(request: NextRequest): NextResponse {
   return NextResponse.redirect(login);
 }
 
+/**
+ * The playground: no sign-in. The browser's visitor id (a new one on its first visit) goes to
+ * the API with every call, server-rendered pages included; a caller cannot choose another's.
+ */
+function playground(request: NextRequest): NextResponse {
+  const path = request.nextUrl.pathname;
+  if (path === "/login") return NextResponse.redirect(new URL("/dashboard", request.url));
+  const known = visitorId(request.cookies.get(VISITOR_COOKIE)?.value);
+  const visitor = known ?? crypto.randomUUID();
+  const headers = new Headers(request.headers);
+  headers.set(VISITOR_HEADER, visitor);
+  if (!known) {
+    const cookies = request.headers.get("cookie");
+    headers.set("cookie", `${cookies ? `${cookies}; ` : ""}${VISITOR_COOKIE}=${visitor}`);
+  }
+  const response = path.startsWith("/api/v1/")
+    ? toBackend(request, headers)
+    : NextResponse.next({ request: { headers } });
+  if (!known) {
+    response.cookies.set(VISITOR_COOKIE, visitor, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      path: "/",
+      maxAge: VISITOR_COOKIE_SECONDS,
+    });
+  }
+  return response;
+}
+
 export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  if (demoMode) return playground(request);
   if (!oidcEnabled) {
     return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
   }

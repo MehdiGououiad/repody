@@ -47,6 +47,9 @@ class Workflow(Base):
     deployed_at: Mapped[UtcDateTime | None]
     api_key_hash: Mapped[str | None]
     api_key_hint: Mapped[str | None]
+    # Demo mode: the playground visitor who owns it; None for everyone else's workflows (and,
+    # in the playground, the shared examples).
+    visitor_id: Mapped[str | None] = mapped_column(index=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
 

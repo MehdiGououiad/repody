@@ -12,17 +12,28 @@ import jwt
 from repody.settings import get_settings
 
 Permission = Literal[
-    "workflow:read", "workflow:write", "workflow:delete", "run:read", "run:execute", "metrics:read"
+    "workflow:read",
+    "workflow:write",
+    "workflow:deploy",
+    "workflow:delete",
+    "run:read",
+    "run:execute",
+    "metrics:read",
 ]
 
 _VIEWER: frozenset[str] = frozenset({"workflow:read", "run:read"})
-_OPERATOR = _VIEWER | {"workflow:write", "run:execute", "metrics:read"}
+_OPERATOR = _VIEWER | {"workflow:write", "workflow:deploy", "run:execute", "metrics:read"}
 _ADMIN = _OPERATOR | {"workflow:delete"}
+# The playground's anonymous visitor: builds and deletes its own workflows, reads the examples,
+# never runs or publishes (both cost model time: the API answers 402, contact us for credits).
+_DEMO_VISITOR = _VIEWER | {"workflow:write", "workflow:delete", "metrics:read"}
+DEMO_VISITOR_ROLE = "demo_visitor"
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "viewer": _VIEWER,
     "operator": _OPERATOR,
     "admin": _ADMIN,
     "platform_admin": _ADMIN,
+    DEMO_VISITOR_ROLE: _DEMO_VISITOR,
 }
 
 
@@ -33,6 +44,11 @@ class User:
 
     def can(self, permission: Permission) -> bool:
         return any(permission in ROLE_PERMISSIONS.get(role, ()) for role in self.roles)
+
+    @property
+    def visitor(self) -> str | None:
+        """The playground visitor id (demo mode), whose workflows this user sees; else None."""
+        return self.subject if DEMO_VISITOR_ROLE in self.roles else None
 
 
 DEV_USER = User(subject="dev-local", roles=frozenset({"platform_admin"}))
@@ -73,7 +89,9 @@ def user_from_token(token: str) -> User:
         raise InvalidTokenError("Not an access token.")
     roles = {*((claims.get("realm_access") or {}).get("roles") or [])}
     roles |= {str(group).lstrip("/") for group in claims.get("groups") or []}
-    return User(subject=str(claims["sub"]), roles=frozenset(roles) & ROLE_PERMISSIONS.keys())
+    # Only demo mode makes visitors (repody.api.deps); a token cannot claim that role.
+    signed_in_roles = ROLE_PERMISSIONS.keys() - {DEMO_VISITOR_ROLE}
+    return User(subject=str(claims["sub"]), roles=frozenset(roles) & signed_in_roles)
 
 
 def hash_api_key(key: str) -> str:

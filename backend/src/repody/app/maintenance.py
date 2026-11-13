@@ -1,5 +1,5 @@
 """Periodic upkeep: fail runs that are stuck, resend tasks that were never sent, and delete runs
-past their retention.
+past their retention (and, in the playground, visitors' old workflows).
 
 The Taskiq scheduler (`taskiq scheduler repody.worker:scheduler`, one replica) sends the
 `maintenance` task every AUDIT_MAINTENANCE_INTERVAL_SECONDS; one worker runs it each time."""
@@ -10,6 +10,7 @@ import structlog
 
 from repody.app.lifecycle import failure, move_runs, stuck_queued, stuck_running
 from repody.app.runs import purge_expired
+from repody.app.workflows import purge_visitor_workflows
 from repody.infra import db, queue
 
 log = structlog.get_logger(__name__)
@@ -43,5 +44,14 @@ async def upkeep() -> None:
     failed = await fail_stuck_runs()
     resent = await queue.redispatch_lost()
     purged = await purge_expired()
-    if failed or resent or purged:
-        log.info("maintenance", runs_failed=failed, runs_resent=resent, runs_purged=purged)
+    async with db.session_factory() as session:
+        visitors = await purge_visitor_workflows(session)
+        await session.commit()
+    if failed or resent or purged or visitors:
+        log.info(
+            "maintenance",
+            runs_failed=failed,
+            runs_resent=resent,
+            runs_purged=purged,
+            visitor_workflows_purged=visitors,
+        )

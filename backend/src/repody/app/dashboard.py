@@ -179,7 +179,7 @@ async def _audits(session: AsyncSession, *, failed: bool, limit: int) -> list[Au
     ]
 
 
-async def get_dashboard(session: AsyncSession) -> Dashboard:
+async def get_dashboard(session: AsyncSession, *, visitor: str | None = None) -> Dashboard:
     both_weeks = last_days(14)
     previous_week, week = both_weeks[:7], both_weeks[7:]
     daily = await daily_counts(session, both_weeks[0])
@@ -207,7 +207,7 @@ async def get_dashboard(session: AsyncSession) -> Dashboard:
     )
     total_failures = sum(failures.values())
     since = midnight(week[0])
-    workflows = await list_workflows(session, limit=WORKFLOWS)
+    workflows = await list_workflows(session, limit=WORKFLOWS, visitor=visitor)
     return Dashboard(
         kpis=[
             _kpi(
