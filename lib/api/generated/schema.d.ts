@@ -78,6 +78,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/workflows/{workflow_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate Workflow
+         * @description A new draft with the same documents and rules, named ``body.name``.
+         */
+        post: operations["duplicate_workflow_v1_workflows__workflow_id__duplicate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workflows/{workflow_id}/deploy": {
         parameters: {
             query?: never;
@@ -1643,6 +1663,12 @@ export interface components {
             /** Lastrun */
             lastRun: string | null;
             apiStats: components["schemas"]["ApiStats"] | null;
+            /**
+             * Readonly
+             * @description A playground example: duplicate it to edit (demo mode).
+             * @default false
+             */
+            readOnly: boolean;
         };
     };
     responses: never;
@@ -1669,6 +1695,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1853,6 +1888,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    duplicate_workflow_v1_workflows__workflow_id__duplicate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWorkflow"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -2191,6 +2261,15 @@ export interface operations {
                     "application/json": components["schemas"]["PlatformConfig"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     operations_v1_operations_get: {
@@ -2211,6 +2290,15 @@ export interface operations {
                     "application/json": components["schemas"]["Operations"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     recover_v1_operations_recover_post: {
@@ -2229,6 +2317,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Recovered"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2280,6 +2377,15 @@ export interface operations {
                     "application/json": components["schemas"]["Catalog"];
                 };
             };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
         };
     };
     dashboard_v1_dashboard_get: {
@@ -2298,6 +2404,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -841,5 +841,20 @@
     "keep": "Laisser tourner",
     "cancelFailed": "Impossible d’arrêter l’exécution",
     "recoverFailed": "Impossible de libérer les exécutions bloquées"
+  },
+  "playground": {
+    "label": "Playground",
+    "banner": "Explorez Repody librement : vos workflows restent liés à ce navigateur 14 jours. L’extraction demande des crédits.",
+    "getCredits": "Obtenir des crédits",
+    "creditsTitle": "Passez à l’extraction",
+    "creditsHint": "Le playground sert à configurer des workflows et à explorer des rapports d’exemple. Pour extraire vos propres documents ou publier l’API, contactez-nous : nous vous ouvrons des crédits.",
+    "contactForm": "Formulaire de contact",
+    "whatsapp": "WhatsApp",
+    "keepExploring": "Continuer à explorer",
+    "noAccount": "Sans compte",
+    "example": "Exemple partagé",
+    "exampleHint": "Modifiez-le librement : votre copie est créée à l’enregistrement.",
+    "copyName": "{name} (ma copie)",
+    "copied": "Votre copie est enregistrée"
   }
 }

@@ -6,9 +6,11 @@ import { dequal } from "dequal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useEffectEvent, useState } from "react";
+import { usePlayground } from "@/components/playground/playground";
 import type { BuilderStep } from "@/components/workflow/builder/step-nav";
 import { $api } from "@/lib/api/browser";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
+import { openCredits } from "@/lib/playground/credits";
 import { errorMessage } from "@/lib/query/get-query-client";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 
@@ -26,9 +28,10 @@ interface Draft {
  */
 export type BuilderSync = "idle" | "saving" | "deploying";
 
-/** What the header says about the draft: in flight, on the server, edited, or refused. */
+/** What the header says about the draft: in flight, on the server, edited, refused, or a
+ * playground example (shared: saving makes the visitor's own copy). */
 export type SaveState =
-  | { kind: "saving" | "deploying" | "saved" | "unsaved" }
+  | { kind: "saving" | "deploying" | "saved" | "unsaved" | "example" }
   | { kind: "failed"; reason: string };
 
 /** A builder test run: the files chosen per document (kept across runs) and the last run. */
@@ -42,6 +45,8 @@ export type TestSession = { files: Record<string, File>; runId: string | null };
 export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "edit") {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
+  const tPlayground = useTranslations("playground");
+  const playground = usePlayground();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -65,19 +70,22 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
 
   const saveMutation = $api.useMutation("put", "/v1/workflows/{workflow_id}");
   const deployMutation = $api.useMutation("post", "/v1/workflows/{workflow_id}/deploy");
+  const copyMutation = $api.useMutation("post", "/v1/workflows/{workflow_id}/duplicate");
   const sync: BuilderSync = deployMutation.isPending
     ? "deploying"
-    : saveMutation.isPending
+    : saveMutation.isPending || copyMutation.isPending
       ? "saving"
       : "idle";
   const saveState: SaveState =
     sync !== "idle"
       ? { kind: sync }
-      : !dirty
-        ? { kind: "saved" }
-        : saveError
-          ? { kind: "failed", reason: saveError }
-          : { kind: "unsaved" };
+      : workflow.readOnly && !dirty
+        ? { kind: "example" }
+        : !dirty
+          ? { kind: "saved" }
+          : saveError
+            ? { kind: "failed", reason: saveError }
+            : { kind: "unsaved" };
   useUnsavedChangesWarning(dirty);
 
   const update =
@@ -105,9 +113,30 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     return workflow.id;
   };
 
+  /** A shared example (playground): the visitor's own copy, with their edits, opened. */
+  const saveAsCopy = async () => {
+    const details = { description: workflow.description, owner: workflow.owner };
+    const copy = await copyMutation.mutateAsync({
+      params: { path: { workflow_id: workflow.id } },
+      body: { name: tPlayground("copyName", { name: draft.name || workflow.name }), ...details },
+    });
+    await saveMutation.mutateAsync({
+      params: { path: { workflow_id: copy.id } },
+      body: { ...draft, name: copy.name, ...details },
+    });
+    void queryClient.invalidateQueries({ queryKey: ["get", "/v1/workflows"] });
+    toast.success(tPlayground("copied"));
+    router.replace(`/workflows/${copy.id}/edit`);
+  };
+
   const handleSaveDraft = async ({ silent = false } = {}) => {
     if (sync !== "idle") return;
+    if (workflow.readOnly && silent) return; // examples are copied on an explicit save
     try {
+      if (workflow.readOnly) {
+        await saveAsCopy();
+        return;
+      }
       await persist({ navigate: !silent });
       if (!silent) {
         toast.success(t("toasts.draftSaved"), { description: t("toasts.draftSavedDetail") });
@@ -120,6 +149,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   };
 
   const handleDeploy = async () => {
+    if (playground) {
+      openCredits(); // the playground does not publish
+      return;
+    }
     if (sync !== "idle") return;
     try {
       const id = await persist({ navigate: false });
@@ -136,10 +169,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   // Autosave a saved workflow shortly after the last edit, when nothing else is in flight.
   const autosave = useEffectEvent(() => void handleSaveDraft({ silent: true }));
   useEffect(() => {
-    if (!persisted || !dirty || sync !== "idle") return;
+    if (!persisted || !dirty || sync !== "idle" || workflow.readOnly) return;
     const timer = window.setTimeout(autosave, AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [persisted, dirty, sync, draft]);
+  }, [persisted, dirty, sync, draft, workflow.readOnly]);
 
   return {
     step,

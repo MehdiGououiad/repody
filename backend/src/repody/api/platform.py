@@ -6,7 +6,7 @@ import structlog
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
-from repody.api.deps import SessionDep, require
+from repody.api.deps import SessionDep, VisitorScope, require
 from repody.app.dashboard import get_dashboard
 from repody.app.maintenance import fail_stuck_runs
 from repody.app.operations import cancel_run, get_operations
@@ -66,8 +66,9 @@ async def platform_config() -> PlatformConfig:
     settings = get_settings()
     return PlatformConfig(
         served_model=settings.llamacpp_served_model,
-        llamacpp_base_url=settings.llamacpp_base_url,
-        model_available=await model_available(),
+        # The public playground does not say where the model runs, nor wake it.
+        llamacpp_base_url="" if settings.demo_mode else settings.llamacpp_base_url,
+        model_available=None if settings.demo_mode else await model_available(),
         cache_enabled=settings.extraction_cache_ttl_seconds > 0,
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,
@@ -103,5 +104,5 @@ async def get_catalog() -> Catalog:
 
 
 @router.get("/dashboard", dependencies=[require("metrics:read")])
-async def dashboard(session: SessionDep) -> Dashboard:
-    return await get_dashboard(session)
+async def dashboard(session: SessionDep, visitor: VisitorScope) -> Dashboard:
+    return await get_dashboard(session, visitor=visitor)

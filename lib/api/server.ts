@@ -1,5 +1,6 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import createFetchClient from "openapi-fetch";
 import createQueryClient from "openapi-react-query";
@@ -8,6 +9,7 @@ import { ApiError, apiErrorMessage } from "@/lib/api/api-error";
 import { backendOrigin } from "@/lib/api/backend-origin";
 import type { paths } from "@/lib/api/generated/schema";
 import { verifySession } from "@/lib/auth/dal";
+import { demoMode, VISITOR_HEADER } from "@/lib/auth/visitor";
 
 const TIMEOUT_MS = 10_000;
 
@@ -20,6 +22,9 @@ serverFetch.use({
     const token = await verifySession();
     const forwarded = new Headers(request.headers);
     if (token) forwarded.set("Authorization", `Bearer ${token}`);
+    // The playground's visitor, as the proxy named them for this request.
+    const visitor = demoMode ? (await headers()).get(VISITOR_HEADER) : null;
+    if (visitor) forwarded.set(VISITOR_HEADER, visitor);
     const signal = AbortSignal.any([request.signal, AbortSignal.timeout(TIMEOUT_MS)]);
     return new Request(request, { headers: forwarded, signal });
   },

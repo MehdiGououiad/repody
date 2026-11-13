@@ -59,6 +59,15 @@ class Settings(BaseSettings):
     oidc_audience: str | None = None
     oidc_jwks_url: str | None = None
 
+    # Demo mode: the public playground (a deployment of its own, with its own database). No
+    # sign-in: each browser is an anonymous visitor (the web app's visitor cookie) who sees the
+    # shared examples and edits only their own workflows; running and publishing answer 402
+    # (the web app says how to get credits). Visitors' workflows are deleted after
+    # demo_retention_days.
+    demo_mode: bool = False
+    demo_retention_days: PositiveInt = 14
+    demo_max_workflows: PositiveInt = 30  # per visitor
+
     # Uploads
     max_upload_bytes: PositiveInt = 25 * 1024 * 1024
     max_upload_files: PositiveInt = 20
@@ -104,6 +113,8 @@ class Settings(BaseSettings):
                 raise ValueError("AUDIT_OIDC_ENABLED must be true in production.")
             if not self.oidc_audience:
                 raise ValueError("AUDIT_OIDC_AUDIENCE is required in production.")
+        if self.demo_mode and self.oidc_enabled:
+            raise ValueError("AUDIT_DEMO_MODE has no sign-in: set AUDIT_OIDC_ENABLED=false.")
         if self.inference_timeout_seconds > self.run_timeout_minutes * 60:
             raise ValueError("AUDIT_INFERENCE_TIMEOUT_SECONDS must fit in the run timeout.")
         return self

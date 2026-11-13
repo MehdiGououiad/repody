@@ -1,7 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import { AccountProvider } from "@/components/auth/account-context";
+import { PlaygroundBanner, PlaygroundProvider } from "@/components/playground/playground";
 import { Overlays } from "@/components/ui/overlays";
 import type { Account } from "@/lib/auth/account";
+import { playgroundContact } from "@/lib/playground/config";
 import { AppSidebar } from "./app-sidebar";
 import { GlobalShortcuts } from "./global-shortcuts";
 import { MobileNav } from "./mobile-nav";
@@ -20,26 +22,29 @@ export async function AppShell({
   const t = await getTranslations("common");
   return (
     <AccountProvider value={account}>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:start-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-overlay focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop"
-      >
-        {t("skipToContent")}
-      </a>
-      <div className="flex h-dvh overflow-hidden bg-canvas">
-        <AppSidebar />
-        <div className="flex min-w-0 flex-1 flex-col md:py-1.5 md:pe-1.5">
-          <MobileNav />
-          <main
-            id="main-content"
-            className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-panel md:rounded-lg md:shadow-panel"
-          >
-            {children}
-          </main>
+      <PlaygroundProvider contact={playgroundContact()}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:start-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-overlay focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop"
+        >
+          {t("skipToContent")}
+        </a>
+        <div className="flex h-dvh overflow-hidden bg-canvas">
+          <AppSidebar />
+          <div className="flex min-w-0 flex-1 flex-col md:py-1.5 md:pe-1.5">
+            <MobileNav />
+            <PlaygroundBanner />
+            <main
+              id="main-content"
+              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-panel md:rounded-lg md:shadow-panel"
+            >
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
-      <GlobalShortcuts />
-      <Overlays />
+        <GlobalShortcuts />
+        <Overlays />
+      </PlaygroundProvider>
     </AccountProvider>
   );
 }

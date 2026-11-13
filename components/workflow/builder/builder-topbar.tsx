@@ -35,6 +35,7 @@ export function BuilderTopbar({
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
+  const tPlayground = useTranslations("playground");
   const saveHint = useShortcutHint("mod+s");
   useShortcut("mod+s", onSaveDraft, { allowInInput: true, description: tCommon("saveDraft") });
 
@@ -100,6 +101,8 @@ export function BuilderTopbar({
                 {t("notSaved")}
                 <span className="sr-only">: {saveState.reason}</span>
               </>
+            ) : saveState.kind === "example" ? (
+              <span title={tPlayground("exampleHint")}>{tPlayground("example")}</span>
             ) : saveState.kind === "unsaved" ? (
               <>
                 <Dot className="size-3" aria-hidden />

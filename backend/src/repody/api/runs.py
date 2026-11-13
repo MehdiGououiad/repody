@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, 
 from fastapi.responses import Response, StreamingResponse
 from pydantic import Json
 
-from repody.api.deps import OptionalUser, SessionDep, TokenDep, require
+from repody.api.deps import CREDITS, OptionalUser, SessionDep, TokenDep, require
 from repody.app import runs, workflows
 from repody.infra.auth import api_key_matches, hash_api_key
 from repody.schemas.run import (
@@ -52,6 +52,8 @@ async def start_run(
     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed.
 
     A caller that is neither gets 401 whether or not the workflow exists."""
+    if user is not None and user.visitor:
+        raise HTTPException(402, CREDITS)  # the playground runs nothing
     wf = await workflows.find(session, workflow_id)
     caller: tuple[Source, str] | None = None
     if wf is not None and token and api_key_matches(token, wf.api_key_hash):

@@ -124,6 +124,9 @@ class WorkflowOut(WorkflowIn):
     success_rate: float = 0.0
     last_run: datetime | None = None
     api_stats: ApiStats | None = None
+    read_only: bool = Field(
+        default=False, description="A playground example: duplicate it to edit (demo mode)."
+    )
 
 
 class WorkflowList(CamelModel):

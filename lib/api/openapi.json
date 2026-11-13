@@ -22,6 +22,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -290,6 +300,65 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/{workflow_id}/duplicate": {
+      "post": {
+        "tags": [
+          "workflows"
+        ],
+        "summary": "Duplicate Workflow",
+        "description": "A new draft with the same documents and rules, named ``body.name``.",
+        "operationId": "duplicate_workflow_v1_workflows__workflow_id__duplicate_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWorkflow"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowOut"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -912,6 +981,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -939,6 +1018,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -963,6 +1052,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Recovered"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1034,6 +1133,16 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1057,6 +1166,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Dashboard"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -3804,6 +3923,12 @@
                 "type": "null"
               }
             ]
+          },
+          "readOnly": {
+            "type": "boolean",
+            "title": "Readonly",
+            "description": "A playground example: duplicate it to edit (demo mode).",
+            "default": false
           }
         },
         "type": "object",
@@ -3821,7 +3946,8 @@
           "totalRuns",
           "successRate",
           "lastRun",
-          "apiStats"
+          "apiStats",
+          "readOnly"
         ],
         "title": "WorkflowOut"
       }

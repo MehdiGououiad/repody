@@ -841,5 +841,20 @@
     "keep": "Keep running",
     "cancelFailed": "Could not stop the run",
     "recoverFailed": "Could not release the stuck runs"
+  },
+  "playground": {
+    "label": "Playground",
+    "banner": "Explore Repody freely: your workflows stay with this browser for 14 days. Extraction needs credits.",
+    "getCredits": "Get credits",
+    "creditsTitle": "Ready to extract?",
+    "creditsHint": "The playground is for building workflows and exploring example reports. To extract your own documents or publish the API, contact us and we will open credits for you.",
+    "contactForm": "Contact form",
+    "whatsapp": "WhatsApp",
+    "keepExploring": "Keep exploring",
+    "noAccount": "No account",
+    "example": "Shared example",
+    "exampleHint": "Edit it freely: saving creates your own copy.",
+    "copyName": "{name} (my copy)",
+    "copied": "Your copy is saved"
   }
 }
