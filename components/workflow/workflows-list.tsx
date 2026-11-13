@@ -154,7 +154,7 @@ export function WorkflowsList() {
         <p className="max-w-sm text-[13px] text-ink-3">{t("emptyHint")}</p>
         <Button className="mt-2" variant="primary" render={<Link href="/workflows/new" />}>
           {tCommon("newWorkflow")}
-          <Kbd className="ms-1 bg-[oklch(1_0_0/0.16)] text-on-accent shadow-none">C</Kbd>
+          <Kbd className="ms-1">C</Kbd>
         </Button>
       </div>
     );

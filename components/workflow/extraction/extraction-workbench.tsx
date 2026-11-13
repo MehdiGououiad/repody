@@ -244,9 +244,7 @@ export function ExtractionWorkbench({
             >
               <Play />
               {busy ? t("extracting") : t("extract")}
-              <Kbd className="ms-0.5 bg-[oklch(1_0_0/0.16)] text-on-accent shadow-none">
-                {extractHint.text}
-              </Kbd>
+              <Kbd className="ms-0.5">{extractHint.text}</Kbd>
             </Button>
           </div>
         }

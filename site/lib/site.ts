@@ -3,6 +3,8 @@ export const SITE = {
   name: "Repody",
   url: "https://repody.com",
   appUrl: "https://app.repody.com",
+  /** The public playground: the platform without sign-in, everything but extraction. */
+  playgroundUrl: "https://playground.repody.com",
   contactEmail: "contact@repody.com",
   /** The product video (HyperFrames): an MP4 or embed URL. Null shows the poster and a notice. */
   videoUrl: null as string | null,

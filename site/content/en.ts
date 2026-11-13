@@ -18,6 +18,8 @@ export const en: Dict = {
       telecom: "Telecom",
     },
     demo: "Request a demo",
+    playground: "Try the playground for free",
+    playgroundShort: "Playground",
     seePlatform: "See the platform",
     learnMore: "Learn more",
     menu: "Menu",

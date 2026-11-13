@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SITE } from "@/lib/site";
 
 export function Container({
   className = "",
@@ -12,21 +13,39 @@ export function Container({
   );
 }
 
-/** A section's title and lead: left-aligned, one idea each. */
+/** A section's number and label, as a lab notebook numbers its pages: `[02] HOW IT WORKS`. */
+export function SectionIndex({ index, label }: { index: number; label?: string }) {
+  return (
+    <p className="eyebrow flex items-center gap-3 text-ink-3">
+      <span className="text-ink-4">[{String(index).padStart(2, "0")}]</span>
+      {label}
+    </p>
+  );
+}
+
+/** A section's title and lead: left-aligned, one idea each, numbered when given an index. */
 export function SectionTitle({
   id,
+  index,
+  label,
   title,
   lead,
   className = "",
 }: {
   id?: string;
+  index?: number;
+  label?: string;
   title: string;
   lead?: string;
   className?: string;
 }) {
   return (
     <div className={`max-w-[720px] ${className}`}>
-      <h2 id={id} className="text-headline font-semibold text-ink max-md:text-[1.875rem]">
+      {index ? <SectionIndex index={index} label={label} /> : null}
+      <h2
+        id={id}
+        className={`text-headline font-semibold text-ink max-md:text-[1.875rem] ${index ? "mt-4" : ""}`}
+      >
         {title}
       </h2>
       {lead ? <p className="mt-4 text-lead text-ink-2">{lead}</p> : null}
@@ -35,7 +54,7 @@ export function SectionTitle({
 }
 
 const BUTTON =
-  "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-[0.9375rem] font-medium transition-[background-color,color,box-shadow,scale] duration-150 ease-out active:scale-[0.97] [&_svg]:size-4";
+  "inline-flex h-10 items-center justify-center gap-2 rounded-[4px] px-4 text-[0.9375rem] font-medium transition-[background-color,color,box-shadow,scale] duration-150 ease-out active:scale-[0.97] [&_svg]:size-4";
 
 export function ButtonLink({
   href,
@@ -50,9 +69,9 @@ export function ButtonLink({
 }) {
   const tone =
     variant === "primary"
-      ? "bg-accent text-on-accent hover:bg-accent-hover"
+      ? "bg-ink text-panel hover:bg-ink-2"
       : variant === "secondary"
-        ? "bg-raised text-ink shadow-[0_0_0_1px_var(--line-strong)] hover:bg-hover"
+        ? "bg-panel text-ink shadow-[0_0_0_1px_var(--line-strong)] hover:bg-hover"
         : "text-ink-2 hover:bg-hover hover:text-ink";
   const external = href.startsWith("http") || href.startsWith("mailto:");
   return external ? (
@@ -97,7 +116,7 @@ export function PageHero({
   children?: React.ReactNode;
 }) {
   return (
-    <header className="border-b border-line bg-canvas">
+    <header className="border-b border-line bg-canvas bg-ruled">
       <Container className="py-16 md:py-24">
         <h1 className="max-w-[860px] text-display font-semibold text-ink max-md:text-[2.375rem]">
           {title}
@@ -109,23 +128,31 @@ export function PageHero({
   );
 }
 
-/** The closing band of every page: one sentence and the demo button. */
+/** The closing band of every page: one sentence, the demo button and the playground. */
 export function CallToAction({
   title,
   lead,
   href,
   label,
+  playground,
 }: {
   title: string;
   lead: string;
   href: string;
   label: string;
+  /** The playground button's label. */
+  playground: string;
 }) {
   return (
-    <section className="border-t border-line bg-canvas py-20 md:py-24">
+    <section className="border-t border-line bg-canvas bg-ruled py-20 md:py-24">
       <Container className="flex flex-col items-start gap-6">
         <SectionTitle title={title} lead={lead} />
-        <ButtonLink href={href}>{label}</ButtonLink>
+        <div className="flex flex-wrap gap-3">
+          <ButtonLink href={href}>{label} →</ButtonLink>
+          <ButtonLink href={SITE.playgroundUrl} variant="secondary">
+            {playground} →
+          </ButtonLink>
+        </div>
       </Container>
     </section>
   );

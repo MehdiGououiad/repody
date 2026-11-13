@@ -89,7 +89,7 @@ export function Section({
     <section className={cn("flex flex-col gap-2.5", className)}>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+          <h2 className="eyebrow flex items-center gap-2 text-ink-2">
             {title}
             {count != null ? (
               <span className="font-normal tabular-nums text-ink-4">{count}</span>

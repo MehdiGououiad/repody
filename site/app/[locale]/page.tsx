@@ -74,7 +74,7 @@ export default async function Home({ params }: Props) {
       />
 
       {/* Hero */}
-      <section className="border-b border-line bg-canvas">
+      <section className="border-b border-line bg-canvas bg-ruled">
         <Container className="grid gap-12 py-16 md:py-24 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center">
           <div>
             <h1 className="text-display font-semibold text-ink max-md:text-[2.5rem]">
@@ -82,9 +82,9 @@ export default async function Home({ params }: Props) {
             </h1>
             <p className="mt-6 max-w-[560px] text-lead text-ink-2">{h.hero.lead}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <ButtonLink href={href(locale, "contact")}>{t.common.demo}</ButtonLink>
-              <ButtonLink href={href(locale, "platform")} variant="secondary">
-                {t.common.seePlatform}
+              <ButtonLink href={href(locale, "contact")}>{t.common.demo} →</ButtonLink>
+              <ButtonLink href={SITE.playgroundUrl} variant="secondary">
+                {t.common.playground} →
               </ButtonLink>
             </div>
             <p className="mt-6 text-sm text-ink-3">{h.hero.note}</p>
@@ -103,7 +103,7 @@ export default async function Home({ params }: Props) {
                 className="flex flex-col gap-1 border-line py-8 pe-6 max-lg:even:ps-6 max-lg:even:border-s lg:border-s lg:ps-6 lg:first:border-s-0 lg:first:ps-0"
               >
                 <dt className="order-2 text-sm text-ink-3">{item.label}</dt>
-                <dd className="order-1 text-[2.5rem] font-semibold leading-none tabular-nums text-ink">
+                <dd className="order-1 font-mono text-[2.5rem] font-medium leading-none tracking-[-0.03em] tabular-nums text-ink">
                   {item.value}
                 </dd>
               </div>
@@ -115,7 +115,7 @@ export default async function Home({ params }: Props) {
       {/* How it works */}
       <section className="py-20 md:py-28">
         <Container className="flex flex-col gap-14">
-          <SectionTitle title={h.how.title} lead={h.how.lead} />
+          <SectionTitle index={1} title={h.how.title} lead={h.how.lead} />
           <HowSteps steps={h.how.steps} />
         </Container>
       </section>
@@ -123,7 +123,7 @@ export default async function Home({ params }: Props) {
       {/* Video */}
       <section className="pb-20 md:pb-28">
         <Container className="flex flex-col gap-8">
-          <SectionTitle title={h.video.title} />
+          <SectionTitle index={2} title={h.video.title} />
           <VideoFrame locale={locale} t={h.video} />
         </Container>
       </section>
@@ -131,7 +131,7 @@ export default async function Home({ params }: Props) {
       {/* One pass instead of three */}
       <section className="border-y border-line bg-canvas py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.compare.title} lead={h.compare.lead} />
+          <SectionTitle index={3} title={h.compare.title} lead={h.compare.lead} />
           <div className="grid gap-6 md:grid-cols-2">
             {[
               {
@@ -185,7 +185,7 @@ export default async function Home({ params }: Props) {
       {/* Platform tour */}
       <section className="py-20 md:py-28">
         <Container className="flex flex-col gap-16">
-          <SectionTitle title={h.tour.title} lead={h.tour.lead} />
+          <SectionTitle index={4} title={h.tour.title} lead={h.tour.lead} />
           {h.tour.items.map((item, i) => (
             <div
               key={item.title}
@@ -207,7 +207,7 @@ export default async function Home({ params }: Props) {
       {/* White label */}
       <section className="border-y border-line bg-canvas py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.brand.title} lead={h.brand.lead} />
+          <SectionTitle index={5} title={h.brand.title} lead={h.brand.lead} />
           <BrandSwitcher t={h.brand} />
         </Container>
       </section>
@@ -215,7 +215,7 @@ export default async function Home({ params }: Props) {
       {/* Security */}
       <section className="py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.security.title} lead={h.security.lead} />
+          <SectionTitle index={6} title={h.security.title} lead={h.security.lead} />
           <ul className="grid gap-x-10 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
             {h.security.items.map((item) => (
               <li key={item.title} className="flex gap-3 border-t border-line pt-5">
@@ -234,7 +234,7 @@ export default async function Home({ params }: Props) {
       {/* Deployment */}
       <section className="border-y border-line bg-canvas py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.deploy.title} lead={h.deploy.lead} />
+          <SectionTitle index={7} title={h.deploy.title} lead={h.deploy.lead} />
           <div className="grid gap-4 md:grid-cols-3">
             {h.deploy.options.map((option) => (
               <div
@@ -253,7 +253,7 @@ export default async function Home({ params }: Props) {
       {/* Engineering */}
       <section className="py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.engineering.title} lead={h.engineering.lead} />
+          <SectionTitle index={8} title={h.engineering.title} lead={h.engineering.lead} />
           <GatePipeline gates={h.engineering.gates} />
           <MoreLink to={href(locale, "engineering")}>{t.common.nav.engineering}</MoreLink>
         </Container>
@@ -262,7 +262,7 @@ export default async function Home({ params }: Props) {
       {/* Industries */}
       <section className="border-y border-line bg-canvas py-20 md:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionTitle title={h.industries.title} />
+          <SectionTitle index={9} title={h.industries.title} />
           <div className="grid gap-4 md:grid-cols-3">
             {h.industries.items.map((item) => (
               <Link
@@ -296,13 +296,14 @@ export default async function Home({ params }: Props) {
       {/* FAQ */}
       <section className="py-20 md:py-28">
         <Container className="flex flex-col gap-10">
-          <SectionTitle title={h.faq.title} />
+          <SectionTitle index={10} title={h.faq.title} />
           <Faq items={h.faq.items} />
         </Container>
       </section>
 
       {/* Call */}
       <CallToAction
+        playground={t.common.playground}
         title={h.cta.title}
         lead={h.cta.lead}
         href={href(locale, "contact")}
