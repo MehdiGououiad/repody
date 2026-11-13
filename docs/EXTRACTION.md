@@ -53,7 +53,7 @@ Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires au
 | Input | Behaviour |
 |-------|-----------|
 | PDF | Every page as PNG at **170 DPI** (the card's PDF example), all pages in one request |
-| Image | The uploaded PNG/JPEG/WebP, turned upright by its EXIF orientation and sent as PNG (the same pixels) |
+| Image | The uploaded PNG/JPEG/WebP, turned upright by its EXIF orientation and sent as PNG (the same pixels). The server gives small images at least ~1024 vision tokens (vLLM `--mm-processor-kwargs` minimum of 1 MP; llama.cpp `--image-min-tokens 1024`): at the processor's default a 515x321 ID card misread its name lines |
 | Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples |
 | `instructions` | The document's notes, then a `Field guidance:` list built from the field descriptions |
 | In-context examples | `developer` messages, input then expected output |

@@ -8,7 +8,8 @@
  *
  * Only what the model card and llama.cpp need: the weights, the served name, --jinja (the chat
  * template takes chat_template_kwargs) and a context per request. Everything else is llama.cpp's
- * default, including image resolution, batch sizes, flash attention and GPU offload.
+ * default (batch sizes, flash attention, GPU offload) but the image minimum, which llama.cpp itself
+ * advises for this model.
  *
  * Settings come from deploy/llamacpp/paths.local.env, overridable by process env:
  *   LLAMACPP_* EXE, MODEL, MMPROJ (or HF repo:quant), MODEL_ALIAS, PORT, CONTEXT, PARALLEL, DEVICE,
@@ -67,6 +68,9 @@ function buildArgs() {
     ...weightArgs(),
     ...["--host", "0.0.0.0", "--port", String(port), "-a", alias, "--jinja"],
     ...["-c", get("CONTEXT", spec.context), "-np", get("PARALLEL", "1")],
+    // llama.cpp's own advice for this vision model ("if you encounter problems with accuracy, try
+    // adding --image-min-tokens 1024"): small images get enough tokens to read their text.
+    ...["--image-min-tokens", "1024"],
   ];
   if (get("GPU_LAYERS")) args.push("-ngl", get("GPU_LAYERS"));
   if (get("DEVICE")) args.push("--device", get("DEVICE"));

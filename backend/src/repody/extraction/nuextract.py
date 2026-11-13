@@ -78,7 +78,7 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
     """Request body; the page images go in the last (user) message."""
     examples = [ex for ex in doc.extraction_icl_examples if ex.input.strip() and ex.output.strip()]
     kwargs: dict[str, Any] = {
-        "template": json.dumps(template(doc.schema_fields), ensure_ascii=False, indent=4),
+        "template": json.dumps(template(doc.schema_fields), indent=4),  # as the card sends it
         "enable_thinking": False,
     }
     if text := instructions(doc):

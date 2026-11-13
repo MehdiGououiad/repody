@@ -49,8 +49,9 @@ The launcher (`deploy/scripts/llama-serve.mjs`) passes only what the model card 
 | `-a <alias>` | The model id Repody sends (`AUDIT_LLAMACPP_SERVED_MODEL`) |
 | `--jinja` | The chat template reads `chat_template_kwargs` (`template`, `mode`, thinking off) |
 | `-c` (`LLAMACPP_CONTEXT`) `-np 1` | One request at a time with a 32768-token context (all pages in one request) |
+| `--image-min-tokens 1024` | llama.cpp's advice for this model's accuracy: small images (a cropped ID card) get enough vision tokens to read their text; larger pages are unchanged |
 
-Image resolution, batch sizes, flash attention and GPU offload are llama.cpp's defaults. Repody sends
+Batch sizes, flash attention and GPU offload are llama.cpp's defaults. Repody sends
 the images the model card describes (PDF pages at 170 DPI, as PNG), and every request sets the
 documented sampling.
 
@@ -67,7 +68,7 @@ See `deploy/llamacpp/repody-llamacpp.env.example`.
 
 ```powershell
 llama-server -m C:\path\to\NuExtract3-Q8_0.gguf --mmproj C:\path\to\mmproj-NuExtract3-BF16.gguf `
-  --host 0.0.0.0 --port 8081 -a nuextract3-q8_0 --jinja -c 32768 -np 1
+  --host 0.0.0.0 --port 8081 -a nuextract3-q8_0 --jinja -c 32768 -np 1 --image-min-tokens 1024
 ```
 
 ## Throughput (`-np`)

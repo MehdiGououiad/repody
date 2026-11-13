@@ -40,6 +40,8 @@ CARD_FLAGS = [
     *["--max-model-len", "131072"],
     *["--speculative-config", '{"method": "qwen3_next_mtp", "num_speculative_tokens": 2}'],
 ]
+# Pixel bounds for the image processor (see --mm-processor-kwargs below).
+IMAGE_SIZE = {"shortest_edge": 1024 * 1024, "longest_edge": 16_777_216}
 MAX_INPUTS = 4  # requests Modal sends one container at once (@modal.concurrent)
 
 # vLLM's wheels are built for CUDA 12.9 (docs.vllm.ai, GPU installation); the CUDA devel base with
@@ -112,6 +114,13 @@ class Vllm:
             # vLLM would otherwise name it after its local path), on the port Modal's proxy uses.
             *["--revision", MODEL_REVISION, "--served-model-name", MODEL],
             *["--host", "0.0.0.0", "--port", str(PORT)],  # noqa: S104 - Modal's proxy connects here
+            # The model's image processor (Qwen2VLImageProcessor, processor_config.json) keeps any
+            # image of at least 65,536 pixels as it is, so a cropped ID card (515x321) reaches the
+            # model as ~240 vision tokens and its name lines are misread (5 runs of 5). vLLM's
+            # documented --mm-processor-kwargs raises that minimum to ~1 MP: the processor itself
+            # enlarges small images (the same card: 5 of 5 right); PDF pages at the card's 170 DPI
+            # (~2.8 MP) and photos are larger and stay untouched. longest_edge is the card default.
+            *["--mm-processor-kwargs", json.dumps({"size": IMAGE_SIZE})],
             # Weights to CPU memory and the KV cache dropped before the snapshot; Torch
             # compilation and CUDA graphs stay on, since the snapshot keeps their result.
             "--enable-sleep-mode",
