@@ -95,7 +95,10 @@ Plan and structure: [docs/site/plan.md](site/plan.md).
 | `pnpm install` | Once |
 | `pnpm dev` | Local preview on http://localhost:3200 |
 | `pnpm build` | Static export to `site/out/` |
-| `pnpm deploy` | Build and deploy with Wrangler (also done by `.github/workflows/site.yml` on master) |
+| `pnpm deploy` | Build and deploy by hand with Wrangler |
+
+Pushes to `master` that touch the site deploy it through Cloudflare Workers Builds
+(Worker `repody-site` > Settings > Builds); `.github/workflows/site.yml` only checks the build.
 
 ## Model serve (advanced / standalone)
 

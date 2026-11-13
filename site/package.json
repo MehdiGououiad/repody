@@ -2,6 +2,7 @@
   "name": "repody-site",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "sync": "node scripts/sync-shared.mjs",
     "predev": "node scripts/sync-shared.mjs",
