@@ -6,7 +6,6 @@ export type Schema = components["schemas"];
 // Workflows, documents and rules
 export type Workflow = Schema["WorkflowOut"];
 /** draft, or active once deployed. Owned by the server: see docs/LIFECYCLES.md. */
-export type WorkflowStatus = Workflow["status"];
 export type DocumentDef = Schema["DocumentDef-Output"];
 export type SchemaField = Schema["SchemaField-Output"];
 export type WorkflowRule = Schema["Rule-Output"];
@@ -33,15 +32,10 @@ export type RunAuditDetail = Schema["AuditDetail"];
 export type RunAuditDocument = Schema["AuditDocument"];
 export type RunAuditRule = Schema["AuditRule"];
 /** passed | failed | skipped (a value the rule needs was not extracted). */
-export type RuleStatus = RunAuditRule["status"];
-export type RunAuditMetadata = Schema["RunTimings"];
 export type RunDocumentExtractionMeta = Schema["ExtractionMeta"];
 export type Audit = Schema["AuditListItem"];
-export type AuditStatus = Audit["status"];
 
 // Dashboard and platform
 export type Dashboard = Schema["Dashboard"];
 export type Kpi = Schema["Kpi"];
-export type PerformancePoint = Schema["DayRuns"];
-export type SeverityShare = Schema["SeverityShare"];
 export type PlatformConfig = Schema["PlatformConfig"];
