@@ -34,7 +34,7 @@ log = structlog.get_logger(__name__)
 
 
 def _ip_hash(ip: str | None) -> str:
-    return hashlib.sha256((ip or "").encode()).hexdigest() if ip else ""
+    return hashlib.sha256(ip.encode()).hexdigest() if ip else ""
 
 
 def _out(r: AccessRequest) -> AccessRequestOut:

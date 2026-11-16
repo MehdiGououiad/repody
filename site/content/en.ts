@@ -1282,7 +1282,8 @@ export const en: Dict = {
   contact: {
     meta: {
       title: "Request access",
-      description: "An account on Repody with credits to try it on your own documents, then a pilot.",
+      description:
+        "An account on Repody with credits to try it on your own documents, then a pilot.",
     },
     title: "Let's see Repody on your documents",
     lead: "Tell us which documents you handle and what you want to check. We get back to you within two business days.",

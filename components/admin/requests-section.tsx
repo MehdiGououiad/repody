@@ -25,40 +25,40 @@ import { $api } from "@/lib/api/browser";
 import { errorMessage } from "@/lib/query/get-query-client";
 import type { AccessRequest, ClientRole, TemporaryPassword } from "@/lib/types";
 
-/** A client name from a company: lowercase, ASCII, dashes (the admin can change it). */
+const SLUG_LENGTH = 50;
+
+/** A client name from a company: lowercase ASCII letters and digits, runs of anything else as one
+ * dash, none at the ends (the admin can change it). A loop, not regexes that could backtrack. */
 export function slugOf(company: string): string {
-  return company
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 50)
-    .replace(/-+$/, "");
+  const letters = company.normalize("NFKD").toLowerCase();
+  let slug = "";
+  for (const char of letters) {
+    if ((char >= "a" && char <= "z") || (char >= "0" && char <= "9")) slug += char;
+    else if (char.charCodeAt(0) < 0x300 || char.charCodeAt(0) > 0x36f) {
+      if (slug && !slug.endsWith("-")) slug += "-";
+    }
+  }
+  slug = slug.slice(0, SLUG_LENGTH);
+  while (slug.endsWith("-")) slug = slug.slice(0, -1);
+  return slug;
 }
+
+function formText(form: FormData, name: string, fallback = ""): string {
+  const value = form.get(name);
+  return typeof value === "string" ? value : fallback;
+}
+
+const GLYPH = { new: "waiting", approved: "passed", declined: "skipped" } as const;
 
 export function RequestsSection() {
   const t = useTranslations("admin");
   const requests = $api.useQuery("get", "/v1/admin/requests");
   const [approving, setApproving] = useState<AccessRequest | null>(null);
   const [password, setPassword] = useState<TemporaryPassword | null>(null);
-  const items = requests.data ?? [];
-  const waiting = items.filter((r) => r.status === "new");
+  const waiting = (requests.data ?? []).filter((r) => r.status === "new");
   return (
     <Section title={t("requests")} count={waiting.length} hint={t("requestsHint")}>
-      {requests.data ? (
-        items.length ? (
-          <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
-            {items.slice(0, 30).map((request) => (
-              <RequestRow key={request.id} request={request} onApprove={setApproving} />
-            ))}
-          </ul>
-        ) : (
-          <p className="py-6 text-[13px] text-ink-3">{t("noRequests")}</p>
-        )
-      ) : (
-        <Skeleton.Lines count={3} />
-      )}
+      <RequestList items={requests.data} empty={t("noRequests")} onApprove={setApproving} />
       <ApproveDialog
         request={approving}
         onClose={() => setApproving(null)}
@@ -69,13 +69,33 @@ export function RequestsSection() {
   );
 }
 
+function RequestList({
+  items,
+  empty,
+  onApprove,
+}: Readonly<{
+  items: AccessRequest[] | undefined;
+  empty: string;
+  onApprove: (request: AccessRequest) => void;
+}>) {
+  if (!items) return <Skeleton.Lines count={3} />;
+  if (!items.length) return <p className="py-6 text-[13px] text-ink-3">{empty}</p>;
+  return (
+    <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
+      {items.slice(0, 30).map((request) => (
+        <RequestRow key={request.id} request={request} onApprove={onApprove} />
+      ))}
+    </ul>
+  );
+}
+
 function RequestRow({
   request,
   onApprove,
-}: {
+}: Readonly<{
   request: AccessRequest;
   onApprove: (request: AccessRequest) => void;
-}) {
+}>) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const format = useFormatter();
@@ -87,8 +107,7 @@ function RequestRow({
     },
     onError: (e) => toast.error(errorMessage(e, t("failed"))),
   });
-  const glyph =
-    request.status === "new" ? "waiting" : request.status === "approved" ? "passed" : "skipped";
+  const glyph = GLYPH[request.status];
   return (
     <li className="flex flex-col gap-1 px-3 py-2.5 text-[13px]">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -158,11 +177,11 @@ function ApproveDialog({
   request,
   onClose,
   onApproved,
-}: {
+}: Readonly<{
   request: AccessRequest | null;
   onClose: () => void;
   onApproved: (invited: TemporaryPassword) => void;
-}) {
+}>) {
   const t = useTranslations("admin");
   const tCommon = useTranslations("common");
   const refresh = useRefreshAdmin();
@@ -197,9 +216,9 @@ function ApproveDialog({
               approve.mutate({
                 params: { path: { request_id: request.id } },
                 body: {
-                  slug: String(form.get("slug") ?? ""),
-                  role: String(form.get("role") ?? "admin") as ClientRole,
-                  credits: Number(form.get("credits") ?? 200),
+                  slug: formText(form, "slug"),
+                  role: formText(form, "role", "admin") as ClientRole,
+                  credits: Number(formText(form, "credits", "200")),
                 },
               });
             }}
