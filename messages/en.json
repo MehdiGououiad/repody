@@ -778,7 +778,6 @@
       "noRole": "None",
       "allowed": "Allowed",
       "notAllowed": "Not allowed",
-      "withCredits": "With credits",
       "account": "Client",
       "credits": "Credits",
       "creditsLeft": "{balance, plural, one {# page left} other {# pages left}}",
@@ -797,8 +796,7 @@
         "viewer": "Viewer",
         "operator": "Operator",
         "admin": "Admin",
-        "platform_admin": "Platform admin",
-        "demo_visitor": "Playground visitor"
+        "platform_admin": "Platform admin"
       }
     }
   },
@@ -862,21 +860,6 @@
     "keep": "Keep running",
     "cancelFailed": "Could not stop the run"
   },
-  "playground": {
-    "label": "Playground",
-    "banner": "Explore Repody freely: your workflows stay with this browser for 14 days. Extraction needs credits.",
-    "getCredits": "Get credits",
-    "creditsTitle": "Ready to extract?",
-    "creditsHint": "The playground is for building workflows and exploring example reports. To extract your own documents or publish the API, contact us and we will open credits for you.",
-    "contactForm": "Contact form",
-    "whatsapp": "WhatsApp",
-    "keepExploring": "Keep exploring",
-    "noAccount": "No account",
-    "example": "Shared example",
-    "exampleHint": "Edit it freely: saving creates your own copy.",
-    "copyName": "{name} (my copy)",
-    "copied": "Your copy is saved"
-  },
   "admin": {
     "title": "Admin",
     "notConfigured": "Managing clients needs Keycloak's repody-admin account (AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET). Credits and spend work without it. See deploy/ENV.md, Admin area.",
@@ -925,7 +908,9 @@
       "user_password_reset": "Password reset",
       "user_removed": "User removed",
       "credits_granted": "Credits granted",
-      "workflow_assigned": "Workflow owner changed"
+      "workflow_assigned": "Workflow owner changed",
+      "request_approved": "Request approved",
+      "request_declined": "Request declined"
     },
     "roles": {
       "viewer": "Viewer",
@@ -993,10 +978,45 @@
     "failed": "That did not work. Try again.",
     "grantConfirm": "Gives {amount} credits to {account}",
     "inviteConfirm": "Creates a user in {account} and shows their temporary password",
-    "resetConfirm": "Replaces the password of {email} with a temporary one"
+    "resetConfirm": "Replaces the password of {email} with a temporary one",
+    "requests": "Access requests",
+    "requestsHint": "From the site's form. Approving creates the client (or reuses it), invites the person with a one-time password and gives starting credits.",
+    "noRequests": "No requests yet.",
+    "requestStatus": {
+      "new": "Waiting",
+      "approved": "Approved",
+      "declined": "Declined"
+    },
+    "approve": "Approve",
+    "approveFor": "Approve {company}",
+    "decline": "Decline",
+    "declineFor": "Decline {company}",
+    "declineTitle": "Decline the request of {company}?",
+    "declineHint": "It stays in the list as declined. Nobody is told: write to them if you want to.",
+    "declineConfirm": "Decline request",
+    "declined": "Request declined",
+    "approvedInto": "Approved into {account}",
+    "declinedNote": "Declined: {note}",
+    "approveTitle": "Approve {company}",
+    "approveHint": "{email} gets an account in this client, with a temporary password to send them.",
+    "approveSlugHint": "An existing client with this name is reused: its credits are added to.",
+    "startingCredits": "Starting credits",
+    "approveSubmit": "Create the account",
+    "approveConfirm": "Creates the client {company}, its first user and its credits"
   },
   "credits": {
     "low": "{balance} credits left. Runs stop when they run out: contact us for more.",
-    "none": "No credits left: runs are refused. Contact us for more."
+    "none": "No credits left: runs are refused. Contact us for more.",
+    "title": "Out of credits",
+    "hint": "Running documents uses credits, and your account does not have enough. Contact us and we will add more.",
+    "contactForm": "Contact form",
+    "whatsapp": "WhatsApp",
+    "close": "Close"
+  },
+  "shared": {
+    "example": "Shared example",
+    "exampleHint": "Edit it freely: saving creates your own copy.",
+    "copyName": "{name} (my copy)",
+    "copied": "Your copy is saved"
   }
 }

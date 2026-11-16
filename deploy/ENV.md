@@ -137,6 +137,21 @@ this account grant any realm role, so keep its secret like the others.
 `/opt/repody`: `sh setup-admin-client.sh` (copied from `deploy/keycloak/`). It is safe to run
 again.
 
+## Access requests
+
+The site's contact form (repody.com) sends access requests to `POST /api/v1/access-requests`, the
+one API route open without a session. A platform admin approves them in Admin, Access requests:
+that creates the client (or reuses it), invites the person with a one-time password and gives
+starting credits. Each request needs a Cloudflare Turnstile token (when the secret is set) and the
+consent box; one network sends at most `AUDIT_ACCESS_REQUESTS_PER_HOUR` (a SHA-256 of its address
+is stored, never the address).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AUDIT_TURNSTILE_SECRET` | — | Turnstile's secret key (widget `repody-access-requests`, site key in `site/lib/site.ts`); unset: no anti-robot check |
+| `AUDIT_ACCESS_REQUESTS_PER_HOUR` | `5` | Requests one network may send an hour (429 beyond) |
+| `AUDIT_CORS_ORIGINS` | — | Must list the site's origin (`https://repody.com`), or browsers refuse the form's request |
+
 ## Observability
 
 | Variable | Purpose |

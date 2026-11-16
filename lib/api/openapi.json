@@ -22,16 +22,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1001,16 +991,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1034,16 +1014,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlatformConfig"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1071,16 +1041,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Operations"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1152,16 +1112,6 @@
                 }
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
         },
         "security": [
@@ -1185,16 +1135,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Dashboard"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1346,16 +1286,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AdminOverview"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -1854,7 +1784,7 @@
           "admin"
         ],
         "summary": "Workflows",
-        "description": "Every workflow outside the playground, with the client it belongs to (None: shared).",
+        "description": "Every workflow, with the client it belongs to (None: shared).",
         "operationId": "workflows_v1_admin_workflows_get",
         "responses": {
           "200": {
@@ -1867,16 +1797,6 @@
                   },
                   "type": "array",
                   "title": "Response Workflows V1 Admin Workflows Get"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -2075,6 +1995,226 @@
           }
         }
       }
+    },
+    "/v1/access-requests": {
+      "post": {
+        "tags": [
+          "access"
+        ],
+        "summary": "Request Access",
+        "description": "Public: a prospect asks for an account (the site's form). 429 past the hourly limit per\nnetwork, 400 when the anti-robot check fails.",
+        "operationId": "request_access_v1_access_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/requests": {
+      "get": {
+        "tags": [
+          "access"
+        ],
+        "summary": "List Requests",
+        "operationId": "list_requests_v1_admin_requests_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "new",
+                    "approved",
+                    "declined"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AccessRequestOut"
+                  },
+                  "title": "Response List Requests V1 Admin Requests Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/requests/{request_id}/approve": {
+      "post": {
+        "tags": [
+          "access"
+        ],
+        "summary": "Approve",
+        "description": "Create (or reuse) the client, invite the person (temporary password in this answer only)\nand give starting credits.",
+        "operationId": "approve_v1_admin_requests__request_id__approve_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "Request Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessApprove"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessApproved"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/requests/{request_id}/decline": {
+      "post": {
+        "tags": [
+          "access"
+        ],
+        "summary": "Decline",
+        "operationId": "decline_v1_admin_requests__request_id__decline_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "Request Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessDecline"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessRequestOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2106,25 +2246,6 @@
             "type": "array",
             "title": "Permissions"
           },
-          "withCredits": {
-            "items": {
-              "type": "string",
-              "enum": [
-                "workflow:read",
-                "workflow:write",
-                "workflow:deploy",
-                "workflow:delete",
-                "run:read",
-                "run:execute",
-                "metrics:read",
-                "credits:grant",
-                "clients:manage"
-              ]
-            },
-            "type": "array",
-            "title": "Withcredits",
-            "description": "A playground visitor's paid actions: offered, answered 402 (contact us)."
-          },
           "credits": {
             "anyOf": [
               {
@@ -2141,11 +2262,234 @@
         "required": [
           "roles",
           "permissions",
-          "withCredits",
           "credits"
         ],
         "title": "Access",
         "description": "What the caller may do: the web app shows or disables each action from it."
+      },
+      "AccessApprove": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$",
+            "title": "Slug",
+            "description": "The client is client-<slug> (created if new)."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "operator",
+              "admin"
+            ],
+            "title": "Role",
+            "default": "admin"
+          },
+          "credits": {
+            "type": "integer",
+            "maximum": 100000.0,
+            "minimum": 0.0,
+            "title": "Credits",
+            "default": 200
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug"
+        ],
+        "title": "AccessApprove"
+      },
+      "AccessApproved": {
+        "properties": {
+          "request": {
+            "$ref": "#/components/schemas/AccessRequestOut"
+          },
+          "invited": {
+            "$ref": "#/components/schemas/TemporaryPassword"
+          }
+        },
+        "type": "object",
+        "required": [
+          "request",
+          "invited"
+        ],
+        "title": "AccessApproved"
+      },
+      "AccessDecline": {
+        "properties": {
+          "note": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "AccessDecline"
+      },
+      "AccessRequestIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "company": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Company"
+          },
+          "sector": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Sector",
+            "default": ""
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Message",
+            "default": ""
+          },
+          "locale": {
+            "type": "string",
+            "enum": [
+              "fr",
+              "en"
+            ],
+            "title": "Locale",
+            "default": "fr"
+          },
+          "consent": {
+            "type": "boolean",
+            "const": true,
+            "title": "Consent",
+            "description": "The prospect agrees to be contacted about it."
+          },
+          "turnstileToken": {
+            "type": "string",
+            "maxLength": 4096,
+            "title": "Turnstiletoken",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "company",
+          "consent"
+        ],
+        "title": "AccessRequestIn"
+      },
+      "AccessRequestOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "company": {
+            "type": "string",
+            "title": "Company"
+          },
+          "sector": {
+            "type": "string",
+            "title": "Sector"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "locale": {
+            "type": "string",
+            "title": "Locale"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "new",
+              "approved",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "decidedBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedby"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "company",
+          "sector",
+          "message",
+          "locale",
+          "status",
+          "note",
+          "account",
+          "decidedBy",
+          "createdAt",
+          "decidedAt"
+        ],
+        "title": "AccessRequestOut"
       },
       "AccountUsage": {
         "properties": {
@@ -2310,7 +2654,9 @@
               "user.password_reset",
               "user.removed",
               "credits.granted",
-              "workflow.assigned"
+              "workflow.assigned",
+              "request.approved",
+              "request.declined"
             ],
             "title": "Action"
           },
@@ -5615,7 +5961,7 @@
           "readOnly": {
             "type": "boolean",
             "title": "Readonly",
-            "description": "A playground example: duplicate it to edit (demo mode).",
+            "description": "Shared (no account): duplicate it to edit or run it.",
             "default": false
           }
         },

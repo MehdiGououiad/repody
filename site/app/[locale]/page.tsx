@@ -83,8 +83,8 @@ export default async function Home({ params }: Props) {
             <p className="mt-6 max-w-[560px] text-lead text-ink-2">{h.hero.lead}</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <ButtonLink href={href(locale, "contact")}>{t.common.demo} →</ButtonLink>
-              <ButtonLink href={SITE.playgroundUrl} variant="secondary">
-                {t.common.playground} →
+              <ButtonLink href={href(locale, "platform")} variant="secondary">
+                {t.common.seePlatform} →
               </ButtonLink>
             </div>
             <p className="mt-6 text-sm text-ink-3">{h.hero.note}</p>
@@ -303,7 +303,6 @@ export default async function Home({ params }: Props) {
 
       {/* Call */}
       <CallToAction
-        playground={t.common.playground}
         title={h.cta.title}
         lead={h.cta.lead}
         href={href(locale, "contact")}

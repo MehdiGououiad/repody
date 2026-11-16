@@ -17,6 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from repody.infra.db import Base, CreatedAt, UpdatedAt, UtcDateTime
+from repody.schemas.access import AccessStatus
 from repody.schemas.admin import AdminAction
 from repody.schemas.credits import CreditKind
 from repody.schemas.rule import Scope, Severity
@@ -50,7 +51,7 @@ class Workflow(Base):
     api_key_hash: Mapped[str | None]
     api_key_hint: Mapped[str | None]
     # The account that owns it (repody.app.scope): a client company (its Keycloak group,
-    # ``client-<name>``) or a playground visitor. None: a shared workflow, which every account
+    # ``client-<name>``). None: a shared workflow, which every account
     # reads and duplicates but cannot change or run (the examples).
     account_id: Mapped[str | None] = mapped_column(index=True)
     created_at: Mapped[CreatedAt]
@@ -209,3 +210,30 @@ class AdminEvent(Base):
     target: Mapped[str] = mapped_column(default="")  # a user's email, a workflow id
     detail: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
     created_at: Mapped[CreatedAt]
+
+
+class AccessRequest(Base):
+    """A prospect's request for an account, from the site (repody.app.access). ``ip_hash`` (a
+    SHA-256 of the address, never the address) limits how many one network sends."""
+
+    __tablename__ = "access_requests"
+    __table_args__ = (
+        Index("ix_access_requests_status_created", "status", "created_at"),
+        Index("ix_access_requests_ip_created", "ip_hash", "created_at"),
+    )
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str]
+    email: Mapped[str] = mapped_column(index=True)
+    company: Mapped[str]
+    sector: Mapped[str] = mapped_column(default="")
+    message: Mapped[str] = mapped_column(Text, default="")
+    locale: Mapped[str] = mapped_column(default="fr")
+    consent_at: Mapped[UtcDateTime]
+    ip_hash: Mapped[str] = mapped_column(default="")
+    status: Mapped[AccessStatus] = mapped_column(default="new")
+    note: Mapped[str] = mapped_column(Text, default="")
+    account_id: Mapped[str | None]  # the client it was approved into
+    decided_by: Mapped[str | None]
+    created_at: Mapped[CreatedAt]
+    decided_at: Mapped[UtcDateTime | None]

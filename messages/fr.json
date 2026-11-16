@@ -778,7 +778,6 @@
       "noRole": "Aucun",
       "allowed": "Autorisé",
       "notAllowed": "Non autorisé",
-      "withCredits": "Avec des crédits",
       "account": "Client",
       "credits": "Crédits",
       "creditsLeft": "{balance, plural, one {# page restante} other {# pages restantes}}",
@@ -797,8 +796,7 @@
         "viewer": "Lecteur",
         "operator": "Opérateur",
         "admin": "Administrateur",
-        "platform_admin": "Administrateur plateforme",
-        "demo_visitor": "Visiteur du playground"
+        "platform_admin": "Administrateur plateforme"
       }
     }
   },
@@ -862,21 +860,6 @@
     "keep": "Laisser tourner",
     "cancelFailed": "Impossible d’arrêter l’exécution"
   },
-  "playground": {
-    "label": "Playground",
-    "banner": "Explorez Repody librement : vos workflows restent liés à ce navigateur 14 jours. L’extraction demande des crédits.",
-    "getCredits": "Obtenir des crédits",
-    "creditsTitle": "Passez à l’extraction",
-    "creditsHint": "Le playground sert à configurer des workflows et à explorer des rapports d’exemple. Pour extraire vos propres documents ou publier l’API, contactez-nous : nous vous ouvrons des crédits.",
-    "contactForm": "Formulaire de contact",
-    "whatsapp": "WhatsApp",
-    "keepExploring": "Continuer à explorer",
-    "noAccount": "Sans compte",
-    "example": "Exemple partagé",
-    "exampleHint": "Modifiez-le librement : votre copie est créée à l’enregistrement.",
-    "copyName": "{name} (ma copie)",
-    "copied": "Votre copie est enregistrée"
-  },
   "admin": {
     "title": "Administration",
     "notConfigured": "Gérer les clients nécessite le compte repody-admin de Keycloak (AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET). Les crédits et les dépenses fonctionnent sans. Voir deploy/ENV.md, Admin area.",
@@ -925,7 +908,9 @@
       "user_password_reset": "Mot de passe réinitialisé",
       "user_removed": "Utilisateur retiré",
       "credits_granted": "Crédits donnés",
-      "workflow_assigned": "Propriétaire du workflow modifié"
+      "workflow_assigned": "Propriétaire du workflow modifié",
+      "request_approved": "Demande approuvée",
+      "request_declined": "Demande refusée"
     },
     "roles": {
       "viewer": "Lecteur",
@@ -993,10 +978,45 @@
     "failed": "Cela n'a pas fonctionné. Réessayez.",
     "grantConfirm": "Donne {amount} crédits à {account}",
     "inviteConfirm": "Crée un utilisateur dans {account} et affiche son mot de passe temporaire",
-    "resetConfirm": "Remplace le mot de passe de {email} par un mot de passe temporaire"
+    "resetConfirm": "Remplace le mot de passe de {email} par un mot de passe temporaire",
+    "requests": "Demandes d'accès",
+    "requestsHint": "Depuis le formulaire du site. Approuver crée le client (ou le réutilise), invite la personne avec un mot de passe temporaire et donne des crédits de départ.",
+    "noRequests": "Aucune demande pour l'instant.",
+    "requestStatus": {
+      "new": "En attente",
+      "approved": "Approuvée",
+      "declined": "Refusée"
+    },
+    "approve": "Approuver",
+    "approveFor": "Approuver {company}",
+    "decline": "Refuser",
+    "declineFor": "Refuser {company}",
+    "declineTitle": "Refuser la demande de {company} ?",
+    "declineHint": "Elle reste dans la liste comme refusée. Personne n'est prévenu : écrivez-leur si vous le souhaitez.",
+    "declineConfirm": "Refuser la demande",
+    "declined": "Demande refusée",
+    "approvedInto": "Approuvée dans {account}",
+    "declinedNote": "Refusée : {note}",
+    "approveTitle": "Approuver {company}",
+    "approveHint": "{email} obtient un compte dans ce client, avec un mot de passe temporaire à lui transmettre.",
+    "approveSlugHint": "Un client existant de ce nom est réutilisé : ses crédits s'ajoutent.",
+    "startingCredits": "Crédits de départ",
+    "approveSubmit": "Créer le compte",
+    "approveConfirm": "Crée le client {company}, son premier utilisateur et ses crédits"
   },
   "credits": {
     "low": "Il reste {balance} crédits. Les exécutions s'arrêtent quand ils sont épuisés : contactez-nous pour en obtenir.",
-    "none": "Plus de crédits : les exécutions sont refusées. Contactez-nous pour en obtenir."
+    "none": "Plus de crédits : les exécutions sont refusées. Contactez-nous pour en obtenir.",
+    "title": "Plus de crédits",
+    "hint": "Lancer des documents consomme des crédits, et votre compte n'en a plus assez. Contactez-nous pour en ajouter.",
+    "contactForm": "Formulaire de contact",
+    "whatsapp": "WhatsApp",
+    "close": "Fermer"
+  },
+  "shared": {
+    "example": "Exemple partagé",
+    "exampleHint": "Modifiez-le librement : votre copie est créée à l’enregistrement.",
+    "copyName": "{name} (ma copie)",
+    "copied": "Votre copie est enregistrée"
   }
 }

@@ -1,8 +1,7 @@
 """Accounts: who sees and changes what.
 
-An account is a client company (its Keycloak group, ``client-<name>``) or, in the playground, one
-visitor. A caller with an account sees its workflows, the shared ones (no account: the examples,
-read-only) and only its own runs. A caller without one (a platform admin, or any user of a
+An account is a client company (its Keycloak group, ``client-<name>``). A caller with an account
+sees its workflows, the shared ones (no account: the examples, read-only) and only its own runs. A caller without one (a platform admin, or any user of a
 single-client installation) sees everything. ``account`` below is the caller's (None: all).
 """
 

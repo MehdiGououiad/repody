@@ -13,7 +13,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import structlog
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app import credits
@@ -55,13 +55,13 @@ NOT_CONFIGURED = (
 )
 
 
-def _kc() -> KeycloakAdmin:
+def keycloak_admin_or_503() -> KeycloakAdmin:
     if not keycloak_admin.enabled():
         raise AppError(503, NOT_CONFIGURED)
     return keycloak_admin.keycloak_admin()
 
 
-async def _call[T](call: Awaitable[T]) -> T:
+async def call[T](call: Awaitable[T]) -> T:
     try:
         return await call
     except KeycloakError as exc:
@@ -208,8 +208,8 @@ async def overview(session: AsyncSession) -> AdminOverview:
     active: dict[str, int] = {}
     if keycloak_admin.enabled():
         kc = keycloak_admin.keycloak_admin()
-        for group in await _call(kc.groups(CLIENT_GROUP_PREFIX)):
-            members = await _call(kc.members(group.id))
+        for group in await call(kc.groups(CLIENT_GROUP_PREFIX)):
+            members = await call(kc.members(group.id))
             groups[group.name] = len(members)
             active[group.name] = sum(m.enabled for m in members)
     balances = await _balances(session)
@@ -240,10 +240,10 @@ async def overview(session: AsyncSession) -> AdminOverview:
 
 async def create_client(session: AsyncSession, slug: str, actor: str) -> ClientSummary:
     account = f"{CLIENT_GROUP_PREFIX}{slug}"
-    kc = _kc()
-    if await _call(kc.group(account)) is not None:
+    kc = keycloak_admin_or_503()
+    if await call(kc.group(account)) is not None:
         raise AppError(409, f"{account} already exists.")
-    await _call(kc.create_group(account))
+    await call(kc.create_group(account))
     await record(session, actor, "client.created", account)
     await session.commit()
     return _summary(
@@ -258,16 +258,16 @@ async def create_client(session: AsyncSession, slug: str, actor: str) -> ClientS
 
 
 async def _group_id(kc: KeycloakAdmin, account: str) -> str:
-    group = await _call(kc.group(account))
+    group = await call(kc.group(account))
     if group is None:
         raise AppError(404, f"No client {account}.")
     return group.id
 
 
 async def client_detail(session: AsyncSession, account: str) -> ClientDetail:
-    kc = _kc()
-    group = await _call(kc.group(account))
-    users = [_client_user(u) for u in await _call(kc.members(group.id))] if group else []
+    kc = keycloak_admin_or_503()
+    group = await call(kc.group(account))
+    users = [_client_user(u) for u in await call(kc.members(group.id))] if group else []
     if group is None and not await session.scalar(
         select(func.count()).where(CreditEntry.account_id == account)
     ):
@@ -320,10 +320,10 @@ async def set_client_enabled(
     session: AsyncSession, account: str, enabled: bool, actor: str
 ) -> None:
     """Disable (or enable again) every user of the client: they cannot sign in meanwhile."""
-    kc = _kc()
-    for user in await _call(kc.members(await _group_id(kc, account))):
+    kc = keycloak_admin_or_503()
+    for user in await call(kc.members(await _group_id(kc, account))):
         if not user.realm_roles & PROTECTED_ROLES:
-            await _call(kc.set_enabled(user.id, enabled))
+            await call(kc.set_enabled(user.id, enabled))
     await record(session, actor, "client.enabled" if enabled else "client.disabled", account)
     await session.commit()
 
@@ -336,28 +336,28 @@ async def invite(
 ) -> TemporaryPassword:
     """A new user in the client, with a temporary password shown once (Keycloak makes them
     replace it and set up two-factor sign-in at the first sign-in)."""
-    kc = _kc()
+    kc = keycloak_admin_or_503()
     group_id = await _group_id(kc, account)
-    user_id = await _call(
+    user_id = await call(
         kc.create_user(email=body.email, first_name=body.first_name, last_name=body.last_name)
     )
     password = _temporary_password()
-    await _call(kc.set_temporary_password(user_id, password))
-    await _call(kc.set_role(user_id, body.role, MANAGED_ROLES))
-    await _call(kc.join(user_id, group_id))
+    await call(kc.set_temporary_password(user_id, password))
+    await call(kc.set_role(user_id, body.role, MANAGED_ROLES))
+    await call(kc.join(user_id, group_id))
     await record(session, actor, "user.invited", account, body.email, role=body.role)
     await session.commit()
     return TemporaryPassword(
-        user=_client_user(await _call(kc.user(user_id))), temporary_password=password
+        user=_client_user(await call(kc.user(user_id))), temporary_password=password
     )
 
 
 async def _member(kc: KeycloakAdmin, account: str, user_id: str) -> KcUser:
     """The user, if they belong to this client and are not a platform admin."""
-    groups = {g.name for g in await _call(kc.user_groups(user_id))}
+    groups = {g.name for g in await call(kc.user_groups(user_id))}
     if account not in groups:
         raise AppError(404, "No such user in this client.")
-    user = await _call(kc.user(user_id))
+    user = await call(kc.user(user_id))
     if user.realm_roles & PROTECTED_ROLES:
         raise AppError(403, "Platform admins are managed in Keycloak, not here.")
     return user
@@ -366,27 +366,27 @@ async def _member(kc: KeycloakAdmin, account: str, user_id: str) -> KcUser:
 async def change_user(
     session: AsyncSession, account: str, user_id: str, body: UserChange, actor: str
 ) -> ClientUser:
-    kc = _kc()
+    kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
     if body.role is not None and body.role != _role(user):
-        await _call(kc.set_role(user_id, body.role, MANAGED_ROLES))
+        await call(kc.set_role(user_id, body.role, MANAGED_ROLES))
         await record(session, actor, "user.role_changed", account, user.email, role=body.role)
     if body.enabled is not None and body.enabled != user.enabled:
-        await _call(kc.set_enabled(user_id, body.enabled))
+        await call(kc.set_enabled(user_id, body.enabled))
         await record(
             session, actor, "user.enabled" if body.enabled else "user.disabled", account, user.email
         )
     await session.commit()
-    return _client_user(await _call(kc.user(user_id)))
+    return _client_user(await call(kc.user(user_id)))
 
 
 async def reset_password(
     session: AsyncSession, account: str, user_id: str, actor: str
 ) -> TemporaryPassword:
-    kc = _kc()
+    kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
     password = _temporary_password()
-    await _call(kc.set_temporary_password(user_id, password))
+    await call(kc.set_temporary_password(user_id, password))
     await record(session, actor, "user.password_reset", account, user.email)
     await session.commit()
     return TemporaryPassword(user=_client_user(user), temporary_password=password)
@@ -395,10 +395,10 @@ async def reset_password(
 async def remove_user(session: AsyncSession, account: str, user_id: str, actor: str) -> None:
     """Out of the client, and disabled: they keep no access (Keycloak keeps the account, for the
     record; delete it there if needed)."""
-    kc = _kc()
+    kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
-    await _call(kc.leave(user_id, await _group_id(kc, account)))
-    await _call(kc.set_enabled(user_id, False))
+    await call(kc.leave(user_id, await _group_id(kc, account)))
+    await call(kc.set_enabled(user_id, False))
     await record(session, actor, "user.removed", account, user.email)
     await session.commit()
 
@@ -415,12 +415,7 @@ async def grant(session: AsyncSession, account: str, body: AdminGrant, actor: st
 
 async def workflows(session: AsyncSession) -> list[SharedWorkflow]:
     rows = await session.scalars(
-        select(Workflow)
-        .where(
-            Workflow.status != "archived",
-            or_(Workflow.account_id.is_(None), ~Workflow.account_id.like("visitor-%")),
-        )
-        .order_by(Workflow.updated_at.desc())
+        select(Workflow).where(Workflow.status != "archived").order_by(Workflow.updated_at.desc())
     )
     return [
         SharedWorkflow(
@@ -439,7 +434,7 @@ async def assign_workflow(
     if wf is None or wf.status == "archived":
         raise AppError(404, "Workflow not found.")
     if account is not None and keycloak_admin.enabled():
-        await _group_id(_kc(), account)
+        await _group_id(keycloak_admin_or_503(), account)
     previous = wf.account_id
     wf.account_id = account
     await record(

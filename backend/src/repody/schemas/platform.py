@@ -30,10 +30,6 @@ class Access(CamelModel):
 
     roles: list[str]
     permissions: list[Permission]
-    with_credits: list[Permission] = Field(
-        default_factory=list,
-        description="A playground visitor's paid actions: offered, answered 402 (contact us).",
-    )
     credits: Credits | None = Field(default=None, description="None when signed out.")
 
 

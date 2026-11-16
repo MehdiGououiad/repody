@@ -15,9 +15,7 @@ export const fr = {
       insurance: "Assurance",
       telecom: "Télécom",
     },
-    demo: "Demander une démo",
-    playground: "Essayer le playground gratuitement",
-    playgroundShort: "Playground",
+    demo: "Demander un accès",
     toLight: "Passer en mode clair",
     toDark: "Passer en mode sombre",
     seePlatform: "Voir la plateforme",
@@ -1306,9 +1304,9 @@ export const fr = {
 
   contact: {
     meta: {
-      title: "Demander une démo",
+      title: "Demander un accès",
       description:
-        "Une démonstration de 30 minutes, puis un pilote sur vos propres documents et vos règles.",
+        "Un compte Repody avec des crédits pour l'essayer sur vos propres documents, puis un pilote.",
     },
     title: "Voyons Repody sur vos documents",
     lead: "Dites-nous quels documents vous traitez et ce que vous voulez contrôler. Nous revenons vers vous sous deux jours ouvrés.",
@@ -1322,8 +1320,15 @@ export const fr = {
       placeholder:
         "Par exemple : 3 000 relevés bancaires par mois pour l'ouverture de compte, contrôle du titulaire et de la période.",
       submit: "Envoyer la demande",
-      note: "Le bouton ouvre votre messagerie avec la demande prête à envoyer.",
-      subject: "Demande de démo Repody",
+      note: "Nous répondons sous deux jours ouvrés avec votre compte.",
+      subject: "Demande d'accès Repody",
+      consent:
+        "J'accepte que Repody me contacte au sujet de cette demande. Mes coordonnées ne servent qu'à elle (voir la page confidentialité).",
+      sending: "Envoi…",
+      sent: "Merci : votre demande est bien reçue. Nous répondons sous deux jours ouvrés.",
+      failed: "La demande n'a pas pu être envoyée. Réessayez, ou écrivez-nous :",
+      tooMany: "Trop de demandes depuis ce réseau. Réessayez dans une heure, ou écrivez-nous :",
+      robot: "Confirmez que vous n'êtes pas un robot, puis renvoyez.",
     },
     next: {
       title: "Ce qui se passe ensuite",

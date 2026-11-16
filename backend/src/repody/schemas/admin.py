@@ -22,6 +22,8 @@ AdminAction = Literal[
     "user.removed",
     "credits.granted",
     "workflow.assigned",
+    "request.approved",
+    "request.declined",
 ]
 # What follows "client-" in a group name: lowercase letters, digits and dashes.
 CLIENT_SLUG = r"^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$"

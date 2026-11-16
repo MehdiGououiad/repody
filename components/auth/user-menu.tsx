@@ -6,7 +6,6 @@ import { useTheme } from "next-themes";
 import { Suspense, useTransition } from "react";
 import { setLocale } from "@/app/actions/preferences";
 import { useAccount } from "@/components/auth/account-context";
-import { usePlayground } from "@/components/playground/playground";
 import {
   Menu,
   MenuContent,
@@ -43,22 +42,16 @@ function AccountMenu() {
   const t = useTranslations("auth");
   const tBar = useTranslations("topbar");
   const account = useAccount();
-  const playground = usePlayground();
-  const tPlayground = useTranslations("playground");
   const { theme, setTheme } = useTheme();
   const locale = useLocale() as Locale;
   const [pending, startTransition] = useTransition();
-  const name = account
-    ? (account.name ?? account.email ?? t("account"))
-    : playground
-      ? tPlayground("label")
-      : t("devModeBadge");
+  const name = account ? (account.name ?? account.email ?? t("account")) : t("devModeBadge");
 
   return (
     <Menu onAction={(value) => (value === "sign-out" ? void signOutToLogin() : undefined)}>
       <MenuTrigger className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-1.5 text-start transition-colors duration-100 hover:bg-hover data-open:bg-hover">
         <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-accent-wash text-2xs font-semibold text-accent-ink">
-          {account ? initials(account) : playground ? "P" : "D"}
+          {account ? initials(account) : "D"}
         </span>
         <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink-2">{name}</span>
         <ChevronsUpDown className="size-3.5 shrink-0 text-ink-4" aria-hidden />
@@ -67,11 +60,7 @@ function AccountMenu() {
         <div className="px-2 pt-1.5 pb-2">
           <p className="truncate text-[13px] font-medium text-ink">{name}</p>
           <p className="truncate text-xs text-ink-3">
-            {account
-              ? (account.email ?? account.roles[0])
-              : playground
-                ? tPlayground("noAccount")
-                : t("devModeHint")}
+            {account ? (account.email ?? account.roles[0]) : t("devModeHint")}
           </p>
           <SegmentedControl
             aria-label={tBar("toggleTheme")}

@@ -72,9 +72,8 @@ async def platform_config() -> PlatformConfig:
     settings = get_settings()
     return PlatformConfig(
         served_model=settings.llamacpp_served_model,
-        # The public playground does not say where the model runs, nor wake it.
-        llamacpp_base_url="" if settings.demo_mode else settings.llamacpp_base_url,
-        model_available=None if settings.demo_mode else await model_available(),
+        llamacpp_base_url=settings.llamacpp_base_url,
+        model_available=await model_available(),
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,
         max_pages_per_document=settings.max_pages_per_document,

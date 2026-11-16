@@ -11,7 +11,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useCan } from "@/components/auth/access-context";
 import { Gate } from "@/components/auth/gate";
-import { usePlayground } from "@/components/playground/playground";
 import { DocChip } from "@/components/shared/doc-chip";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -23,7 +22,6 @@ import { RunErrorAlert } from "@/components/workflow/run-error-alert";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
 import { startRun, useRun } from "@/lib/api/runs";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
-import { openCredits } from "@/lib/playground/credits";
 import { errorMessage } from "@/lib/query/get-query-client";
 import { fieldKey } from "@/lib/rules/field-key";
 import type { DocumentDef, SchemaField, WorkflowRule } from "@/lib/types";
@@ -173,9 +171,7 @@ export function ExtractionWorkbench({
   const canEdit = useCan("workflow:write");
   const canRun = useCan("run:execute");
   const canExtract = canEdit && canRun && Object.keys(session.files).length > 0 && !busy;
-  // The playground configures but does not extract: it asks for credits instead.
-  const playground = usePlayground();
-  const extract = () => (playground ? openCredits() : start.mutate());
+  const extract = () => start.mutate();
   useShortcut("mod+enter", extract, {
     allowInInput: true,
     when: () => canExtract,

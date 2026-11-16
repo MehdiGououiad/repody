@@ -57,7 +57,7 @@ export default async function Contact({ params }: Props) {
           </p>
         </div>
         <div className="rounded-xl bg-panel p-6 shadow-[0_0_0_1px_var(--line)] md:p-8 lg:self-start">
-          <ContactForm t={c.form} />
+          <ContactForm t={c.form} locale={locale} />
         </div>
       </Container>
     </section>

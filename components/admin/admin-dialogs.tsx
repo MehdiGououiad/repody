@@ -116,12 +116,14 @@ export function NewClientDialog({ open, onOpenChange }: DialogProps) {
 
 export function RoleSelect({
   value,
+  initial = "operator",
   onValueChange,
   label,
   name,
   disabled,
 }: {
   value?: ClientRole;
+  initial?: ClientRole;
   onValueChange?: (role: ClientRole) => void;
   label: string;
   name?: string;
@@ -131,7 +133,7 @@ export function RoleSelect({
   return (
     <Select
       name={name}
-      defaultValue={value === undefined ? "operator" : undefined}
+      defaultValue={value === undefined ? initial : undefined}
       value={value}
       disabled={disabled}
       onValueChange={(next: string | null) => next && onValueChange?.(next as ClientRole)}

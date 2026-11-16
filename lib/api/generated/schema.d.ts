@@ -626,7 +626,7 @@ export interface paths {
         };
         /**
          * Workflows
-         * @description Every workflow outside the playground, with the client it belongs to (None: shared).
+         * @description Every workflow, with the client it belongs to (None: shared).
          */
         get: operations["workflows_v1_admin_workflows_get"];
         put?: never;
@@ -691,6 +691,82 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/access-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Access
+         * @description Public: a prospect asks for an account (the site's form). 429 past the hourly limit per
+         *     network, 400 when the anti-robot check fails.
+         */
+        post: operations["request_access_v1_access_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Requests */
+        get: operations["list_requests_v1_admin_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve
+         * @description Create (or reuse) the client, invite the person (temporary password in this answer only)
+         *     and give starting credits.
+         */
+        post: operations["approve_v1_admin_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/requests/{request_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Decline */
+        post: operations["decline_v1_admin_requests__request_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -704,13 +780,111 @@ export interface components {
             roles: string[];
             /** Permissions */
             permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant" | "clients:manage")[];
-            /**
-             * Withcredits
-             * @description A playground visitor's paid actions: offered, answered 402 (contact us).
-             */
-            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant" | "clients:manage")[];
             /** @description None when signed out. */
             credits: components["schemas"]["Credits"] | null;
+        };
+        /** AccessApprove */
+        AccessApprove: {
+            /**
+             * Slug
+             * @description The client is client-<slug> (created if new).
+             */
+            slug: string;
+            /**
+             * Role
+             * @default admin
+             * @enum {string}
+             */
+            role: "viewer" | "operator" | "admin";
+            /**
+             * Credits
+             * @default 200
+             */
+            credits: number;
+        };
+        /** AccessApproved */
+        AccessApproved: {
+            request: components["schemas"]["AccessRequestOut"];
+            invited: components["schemas"]["TemporaryPassword"];
+        };
+        /** AccessDecline */
+        AccessDecline: {
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** AccessRequestIn */
+        AccessRequestIn: {
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Company */
+            company: string;
+            /**
+             * Sector
+             * @default
+             */
+            sector: string;
+            /**
+             * Message
+             * @default
+             */
+            message: string;
+            /**
+             * Locale
+             * @default fr
+             * @enum {string}
+             */
+            locale: "fr" | "en";
+            /**
+             * Consent
+             * @description The prospect agrees to be contacted about it.
+             * @constant
+             */
+            consent: true;
+            /**
+             * Turnstiletoken
+             * @default
+             */
+            turnstileToken: string;
+        };
+        /** AccessRequestOut */
+        AccessRequestOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Email */
+            email: string;
+            /** Company */
+            company: string;
+            /** Sector */
+            sector: string;
+            /** Message */
+            message: string;
+            /** Locale */
+            locale: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "new" | "approved" | "declined";
+            /** Note */
+            note: string;
+            /** Account */
+            account: string | null;
+            /** Decidedby */
+            decidedBy: string | null;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+            /** Decidedat */
+            decidedAt: string | null;
         };
         /** AccountUsage */
         AccountUsage: {
@@ -779,7 +953,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "client.created" | "client.disabled" | "client.enabled" | "user.invited" | "user.role_changed" | "user.disabled" | "user.enabled" | "user.password_reset" | "user.removed" | "credits.granted" | "workflow.assigned";
+            action: "client.created" | "client.disabled" | "client.enabled" | "user.invited" | "user.role_changed" | "user.disabled" | "user.enabled" | "user.password_reset" | "user.removed" | "credits.granted" | "workflow.assigned" | "request.approved" | "request.declined";
             /** Account */
             account: string | null;
             /** Target */
@@ -2264,7 +2438,7 @@ export interface components {
             apiStats: components["schemas"]["ApiStats"] | null;
             /**
              * Readonly
-             * @description A playground example: duplicate it to edit (demo mode).
+             * @description Shared (no account): duplicate it to edit or run it.
              * @default false
              */
             readOnly: boolean;
@@ -2294,15 +2468,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkflowList"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2863,15 +3028,6 @@ export interface operations {
                     "application/json": components["schemas"]["Access"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     platform_config_v1_platform_config_get: {
@@ -2892,15 +3048,6 @@ export interface operations {
                     "application/json": components["schemas"]["PlatformConfig"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     operations_v1_operations_get: {
@@ -2919,15 +3066,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Operations"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2979,15 +3117,6 @@ export interface operations {
                     "application/json": components["schemas"]["Catalog"];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     dashboard_v1_dashboard_get: {
@@ -3006,15 +3135,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Dashboard"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3102,15 +3222,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminOverview"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -3423,15 +3534,6 @@ export interface operations {
                     "application/json": components["schemas"]["SharedWorkflow"][];
                 };
             };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
         };
     };
     assign_workflow_v1_admin_workflows__workflow_id__account_put: {
@@ -3520,6 +3622,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminEventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_access_v1_access_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_requests_v1_admin_requests_get: {
+        parameters: {
+            query?: {
+                status?: ("new" | "approved" | "declined") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_v1_admin_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessApproved"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decline_v1_admin_requests__request_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccessDecline"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessRequestOut"];
                 };
             };
             /** @description Validation Error */

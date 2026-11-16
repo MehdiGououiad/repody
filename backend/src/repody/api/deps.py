@@ -1,16 +1,14 @@
 """Request dependencies: a database session, the bearer token and the caller."""
 
-import uuid
 from collections.abc import AsyncIterator
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.infra import db
 from repody.infra.auth import (
-    DEMO_VISITOR_ROLE,
     DEV_USER,
     InvalidTokenError,
     Permission,
@@ -40,28 +38,10 @@ def bearer_token(
 TokenDep = Annotated[str | None, Depends(bearer_token)]
 
 
-VISITOR_HEADER = "X-Repody-Visitor"
-CREDITS = "The playground does not run documents. Contact us for credits to continue."
-
-
-def _visitor(header: str | None) -> User | None:
-    """The playground visitor the web app names (a random UUID kept in its cookie)."""
-    try:
-        visitor = uuid.UUID(header or "")
-    except ValueError:
-        return None
-    return User(subject=f"visitor-{visitor.hex}", roles=frozenset({DEMO_VISITOR_ROLE}))
-
-
-def optional_user(
-    token: TokenDep,
-    visitor: Annotated[str | None, Header(alias=VISITOR_HEADER, include_in_schema=False)] = None,
-) -> User | None:
-    """The caller: in demo mode the anonymous visitor (no visitor header: nobody); else the
-    signed-in user, None without a valid token (always the dev user without OIDC)."""
+def optional_user(token: TokenDep) -> User | None:
+    """The caller: the signed-in user, None without a valid token (always the dev user without
+    OIDC)."""
     settings = get_settings()
-    if settings.demo_mode:
-        return _visitor(visitor)
     if not settings.oidc_enabled:
         return DEV_USER
     if token is None:
@@ -80,8 +60,6 @@ def require(permission: Permission):
         if user is None:
             raise HTTPException(401, "Sign in to continue.")
         if not user.can(permission):
-            if user.visitor:  # a playground visitor reaching for what costs model time
-                raise HTTPException(402, CREDITS)
             raise HTTPException(403, f"Missing permission {permission}.")
         return user
 

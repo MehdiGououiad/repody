@@ -52,3 +52,4 @@ export type LedgerEntry = Schema["LedgerEntry"];
 export type SharedWorkflow = Schema["SharedWorkflow"];
 export type AdminEvent = Schema["AdminEventOut"];
 export type TemporaryPassword = Schema["TemporaryPassword"];
+export type AccessRequest = Schema["AccessRequestOut"];
