@@ -445,6 +445,252 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overview
+         * @description Every client with its users, balance and use, and this month's GPU spend.
+         */
+        get: operations["overview_v1_admin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Client
+         * @description A new client company: the Keycloak group client-<slug>.
+         */
+        post: operations["create_client_v1_admin_clients_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client */
+        get: operations["client_v1_admin_clients__account__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable Client
+         * @description Disable every user of the client (nobody of it can sign in).
+         */
+        post: operations["disable_client_v1_admin_clients__account__disable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/enable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable Client */
+        post: operations["enable_client_v1_admin_clients__account__enable_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite
+         * @description A new user of the client, with a temporary password shown only in this answer.
+         */
+        post: operations["invite_v1_admin_clients__account__users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove User
+         * @description Out of the client and disabled.
+         */
+        delete: operations["remove_user_v1_admin_clients__account__users__user_id__delete"];
+        options?: never;
+        head?: never;
+        /** Change User */
+        patch: operations["change_user_v1_admin_clients__account__users__user_id__patch"];
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/users/{user_id}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Password
+         * @description A new temporary password, shown only in this answer.
+         */
+        post: operations["reset_password_v1_admin_clients__account__users__user_id__password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/clients/{account}/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Grant */
+        post: operations["grant_v1_admin_clients__account__credits_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/workflows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Workflows
+         * @description Every workflow outside the playground, with the client it belongs to (None: shared).
+         */
+        get: operations["workflows_v1_admin_workflows_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/workflows/{workflow_id}/account": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Assign Workflow */
+        put: operations["assign_workflow_v1_admin_workflows__workflow_id__account_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Spend */
+        get: operations["spend_v1_admin_spend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Events
+         * @description The audit log, newest first.
+         */
+        get: operations["events_v1_admin_events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -457,12 +703,12 @@ export interface components {
             /** Roles */
             roles: string[];
             /** Permissions */
-            permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant")[];
+            permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant" | "clients:manage")[];
             /**
              * Withcredits
              * @description A playground visitor's paid actions: offered, answered 402 (contact us).
              */
-            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant")[];
+            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant" | "clients:manage")[];
             /** @description None when signed out. */
             credits: components["schemas"]["Credits"] | null;
         };
@@ -522,6 +768,57 @@ export interface components {
             /** Startedat */
             startedAt: string | null;
             progress: components["schemas"]["RunProgress"] | null;
+        };
+        /** AdminEventOut */
+        AdminEventOut: {
+            /** Id */
+            id: string;
+            /** Actor */
+            actor: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "client.created" | "client.disabled" | "client.enabled" | "user.invited" | "user.role_changed" | "user.disabled" | "user.enabled" | "user.password_reset" | "user.removed" | "credits.granted" | "workflow.assigned";
+            /** Account */
+            account: string | null;
+            /** Target */
+            target: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
+        };
+        /** AdminGrant */
+        AdminGrant: {
+            /**
+             * Amount
+             * @description Negative takes credits back.
+             */
+            amount: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** AdminOverview */
+        AdminOverview: {
+            /**
+             * Enabled
+             * @description False: the Keycloak admin account is not configured.
+             */
+            enabled: boolean;
+            /** Lowbalancethreshold */
+            lowBalanceThreshold: number;
+            /** Clients */
+            clients: components["schemas"]["ClientSummary"][];
+            spend: components["schemas"]["Spend"];
         };
         /**
          * Aggregate
@@ -869,6 +1166,84 @@ export interface components {
              */
             presenceOperators: ("==" | "!=" | ">" | ">=" | "<" | "<=" | "IN" | "NOT_IN" | "EXISTS" | "IS_EMPTY")[];
         };
+        /** ClientCreate */
+        ClientCreate: {
+            /**
+             * Slug
+             * @description The group is client-<slug>.
+             */
+            slug: string;
+        };
+        /** ClientDetail */
+        ClientDetail: {
+            summary: components["schemas"]["ClientSummary"];
+            /** Users */
+            users: components["schemas"]["ClientUser"][];
+            /** Ledger */
+            ledger: components["schemas"]["LedgerEntry"][];
+            /** Workflows */
+            workflows: components["schemas"]["ClientWorkflow"][];
+        };
+        /** ClientSummary */
+        ClientSummary: {
+            /**
+             * Account
+             * @description client-<slug>, the Keycloak group.
+             */
+            account: string;
+            /** Users */
+            users: number;
+            /** Activeusers */
+            activeUsers: number;
+            /** Balance */
+            balance: number;
+            /** Held */
+            held: number;
+            /** Lowbalance */
+            lowBalance: boolean;
+            /** Recentruns */
+            recentRuns: number;
+            /** Recentpages */
+            recentPages: number;
+            /** Workflows */
+            workflows: number;
+            /**
+             * Inkeycloak
+             * @description False: credits or workflows but no group any more.
+             */
+            inKeycloak: boolean;
+        };
+        /** ClientUser */
+        ClientUser: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Firstname */
+            firstName: string;
+            /** Lastname */
+            lastName: string;
+            /** Role */
+            role: ("viewer" | "operator" | "admin") | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Createdat */
+            createdAt: string | null;
+        };
+        /** ClientWorkflow */
+        ClientWorkflow: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Status */
+            status: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
         /** Condition */
         "Condition-Input": {
             /** Id */
@@ -939,6 +1314,12 @@ export interface components {
             held: number;
             /** Enforced */
             enforced: boolean;
+            /**
+             * Low
+             * @description Below AUDIT_CREDIT_LOW_BALANCE, enforced.
+             * @default false
+             */
+            low: boolean;
         };
         /** Dashboard */
         Dashboard: {
@@ -1272,6 +1653,35 @@ export interface components {
             day: string;
             /** Value */
             value: number;
+        };
+        /** LedgerEntry */
+        LedgerEntry: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "grant" | "run";
+            /** Amount */
+            amount: number;
+            /** Pending */
+            pending: boolean;
+            /** Runid */
+            runId: string | null;
+            /** Pages */
+            pages: number;
+            /** Modelms */
+            modelMs: number;
+            /** Note */
+            note: string;
+            /** Actor */
+            actor: string;
+            /**
+             * Createdat
+             * Format: date-time
+             */
+            createdAt: string;
         };
         /**
          * LiteralValue
@@ -1608,6 +2018,22 @@ export interface components {
             /** Share */
             share: number;
         };
+        /** SharedWorkflow */
+        SharedWorkflow: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Account */
+            account: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Updatedat
+             * Format: date-time
+             */
+            updatedAt: string;
+        };
         /**
          * SourceCounts
          * @description Runs of the last 7 days by who started them.
@@ -1617,6 +2043,42 @@ export interface components {
             api: number;
             /** Test */
             test: number;
+        };
+        /** Spend */
+        Spend: {
+            /**
+             * Since
+             * Format: date-time
+             */
+            since: string;
+            /** Runs */
+            runs: number;
+            /** Pages */
+            pages: number;
+            /** Modelms */
+            modelMs: number;
+            /**
+             * Dollars
+             * @description Model time at AUDIT_GPU_DOLLARS_PER_HOUR (an estimate).
+             */
+            dollars: number;
+            /** Dollarsperhour */
+            dollarsPerHour: number;
+            /** Accounts */
+            accounts: components["schemas"]["SpendAccount"][];
+        };
+        /** SpendAccount */
+        SpendAccount: {
+            /** Account */
+            account: string;
+            /** Runs */
+            runs: number;
+            /** Pages */
+            pages: number;
+            /** Modelms */
+            modelMs: number;
+            /** Dollars */
+            dollars: number;
         };
         /** TemplateTypeInfo */
         TemplateTypeInfo: {
@@ -1630,6 +2092,15 @@ export interface components {
             /** Listable */
             listable: boolean;
         };
+        /** TemporaryPassword */
+        TemporaryPassword: {
+            user: components["schemas"]["ClientUser"];
+            /**
+             * Temporarypassword
+             * @description Shown once; Keycloak makes the user replace it at the first sign-in.
+             */
+            temporaryPassword: string;
+        };
         /** UsageReport */
         UsageReport: {
             /** Since */
@@ -1638,6 +2109,34 @@ export interface components {
             until: string | null;
             /** Accounts */
             accounts: components["schemas"]["AccountUsage"][];
+        };
+        /** UserChange */
+        UserChange: {
+            /** Role */
+            role?: ("viewer" | "operator" | "admin") | null;
+            /** Enabled */
+            enabled?: boolean | null;
+        };
+        /** UserInvite */
+        UserInvite: {
+            /** Email */
+            email: string;
+            /**
+             * Firstname
+             * @default
+             */
+            firstName: string;
+            /**
+             * Lastname
+             * @default
+             */
+            lastName: string;
+            /**
+             * Role
+             * @default operator
+             * @enum {string}
+             */
+            role: "viewer" | "operator" | "admin";
         };
         /** ValidationError */
         ValidationError: {
@@ -1663,6 +2162,14 @@ export interface components {
             runs: number[];
             /** Medianms */
             medianMs: number;
+        };
+        /** WorkflowAssign */
+        WorkflowAssign: {
+            /**
+             * Account
+             * @description The client to give it to; None makes it shared again.
+             */
+            account?: string | null;
         };
         /**
          * WorkflowDefinition
@@ -2566,6 +3073,453 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UsageReport"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    overview_v1_admin_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminOverview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_client_v1_admin_clients_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClientCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_v1_admin_clients__account__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    disable_client_v1_admin_clients__account__disable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enable_client_v1_admin_clients__account__enable_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invite_v1_admin_clients__account__users_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserInvite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemporaryPassword"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_user_v1_admin_clients__account__users__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_user_v1_admin_clients__account__users__user_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserChange"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientUser"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_password_v1_admin_clients__account__users__user_id__password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemporaryPassword"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_v1_admin_clients__account__credits_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminGrant"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    workflows_v1_admin_workflows_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedWorkflow"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_workflow_v1_admin_workflows__workflow_id__account_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                workflow_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WorkflowAssign"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedWorkflow"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    spend_v1_admin_spend_get: {
+        parameters: {
+            query?: {
+                /** @description Default: this month. */
+                since?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spend"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    events_v1_admin_events_get: {
+        parameters: {
+            query?: {
+                account?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminEventOut"][];
                 };
             };
             /** @description Validation Error */

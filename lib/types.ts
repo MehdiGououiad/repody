@@ -41,3 +41,14 @@ export type Kpi = Schema["Kpi"];
 export type PlatformConfig = Schema["PlatformConfig"];
 export type Access = Schema["Access"];
 export type Permission = Access["permissions"][number];
+
+// Admin area (platform admins)
+export type AdminOverview = Schema["AdminOverview"];
+export type ClientSummary = Schema["ClientSummary"];
+export type ClientDetail = Schema["ClientDetail"];
+export type ClientUser = Schema["ClientUser"];
+export type ClientRole = NonNullable<Schema["ClientUser"]["role"]>;
+export type LedgerEntry = Schema["LedgerEntry"];
+export type SharedWorkflow = Schema["SharedWorkflow"];
+export type AdminEvent = Schema["AdminEventOut"];
+export type TemporaryPassword = Schema["TemporaryPassword"];

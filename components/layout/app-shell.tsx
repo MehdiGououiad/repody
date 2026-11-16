@@ -7,6 +7,7 @@ import { fetchAccess } from "@/lib/api/server";
 import type { Account } from "@/lib/auth/account";
 import { playgroundContact } from "@/lib/playground/config";
 import { AppSidebar } from "./app-sidebar";
+import { CreditsBanner } from "./credits-banner";
 import { GlobalShortcuts } from "./global-shortcuts";
 import { MobileNav } from "./mobile-nav";
 
@@ -37,6 +38,7 @@ export async function AppShell({
             <div className="flex min-w-0 flex-1 flex-col md:py-1.5 md:pe-1.5">
               <MobileNav />
               <PlaygroundBanner />
+              <CreditsBanner access={access} />
               <main
                 id="main-content"
                 className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-panel md:rounded-lg md:shadow-panel"

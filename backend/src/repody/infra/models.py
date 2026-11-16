@@ -17,6 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from repody.infra.db import Base, CreatedAt, UpdatedAt, UtcDateTime
+from repody.schemas.admin import AdminAction
 from repody.schemas.credits import CreditKind
 from repody.schemas.rule import Scope, Severity
 from repody.schemas.run import Outcome, RuleStatus, RunStatus, Source
@@ -192,3 +193,19 @@ class CreditEntry(Base):
     actor: Mapped[str] = mapped_column(default="")  # who granted, or the run's client
     created_at: Mapped[CreatedAt]
     settled_at: Mapped[UtcDateTime | None]
+
+
+class AdminEvent(Base):
+    """What a platform admin did in the admin area (repody.app.admin): who, to which client and
+    user, and when. Kept for good: it is the record of who was given access and credits."""
+
+    __tablename__ = "admin_events"
+    __table_args__ = (Index("ix_admin_events_created", "created_at"),)
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    actor: Mapped[str]  # the admin's Keycloak subject
+    action: Mapped[AdminAction]
+    account_id: Mapped[str | None] = mapped_column(index=True)
+    target: Mapped[str] = mapped_column(default="")  # a user's email, a workflow id
+    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+    created_at: Mapped[CreatedAt]

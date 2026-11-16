@@ -172,7 +172,7 @@ async def test_me_says_what_each_caller_may_do(api, as_user):
         "roles": ["viewer"],
         "permissions": ["workflow:read", "run:read"],
         "withCredits": [],
-        "credits": {"account": None, "balance": 0, "held": 0, "enforced": False},
+        "credits": {"account": None, "balance": 0, "held": 0, "enforced": False, "low": False},
     }
     operator = (
         await as_user(User(subject="otto", roles=frozenset({"operator"}))).get("/v1/me")

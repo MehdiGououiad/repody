@@ -115,6 +115,7 @@ async def test_runs_wait_for_credits_and_pay_the_pages_they_send(as_user, model_
         "balance": 10,
         "held": 0,
         "enforced": True,
+        "low": True,  # under AUDIT_CREDIT_LOW_BALANCE (20)
     }
     assert (await acme.post("/v1/workflows/wf-acme/runs", files=FILE)).status_code == 202
     assert (await credits(acme))["balance"] == 10 - PAGES
@@ -192,6 +193,7 @@ async def test_a_run_that_never_started_pays_nothing(as_user, model_answer, enfo
         "balance": 10,
         "held": 0,
         "enforced": True,
+        "low": True,  # under AUDIT_CREDIT_LOW_BALANCE (20)
     }
 
 

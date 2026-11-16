@@ -13,6 +13,7 @@ const PERMISSIONS: Permission[] = [
   "run:execute",
   "metrics:read",
   "credits:grant",
+  "clients:manage",
 ];
 
 const ROLES = ["viewer", "operator", "admin", "platform_admin", "demo_visitor"] as const;

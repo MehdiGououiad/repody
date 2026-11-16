@@ -210,6 +210,7 @@ services:
       # Realm placeholders (deploy/keycloak/realm-repody.production.json), read on first import.
       REPODY_APP_URL: https://${APP_HOST:?}
       AUTH_KEYCLOAK_CLIENT_SECRET: ${AUTH_KEYCLOAK_CLIENT_SECRET:?}
+      KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?}
       REPODY_ADMIN_EMAIL: ${REPODY_ADMIN_EMAIL:?}
       REPODY_ADMIN_INITIAL_PASSWORD: ${REPODY_ADMIN_INITIAL_PASSWORD:?}
     expose:
@@ -263,6 +264,9 @@ services:
       <<: *backend-env
       OTEL_SERVICE_NAME: repody-api
       HATCHET_CLIENT_TOKEN_FILE: /run/hatchet/token
+      # The admin area: client groups and users in Keycloak (deploy/ENV.md, "Admin area").
+      AUDIT_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
+      AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?}
     volumes:
       - hatchet-token:/run/hatchet:ro
     expose:
