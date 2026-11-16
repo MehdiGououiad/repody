@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SITE } from "@/lib/site";
 
 export function Container({
   className = "",

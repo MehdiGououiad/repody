@@ -18,7 +18,7 @@ import type { CreditsContact } from "@/lib/credits/contact";
 import { creditsDialog } from "@/lib/credits/dialog";
 
 /** "Contact us for credits": opened when the API refuses a run its account cannot pay (402). */
-export function CreditsDialog({ contact }: { contact: CreditsContact }) {
+export function CreditsDialog({ contact }: Readonly<{ contact: CreditsContact }>) {
   const t = useTranslations("credits");
   return (
     <Dialog controller={creditsDialog}>

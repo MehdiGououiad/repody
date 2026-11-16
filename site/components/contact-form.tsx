@@ -20,6 +20,7 @@ declare global {
 }
 
 type State = "idle" | "sending" | "sent" | "failed" | "tooMany" | "robot";
+const FAILURES: Record<number, State> = { 429: "tooMany", 400: "robot" };
 
 /** Loads Turnstile once and renders its widget; the token comes back through `onToken`. */
 function useTurnstile(container: React.RefObject<HTMLDivElement | null>, locale: Locale) {
@@ -60,17 +61,16 @@ function useTurnstile(container: React.RefObject<HTMLDivElement | null>, locale:
 }
 
 /** The access request: sent to Repody's API, which a platform admin approves in the app. */
-export function ContactForm({ t, locale }: { t: Dict["contact"]["form"]; locale: Locale }) {
+export function ContactForm({
+  t,
+  locale,
+}: Readonly<{ t: Dict["contact"]["form"]; locale: Locale }>) {
   const [state, setState] = useState<State>("idle");
   const box = useRef<HTMLDivElement>(null);
   const turnstile = useTurnstile(box, locale);
 
   if (state === "sent") {
-    return (
-      <p role="status" className="text-[0.9375rem] text-ink">
-        {t.sent}
-      </p>
-    );
+    return <output className="block text-[0.9375rem] text-ink">{t.sent}</output>;
   }
   const problem = state === "failed" || state === "tooMany" || state === "robot";
   return (
@@ -103,9 +103,7 @@ export function ContactForm({ t, locale }: { t: Dict["contact"]["form"]; locale:
             setState("sent");
             return;
           }
-          setState(
-            response.status === 429 ? "tooMany" : response.status === 400 ? "robot" : "failed"
-          );
+          setState(FAILURES[response.status] ?? "failed");
         } catch {
           setState("failed");
         }
@@ -115,7 +113,13 @@ export function ContactForm({ t, locale }: { t: Dict["contact"]["form"]; locale:
       <div className="grid gap-5 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-2">
           {t.name}
-          <input name="name" required maxLength={200} autoComplete="name" className={`${FIELD} h-10`} />
+          <input
+            name="name"
+            required
+            maxLength={200}
+            autoComplete="name"
+            className={`${FIELD} h-10`}
+          />
         </label>
         <label className="flex flex-col gap-1.5 text-sm font-medium text-ink-2">
           {t.email}
@@ -166,7 +170,10 @@ export function ContactForm({ t, locale }: { t: Dict["contact"]["form"]; locale:
         <p role="alert" className="text-sm text-fail-ink">
           {t[state]}{" "}
           {state !== "robot" ? (
-            <a className="underline" href={`mailto:${SITE.contactEmail}?subject=${encodeURIComponent(t.subject)}`}>
+            <a
+              className="underline"
+              href={`mailto:${SITE.contactEmail}?subject=${encodeURIComponent(t.subject)}`}
+            >
               {SITE.contactEmail}
             </a>
           ) : null}
