@@ -702,8 +702,9 @@ export interface paths {
         put?: never;
         /**
          * Request Access
-         * @description Public: a prospect asks for an account (the site's form). 429 past the hourly limit per
-         *     network, 400 when the anti-robot check fails.
+         * @description Public: a prospect asks for an account (the site's form). 404 when this installation
+         *     takes no requests (AUDIT_ACCESS_REQUESTS_ENABLED), 429 past the hourly limit per network, 400
+         *     when the anti-robot check fails.
          */
         post: operations["request_access_v1_access_requests_post"];
         delete?: never;
@@ -3657,6 +3658,20 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
+            /** @description The anti-robot check failed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description This installation takes no access requests. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -3665,6 +3680,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+            /** @description Too many requests from this network. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
