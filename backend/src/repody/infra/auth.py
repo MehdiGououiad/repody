@@ -5,21 +5,11 @@ import hashlib
 import secrets
 from dataclasses import dataclass
 from functools import lru_cache
-from typing import Literal
 
 import jwt
 
+from repody.schemas.platform import PERMISSIONS, Access, Permission
 from repody.settings import get_settings
-
-Permission = Literal[
-    "workflow:read",
-    "workflow:write",
-    "workflow:deploy",
-    "workflow:delete",
-    "run:read",
-    "run:execute",
-    "metrics:read",
-]
 
 _VIEWER: frozenset[str] = frozenset({"workflow:read", "run:read"})
 _OPERATOR = _VIEWER | {"workflow:write", "workflow:deploy", "run:execute", "metrics:read"}
@@ -44,6 +34,11 @@ class User:
 
     def can(self, permission: Permission) -> bool:
         return any(permission in ROLE_PERMISSIONS.get(role, ()) for role in self.roles)
+
+    def access(self) -> Access:
+        granted: list[Permission] = [p for p in PERMISSIONS if self.can(p)]
+        paid: list[Permission] = [p for p in PERMISSIONS if p not in granted] if self.visitor else []
+        return Access(roles=sorted(self.roles), permissions=granted, with_credits=paid)
 
     @property
     def visitor(self) -> str | None:

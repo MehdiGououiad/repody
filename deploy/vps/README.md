@@ -17,7 +17,8 @@ workers ──HTTPS──▶ Modal (NuExtract3 on vLLM)
 | `auth.example.com` | `http://keycloak:8080`, paths `realms/repody` and `resources` only | Yes |
 | `kc-admin.example.com` | `http://keycloak:8080`, the admin console | No, Cloudflare Access only |
 
-The API, workers, Postgres, Redis and SeaweedFS have no route at all.
+The API, workers, Postgres, Hatchet and SeaweedFS have no route at all. Hatchet's dashboard
+listens on the server's loopback only ([Hatchet](#hatchet)).
 
 **Deploys** come from [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml), run by
 hand with a version. It does the following:
@@ -161,9 +162,9 @@ the deploy with its name.
 ## 5. Deploy
 
 Under **Actions → Deploy → Run workflow**, enter the version, for example `1.0.0`. The first
-deploy creates the databases. Postgres, Redis and SeaweedFS turn healthy, `migrate` applies the
-migrations and exits, then Keycloak, the API, the workers, the scheduler, web and cloudflared
-start. The run fails if any health check fails, or if `https://app.example.com` doesn't answer.
+deploy creates the databases. Postgres and SeaweedFS turn healthy, then Hatchet Lite; `migrate`
+applies the migrations and `hatchet-token` writes a new Hatchet API token, and both exit; then
+Keycloak, the API, the workers, web and cloudflared start. The run fails if any health check fails, or if `https://app.example.com` doesn't answer.
 
 **Rolling back** is the same thing: run Deploy with the previous version. The migrations are
 forward-only, so check the release notes before going back across a schema change.
@@ -197,11 +198,10 @@ Measured on 12 November 2026, after a full extraction run (`docker stats`):
 | keycloak | 645 MB | 1.5 GB | Optimized build; the JVM takes 70% of the limit, and Keycloak advises at least 750 MB; healthy in about 14 s |
 | worker | 247 MB | 1.5 GB | Renders PDF pages; up to `AUDIT_WORKER_CONCURRENCY` runs at once |
 | api | 166 MB | 768 MB | |
-| scheduler | 137 MB | 256 MB | |
+| hatchet-lite | (not measured) | 768 MB | Hatchet's engine, API and dashboard; its queue is the `hatchet` database |
 | postgres | 105 MB | 1 GB | `shared_buffers=256MB`, 256 MB `shm_size` |
 | web | 77 MB | 512 MB | Next.js standalone server |
 | seaweedfs | 73 MB | 512 MB | |
-| redis | 9 MB | 384 MB | `maxmemory 256mb`, `noeviction`, append-only (the run queue) |
 | cloudflared | (not measured) | 128 MB | |
 | **Total** | **≈ 1.5 GB** | 6.5 GB | |
 
@@ -209,6 +209,19 @@ The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memo
 go to Modal, 4 at a time (`AUDIT_INFERENCE_CONCURRENCY`, the vLLM server's `MAX_INPUTS`). Every
 container runs with `no-new-privileges`, and the backend and web containers have read-only
 filesystems with `/tmp` in memory.
+
+## Hatchet
+
+Hatchet Lite queues the runs, enforces their timeouts and per-client limits, and runs the
+maintenance cron. Its dashboard (runs, workers, the cron) listens on the server's loopback:
+
+```bash
+ssh -N -L 8888:127.0.0.1:8888 deploy@<server>
+```
+
+Then open `http://localhost:8888` and sign in as `REPODY_ADMIN_EMAIL` with `HATCHET_ADMIN_PASSWORD`.
+Its config and keys live in the `hatchet-config` volume; run history is kept 7 days. The API and
+workers never need a token in `.env`: `hatchet-token` writes a new one on every deploy.
 
 ## Operating it
 

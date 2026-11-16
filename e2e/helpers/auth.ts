@@ -87,7 +87,12 @@ export function writeAuthArtifacts(token: string, storageStateJson: string): voi
 }
 
 /** Browser login via Keycloak: Better Auth starts the OAuth flow, then the Keycloak form. */
-export async function loginViaKeycloak(page: Page, callbackPath = "/dashboard"): Promise<void> {
+/** Sign in through Keycloak (the e2e user by default; `user` for another dev-realm account). */
+export async function loginViaKeycloak(
+  page: Page,
+  callbackPath = "/dashboard",
+  user = { name: KEYCLOAK_USER, password: KEYCLOAK_PASSWORD }
+): Promise<void> {
   const signIn = await page.request.post("/api/auth/sign-in/social", {
     data: { provider: "keycloak", callbackURL: callbackPath },
     headers: { origin: new URL(WEB_URL).origin },
@@ -97,7 +102,7 @@ export async function loginViaKeycloak(page: Page, callbackPath = "/dashboard"):
     await page.goto(url);
   } else {
     await page.goto(`/login?callbackUrl=${encodeURIComponent(callbackPath)}`);
-    const keycloakBtn = page.getByRole("button", { name: /Continue with Keycloak/i });
+    const keycloakBtn = page.getByRole("button", { name: /^Continue$/ });
     await keycloakBtn.click();
     const authHost = new URL(AUTH_URL).hostname.replace(/\./g, "\\.");
     await page.waitForURL(new RegExp(authHost), { timeout: 30_000 });
@@ -105,8 +110,8 @@ export async function loginViaKeycloak(page: Page, callbackPath = "/dashboard"):
 
   const username = page.locator("#username, input[name='username']").first();
   await username.waitFor({ state: "visible", timeout: 30_000 });
-  await username.fill(KEYCLOAK_USER);
-  await page.locator("#password, input[name='password']").first().fill(KEYCLOAK_PASSWORD);
+  await username.fill(user.name);
+  await page.locator("#password, input[name='password']").first().fill(user.password);
   await page.locator("#kc-login, input[name='login'], button[type='submit']").first().click();
 
   await page.waitForURL((url) => url.origin === new URL(WEB_URL).origin, {

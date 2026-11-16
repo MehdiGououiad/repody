@@ -2,25 +2,17 @@
 
 Everything goes to NuExtract3, all pages in one request: documents with fields in structured
 mode, documents without fields in its Markdown mode.
-
-Answers are cached in Redis by document bytes, request (model, template, instructions, examples)
-and rendering (page limit, resolution) when AUDIT_EXTRACTION_CACHE_TTL_SECONDS > 0.
-The cache is optional: when Redis fails, the model is asked and the failure logged.
 """
 
 import asyncio
-import hashlib
-import json
 import time
 from typing import Any
 
 import structlog
 from pydantic import BaseModel
-from redis.exceptions import RedisError
 
-from repody.extraction import client, nuextract, render
+from repody.extraction import client, nuextract
 from repody.extraction.fields import FieldValue, leaf_values, parse_answer
-from repody.infra.redis import get_redis
 from repody.schemas.run import ExtractionMeta
 from repody.schemas.workflow import DocumentDef
 from repody.settings import get_settings
@@ -47,13 +39,6 @@ def _request(doc: DocumentDef) -> dict[str, Any]:
     return nuextract.markdown_request(model)
 
 
-def _cache_key(data: bytes, request: dict[str, Any]) -> str:
-    """Everything that decides the answer: the file, the request, and how pages are rendered."""
-    rendering = {"max_pages": get_settings().max_pages_per_document, "pdf_dpi": render.PDF_DPI}
-    meta = json.dumps({"request": request, "rendering": rendering}, sort_keys=True)
-    return f"extract:{hashlib.sha256(data + meta.encode()).hexdigest()}"
-
-
 def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[str, Any]:
     """A copy of ``request`` whose last (user) message holds the page images."""
     return {**request, "messages": [*request["messages"][:-1], {"role": "user", "content": parts}]}
@@ -72,34 +57,11 @@ async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str
     return _Answer(markdown=reply.text[:MAX_TEXT_CHARS], **pages)
 
 
-async def _cached(key: str) -> _Answer | None:
-    try:
-        cached = await get_redis().get(key)
-    except RedisError as exc:
-        log.warning("extraction_cache_unavailable", error=repr(exc))
-        return None
-    return _Answer.model_validate_json(cached) if cached else None
-
-
-async def _cache(key: str, answer: _Answer, ttl: int) -> None:
-    try:
-        await get_redis().set(key, answer.model_dump_json(), ex=ttl)
-    except RedisError as exc:
-        log.warning("extraction_cache_unavailable", error=repr(exc))
-
-
 async def extract(
     doc: DocumentDef, data: bytes, mime: str
 ) -> tuple[list[FieldValue], ExtractionMeta]:
-    request = _request(doc)
-    key = _cache_key(data, request)
-    ttl = get_settings().extraction_cache_ttl_seconds
-
     started = time.perf_counter()
-    cached = await _cached(key) if ttl else None
-    answer = cached or await _ask_model(doc, data, mime, request)
-    if ttl and cached is None:
-        await _cache(key, answer, ttl)
+    answer = await _ask_model(doc, data, mime, _request(doc))
     elapsed = int((time.perf_counter() - started) * 1000)
 
     fields: list[FieldValue] = []
@@ -111,7 +73,6 @@ async def extract(
         fields = leaf_values(doc.schema_fields, parsed)
     meta = ExtractionMeta(
         extraction_ms=elapsed,
-        cache_hit=cached is not None,
         fields_extracted=sum(f.extracted for f in fields),
         pages_rendered=answer.pages_rendered,
         pages_sent=answer.pages_sent,
@@ -124,7 +85,6 @@ async def extract(
         document_type=doc.document_type,
         model="nuextract",
         ms=elapsed,
-        cache_hit=meta.cache_hit,
         fields=meta.fields_extracted,
         pages=answer.pages_sent,
         error=error,

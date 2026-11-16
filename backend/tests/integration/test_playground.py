@@ -90,7 +90,6 @@ async def test_visitors_cannot_run_publish_or_stop_runs(visitor):
         await alice.post("/v1/workflows/wf-example/runs", files=FILE),
         await alice.post("/v1/workflows/wf-alice/deploy"),
         await alice.post("/v1/runs/run-any/cancel"),
-        await alice.post("/v1/operations/recover"),
     ]:
         assert (response.status_code, response.json()["detail"]) == (402, CREDITS)
     config = (await alice.get("/v1/platform/config")).json()
@@ -143,3 +142,9 @@ def test_demo_mode_is_a_deployment_of_its_own_without_sign_in():
     # Production requires sign-in, so the playground can never be production itself.
     with pytest.raises(ValidationError, match="must be true in production"):
         Settings(demo_mode=True, deployment_environment="production")
+
+
+async def test_a_visitor_is_offered_the_paid_actions(visitor):
+    access = (await visitor().get("/v1/me")).json()
+    assert "workflow:write" in access["permissions"]
+    assert set(access["withCredits"]) == {"run:execute", "workflow:deploy"}

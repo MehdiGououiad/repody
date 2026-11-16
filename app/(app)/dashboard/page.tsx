@@ -8,7 +8,7 @@ import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
-import { $server } from "@/lib/api/server";
+import { $server, requirePermission } from "@/lib/api/server";
 import { getQueryClient } from "@/lib/query/get-query-client";
 
 export async function generateMetadata() {
@@ -16,7 +16,11 @@ export async function generateMetadata() {
 }
 
 export default async function DashboardPage() {
-  const [tNav, tCommon] = await Promise.all([getTranslations("nav"), getTranslations("common")]);
+  const [tNav, tCommon, access] = await Promise.all([
+    getTranslations("nav"),
+    getTranslations("common"),
+    requirePermission("metrics:read"),
+  ]);
   const queryClient = getQueryClient();
   // Started, not awaited: the overview streams in when the API answers.
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/dashboard"));
@@ -26,11 +30,13 @@ export default async function DashboardPage() {
       title={tNav("dashboard")}
       className="max-w-[1440px] py-5"
       actions={
-        <Button variant="primary" render={<Link href="/workflows/new" />}>
-          <Plus />
-          {tCommon("newWorkflow")}
-          <Kbd className="ms-1">C</Kbd>
-        </Button>
+        access.permissions.includes("workflow:write") ? (
+          <Button variant="primary" render={<Link href="/workflows/new" />}>
+            <Plus />
+            {tCommon("newWorkflow")}
+            <Kbd className="ms-1">C</Kbd>
+          </Button>
+        ) : null
       }
     >
       <HydrationBoundary state={dehydrate(queryClient)}>

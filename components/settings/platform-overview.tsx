@@ -5,7 +5,7 @@ import { currentBrand } from "@/lib/theme/brand";
 import type { PlatformConfig } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
 
-function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
+export function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
     <dl className="divide-y divide-line overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]">
       {rows.map(([label, value]) => (
@@ -71,7 +71,6 @@ export async function PlatformOverview({ platform }: { platform: PlatformConfig 
                   {platform.llamacppBaseUrl}
                 </span>,
               ],
-              [t("cache"), platform.cacheEnabled ? t("enabled") : t("disabled")],
             ]}
           />
         </Section>

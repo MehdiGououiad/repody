@@ -44,6 +44,7 @@ def upgrade() -> None:
         sa.Column("deployed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("api_key_hash", sa.String(), nullable=True),
         sa.Column("api_key_hint", sa.String(), nullable=True),
+        sa.Column("visitor_id", sa.String(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -62,6 +63,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_workflows")),
     )
+    op.create_index(op.f("ix_workflows_visitor_id"), "workflows", ["visitor_id"], unique=False)
     op.create_table(
         "runs",
         sa.Column("id", sa.String(), nullable=False),
@@ -114,7 +116,7 @@ def upgrade() -> None:
         sa.Column("fields_extracted", sa.Integer(), nullable=False),
         sa.Column("extraction_ms", sa.Integer(), nullable=False),
         sa.Column("validation_ms", sa.Integer(), nullable=False),
-        sa.Column("dispatched_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("task_run_id", sa.String(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -136,6 +138,8 @@ def upgrade() -> None:
     )
     op.create_index("ix_runs_status_created", "runs", ["status", "created_at"], unique=False)
     op.create_index("ix_runs_workflow_created", "runs", ["workflow_id", "created_at"], unique=False)
+    op.create_index("ix_runs_created", "runs", ["created_at"], unique=False)
+    op.create_index("ix_runs_finished", "runs", ["finished_at"], unique=False)
     op.create_table(
         "rule_results",
         sa.Column("id", sa.String(), nullable=False),
@@ -241,7 +245,10 @@ def downgrade() -> None:
     op.drop_table("run_documents")
     op.drop_index(op.f("ix_rule_results_run_id"), table_name="rule_results")
     op.drop_table("rule_results")
+    op.drop_index("ix_runs_finished", table_name="runs")
+    op.drop_index("ix_runs_created", table_name="runs")
     op.drop_index("ix_runs_workflow_created", table_name="runs")
     op.drop_index("ix_runs_status_created", table_name="runs")
     op.drop_table("runs")
+    op.drop_index(op.f("ix_workflows_visitor_id"), table_name="workflows")
     op.drop_table("workflows")

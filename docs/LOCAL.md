@@ -14,7 +14,7 @@ Full checkout for daily work on **Windows · Linux** (`pnpm platform`).
 | Layer | Source |
 |-------|--------|
 | API / UI / workers | Docker Hub (`mehdigououiad/repody-backend` + `repody-web`, `linux/amd64` + `linux/arm64`) |
-| Postgres / Redis / SeaweedFS (S3) / Keycloak | Docker Compose |
+| Postgres / Hatchet Lite / SeaweedFS (S3) / Keycloak | Docker Compose |
 | NuExtract `:8081` | Host (**default**) |
 
 Images pull as public multi-arch - no Hub login required.
@@ -164,7 +164,7 @@ pnpm platform -- --no-obs
 pnpm platform dev
 ```
 
-Compose runs Postgres, Redis, SeaweedFS (S3) and Keycloak and builds the workers from source; the API
+Compose runs Postgres, Hatchet Lite, SeaweedFS (S3) and Keycloak and builds the workers from source; the API
 (uvicorn) and UI (next dev) run on the host and reload on edits. Ctrl+C stops API + UI;
 `pnpm platform stop` stops everything. Flags: `--no-nuextract`, `--no-obs`.
 

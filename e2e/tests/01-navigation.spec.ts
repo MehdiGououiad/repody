@@ -100,7 +100,7 @@ test.describe("Navigation and shell", () => {
   test("the user menu switches theme and language", async ({ page }) => {
     const watch = watchErrors(page);
     await open(page, "/dashboard");
-    const account = page.getByRole("button", { name: /no sign-in|sans connexion/ });
+    const account = page.getByRole("button", { name: /Repody Operator|no sign-in|sans connexion/ });
     await account.click();
     const menu = page.getByRole("menu");
     await menu.getByRole("radio", { name: "Dark" }).click();

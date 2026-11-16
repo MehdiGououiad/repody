@@ -1,5 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import { API, apiAuthHeaders } from "../helpers/api";
+import { loginViaKeycloak } from "../helpers/auth";
+import { KEYCLOAK_ADMIN, WEB_URL } from "../helpers/env";
 import {
   createWorkflow,
   dropWorkflow,
@@ -17,9 +19,16 @@ async function fetchWorkflow(page: Page, id: string) {
 }
 
 test.describe("Workflows list", () => {
-  test("X selects a row, the bar deletes it after a confirmation", async ({ page, request }) => {
-    const watch = watchErrors(page);
+  test("X selects a row, the bar deletes it after a confirmation", async ({ browser, request }) => {
     const workflow = await createWorkflow(request, `QA delete ${Date.now()}`);
+    // Deleting is admin-only: an admin's own session (the suite signs in as an operator).
+    const context = await browser.newContext({
+      baseURL: WEB_URL,
+      storageState: { cookies: [], origins: [] },
+    });
+    const page = await context.newPage();
+    await loginViaKeycloak(page, "/workflows", KEYCLOAK_ADMIN);
+    const watch = watchErrors(page);
     await open(page, "/workflows");
     const row = page.getByRole("listitem").filter({ hasText: workflow.name });
     await row.getByRole("link").focus();
@@ -40,6 +49,7 @@ test.describe("Workflows list", () => {
     await expect(page.getByText("1 workflow deleted")).toBeVisible();
     await expect(row).toBeHidden();
     watch.expectNoErrors();
+    await context.close();
   });
 
   test("C opens a new workflow with its name focused; Ctrl+S saves it", async ({ page }) => {

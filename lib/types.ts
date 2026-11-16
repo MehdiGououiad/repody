@@ -39,3 +39,5 @@ export type Audit = Schema["AuditListItem"];
 export type Dashboard = Schema["Dashboard"];
 export type Kpi = Schema["Kpi"];
 export type PlatformConfig = Schema["PlatformConfig"];
+export type Access = Schema["Access"];
+export type Permission = Access["permissions"][number];

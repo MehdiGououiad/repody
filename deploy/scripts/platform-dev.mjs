@@ -135,6 +135,59 @@ function patchBackendEnv() {
   });
 }
 
+// Hatchet Lite's default tenant (https://docs.hatchet.run/self-hosting/docker-compose).
+const HATCHET_TENANT = "707d0855-80ab-4e1f-a156-f1c4546cbf52";
+
+/**
+ * Start Postgres and Hatchet Lite, then write a new Hatchet API token to backend/.env for the
+ * API and the workers. A new one on every start: it stays valid however the Hatchet volume was
+ * reset (a token is signed with that volume's keys), and never reaches its 90-day expiry.
+ */
+function startHatchet(files, env) {
+  run(
+    "docker",
+    composeArgsFor(
+      files,
+      "up",
+      "-d",
+      "--wait",
+      "--wait-timeout",
+      "180",
+      "--pull",
+      "missing",
+      "postgres",
+      "hatchet-lite"
+    ),
+    { inherit: true, env }
+  );
+  const created = run(
+    "docker",
+    composeArgsFor(
+      files,
+      "exec",
+      "-T",
+      "hatchet-lite",
+      "/hatchet-admin",
+      "token",
+      "create",
+      "--config",
+      "/config",
+      "--tenant-id",
+      HATCHET_TENANT,
+      "--name",
+      "repody-local"
+    ),
+    { env }
+  );
+  const token = created.stdout.trim().split(/\s+/).pop() ?? "";
+  if (!token.startsWith("ey")) {
+    console.error("Hatchet Lite returned no API token (docker compose logs hatchet-lite).");
+    process.exit(1);
+  }
+  // The host API reaches the engine at the addresses in the token; containers set their own.
+  setEnvKeys(BACKEND_ENV, { HATCHET_CLIENT_TOKEN: token, HATCHET_CLIENT_TLS_STRATEGY: "none" });
+}
+
 function nuextractConfigured() {
   const env = parseEnvFile(LLAMA_PATHS);
   const model = (env.LLAMACPP_MODEL || "").trim();
@@ -363,6 +416,7 @@ async function up() {
   }
 
   console.log("\n── Start the platform (waits for healthchecks) ───────────────");
+  startHatchet(["compose.yaml", "compose.portable.yaml"], composeEnv);
   run(
     "docker",
     composeArgs(
@@ -375,13 +429,12 @@ async function up() {
       "missing",
       "--no-build",
       "postgres",
-      "redis",
+      "hatchet-lite",
       "seaweedfs",
       "keycloak",
       "api",
       "web",
-      "worker",
-      "scheduler"
+      "worker"
     ),
     { inherit: true, env: composeEnv }
   );
@@ -395,6 +448,7 @@ async function up() {
   UI          http://localhost:3000
   API         http://localhost:8000
   Keycloak    http://localhost:8080   (admin / admin)
+  Hatchet     http://localhost:8888   (admin@example.com / Admin123!!: runs, workers, cron)
   Sign-in     operator@repody.local / repody-dev
   Extraction  ${opts.withNuextract ? "repody:vlm (NuExtract)" : "(platform only)"}
 ${
@@ -434,6 +488,7 @@ async function dev() {
   run("docker", composeArgsFor(["compose.yaml"], "--profile", "workers", "build"), {
     inherit: true,
   });
+  startHatchet(["compose.yaml"]);
   run(
     "docker",
     composeArgsFor(
@@ -446,11 +501,10 @@ async function dev() {
       "--wait-timeout",
       "300",
       "postgres",
-      "redis",
+      "hatchet-lite",
       "seaweedfs",
       "keycloak",
-      "worker",
-      "scheduler"
+      "worker"
     ),
     { inherit: true }
   );
@@ -508,6 +562,7 @@ async function status() {
     ["API", "http://127.0.0.1:8000/v1/healthz"],
     ["UI", "http://127.0.0.1:3000"],
     ["Keycloak", "http://127.0.0.1:8080"],
+    ["Hatchet", "http://127.0.0.1:8888"],
     ["NuExtract", "http://127.0.0.1:8081/v1/models"],
     ["Grafana", "http://127.0.0.1:3030"],
     ["Bugsink", "http://127.0.0.1:8090"],
@@ -525,18 +580,7 @@ function logs() {
   console.log("Tailing API + web + workers (Ctrl+C to stop)…\n");
   run(
     "docker",
-    composeArgs(
-      "--profile",
-      "workers",
-      "logs",
-      "-f",
-      "--tail",
-      "200",
-      "api",
-      "web",
-      "worker",
-      "scheduler"
-    ),
+    composeArgs("--profile", "workers", "logs", "-f", "--tail", "200", "api", "web", "worker"),
     { inherit: true, allowFail: true }
   );
 }

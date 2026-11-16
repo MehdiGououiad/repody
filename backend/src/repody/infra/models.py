@@ -59,6 +59,9 @@ class Run(Base):
     __table_args__ = (
         Index("ix_runs_status_created", "status", "created_at"),
         Index("ix_runs_workflow_created", "workflow_id", "created_at"),
+        # The dashboard's windows (by creation) and the operations page's hourly counts (by finish).
+        Index("ix_runs_created", "created_at"),
+        Index("ix_runs_finished", "finished_at"),
         CheckConstraint(
             "(outcome IS NOT NULL) = (status = 'done')", name="ck_runs_outcome_when_done"
         ),
@@ -78,8 +81,7 @@ class Run(Base):
     fields_extracted: Mapped[int] = mapped_column(default=0)
     extraction_ms: Mapped[int] = mapped_column(default=0)
     validation_ms: Mapped[int] = mapped_column(default=0)
-    # NULL while queued means the task was never sent; maintenance sends it again.
-    dispatched_at: Mapped[UtcDateTime | None]
+    task_run_id: Mapped[str | None]  # its Hatchet run, to cancel it
     created_at: Mapped[CreatedAt]
     started_at: Mapped[UtcDateTime | None]
     finished_at: Mapped[UtcDateTime | None]

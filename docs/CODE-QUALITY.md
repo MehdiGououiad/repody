@@ -64,7 +64,7 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 |---------|------------|-----------------|
 | `api/` (routes, caller dependencies) | everything below | - |
 | `app/` (use cases) | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api` |
-| `extraction/`, `rules/` (domain) | `schemas`, `settings` (extraction only) | `app`, `api`; `rules` also no DB, Redis or settings |
+| `extraction/`, `rules/` (domain) | `schemas`, `settings` (extraction only) | `app`, `api`; `rules` also no DB, Hatchet or settings |
 - **Suppressions must explain themselves.** Every `biome-ignore`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 
@@ -88,7 +88,7 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 
 ## Smells To Reject In Review
 
-- Business rules directly inside FastAPI routers, React pages, Taskiq task bodies, SQLAlchemy models, or Helm templates.
+- Business rules directly inside FastAPI routers, React pages, Hatchet task bodies, SQLAlchemy models, or Helm templates.
 - New modules whose interface is almost the same size as the implementation.
 - One-adapter seams unless a second adapter is planned and documented.
 - Environment variables documented in only one place but consumed elsewhere with a different default.

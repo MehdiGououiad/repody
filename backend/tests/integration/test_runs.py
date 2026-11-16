@@ -1,7 +1,10 @@
 import json
+from datetime import UTC, datetime
 
+from repody.app import execute
+from repody.app.lifecycle import move_run
 from repody.extraction import client
-from repody.infra import queue
+from repody.infra import db, queue
 from repody.settings import get_settings
 from tests.files import FILE, PDF
 from tests.integration.helpers import condition, invoice_workflow, rule
@@ -128,8 +131,8 @@ async def test_wrong_api_key_is_refused_when_signed_in_users_are_required(api, m
 
 
 async def test_queue_cap_and_position(api, monkeypatch):
-    async def keep_queued(_run_id: str) -> bool:
-        return True
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task"
 
     monkeypatch.setattr(queue, "dispatch", keep_queued)
     monkeypatch.setattr(get_settings(), "max_queued_runs", 1)
@@ -138,7 +141,6 @@ async def test_queue_cap_and_position(api, monkeypatch):
     assert first.status_code == 202
     state = (await api.get(f"/v1/runs/{first.json()['runId']}")).json()
     assert state["status"] == "queued"
-    assert state["progress"]["queuePosition"] == 1
     second = await api.post("/v1/workflows/wf-run/runs")
     assert second.status_code == 503
     assert second.headers["retry-after"] == "15"
@@ -164,3 +166,50 @@ async def test_markdown_with_nuextract(api, model_answer):
     assert document["extraction"]["markdownText"] == "# FACTURE"
     [call] = model_answer["calls"]
     assert call["request"]["extra_body"]["chat_template_kwargs"]["mode"] == "markdown"
+
+
+async def test_a_queue_that_cannot_take_the_run_fails_it_at_once(api, monkeypatch):
+    async def down(_run_id: str, _client_key: str) -> str:
+        raise ConnectionError("Hatchet is not answering")
+
+    monkeypatch.setattr(queue, "dispatch", down)
+    await deploy(api)
+    refused = await api.post("/v1/workflows/wf-run/runs")
+    assert refused.status_code == 503
+    [audit] = (await api.get("/v1/operations")).json()["errors"]
+    assert audit["error"] == "The run could not be queued."
+
+
+async def test_hatchet_giving_up_fails_the_run_where_it_stopped(api, monkeypatch):
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", keep_queued)
+    await deploy(api)
+    waiting = (await api.post("/v1/workflows/wf-run/runs")).json()["runId"]
+    await execute.fail_unfinished(waiting)  # schedule timeout: never started
+    state = (await api.get(f"/v1/runs/{waiting}")).json()
+    assert (state["status"], state["error"]) == (
+        "failed",
+        "The run waited too long for a worker to start it.",
+    )
+
+    started = (await api.post("/v1/workflows/wf-run/runs")).json()["runId"]
+    async with db.session_factory() as session:
+        await move_run(session, started, "running", started_at=datetime.now(UTC))
+        await session.commit()
+    await execute.fail_unfinished(started)  # execution timeout or a lost worker
+    state = (await api.get(f"/v1/runs/{started}")).json()
+    assert state["status"] == "failed"
+    assert state["error"].startswith("The run stopped before it finished")
+
+
+async def test_stopping_a_run_cancels_its_hatchet_run(api, monkeypatch, cancelled):
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task-hatchet-1"
+
+    monkeypatch.setattr(queue, "dispatch", keep_queued)
+    await deploy(api)
+    run_id = (await api.post("/v1/workflows/wf-run/runs")).json()["runId"]
+    assert (await api.post(f"/v1/runs/{run_id}/cancel")).status_code == 204
+    assert cancelled == ["task-hatchet-1"]

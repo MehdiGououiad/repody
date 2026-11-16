@@ -23,7 +23,7 @@ both move it: the loser's update matches no row. The database CHECK constraints 
 reject any state these transitions would not produce. Diagrams: docs/LIFECYCLES.md.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -33,7 +33,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repody.infra import db
 from repody.infra.models import Run
 from repody.schemas.run import RunStatus
-from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 
@@ -43,10 +42,6 @@ RUN_TRANSITIONS: dict[RunStatus, tuple[RunStatus, ...]] = {
     "done": (),
     "failed": (),
 }
-# A running run past its timeout (plus a grace minute for the worker to fail it itself) has
-# lost its worker; a queued run this old will not start.
-RUNNING_GRACE = timedelta(minutes=1)
-QUEUED_LIMIT = timedelta(hours=1)
 
 
 def run_sources(to: RunStatus) -> list[RunStatus]:
@@ -102,23 +97,3 @@ async def fail_run(run_id: str, error: str, *, only_if: RunStatus | None = None)
     if failed:
         log.warning("run_failed", run_id=run_id, error=error)
     return failed
-
-
-def _running_limit() -> timedelta:
-    return timedelta(minutes=get_settings().run_timeout_minutes) + RUNNING_GRACE
-
-
-def stuck_running(now: datetime) -> ColumnElement[bool]:
-    """Running runs past their timeout and the grace minute: their worker is gone."""
-    return (Run.status == "running") & (Run.started_at < now - _running_limit())
-
-
-def is_stuck(run: Run, now: datetime) -> bool:
-    """The same test as ``stuck_running`` and ``stuck_queued``, on a loaded run."""
-    if run.status == "running":
-        return run.started_at is not None and run.started_at < now - _running_limit()
-    return run.status == "queued" and run.created_at < now - QUEUED_LIMIT
-
-
-def stuck_queued(now: datetime) -> ColumnElement[bool]:
-    return (Run.status == "queued") & (Run.created_at < now - QUEUED_LIMIT)

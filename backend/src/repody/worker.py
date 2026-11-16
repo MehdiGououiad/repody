@@ -1,46 +1,118 @@
-"""Taskiq entry points, one image for both roles:
+"""The Hatchet worker: runs the runs and the maintenance cron (`python -m repody.worker`).
 
-    taskiq worker repody.worker:broker --workers 1 --max-async-tasks $AUDIT_WORKER_CONCURRENCY
-    taskiq scheduler repody.worker:scheduler      # exactly one replica
+- ``process-run`` processes one run. Hatchet bounds it: it waits at most QUEUE_TIMEOUT for a
+  worker and runs at most AUDIT_RUN_TIMEOUT_MINUTES; each client (API key or user) starts at
+  most AUDIT_RUNS_PER_MINUTE_PER_CLIENT a minute (a dynamic rate limit: more wait their turn)
+  and has at most AUDIT_RUNS_IN_PROGRESS_PER_CLIENT in progress, clients taking turns (round
+  robin), so one bulk upload cannot hold every worker slot.
+  When Hatchet gives up on it (a timeout, a lost worker, a cancellation), the failure task fails
+  the run in our database.
+- ``maintenance`` runs every minute (a Hatchet cron): it deletes runs past their retention and
+  the playground's old workflows.
 
-Workers run the runs and the scheduled maintenance; scale them with replicas.
+The worker takes AUDIT_WORKER_CONCURRENCY runs at a time (Hatchet slots); scale it with replicas.
+The client's connection comes from the HATCHET_CLIENT_* environment.
 """
 
-from taskiq import TaskiqEvents, TaskiqScheduler, TaskiqState
-from taskiq.schedule_sources import LabelScheduleSource
+from collections.abc import AsyncGenerator
+from datetime import timedelta
+
+from hatchet_sdk import (
+    ConcurrencyExpression,
+    ConcurrencyLimitStrategy,
+    Context,
+    EmptyModel,
+    RateLimit,
+    RateLimitDuration,
+)
+from pydantic import BaseModel
 
 from repody.app import maintenance
-from repody.app.execute import process_run
+from repody.app.execute import fail_unfinished, process_run
 from repody.extraction import client
 from repody.infra import db, observability
-from repody.infra.queue import TASK_NAME, broker
-from repody.infra.redis import close_redis
+from repody.infra.queue import MAINTENANCE_WORKFLOW, RUN_WORKFLOW, hatchet
 from repody.settings import get_settings
 
-__all__ = ["broker", "scheduler"]
-
-MAINTENANCE_TASK = "maintenance"
+QUEUE_TIMEOUT = timedelta(hours=1)  # a run that waits longer for a worker fails
 
 
-@broker.on_event(TaskiqEvents.WORKER_STARTUP, TaskiqEvents.CLIENT_STARTUP)
-async def _startup(_state: TaskiqState) -> None:
-    """Logging and error reporting for the worker and the scheduler (a broker client)."""
+class RunInput(BaseModel):
+    run_id: str
+    client_key: str
+
+
+settings = get_settings()
+
+runs = hatchet().workflow(
+    name=RUN_WORKFLOW,
+    input_validator=RunInput,
+    concurrency=ConcurrencyExpression(
+        expression="input.client_key",
+        max_runs=settings.runs_in_progress_per_client,
+        limit_strategy=ConcurrencyLimitStrategy.GROUP_ROUND_ROBIN,
+    ),
+)
+
+
+@runs.task(
+    execution_timeout=timedelta(minutes=settings.run_timeout_minutes),
+    schedule_timeout=QUEUE_TIMEOUT,
+    rate_limits=[
+        RateLimit(
+            dynamic_key="input.client_key",
+            units=1,
+            limit=settings.runs_per_minute_per_client,
+            duration=RateLimitDuration.MINUTE,
+        )
+    ]
+    if settings.runs_per_minute_per_client
+    else None,
+)
+async def process(input: RunInput, _ctx: Context) -> None:
+    await process_run(input.run_id)
+
+
+@runs.on_failure_task()
+async def failed(input: RunInput, _ctx: Context) -> None:
+    await fail_unfinished(input.run_id)
+
+
+# A cron tick while the previous pass still runs is dropped (CANCEL_NEWEST on one static key):
+# passes never pile up on the worker's slots, which the runs share.
+upkeep = hatchet().workflow(
+    name=MAINTENANCE_WORKFLOW,
+    on_crons=["* * * * *"],
+    concurrency=ConcurrencyExpression(
+        expression="'maintenance'",
+        max_runs=1,
+        limit_strategy=ConcurrencyLimitStrategy.CANCEL_NEWEST,
+    ),
+)
+
+
+@upkeep.task(execution_timeout=timedelta(minutes=5))
+async def maintain(_input: EmptyModel, _ctx: Context) -> None:
+    await maintenance.upkeep()
+
+
+async def lifespan() -> AsyncGenerator[None]:
+    """Logging and error reporting at start; the model client and database pool at stop."""
     observability.setup()
-
-
-@broker.on_event(TaskiqEvents.WORKER_SHUTDOWN)
-async def _shutdown(_state: TaskiqState) -> None:
+    yield
     await client.close()
-    await close_redis()
     await db.engine.dispose()
 
 
-broker.register_task(process_run, task_name=TASK_NAME)
-broker.register_task(
-    maintenance.upkeep,
-    task_name=MAINTENANCE_TASK,
-    schedule=[{"interval": get_settings().maintenance_interval_seconds}],
-)
+def main() -> None:
+    worker = hatchet().worker(
+        "repody-worker",
+        slots=settings.worker_concurrency,
+        workflows=[runs, upkeep],
+        lifespan=lifespan,
+    )
+    worker.start()
 
-# Sends each task whose `schedule` label is due (here: maintenance) to the queue.
-scheduler = TaskiqScheduler(broker, sources=[LabelScheduleSource(broker)])
+
+if __name__ == "__main__":
+    main()

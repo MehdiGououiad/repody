@@ -22,14 +22,14 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
     spec:
       {{- include "repody.podDefaults" $ctx | nindent 6 }}
-      # Taskiq finishes the running task on SIGTERM; give it time before SIGKILL.
+      # Time for the runs in progress to finish on SIGTERM before SIGKILL.
       terminationGracePeriodSeconds: {{ $worker.terminationGracePeriodSeconds }}
       containers:
         - name: worker
           image: {{ include "repody.image" (dict "image" .Values.images.backend "root" .) | quote }}
           imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
           # args (not command) so the image entrypoint can start the OTEL agent.
-          args: [taskiq, worker, "repody.worker:broker", --workers, "1", --max-async-tasks, {{ $worker.concurrency | quote }}]
+          args: [python, -m, repody.worker]
           securityContext:
             {{- include "repody.containerSecurityContext" . | nindent 12 }}
           volumeMounts:
@@ -39,50 +39,17 @@ spec:
             {{- include "repody.backendSecretEnv" . | nindent 12 }}
             - name: OTEL_SERVICE_NAME
               value: repody-worker
+            - name: AUDIT_WORKER_CONCURRENCY
+              value: {{ $worker.concurrency | quote }}
+            - name: HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED
+              value: "true"
+          # The Hatchet SDK's health server: 503 once the worker's listener stops answering.
+          livenessProbe:
+            httpGet: { path: /health, port: 8001 }
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 4
           resources:
             {{- toYaml $worker.resources | nindent 12 }}
-      volumes:
-        - { name: tmp, emptyDir: {} }
----
-# Sends the periodic maintenance task to the workers (Taskiq scheduler). Exactly one replica:
-# two would send every scheduled task twice.
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: {{ include "repody.fullname" . }}-scheduler
-  labels:
-    {{- include "repody.labels" . | nindent 4 }}
-    app.kubernetes.io/component: scheduler
-spec:
-  replicas: 1
-  strategy: { type: Recreate }
-  selector:
-    matchLabels:
-      {{- include "repody.selectorLabels" (dict "root" . "component" "scheduler") | nindent 6 }}
-  template:
-    metadata:
-      labels:
-        {{- include "repody.selectorLabels" (dict "root" . "component" "scheduler") | nindent 8 }}
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
-    spec:
-      {{- include "repody.podDefaults" (dict "root" . "component" "scheduler") | nindent 6 }}
-      containers:
-        - name: scheduler
-          image: {{ include "repody.image" (dict "image" .Values.images.backend "root" .) | quote }}
-          imagePullPolicy: {{ .Values.images.backend.pullPolicy }}
-          args: [taskiq, scheduler, "repody.worker:scheduler"]
-          securityContext:
-            {{- include "repody.containerSecurityContext" . | nindent 12 }}
-          volumeMounts:
-            - { name: tmp, mountPath: /tmp }
-          {{- include "repody.backendEnvFrom" . | nindent 10 }}
-          env:
-            {{- include "repody.backendSecretEnv" . | nindent 12 }}
-            - name: OTEL_SERVICE_NAME
-              value: repody-scheduler
-          resources:
-            requests: { cpu: 10m, memory: 128Mi }
-            limits: { memory: 256Mi }
       volumes:
         - { name: tmp, emptyDir: {} }

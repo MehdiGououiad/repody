@@ -28,8 +28,7 @@ def page_parts(
     All pages go in one request, as the model card sends a multi-page PDF.
     """
     if mime == "application/pdf":
-        pages, total = render.pdf_pages(data, max_pages=max_pages)
-        return [render.image_part(page) for page in pages], total
+        return render.pdf_page_parts(data, max_pages=max_pages)
     return [render.image_part(render.open_image(data))], 1
 
 

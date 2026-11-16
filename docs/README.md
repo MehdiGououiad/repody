@@ -16,6 +16,5 @@
 | Code quality review gate | [CODE-QUALITY.md](./CODE-QUALITY.md) |
 | Publish images (Hub / GHCR) | [../deploy/registry/README.md](../deploy/registry/README.md) · [CLUSTER.md - Release](./CLUSTER.md#images-and-releases) |
 | Architecture decisions | [adr/](./adr/README.md) |
-| Upgrade from 0.x (breaking changes) | [MIGRATING-1.0.md](./MIGRATING-1.0.md) |
 
 Root: [../README.md](../README.md) · architecture: [../CONTEXT.md](../CONTEXT.md)

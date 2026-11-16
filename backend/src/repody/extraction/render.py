@@ -17,6 +17,9 @@ import pypdfium2 as pdfium
 from PIL import Image, ImageOps
 
 PDF_DPI = 170  # NuExtract3's documented rendering resolution
+# A page renders to at most this many pixels: an oversized page (a PDF can declare one of
+# 200 x 200 inches) is drawn smaller instead of filling the worker's memory.
+MAX_RENDER_PIXELS = 4096 * 4096
 IMAGE_FORMATS = ("PNG", "JPEG", "WEBP")
 PDF = "application/pdf"
 
@@ -44,17 +47,23 @@ def file_type(file: BinaryIO) -> str | None:
         file.seek(0)
 
 
-def pdf_pages(data: bytes, *, max_pages: int | None) -> tuple[list[Image.Image], int]:
-    """``(rendered pages, page count)`` at NuExtract3's 170 DPI."""
+def _render(page: pdfium.PdfPage, dpi: int) -> Image.Image:
+    """The page at ``dpi``, or smaller when that would exceed MAX_RENDER_PIXELS."""
+    width, height = page.get_size()  # PDF points, 1/72 inch
+    scale = min(dpi / 72, (MAX_RENDER_PIXELS / max(width * height, 1)) ** 0.5)
+    # `scale` is documented as a float; its default (1) makes type checkers read it as int.
+    return page.render(scale=scale).to_pil()  # pyright: ignore[reportArgumentType]
+
+
+def pdf_page_parts(data: bytes, *, max_pages: int | None) -> tuple[list[dict[str, Any]], int]:
+    """``(image parts, page count)``: the pages at NuExtract3's 170 DPI, each encoded as soon as
+    it is drawn, so one page's bitmap is in memory at a time (an A4 page is ~8 MB raw, a few
+    hundred KB as PNG)."""
     with _PDFIUM, pdfium.PdfDocument(data) as pdf:
         total = len(pdf)
-        pages = []
-        for index in range(min(total, max_pages or total)):
-            page = pdf[index]
-            scale = PDF_DPI / 72  # PDF points are 1/72 inch
-            # `scale` is documented as a float; its default (1) makes type checkers read it as int.
-            pages.append(page.render(scale=scale).to_pil())  # pyright: ignore[reportArgumentType]
-    return pages, total
+        count = min(total, max_pages or total)
+        parts = [image_part(_render(pdf[index], PDF_DPI)) for index in range(count)]
+    return parts, total
 
 
 def open_image(data: bytes) -> Image.Image:
@@ -92,8 +101,7 @@ def page_preview(data: bytes, mime: str, index: int) -> bytes | None:
         with _PDFIUM, pdfium.PdfDocument(data) as pdf:
             if not 0 <= index < len(pdf):
                 return None
-            # See pdf_pages: `scale` is a float the type checker reads as int.
-            image = pdf[index].render(scale=SCREEN_DPI / 72).to_pil()  # pyright: ignore[reportArgumentType]
+            image = _render(pdf[index], SCREEN_DPI)
     elif index == 0:
         image = open_image(data)
     else:

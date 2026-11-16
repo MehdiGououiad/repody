@@ -2,7 +2,8 @@
 
 Documents are extracted concurrently (bounded by AUDIT_INFERENCE_CONCURRENCY). A document
 whose extraction fails keeps its error on the report and has no values (its rules are
-skipped); any other error, or running past AUDIT_RUN_TIMEOUT_MINUTES, fails the run.
+skipped); any other error fails the run, and so does running past AUDIT_RUN_TIMEOUT_MINUTES
+(Hatchet's execution timeout, see ``fail_unfinished``).
 """
 
 import asyncio
@@ -34,23 +35,30 @@ EXTRACTION_FAILED = (
 
 
 async def process_run(run_id: str) -> None:
-    """The ``process_run`` task: run it to the end, or mark it failed."""
-    minutes = get_settings().run_timeout_minutes
+    """The ``process-run`` task: run it to the end, or mark it failed. Its time limit is the
+    Hatchet task's execution timeout (``repody.worker``): past it the task is cancelled and
+    ``fail_unfinished`` records why."""
     with structlog.contextvars.bound_contextvars(run_id=run_id):
-        deadline = asyncio.timeout(minutes * 60)
         try:
-            async with deadline:
-                await _process(run_id)
-        except TimeoutError:
-            if not deadline.expired():  # a timeout of its own (database, network), not ours
-                log.exception("run_processing_failed")
-                await fail_run(run_id, FAILURE_MESSAGE)
-                return
-            message = f"The run took longer than {minutes} minutes."
-            await fail_run(run_id, message, only_if="running")
+            await _process(run_id)
         except Exception:
             log.exception("run_processing_failed")
             await fail_run(run_id, FAILURE_MESSAGE)
+
+
+async def fail_unfinished(run_id: str) -> None:
+    """Hatchet gave up on the run's task (a timeout, a lost worker, a cancellation): fail the
+    run if it is not finished, saying where it stopped."""
+    minutes = get_settings().run_timeout_minutes
+    if not await fail_run(
+        run_id, "The run waited too long for a worker to start it.", only_if="queued"
+    ):
+        await fail_run(
+            run_id,
+            f"The run stopped before it finished (time limit {minutes} min, or its worker"
+            " stopped).",
+            only_if="running",
+        )
 
 
 async def _claim(run_id: str) -> bool:
@@ -120,7 +128,7 @@ async def _process(run_id: str) -> None:
         if not await move_run(
             session, run_id, "done", outcome=outcome, finished_at=datetime.now(UTC)
         ):
-            # Failed meanwhile (timeout or maintenance): a final state is never overwritten.
+            # Failed meanwhile (Hatchet's timeout, or stopped): a final state is never overwritten.
             await session.rollback()
             log.warning("run_finished_elsewhere")
             return
@@ -165,7 +173,6 @@ async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tra
     await tracker.finish(
         step_id,
         duration_ms=meta.extraction_ms,
-        cache_hit=meta.cache_hit,
         fields_extracted=meta.fields_extracted,
         failed=meta.error is not None,
     )

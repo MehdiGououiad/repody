@@ -23,9 +23,9 @@ holds each async flow as one discriminated union, so a contradictory state canno
 stateDiagram-v2
   [*] --> queued: POST /v1/workflows/{id}/runs
   queued --> running: worker claims the task
-  queued --> failed: waited over 1 h (maintenance)
+  queued --> failed: Hatchet unreachable, or waited over 1 h for a worker
   running --> done: rules checked, report saved
-  running --> failed: error, AUDIT_RUN_TIMEOUT_MINUTES, or worker lost (maintenance)
+  running --> failed: error, AUDIT_RUN_TIMEOUT_MINUTES, worker lost, or stopped by an operator
   done --> [*]
   failed --> [*]
 ```
@@ -33,9 +33,11 @@ stateDiagram-v2
 - `done` and `failed` are final. `outcome` (passed · warning · failed) exists only on a done run;
   an **audit** is a done run, so the audit list filters by outcome, never by run status.
 - Each transition is one conditional `UPDATE … WHERE status IN (<allowed sources>)`. When two
-  processes race on a run (a duplicate task delivery, maintenance and a slow worker), the loser's
+  processes race on a run (a duplicate task delivery, Hatchet's failure task and a slow worker), the loser's
   update matches no row and it backs off: a final state is never overwritten.
-- `dispatched_at IS NULL` while queued means the task was never sent; maintenance resends it.
+- Hatchet bounds each run (repody/worker.py): it fails a run that waits an hour for a worker
+  or runs past `AUDIT_RUN_TIMEOUT_MINUTES` through the workflow's failure task
+  (`execute.fail_unfinished`). A run Hatchet could not take is failed when it is started.
 - Clients poll it as `RunState.status` (`GET /v1/runs/{id}`) until it is `done` or `failed`
   (`lib/api/runs.ts` `useRun`). The server owns the timeout, so polling always ends.
 

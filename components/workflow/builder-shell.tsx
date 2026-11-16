@@ -24,6 +24,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
     setDocuments,
     rules,
     setRules,
+    canEdit,
     deployed,
     apiKey,
     sync,
@@ -79,12 +80,14 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
               <div className="h-full overflow-y-auto overscroll-contain">
                 <div className="mx-auto w-full max-w-[1080px] px-4 py-6 md:px-8">
                   {step === 1 ? (
-                    <RulesPanel
-                      rules={rules}
-                      documents={documents}
-                      results={run.phase === "done" ? run.result.ruleResults : undefined}
-                      onChange={setRules}
-                    />
+                    <fieldset disabled={!canEdit} className="contents">
+                      <RulesPanel
+                        rules={rules}
+                        documents={documents}
+                        results={run.phase === "done" ? run.result.ruleResults : undefined}
+                        onChange={setRules}
+                      />
+                    </fieldset>
                   ) : (
                     <PublishStep
                       workflowId={workflow.id}

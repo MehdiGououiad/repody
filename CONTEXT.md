@@ -32,14 +32,14 @@ sequenceDiagram
   participant UI as Next.js UI
   participant API as FastAPI /v1
   participant Store as S3 storage
-  participant Q as Redis / Taskiq
+  participant Q as Hatchet
   participant W as Worker
   participant Inf as External VLM
 
   UI->>API: POST /workflows/{id}/runs (multipart files)
   API->>Store: put files
-  API->>Q: send process_run (Taskiq)
-  Q->>W: execute run task
+  API->>Q: trigger process-run (run id)
+  Q->>W: assign the task (rate limit, round robin per client)
   W->>Store: fetch PDF/image
   W->>Inf: document-model chat completion
   Inf-->>W: structured JSON fields
@@ -52,15 +52,15 @@ sequenceDiagram
 
 ```
 backend/src/repody/
-├── main.py · worker.py  FastAPI app; Taskiq worker entry point
+├── main.py · worker.py  FastAPI app; Hatchet worker (process-run workflow, maintenance cron)
 ├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
 ├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance,
 │                      lifecycle (the only code that changes a run's status)
 ├── extraction/        NuExtract requests, page rendering, model client, field values
 ├── rules/             Typed conditions and their evaluation
 ├── schemas/           Pydantic models (API and stored workflow definition)
-├── infra/             auth (Keycloak JWT, roles, API keys), queue (Taskiq), models, db,
-│                      storage (S3), redis, observability (logs, errors)
+├── infra/             auth (Keycloak JWT, roles, API keys), queue (Hatchet client), models,
+│                      db, storage (S3), observability (logs, errors)
 └── settings.py        AUDIT_* settings
 ```
 
@@ -76,11 +76,11 @@ backend/src/repody/
 
 ### Run pipeline
 
-One Taskiq queue and task (`process_run`). The API sends the task after the commit and stamps `runs.dispatched_at`; maintenance (a Taskiq task the scheduler sends every `AUDIT_MAINTENANCE_INTERVAL_SECONDS`) resends lost ones, fails runs stuck past `AUDIT_RUN_TIMEOUT_MINUTES` and purges runs past their retention. Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
+One Hatchet workflow, `process-run`, with one task (`process_run`). The API triggers it after the commit and keeps the Hatchet run id (`runs.task_run_id`, to cancel it); when Hatchet cannot take it, the run fails at once and the API answers 503. Hatchet enforces the timeouts (an hour to reach a worker, `AUDIT_RUN_TIMEOUT_MINUTES` to finish), the per-client rate limit and round robin, and calls the workflow's failure task when it gives up (a timeout, a lost worker), which fails the run. A Hatchet cron runs maintenance every minute: it purges runs past their retention and the playground's old workflows. [ADR 011](./docs/adr/011-hatchet.md). Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
 
 ## Extraction
 
-`extraction/pipeline.py` `extract` is the one entry point: optional Redis cache, then NuExtract on the
+`extraction/pipeline.py` `extract` is the one entry point: NuExtract on the
 llama-server (`extraction/client.py`). Model availability is `GET /v1/models` on the llama-server,
 shown by `GET /v1/platform/config`.
 
@@ -104,10 +104,9 @@ Next.js 16 App Router at repo root:
 | Module | Kubernetes shape | Purpose |
 |--------|------------------|---------|
 | control | `repody-api` | Workflows, runs, uploads |
-| worker | `repody-worker` | Runs and the scheduled maintenance (one queue; scale by replicas) |
-| scheduler | `repody-scheduler` | Sends the periodic maintenance task (exactly one replica) |
+| worker | `repody-worker` | Hatchet worker: runs and the maintenance cron (scale by replicas) |
 | edge | `repody-web` | Next.js UI |
-| data plane | Postgres, Redis, object storage | Durable state + Taskiq broker |
+| data plane | Postgres, Hatchet, object storage | Durable state; Hatchet queues the runs (Hatchet Lite on Postgres in Compose) |
 | auth | External OIDC | Authentication |
 | inference | External OpenAI-compatible | Not in the Repody chart |
 

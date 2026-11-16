@@ -61,7 +61,7 @@ which tool owns which concern.
 | `pnpm lint:fix` / `pnpm lint:py:fix` | Apply the safe lint fixes |
 | `pnpm lint` / `pnpm lint:py` | Lint and format check only |
 | `pnpm typecheck` / `pnpm typecheck:py` | `tsc --noEmit` / pyright |
-| `pnpm deadcode` | Unused files, exports and dependencies (knip) |
+| `pnpm deadcode` | Unused files, exports and dependencies (knip; CI runs it). In a OneDrive folder it reports false positives: OneDrive turns folders into reparse points its file walker skips |
 | `pnpm review:check` | `verify` + backend tests + deploy checks |
 
 ---

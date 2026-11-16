@@ -6,6 +6,7 @@ import { Square } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useFormatter, useNow, useTranslations } from "next-intl";
 import { When } from "@/components/audit/run-row";
+import { useCan } from "@/components/auth/access-context";
 import { CardHeader, card } from "@/components/dashboard/insights";
 import { AnimatedNumber } from "@/components/shared/animated-number";
 import { Figure } from "@/components/shared/figure";
@@ -79,9 +80,7 @@ function StepTrack({ run }: { run: ActiveRun }) {
           transition={{ duration: 0.18 }}
           className="truncate text-xs text-ink-2"
         >
-          {run.status === "queued" && run.progress?.queuePosition
-            ? `#${run.progress.queuePosition} / ${run.progress.queueDepth}`
-            : active.map(title).join(" · ") || "…"}
+          {active.map(title).join(" · ") || "…"}
         </motion.span>
       </AnimatePresence>
     </div>
@@ -125,6 +124,8 @@ function InFlight({ runs }: { runs: ActiveRun[] }) {
   const t = useTranslations("operations");
   const tAudits = useTranslations("audits");
   const stop = useCancelRun();
+  const canStop = useCan("run:execute");
+  const tCommon = useTranslations("common");
   return (
     <section className={card}>
       <CardHeader title={t("inFlight")} hint={t("inFlightHint")} />
@@ -132,7 +133,6 @@ function InFlight({ runs }: { runs: ActiveRun[] }) {
         <ul className="divide-y divide-line">
           <AnimatePresence initial={false}>
             {runs.map((run) => {
-              const stale = run.stuck;
               return (
                 <motion.li
                   key={run.id}
@@ -143,16 +143,8 @@ function InFlight({ runs }: { runs: ActiveRun[] }) {
                   transition={{ duration: 0.25, ease: EASE_OUT }}
                   className="overflow-hidden"
                 >
-                  <div
-                    className={cn(
-                      "group grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1.2fr)_72px_auto] items-center gap-4 px-4 py-3",
-                      stale && "bg-warn-wash/40"
-                    )}
-                  >
-                    <StatusGlyph
-                      status={stale ? "warning" : run.status === "running" ? "running" : "waiting"}
-                      label={stale ? t("stuckHint") : undefined}
-                    />
+                  <div className="group grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1.2fr)_72px_auto] items-center gap-4 px-4 py-3">
+                    <StatusGlyph status={run.status === "running" ? "running" : "waiting"} />
                     <span className="min-w-0">
                       <span className="block truncate text-[13px] font-medium text-ink">
                         {run.workflowName}
@@ -173,22 +165,17 @@ function InFlight({ runs }: { runs: ActiveRun[] }) {
                       </span>
                     </span>
                     <StepTrack run={run} />
-                    <span
-                      className={cn("text-end text-xs", stale ? "text-warn-ink" : "text-ink-3")}
-                    >
+                    <span className="text-end text-xs text-ink-3">
                       <Elapsed since={run.startedAt ?? run.createdAt} />
-                      {stale ? <span className="block text-2xs">{t("stale")}</span> : null}
                     </span>
-                    <Tooltip label={stale ? t("stuckHint") : t("cancel")}>
+                    <Tooltip label={canStop ? t("cancel") : tCommon("notAllowed")}>
                       <Button
-                        variant={stale ? "secondary" : "ghost"}
+                        variant="ghost"
                         size="xs"
+                        disabled={!canStop}
+                        focusableWhenDisabled
                         onClick={() => stop(run)}
-                        className={cn(
-                          "text-fail-ink",
-                          !stale &&
-                            "pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
-                        )}
+                        className="text-fail-ink pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
                       >
                         <Square className="fill-current" />
                         {t("cancel")}
@@ -299,6 +286,7 @@ export function ControlRoom() {
   });
   const platform = $api.useQuery("get", "/v1/platform/config", undefined, {
     refetchInterval: 15_000,
+    enabled: useCan("metrics:read"),
   }).data;
   const model =
     platform?.modelAvailable === true
@@ -307,19 +295,10 @@ export function ControlRoom() {
         ? { text: t("modelDown"), tone: "fail" as const }
         : { text: t("modelAsleep"), tone: "idle" as const };
   const integer = (v: number) => String(Math.round(v));
-  const queryClient = useQueryClient();
-  const recover = $api.useMutation("post", "/v1/operations/recover", {
-    onSuccess: ({ failed }) => {
-      toast.success(t("recovered", { count: failed.length }));
-      void queryClient.invalidateQueries({ queryKey: ["get", "/v1/operations"] });
-      void queryClient.invalidateQueries({ queryKey: ["get", "/v1/dashboard"] });
-    },
-    onError: (error) => toast.error(errorMessage(error, t("recoverFailed"))),
-  });
 
   return (
     <div className="flex flex-col gap-4">
-      <div className={cn(card, "grid grid-cols-2 divide-x divide-line md:grid-cols-5")}>
+      <div className={cn(card, "grid grid-cols-2 divide-x divide-line md:grid-cols-4")}>
         <Figure
           label={t("model")}
           value={
@@ -342,23 +321,6 @@ export function ControlRoom() {
         <Figure
           label={t("queued")}
           value={<AnimatedNumber value={data.queue.queuedRuns} format={integer} />}
-        />
-        <Figure
-          label={t("stale")}
-          value={<AnimatedNumber value={data.staleRuns} format={integer} />}
-          tone={data.staleRuns ? "text-warn-ink" : undefined}
-          foot={
-            data.staleRuns ? (
-              <Button
-                variant="secondary"
-                size="xs"
-                className="mt-1"
-                onClick={() => recover.mutate({})}
-              >
-                {t("recover")}
-              </Button>
-            ) : null
-          }
         />
         <Figure
           label={t("median")}

@@ -59,5 +59,6 @@ export function newWorkflow(): Workflow {
     successRate: 0,
     lastRun: null,
     apiStats: null,
+    readOnly: false,
   };
 }

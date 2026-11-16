@@ -1,74 +1,43 @@
-"""The run queue: one Taskiq task, ``process_run``, on a Redis stream.
+"""The run queue: Hatchet (https://docs.hatchet.run).
 
-The API commits a run, then sends its task and stamps ``runs.dispatched_at``. When the send
-fails, maintenance sends it again. Redis Streams redeliver unacknowledged tasks, and the
-worker's claim is conditional, so a duplicate delivery does nothing.
-
-Acknowledged messages stay in a Redis stream until it is trimmed, so the stream is capped
-(``maxlen``, approximate trimming) far above the queue limit: only old, acknowledged messages
-are ever dropped. A message is redelivered once it has been unacknowledged for longer than a
-run may take (``idle_timeout``), so a run still in progress is not delivered twice.
-
-Tracing: the OpenTelemetry agent (`opentelemetry-instrument`) loads Taskiq's own instrumentor
-(`taskiq.instrumentation.TaskiqInstrumentor`), which adds the tracing middleware to the broker;
-adding it here as well would trace every task twice.
+The API commits a run, then triggers the ``process-run`` workflow with its id (``dispatch``),
+and keeps the Hatchet run id to cancel it (``cancel``). Hatchet stores the trigger durably, gives
+the run to a worker (``repody.worker``), enforces its timeouts and rate limit, and reports a
+failure (a timeout, a lost worker, an error) to the workflow's failure task, which fails the run
+in our database. The client reads its settings from the ``HATCHET_CLIENT_*`` environment.
 """
 
-from datetime import UTC, datetime, timedelta
+from functools import cache
 
 import structlog
-from sqlalchemy import select, update
-from taskiq.kicker import AsyncKicker
-from taskiq_redis import RedisStreamBroker
-
-from repody.infra import db
-from repody.infra.models import Run
-from repody.settings import get_settings
+from hatchet_sdk import Hatchet
 
 log = structlog.get_logger(__name__)
 
-TASK_NAME = "process_run"
-STREAM_MAXLEN = 10_000
-
-_settings = get_settings()
-broker = RedisStreamBroker(
-    url=_settings.redis_url.get_secret_value(),
-    queue_name="repody:runs",
-    maxlen=max(STREAM_MAXLEN, _settings.max_queued_runs * 10),
-    idle_timeout=(_settings.run_timeout_minutes + 1) * 60_000,
-)
+RUN_WORKFLOW = "process-run"
+MAINTENANCE_WORKFLOW = "maintenance"
 
 
-async def dispatch(run_id: str) -> bool:
-    """Send the run's task and stamp it sent; False (logged) when either fails.
+@cache
+def hatchet() -> Hatchet:
+    """The process's Hatchet client (created on first use: it needs HATCHET_CLIENT_TOKEN)."""
+    return Hatchet()
 
-    Maintenance sends a run again while it has no stamp; a duplicate send is harmless (the
-    worker's claim is conditional), so a failed stamp only means one more delivery.
-    """
+
+async def dispatch(run_id: str, client_key: str) -> str:
+    """Queue the run; the Hatchet run id. ``client_key`` keys the per-client rate limit."""
+    details = await hatchet().runs.aio_create(
+        workflow_name=RUN_WORKFLOW,
+        input={"run_id": run_id, "client_key": client_key},
+        additional_metadata={"run_id": run_id},
+    )
+    return details.run.metadata.id
+
+
+async def cancel(task_run_id: str) -> None:
+    """Stop the run's Hatchet task; a failure is logged (the run is already failed in our
+    database, and its worker cannot finish it then)."""
     try:
-        await AsyncKicker(TASK_NAME, broker, labels={}).kiq(run_id)
-        async with db.session_factory() as session:
-            await session.execute(
-                update(Run).where(Run.id == run_id).values(dispatched_at=datetime.now(UTC))
-            )
-            await session.commit()
+        await hatchet().runs.aio_cancel(task_run_id)
     except Exception as exc:
-        log.warning("run_dispatch_failed", run_id=run_id, error=repr(exc))
-        return False
-    return True
-
-
-async def redispatch_lost() -> int:
-    """Send again the queued runs whose first send failed (older than 30 s)."""
-    async with db.session_factory() as session:
-        run_ids = await session.scalars(
-            select(Run.id)
-            .where(
-                Run.status == "queued",
-                Run.dispatched_at.is_(None),
-                Run.created_at < datetime.now(UTC) - timedelta(seconds=30),
-            )
-            .limit(100)
-        )
-        pending = list(run_ids)
-    return sum([await dispatch(run_id) for run_id in pending])
+        log.warning("run_cancel_failed", task_run_id=task_run_id, error=repr(exc))

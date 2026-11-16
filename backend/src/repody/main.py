@@ -11,8 +11,7 @@ from repody.api import platform, runs, workflows
 from repody.app.errors import AppError
 from repody.app.seed import seed
 from repody.extraction import client
-from repody.infra import db, observability, queue
-from repody.infra.redis import close_redis
+from repody.infra import db, observability
 from repody.infra.storage import S3Store, get_store
 from repody.settings import get_settings
 
@@ -22,15 +21,12 @@ async def lifespan(_app: FastAPI):
     store = get_store()
     if isinstance(store, S3Store):
         await store.ensure_bucket()
-    await queue.broker.startup()
     if get_settings().seed_on_startup:
         async with db.session_factory() as session:
             await seed(session)
             await session.commit()
     yield
-    await queue.broker.shutdown()
     await client.close()
-    await close_redis()
     await db.engine.dispose()
 
 

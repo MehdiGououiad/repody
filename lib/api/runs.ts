@@ -59,7 +59,8 @@ export type RunView =
   | { phase: "done"; result: RunAuditDetail }
   | { phase: "failed"; error: string };
 
-/** The run's state, polled every second until it is done or failed. */
+/** The run's state, polled every second until it is done or failed, or cannot be read (a
+ * deleted or expired run would otherwise be polled for as long as the page is open). */
 export function useRun(runId: string | null): RunView {
   const { data, error } = $api.useQuery(
     "get",
@@ -70,7 +71,8 @@ export function useRun(runId: string | null): RunView {
       staleTime: 0,
       refetchInterval: (query) => {
         const status = query.state.data?.status;
-        return status === "done" || status === "failed" ? false : POLL_MS;
+        if (query.state.error || status === "done" || status === "failed") return false;
+        return POLL_MS;
       },
     }
   );

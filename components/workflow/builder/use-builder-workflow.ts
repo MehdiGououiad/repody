@@ -6,6 +6,7 @@ import { dequal } from "dequal";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useEffectEvent, useState } from "react";
+import { useCan } from "@/components/auth/access-context";
 import { usePlayground } from "@/components/playground/playground";
 import type { BuilderStep } from "@/components/workflow/builder/step-nav";
 import { $api } from "@/lib/api/browser";
@@ -31,7 +32,7 @@ export type BuilderSync = "idle" | "saving" | "deploying";
 /** What the header says about the draft: in flight, on the server, edited, refused, or a
  * playground example (shared: saving makes the visitor's own copy). */
 export type SaveState =
-  | { kind: "saving" | "deploying" | "saved" | "unsaved" | "example" }
+  | { kind: "saving" | "deploying" | "saved" | "unsaved" | "example" | "viewOnly" }
   | { kind: "failed"; reason: string };
 
 /** A builder test run: the files chosen per document (kept across runs) and the last run. */
@@ -47,6 +48,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   const tCommon = useTranslations("common");
   const tPlayground = useTranslations("playground");
   const playground = usePlayground();
+  const canEdit = useCan("workflow:write");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -76,8 +78,9 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     : saveMutation.isPending || copyMutation.isPending
       ? "saving"
       : "idle";
-  const saveState: SaveState =
-    sync !== "idle"
+  const saveState: SaveState = !canEdit
+    ? { kind: "viewOnly" }
+    : sync !== "idle"
       ? { kind: sync }
       : workflow.readOnly && !dirty
         ? { kind: "example" }
@@ -86,7 +89,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
           : saveError
             ? { kind: "failed", reason: saveError }
             : { kind: "unsaved" };
-  useUnsavedChangesWarning(dirty);
+  useUnsavedChangesWarning(dirty && canEdit);
 
   const update =
     <K extends keyof Draft>(key: K) =>
@@ -130,7 +133,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   };
 
   const handleSaveDraft = async ({ silent = false } = {}) => {
-    if (sync !== "idle") return;
+    if (!canEdit || sync !== "idle") return;
     if (workflow.readOnly && silent) return; // examples are copied on an explicit save
     try {
       if (workflow.readOnly) {
@@ -169,10 +172,10 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   // Autosave a saved workflow shortly after the last edit, when nothing else is in flight.
   const autosave = useEffectEvent(() => void handleSaveDraft({ silent: true }));
   useEffect(() => {
-    if (!persisted || !dirty || sync !== "idle" || workflow.readOnly) return;
+    if (!canEdit || !persisted || !dirty || sync !== "idle" || workflow.readOnly) return;
     const timer = window.setTimeout(autosave, AUTOSAVE_MS);
     return () => window.clearTimeout(timer);
-  }, [persisted, dirty, sync, draft, workflow.readOnly]);
+  }, [canEdit, persisted, dirty, sync, draft, workflow.readOnly]);
 
   return {
     step,
@@ -181,6 +184,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     setName: update("name"),
     setDocuments: update("documents"),
     setRules: update("rules"),
+    canEdit,
     deployed,
     apiKey,
     sync,

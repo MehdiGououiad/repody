@@ -3,6 +3,8 @@
 #   pnpm platform          # builds repody-backend:dev + repody-web:dev from this checkout first
 #   docker compose -f compose.yaml -f compose.portable.yaml --profile workers up -d --no-build
 #
+# This file adds the API and the UI; the worker is in compose.yaml (the same backend image).
+#
 # Images: REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE, default repody-*:dev (pnpm images:build);
 # set them to a registry tag to run a published release.
 # Inference stays on the host (llama-server for NuExtract).
@@ -19,7 +21,11 @@ x-portable-backend: &portable-backend
 
 x-backend-env: &backend-env
   AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit-local-dev@postgres:5432/repody
-  AUDIT_REDIS_URL: redis://redis:6379/0
+  # Hatchet (compose.yaml): the token from backend/.env, the engine over the stack network.
+  HATCHET_CLIENT_TOKEN: ${HATCHET_CLIENT_TOKEN:-}
+  HATCHET_CLIENT_HOST_PORT: hatchet-lite:7077
+  HATCHET_CLIENT_SERVER_URL: http://hatchet-lite:8888
+  HATCHET_CLIENT_TLS_STRATEGY: none
   AUDIT_S3_ENDPOINT_URL: http://seaweedfs:8333
   AUDIT_S3_ACCESS_KEY: repody
   AUDIT_S3_SECRET_KEY: s3-local-dev
@@ -39,7 +45,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
+      hatchet-lite:
         condition: service_healthy
       seaweedfs:
         condition: service_healthy
@@ -99,27 +105,3 @@ services:
       retries: 24
       start_period: 10s
     restart: unless-stopped
-
-  worker:
-    <<: *portable-backend
-    profiles: [workers]
-    command: ["taskiq", "worker", "repody.worker:broker", "--workers", "1", "--max-async-tasks", "1"]
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      OTEL_SERVICE_NAME: repody-worker
-
-  scheduler:
-    <<: *portable-backend
-    profiles: [workers]
-    command: ["taskiq", "scheduler", "repody.worker:scheduler"]
-    depends_on:
-      redis:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      OTEL_SERVICE_NAME: repody-scheduler

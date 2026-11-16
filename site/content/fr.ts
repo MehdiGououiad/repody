@@ -701,7 +701,7 @@ export const fr = {
     meta: {
       title: "Architecture : composants, modèle, montée en charge",
       description:
-        "Next.js, FastAPI, workers Taskiq sur Redis Streams, PostgreSQL, stockage S3, Keycloak et un serveur de modèle vLLM externe : l'architecture de Repody et sa montée en charge.",
+        "Next.js, FastAPI, workers Hatchet, PostgreSQL, stockage S3, Keycloak et un serveur de modèle vLLM externe : l'architecture de Repody et sa montée en charge.",
     },
     hero: {
       title: "Une architecture simple, faite pour durer",
@@ -715,7 +715,7 @@ export const fr = {
       api: "API",
       apiTech: "FastAPI",
       workers: "Workers",
-      workersTech: "Taskiq · Redis Streams",
+      workersTech: "Hatchet",
       db: "Base de données",
       dbTech: "PostgreSQL",
       storage: "Stockage objet",
@@ -742,7 +742,7 @@ export const fr = {
           },
           {
             title: "Workers",
-            body: "Taskiq sur Redis Streams : l'API répond tout de suite, les workers traitent les exécutions en arrière-plan.",
+            body: "Hatchet met chaque exécution en file : l'API répond tout de suite, les workers traitent les exécutions en arrière-plan.",
           },
           {
             title: "PostgreSQL",
@@ -802,7 +802,7 @@ export const fr = {
           },
           {
             title: "Délais et reprise",
-            body: "Chaque exécution a un délai maximal ; une tâche de maintenance clôt celles dont le worker s'est arrêté.",
+            body: "Chaque exécution a un délai maximal ; celle qui le dépasse, ou dont le worker s'arrête, échoue avec sa raison.",
           },
           {
             title: "Admission contrôlée",
@@ -810,7 +810,7 @@ export const fr = {
           },
           {
             title: "Concurrence bornée",
-            body: "Le nombre de requêtes simultanées vers le modèle est réglé pour ne jamais saturer le GPU.",
+            body: "Le nombre de requêtes simultanées vers le modèle est réglé pour ne jamais saturer le GPU, et les clients passent à tour de rôle : un gros envoi n'occupe pas tous les workers.",
           },
           {
             title: "PostgreSQL en haute disponibilité",
@@ -844,7 +844,7 @@ export const fr = {
           },
           {
             title: "Vue d'exploitation",
-            body: "Exécutions bloquées signalées dans l'interface, état de la file en direct.",
+            body: "État de la file en direct dans l'interface ; exécutions, workers et planifications dans le tableau de bord de la file.",
           },
         ],
       },
@@ -859,7 +859,7 @@ export const fr = {
         },
         {
           title: "File d'attente",
-          body: "L'exécution entre dans Redis Streams. Si la file est pleine, l'API répond 503 avec Retry-After.",
+          body: "L'exécution entre dans la file Hatchet. Si la file est pleine, l'API répond 503 avec Retry-After.",
         },
         {
           title: "Prise en charge",
@@ -885,8 +885,8 @@ export const fr = {
       items: [
         {
           adr: "001",
-          title: "Exécutions asynchrones avec Taskiq",
-          body: "L'API répond tout de suite ; les workers traitent sur Redis Streams.",
+          title: "Exécutions asynchrones avec Hatchet",
+          body: "L'API répond tout de suite ; Hatchet confie chaque exécution à un worker et fait respecter ses délais.",
         },
         {
           adr: "004",
@@ -928,7 +928,7 @@ export const fr = {
         title: "Un serveur",
         body: "Pour démarrer vite ou pour un volume modéré.",
         points: [
-          "Docker Compose : interface, API, workers, PostgreSQL, Redis, stockage, Keycloak, tunnel",
+          "Docker Compose : interface, API, workers, PostgreSQL, Hatchet, stockage, Keycloak, tunnel",
           "Chaque service avec son contrôle de santé et sa limite de mémoire",
           "Migrations appliquées automatiquement avant le démarrage",
           "Déploiement par la chaîne de CI, signature vérifiée, retour arrière en une commande",

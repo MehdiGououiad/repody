@@ -14,7 +14,9 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 |----------|---------|---------|
 | `AUDIT_DATABASE_URL` | local Postgres | `postgresql+asyncpg://…` (secret) |
 | `AUDIT_DB_POOL_SIZE` | `10` | Connections per process |
-| `AUDIT_REDIS_URL` | `redis://localhost:6379/0` | Task queue, rate limits, extraction cache (secret) |
+| `HATCHET_CLIENT_TOKEN` | — | Hatchet API token: the run queue and the maintenance cron (secret). Compose: written by `pnpm platform` (local) or the `hatchet-token` service (VPS) |
+| `HATCHET_CLIENT_HOST_PORT` / `HATCHET_CLIENT_SERVER_URL` | from the token | Hatchet's gRPC address and API URL, when the token's are not reachable from the container |
+| `HATCHET_CLIENT_TLS_STRATEGY` | `tls` | `none` for an engine on a private network without TLS (Compose) |
 | `AUDIT_S3_ENDPOINT_URL` | `http://localhost:9000` | S3-compatible storage for uploaded documents |
 | `AUDIT_S3_ACCESS_KEY` / `AUDIT_S3_SECRET_KEY` | Compose: SeaweedFS dev keys | Storage credentials (secret) |
 | `AUDIT_S3_BUCKET` | `audit-documents` | Created at API start when missing |
@@ -54,18 +56,17 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_LLAMACPP_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to llama-server `--parallel`; documents and pages are sent concurrently up to it |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
-| `AUDIT_EXTRACTION_CACHE_TTL_SECONDS` | `0` | Cache model answers in Redis (`0` = off) |
 
 ## Runs
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUDIT_WORKER_CONCURRENCY` | `1` | Runs per worker container: the image passes it to `taskiq worker --max-async-tasks` |
-| `AUDIT_RUN_TIMEOUT_MINUTES` | `5` | A longer run fails; a `running` run past it is failed by maintenance |
+| `AUDIT_WORKER_CONCURRENCY` | `4` | Runs one worker takes at once (its Hatchet slots) |
+| `AUDIT_RUN_TIMEOUT_MINUTES` | `5` | Hatchet's execution timeout: a longer run is cancelled and failed. A run that waits over an hour for a worker fails too |
 | `AUDIT_MAX_QUEUED_RUNS` | `200` | Starting a run answers 503 beyond this (`0` = no cap) |
-| `AUDIT_RUNS_PER_MINUTE_PER_CLIENT` | `600` | Per API key or user (`0` = no limit) |
-| `AUDIT_MAINTENANCE_INTERVAL_SECONDS` | `60` | How often the scheduler sends the maintenance task (fail stuck runs, resend lost tasks, purge expired runs) |
-| `AUDIT_RUN_RETENTION_DAYS` | `0` | Delete finished runs (and their uploaded files) older than this (`0` = keep) |
+| `AUDIT_RUNS_PER_MINUTE_PER_CLIENT` | `600` | Runs one API key or user starts a minute; more wait their turn in Hatchet (`0` = no limit) |
+| `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT` | `2` | Runs one API key or user has in progress at once; clients take turns (Hatchet round robin) |
+| `AUDIT_RUN_RETENTION_DAYS` | `0` | Delete finished runs (and their uploaded files) older than this (`0` = keep); the maintenance cron runs every minute |
 
 ## Observability
 

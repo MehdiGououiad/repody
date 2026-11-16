@@ -87,11 +87,11 @@ Plus `sitemap.xml`, `robots.txt`, `llms.txt` (and `llms-full.txt`), Open Graph i
   (Cloudflare Tunnel), admin console behind Cloudflare Access, server reachable only over a private
   network (Tailscale) with identity-based SSH; images scanned (Trivy), SBOM and provenance attached,
   signed with Sigstore cosign and verified before every deploy.
-- **Architecture:** Next.js web, FastAPI API, Taskiq workers on Redis Streams, PostgreSQL,
+- **Architecture:** Next.js web, FastAPI API, Hatchet workers, PostgreSQL,
   S3-compatible storage (SeaweedFS), Keycloak; the model server is external (vLLM, OpenAI-compatible):
   your GPU or a managed serverless GPU that sleeps when idle and wakes from a memory snapshot.
   Extraction: 170 DPI rasterisation, up to 99 pages per request, result cache keyed by content and
-  schema, bounded concurrency. Resilience: atomic run claiming, timeouts, stale-run recovery,
+  schema, bounded concurrency. Resilience: atomic run claiming, timeouts and failures handled by Hatchet,
   maintenance loop. Observability: structured JSON logs, OpenTelemetry traces, Prometheus, Grafana,
   Loki, Tempo, error tracking.
 - **Deployment:** single server (Docker Compose, every container memory-capped, 6.5 GB of limits in total), Kubernetes
