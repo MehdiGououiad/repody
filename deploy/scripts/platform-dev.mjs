@@ -123,6 +123,10 @@ function copyEnvFiles() {
 /** Point backend/.env at the host model and toggle OTEL for this run (setup / up only). */
 function patchBackendEnv() {
   const llamaEnv = parseEnvFile(LLAMA_PATHS);
+  // Older backend/.env files predate it; a local value, so it can be filled in.
+  if (!parseEnvFile(BACKEND_ENV).HATCHET_DB_PASSWORD) {
+    setEnvKeys(BACKEND_ENV, { HATCHET_DB_PASSWORD: "hatchet-local-dev" });
+  }
   setEnvKeys(BACKEND_ENV, {
     AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
     AUDIT_LLAMACPP_SERVED_MODEL:
