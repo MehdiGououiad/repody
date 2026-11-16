@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # One backend image for api + workers (role chosen by the container command).
-#   docker buildx bake backend --load      (see docker-bake.hcl)
+#   docker buildx bake -f docker-bake.hcl backend --load      (see docker-bake.hcl)
 
 FROM python:3.14.10-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS runtime-base
 
