@@ -80,8 +80,8 @@ Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
 | Command | When |
 |---------|------|
-| `pnpm images:build` | Build locally (`docker buildx bake --load`) |
-| `pnpm images:release` | Build + push (`docker buildx bake --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
+| `pnpm images:build` | Build locally (`docker buildx bake -f docker-bake.hcl --load`) |
+| `pnpm images:release` | Build + push (`docker buildx bake -f docker-bake.hcl --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
 
 Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 

@@ -1,9 +1,12 @@
 # Repody images - Docker Buildx Bake (https://docs.docker.com/build/bake/).
 #
-#   pnpm images:build                      # docker buildx bake --load   (host platform)
-#   pnpm images:release                    # docker buildx bake --push
-#   docker buildx bake --print             # resolved config
-#   docker buildx bake backend --load      # one target
+#   pnpm images:build                      # docker buildx bake -f docker-bake.hcl --load
+#   pnpm images:release                    # docker buildx bake -f docker-bake.hcl --push
+#   docker buildx bake -f docker-bake.hcl --print           # resolved config
+#   docker buildx bake -f docker-bake.hcl backend --load    # one target
+#
+# Always pass -f docker-bake.hcl: without it bake also reads compose.yaml, whose variables
+# (HATCHET_DB_PASSWORD) come from backend/.env.
 #
 # Every variable can be set from the environment of the same name:
 #   REPODY_IMAGE_REGISTRY=ghcr.io/org REPODY_IMAGE_TAG=v1.2.3 \
