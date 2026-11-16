@@ -218,10 +218,13 @@ services:
       # The image ships no curl: an HTTP request over bash's /dev/tcp to the management port.
       test:
         - CMD-SHELL
+        # The realm's discovery document, as the web app fetches it at start (keycloak:8080): the
+        # server's /health/ready answers before the realm is served, and a web app that starts
+        # then logs that it skipped Keycloak (sign-in retries discovery, but the error is noise).
         - >-
-          exec 3<>/dev/tcp/127.0.0.1/9000 &&
-          printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 &&
-          grep -q '"status": "UP"' <&3
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /realms/repody/.well-known/openid-configuration HTTP/1.1\r\nHost: keycloak:8080\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"authorization_endpoint"' <&3
       interval: 15s
       timeout: 5s
       retries: 20
