@@ -11,10 +11,6 @@ const AccessContext = createContext<Access>(NO_ACCESS);
 /** What the signed-in caller may do (`GET /v1/me`), resolved once by the app shell. */
 export const AccessProvider = AccessContext;
 
-export function useAccess(): Access {
-  return use(AccessContext);
-}
-
 /** Whether to offer an action. A playground visitor is also offered the paid ones: the API
  * answers 402 and the app asks them to contact us. */
 export function useCan(permission: Permission): boolean {
