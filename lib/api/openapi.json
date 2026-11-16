@@ -2002,7 +2002,7 @@
           "access"
         ],
         "summary": "Request Access",
-        "description": "Public: a prospect asks for an account (the site's form). 429 past the hourly limit per\nnetwork, 400 when the anti-robot check fails.",
+        "description": "Public: a prospect asks for an account (the site's form). 404 when this installation\ntakes no requests (AUDIT_ACCESS_REQUESTS_ENABLED), 429 past the hourly limit per network, 400\nwhen the anti-robot check fails.",
         "operationId": "request_access_v1_access_requests_post",
         "requestBody": {
           "content": {
@@ -2022,6 +2022,15 @@
                 "schema": {}
               }
             }
+          },
+          "400": {
+            "description": "The anti-robot check failed."
+          },
+          "404": {
+            "description": "This installation takes no access requests."
+          },
+          "429": {
+            "description": "Too many requests from this network."
           },
           "422": {
             "description": "Validation Error",

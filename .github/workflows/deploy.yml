@@ -123,7 +123,7 @@ jobs:
         run: |
           remote() { tailscale ssh "deploy@${HOST}" "$@"; }
           compose="docker compose --env-file .env --env-file release.env"
-          fail() { echo "::error::$1"; exit 1; }
+          fail() { local message="$1"; echo "::error::${message}"; exit 1; }
 
           running="$(remote 'cat /opt/repody/release.env')"
           [ "${running}" = "REPODY_VERSION=${VERSION}" ] || fail "the server runs '${running}', not ${VERSION}"
@@ -147,8 +147,9 @@ jobs:
           grep -qi '^x-powered-by:' <<<"${headers}" && fail "X-Powered-By is sent"
 
           cors() {
+            local origin="$1"
             curl -sS --max-time 10 -X OPTIONS -D - -o /dev/null "${app}/api/v1/access-requests" \
-              -H "Origin: $1" -H 'Access-Control-Request-Method: POST' \
+              -H "Origin: ${origin}" -H 'Access-Control-Request-Method: POST' \
               -H 'Access-Control-Request-Headers: content-type' | tr -d '\r' | grep -i '^access-control-allow-origin:' || true
           }
           [[ "$(cors "${SITE_ORIGIN}")" == *"${SITE_ORIGIN}"* ]] || fail "the site (${SITE_ORIGIN}) may not post access requests"

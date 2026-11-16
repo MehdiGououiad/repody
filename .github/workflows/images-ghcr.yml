@@ -15,16 +15,17 @@ on:
     tags:
       - "v*"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
-  actions: read  # read the CI result of the released commit
+permissions: {}
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write # push the images and their build cache
+      id-token: write # keyless cosign signatures
+      actions: read # read the CI result of the released code
     outputs:
       tag: ${{ steps.images.outputs.tag }}
     steps:
@@ -39,7 +40,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tree() { gh api "repos/${GITHUB_REPOSITORY}/commits/$1" --jq .commit.tree.sha; }
+          tree() { local sha="$1"; gh api "repos/${GITHUB_REPOSITORY}/commits/${sha}" --jq .commit.tree.sha; }
           want="$(tree "${GITHUB_SHA}")"
           for attempt in $(seq 1 50); do
             state="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --commit "${GITHUB_SHA}" \
