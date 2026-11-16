@@ -18,6 +18,8 @@ services:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
       POSTGRES_DB: repody
+      # Hatchet's role, as on the VPS (deploy/vps/compose.yaml); local only, so it has a default.
+      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:-hatchet-local-dev}
     ports:
       - "5432:5432"
     configs:
@@ -43,7 +45,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://hatchet:hatchet-local-dev@postgres:5432/hatchet?sslmode=disable
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:-hatchet-local-dev}@postgres:5432/hatchet?sslmode=disable
       # Postgres is the queue too (no RabbitMQ). Lite's generated config says rabbitmq, so it is
       # set here rather than left to the image's default.
       SERVER_MSGQUEUE_KIND: postgres
@@ -288,7 +290,7 @@ configs:
       #!/bin/sh
       set -eu
       psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<SQL
-      CREATE ROLE hatchet LOGIN PASSWORD 'hatchet-local-dev';
+      CREATE ROLE hatchet LOGIN PASSWORD '$$HATCHET_DB_PASSWORD';
       CREATE DATABASE hatchet OWNER hatchet;
       SQL
 

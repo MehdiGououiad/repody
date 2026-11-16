@@ -35,6 +35,20 @@ export type SaveState =
   | { kind: "saving" | "deploying" | "saved" | "unsaved" | "example" | "viewOnly" }
   | { kind: "failed"; reason: string };
 
+function saveStateOf(state: {
+  canEdit: boolean;
+  sync: BuilderSync;
+  example: boolean;
+  dirty: boolean;
+  saveError: string | null;
+}): SaveState {
+  if (!state.canEdit) return { kind: "viewOnly" };
+  if (state.sync !== "idle") return { kind: state.sync };
+  if (!state.dirty) return { kind: state.example ? "example" : "saved" };
+  if (state.saveError) return { kind: "failed", reason: state.saveError };
+  return { kind: "unsaved" };
+}
+
 /** A builder test run: the files chosen per document (kept across runs) and the last run. */
 export type TestSession = { files: Record<string, File>; runId: string | null };
 
@@ -78,17 +92,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     : saveMutation.isPending || copyMutation.isPending
       ? "saving"
       : "idle";
-  const saveState: SaveState = !canEdit
-    ? { kind: "viewOnly" }
-    : sync !== "idle"
-      ? { kind: sync }
-      : workflow.readOnly && !dirty
-        ? { kind: "example" }
-        : !dirty
-          ? { kind: "saved" }
-          : saveError
-            ? { kind: "failed", reason: saveError }
-            : { kind: "unsaved" };
+  const saveState = saveStateOf({ canEdit, sync, example: workflow.readOnly, dirty, saveError });
   useUnsavedChangesWarning(dirty && canEdit);
 
   const update =
