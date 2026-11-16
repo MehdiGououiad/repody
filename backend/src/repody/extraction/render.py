@@ -20,6 +20,9 @@ PDF_DPI = 170  # NuExtract3's documented rendering resolution
 # A page renders to at most this many pixels: an oversized page (a PDF can declare one of
 # 200 x 200 inches) is drawn smaller instead of filling the worker's memory.
 MAX_RENDER_PIXELS = 4096 * 4096
+# Pillow refuses, from the header and before decoding, an image over twice this (an "image
+# bomb": a small PNG that would decode to gigabytes); a 48 MP phone photo is under it.
+Image.MAX_IMAGE_PIXELS = 32_000_000
 IMAGE_FORMATS = ("PNG", "JPEG", "WEBP")
 PDF = "application/pdf"
 
@@ -35,6 +38,8 @@ def file_type(file: BinaryIO) -> str | None:
             with Image.open(file, formats=IMAGE_FORMATS) as image:
                 image.verify()
                 return Image.MIME[image.format or ""]
+        except Image.DecompressionBombError:
+            return None
         except OSError, SyntaxError, KeyError:  # UnidentifiedImageError is an OSError
             pass
         file.seek(0)
@@ -72,6 +77,9 @@ def open_image(data: bytes) -> Image.Image:
     EXIF and cannot read WebP, so images are sent re-encoded as PNG, as the NuExtract3 model card
     sends them (lossless: the model gets exactly these pixels)."""
     with Image.open(io.BytesIO(data)) as image:
+        scale = (MAX_RENDER_PIXELS / (image.width * image.height)) ** 0.5
+        if scale < 1:  # drawn smaller, like an oversized PDF page (JPEG decodes at that size)
+            image.thumbnail((int(image.width * scale), int(image.height * scale)))
         upright = ImageOps.exif_transpose(image)
         if upright.mode in ("RGBA", "LA") or "transparency" in upright.info:
             rgba = upright.convert("RGBA")
