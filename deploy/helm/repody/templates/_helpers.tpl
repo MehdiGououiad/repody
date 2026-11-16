@@ -85,6 +85,10 @@ envFrom:
 - name: AUDIT_LLAMACPP_API_KEY
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: AUDIT_LLAMACPP_API_KEY, optional: true }
+# The admin area's Keycloak service account (repody-admin): without it, Admin cannot manage users.
+- name: AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef: { name: {{ $secret }}, key: KEYCLOAK_ADMIN_CLIENT_SECRET, optional: true }
 # Errors go to Bugsink through the Sentry SDK.
 - name: SENTRY_DSN
   valueFrom:

@@ -1,7 +1,9 @@
 name: Publish images to GHCR
 
-# Build both images with docker-bake.hcl, attach BuildKit SBOM + provenance attestations,
-# sign the digests with cosign (keyless, GitHub OIDC), and publish Helm image values.
+# Build the images with docker-bake.hcl, attach BuildKit SBOM + provenance attestations,
+# sign the digests with cosign (keyless, GitHub OIDC), and publish Helm image values. A v* tag
+# then deploys itself (deploy.yml): merge, tag, and the release reaches production with no other
+# step. Tag right after merging: the build waits for the commit's CI.
 on:
   workflow_dispatch:
     inputs:
@@ -23,21 +25,42 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    outputs:
+      tag: ${{ steps.images.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Require a green CI run on this commit
+      # The commit's CI must pass. It may still be running (a tag pushed right after merging):
+      # wait for it. A rebase merge makes a new commit of the exact files a pull request's CI
+      # already passed on: that run counts too (same git tree, so the same code).
+      - name: Require a green CI run on this code
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          conclusion="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --commit "${GITHUB_SHA}" \
-            --status completed --limit 1 --json conclusion --jq '.[0].conclusion // "none"')"
-          if [ "${conclusion}" != "success" ]; then
-            echo "::error::CI on ${GITHUB_SHA} is '${conclusion}': release a commit whose CI passed."
-            exit 1
-          fi
+          tree() { gh api "repos/${GITHUB_REPOSITORY}/commits/$1" --jq .commit.tree.sha; }
+          want="$(tree "${GITHUB_SHA}")"
+          for attempt in $(seq 1 50); do
+            state="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --commit "${GITHUB_SHA}" \
+              --limit 1 --json status,conclusion --jq '.[0] | if . == null then "none" elif .status == "completed" then .conclusion else "running" end')"
+            case "${state}" in
+              success) echo "CI passed on ${GITHUB_SHA}"; exit 0 ;;
+              none|running) ;;
+              *) echo "::error::CI on ${GITHUB_SHA} ended '${state}': release a commit whose CI passed."; exit 1 ;;
+            esac
+            for head in $(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --event pull_request \
+                --status success --limit 20 --json headSha --jq '.[].headSha'); do
+              if [ "$(tree "${head}")" = "${want}" ]; then
+                echo "CI passed on ${head}, a pull request with the same files (tree ${want})"
+                exit 0
+              fi
+            done
+            echo "waiting for CI on ${GITHUB_SHA} (${state}), check ${attempt}/50"
+            sleep 30
+          done
+          echo "::error::no passing CI for ${GITHUB_SHA} after 25 minutes"
+          exit 1
 
       - name: Resolve image coordinates
         id: images
@@ -84,7 +107,12 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
+          # The layers CI built for this code (its GitHub Actions cache, per image), then the
+          # registry cache of the last release.
           set: |
+            backend.cache-from=type=gha,scope=backend
+            web.cache-from=type=gha,scope=web
+            keycloak.cache-from=type=gha,scope=keycloak
             backend.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
             backend.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
             web.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache
@@ -120,3 +148,16 @@ jobs:
           name: repody-images-${{ steps.images.outputs.tag }}
           path: dist/helm-images.yaml
           retention-days: 90
+
+  # A release tag deploys itself, with the release's own files (deploy.yml).
+  deploy:
+    needs: publish
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.publish.outputs.tag }}
+    secrets: inherit

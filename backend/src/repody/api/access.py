@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Path, Query, Request
+from fastapi import APIRouter, HTTPException, Path, Query, Request
 
 from repody.api.deps import SessionDep, require
 from repody.app import access
@@ -15,6 +15,7 @@ from repody.schemas.access import (
     AccessRequestOut,
     AccessStatus,
 )
+from repody.settings import get_settings
 
 router = APIRouter(tags=["access"])
 
@@ -31,8 +32,11 @@ def _client_ip(request: Request) -> str | None:
 
 @router.post("/access-requests", status_code=202)
 async def request_access(body: AccessRequestIn, request: Request, session: SessionDep) -> None:
-    """Public: a prospect asks for an account (the site's form). 429 past the hourly limit per
-    network, 400 when the anti-robot check fails."""
+    """Public: a prospect asks for an account (the site's form). 404 when this installation
+    takes no requests (AUDIT_ACCESS_REQUESTS_ENABLED), 429 past the hourly limit per network, 400
+    when the anti-robot check fails."""
+    if not get_settings().access_requests_enabled:
+        raise HTTPException(404, "Not Found")
     await access.submit(session, body, _client_ip(request))
 
 

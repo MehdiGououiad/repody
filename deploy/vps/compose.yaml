@@ -269,6 +269,7 @@ services:
       AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?}
       # Access requests from the site's form (repody.com posts to /api/v1/access-requests):
       # its origin, and Cloudflare Turnstile's secret (empty: no anti-robot check).
+      AUDIT_ACCESS_REQUESTS_ENABLED: "true"
       AUDIT_CORS_ORIGINS: https://repody.com
       AUDIT_TURNSTILE_SECRET: ${TURNSTILE_SECRET:-}
     volumes:

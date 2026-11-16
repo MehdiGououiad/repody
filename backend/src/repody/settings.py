@@ -101,8 +101,10 @@ class Settings(BaseSettings):
     # plus credit_run_fee per run (the model's start-up and idle time a run causes). Enforced:
     # a run is refused (402) when its account cannot pay its estimate. Accounts are the client
     # companies (Keycloak groups client-<name>); callers outside any client are not charged.
-    # Access requests from the site (repody.app.access): Cloudflare Turnstile's secret (off when
-    # unset), and how many requests one IP address may send an hour.
+    # Access requests from the site (repody.app.access): off unless set, so an installation never
+    # opens a public form it does not use (Repody's own site: the VPS turns it on). Cloudflare
+    # Turnstile's secret (no check when unset), and how many requests one network sends an hour.
+    access_requests_enabled: bool = False
     turnstile_secret: SecretStr | None = None
     access_requests_per_hour: PositiveInt = 5
     # Declined requests are deleted after this (their details were kept only for the request).
