@@ -56,6 +56,9 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_LLAMACPP_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to llama-server `--parallel`; documents and pages are sent concurrently up to it |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
+| `AUDIT_MAX_PAGES_PER_RUN` | all | Pages one run may send the model, all its documents together; checked from the files before the run is queued (422) |
+| `AUDIT_MAX_OUTPUT_TOKENS` | `16384` | The longest answer the model may write. A schema without tables or lists gets less, by its size, so an answer that loops stops early |
+| `AUDIT_MAX_JSON_BYTES` | 2 MiB | JSON request bodies (workflow definitions); larger ones get 413 |
 
 ## Runs
 
@@ -67,6 +70,45 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_RUNS_PER_MINUTE_PER_CLIENT` | `600` | Runs one API key or user starts a minute; more wait their turn in Hatchet (`0` = no limit) |
 | `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT` | `2` | Runs one API key or user has in progress at once; clients take turns (Hatchet round robin) |
 | `AUDIT_RUN_RETENTION_DAYS` | `0` | Delete finished runs (and their uploaded files) older than this (`0` = keep); the maintenance cron runs every minute |
+
+## Credits
+
+Every run is metered: 1 credit = 1 page sent to the model, plus `AUDIT_CREDIT_RUN_FEE` per run.
+A run holds its estimate (its files' pages) when it is queued. It then pays the pages it sent
+when done, its estimate when it failed after it started or the model failed on a document, and
+nothing when it never started. Usage per account: `GET /v1/credits/usage?since=&until=`.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AUDIT_CREDITS_ENFORCED` | `false` | Refuse a run (402) when its account cannot pay its estimate. Off: runs are metered, never refused (an on-premise installation) |
+| `AUDIT_CREDIT_RUN_FEE` | `0` | Credits per run on top of its pages: the GPU's start and idle time a run causes on a model that scales to zero |
+
+**Accounts.** A client company is a Keycloak group named `client-<name>`. Its users see and change
+only its workflows, runs and audits, and its credits pay their runs and its workflows' API-key runs.
+Users outside any client group (every user of a single-client installation) and `platform_admin`
+see everything; their workflows are shared: every client reads and duplicates them, none edits or
+runs them. Their runs are charged to the `deployment` account, which is metered and never refused.
+
+**Granting.** A `platform_admin` grants credits (a negative amount takes them back):
+
+```bash
+curl -X POST https://<app>/api/v1/credits/grants -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" -d '{"account": "client-acme", "amount": 200, "note": "trial"}'
+```
+
+**Sizing for the Modal GPU** (measured in deploy/modal/README.md: about 10 s per page at worst,
+Markdown; 1–4 s for a field extraction; about 75 s of start and idle time per isolated run). With
+`AUDIT_CREDIT_RUN_FEE=8`, 200 credits cost at most about $1 on an L4 ($0.80/h) and $1.20 on an A10
+($1.10/h), for Markdown-only runs. Field extraction costs a fraction of that.
+
+**Keycloak setup.** The realm files map group membership into the access token (`groups`, the
+`repody-web` client) and the production realm sets a password policy. A realm imported before
+that has neither: add them once in the admin console:
+1. Clients → `repody-web` → Client scopes → `repody-web-dedicated` → Add mapper → By configuration →
+   Group Membership. Name and token claim name `groups`, Full group path off, Add to access token on.
+2. Realm settings → Policies → Password policy: Minimum length 12, Not username, Password history 3.
+3. Groups → Create group `client-<name>` per client, and add its users (with the `operator` or
+   `admin` role).
 
 ## Observability
 

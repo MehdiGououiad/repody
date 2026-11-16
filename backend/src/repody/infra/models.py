@@ -12,11 +12,12 @@ below tie a lifecycle state to the columns it implies (repody.app.lifecycle).
 import uuid
 from typing import Any
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, Text
+from sqlalchemy import BigInteger, CheckConstraint, ForeignKey, Index, Text, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from repody.infra.db import Base, CreatedAt, UpdatedAt, UtcDateTime
+from repody.schemas.credits import CreditKind
 from repody.schemas.rule import Scope, Severity
 from repody.schemas.run import Outcome, RuleStatus, RunStatus, Source
 from repody.schemas.workflow import WorkflowState
@@ -47,9 +48,10 @@ class Workflow(Base):
     deployed_at: Mapped[UtcDateTime | None]
     api_key_hash: Mapped[str | None]
     api_key_hint: Mapped[str | None]
-    # Demo mode: the playground visitor who owns it; None for everyone else's workflows (and,
-    # in the playground, the shared examples).
-    visitor_id: Mapped[str | None] = mapped_column(index=True)
+    # The account that owns it (repody.app.scope): a client company (its Keycloak group,
+    # ``client-<name>``) or a playground visitor. None: a shared workflow, which every account
+    # reads and duplicates but cannot change or run (the examples).
+    account_id: Mapped[str | None] = mapped_column(index=True)
     created_at: Mapped[CreatedAt]
     updated_at: Mapped[UpdatedAt]
 
@@ -62,6 +64,14 @@ class Run(Base):
         # The dashboard's windows (by creation) and the operations page's hourly counts (by finish).
         Index("ix_runs_created", "created_at"),
         Index("ix_runs_finished", "finished_at"),
+        # A retried request with the same Idempotency-Key returns the run it started.
+        Index(
+            "uq_runs_client_idempotency",
+            "client_key",
+            "idempotency_key",
+            unique=True,
+            postgresql_where=text("idempotency_key IS NOT NULL"),
+        ),
         CheckConstraint(
             "(outcome IS NOT NULL) = (status = 'done')", name="ck_runs_outcome_when_done"
         ),
@@ -82,6 +92,9 @@ class Run(Base):
     extraction_ms: Mapped[int] = mapped_column(default=0)
     validation_ms: Mapped[int] = mapped_column(default=0)
     task_run_id: Mapped[str | None]  # its Hatchet run, to cancel it
+    account_id: Mapped[str | None] = mapped_column(index=True)  # its workflow's, when started
+    client_key: Mapped[str | None]  # who started it: the API key's hash prefix or the user
+    idempotency_key: Mapped[str | None]
     created_at: Mapped[CreatedAt]
     started_at: Mapped[UtcDateTime | None]
     finished_at: Mapped[UtcDateTime | None]
@@ -152,3 +165,30 @@ class RuleResult(Base):
     affected_fields: Mapped[list[str]] = mapped_column(JSONB, default=list)
 
     run: Mapped[Run] = relationship(back_populates="rule_results")
+
+
+class CreditEntry(Base):
+    """The credit ledger (repody.app.credits): an account's balance is the sum of its entries.
+
+    A grant adds credits. A run's entry holds its estimate (negative, ``pending``) from the moment
+    it is queued, then is settled once: the pages it sent the model (done), its estimate (failed
+    after it started), or nothing (failed before it started). Entries outlive the run they charge
+    (retention deletes runs, never entries), so usage and balances stay whole.
+    """
+
+    __tablename__ = "credit_entries"
+
+    id: Mapped[str] = mapped_column(primary_key=True)
+    account_id: Mapped[str] = mapped_column(index=True)
+    kind: Mapped[CreditKind]
+    amount: Mapped[int] = mapped_column(BigInteger)  # credits: 1 = one page sent to the model
+    pending: Mapped[bool] = mapped_column(default=False)
+    run_id: Mapped[str | None] = mapped_column(
+        ForeignKey("runs.id", ondelete="SET NULL"), unique=True
+    )
+    pages: Mapped[int] = mapped_column(default=0)  # pages sent to the model (runs)
+    model_ms: Mapped[int] = mapped_column(BigInteger, default=0)  # extraction time (runs)
+    note: Mapped[str] = mapped_column(Text, default="")
+    actor: Mapped[str] = mapped_column(default="")  # who granted, or the run's client
+    created_at: Mapped[CreatedAt]
+    settled_at: Mapped[UtcDateTime | None]

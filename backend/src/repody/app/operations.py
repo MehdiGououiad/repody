@@ -8,8 +8,9 @@ from sqlalchemy.orm import selectinload
 
 from repody.app.dashboard import timing
 from repody.app.errors import AppError
-from repody.app.lifecycle import failure, move_run
+from repody.app.lifecycle import fail
 from repody.app.progress import stored
+from repody.app.scope import visible_runs
 from repody.infra import queue
 from repody.infra.models import Run, RunDocument
 from repody.schemas.platform import (
@@ -25,9 +26,11 @@ ERRORS = 10
 HOURS = 24
 
 
-async def get_operations(session: AsyncSession) -> Operations:
+async def get_operations(session: AsyncSession, *, account: str | None = None) -> Operations:
+    """The queue counts are the platform's (they explain a wait); the rest is the account's."""
     now = datetime.now(UTC)
     since = now - timedelta(hours=HOURS)
+    mine = visible_runs(account)
     with_files = (
         selectinload(Run.workflow),
         selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
@@ -35,7 +38,7 @@ async def get_operations(session: AsyncSession) -> Operations:
     active = (
         await session.scalars(
             select(Run)
-            .where(Run.status.in_(("queued", "running")))
+            .where(Run.status.in_(("queued", "running")), mine)
             .order_by(Run.created_at)
             .limit(ACTIVE)
             .options(*with_files)
@@ -43,7 +46,7 @@ async def get_operations(session: AsyncSession) -> Operations:
     ).all()
     failed = await session.scalars(
         select(Run)
-        .where(Run.status == "failed", Run.created_at >= since)
+        .where(Run.status == "failed", Run.created_at >= since, mine)
         .order_by(Run.created_at.desc())
         .limit(ERRORS)
         .options(selectinload(Run.workflow))
@@ -65,7 +68,7 @@ async def get_operations(session: AsyncSession) -> Operations:
                 func.count().filter(Run.status == "done"),
                 func.count().filter(Run.status == "failed"),
             )
-            .where(Run.finished_at >= since)
+            .where(Run.finished_at >= since, mine)
             .group_by(hour)
         )
     }
@@ -104,14 +107,19 @@ async def get_operations(session: AsyncSession) -> Operations:
             )
             for h in hours
         ],
-        timing=await timing(session, since),
+        timing=await timing(session, since, mine),
     )
 
 
-async def cancel_run(session: AsyncSession, run_id: str, by: str) -> None:
-    """Stop a queued or running run: it fails with who stopped it, and its Hatchet task is
-    cancelled. A worker still busy with it cannot finish it (a final state is never overwritten)."""
-    if await move_run(session, run_id, "failed", **failure(f"Cancelled by {by}.")):
+async def cancel_run(
+    session: AsyncSession, run_id: str, by: str, *, account: str | None = None
+) -> None:
+    """Stop a queued or running run of the caller's account: it fails with who stopped it, and
+    its Hatchet task is cancelled. A worker still busy with it cannot finish it (a final state is
+    never overwritten)."""
+    if not await session.scalar(select(Run.id).where(Run.id == run_id, visible_runs(account))):
+        raise AppError(404, "Run not found.")
+    if await fail(session, run_id, f"Cancelled by {by}."):
         await session.commit()
         if task_run_id := await session.scalar(select(Run.task_run_id).where(Run.id == run_id)):
             await queue.cancel(task_run_id)

@@ -6,6 +6,7 @@ from typing import Literal, get_args
 from pydantic import Field
 
 from repody.schemas.common import CamelModel
+from repody.schemas.credits import Credits
 from repody.schemas.rule import Severity
 from repody.schemas.run import AuditListItem, RunProgress, RunStatus, Source
 from repody.schemas.workflow import WorkflowOut
@@ -18,6 +19,7 @@ Permission = Literal[
     "run:read",
     "run:execute",
     "metrics:read",
+    "credits:grant",
 ]
 PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 
@@ -31,6 +33,7 @@ class Access(CamelModel):
         default_factory=list,
         description="A playground visitor's paid actions: offered, answered 402 (contact us).",
     )
+    credits: Credits | None = Field(default=None, description="None when signed out.")
 
 
 class Health(CamelModel):

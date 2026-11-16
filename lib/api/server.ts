@@ -77,7 +77,7 @@ export const fetchAccess = cache(async (): Promise<Access> => {
     return await data(serverFetch.GET("/v1/me"));
   } catch (error) {
     unstable_rethrow(error); // the sign-in redirect for a stale session
-    return { roles: [], permissions: [], withCredits: [] };
+    return { roles: [], permissions: [], withCredits: [], credits: null };
   }
 });
 

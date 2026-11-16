@@ -75,6 +75,22 @@ def test_user_from_token(monkeypatch, fresh_settings):
     )
     assert user.subject == "alice"
     assert user.roles == {"operator", "viewer"}
+    assert user.client is None
+    assert user.account is None  # a single-client installation: sees everything
+
+    # A client company is a Keycloak group (full path or not); its users see only its work.
+    client_user = auth.user_from_token(
+        token(
+            "http://kc.test/realms/repody",
+            realm_access={"roles": ["operator"]},
+            groups=["/clients/Client-Acme"],
+        )
+    )
+    assert client_user.account == "client-acme"
+    admin = auth.User(subject="p", roles=frozenset({"platform_admin"}), client="client-acme")
+    assert admin.account is None  # a platform admin sees every client
+    assert admin.can("credits:grant")
+    assert not client_user.can("credits:grant")
     with pytest.raises(auth.InvalidTokenError):
         auth.user_from_token(token("http://evil.test"))
     with pytest.raises(auth.InvalidTokenError):

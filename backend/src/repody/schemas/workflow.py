@@ -15,6 +15,16 @@ from repody.schemas.rule import Rule, Severity
 WorkflowState = Literal["draft", "active", "archived"]
 WorkflowStatus = Literal["draft", "active"]
 
+# A definition goes into every model request: bounded so one workflow cannot fill the model's
+# context (or the API's memory) on every page it reads.
+MAX_DOCUMENTS = 20
+MAX_RULES = 200
+MAX_FIELDS = 300  # per document, at every level together
+MAX_DEPTH = 5  # objects within objects
+MAX_CHOICES = 100
+MAX_EXAMPLES = 5
+MAX_EXAMPLE_CHARS = 20_000
+
 
 class SchemaField(CamelModel):
     """One NuExtract template field.
@@ -28,8 +38,8 @@ class SchemaField(CamelModel):
     name: Name
     description: Text = ""
     template_type: TemplateType = DEFAULT_TYPE
-    enum_values: list[Name] = Field(default_factory=list)
-    children: list[SchemaField] = Field(default_factory=list)
+    enum_values: list[Name] = Field(default_factory=list, max_length=MAX_CHOICES)
+    children: list[SchemaField] = Field(default_factory=list, max_length=MAX_FIELDS)
 
     @model_validator(mode="after")
     def _choices(self) -> Self:
@@ -41,19 +51,32 @@ class SchemaField(CamelModel):
 class IclExample(CamelModel):
     """A NuExtract in-context example: input text and the JSON it should produce."""
 
-    input: Annotated[str, StringConstraints(max_length=100_000)]
-    output: Annotated[str, StringConstraints(max_length=100_000)]
+    input: Annotated[str, StringConstraints(max_length=MAX_EXAMPLE_CHARS)]
+    output: Annotated[str, StringConstraints(max_length=MAX_EXAMPLE_CHARS)]
 
 
 class DocumentDef(CamelModel):
     id: Id
     document_type: Name = ""
-    schema_fields: list[SchemaField] = Field(default_factory=list, alias="schema")
+    schema_fields: list[SchemaField] = Field(
+        default_factory=list, alias="schema", max_length=MAX_FIELDS
+    )
     extraction_instructions: Text = ""
     markdown_extraction: bool = Field(
         default=False, description="Transcribe the document to Markdown when it has no fields."
     )
-    extraction_icl_examples: list[IclExample] = Field(default_factory=list)
+    extraction_icl_examples: list[IclExample] = Field(default_factory=list, max_length=MAX_EXAMPLES)
+
+    @model_validator(mode="after")
+    def _bounded(self) -> Self:
+        def walk(fields: list[SchemaField], depth: int) -> int:
+            if fields and depth > MAX_DEPTH:
+                raise ValueError(f"Fields nest at most {MAX_DEPTH} levels deep.")
+            return sum(1 + walk(f.children, depth + 1) for f in fields)
+
+        if walk(self.schema_fields, 1) > MAX_FIELDS:
+            raise ValueError(f"A document has at most {MAX_FIELDS} fields.")
+        return self
 
     @property
     def wants_extraction(self) -> bool:
@@ -63,8 +86,8 @@ class DocumentDef(CamelModel):
 class WorkflowDefinition(CamelModel):
     """What a run executes; stored as JSON on the workflow and copied onto each run."""
 
-    documents: list[DocumentDef] = Field(default_factory=list)
-    rules: list[Rule] = Field(default_factory=list)
+    documents: list[DocumentDef] = Field(default_factory=list, max_length=MAX_DOCUMENTS)
+    rules: list[Rule] = Field(default_factory=list, max_length=MAX_RULES)
 
     @model_validator(mode="after")
     def _unique_field_names(self) -> Self:

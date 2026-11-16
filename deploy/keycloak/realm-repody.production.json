@@ -49,6 +49,19 @@
             "access.token.claim": "true",
             "userinfo.token.claim": "false"
           }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "consentRequired": false,
+          "config": {
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "claim.name": "groups"
+          }
         }
       ],
       "attributes": {
@@ -88,5 +101,6 @@
       "client": "repody-web",
       "roles": ["platform_admin", "admin", "operator", "viewer"]
     }
-  ]
+  ],
+  "passwordPolicy": "length(12) and notUsername and passwordHistory(3)"
 }

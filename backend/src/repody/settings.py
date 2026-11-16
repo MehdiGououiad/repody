@@ -91,6 +91,21 @@ class Settings(BaseSettings):
     inference_concurrency: PositiveInt = 1
 
     max_pages_per_document: PositiveInt | None = None
+    # Pages one run may send the model, all its documents together (checked before it is
+    # queued, from the files' page counts).
+    max_pages_per_run: PositiveInt | None = None
+    # The longest answer the model may write. Structured answers get less, by their schema's
+    # size (repody.extraction.nuextract): an answer that loops stops here, not at the timeout.
+    max_output_tokens: PositiveInt = 16_384
+    # JSON request bodies (workflow definitions); file uploads have their own limits.
+    max_json_bytes: PositiveInt = 2 * 1024 * 1024
+
+    # Credits (repody.app.credits): every run is metered, 1 credit = 1 page sent to the model,
+    # plus credit_run_fee per run (the model's start-up and idle time a run causes). Enforced:
+    # a run is refused (402) when its account cannot pay its estimate. Accounts are the client
+    # companies (Keycloak groups client-<name>); callers outside any client are not charged.
+    credits_enforced: bool = False
+    credit_run_fee: NonNegativeInt = 0
 
     # Runs
     run_timeout_minutes: PositiveInt = 5

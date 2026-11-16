@@ -4,7 +4,7 @@ import { createContext, use } from "react";
 import { MAIN_NAV_ITEMS } from "@/lib/navigation";
 import type { Access, Permission } from "@/lib/types";
 
-const NO_ACCESS: Access = { roles: [], permissions: [], withCredits: [] };
+const NO_ACCESS: Access = { roles: [], permissions: [], withCredits: [], credits: null };
 
 const AccessContext = createContext<Access>(NO_ACCESS);
 

@@ -88,10 +88,10 @@ def require(permission: Permission):
     return Depends(dependency)
 
 
-def visitor_scope(user: OptionalUser) -> str | None:
-    """Whose workflows the caller sees: a playground visitor's own (and the examples); None
-    outside demo mode, where everyone sees every workflow."""
-    return user.visitor if user else None
+def account_scope(user: OptionalUser) -> str | None:
+    """Whose workflows and runs the caller sees (repody.app.scope): their account's, or all
+    (None) for a platform admin and in a single-client installation."""
+    return user.account if user else None
 
 
-VisitorScope = Annotated[str | None, Depends(visitor_scope)]
+AccountScope = Annotated[str | None, Depends(account_scope)]

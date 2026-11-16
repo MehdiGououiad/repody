@@ -12,6 +12,7 @@ const PERMISSIONS: Permission[] = [
   "run:read",
   "run:execute",
   "metrics:read",
+  "credits:grant",
 ];
 
 const ROLES = ["viewer", "operator", "admin", "platform_admin", "demo_visitor"] as const;
@@ -33,6 +34,12 @@ export async function AccessOverview({ access }: { access: Access }) {
       <Rows
         rows={[
           [t("role"), roles.join(", ") || t("noRole")],
+          ...(access.credits?.account
+            ? ([
+                [t("account"), access.credits.account],
+                [t("credits"), t("creditsLeft", { balance: access.credits.balance })],
+              ] as [string, React.ReactNode][])
+            : []),
           ...PERMISSIONS.map((permission): [string, React.ReactNode] => {
             const { glyph, label } = state(permission);
             return [

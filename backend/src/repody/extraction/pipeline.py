@@ -33,10 +33,11 @@ class _Answer(BaseModel):
 
 def _request(doc: DocumentDef) -> dict[str, Any]:
     """The request that decides the answer, without the page images."""
-    model = get_settings().llamacpp_served_model
+    settings = get_settings()
+    model, max_tokens = settings.llamacpp_served_model, settings.max_output_tokens
     if doc.schema_fields:
-        return nuextract.structured_request(doc, model)
-    return nuextract.markdown_request(model)
+        return nuextract.structured_request(doc, model, max_tokens=max_tokens)
+    return nuextract.markdown_request(model, max_tokens=max_tokens)
 
 
 def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[str, Any]:

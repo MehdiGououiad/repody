@@ -79,6 +79,6 @@ class Rule(CamelModel):
     id: Id
     name: Name = ""
     scope: Scope = "intra"
-    applies_to: list[Id] = Field(default_factory=list)
+    applies_to: list[Id] = Field(default_factory=list, max_length=20)
     severity: Severity = "reject"
-    conditions: list[Condition] = Field(default_factory=list)
+    conditions: list[Condition] = Field(default_factory=list, max_length=50)
