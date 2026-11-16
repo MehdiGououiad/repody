@@ -9,7 +9,7 @@ name: repody
 
 services:
   postgres:
-    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
     # Hatchet's queue runs on Postgres too: more connections, and more shared memory than the
     # image's 64 MB (https://docs.hatchet.run/self-hosting/docker-compose, "shared memory").
     command: ["postgres", "-c", "max_connections=200"]
@@ -179,7 +179,7 @@ services:
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
   bugsink-db:
     profiles: [observability]
-    image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
+    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
     environment:
       POSTGRES_USER: bugsink
       POSTGRES_PASSWORD: bugsink-local-dev
