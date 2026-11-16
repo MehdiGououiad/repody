@@ -186,3 +186,16 @@ def test_an_oversized_pdf_page_is_drawn_within_the_pixel_cap():
     width, height = _size(part)
     assert total == 1
     assert width * height <= render.MAX_RENDER_PIXELS
+
+
+def test_an_image_bomb_is_refused_from_its_header():
+    buffer = io.BytesIO()
+    Image.new("1", (10_000, 8_000)).save(buffer, format="PNG")  # 80 MP, a few KB on disk
+    assert render.file_type(buffer) is None
+
+
+def test_an_oversized_image_is_drawn_within_the_pixel_cap():
+    buffer = io.BytesIO()
+    Image.new("RGB", (6_000, 5_000), "white").save(buffer, format="JPEG")  # 30 MP: allowed
+    page = render.open_image(buffer.getvalue())
+    assert page.width * page.height <= render.MAX_RENDER_PIXELS
