@@ -106,7 +106,14 @@ services:
     volumes:
       - ./deploy/keycloak/realm-repody.json:/opt/keycloak/data/import/realm-repody.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      # Healthy once the realm is served (the web app fetches its discovery document at start), not
+      # when the port opens: the same check as the VPS (deploy/vps/compose.yaml).
+      test:
+        - CMD-SHELL
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /realms/repody/.well-known/openid-configuration HTTP/1.1\r\nHost: localhost:8080\r\nConnection: close\r\n\r\n' >&3 &&
+          grep -q '"authorization_endpoint"' <&3
       interval: 10s
       timeout: 5s
       retries: 12

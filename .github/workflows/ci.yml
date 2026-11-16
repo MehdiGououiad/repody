@@ -195,9 +195,15 @@ jobs:
           source: .
           files: ./docker-bake.hcl
           load: true
+          # One cache per image: with a shared scope each export replaced the others, and every
+          # build missed its dependency layers. The release build reads these (images-ghcr.yml).
           set: |
-            *.cache-from=type=gha
-            *.cache-to=type=gha,mode=max
+            backend.cache-from=type=gha,scope=backend
+            backend.cache-to=type=gha,scope=backend,mode=max
+            web.cache-from=type=gha,scope=web
+            web.cache-to=type=gha,scope=web,mode=max
+            keycloak.cache-from=type=gha,scope=keycloak
+            keycloak.cache-to=type=gha,scope=keycloak,mode=max
       # Waits for every container's healthcheck (compose up --wait); fails on an unhealthy one.
       - name: Start platform (containers only)
         run: pnpm platform -- --platform-only --no-obs --no-pull

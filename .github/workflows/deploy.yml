@@ -1,15 +1,29 @@
 name: Deploy
 
-# Deploys a published release to the VPS (deploy/vps/README.md):
-#   1. the three images of that version must carry this repository's release signature (cosign);
-#   2. the runner joins the tailnet as an ephemeral tag:ci node, with workload identity federation
+# Deploys a published release to the VPS (deploy/vps/README.md). Runs by itself after the images
+# of a v* tag are published (images-ghcr.yml), or by hand (Actions > Deploy > Run workflow) to
+# deploy or roll back to any published version:
+#   1. the files deployed (compose.yaml) are the release's own, from its tag, whatever ref this
+#      workflow runs on: old images never meet newer configuration;
+#   2. the three images of that version must carry this repository's release signature (cosign);
+#   3. the runner joins the tailnet as an ephemeral tag:ci node, with workload identity federation
 #      (no Tailscale secret: https://tailscale.com/kb/1276/tailscale-github-action);
-#   3. over Tailscale SSH it sends compose.yaml, pulls with this run's short-lived token (logged
-#      out right after), and starts the stack, waiting for every health check;
-#   4. the public app answers through Cloudflare.
+#   4. over Tailscale SSH it backs up the databases (the last 10 dumps are kept), sends
+#      compose.yaml, pulls with this run's short-lived token (logged out right after), and starts
+#      the stack, waiting for every health check;
+#   5. it checks the release: its version runs, the migrations passed, the public app answers,
+#      sign-in works, and the security headers and the site's CORS are in place.
+# Rolling back is deploying the previous version: migrations only ever add, and the old code
+# ignores what it does not know. A deploy never downgrades the database.
 # Secrets stay on the server (/opt/repody/.env); this workflow never reads them.
 
 on:
+  workflow_call:
+    inputs:
+      version:
+        description: Release to deploy (e.g. 1.0.0, published from the git tag v1.0.0)
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       version:
@@ -36,15 +50,17 @@ jobs:
       VERSION: ${{ inputs.version }}
       HOST: ${{ vars.DEPLOY_HOST }}
       APP_HOST: ${{ vars.APP_HOST }}
+      SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://repody.com' }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
       - name: Check the inputs
         run: |
           [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version must look like 1.2.3"; exit 1; }
           [[ -n "${HOST}" && -n "${APP_HOST}" ]] || { echo "::error::set the DEPLOY_HOST and APP_HOST variables on the production environment"; exit 1; }
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/v${{ inputs.version }}
+          persist-credentials: false
 
       - name: Install cosign
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
@@ -72,6 +88,20 @@ jobs:
           tags: tag:ci
           ping: ${{ vars.DEPLOY_HOST }}
 
+      - name: Back up the databases
+        run: |
+          remote() { tailscale ssh "deploy@${HOST}" "$@"; }
+          remote 'test -s /opt/repody/.env' || { echo "::error::/opt/repody/.env is missing on the server"; exit 1; }
+          # Every database of the stack's Postgres (Repody, Keycloak, Hatchet), when it runs; the
+          # newest 10 dumps are kept.
+          remote "set -o pipefail; cd /opt/repody && mkdir -p backups && chmod 700 backups \
+            && if docker compose --env-file .env --env-file release.env ps --status running --services 2>/dev/null | grep -qx postgres; then \
+                 f=backups/pre-${VERSION}-\$(date -u +%Y%m%dT%H%M%SZ).sql.gz \
+                 && docker compose --env-file .env --env-file release.env exec -T postgres pg_dumpall -U repody | gzip > \$f \
+                 && chmod 600 \$f && test -s \$f && echo \"backed up: \$f (\$(stat -c %s \$f) bytes)\"; \
+               else echo 'no running Postgres: nothing to back up'; fi \
+            && ls -1t backups/*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --"
+
       - name: Deploy
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,7 +109,6 @@ jobs:
           remote() { tailscale ssh "deploy@${HOST}" "$@"; }
           compose="docker compose --env-file .env --env-file release.env"
 
-          remote 'test -s /opt/repody/.env' || { echo "::error::/opt/repody/.env is missing on the server"; exit 1; }
           remote 'cat > /opt/repody/compose.yaml' < deploy/vps/compose.yaml
           printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote 'cat > /opt/repody/release.env'
 
@@ -90,11 +119,44 @@ jobs:
           remote "cd /opt/repody && ${compose} up -d --wait --wait-timeout 600 --remove-orphans"
           remote "cd /opt/repody && ${compose} ps --format 'table {{.Service}}\t{{.Status}}'"
 
-      - name: Check the public app
+      - name: Check the release
         run: |
+          remote() { tailscale ssh "deploy@${HOST}" "$@"; }
+          compose="docker compose --env-file .env --env-file release.env"
+          fail() { echo "::error::$1"; exit 1; }
+
+          running="$(remote 'cat /opt/repody/release.env')"
+          [ "${running}" = "REPODY_VERSION=${VERSION}" ] || fail "the server runs '${running}', not ${VERSION}"
+          migrate="$(remote "cd /opt/repody && ${compose} ps -a migrate --format '{{.ExitCode}}'")"
+          [ "${migrate}" = "0" ] || fail "the migrations exited with ${migrate}"
+
+          app="https://${APP_HOST}"
           for _ in $(seq 1 12); do
-            curl -fsS --max-time 10 "https://${APP_HOST}/api/auth/ok" && exit 0
+            curl -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" && break
             sleep 10
           done
-          echo "::error::https://${APP_HOST} does not answer"
-          exit 1
+          curl -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" || fail "${app}/api/v1/healthz does not answer"
+
+          signin="$(curl -fsS --max-time 15 -X POST "${app}/api/auth/sign-in/social" \
+            -H 'content-type: application/json' -H "origin: ${app}" \
+            -d '{"provider":"keycloak","callbackURL":"/dashboard","disableRedirect":true}')"
+          [[ "${signin}" == *'/protocol/openid-connect/auth'* ]] || fail "sign-in returns no Keycloak URL: ${signin:0:200}"
+
+          headers="$(curl -fsS --max-time 10 -D - -o /dev/null "${app}/login" | tr -d '\r')"
+          grep -qi '^strict-transport-security:' <<<"${headers}" || fail "no HSTS header"
+          grep -qi '^x-powered-by:' <<<"${headers}" && fail "X-Powered-By is sent"
+
+          cors() {
+            curl -sS --max-time 10 -X OPTIONS -D - -o /dev/null "${app}/api/v1/access-requests" \
+              -H "Origin: $1" -H 'Access-Control-Request-Method: POST' \
+              -H 'Access-Control-Request-Headers: content-type' | tr -d '\r' | grep -i '^access-control-allow-origin:' || true
+          }
+          [[ "$(cors "${SITE_ORIGIN}")" == *"${SITE_ORIGIN}"* ]] || fail "the site (${SITE_ORIGIN}) may not post access requests"
+          [ -z "$(cors https://example.invalid)" ] || fail "CORS allows another origin"
+          echo "release ${VERSION}: running, migrated, answering, signing in, headers and CORS in place"
+
+      - name: Logs of the failed release
+        if: failure()
+        run: |
+          tailscale ssh "deploy@${HOST}" "cd /opt/repody && docker compose --env-file .env --env-file release.env ps -a \
+            && docker compose --env-file .env --env-file release.env logs --no-color --tail 80 migrate api worker web keycloak" || true

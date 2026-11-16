@@ -38,6 +38,10 @@ production Keycloak. Create the realm with:
 | Audience | An audience mapper adding `repody-api` to access tokens, and `config.AUDIT_OIDC_AUDIENCE: repody-api` (required in production: the API refuses tokens meant for other clients) |
 | Hostname | Keycloak hostname v2 with `KC_HOSTNAME` set to its public URL; when the web pods reach it in-cluster (`web.internalIssuer`), also `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true` |
 
+| Client groups | One group `client-<name>` per client company when several share the installation (their users see only its work); a single-client installation needs none |
+| Groups in tokens | A Group Membership mapper on `repody-web`: token claim `groups`, full group path off, in the access token |
+| Admin area (optional) | Client `repody-admin`: confidential, service accounts only (no standard flow, no direct grants), full scope off. Its service account gets realm-management's `manage-users`, `view-users`, `query-users`, `query-groups`; map those four to the client's scope (Client scopes → Dedicated scope → Scope), and add the client scope `kc-admin-api` as a default scope (Keycloak 26.8.2+ refuses Admin API tokens without it). Its secret goes into the runtime Secret as `KEYCLOAK_ADMIN_CLIENT_SECRET`. The steps as `kcadm.sh` commands: [`deploy/keycloak/setup-admin-client.sh`](../deploy/keycloak/setup-admin-client.sh) |
+
 The API accepts only access tokens (`typ: Bearer`) signed by the realm, for that audience.
 The e2e tests' service account (`repody-e2e`, client credentials, operator role) belongs only in
 a test realm.
@@ -64,6 +68,7 @@ ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
 | `AUDIT_LLAMACPP_API_KEY` | workers, optional bearer token for the inference endpoint |
 | `BUGSINK_DSN` | optional error tracking |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET` | API, optional: the admin area's Keycloak account (`repody-admin`) |
 
 The image pull secret comes from [`registry-pull.externalsecret.example.yaml`](../deploy/client/secrets/registry-pull.externalsecret.example.yaml).
 

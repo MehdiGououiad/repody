@@ -127,8 +127,15 @@ async def test_the_site_may_post_across_origins(api, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
-def _no_turnstile(monkeypatch: pytest.MonkeyPatch) -> None:
+def _site_form(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Repody's own installation: it takes requests; no Turnstile in tests."""
+    monkeypatch.setattr(get_settings(), "access_requests_enabled", True)
     monkeypatch.setattr(get_settings(), "turnstile_secret", None)
+
+
+async def test_an_installation_without_the_form_takes_no_requests(api, monkeypatch):
+    monkeypatch.setattr(get_settings(), "access_requests_enabled", False)
+    assert (await anonymous_post(api, FORM)).status_code == 404
 
 
 async def _request_id(as_user) -> str:  # noqa: F811
