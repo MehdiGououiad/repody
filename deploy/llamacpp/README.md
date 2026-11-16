@@ -59,7 +59,7 @@ documented sampling.
 
 ```powershell
 # backend/.env: AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 (Compose: host.docker.internal)
-docker compose --profile workers restart worker
+docker compose --env-file backend/.env --profile workers restart worker
 ```
 
 See `deploy/llamacpp/repody-llamacpp.env.example`.
@@ -78,7 +78,7 @@ Each slot gets its own context window. Match `LLAMACPP_PARALLEL` to the worker c
 
 ```powershell
 pnpm llamacpp:restart
-docker compose --profile workers restart worker
+docker compose --env-file backend/.env --profile workers restart worker
 ```
 
 ## Troubleshooting

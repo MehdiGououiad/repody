@@ -18,8 +18,8 @@ services:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
       POSTGRES_DB: repody
-      # Hatchet's role, as on the VPS (deploy/vps/compose.yaml); local only, so it has a default.
-      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:-hatchet-local-dev}
+      # Hatchet's role, as on the VPS; the value is in backend/.env (`pnpm platform` writes it).
+      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}
     ports:
       - "5432:5432"
     configs:
@@ -45,7 +45,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:-hatchet-local-dev}@postgres:5432/hatchet?sslmode=disable
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}@postgres:5432/hatchet?sslmode=disable
       # Postgres is the queue too (no RabbitMQ). Lite's generated config says rabbitmq, so it is
       # set here rather than left to the image's default.
       SERVER_MSGQUEUE_KIND: postgres
@@ -166,7 +166,7 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  # Observability (optional: docker compose --profile observability up -d)
+  # Observability (optional: docker compose --env-file backend/.env --profile observability up -d)
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
   bugsink-db:
     profiles: [observability]
