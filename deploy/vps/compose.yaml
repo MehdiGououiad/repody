@@ -30,8 +30,8 @@ x-backend-env: &backend-env
   AUDIT_DEPLOYMENT_ENVIRONMENT: production
   AUDIT_LOG_JSON: "true"
   AUDIT_DATABASE_URL: postgresql+asyncpg://repody:${POSTGRES_PASSWORD:?}@postgres:5432/repody
-  # Hatchet Lite on the stack network; the token is written by the hatchet-token service.
-  HATCHET_CLIENT_TOKEN_FILE: /run/hatchet/token
+  # Hatchet Lite on the stack network. The API and the worker also read its token from the file
+  # the hatchet-token service writes (migrate runs before it, and needs none).
   HATCHET_CLIENT_HOST_PORT: hatchet-lite:7077
   HATCHET_CLIENT_SERVER_URL: http://hatchet-lite:8888
   HATCHET_CLIENT_TLS_STRATEGY: none
@@ -247,6 +247,7 @@ services:
     environment:
       <<: *backend-env
       OTEL_SERVICE_NAME: repody-api
+      HATCHET_CLIENT_TOKEN_FILE: /run/hatchet/token
     volumes:
       - hatchet-token:/run/hatchet:ro
     expose:
@@ -282,6 +283,7 @@ services:
       AUDIT_WORKER_CONCURRENCY: ${AUDIT_WORKER_CONCURRENCY:-4}
       HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED: "true"
       OTEL_SERVICE_NAME: repody-worker
+      HATCHET_CLIENT_TOKEN_FILE: /run/hatchet/token
     volumes:
       - hatchet-token:/run/hatchet:ro
     healthcheck:
