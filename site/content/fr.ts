@@ -1356,8 +1356,9 @@ export const fr = {
     title: "Confidentialité",
     body: [
       "Ce site ne dépose aucun cookie de suivi et n'utilise aucun outil de mesure d'audience tiers.",
-      "Le formulaire de contact n'envoie rien par lui-même : il prépare un e-mail dans votre messagerie, que vous choisissez d'envoyer.",
-      "Les données que vous nous adressez servent uniquement à vous répondre et ne sont pas cédées.",
+      "Le formulaire de demande d'accès envoie vos nom, e-mail professionnel, entreprise, secteur et message aux serveurs de Repody, uniquement après que vous avez coché la case de consentement et envoyé la demande. Nous ne les utilisons que pour traiter la demande et ouvrir votre compte, et ne les cédons jamais.",
+      "Pour bloquer les envois automatisés, le formulaire utilise Cloudflare Turnstile (une vérification qui s'exécute dans votre navigateur) et conserve une empreinte à sens unique (SHA-256) de votre adresse réseau, jamais l'adresse elle-même, pour limiter le nombre de demandes par réseau.",
+      "Une demande refusée est supprimée au bout de 90 jours. Une demande acceptée reste attachée à votre compte tant que vous utilisez Repody.",
       "Conformément à la loi 09-08, vous pouvez demander l'accès, la rectification ou la suppression de vos données à l'adresse de contact.",
     ],
   },
