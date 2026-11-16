@@ -14,6 +14,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { chromium } from "@playwright/test";
+import { uvBackend } from "../deploy/scripts/runtime-env.mjs";
 
 const WEB = process.env.E2E_WEB_URL ?? "http://localhost:3100";
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -105,11 +106,7 @@ await browser.close();
 
 mkdirSync(OUT, { recursive: true });
 execFileSync(
-  "uv",
-  [
-    "run",
-    "--directory",
-    path.join(ROOT, "backend"),
+  ...uvBackend([
     "python",
     "-c",
     `import pathlib,sys
@@ -122,6 +119,6 @@ for png in sorted(raw.glob("*.png")):
     print("  ", png.stem + ".webp")`,
     RAW,
     OUT,
-  ],
+  ]),
   { stdio: "inherit" }
 );

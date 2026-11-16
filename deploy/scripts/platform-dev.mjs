@@ -12,6 +12,7 @@
  * dev: compose.yaml data plane + workers built from source; API and UI on the host
  */
 import { spawnSync } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -123,9 +124,9 @@ function copyEnvFiles() {
 /** Point backend/.env at the host model and toggle OTEL for this run (setup / up only). */
 function patchBackendEnv() {
   const llamaEnv = parseEnvFile(LLAMA_PATHS);
-  // Older backend/.env files predate it; a local value, so it can be filled in.
+  // Hatchet's local database password: one per machine, made on the first start.
   if (!parseEnvFile(BACKEND_ENV).HATCHET_DB_PASSWORD) {
-    setEnvKeys(BACKEND_ENV, { HATCHET_DB_PASSWORD: "hatchet-local-dev" });
+    setEnvKeys(BACKEND_ENV, { HATCHET_DB_PASSWORD: randomBytes(24).toString("hex") });
   }
   setEnvKeys(BACKEND_ENV, {
     AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
