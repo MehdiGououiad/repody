@@ -16,7 +16,7 @@ const PERMISSIONS: Permission[] = [
   "clients:manage",
 ];
 
-const ROLES = ["viewer", "operator", "admin", "platform_admin", "demo_visitor"] as const;
+const ROLES = ["viewer", "operator", "admin", "platform_admin"] as const;
 const isRole = (role: string): role is (typeof ROLES)[number] =>
   (ROLES as readonly string[]).includes(role);
 
@@ -26,9 +26,7 @@ export async function AccessOverview({ access }: { access: Access }) {
   const state = (permission: Permission) =>
     access.permissions.includes(permission)
       ? ({ glyph: "passed", label: t("allowed") } as const)
-      : access.withCredits.includes(permission)
-        ? ({ glyph: "warning", label: t("withCredits") } as const)
-        : ({ glyph: "failed", label: t("notAllowed") } as const);
+      : ({ glyph: "failed", label: t("notAllowed") } as const);
 
   return (
     <Section title={t("title")} hint={t("hint")}>

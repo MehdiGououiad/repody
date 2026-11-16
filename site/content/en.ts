@@ -17,9 +17,7 @@ export const en: Dict = {
       insurance: "Insurance",
       telecom: "Telecom",
     },
-    demo: "Request a demo",
-    playground: "Try the playground for free",
-    playgroundShort: "Playground",
+    demo: "Request access",
     toLight: "Switch to light mode",
     toDark: "Switch to dark mode",
     seePlatform: "See the platform",
@@ -1283,8 +1281,8 @@ export const en: Dict = {
 
   contact: {
     meta: {
-      title: "Request a demo",
-      description: "A 30-minute demo, then a pilot on your own documents and rules.",
+      title: "Request access",
+      description: "An account on Repody with credits to try it on your own documents, then a pilot.",
     },
     title: "Let's see Repody on your documents",
     lead: "Tell us which documents you handle and what you want to check. We get back to you within two business days.",
@@ -1298,8 +1296,15 @@ export const en: Dict = {
       placeholder:
         "For example: 3,000 bank statements a month for account opening, checking the holder and the period.",
       submit: "Send the request",
-      note: "The button opens your email app with the request ready to send.",
-      subject: "Repody demo request",
+      note: "We reply within two business days with your account.",
+      subject: "Repody access request",
+      consent:
+        "I agree that Repody contacts me about this request. My details are kept only for it (see the privacy page).",
+      sending: "Sending…",
+      sent: "Thank you: your request is received. We reply within two business days.",
+      failed: "The request could not be sent. Try again, or write to us:",
+      tooMany: "Too many requests from this network. Try again in an hour, or write to us:",
+      robot: "Confirm you are not a robot, then send again.",
     },
     next: {
       title: "What happens next",

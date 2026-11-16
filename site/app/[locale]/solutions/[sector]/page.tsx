@@ -108,7 +108,6 @@ export default async function Solution({ params }: Props) {
       </section>
 
       <CallToAction
-        playground={t.common.playground}
         title={t.home.cta.title}
         lead={t.home.cta.lead}
         href={href(locale, "contact")}

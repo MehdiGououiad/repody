@@ -3,8 +3,10 @@ export const SITE = {
   name: "Repody",
   url: "https://repody.com",
   appUrl: "https://app.repody.com",
-  /** The public playground: the platform without sign-in, everything but extraction. */
-  playgroundUrl: "https://playground.repody.com",
+  /** The contact form posts access requests here (the app's API; CORS allows this site). */
+  accessRequestsUrl: "https://app.repody.com/api/v1/access-requests",
+  /** Cloudflare Turnstile's public site key (the widget repody-access-requests, repody.com). */
+  turnstileSiteKey: "0x4AAAAAAGD9eQZHqJFQ2eSW",
   contactEmail: "contact@repody.com",
   /** The product video (HyperFrames): an MP4 or embed URL. Null shows the poster and a notice. */
   videoUrl: null as string | null,

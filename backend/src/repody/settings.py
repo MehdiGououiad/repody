@@ -65,15 +65,6 @@ class Settings(BaseSettings):
     keycloak_admin_client_id: str = "repody-admin"
     keycloak_admin_client_secret: SecretStr | None = None
 
-    # Demo mode: the public playground (a deployment of its own, with its own database). No
-    # sign-in: each browser is an anonymous visitor (the web app's visitor cookie) who sees the
-    # shared examples and edits only their own workflows; running and publishing answer 402
-    # (the web app says how to get credits). Visitors' workflows are deleted after
-    # demo_retention_days.
-    demo_mode: bool = False
-    demo_retention_days: PositiveInt = 14
-    demo_max_workflows: PositiveInt = 30  # per visitor
-
     # Uploads
     max_upload_bytes: PositiveInt = 25 * 1024 * 1024
     max_upload_files: PositiveInt = 20
@@ -110,6 +101,11 @@ class Settings(BaseSettings):
     # plus credit_run_fee per run (the model's start-up and idle time a run causes). Enforced:
     # a run is refused (402) when its account cannot pay its estimate. Accounts are the client
     # companies (Keycloak groups client-<name>); callers outside any client are not charged.
+    # Access requests from the site (repody.app.access): Cloudflare Turnstile's secret (off when
+    # unset), and how many requests one IP address may send an hour.
+    turnstile_secret: SecretStr | None = None
+    access_requests_per_hour: PositiveInt = 5
+
     credits_enforced: bool = False
     credit_run_fee: NonNegativeInt = 0
     # The admin area flags a client below this balance; its users see a warning too.
@@ -143,8 +139,6 @@ class Settings(BaseSettings):
                 raise ValueError("AUDIT_OIDC_ENABLED must be true in production.")
             if not self.oidc_audience:
                 raise ValueError("AUDIT_OIDC_AUDIENCE is required in production.")
-        if self.demo_mode and self.oidc_enabled:
-            raise ValueError("AUDIT_DEMO_MODE has no sign-in: set AUDIT_OIDC_ENABLED=false.")
         if self.inference_timeout_seconds > self.run_timeout_minutes * 60:
             raise ValueError("AUDIT_INFERENCE_TIMEOUT_SECONDS must fit in the run timeout.")
         return self

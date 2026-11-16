@@ -16,7 +16,7 @@ from fastapi import (
 from fastapi.responses import Response, StreamingResponse
 from pydantic import Json
 
-from repody.api.deps import CREDITS, AccountScope, OptionalUser, SessionDep, TokenDep, require
+from repody.api.deps import AccountScope, OptionalUser, SessionDep, TokenDep, require
 from repody.app import runs, workflows
 from repody.app.scope import own_workflow, sees_workflow
 from repody.infra.auth import api_key_matches, hash_api_key
@@ -71,8 +71,6 @@ async def start_run(
     account has not enough credits for the files' pages.
 
     A caller that is neither gets 401 whether or not the workflow exists."""
-    if user is not None and user.visitor:
-        raise HTTPException(402, CREDITS)  # the playground runs nothing
     wf = await workflows.find(session, workflow_id)
     caller: tuple[Source, str] | None = None
     if wf is not None and token and api_key_matches(token, wf.api_key_hash):

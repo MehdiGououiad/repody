@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
 import { NewClientDialog, useRefreshAdmin } from "@/components/admin/admin-dialogs";
+import { RequestsSection } from "@/components/admin/requests-section";
 import { Section } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
@@ -37,6 +38,7 @@ export function AdminArea() {
           {t("notConfigured")}
         </p>
       )}
+      <RequestsSection />
       <SpendSection data={data} />
       <Section
         title={t("clients")}

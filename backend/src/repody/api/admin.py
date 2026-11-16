@@ -97,7 +97,7 @@ async def grant(account: Account, body: AdminGrant, session: SessionDep, user: A
 
 @router.get("/workflows")
 async def workflows(session: SessionDep, _admin: Admin) -> list[SharedWorkflow]:
-    """Every workflow outside the playground, with the client it belongs to (None: shared)."""
+    """Every workflow, with the client it belongs to (None: shared)."""
     return await admin.workflows(session)
 
 

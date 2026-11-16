@@ -3,7 +3,7 @@ import createQueryClient from "openapi-react-query";
 import type { paths } from "@/lib/api/generated/schema";
 
 import { signOutToLogin } from "@/lib/auth/client";
-import { openCredits } from "@/lib/playground/credits";
+import { openCredits } from "@/lib/credits/dialog";
 
 let signingOut = false;
 
@@ -17,7 +17,7 @@ function sessionEnded(): void {
 /**
  * The browser's API client: `/api/v1/*` goes through the Next.js proxy, which adds the
  * session token. A 401 signs out (the session expired); a 403 shows /unauthorized; a 402 is the
- * playground declining to run or publish (it asks the visitor to contact us for credits).
+ * run its account cannot pay (it asks the client to contact us for credits).
  */
 export const browserFetch = createFetchClient<paths>({ baseUrl: "/api" });
 browserFetch.use({

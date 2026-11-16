@@ -171,7 +171,6 @@ async def test_me_says_what_each_caller_may_do(api, as_user):
     assert viewer == {
         "roles": ["viewer"],
         "permissions": ["workflow:read", "run:read"],
-        "withCredits": [],
         "credits": {"account": None, "balance": 0, "held": 0, "enforced": False, "low": False},
     }
     operator = (

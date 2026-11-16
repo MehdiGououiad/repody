@@ -14,6 +14,7 @@ const allowedDevOrigins = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
   // Next 16 blocks cross-origin HMR when UI is opened as 127.0.0.1 vs localhost.
   allowedDevOrigins,
   experimental: {
@@ -39,6 +40,8 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // HTTPS only for a year, on every subdomain (the app is never served over HTTP).
+          { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
         ],
       },
     ];

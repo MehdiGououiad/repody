@@ -5,10 +5,10 @@ statistics.
 ones (no account, read-only), and change only their own. None: everything."""
 
 from collections import Counter
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import NamedTuple
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +31,6 @@ from repody.schemas.workflow import (
     WorkflowIn,
     WorkflowOut,
 )
-from repody.settings import get_settings
 
 
 class RunStats(NamedTuple):
@@ -137,17 +136,6 @@ async def load(session: AsyncSession, workflow_id: str, *, account: str | None =
     return wf
 
 
-async def _room_for_one_more(session: AsyncSession, account: str | None) -> None:
-    """The playground keeps a limited number of workflows per visitor."""
-    if account is None or not get_settings().demo_mode:
-        return
-    count = await session.scalar(
-        select(func.count()).where(Workflow.account_id == account, Workflow.status != "archived")
-    )
-    if (count or 0) >= get_settings().demo_max_workflows:
-        raise AppError(409, "The playground keeps a limited number of workflows: delete one.")
-
-
 async def list_workflows(
     session: AsyncSession, *, limit: int | None = None, account: str | None = None
 ) -> list[WorkflowOut]:
@@ -182,7 +170,6 @@ async def get_workflow(
 async def create_workflow(
     session: AsyncSession, body: CreateWorkflow, *, account: str | None = None
 ) -> WorkflowOut:
-    await _room_for_one_more(session, account)
     definition = WorkflowDefinition(documents=[DocumentDef(id=new_id("doc"))])
     wf = Workflow(
         id=new_id("wf"),
@@ -202,7 +189,6 @@ async def duplicate_workflow(
 ) -> WorkflowOut:
     """A new draft with the workflow's documents and rules (no runs, no API key)."""
     source = await load(session, workflow_id, account=account)
-    await _room_for_one_more(session, account)
     wf = Workflow(
         id=new_id("wf"),
         name=body.name,
@@ -247,8 +233,6 @@ async def save_workflow(
     types = schema_types(body)
     if issues := [issue for rule in body.rules for issue in rule_issues(rule, types)]:
         raise AppError(422, "; ".join(issues))
-    if await session.get(Workflow, workflow_id) is None:
-        await _room_for_one_more(session, account)
     # Create the draft if it is new: one statement, so two first saves cannot both insert it.
     await session.execute(
         insert(Workflow)
@@ -308,18 +292,3 @@ def check_rules(definition: WorkflowDefinition) -> list[RuleCheck]:
         )
         for rule in definition.rules
     ]
-
-
-async def purge_visitor_workflows(session: AsyncSession) -> int:
-    """Demo mode: delete the visitors' workflows not edited for ``demo_retention_days`` (they
-    have no runs: the playground runs nothing). The caller commits."""
-    settings = get_settings()
-    if not settings.demo_mode:
-        return 0
-    before = datetime.now(UTC) - timedelta(days=settings.demo_retention_days)
-    deleted = await session.scalars(
-        delete(Workflow)
-        .where(Workflow.account_id.like("visitor-%"), Workflow.updated_at < before)
-        .returning(Workflow.id)
-    )
-    return len(deleted.all())

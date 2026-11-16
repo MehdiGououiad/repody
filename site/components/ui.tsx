@@ -128,20 +128,17 @@ export function PageHero({
   );
 }
 
-/** The closing band of every page: one sentence, the demo button and the playground. */
+/** The closing band of every page: one sentence and the access request button. */
 export function CallToAction({
   title,
   lead,
   href,
   label,
-  playground,
 }: {
   title: string;
   lead: string;
   href: string;
   label: string;
-  /** The playground button's label. */
-  playground: string;
 }) {
   return (
     <section className="border-t border-line bg-canvas bg-ruled py-20 md:py-24">
@@ -149,9 +146,6 @@ export function CallToAction({
         <SectionTitle title={title} lead={lead} />
         <div className="flex flex-wrap gap-3">
           <ButtonLink href={href}>{label} →</ButtonLink>
-          <ButtonLink href={SITE.playgroundUrl} variant="secondary">
-            {playground} →
-          </ButtonLink>
         </div>
       </Container>
     </section>

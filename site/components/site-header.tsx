@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/content";
-import { href, type Locale, type PageKey, SITE } from "@/lib/site";
+import { href, type Locale, type PageKey } from "@/lib/site";
 
 const NAV: PageKey[] = ["platform", "security", "architecture", "deployment", "engineering"];
 const SOLUTIONS: PageKey[] = ["banks", "insurance", "telecom"];
@@ -86,12 +86,6 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dict["common"] })
             {other}
           </Link>
           <ThemeToggle toLight={t.toLight} toDark={t.toDark} />
-          <a
-            href={SITE.playgroundUrl}
-            className="hidden h-8 items-center rounded-[4px] px-3 text-sm font-medium text-ink shadow-[0_0_0_1px_var(--line-strong)] transition-colors duration-100 hover:bg-hover md:inline-flex"
-          >
-            {t.playgroundShort}
-          </a>
           <Link
             href={href(locale, "contact")}
             className="hidden h-8 items-center rounded-[4px] bg-ink px-3 text-sm font-medium text-panel transition-colors duration-100 hover:bg-ink-2 sm:inline-flex"
@@ -131,12 +125,6 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dict["common"] })
           >
             {t.demo}
           </Link>
-          <a
-            href={SITE.playgroundUrl}
-            className="mt-2 flex h-11 items-center justify-center rounded-[4px] text-[0.9375rem] font-medium text-ink shadow-[0_0_0_1px_var(--line-strong)]"
-          >
-            {t.playground}
-          </a>
         </nav>
       ) : null}
     </header>

@@ -37,7 +37,7 @@ export function BuilderTopbar({
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
-  const tPlayground = useTranslations("playground");
+  const tShared = useTranslations("shared");
   const saveHint = useShortcutHint("mod+s");
   const canEdit = useCan("workflow:write");
   useShortcut("mod+s", onSaveDraft, { allowInInput: true, description: tCommon("saveDraft") });
@@ -108,7 +108,7 @@ export function BuilderTopbar({
             ) : saveState.kind === "viewOnly" ? (
               <span title={t("viewOnlyHint")}>{t("viewOnly")}</span>
             ) : saveState.kind === "example" ? (
-              <span title={tPlayground("exampleHint")}>{tPlayground("example")}</span>
+              <span title={tShared("exampleHint")}>{tShared("example")}</span>
             ) : saveState.kind === "unsaved" ? (
               <>
                 <Dot className="size-3" aria-hidden />

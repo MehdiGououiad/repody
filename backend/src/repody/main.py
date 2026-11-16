@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from repody.api import admin, credits, platform, runs, workflows
+from repody.api import access, admin, credits, platform, runs, workflows
 from repody.app.errors import AppError
 from repody.app.seed import seed
 from repody.extraction import client
@@ -77,7 +77,14 @@ def create_app() -> FastAPI:
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=headers)
 
-    for router in (workflows.router, runs.router, platform.router, credits.router, admin.router):
+    for router in (
+        workflows.router,
+        runs.router,
+        platform.router,
+        credits.router,
+        admin.router,
+        access.router,
+    ):
         app.include_router(router, prefix="/v1")
     return app
 

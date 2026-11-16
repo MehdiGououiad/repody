@@ -148,7 +148,7 @@ class WorkflowOut(WorkflowIn):
     last_run: datetime | None = None
     api_stats: ApiStats | None = None
     read_only: bool = Field(
-        default=False, description="A playground example: duplicate it to edit (demo mode)."
+        default=False, description="Shared (no account): duplicate it to edit or run it."
     )
 
 

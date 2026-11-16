@@ -15,18 +15,11 @@ _VIEWER: frozenset[str] = frozenset({"workflow:read", "run:read"})
 _OPERATOR = _VIEWER | {"workflow:write", "workflow:deploy", "run:execute", "metrics:read"}
 _ADMIN = _OPERATOR | {"workflow:delete"}
 _PLATFORM_ADMIN = _ADMIN | {"credits:grant", "clients:manage"}
-# The playground's anonymous visitor: builds and deletes its own workflows, reads the examples,
-# never runs or publishes (both cost model time: the API answers 402, contact us for credits).
-_DEMO_VISITOR = _VIEWER | {"workflow:write", "workflow:delete", "metrics:read"}
-DEMO_VISITOR_ROLE = "demo_visitor"
-# What a playground visitor is offered but cannot do: both cost model time (402).
-PAID_PERMISSIONS: tuple[Permission, ...] = ("workflow:deploy", "run:execute")
 ROLE_PERMISSIONS: dict[str, frozenset[str]] = {
     "viewer": _VIEWER,
     "operator": _OPERATOR,
     "admin": _ADMIN,
     "platform_admin": _PLATFORM_ADMIN,
-    DEMO_VISITOR_ROLE: _DEMO_VISITOR,
 }
 
 
@@ -43,23 +36,13 @@ class User:
 
     def access(self) -> Access:
         granted: list[Permission] = [p for p in PERMISSIONS if self.can(p)]
-        paid: list[Permission] = (
-            [p for p in PAID_PERMISSIONS if p not in granted] if self.visitor else []
-        )
-        return Access(roles=sorted(self.roles), permissions=granted, with_credits=paid)
-
-    @property
-    def visitor(self) -> str | None:
-        """The playground visitor id (demo mode), whose workflows this user sees; else None."""
-        return self.subject if DEMO_VISITOR_ROLE in self.roles else None
+        return Access(roles=sorted(self.roles), permissions=granted)
 
     @property
     def account(self) -> str | None:
         """Whose workflows and runs this user sees and changes (repody.app.scope): their client
-        company or, in the playground, their own; None (everything) for a platform admin and for
-        users outside any client (a single-client installation)."""
-        if self.visitor:
-            return self.visitor
+        company; None (everything) for a platform admin and for users outside any client (a
+        single-client installation)."""
         if "platform_admin" in self.roles:
             return None
         return self.client
@@ -105,8 +88,6 @@ def user_from_token(token: str) -> User:
     roles = {*((claims.get("realm_access") or {}).get("roles") or [])}
     groups = {str(group).strip("/").rsplit("/", 1)[-1] for group in claims.get("groups") or []}
     roles |= groups
-    # Only demo mode makes visitors (repody.api.deps); a token cannot claim that role.
-    signed_in_roles = ROLE_PERMISSIONS.keys() - {DEMO_VISITOR_ROLE}
     # One client per user; a user put in several by mistake gets the first by name.
     clients = sorted(
         name
@@ -115,7 +96,7 @@ def user_from_token(token: str) -> User:
     )
     return User(
         subject=str(claims["sub"]),
-        roles=frozenset(roles) & signed_in_roles,
+        roles=frozenset(roles) & ROLE_PERMISSIONS.keys(),
         client=clients[0] if clients else None,
     )
 

@@ -7,11 +7,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useEffectEvent, useState } from "react";
 import { useCan } from "@/components/auth/access-context";
-import { usePlayground } from "@/components/playground/playground";
 import type { BuilderStep } from "@/components/workflow/builder/step-nav";
 import { $api } from "@/lib/api/browser";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
-import { openCredits } from "@/lib/playground/credits";
 import { errorMessage } from "@/lib/query/get-query-client";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 
@@ -30,7 +28,7 @@ interface Draft {
 export type BuilderSync = "idle" | "saving" | "deploying";
 
 /** What the header says about the draft: in flight, on the server, edited, refused, or a
- * playground example (shared: saving makes the visitor's own copy). */
+ * shared workflow (read-only: saving makes the caller's own copy). */
 export type SaveState =
   | { kind: "saving" | "deploying" | "saved" | "unsaved" | "example" | "viewOnly" }
   | { kind: "failed"; reason: string };
@@ -60,8 +58,7 @@ export type TestSession = { files: Record<string, File>; runId: string | null };
 export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "edit") {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
-  const tPlayground = useTranslations("playground");
-  const playground = usePlayground();
+  const tShared = useTranslations("shared");
   const canEdit = useCan("workflow:write");
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -120,19 +117,19 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     return workflow.id;
   };
 
-  /** A shared example (playground): the visitor's own copy, with their edits, opened. */
+  /** A shared workflow: the caller's own copy, with their edits, opened. */
   const saveAsCopy = async () => {
     const details = { description: workflow.description, owner: workflow.owner };
     const copy = await copyMutation.mutateAsync({
       params: { path: { workflow_id: workflow.id } },
-      body: { name: tPlayground("copyName", { name: draft.name || workflow.name }), ...details },
+      body: { name: tShared("copyName", { name: draft.name || workflow.name }), ...details },
     });
     await saveMutation.mutateAsync({
       params: { path: { workflow_id: copy.id } },
       body: { ...draft, name: copy.name, ...details },
     });
     void queryClient.invalidateQueries({ queryKey: ["get", "/v1/workflows"] });
-    toast.success(tPlayground("copied"));
+    toast.success(tShared("copied"));
     router.replace(`/workflows/${copy.id}/edit`);
   };
 
@@ -156,10 +153,6 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
   };
 
   const handleDeploy = async () => {
-    if (playground) {
-      openCredits(); // the playground does not publish
-      return;
-    }
     if (sync !== "idle") return;
     try {
       const id = await persist({ navigate: false });

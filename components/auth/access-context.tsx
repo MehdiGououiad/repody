@@ -4,18 +4,16 @@ import { createContext, use } from "react";
 import { MAIN_NAV_ITEMS } from "@/lib/navigation";
 import type { Access, Permission } from "@/lib/types";
 
-const NO_ACCESS: Access = { roles: [], permissions: [], withCredits: [], credits: null };
+const NO_ACCESS: Access = { roles: [], permissions: [], credits: null };
 
 const AccessContext = createContext<Access>(NO_ACCESS);
 
 /** What the signed-in caller may do (`GET /v1/me`), resolved once by the app shell. */
 export const AccessProvider = AccessContext;
 
-/** Whether to offer an action. A playground visitor is also offered the paid ones: the API
- * answers 402 and the app asks them to contact us. */
+/** Whether the caller may do it (the API checks again). */
 export function useCan(permission: Permission): boolean {
-  const { permissions, withCredits } = use(AccessContext);
-  return permissions.includes(permission) || withCredits.includes(permission);
+  return use(AccessContext).permissions.includes(permission);
 }
 
 export function useNavItems() {
