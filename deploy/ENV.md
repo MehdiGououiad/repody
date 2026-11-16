@@ -110,6 +110,33 @@ that has neither: add them once in the admin console:
 3. Groups → Create group `client-<name>` per client, and add its users (with the `operator` or
    `admin` role).
 
+## Admin area
+
+Platform admins manage client companies in Repody (**Admin** in the sidebar): create a client
+(its Keycloak group), invite its users with a one-time password, change their role, disable or
+remove them, give credits, hand a workflow to a client, see this month's GPU spend, and read the
+audit log of every change. Keycloak stays the source of truth for users and passwords.
+
+Repody reaches Keycloak as the `repody-admin` service account (client credentials). It holds only
+realm-management's `manage-users`, `view-users`, `query-users` and `query-groups`, and the
+`kc-admin-api` client scope Keycloak 26.8.2+ requires for the Admin API. Repody only ever gives a
+client role (viewer, operator, admin) and never edits a platform admin; Keycloak itself would let
+this account grant any realm role, so keep its secret like the others.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET` | — | The `repody-admin` client's secret; without it, Admin shows credits and spend but cannot manage clients |
+| `AUDIT_KEYCLOAK_ADMIN_CLIENT_ID` | `repody-admin` | |
+| `AUDIT_KEYCLOAK_INTERNAL_ISSUER` | `AUDIT_OIDC_ISSUER` | The realm as the API reaches it, e.g. `http://keycloak:8080/realms/repody` |
+| `AUDIT_CREDIT_LOW_BALANCE` | `20` | Admin flags a client below this; its users see a warning banner |
+| `AUDIT_GPU_DOLLARS_PER_HOUR` | `1.10` | For Admin's spend estimate (model time × this) |
+
+**New installation:** the realm files create `repody-admin` with the secret
+`KEYCLOAK_ADMIN_CLIENT_SECRET` (VPS `.env`, `openssl rand -hex 32`). **A realm imported before
+1.5:** set `KEYCLOAK_ADMIN_CLIENT_SECRET` in `.env`, deploy, then run once on the server, from
+`/opt/repody`: `sh setup-admin-client.sh` (copied from `deploy/keycloak/`). It is safe to run
+again.
+
 ## Observability
 
 | Variable | Purpose |

@@ -22,6 +22,7 @@ class Credits(CamelModel):
     balance: int = Field(description="Credits left (1 credit = 1 page sent to the model).")
     held: int = Field(description="Credits held by runs still in progress.")
     enforced: bool
+    low: bool = Field(default=False, description="Below AUDIT_CREDIT_LOW_BALANCE, enforced.")
 
 
 class GrantIn(CamelModel):

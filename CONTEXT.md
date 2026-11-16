@@ -130,7 +130,7 @@ Keycloak realm roles -> `infra/auth.py` (`ROLE_PERMISSIONS`). Routes declare `re
 | `admin` | Operator + delete workflows |
 | `platform_admin` | Admin + grant credits; sees every client |
 
-Roles say what a user may do; their **account** says on what (`app/scope.py`). A Keycloak group `client-<name>` makes the user's client company their account: they see and change only its workflows and runs, and shared workflows (no account) read-only. Users outside any client group see everything. **Credits** (`app/credits.py`, `credit_entries`): every run is metered by pages sent to the model and, with `AUDIT_CREDITS_ENFORCED`, refused (402) when its account cannot pay. Setup and sizing: [deploy/ENV.md](deploy/ENV.md#credits).
+Roles say what a user may do; their **account** says on what (`app/scope.py`). A Keycloak group `client-<name>` makes the user's client company their account: they see and change only its workflows and runs, and shared workflows (no account) read-only. Users outside any client group see everything. **Credits** (`app/credits.py`, `credit_entries`): every run is metered by pages sent to the model and, with `AUDIT_CREDITS_ENFORCED`, refused (402) when its account cannot pay. Setup and sizing: [deploy/ENV.md](deploy/ENV.md#credits). **Admin area** (`app/admin.py`, `/admin`): platform admins manage clients, users and credits in Keycloak through the `repody-admin` service account (`infra/keycloak_admin.py`); every change goes to the `admin_events` audit log. Setup: [deploy/ENV.md](deploy/ENV.md#admin-area).
 
 ## Tests
 

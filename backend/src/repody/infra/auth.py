@@ -14,7 +14,7 @@ from repody.settings import get_settings
 _VIEWER: frozenset[str] = frozenset({"workflow:read", "run:read"})
 _OPERATOR = _VIEWER | {"workflow:write", "workflow:deploy", "run:execute", "metrics:read"}
 _ADMIN = _OPERATOR | {"workflow:delete"}
-_PLATFORM_ADMIN = _ADMIN | {"credits:grant"}
+_PLATFORM_ADMIN = _ADMIN | {"credits:grant", "clients:manage"}
 # The playground's anonymous visitor: builds and deletes its own workflows, reads the examples,
 # never runs or publishes (both cost model time: the API answers 402, contact us for credits).
 _DEMO_VISITOR = _VIEWER | {"workflow:write", "workflow:delete", "metrics:read"}

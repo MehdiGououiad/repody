@@ -20,6 +20,7 @@ Permission = Literal[
     "run:execute",
     "metrics:read",
     "credits:grant",
+    "clients:manage",
 ]
 PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 

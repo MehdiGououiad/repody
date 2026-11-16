@@ -103,6 +103,22 @@
       "enabled": true,
       "bearerOnly": true,
       "protocol": "openid-connect"
+    },
+    {
+      "clientId": "repody-admin",
+      "name": "Repody admin area",
+      "description": "Service account the Repody API uses to manage client groups and their users.",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "repody-admin-dev-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["roles", "kc-admin-api"],
+      "optionalClientScopes": []
     }
   ],
   "users": [
@@ -162,6 +178,14 @@
       "enabled": true,
       "serviceAccountClientId": "repody-e2e",
       "realmRoles": ["operator"]
+    },
+    {
+      "username": "service-account-repody-admin",
+      "enabled": true,
+      "serviceAccountClientId": "repody-admin",
+      "clientRoles": {
+        "realm-management": ["manage-users", "view-users", "query-users", "query-groups"]
+      }
     }
   ],
   "scopeMappings": [
@@ -173,5 +197,13 @@
       "client": "repody-e2e",
       "roles": ["operator"]
     }
-  ]
+  ],
+  "clientScopeMappings": {
+    "realm-management": [
+      {
+        "client": "repody-admin",
+        "roles": ["manage-users", "view-users", "query-users", "query-groups"]
+      }
+    ]
+  }
 }

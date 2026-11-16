@@ -10,11 +10,11 @@ from fastapi.responses import JSONResponse
 from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from repody.api import credits, platform, runs, workflows
+from repody.api import admin, credits, platform, runs, workflows
 from repody.app.errors import AppError
 from repody.app.seed import seed
 from repody.extraction import client
-from repody.infra import db, observability
+from repody.infra import db, keycloak_admin, observability
 from repody.infra.storage import S3Store, get_store
 from repody.settings import get_settings
 
@@ -32,6 +32,8 @@ async def lifespan(_app: FastAPI):
             await session.commit()
     yield
     await client.close()
+    if keycloak_admin.enabled():
+        await keycloak_admin.keycloak_admin().close()
     await db.engine.dispose()
 
 
@@ -75,7 +77,7 @@ def create_app() -> FastAPI:
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=headers)
 
-    for router in (workflows.router, runs.router, platform.router, credits.router):
+    for router in (workflows.router, runs.router, platform.router, credits.router, admin.router):
         app.include_router(router, prefix="/v1")
     return app
 

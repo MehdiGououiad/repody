@@ -1330,6 +1330,751 @@
           }
         }
       }
+    },
+    "/v1/admin": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Overview",
+        "description": "Every client with its users, balance and use, and this month's GPU spend.",
+        "operationId": "overview_v1_admin_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOverview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/clients": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Create Client",
+        "description": "A new client company: the Keycloak group client-<slug>.",
+        "operationId": "create_client_v1_admin_clients_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/clients/{account}": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Client",
+        "operationId": "client_v1_admin_clients__account__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/disable": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Disable Client",
+        "description": "Disable every user of the client (nobody of it can sign in).",
+        "operationId": "disable_client_v1_admin_clients__account__disable_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/enable": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Enable Client",
+        "operationId": "enable_client_v1_admin_clients__account__enable_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/users": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Invite",
+        "description": "A new user of the client, with a temporary password shown only in this answer.",
+        "operationId": "invite_v1_admin_clients__account__users_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserInvite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporaryPassword"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/users/{user_id}": {
+      "patch": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Change User",
+        "operationId": "change_user_v1_admin_clients__account__users__user_id__patch",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "User Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientUser"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Remove User",
+        "description": "Out of the client and disabled.",
+        "operationId": "remove_user_v1_admin_clients__account__users__user_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/users/{user_id}/password": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Reset Password",
+        "description": "A new temporary password, shown only in this answer.",
+        "operationId": "reset_password_v1_admin_clients__account__users__user_id__password_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemporaryPassword"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/clients/{account}/credits": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Grant",
+        "operationId": "grant_v1_admin_clients__account__credits_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "pattern": "^client-[a-z0-9][a-z0-9-]*$",
+              "title": "Account"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminGrant"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credits"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/workflows": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Workflows",
+        "description": "Every workflow outside the playground, with the client it belongs to (None: shared).",
+        "operationId": "workflows_v1_admin_workflows_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SharedWorkflow"
+                  },
+                  "type": "array",
+                  "title": "Response Workflows V1 Admin Workflows Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/admin/workflows/{workflow_id}/account": {
+      "put": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Assign Workflow",
+        "operationId": "assign_workflow_v1_admin_workflows__workflow_id__account_put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workflow_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 64,
+              "title": "Workflow Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowAssign"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SharedWorkflow"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/spend": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Spend",
+        "operationId": "spend_v1_admin_spend_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: this month.",
+              "title": "Since"
+            },
+            "description": "Default: this month."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Spend"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/events": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Events",
+        "description": "The audit log, newest first.",
+        "operationId": "events_v1_admin_events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 200,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminEventOut"
+                  },
+                  "title": "Response Events V1 Admin Events Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1354,7 +2099,8 @@
                 "run:read",
                 "run:execute",
                 "metrics:read",
-                "credits:grant"
+                "credits:grant",
+                "clients:manage"
               ]
             },
             "type": "array",
@@ -1371,7 +2117,8 @@
                 "run:read",
                 "run:execute",
                 "metrics:read",
-                "credits:grant"
+                "credits:grant",
+                "clients:manage"
               ]
             },
             "type": "array",
@@ -1539,6 +2286,124 @@
           "progress"
         ],
         "title": "ActiveRun"
+      },
+      "AdminEventOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "client.created",
+              "client.disabled",
+              "client.enabled",
+              "user.invited",
+              "user.role_changed",
+              "user.disabled",
+              "user.enabled",
+              "user.password_reset",
+              "user.removed",
+              "credits.granted",
+              "workflow.assigned"
+            ],
+            "title": "Action"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "target": {
+            "type": "string",
+            "title": "Target"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Detail"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "actor",
+          "action",
+          "account",
+          "target",
+          "detail",
+          "createdAt"
+        ],
+        "title": "AdminEventOut"
+      },
+      "AdminGrant": {
+        "properties": {
+          "amount": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": -1000000.0,
+            "title": "Amount",
+            "description": "Negative takes credits back."
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "amount"
+        ],
+        "title": "AdminGrant"
+      },
+      "AdminOverview": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "description": "False: the Keycloak admin account is not configured."
+          },
+          "lowBalanceThreshold": {
+            "type": "integer",
+            "title": "Lowbalancethreshold"
+          },
+          "clients": {
+            "items": {
+              "$ref": "#/components/schemas/ClientSummary"
+            },
+            "type": "array",
+            "title": "Clients"
+          },
+          "spend": {
+            "$ref": "#/components/schemas/Spend"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "lowBalanceThreshold",
+          "clients",
+          "spend"
+        ],
+        "title": "AdminOverview"
       },
       "Aggregate-Input": {
         "properties": {
@@ -2257,6 +3122,209 @@
         "title": "Catalog",
         "description": "What the builder offers: field types, and which of them rules can order or add."
       },
+      "ClientCreate": {
+        "properties": {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9](?:[a-z0-9-]{0,48}[a-z0-9])?$",
+            "title": "Slug",
+            "description": "The group is client-<slug>."
+          }
+        },
+        "type": "object",
+        "required": [
+          "slug"
+        ],
+        "title": "ClientCreate"
+      },
+      "ClientDetail": {
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/ClientSummary"
+          },
+          "users": {
+            "items": {
+              "$ref": "#/components/schemas/ClientUser"
+            },
+            "type": "array",
+            "title": "Users"
+          },
+          "ledger": {
+            "items": {
+              "$ref": "#/components/schemas/LedgerEntry"
+            },
+            "type": "array",
+            "title": "Ledger"
+          },
+          "workflows": {
+            "items": {
+              "$ref": "#/components/schemas/ClientWorkflow"
+            },
+            "type": "array",
+            "title": "Workflows"
+          }
+        },
+        "type": "object",
+        "required": [
+          "summary",
+          "users",
+          "ledger",
+          "workflows"
+        ],
+        "title": "ClientDetail"
+      },
+      "ClientSummary": {
+        "properties": {
+          "account": {
+            "type": "string",
+            "title": "Account",
+            "description": "client-<slug>, the Keycloak group."
+          },
+          "users": {
+            "type": "integer",
+            "title": "Users"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "title": "Activeusers"
+          },
+          "balance": {
+            "type": "integer",
+            "title": "Balance"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "lowBalance": {
+            "type": "boolean",
+            "title": "Lowbalance"
+          },
+          "recentRuns": {
+            "type": "integer",
+            "title": "Recentruns"
+          },
+          "recentPages": {
+            "type": "integer",
+            "title": "Recentpages"
+          },
+          "workflows": {
+            "type": "integer",
+            "title": "Workflows"
+          },
+          "inKeycloak": {
+            "type": "boolean",
+            "title": "Inkeycloak",
+            "description": "False: credits or workflows but no group any more."
+          }
+        },
+        "type": "object",
+        "required": [
+          "account",
+          "users",
+          "activeUsers",
+          "balance",
+          "held",
+          "lowBalance",
+          "recentRuns",
+          "recentPages",
+          "workflows",
+          "inKeycloak"
+        ],
+        "title": "ClientSummary"
+      },
+      "ClientUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "firstName": {
+            "type": "string",
+            "title": "Firstname"
+          },
+          "lastName": {
+            "type": "string",
+            "title": "Lastname"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "viewer",
+                  "operator",
+                  "admin"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "createdAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email",
+          "firstName",
+          "lastName",
+          "role",
+          "enabled",
+          "createdAt"
+        ],
+        "title": "ClientUser"
+      },
+      "ClientWorkflow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "status",
+          "updatedAt"
+        ],
+        "title": "ClientWorkflow"
+      },
       "Condition-Input": {
         "properties": {
           "id": {
@@ -2467,6 +3535,12 @@
           "enforced": {
             "type": "boolean",
             "title": "Enforced"
+          },
+          "low": {
+            "type": "boolean",
+            "title": "Low",
+            "description": "Below AUDIT_CREDIT_LOW_BALANCE, enforced.",
+            "default": false
           }
         },
         "type": "object",
@@ -2474,7 +3548,8 @@
           "account",
           "balance",
           "held",
-          "enforced"
+          "enforced",
+          "low"
         ],
         "title": "Credits",
         "description": "The caller's account and balance; ``enforced`` says whether runs are refused at zero."
@@ -3160,6 +4235,76 @@
           "value"
         ],
         "title": "KpiPoint"
+      },
+      "LedgerEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "grant",
+              "run"
+            ],
+            "title": "Kind"
+          },
+          "amount": {
+            "type": "integer",
+            "title": "Amount"
+          },
+          "pending": {
+            "type": "boolean",
+            "title": "Pending"
+          },
+          "runId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runid"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "modelMs": {
+            "type": "integer",
+            "title": "Modelms"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          },
+          "actor": {
+            "type": "string",
+            "title": "Actor"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Createdat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "amount",
+          "pending",
+          "runId",
+          "pages",
+          "modelMs",
+          "note",
+          "actor",
+          "createdAt"
+        ],
+        "title": "LedgerEntry"
       },
       "LiteralValue-Input": {
         "properties": {
@@ -3886,6 +5031,47 @@
         ],
         "title": "SeverityShare"
       },
+      "SharedWorkflow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updatedat"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "account",
+          "status",
+          "updatedAt"
+        ],
+        "title": "SharedWorkflow"
+      },
       "SourceCounts": {
         "properties": {
           "api": {
@@ -3904,6 +5090,87 @@
         ],
         "title": "SourceCounts",
         "description": "Runs of the last 7 days by who started them."
+      },
+      "Spend": {
+        "properties": {
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Since"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "modelMs": {
+            "type": "integer",
+            "title": "Modelms"
+          },
+          "dollars": {
+            "type": "number",
+            "title": "Dollars",
+            "description": "Model time at AUDIT_GPU_DOLLARS_PER_HOUR (an estimate)."
+          },
+          "dollarsPerHour": {
+            "type": "number",
+            "title": "Dollarsperhour"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/SpendAccount"
+            },
+            "type": "array",
+            "title": "Accounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since",
+          "runs",
+          "pages",
+          "modelMs",
+          "dollars",
+          "dollarsPerHour",
+          "accounts"
+        ],
+        "title": "Spend"
+      },
+      "SpendAccount": {
+        "properties": {
+          "account": {
+            "type": "string",
+            "title": "Account"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs"
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages"
+          },
+          "modelMs": {
+            "type": "integer",
+            "title": "Modelms"
+          },
+          "dollars": {
+            "type": "number",
+            "title": "Dollars"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account",
+          "runs",
+          "pages",
+          "modelMs",
+          "dollars"
+        ],
+        "title": "SpendAccount"
       },
       "TemplateTypeInfo": {
         "properties": {
@@ -3932,6 +5199,24 @@
           "listable"
         ],
         "title": "TemplateTypeInfo"
+      },
+      "TemporaryPassword": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/ClientUser"
+          },
+          "temporaryPassword": {
+            "type": "string",
+            "title": "Temporarypassword",
+            "description": "Shown once; Keycloak makes the user replace it at the first sign-in."
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "temporaryPassword"
+        ],
+        "title": "TemporaryPassword"
       },
       "UsageReport": {
         "properties": {
@@ -3974,6 +5259,76 @@
           "accounts"
         ],
         "title": "UsageReport"
+      },
+      "UserChange": {
+        "properties": {
+          "role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "viewer",
+                  "operator",
+                  "admin"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "title": "UserChange"
+      },
+      "UserInvite": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 254,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "firstName": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Firstname",
+            "default": ""
+          },
+          "lastName": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Lastname",
+            "default": ""
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "viewer",
+              "operator",
+              "admin"
+            ],
+            "title": "Role",
+            "default": "operator"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "UserInvite"
       },
       "ValidationError": {
         "properties": {
@@ -4041,6 +5396,25 @@
           "medianMs"
         ],
         "title": "WorkflowActivity"
+      },
+      "WorkflowAssign": {
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^client-[a-z0-9][a-z0-9-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account",
+            "description": "The client to give it to; None makes it shared again."
+          }
+        },
+        "type": "object",
+        "title": "WorkflowAssign"
       },
       "WorkflowDefinition": {
         "properties": {

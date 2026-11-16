@@ -61,8 +61,10 @@ async def balances(session: AsyncSession, account: str) -> tuple[int, int]:
 
 async def credits_of(session: AsyncSession, account: str | None) -> Credits:
     available, held = await balances(session, account) if account else (0, 0)
-    enforced = get_settings().credits_enforced and account is not None
-    return Credits(account=account, balance=available, held=held, enforced=enforced)
+    settings = get_settings()
+    enforced = settings.credits_enforced and account is not None
+    low = enforced and available < settings.credit_low_balance
+    return Credits(account=account, balance=available, held=held, enforced=enforced, low=low)
 
 
 def run_cost(pages: int) -> int:

@@ -58,6 +58,12 @@ class Settings(BaseSettings):
     # production, so a token issued to another client of the realm is not accepted.
     oidc_audience: str | None = None
     oidc_jwks_url: str | None = None
+    # The admin area (repody.app.admin) manages client companies and their users in Keycloak as
+    # the ``repody-admin`` service account; off without its secret. The internal issuer is the
+    # realm as the API reaches it (Compose: http://keycloak:8080/realms/repody).
+    keycloak_internal_issuer: str | None = None
+    keycloak_admin_client_id: str = "repody-admin"
+    keycloak_admin_client_secret: SecretStr | None = None
 
     # Demo mode: the public playground (a deployment of its own, with its own database). No
     # sign-in: each browser is an anonymous visitor (the web app's visitor cookie) who sees the
@@ -106,6 +112,10 @@ class Settings(BaseSettings):
     # companies (Keycloak groups client-<name>); callers outside any client are not charged.
     credits_enforced: bool = False
     credit_run_fee: NonNegativeInt = 0
+    # The admin area flags a client below this balance; its users see a warning too.
+    credit_low_balance: NonNegativeInt = 20
+    # For the admin area's spend estimate: what an hour of the model's GPU costs (Modal A10).
+    gpu_dollars_per_hour: PositiveFloat = 1.10
 
     # Runs
     run_timeout_minutes: PositiveInt = 5
