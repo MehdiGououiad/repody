@@ -14,13 +14,15 @@ TIMEOUT_SECONDS = 10
 
 
 def enabled() -> bool:
-    return get_settings().turnstile_secret is not None
+    # Compose passes an unset variable as "": that is no secret, not an empty one.
+    secret = get_settings().turnstile_secret
+    return secret is not None and bool(secret.get_secret_value())
 
 
 async def verify(token: str, ip: str | None) -> bool:
     """Whether Cloudflare accepts the token (single use, five minutes). Off without a secret."""
     secret = get_settings().turnstile_secret
-    if secret is None:
+    if secret is None or not enabled():
         return True
     if not token:
         return False

@@ -59,6 +59,10 @@ class FakeKeycloak:
     async def user_groups(self, user_id: str) -> list[KcGroup]:
         return [self.groups_[g] for g in self.users[user_id]["groups"]]
 
+    async def find_user(self, email: str) -> KcUser | None:
+        found = [i for i, u in self.users.items() if u["email"] == email]
+        return self._kc_user(found[0]) if found else None
+
     async def create_user(self, *, email: str, first_name: str, last_name: str) -> str:
         if any(u["email"] == email for u in self.users.values()):
             raise KeycloakError(409, "It already exists in Keycloak.")
@@ -100,10 +104,10 @@ def kc(monkeypatch: pytest.MonkeyPatch) -> FakeKeycloak:
 
 
 @pytest.fixture
-async def as_user(api: AsyncClient) -> AsyncIterator[Callable[[User], AsyncClient]]:
+async def as_user(api: AsyncClient) -> AsyncIterator[Callable[[User | None], AsyncClient]]:
     clients: list[AsyncClient] = []
 
-    def make(user: User) -> AsyncClient:
+    def make(user: User | None) -> AsyncClient:
         app = create_app()
         app.dependency_overrides[optional_user] = lambda: user
         clients.append(AsyncClient(transport=ASGITransport(app=app), base_url="http://test"))

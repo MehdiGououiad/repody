@@ -11,14 +11,14 @@ import hashlib
 from datetime import UTC, datetime, timedelta
 
 import structlog
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app import admin
 from repody.app.errors import AppError
 from repody.infra import turnstile
 from repody.infra.auth import CLIENT_GROUP_PREFIX
-from repody.infra.models import AccessRequest, new_id
+from repody.infra.models import AccessRequest, CreditEntry, new_id
 from repody.schemas.access import (
     AccessApprove,
     AccessApproved,
@@ -27,7 +27,7 @@ from repody.schemas.access import (
     AccessRequestOut,
     AccessStatus,
 )
-from repody.schemas.admin import AdminGrant, UserInvite
+from repody.schemas.admin import AdminGrant, ClientRole, TemporaryPassword, UserInvite
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -115,28 +115,54 @@ async def _pending(session: AsyncSession, request_id: str) -> AccessRequest:
     return request
 
 
+async def _person(
+    session: AsyncSession, request: AccessRequest, account: str, role: ClientRole, actor: str
+) -> TemporaryPassword:
+    """The request's person in ``account``, with a temporary password to send them: invited when
+    new; joined when Keycloak already knows them but they belong to no client; and when a retry
+    finds them already in it (an approval that stopped halfway), given a fresh password."""
+    kc = admin.keycloak_admin_or_503()
+    existing = await admin.call(kc.find_user(request.email))
+    if existing is None:
+        first, _, last = request.name.partition(" ")
+        invite = UserInvite(email=request.email, first_name=first, last_name=last, role=role)
+        return await admin.invite(session, account, invite, actor)
+    if existing.realm_roles & admin.PROTECTED_ROLES:
+        raise AppError(409, f"{request.email} is a platform admin: approve with another email.")
+    clients = {
+        g.name
+        for g in await admin.call(kc.user_groups(existing.id))
+        if g.name.startswith(CLIENT_GROUP_PREFIX)
+    }
+    if clients - {account}:
+        raise AppError(409, f"{request.email} already belongs to {', '.join(sorted(clients))}.")
+    if account not in clients:
+        await admin.call(kc.join(existing.id, await admin.group_id(kc, account)))
+        await admin.call(kc.set_role(existing.id, role, admin.MANAGED_ROLES))
+        await admin.call(kc.set_enabled(existing.id, True))
+        await admin.record(session, actor, "user.invited", account, request.email, role=role)
+        await session.commit()
+    return await admin.reset_password(session, account, existing.id, actor)
+
+
 async def approve(
     session: AsyncSession, request_id: str, body: AccessApprove, actor: str
 ) -> AccessApproved:
+    """Safe to retry: each step checks what an earlier, interrupted approval already did."""
     request = await _pending(session, request_id)
     account = f"{CLIENT_GROUP_PREFIX}{body.slug}"
     kc = admin.keycloak_admin_or_503()
     if await admin.call(kc.group(account)) is None:
         await admin.create_client(session, body.slug, actor)
-    first, _, last = request.name.partition(" ")
-    invited = await admin.invite(
-        session,
-        account,
-        UserInvite(email=request.email, first_name=first, last_name=last, role=body.role),
-        actor,
-    )
-    if body.credits:
-        await admin.grant(
-            session,
-            account,
-            AdminGrant(amount=body.credits, note=f"Access request {request.id}"),
-            actor,
+    invited = await _person(session, request, account, body.role, actor)
+    note = f"Access request {request.id}"
+    already_granted = await session.scalar(
+        select(func.count()).where(
+            CreditEntry.account_id == account, CreditEntry.kind == "grant", CreditEntry.note == note
         )
+    )
+    if body.credits and not already_granted:
+        await admin.grant(session, account, AdminGrant(amount=body.credits, note=note), actor)
     request.status, request.account_id = "approved", account
     request.decided_by, request.decided_at = actor, datetime.now(UTC)
     await admin.record(
@@ -155,3 +181,15 @@ async def decline(
     await admin.record(session, actor, "request.declined", None, request.email, request=request.id)
     await session.commit()
     return _out(request)
+
+
+async def purge_declined(session: AsyncSession) -> int:
+    """Delete declined requests past AUDIT_ACCESS_REQUEST_RETENTION_DAYS. The caller commits."""
+    days = get_settings().access_request_retention_days
+    before = datetime.now(UTC) - timedelta(days=days)
+    deleted = await session.scalars(
+        delete(AccessRequest)
+        .where(AccessRequest.status == "declined", AccessRequest.decided_at < before)
+        .returning(AccessRequest.id)
+    )
+    return len(deleted.all())

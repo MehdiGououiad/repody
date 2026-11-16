@@ -129,3 +129,85 @@ async def test_the_site_may_post_across_origins(api, monkeypatch):
 @pytest.fixture(autouse=True)
 def _no_turnstile(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(get_settings(), "turnstile_secret", None)
+
+
+async def _request_id(as_user) -> str:  # noqa: F811
+    return (await as_user(PLATFORM).get("/v1/admin/requests")).json()[0]["id"]
+
+
+async def test_someone_keycloak_knows_joins_the_client(api, as_user, kc):  # noqa: F811
+    """A person who signed up before (no client any more) is joined, with a fresh password."""
+    known = await kc.create_user(email="nadia@bank.test", first_name="N", last_name="")
+    await anonymous_post(api, FORM)
+    platform = as_user(PLATFORM)
+    approved = await platform.post(
+        f"/v1/admin/requests/{await _request_id(as_user)}/approve", json={"slug": "bank"}
+    )
+    assert approved.status_code == 200, approved.text
+    assert approved.json()["invited"]["user"]["id"] == known
+    assert kc.passwords[known]
+    assert len(kc.users) == 1  # no second account
+
+
+async def test_an_email_of_another_client_or_an_admin_is_refused(api, as_user, kc):  # noqa: F811
+    other = await kc.create_group("client-other")
+    user = await kc.create_user(email="nadia@bank.test", first_name="N", last_name="")
+    await kc.join(user, other.id)
+    await anonymous_post(api, FORM)
+    platform = as_user(PLATFORM)
+    path = f"/v1/admin/requests/{await _request_id(as_user)}/approve"
+    refused = await platform.post(path, json={"slug": "bank"})
+    assert refused.status_code == 409
+    assert "client-other" in refused.json()["detail"]
+    await kc.leave(user, other.id)
+    kc.users[user]["roles"].add("platform_admin")
+    refused = await platform.post(path, json={"slug": "bank"})
+    assert refused.status_code == 409
+    assert "platform admin" in refused.json()["detail"]
+
+
+async def test_a_retried_approval_does_not_invite_or_credit_twice(api, as_user, kc, monkeypatch):  # noqa: F811
+    await anonymous_post(api, FORM)
+    platform = as_user(PLATFORM)
+    request_id = await _request_id(as_user)
+    calls = {"n": 0}
+    from repody.app import admin
+
+    real_grant = admin.grant
+
+    async def failing_grant(*_args, **_kwargs):
+        calls["n"] += 1
+        raise RuntimeError("database went away")
+
+    monkeypatch.setattr(admin, "grant", failing_grant)
+    with pytest.raises(RuntimeError):
+        await platform.post(f"/v1/admin/requests/{request_id}/approve", json={"slug": "bank"})
+    monkeypatch.setattr(admin, "grant", real_grant)
+    retried = await platform.post(f"/v1/admin/requests/{request_id}/approve", json={"slug": "bank"})
+    assert retried.status_code == 200, retried.text
+    assert len(kc.users) == 1
+    detail = (await platform.get("/v1/admin/clients/client-bank")).json()
+    assert detail["summary"]["balance"] == 200
+    assert calls["n"] == 1
+
+
+async def test_declined_requests_are_deleted_after_their_retention(api, as_user, kc):  # noqa: F811
+    from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import update
+
+    from repody.app.access import purge_declined
+    from repody.infra import db
+    from repody.infra.models import AccessRequest
+
+    await anonymous_post(api, FORM)
+    platform = as_user(PLATFORM)
+    request_id = await _request_id(as_user)
+    await platform.post(f"/v1/admin/requests/{request_id}/decline", json={"note": ""})
+    async with db.session_factory() as session:
+        assert await purge_declined(session) == 0
+        await session.execute(
+            update(AccessRequest).values(decided_at=datetime.now(UTC) - timedelta(days=91))
+        )
+        assert await purge_declined(session) == 1
+        await session.commit()

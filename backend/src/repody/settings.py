@@ -105,6 +105,8 @@ class Settings(BaseSettings):
     # unset), and how many requests one IP address may send an hour.
     turnstile_secret: SecretStr | None = None
     access_requests_per_hour: PositiveInt = 5
+    # Declined requests are deleted after this (their details were kept only for the request).
+    access_request_retention_days: PositiveInt = 90
 
     credits_enforced: bool = False
     credit_run_fee: NonNegativeInt = 0

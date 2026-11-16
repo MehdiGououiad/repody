@@ -149,7 +149,8 @@ is stored, never the address).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AUDIT_TURNSTILE_SECRET` | — | Turnstile's secret key (widget `repody-access-requests`, site key in `site/lib/site.ts`); unset: no anti-robot check |
-| `AUDIT_ACCESS_REQUESTS_PER_HOUR` | `5` | Requests one network may send an hour (429 beyond) |
+| `AUDIT_ACCESS_REQUESTS_PER_HOUR` | `5` | Requests one network may send an hour (429 beyond). The network is Cloudflare's `CF-Connecting-IP`: meaningful only behind Cloudflare, since anyone can set that header elsewhere |
+| `AUDIT_ACCESS_REQUEST_RETENTION_DAYS` | `90` | Declined requests are deleted after this (the maintenance cron); the site's privacy page says so |
 | `AUDIT_CORS_ORIGINS` | — | Must list the site's origin (`https://repody.com`), or browsers refuse the form's request |
 
 ## Observability

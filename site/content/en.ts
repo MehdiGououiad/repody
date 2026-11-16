@@ -1332,8 +1332,9 @@ export const en: Dict = {
     title: "Privacy",
     body: [
       "This site sets no tracking cookies and uses no third-party analytics.",
-      "The contact form sends nothing by itself: it prepares an email in your mail app, which you choose to send.",
-      "The data you send us is only used to answer you and is never shared.",
+      "The access request form sends your name, work email, company, industry and message to Repody's servers, only once you tick the consent box and send it. We use them only to answer the request and open your account, and never share them.",
+      "To stop automated spam, the form uses Cloudflare Turnstile (a check that runs in your browser) and keeps a one-way fingerprint (SHA-256) of your network address, never the address itself, to limit how many requests one network sends.",
+      "A declined request is deleted after 90 days. An approved one stays with your account for as long as you use Repody.",
       "Under Law 09-08, you can ask to access, correct or delete your data at the contact address.",
     ],
   },

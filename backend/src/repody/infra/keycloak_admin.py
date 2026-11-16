@@ -170,6 +170,13 @@ class KeycloakAdmin:
         response = await self._request("GET", f"/users/{user_id}/groups")
         return [KcGroup(id=g["id"], name=g["name"]) for g in response.json()]
 
+    async def find_user(self, email: str) -> KcUser | None:
+        response = await self._request(
+            "GET", "/users", params={"email": email, "exact": "true", "briefRepresentation": "true"}
+        )
+        found = [u for u in response.json() if (u.get("email") or "").lower() == email.lower()]
+        return await self.user(found[0]["id"]) if found else None
+
     async def create_user(self, *, email: str, first_name: str, last_name: str) -> str:
         response = await self._request(
             "POST",
