@@ -92,8 +92,7 @@ RunReader = Depends(require_run_reader)
 
 @router.get("/runs/{run_id}", dependencies=[RunReader])
 async def get_run(run_id: str, session: SessionDep) -> RunState:
-    """Status and live progress (with the queue position while queued); the audit report once
-    the run is done."""
+    """Status and live progress; the audit report once the run is done."""
     return await runs.run_state(session, run_id)
 
 

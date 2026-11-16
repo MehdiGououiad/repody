@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Gate } from "@/components/auth/gate";
 import { Section } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { StatusGlyph } from "@/components/ui/status-glyph";
@@ -56,14 +57,16 @@ export function PublishStep({
             />
           </>
         ) : (
-          <Button
-            variant="primary"
-            className="self-start"
-            onClick={onDeploy}
-            disabled={sync !== "idle"}
-          >
-            {sync === "deploying" ? tCommon("deploying") : tCommon("deployWorkflow")}
-          </Button>
+          <Gate permission="workflow:deploy">
+            <Button
+              variant="primary"
+              className="self-start"
+              onClick={onDeploy}
+              disabled={sync !== "idle"}
+            >
+              {sync === "deploying" ? tCommon("deploying") : tCommon("deployWorkflow")}
+            </Button>
+          </Gate>
         )}
       </Section>
       <Section title={t("publish.lastExtraction")}>

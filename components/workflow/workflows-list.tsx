@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { When } from "@/components/audit/run-row";
+import { useCan } from "@/components/auth/access-context";
+import { Gate } from "@/components/auth/gate";
 import { ListKeysHint, useListKeys } from "@/components/layout/list-keys";
 import { DocChip } from "@/components/shared/doc-chip";
 import { Button } from "@/components/ui/button";
@@ -115,6 +117,7 @@ export function WorkflowsList() {
   const listRef = useRef<HTMLUListElement>(null);
   useListKeys(listRef);
   const { workflows } = $api.useSuspenseQuery("get", "/v1/workflows").data;
+  const canCreate = useCan("workflow:write");
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const toggle = (id: string, on: boolean) =>
     setSelection((current) => {
@@ -152,10 +155,12 @@ export function WorkflowsList() {
       <div className="flex flex-col items-center gap-2 px-6 py-24 text-center">
         <p className="text-[13px] font-medium text-ink">{t("emptyTitle")}</p>
         <p className="max-w-sm text-[13px] text-ink-3">{t("emptyHint")}</p>
-        <Button className="mt-2" variant="primary" render={<Link href="/workflows/new" />}>
-          {tCommon("newWorkflow")}
-          <Kbd className="ms-1">C</Kbd>
-        </Button>
+        {canCreate ? (
+          <Button className="mt-2" variant="primary" render={<Link href="/workflows/new" />}>
+            {tCommon("newWorkflow")}
+            <Kbd className="ms-1">C</Kbd>
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -233,15 +238,17 @@ export function WorkflowsList() {
             <span className="me-2 text-[13px] tabular-nums text-ink-2">
               {t("delete.selected", { count: selection.size })}
             </span>
-            <Button
-              variant="ghost"
-              className="text-fail-ink hover:text-fail-ink"
-              disabled={remove.isPending}
-              onClick={archive}
-            >
-              <Archive />
-              {t("delete.deleteSelected")}
-            </Button>
+            <Gate permission="workflow:delete">
+              <Button
+                variant="ghost"
+                className="text-fail-ink hover:text-fail-ink"
+                disabled={remove.isPending}
+                onClick={archive}
+              >
+                <Archive />
+                {t("delete.deleteSelected")}
+              </Button>
+            </Gate>
             <Button
               variant="ghost"
               size="icon-sm"

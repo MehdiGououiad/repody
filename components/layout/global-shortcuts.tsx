@@ -5,6 +5,7 @@ import { shortcuts, useShortcut } from "@ui-sdk/react/shortcuts";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useRef, useState } from "react";
+import { useCan } from "@/components/auth/access-context";
 import {
   Dialog,
   DialogBackdrop,
@@ -40,13 +41,14 @@ export function GlobalShortcuts() {
   const t = useTranslations("shell");
   const tNav = useTranslations("nav");
   const goPending = useRef(0);
+  const canCreate = useCan("workflow:write");
   const [listed, setListed] = useState<ReturnType<typeof shortcuts.list>>([]);
 
   useShortcut("mod+k", openCommandPalette, { description: t("search") });
   useShortcut("/", openCommandPalette, { description: t("search") });
   // C creates, unless it ends a G sequence (G then C opens the control room).
   useShortcut("c", () => router.push("/workflows/new"), {
-    when: () => Date.now() - goPending.current >= SEQUENCE_MS,
+    when: () => canCreate && Date.now() - goPending.current >= SEQUENCE_MS,
     description: tNav("newWorkflow"),
   });
   useShortcut(

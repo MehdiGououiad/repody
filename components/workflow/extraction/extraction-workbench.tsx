@@ -9,6 +9,8 @@ import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { useCan } from "@/components/auth/access-context";
+import { Gate } from "@/components/auth/gate";
 import { usePlayground } from "@/components/playground/playground";
 import { DocChip } from "@/components/shared/doc-chip";
 import { Button } from "@/components/ui/button";
@@ -168,7 +170,9 @@ export function ExtractionWorkbench({
   });
   const run = useRun(session.runId);
   const busy = start.isPending || run.phase === "running";
-  const canExtract = Object.keys(session.files).length > 0 && !busy;
+  const canEdit = useCan("workflow:write");
+  const canRun = useCan("run:execute");
+  const canExtract = canEdit && canRun && Object.keys(session.files).length > 0 && !busy;
   // The playground configures but does not extract: it asks for credits instead.
   const playground = usePlayground();
   const extract = () => (playground ? openCredits() : start.mutate());
@@ -214,7 +218,8 @@ export function ExtractionWorkbench({
   };
 
   const fieldsPane = (
-    <>
+    // Read-only roles see the schema with every control disabled (the API refuses saves too).
+    <fieldset disabled={!canEdit} className="contents">
       <DocumentCard
         key={active.id}
         doc={active}
@@ -235,17 +240,19 @@ export function ExtractionWorkbench({
                 {t("found", { found, total: activeResults.size })}
               </span>
             ) : null}
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={extract}
-              disabled={!canExtract}
-              title={Object.keys(session.files).length ? t("extractHint") : t("needSample")}
-            >
-              <Play />
-              {busy ? t("extracting") : t("extract")}
-              <Kbd className="ms-0.5">{extractHint.text}</Kbd>
-            </Button>
+            <Gate permission="run:execute">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={extract}
+                disabled={!canExtract}
+                title={Object.keys(session.files).length ? t("extractHint") : t("needSample")}
+              >
+                <Play />
+                {busy ? t("extracting") : t("extract")}
+                <Kbd className="ms-0.5">{extractHint.text}</Kbd>
+              </Button>
+            </Gate>
           </div>
         }
       />
@@ -262,7 +269,7 @@ export function ExtractionWorkbench({
           <RunErrorAlert title={tTest("errorTitle")} message={run.error} runId={session.runId} />
         </div>
       ) : null}
-    </>
+    </fieldset>
   );
 
   return (
@@ -287,19 +294,21 @@ export function ExtractionWorkbench({
             </TabsTab>
           ))}
         </TabsList>
-        <Button
-          variant="ghost"
-          size="xs"
-          aria-label={tDoc("addDocument")}
-          onClick={() => {
-            const doc = newDocument();
-            onChange([...documents, doc]);
-            setActiveId(doc.id);
-          }}
-        >
-          <Plus />
-          {t("addDocument")}
-        </Button>
+        {canEdit ? (
+          <Button
+            variant="ghost"
+            size="xs"
+            aria-label={tDoc("addDocument")}
+            onClick={() => {
+              const doc = newDocument();
+              onChange([...documents, doc]);
+              setActiveId(doc.id);
+            }}
+          >
+            <Plus />
+            {t("addDocument")}
+          </Button>
+        ) : null}
       </div>
 
       <TabsPanel value={active.id} className="relative min-h-0 flex-1">

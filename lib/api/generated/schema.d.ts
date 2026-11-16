@@ -150,8 +150,7 @@ export interface paths {
         };
         /**
          * Get Run
-         * @description Status and live progress (with the queue position while queued); the audit report once
-         *     the run is done.
+         * @description Status and live progress; the audit report once the run is done.
          */
         get: operations["get_run_v1_runs__run_id__get"];
         put?: never;
@@ -279,9 +278,29 @@ export interface paths {
         };
         /**
          * Ready
-         * @description Postgres and Redis answer (checked concurrently).
+         * @description Postgres answers. The run queue is Hatchet, whose dashboard shows its workers.
          */
         get: operations["ready_v1_healthz_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description The caller's roles and permissions (none when signed out).
+         */
+        get: operations["me_v1_me_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -321,26 +340,6 @@ export interface paths {
         get: operations["operations_v1_operations_get"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/operations/recover": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Recover
-         * @description Run the stuck-run check now (maintenance also runs it on its schedule).
-         */
-        post: operations["recover_v1_operations_recover_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -408,6 +407,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Access
+         * @description What the caller may do: the web app shows or disables each action from it.
+         */
+        Access: {
+            /** Roles */
+            roles: string[];
+            /** Permissions */
+            permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read")[];
+            /**
+             * Withcredits
+             * @description A playground visitor's paid actions: offered, answered 402 (contact us).
+             */
+            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read")[];
+        };
         /** ActiveRun */
         ActiveRun: {
             /** Id */
@@ -436,11 +450,6 @@ export interface components {
             /** Startedat */
             startedAt: string | null;
             progress: components["schemas"]["RunProgress"] | null;
-            /**
-             * Stuck
-             * @description Past its time limit: the worker is gone; maintenance fails it, or cancel it now.
-             */
-            stuck: boolean;
         };
         /**
          * Aggregate
@@ -857,8 +866,6 @@ export interface components {
             workflowActivity: components["schemas"]["WorkflowActivity"][];
             /** Failuresbyseverity */
             failuresBySeverity: components["schemas"]["SeverityShare"][];
-            /** Staleruns */
-            staleRuns: number;
             queue: components["schemas"]["QueueCounts"];
             /** Recentaudits */
             recentAudits: components["schemas"]["AuditListItem"][];
@@ -978,11 +985,6 @@ export interface components {
              */
             extractionMs: number;
             /**
-             * Cachehit
-             * @default false
-             */
-            cacheHit: boolean;
-            /**
              * Fieldsextracted
              * @default 0
              */
@@ -1093,11 +1095,6 @@ export interface components {
              */
             database: boolean;
             /**
-             * Redis
-             * @default true
-             */
-            redis: boolean;
-            /**
              * Oidcenabled
              * @description Whether API calls need a Keycloak token.
              */
@@ -1204,8 +1201,6 @@ export interface components {
          */
         Operations: {
             queue: components["schemas"]["QueueCounts"];
-            /** Staleruns */
-            staleRuns: number;
             /** Active */
             active: components["schemas"]["ActiveRun"][];
             /**
@@ -1228,8 +1223,6 @@ export interface components {
             llamacppBaseUrl: string;
             /** Modelavailable */
             modelAvailable: boolean | null;
-            /** Cacheenabled */
-            cacheEnabled: boolean;
             /** Maxuploadbytes */
             maxUploadBytes: number;
             /** Maxuploadfiles */
@@ -1275,11 +1268,6 @@ export interface components {
             /** Durationms */
             durationMs: number | null;
             /**
-             * Cachehit
-             * @default false
-             */
-            cacheHit: boolean;
-            /**
              * Failed
              * @description Done extract steps whose extraction failed.
              * @default false
@@ -1298,14 +1286,6 @@ export interface components {
             queuedRuns: number;
             /** Runningruns */
             runningRuns: number;
-        };
-        /**
-         * Recovered
-         * @description Runs a recovery pass failed: running ones that lost their worker, queued ones too old.
-         */
-        Recovered: {
-            /** Failed */
-            failed: string[];
         };
         /**
          * Rule
@@ -1397,13 +1377,6 @@ export interface components {
         RunProgress: {
             /** Steps */
             steps: components["schemas"]["ProgressStep"][];
-            /**
-             * Queueposition
-             * @description 1-based, while queued.
-             */
-            queuePosition: number | null;
-            /** Queuedepth */
-            queueDepth: number | null;
         };
         /**
          * RunState
@@ -2243,6 +2216,35 @@ export interface operations {
             };
         };
     };
+    me_v1_me_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Access"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     platform_config_v1_platform_config_get: {
         parameters: {
             query?: never;
@@ -2288,35 +2290,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Operations"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    recover_v1_operations_recover_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Recovered"];
                 };
             };
             /** @description Validation Error */

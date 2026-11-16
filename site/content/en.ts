@@ -699,7 +699,7 @@ export const en: Dict = {
     meta: {
       title: "Architecture: components, model, scaling",
       description:
-        "Next.js, FastAPI, Taskiq workers on Redis Streams, PostgreSQL, S3 storage, Keycloak and an external vLLM model server: Repody's architecture and how it scales.",
+        "Next.js, FastAPI, Hatchet workers, PostgreSQL, S3 storage, Keycloak and an external vLLM model server: Repody's architecture and how it scales.",
     },
     hero: {
       title: "A simple architecture, built to last",
@@ -713,7 +713,7 @@ export const en: Dict = {
       api: "API",
       apiTech: "FastAPI",
       workers: "Workers",
-      workersTech: "Taskiq · Redis Streams",
+      workersTech: "Hatchet",
       db: "Database",
       dbTech: "PostgreSQL",
       storage: "Object storage",
@@ -740,7 +740,7 @@ export const en: Dict = {
           },
           {
             title: "Workers",
-            body: "Taskiq on Redis Streams: the API answers at once, workers process runs in the background.",
+            body: "Hatchet queues each run: the API answers at once, workers process runs in the background.",
           },
           {
             title: "PostgreSQL",
@@ -800,7 +800,7 @@ export const en: Dict = {
           },
           {
             title: "Timeouts and recovery",
-            body: "Every run has a maximum duration; a maintenance task closes runs whose worker stopped.",
+            body: "Every run has a maximum duration; a run that exceeds it, or whose worker stops, is failed with the reason.",
           },
           {
             title: "Admission control",
@@ -808,7 +808,7 @@ export const en: Dict = {
           },
           {
             title: "Bounded concurrency",
-            body: "Simultaneous requests to the model are capped so the GPU is never overloaded.",
+            body: "Simultaneous requests to the model are capped so the GPU is never overloaded, and clients take turns so one bulk upload cannot hold every worker.",
           },
           {
             title: "Highly available PostgreSQL",
@@ -842,7 +842,7 @@ export const en: Dict = {
           },
           {
             title: "Operations view",
-            body: "Stuck runs flagged in the interface, live queue status.",
+            body: "Live queue status in the interface; runs, workers and schedules in the queue's own dashboard.",
           },
         ],
       },
@@ -857,7 +857,7 @@ export const en: Dict = {
         },
         {
           title: "Queue",
-          body: "The run enters Redis Streams. When the queue is full, the API answers 503 with Retry-After.",
+          body: "The run enters the Hatchet queue. When the queue is full, the API answers 503 with Retry-After.",
         },
         {
           title: "Claim",
@@ -883,8 +883,8 @@ export const en: Dict = {
       items: [
         {
           adr: "001",
-          title: "Asynchronous runs with Taskiq",
-          body: "The API answers at once; workers process on Redis Streams.",
+          title: "Asynchronous runs with Hatchet",
+          body: "The API answers at once; Hatchet hands each run to a worker and enforces its time limits.",
         },
         {
           adr: "004",
@@ -926,7 +926,7 @@ export const en: Dict = {
         title: "One server",
         body: "To start fast or for moderate volumes.",
         points: [
-          "Docker Compose: interface, API, workers, PostgreSQL, Redis, storage, Keycloak, tunnel",
+          "Docker Compose: interface, API, workers, PostgreSQL, Hatchet, storage, Keycloak, tunnel",
           "Every service with its health check and memory limit",
           "Migrations applied automatically before start-up",
           "Deployed by the CI pipeline, signature verified, rollback in one command",

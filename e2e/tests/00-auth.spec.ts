@@ -36,7 +36,7 @@ test.describe("Authentication", () => {
     try {
       await page.goto("/dashboard");
       await expect(page).toHaveURL(/\/login/);
-      await expect(page.getByRole("button", { name: /Continue with Keycloak/i })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Continue$/ })).toBeVisible();
     } finally {
       await context.close();
     }
@@ -47,7 +47,7 @@ test.describe("Authentication", () => {
 
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Overview" })).toBeVisible();
   });
 
   test("API rejects workflow runs without credentials when OIDC is enabled", async ({

@@ -3,7 +3,7 @@ Install-time guardrails (renders nothing). `config` becomes a plaintext ConfigMa
 credentials must never be put there; production also needs OIDC and immutable images.
 */ -}}
 {{- range $key, $_ := .Values.config }}
-{{- if regexMatch "(?i)(PASSWORD|SECRET|TOKEN|DSN|_KEY$|DATABASE_URL|REDIS_URL)" $key }}
+{{- if regexMatch "(?i)(PASSWORD|SECRET|TOKEN|DSN|_KEY$|DATABASE_URL)" $key }}
 {{- fail (printf "config.%s is a credential: put it in the %q Secret, not in config (rendered as a plaintext ConfigMap)" $key $.Values.existingSecret) }}
 {{- end }}
 {{- end }}

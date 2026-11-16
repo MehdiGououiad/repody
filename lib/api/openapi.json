@@ -485,7 +485,7 @@
           "runs"
         ],
         "summary": "Get Run",
-        "description": "Status and live progress (with the queue position while queued); the audit report once\nthe run is done.",
+        "description": "Status and live progress; the audit report once the run is done.",
         "operationId": "get_run_v1_runs__run_id__get",
         "security": [
           {
@@ -948,7 +948,7 @@
           "platform"
         ],
         "summary": "Ready",
-        "description": "Postgres and Redis answer (checked concurrently).",
+        "description": "Postgres answers. The run queue is Hatchet, whose dashboard shows its workers.",
         "operationId": "ready_v1_healthz_get",
         "responses": {
           "200": {
@@ -962,6 +962,43 @@
             }
           }
         }
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Me",
+        "description": "The caller's roles and permissions (none when signed out).",
+        "operationId": "me_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Access"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
       }
     },
     "/v1/platform/config": {
@@ -1015,43 +1052,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Operations"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
-    "/v1/operations/recover": {
-      "post": {
-        "tags": [
-          "platform"
-        ],
-        "summary": "Recover",
-        "description": "Run the stuck-run check now (maintenance also runs it on its schedule).",
-        "operationId": "recover_v1_operations_recover_post",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Recovered"
                 }
               }
             }
@@ -1191,6 +1191,58 @@
   },
   "components": {
     "schemas": {
+      "Access": {
+        "properties": {
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Roles"
+          },
+          "permissions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "workflow:read",
+                "workflow:write",
+                "workflow:deploy",
+                "workflow:delete",
+                "run:read",
+                "run:execute",
+                "metrics:read"
+              ]
+            },
+            "type": "array",
+            "title": "Permissions"
+          },
+          "withCredits": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "workflow:read",
+                "workflow:write",
+                "workflow:deploy",
+                "workflow:delete",
+                "run:read",
+                "run:execute",
+                "metrics:read"
+              ]
+            },
+            "type": "array",
+            "title": "Withcredits",
+            "description": "A playground visitor's paid actions: offered, answered 402 (contact us)."
+          }
+        },
+        "type": "object",
+        "required": [
+          "roles",
+          "permissions",
+          "withCredits"
+        ],
+        "title": "Access",
+        "description": "What the caller may do: the web app shows or disables each action from it."
+      },
       "ActiveRun": {
         "properties": {
           "id": {
@@ -1256,11 +1308,6 @@
                 "type": "null"
               }
             ]
-          },
-          "stuck": {
-            "type": "boolean",
-            "title": "Stuck",
-            "description": "Past its time limit: the worker is gone; maintenance fails it, or cancel it now."
           }
         },
         "type": "object",
@@ -1273,8 +1320,7 @@
           "files",
           "createdAt",
           "startedAt",
-          "progress",
-          "stuck"
+          "progress"
         ],
         "title": "ActiveRun"
       },
@@ -2226,10 +2272,6 @@
             "type": "array",
             "title": "Failuresbyseverity"
           },
-          "staleRuns": {
-            "type": "integer",
-            "title": "Staleruns"
-          },
           "queue": {
             "$ref": "#/components/schemas/QueueCounts"
           },
@@ -2266,7 +2308,6 @@
           "documents",
           "workflowActivity",
           "failuresBySeverity",
-          "staleRuns",
           "queue",
           "recentAudits",
           "failedAudits",
@@ -2487,11 +2528,6 @@
             "title": "Extractionms",
             "default": 0
           },
-          "cacheHit": {
-            "type": "boolean",
-            "title": "Cachehit",
-            "default": false
-          },
           "fieldsExtracted": {
             "type": "integer",
             "title": "Fieldsextracted",
@@ -2546,7 +2582,6 @@
         "type": "object",
         "required": [
           "extractionMs",
-          "cacheHit",
           "fieldsExtracted",
           "pagesRendered",
           "pagesSent",
@@ -2696,11 +2731,6 @@
             "title": "Database",
             "default": true
           },
-          "redis": {
-            "type": "boolean",
-            "title": "Redis",
-            "default": true
-          },
           "oidcEnabled": {
             "type": "boolean",
             "title": "Oidcenabled",
@@ -2711,7 +2741,6 @@
         "required": [
           "status",
           "database",
-          "redis",
           "oidcEnabled"
         ],
         "title": "Health"
@@ -2892,10 +2921,6 @@
           "queue": {
             "$ref": "#/components/schemas/QueueCounts"
           },
-          "staleRuns": {
-            "type": "integer",
-            "title": "Staleruns"
-          },
           "active": {
             "items": {
               "$ref": "#/components/schemas/ActiveRun"
@@ -2926,7 +2951,6 @@
         "type": "object",
         "required": [
           "queue",
-          "staleRuns",
           "active",
           "errors",
           "throughput",
@@ -2955,10 +2979,6 @@
               }
             ],
             "title": "Modelavailable"
-          },
-          "cacheEnabled": {
-            "type": "boolean",
-            "title": "Cacheenabled"
           },
           "maxUploadBytes": {
             "type": "integer",
@@ -2989,7 +3009,6 @@
           "servedModel",
           "llamacppBaseUrl",
           "modelAvailable",
-          "cacheEnabled",
           "maxUploadBytes",
           "maxUploadFiles",
           "maxPagesPerDocument",
@@ -3071,11 +3090,6 @@
             ],
             "title": "Durationms"
           },
-          "cacheHit": {
-            "type": "boolean",
-            "title": "Cachehit",
-            "default": false
-          },
           "failed": {
             "type": "boolean",
             "title": "Failed",
@@ -3098,7 +3112,6 @@
           "ruleCount",
           "fieldsExtracted",
           "durationMs",
-          "cacheHit",
           "failed",
           "coldStart"
         ],
@@ -3122,23 +3135,6 @@
           "runningRuns"
         ],
         "title": "QueueCounts"
-      },
-      "Recovered": {
-        "properties": {
-          "failed": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Failed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "failed"
-        ],
-        "title": "Recovered",
-        "description": "Runs a recovery pass failed: running ones that lost their worker, queued ones too old."
       },
       "Rule-Input": {
         "properties": {
@@ -3332,36 +3328,11 @@
             },
             "type": "array",
             "title": "Steps"
-          },
-          "queuePosition": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Queueposition",
-            "description": "1-based, while queued."
-          },
-          "queueDepth": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Queuedepth"
           }
         },
         "type": "object",
         "required": [
-          "steps",
-          "queuePosition",
-          "queueDepth"
+          "steps"
         ],
         "title": "RunProgress"
       },

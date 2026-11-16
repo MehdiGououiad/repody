@@ -8,7 +8,6 @@ import {
   ListChecks,
   type LucideIcon,
   ScanText,
-  Sparkles,
   Users,
   X,
 } from "lucide-react";
@@ -237,14 +236,7 @@ export function RunProgressSteps({
               exit={{ opacity: 0, height: 0, marginBottom: 0 }}
               className="overflow-hidden rounded-lg bg-warn-wash px-3 py-2.5 text-sm text-ink"
             >
-              <p className="font-medium">
-                {progress.queuePosition != null && progress.queueDepth != null
-                  ? t("queuePosition", {
-                      position: progress.queuePosition,
-                      depth: progress.queueDepth,
-                    })
-                  : t("queueWaiting")}
-              </p>
+              <p className="font-medium">{t("queueWaiting")}</p>
               <p className="mt-0.5 text-xs text-ink-3">{t("queueOrdered")}</p>
             </motion.div>
           ) : null}
@@ -355,11 +347,9 @@ export function RunProgressSteps({
                         failed ? "text-fail-ink" : "text-ink-3/90"
                       )}
                     >
-                      {step.cacheHit ? <Sparkles className="size-3 text-pass-ink" /> : null}
                       {failed
                         ? t("steps.extractFailed")
                         : t("steps.extracted", { count: step.fieldsExtracted ?? 0 })}
-                      {step.cacheHit ? ` · ${t("badges.cached")}` : null}
                     </p>
                   ) : null}
 

@@ -5,8 +5,9 @@
 #
 # - Images are the signed releases from GHCR (the images-ghcr workflow), pinned by REPODY_VERSION
 #   (release.env, written by each deploy). Nothing is built on the server.
-# - No ports are published. cloudflared connects out to Cloudflare and forwards each public
-#   hostname to web or keycloak on the stack network; everything else stays internal.
+# - No ports are published, except Hatchet's dashboard on the server's loopback (reach it through
+#   Tailscale SSH, README "Hatchet"). cloudflared connects out to Cloudflare and forwards each
+#   public hostname to web or keycloak on the stack network; everything else stays internal.
 # - Secrets live only on the server (.env, mode 600, never in git or CI); ${VAR:?} stops the
 #   deploy when one is missing. See env.example.
 # - NuExtract3 runs outside the VPS (deploy/modal/README.md); workers call it over HTTPS.
@@ -29,7 +30,11 @@ x-backend-env: &backend-env
   AUDIT_DEPLOYMENT_ENVIRONMENT: production
   AUDIT_LOG_JSON: "true"
   AUDIT_DATABASE_URL: postgresql+asyncpg://repody:${POSTGRES_PASSWORD:?}@postgres:5432/repody
-  AUDIT_REDIS_URL: redis://redis:6379/0
+  # Hatchet Lite on the stack network; the token is written by the hatchet-token service.
+  HATCHET_CLIENT_TOKEN_FILE: /run/hatchet/token
+  HATCHET_CLIENT_HOST_PORT: hatchet-lite:7077
+  HATCHET_CLIENT_SERVER_URL: http://hatchet-lite:8888
+  HATCHET_CLIENT_TLS_STRATEGY: none
   AUDIT_S3_ENDPOINT_URL: http://seaweedfs:8333
   AUDIT_S3_ACCESS_KEY: repody
   AUDIT_S3_SECRET_KEY: ${S3_SECRET_KEY:?}
@@ -49,8 +54,6 @@ x-backend-env: &backend-env
   # A cold model start right after a Modal deploy takes up to ~8.5 minutes (deploy/modal/README.md).
   AUDIT_INFERENCE_TIMEOUT_SECONDS: "600"
   AUDIT_RUN_TIMEOUT_MINUTES: "12"
-  # No extraction cache: it would share Redis (and its noeviction limit) with the run queue.
-  AUDIT_EXTRACTION_CACHE_TTL_SECONDS: "0"
   AUDIT_RUN_MIGRATIONS_ON_STARTUP: "false"
   AUDIT_SEED_ON_STARTUP: "false"
   OTEL_SDK_DISABLED: "true"
@@ -61,17 +64,19 @@ services:
     <<: *hardening
     image: postgres:18.6-alpine@sha256:123b17998ccaf47e53b502e8c6a1e79afd8f579c6f3eec83c563da026f957395
     # Sized for one small VPS; the official image's default shm (64 MB) is too small for parallel
-    # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size").
-    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=100"]
+    # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size"). It also holds
+    # Hatchet's queue (its own database), hence the connections.
+    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=150"]
     shm_size: 256mb
     environment:
       POSTGRES_USER: repody
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       POSTGRES_DB: repody
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?}
+      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?}
     configs:
       - source: postgres-init
-        target: /docker-entrypoint-initdb.d/10-keycloak.sh
+        target: /docker-entrypoint-initdb.d/10-databases.sh
     volumes:
       - postgres-data:/var/lib/postgresql
     healthcheck:
@@ -83,23 +88,73 @@ services:
       resources:
         limits: { memory: 1G }
 
-  redis:
+  # The run queue and the maintenance cron: Hatchet Lite (engine, API and dashboard in one
+  # container) on its own database in the Postgres above.
+  # https://docs.hatchet.run/self-hosting/hatchet-lite
+  hatchet-lite:
     <<: *hardening
-    image: redis:8.10.3-alpine@sha256:71885d8cc6e42f2bc0aa2eb853bfc4be200b5108a46ac50e117ae1df0531fb80
-    # The run queue (Taskiq streams) lives here: append-only persistence, and no eviction, so a
-    # full Redis refuses writes instead of dropping queued runs.
-    command:
-      ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?}@postgres:5432/hatchet?sslmode=disable
+      DATABASE_MAX_CONNS: "30"
+      # Postgres is the queue too (no RabbitMQ). Lite's generated config says rabbitmq, so it is
+      # set here rather than left to the image's default.
+      SERVER_MSGQUEUE_KIND: postgres
+      # Run history kept for a week: our own runs table is the record (AUDIT_RUN_RETENTION_DAYS).
+      SERVER_LIMITS_DEFAULT_707d0855-80ab-4e1f-a156-f1c4546cbf52_RETENTION_PERIOD: 168h
+      # The dashboard, on the server's loopback only (plain HTTP through an SSH tunnel).
+      SERVER_URL: http://localhost:8888
+      SERVER_AUTH_COOKIE_DOMAIN: localhost
+      SERVER_AUTH_COOKIE_INSECURE: "t"
+      SERVER_AUTH_SET_EMAIL_VERIFIED: "t"
+      SERVER_ALLOW_SIGNUP: "f"
+      ADMIN_EMAIL: ${REPODY_ADMIN_EMAIL:?}
+      ADMIN_PASSWORD: ${HATCHET_ADMIN_PASSWORD:?}
+      # gRPC for the API and workers, inside the stack network only.
+      SERVER_GRPC_BIND_ADDRESS: 0.0.0.0
+      SERVER_GRPC_INSECURE: "t"
+      SERVER_GRPC_PORT: "7077"
+      SERVER_GRPC_BROADCAST_ADDRESS: hatchet-lite:7077
+      SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: localhost:7077
+    ports:
+      - "127.0.0.1:8888:8888"
+    expose:
+      - "7077"
     volumes:
-      - redis-data:/data
+      # Its generated config and encryption keys: tokens stay valid across recreations.
+      - hatchet-config:/config
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8733/ready"]
       interval: 10s
       timeout: 3s
-      retries: 10
+      retries: 18
+      start_period: 30s
     deploy:
       resources:
-        limits: { memory: 384M }
+        limits: { memory: 768M }
+
+  # Writes a new Hatchet API token for the API and workers on every deploy, then exits: it never
+  # goes in .env, and it always matches the keys in hatchet-config.
+  hatchet-token:
+    <<: *hardening
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
+    restart: "no"
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        /hatchet-admin token create --config /config --tenant-id 707d0855-80ab-4e1f-a156-f1c4546cbf52
+        --name repody --expiresIn 87600h > /token/token.new && mv /token/token.new /token/token
+    depends_on:
+      hatchet-lite:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?}@postgres:5432/hatchet?sslmode=disable
+    volumes:
+      - hatchet-config:/config:ro
+      - hatchet-token:/token
 
   # Uploaded documents (S3 API). https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
   seaweedfs:
@@ -185,13 +240,15 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
+      hatchet-token:
+        condition: service_completed_successfully
       seaweedfs:
         condition: service_healthy
     environment:
       <<: *backend-env
       OTEL_SERVICE_NAME: repody-api
+    volumes:
+      - hatchet-token:/run/hatchet:ro
     expose:
       - "8000"
     healthcheck:
@@ -208,41 +265,40 @@ services:
       resources:
         limits: { memory: 768M }
 
+  # The Hatchet worker: up to AUDIT_WORKER_CONCURRENCY runs at once (their model calls share the
+  # 4 slots above), and the maintenance cron. Scale it with replicas.
   worker:
     <<: *backend
-    # Up to AUDIT_WORKER_CONCURRENCY runs at once; their model calls share the 4 slots above.
-    command:
-      - sh
-      - -c
-      - exec taskiq worker repody.worker:broker --workers 1 --max-async-tasks ${AUDIT_WORKER_CONCURRENCY:-4}
+    command: ["python", "-m", "repody.worker"]
     depends_on:
       migrate:
         condition: service_completed_successfully
-      redis:
-        condition: service_healthy
+      hatchet-token:
+        condition: service_completed_successfully
       seaweedfs:
         condition: service_healthy
     environment:
       <<: *backend-env
+      AUDIT_WORKER_CONCURRENCY: ${AUDIT_WORKER_CONCURRENCY:-4}
+      HATCHET_CLIENT_WORKER_HEALTHCHECK_ENABLED: "true"
       OTEL_SERVICE_NAME: repody-worker
+    volumes:
+      - hatchet-token:/run/hatchet:ro
+    healthcheck:
+      # The SDK's /health: 503 once the worker's listener stops answering.
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     stop_grace_period: 4m
     deploy:
       resources:
         limits: { memory: 1536M }
-
-  # Sends the periodic maintenance task to the workers. Exactly one.
-  scheduler:
-    <<: *backend
-    command: ["taskiq", "scheduler", "repody.worker:scheduler"]
-    depends_on:
-      redis:
-        condition: service_healthy
-    environment:
-      <<: *backend-env
-      OTEL_SERVICE_NAME: repody-scheduler
-    deploy:
-      resources:
-        limits: { memory: 256M }
 
   # The only way in: an outbound connection to Cloudflare. Public hostnames and the services they
   # reach are set on the tunnel in Cloudflare (deploy/vps/README.md, "Cloudflare Tunnel").
@@ -303,7 +359,8 @@ services:
         limits: { memory: 512M }
 
 configs:
-  # Creates Keycloak's database and role on the first start of an empty Postgres volume.
+  # Creates Keycloak's and Hatchet's databases and roles on the first start of an empty
+  # Postgres volume.
   postgres-init:
     content: |
       #!/bin/sh
@@ -311,6 +368,8 @@ configs:
       psql -v ON_ERROR_STOP=1 --username "$$POSTGRES_USER" --dbname "$$POSTGRES_DB" <<SQL
       CREATE ROLE keycloak LOGIN PASSWORD '$$KEYCLOAK_DB_PASSWORD';
       CREATE DATABASE keycloak OWNER keycloak;
+      CREATE ROLE hatchet LOGIN PASSWORD '$$HATCHET_DB_PASSWORD';
+      CREATE DATABASE hatchet OWNER hatchet;
       SQL
   # One S3 identity, for the backend.
   seaweedfs-s3:
@@ -321,5 +380,6 @@ configs:
 
 volumes:
   postgres-data:
-  redis-data:
+  hatchet-config:
+  hatchet-token:
   seaweedfs-data:

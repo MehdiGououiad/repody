@@ -64,17 +64,16 @@
     "saving": "Enregistrement…",
     "deploying": "Déploiement…",
     "saveFailed": "Impossible d'enregistrer le workflow",
-    "delete": "Supprimer",
     "confirm": "Confirmer",
     "deleteWarning": "Cette action est irréversible.",
     "retry": "Réessayer",
-    "copyFailed": "Copie impossible"
+    "copyFailed": "Copie impossible",
+    "notAllowed": "Votre rôle ne le permet pas."
   },
   "runProgress": {
     "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
-    "queuePosition": "Position dans la file {position} sur {depth}",
     "queueWaiting": "En attente dans la file…",
-    "queueOrdered": "Les exécutions sont traitées dans l'ordre. Votre position se met à jour automatiquement.",
+    "queueOrdered": "Elle démarre dès qu'un worker est libre ; les exécutions de chaque client passent à tour de rôle avec celles des autres.",
     "steps": {
       "queue": "En attente d'un worker",
       "model": "Réveil du modèle",
@@ -91,9 +90,6 @@
       "finalize": "Enregistrer le rapport d'audit",
       "extracted": "{count, plural, =0 {Aucun champ extrait} one {# champ extrait} other {# champs extraits}}",
       "extractFailed": "Échec de l'extraction — le rapport en donne la raison"
-    },
-    "badges": {
-      "cached": "Résultat en cache"
     }
   },
   "dashboard": {
@@ -120,7 +116,6 @@
       "cta": "Créer un workflow"
     },
     "nothingToReview": "Rien à examiner",
-    "stale": "{count, plural, one {# exécution ne répond plus} other {# exécutions ne répondent plus}}",
     "queueTitle": "À examiner",
     "queueHint": "Exécutions rejetées ou à vérifier, les plus récentes d’abord.",
     "toReview": "à examiner",
@@ -727,7 +722,9 @@
         "noExtraction": "Aucune extraction pour l’instant : déposez un exemple à l’étape Extraction."
       },
       "unsaved": "Modifications non enregistrées",
-      "notSaved": "Non enregistré"
+      "notSaved": "Non enregistré",
+      "viewOnly": "Lecture seule",
+      "viewOnlyHint": "Votre rôle permet de lire ce workflow, pas de le modifier."
     },
     "row": {
       "neverRun": "Jamais exécuté"
@@ -749,9 +746,6 @@
     "ready": "Prêt",
     "unavailable": "Indisponible",
     "onDemand": "À la demande",
-    "cache": "Cache",
-    "enabled": "Activé",
-    "disabled": "Désactivé",
     "runtimeTitle": "Limites",
     "runtimeHint": "Définies par l'environnement du déploiement ; un redémarrage applique les changements.",
     "endpoint": "Point d'inférence",
@@ -775,7 +769,32 @@
     "paletteHint": "Ce que le moteur de thème calcule à partir de la marque.",
     "documents": "Couleurs des documents",
     "status": "Statuts",
-    "actions": "Actions"
+    "actions": "Actions",
+    "access": {
+      "title": "Vos accès",
+      "hint": "Ce que votre rôle vous permet de faire. Votre administrateur gère les rôles dans Keycloak.",
+      "role": "Rôle",
+      "noRole": "Aucun",
+      "allowed": "Autorisé",
+      "notAllowed": "Non autorisé",
+      "withCredits": "Avec des crédits",
+      "permissions": {
+        "workflow:read": "Voir les workflows",
+        "workflow:write": "Créer et modifier des workflows",
+        "workflow:deploy": "Publier des workflows",
+        "workflow:delete": "Supprimer des workflows",
+        "run:read": "Voir les exécutions et les rapports",
+        "run:execute": "Lancer des documents et arrêter des exécutions",
+        "metrics:read": "Voir la vue d'ensemble et les détails de la plateforme"
+      },
+      "roles": {
+        "viewer": "Lecteur",
+        "operator": "Opérateur",
+        "admin": "Administrateur",
+        "platform_admin": "Administrateur plateforme",
+        "demo_visitor": "Visiteur du playground"
+      }
+    }
   },
   "error": {
     "title": "Une erreur est survenue",
@@ -824,7 +843,6 @@
     "queue": "File",
     "running": "En traitement",
     "queued": "En attente",
-    "stale": "Sans réponse",
     "median": "Durée médiane",
     "p95": "p95",
     "waiting": "En attente depuis",
@@ -835,12 +853,8 @@
     "cancelTitle": "Arrêter cette exécution ?",
     "cancelHint": "Elle passe en erreur avec votre nom. Les fichiers déjà envoyés restent liés à l’exécution.",
     "cancelled": "Exécution arrêtée",
-    "recover": "Libérer les exécutions bloquées",
-    "recovered": "{count, plural, =0 {Aucune exécution bloquée} one {# exécution libérée} other {# exécutions libérées}}",
-    "stuckHint": "Dépassée de son délai : le worker ne répond plus. La maintenance la libère automatiquement, ou arrêtez-la maintenant.",
     "keep": "Laisser tourner",
-    "cancelFailed": "Impossible d’arrêter l’exécution",
-    "recoverFailed": "Impossible de libérer les exécutions bloquées"
+    "cancelFailed": "Impossible d’arrêter l’exécution"
   },
   "playground": {
     "label": "Playground",

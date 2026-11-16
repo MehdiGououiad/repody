@@ -4,13 +4,12 @@ Days are UTC (the database session runs in UTC). The pass rate is passed / finis
 as on the workflow cards.
 """
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 
 from sqlalchemy import ColumnElement, Float, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.app.lifecycle import stuck_running
 from repody.app.runs import audit_item
 from repody.app.stats import DayCounts, daily_counts, last_days, midnight, pass_rate
 from repody.app.workflows import list_workflows
@@ -186,12 +185,11 @@ async def get_dashboard(session: AsyncSession, *, visitor: str | None = None) ->
     this_week = [daily.get(d, DayCounts()) for d in week]
     last_week = [daily.get(d, DayCounts()) for d in previous_week]
 
-    queued, running, stale = (
+    queued, running = (
         await session.execute(
             select(
                 func.count().filter(Run.status == "queued"),
                 func.count().filter(Run.status == "running"),
-                func.count().filter(stuck_running(datetime.now(UTC))),
             )
         )
     ).one()
@@ -245,7 +243,6 @@ async def get_dashboard(session: AsyncSession, *, visitor: str | None = None) ->
             SeverityShare(severity=severity, share=count / total_failures)
             for severity, count in failures.items()
         ],
-        stale_runs=stale,
         queue=QueueCounts(queued_runs=queued, running_runs=running),
         recent_audits=await _audits(session, failed=False, limit=RECENT_AUDITS),
         failed_audits=await _audits(session, failed=True, limit=FAILED_AUDITS),

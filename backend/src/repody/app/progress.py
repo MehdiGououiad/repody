@@ -6,8 +6,7 @@ Queue position is not stored: it is counted when a client reads a queued run.
 import asyncio
 from typing import Any
 
-from sqlalchemy import func, select, tuple_, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import update
 
 from repody.infra import db
 from repody.infra.models import Run
@@ -41,23 +40,9 @@ def plan(definition: WorkflowDefinition, document_ids_with_files: set[str]) -> R
     return RunProgress(steps=steps)
 
 
-async def with_queue_position(session: AsyncSession, run: Run) -> RunProgress | None:
-    if run.progress is None:
-        return None
-    progress = RunProgress.model_validate(run.progress)
-    if run.status == "queued":
-        # Queue order is (created_at, id); a row comparison counts the runs ahead in the same
-        # query as the depth.
-        ahead_of_run = tuple_(Run.created_at, Run.id) < tuple_(run.created_at, run.id)
-        ahead, depth = (
-            await session.execute(
-                select(func.count().filter(ahead_of_run), func.count()).where(
-                    Run.status == "queued"
-                )
-            )
-        ).one()
-        progress.queue_position, progress.queue_depth = ahead + 1, depth
-    return progress
+def stored(run: Run) -> RunProgress | None:
+    """The progress saved on the run (None before it was planned)."""
+    return RunProgress.model_validate(run.progress) if run.progress is not None else None
 
 
 class Tracker:

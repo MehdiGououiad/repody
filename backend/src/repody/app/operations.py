@@ -8,8 +8,9 @@ from sqlalchemy.orm import selectinload
 
 from repody.app.dashboard import timing
 from repody.app.errors import AppError
-from repody.app.lifecycle import failure, is_stuck, move_run, stuck_running
-from repody.app.progress import with_queue_position
+from repody.app.lifecycle import failure, move_run
+from repody.app.progress import stored
+from repody.infra import queue
 from repody.infra.models import Run, RunDocument
 from repody.schemas.platform import (
     ActiveRun,
@@ -47,12 +48,11 @@ async def get_operations(session: AsyncSession) -> Operations:
         .limit(ERRORS)
         .options(selectinload(Run.workflow))
     )
-    queued, running, stale = (
+    queued, running = (
         await session.execute(
             select(
                 func.count().filter(Run.status == "queued"),
                 func.count().filter(Run.status == "running"),
-                func.count().filter(stuck_running(now)),
             )
         )
     ).one()
@@ -73,7 +73,6 @@ async def get_operations(session: AsyncSession) -> Operations:
     hours = [first + timedelta(hours=i) for i in range(HOURS)]
     return Operations(
         queue=QueueCounts(queued_runs=queued, running_runs=running),
-        stale_runs=stale,
         active=[
             ActiveRun(
                 id=run.id,
@@ -84,8 +83,7 @@ async def get_operations(session: AsyncSession) -> Operations:
                 files=[doc.file_name for doc in run.documents if doc.file_name],
                 created_at=run.created_at,
                 started_at=run.started_at,
-                progress=await with_queue_position(session, run),
-                stuck=is_stuck(run, now),
+                progress=stored(run),
             )
             for run in active
         ],
@@ -111,10 +109,12 @@ async def get_operations(session: AsyncSession) -> Operations:
 
 
 async def cancel_run(session: AsyncSession, run_id: str, by: str) -> None:
-    """Stop a queued or running run: it fails with who stopped it. A worker still busy with it
-    cannot finish it afterwards (a final state is never overwritten)."""
+    """Stop a queued or running run: it fails with who stopped it, and its Hatchet task is
+    cancelled. A worker still busy with it cannot finish it (a final state is never overwritten)."""
     if await move_run(session, run_id, "failed", **failure(f"Cancelled by {by}.")):
         await session.commit()
+        if task_run_id := await session.scalar(select(Run.task_run_id).where(Run.id == run_id)):
+            await queue.cancel(task_run_id)
         return
     # Not moved: unknown, or already finished (perhaps a moment ago, by its worker).
     status = await session.scalar(select(Run.status).where(Run.id == run_id))

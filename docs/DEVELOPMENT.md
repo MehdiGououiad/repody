@@ -15,7 +15,7 @@ backend/src/repody/
 ├── rules/             Typed conditions and their evaluation
 ├── schemas/           Pydantic models (API and stored workflow definition)
 ├── auth.py            Keycloak JWT, roles, workflow API keys
-├── queue.py · worker.py   Taskiq broker, dispatch, worker entry point
+├── queue.py · worker.py   Hatchet client (dispatch, cancel); the worker and its workflows
 ├── models.py · db.py  SQLAlchemy tables and sessions
 ├── storage.py         S3 documents
 └── settings.py        AUDIT_* settings

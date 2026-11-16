@@ -40,10 +40,10 @@ class Settings(BaseSettings):
     cors_origins: CommaList = []
     seed_on_startup: bool = False
 
-    # Postgres, Redis, S3 (Compose: SeaweedFS)
+    # Postgres and S3 (Compose: SeaweedFS). The run queue is Hatchet: its client reads the
+    # HATCHET_CLIENT_* environment (repody.infra.queue).
     database_url: SecretStr = SecretStr("postgresql+asyncpg://audit:audit@localhost:5432/repody")
     db_pool_size: PositiveInt = 10
-    redis_url: SecretStr = SecretStr("redis://localhost:6379/0")
     s3_endpoint_url: str = "http://localhost:8333"
     s3_region: str = "us-east-1"
     s3_access_key: str = "repody"
@@ -91,17 +91,22 @@ class Settings(BaseSettings):
     inference_concurrency: PositiveInt = 1
 
     max_pages_per_document: PositiveInt | None = None
-    extraction_cache_ttl_seconds: NonNegativeInt = 0  # 0 disables the Redis extraction cache
 
     # Runs
     run_timeout_minutes: PositiveInt = 5
     max_queued_runs: NonNegativeInt = 200  # enqueue answers 503 beyond this (0 disables)
-    # Per workflow API key or signed-in user (0 disables).
+    # Runs each workflow API key or signed-in user starts a minute (a Hatchet rate limit: more
+    # wait their turn in the queue; 0 disables).
     runs_per_minute_per_client: NonNegativeInt = 600
-    maintenance_interval_seconds: PositiveInt = 60
+    # Runs a worker processes at a time (its Hatchet slots).
+    worker_concurrency: PositiveInt = 4
+    # Runs one client (API key or user) has in progress at once; its other runs wait, taking
+    # turns with other clients' (Hatchet round-robin concurrency), so one bulk upload cannot
+    # hold every worker slot.
+    runs_in_progress_per_client: PositiveInt = 2
     # Finished runs (and their uploaded files) older than this are deleted; 0 keeps them.
     run_retention_days: NonNegativeInt = 0
-    # Health probes give up after this long (a hung Postgres or Redis reads as down).
+    # Health probes give up after this long (a hung Postgres reads as down).
     health_timeout_seconds: PositiveFloat = 2.0
 
     @model_validator(mode="after")

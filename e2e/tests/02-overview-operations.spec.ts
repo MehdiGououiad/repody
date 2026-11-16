@@ -18,7 +18,7 @@ test.describe("Overview", () => {
     await expect(main.getByRole("heading", { name: /Volume/ })).toBeVisible();
     await expect(main.getByRole("heading", { name: "To review" })).toBeVisible();
     await expect(main.getByRole("heading", { name: "Workflows" })).toBeVisible();
-    await expect(main.getByText("Factures fournisseurs").first()).toBeVisible();
+    await expect(main.getByText("Invoice Audit Pipeline").first()).toBeVisible();
     watch.expectNoErrors();
   });
 
@@ -129,16 +129,6 @@ test.describe("Control room", () => {
           .filter({ hasText: "Cancelled by" })
       ).toBeVisible();
     }
-    watch.expectNoErrors();
-  });
-
-  test("Release stuck runs answers even when nothing is stuck", async ({ page }) => {
-    const watch = watchErrors(page);
-    await open(page, "/operations");
-    const release = page.getByRole("button", { name: "Release stuck runs" });
-    test.skip((await release.count()) === 0, "the button only shows while a run is stuck");
-    await release.click();
-    await expect(page.getByText(/released|No stuck runs/)).toBeVisible();
     watch.expectNoErrors();
   });
 });

@@ -17,11 +17,11 @@ test.describe("Runs", () => {
     await expect(page).not.toHaveURL(/outcome=/);
 
     await page.getByRole("button", { name: "Workflow" }).click();
-    await page.getByRole("menuitemcheckbox", { name: "Factures fournisseurs" }).click();
+    await page.getByRole("menuitemcheckbox", { name: "Invoice Audit Pipeline" }).click();
     await expect(page).toHaveURL(/workflow=wf-invoice-audit/);
     // One workflow at a time: choosing closes the menu.
     await expect(page.getByRole("menu")).toBeHidden();
-    const chip = page.getByRole("button", { name: /Factures fournisseurs/ });
+    const chip = page.getByRole("button", { name: /Invoice Audit Pipeline/ });
     await chip.click();
     await expect(page).not.toHaveURL(/workflow=/);
 
@@ -56,7 +56,7 @@ test.describe("Runs", () => {
     const href = await first.getAttribute("href");
     await first.click();
     await expect(page).toHaveURL(new RegExp(`${href}$`));
-    await expect(page.getByRole("heading", { level: 1 })).toContainText("Factures fournisseurs");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText("Invoice Audit Pipeline");
 
     // The document: one tab per file and its first page as an image.
     await expect(page.getByRole("tab").first()).toBeVisible();
@@ -67,7 +67,7 @@ test.describe("Runs", () => {
       .toBeGreaterThan(0);
 
     // Pointing at a rule lights up the fields it reads.
-    await page.getByText("Total TTC = HT + TVA").hover();
+    await page.getByText("Math integrity").first().hover();
     await expect(page.locator("li[data-lit]").first()).toBeVisible();
     await page.getByRole("heading", { level: 1 }).hover();
     await expect(page.locator("li[data-lit]")).toHaveCount(0);

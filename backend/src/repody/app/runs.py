@@ -3,23 +3,19 @@
 import asyncio
 import csv
 import json
-import math
-import time
 from collections.abc import AsyncIterator, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from functools import cache
 from typing import Any, BinaryIO
 
-from limits import RateLimitItemPerMinute
-from limits.aio.storage import RedisStorage
-from limits.aio.strategies import SlidingWindowCounterRateLimiter
+import structlog
 from sqlalchemy import Select, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, selectinload
 
 from repody.app.errors import AppError
-from repody.app.progress import plan, with_queue_position
+from repody.app.lifecycle import failure, move_run
+from repody.app.progress import plan, stored
 from repody.app.stats import midnight
 from repody.extraction.render import file_type, page_preview
 from repody.infra import db, queue
@@ -44,6 +40,8 @@ from repody.schemas.run import (
 from repody.schemas.workflow import WorkflowDefinition
 from repody.settings import get_settings
 
+log = structlog.get_logger(__name__)
+
 EXPORT_BATCH = 500  # rows fetched per round trip while streaming a CSV export
 PURGE_BATCH = 1000  # runs deleted per transaction by the retention purge
 BOM = "﻿"  # spreadsheets read a UTF-8 CSV as UTF-8 when it starts with a BOM
@@ -61,26 +59,6 @@ class Upload:
 
 
 # --- Start a run ---
-
-
-@cache
-def _limiter() -> SlidingWindowCounterRateLimiter:
-    # redis-py, the client the rest of the backend uses (limits defaults to coredis). The
-    # sliding window counter is the strategy limits recommends: approximate, two keys per client.
-    redis_url = get_settings().redis_url.get_secret_value()
-    storage = RedisStorage(f"async+{redis_url}", implementation="redispy")
-    return SlidingWindowCounterRateLimiter(storage)
-
-
-async def _check_rate(client_key: str) -> None:
-    per_minute = get_settings().runs_per_minute_per_client
-    if not per_minute:
-        return
-    limit = RateLimitItemPerMinute(per_minute)
-    if not await _limiter().hit(limit, "runs", client_key):
-        stats = await _limiter().get_window_stats(limit, "runs", client_key)
-        retry_after = max(1, math.ceil(stats.reset_time - time.time()))
-        raise AppError(429, "Too many runs started; try again shortly.", retry_after=retry_after)
 
 
 async def _check_queue(session: AsyncSession) -> None:
@@ -153,7 +131,6 @@ async def start_run(
         raise AppError(422, f"At most {settings.max_upload_files} files per run.")
     for upload in uploads:
         _check_upload(upload)
-    await _check_rate(client_key)
     await _check_queue(session)
 
     if source == "api" or definition is None:
@@ -189,7 +166,16 @@ async def start_run(
     except BaseException:
         await get_store().delete(stored)
         raise
-    await queue.dispatch(run.id)
+    try:
+        run.task_run_id = await queue.dispatch(run.id, client_key)
+    except Exception as exc:
+        log.warning("run_dispatch_failed", run_id=run.id, error=repr(exc))
+        await move_run(session, run.id, "failed", **failure("The run could not be queued."))
+        await session.commit()
+        raise AppError(
+            503, "The run queue is unavailable; try again shortly.", retry_after=15
+        ) from exc
+    await session.commit()
     return RunCreated(run_id=run.id)
 
 
@@ -249,7 +235,7 @@ async def run_state(session: AsyncSession, run_id: str) -> RunState:
     run = await _load_run(session, run_id)
     return RunState(
         status=run.status,
-        progress=await with_queue_position(session, run),
+        progress=stored(run),
         error=run.error,
         result=_report(run) if run.status == "done" else None,
     )

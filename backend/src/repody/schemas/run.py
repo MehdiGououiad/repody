@@ -30,7 +30,6 @@ class ProgressStep(CamelModel):
     rule_count: int | None = Field(default=None, description="rules steps.")
     fields_extracted: int | None = Field(default=None, description="Done extract steps.")
     duration_ms: int | None = None
-    cache_hit: bool = False
     failed: bool = Field(default=False, description="Done extract steps whose extraction failed.")
     cold_start: bool = Field(
         default=False,
@@ -41,13 +40,10 @@ class ProgressStep(CamelModel):
 
 class RunProgress(CamelModel):
     steps: list[ProgressStep] = Field(default_factory=list)
-    queue_position: int | None = Field(default=None, description="1-based, while queued.")
-    queue_depth: int | None = None
 
 
 class ExtractionMeta(CamelModel):
     extraction_ms: int = 0
-    cache_hit: bool = False
     fields_extracted: int = 0
     pages_rendered: int = 0
     pages_sent: int = 0

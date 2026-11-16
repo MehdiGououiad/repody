@@ -1,6 +1,6 @@
 # Repody design system
 
-Read before any UI work. Audit and plan: `docs/design/app-redesign.md`.
+Read before any UI work.
 
 ## Direction: a live ledger
 

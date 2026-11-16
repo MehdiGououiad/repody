@@ -21,7 +21,7 @@ import { VolumeChart } from "./volume-chart";
 
 const REFRESH_MS = 10_000;
 
-/** What is happening now: the queue, the model, stuck runs, the last refresh. */
+/** What is happening now: the queue, the model, the last refresh. */
 function Pulse({ data, updatedAt }: { data: Dashboard; updatedAt: number }) {
   const t = useTranslations("dashboard");
   const platform = $api.useQuery("get", "/v1/platform/config", undefined, {
@@ -55,12 +55,6 @@ function Pulse({ data, updatedAt }: { data: Dashboard; updatedAt: number }) {
           <span className={cn("size-2 rounded-full", model.dot)} />
           {model.text}
         </span>
-      ) : null}
-      {data.staleRuns ? (
-        <Link href="/audits" className="flex items-center gap-1.5 text-warn-ink hover:underline">
-          <StatusGlyph status="warning" className="size-3" />
-          {t("stale", { count: data.staleRuns })}
-        </Link>
       ) : null}
       {updatedAt ? (
         <span className="ms-auto text-ink-4">

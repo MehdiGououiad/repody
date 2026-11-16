@@ -4,7 +4,7 @@
 #
 # The Secret named by existingSecret must exist first (External Secrets / Vault / SOPS) with:
 #   AUDIT_DATABASE_URL       postgresql+asyncpg://repody:…@postgres-rw.db.svc:5432/repody
-#   AUDIT_REDIS_URL          redis://…@redis.cache.svc:6379/0
+#   HATCHET_CLIENT_TOKEN     a Hatchet API token (dashboard → Settings → API Tokens)
 #   AUDIT_S3_ACCESS_KEY      AUDIT_S3_SECRET_KEY
 #   AUTH_SECRET              (openssl rand -base64 32)
 #   AUTH_KEYCLOAK_CLIENT_SECRET
@@ -59,4 +59,4 @@ ingress:
 networkPolicy:
   enabled: true
   egressCidrs:
-    - 10.0.0.0/8            # database, Redis, S3, Keycloak, inference
+    - 10.0.0.0/8            # database, Hatchet, S3, Keycloak, inference

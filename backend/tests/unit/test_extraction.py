@@ -6,11 +6,10 @@ import pypdfium2 as pdfium
 import pytest
 from PIL import ExifTags, Image
 
-from repody.extraction import nuextract, pipeline, render
+from repody.extraction import nuextract, render
 from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
-from repody.settings import get_settings
 
 FIELDS = [
     SchemaField(name="total", description="Amount due", template_type="number"),
@@ -178,9 +177,12 @@ def test_file_type_is_what_the_decoders_can_open(data: bytes, mime: str | None):
     assert file.tell() == 0  # rewound for storage
 
 
-def test_the_cache_key_changes_with_how_pages_are_rendered(monkeypatch):
-    request = {"model": "m"}
-    monkeypatch.setattr(get_settings(), "max_pages_per_document", None)
-    every_page = pipeline._cache_key(b"pdf", request)
-    monkeypatch.setattr(get_settings(), "max_pages_per_document", 2)
-    assert pipeline._cache_key(b"pdf", request) != every_page
+def test_an_oversized_pdf_page_is_drawn_within_the_pixel_cap():
+    pdf = pdfium.PdfDocument.new()
+    pdf.new_page(200 * 72, 200 * 72)  # 200 x 200 inches: 34 000 px a side at 170 DPI
+    buffer = io.BytesIO()
+    pdf.save(buffer)
+    [part], total = render.pdf_page_parts(buffer.getvalue(), max_pages=None)
+    width, height = _size(part)
+    assert total == 1
+    assert width * height <= render.MAX_RENDER_PIXELS

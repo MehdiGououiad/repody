@@ -1,11 +1,14 @@
 """Logging (structlog over stdlib logging) and error reporting (Sentry SDK, e.g. Bugsink).
 
 Tracing is the OpenTelemetry agent's job (``opentelemetry-instrument``, configured by OTEL_*).
+Hatchet's instrumentor is not one of the agent's, so it is started here when tracing is on: a
+run's trigger in the API and its task on the worker then share one trace.
 Error reporting turns on when SENTRY_DSN is set; the SDK enables its FastAPI, Starlette and
 logging integrations by default.
 """
 
 import logging
+import os
 
 import sentry_sdk
 import structlog
@@ -50,3 +53,13 @@ def setup() -> None:
     # Errors only: tracing is the OpenTelemetry agent's. Leaving traces_sample_rate unset is
     # what turns Sentry tracing off (any value, even 0, enables it).
     sentry_sdk.init(environment=settings.deployment_environment)
+    if os.environ.get("OTEL_SDK_DISABLED", "true") == "false":
+        _trace_hatchet()
+
+
+def _trace_hatchet() -> None:
+    # The `otel` extra, installed wherever the agent runs.
+    from hatchet_sdk.opentelemetry.instrumentor import HatchetInstrumentor
+
+    # Spans go to the agent's tracer provider (our collector), not to Hatchet's engine.
+    HatchetInstrumentor(enable_hatchet_otel_collector=False).instrument()

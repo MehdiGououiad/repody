@@ -6,7 +6,7 @@ import { browserFetch } from "@/lib/api/browser";
 
 const REFRESH_MS = 30_000;
 
-/** Liveness only: the check must not ping Postgres and Redis every 30 s. */
+/** Liveness only: the check must not query Postgres every 30 s. */
 async function checkLive(): Promise<boolean> {
   const { data, response } = await browserFetch.GET("/v1/healthz/live");
   return response.ok && data?.status === "ok";

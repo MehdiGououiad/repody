@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 # One backend image for api + workers (role chosen by the container command).
 #   docker buildx bake backend --load      (see docker-bake.hcl)
-# Role-specific targets (same layers): --target api | --target worker
 
 FROM python:3.14.10-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS runtime-base
 
@@ -70,14 +69,3 @@ ENV AUDIT_RUN_MIGRATIONS_ON_STARTUP=false \
     OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
 ENTRYPOINT ["/app/scripts/docker-entrypoint.sh"]
-
-FROM backend AS worker
-
-ENV OTEL_SERVICE_NAME=repody-worker
-CMD ["sh", "-c", "exec taskiq worker repody.worker:broker --workers 1 --max-async-tasks ${AUDIT_WORKER_CONCURRENCY:-1}"]
-
-FROM backend AS api
-
-ENV OTEL_SERVICE_NAME=repody-api
-EXPOSE 8000
-CMD ["uvicorn", "repody.main:app", "--host", "0.0.0.0", "--port", "8000"]

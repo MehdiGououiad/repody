@@ -64,17 +64,16 @@
     "saving": "Saving…",
     "deploying": "Deploying…",
     "saveFailed": "Could not save workflow",
-    "delete": "Delete",
     "confirm": "Confirm",
     "deleteWarning": "This action cannot be undone.",
     "retry": "Retry",
-    "copyFailed": "Could not copy"
+    "copyFailed": "Could not copy",
+    "notAllowed": "Your role does not allow this."
   },
   "runProgress": {
     "pagesTruncated": "Only {sent} of {total} pages analyzed",
-    "queuePosition": "Queue position {position} of {depth}",
     "queueWaiting": "Waiting in queue…",
-    "queueOrdered": "Runs are processed in order. Your position updates automatically.",
+    "queueOrdered": "It starts as soon as a worker is free; each client's runs take turns with the others'.",
     "steps": {
       "queue": "Queued for a worker",
       "model": "Wake the model",
@@ -91,9 +90,6 @@
       "finalize": "Save the audit report",
       "extracted": "{count, plural, =0 {No field extracted} one {# field extracted} other {# fields extracted}}",
       "extractFailed": "Extraction failed — the report shows why"
-    },
-    "badges": {
-      "cached": "Cached result"
     }
   },
   "dashboard": {
@@ -120,7 +116,6 @@
       "cta": "Create a workflow"
     },
     "nothingToReview": "Nothing needs review",
-    "stale": "{count, plural, one {# run stopped responding} other {# runs stopped responding}}",
     "queueTitle": "To review",
     "queueHint": "Rejected runs and runs to check, newest first.",
     "toReview": "to review",
@@ -727,7 +722,9 @@
         "noExtraction": "No extraction yet: drop a sample in the Extraction step."
       },
       "unsaved": "Unsaved changes",
-      "notSaved": "Not saved"
+      "notSaved": "Not saved",
+      "viewOnly": "View only",
+      "viewOnlyHint": "Your role can read this workflow but not change it."
     },
     "row": {
       "neverRun": "Never run"
@@ -749,9 +746,6 @@
     "ready": "Ready",
     "unavailable": "Unavailable",
     "onDemand": "On demand",
-    "cache": "Cache",
-    "enabled": "Enabled",
-    "disabled": "Disabled",
     "runtimeTitle": "Limits",
     "runtimeHint": "Set by the deployment's environment; a restart applies changes.",
     "endpoint": "Inference endpoint",
@@ -775,7 +769,32 @@
     "paletteHint": "What the theme engine derives from the brand.",
     "documents": "Document colours",
     "status": "Statuses",
-    "actions": "Actions"
+    "actions": "Actions",
+    "access": {
+      "title": "Your access",
+      "hint": "What your role lets you do. Your administrator manages roles in Keycloak.",
+      "role": "Role",
+      "noRole": "None",
+      "allowed": "Allowed",
+      "notAllowed": "Not allowed",
+      "withCredits": "With credits",
+      "permissions": {
+        "workflow:read": "See workflows",
+        "workflow:write": "Create and edit workflows",
+        "workflow:deploy": "Publish workflows",
+        "workflow:delete": "Delete workflows",
+        "run:read": "See runs and reports",
+        "run:execute": "Run documents and stop runs",
+        "metrics:read": "See the overview and platform details"
+      },
+      "roles": {
+        "viewer": "Viewer",
+        "operator": "Operator",
+        "admin": "Admin",
+        "platform_admin": "Platform admin",
+        "demo_visitor": "Playground visitor"
+      }
+    }
   },
   "error": {
     "title": "Something went wrong",
@@ -824,7 +843,6 @@
     "queue": "Queue",
     "running": "Running",
     "queued": "Queued",
-    "stale": "Not responding",
     "median": "Median duration",
     "p95": "p95",
     "waiting": "Waiting for",
@@ -835,12 +853,8 @@
     "cancelTitle": "Stop this run?",
     "cancelHint": "It fails with your name on it. Files already sent stay with the run.",
     "cancelled": "Run stopped",
-    "recover": "Release stuck runs",
-    "recovered": "{count, plural, =0 {No stuck runs} one {# run released} other {# runs released}}",
-    "stuckHint": "Past its time limit: the worker is not answering. Maintenance releases it automatically, or stop it now.",
     "keep": "Keep running",
-    "cancelFailed": "Could not stop the run",
-    "recoverFailed": "Could not release the stuck runs"
+    "cancelFailed": "Could not stop the run"
   },
   "playground": {
     "label": "Playground",

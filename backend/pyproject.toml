@@ -14,12 +14,9 @@ dependencies = [
   "sqlalchemy[asyncio]>=2.1.8",
   "asyncpg>=0.32.0",
   "alembic>=1.20.1",
-  # Queue, cache, rate limits
-  "taskiq>=0.13.0",
-  "taskiq-redis>=1.2.4",
-  "redis>=8.1.0",
-  # limits runs on redis-py (implementation="redispy"), the one Redis client.
-  "limits>=5.8.0",
+  # Runs: Hatchet (queue, workers, cron, timeouts, retries, cancellation, rate limits).
+  # The 1.x line, written against what V2 keeps (docs.hatchet.run/v1/migration-guide-python-v2).
+  "hatchet-sdk>=1.46.0,<2",
   # Extraction: llama-server (OpenAI-compatible); PDFium and Pillow render pages and also check
   # that an upload is the PDF or image it claims to be.
   "openai>=3.49.0",
@@ -35,11 +32,11 @@ dependencies = [
 
 [project.optional-dependencies]
 # OpenTelemetry agent (`opentelemetry-instrument`, see scripts/docker-entrypoint.sh): the distro
-# configures the SDK from OTEL_* env and loads every installed instrumentation, Taskiq's own
+# configures the SDK from OTEL_* env and loads every installed instrumentation, Hatchet's own
 # included. No SQLAlchemy instrumentation: it does not support SQLAlchemy 2.1 yet. Logs are
 # structlog JSON on stdout (collected into Loki), so no logging instrumentation either.
 otel = [
-  "taskiq[opentelemetry]>=0.13.0",
+  "hatchet-sdk[otel]>=1.46.0,<2",
   "opentelemetry-distro>=0.66b2",
   "opentelemetry-exporter-otlp-proto-http>=1.45.2",
   "opentelemetry-instrumentation-fastapi>=0.66b2",
@@ -137,7 +134,7 @@ forbidden_modules = ["fastapi", "starlette"]
 name = "Rules are pure"
 type = "forbidden"
 source_modules = ["repody.rules"]
-forbidden_modules = ["sqlalchemy", "redis", "repody.infra", "repody.settings"]
+forbidden_modules = ["sqlalchemy", "hatchet_sdk", "repody.infra", "repody.settings"]
 
 [tool.pyright]
 include = ["src", "tests", "scripts", "alembic/env.py"]
@@ -162,6 +159,6 @@ testpaths = ["tests"]
 addopts = ["-ra", "-m", "not live"]
 markers = [
   "unit: pure tests, no services",
-  "integration: the app on Postgres and Redis, runs processed inline",
+  "integration: the app on Postgres, runs processed inline (no Hatchet)",
   "live: a running stack with the llama-server (E2E_API_URL)",
 ]

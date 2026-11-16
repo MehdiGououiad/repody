@@ -1,7 +1,7 @@
 import "server-only";
 
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import createFetchClient from "openapi-fetch";
 import createQueryClient from "openapi-react-query";
 import { cache } from "react";
@@ -10,6 +10,7 @@ import { backendOrigin } from "@/lib/api/backend-origin";
 import type { paths } from "@/lib/api/generated/schema";
 import { verifySession } from "@/lib/auth/dal";
 import { demoMode, VISITOR_HEADER } from "@/lib/auth/visitor";
+import type { Access, Permission } from "@/lib/types";
 
 const TIMEOUT_MS = 10_000;
 
@@ -69,3 +70,20 @@ export const fetchAudit = cache((id: string) =>
 );
 
 export const fetchPlatformConfig = cache(() => data(serverFetch.GET("/v1/platform/config")));
+
+/** What the caller may do; no access when the API cannot say (the shell still renders). */
+export const fetchAccess = cache(async (): Promise<Access> => {
+  try {
+    return await data(serverFetch.GET("/v1/me"));
+  } catch (error) {
+    unstable_rethrow(error); // the sign-in redirect for a stale session
+    return { roles: [], permissions: [], withCredits: [] };
+  }
+});
+
+/** Leave a page the caller may not use for one they may (Runs, which every role reads). */
+export async function requirePermission(permission: Permission): Promise<Access> {
+  const access = await fetchAccess();
+  if (!access.permissions.includes(permission)) redirect("/audits");
+  return access;
+}

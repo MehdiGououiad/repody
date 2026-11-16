@@ -77,7 +77,7 @@ envFrom:
 {{/* Only the Secret keys the API and workers read (not the web's Better Auth secrets). */}}
 {{- define "repody.backendSecretEnv" -}}
 {{- $secret := required "existingSecret is required" .Values.existingSecret -}}
-{{- range $key := list "AUDIT_DATABASE_URL" "AUDIT_REDIS_URL" "AUDIT_S3_ACCESS_KEY" "AUDIT_S3_SECRET_KEY" }}
+{{- range $key := list "AUDIT_DATABASE_URL" "HATCHET_CLIENT_TOKEN" "AUDIT_S3_ACCESS_KEY" "AUDIT_S3_SECRET_KEY" }}
 - name: {{ $key }}
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: {{ $key }} }

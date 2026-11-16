@@ -5,6 +5,8 @@ import { Check, CircleAlert, Dot } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useCan } from "@/components/auth/access-context";
+import { Gate } from "@/components/auth/gate";
 import { Button } from "@/components/ui/button";
 import { BareInput, inlineFieldClass } from "@/components/ui/input";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -37,6 +39,7 @@ export function BuilderTopbar({
   const tCommon = useTranslations("common");
   const tPlayground = useTranslations("playground");
   const saveHint = useShortcutHint("mod+s");
+  const canEdit = useCan("workflow:write");
   useShortcut("mod+s", onSaveDraft, { allowInInput: true, description: tCommon("saveDraft") });
 
   return (
@@ -53,6 +56,7 @@ export function BuilderTopbar({
       <BareInput
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
+        readOnly={!canEdit}
         placeholder={t("namePlaceholder")}
         aria-label={t("nameLabel")}
         autoFocus={!name}
@@ -101,6 +105,8 @@ export function BuilderTopbar({
                 {t("notSaved")}
                 <span className="sr-only">: {saveState.reason}</span>
               </>
+            ) : saveState.kind === "viewOnly" ? (
+              <span title={t("viewOnlyHint")}>{t("viewOnly")}</span>
             ) : saveState.kind === "example" ? (
               <span title={tPlayground("exampleHint")}>{tPlayground("example")}</span>
             ) : saveState.kind === "unsaved" ? (
@@ -116,19 +122,23 @@ export function BuilderTopbar({
             )}
           </motion.span>
         </AnimatePresence>
-        <Tooltip label={tCommon("saveDraft")} shortcut={saveHint.text}>
-          <Button variant="ghost" disabled={sync !== "idle"} onClick={onSaveDraft}>
-            {tCommon("saveDraft")}
+        {canEdit ? (
+          <Tooltip label={tCommon("saveDraft")} shortcut={saveHint.text}>
+            <Button variant="ghost" disabled={sync !== "idle"} onClick={onSaveDraft}>
+              {tCommon("saveDraft")}
+            </Button>
+          </Tooltip>
+        ) : null}
+        <Gate permission="workflow:deploy">
+          <Button
+            variant={deployed ? "secondary" : "primary"}
+            disabled={!schemaReady || sync !== "idle"}
+            onClick={onDeploy}
+            title={!schemaReady ? t("steps.continueBlockedSchema") : undefined}
+          >
+            {deployed ? tCommon("redeployWorkflow") : tCommon("deployWorkflow")}
           </Button>
-        </Tooltip>
-        <Button
-          variant={deployed ? "secondary" : "primary"}
-          disabled={!schemaReady || sync !== "idle"}
-          onClick={onDeploy}
-          title={!schemaReady ? t("steps.continueBlockedSchema") : undefined}
-        >
-          {deployed ? tCommon("redeployWorkflow") : tCommon("deployWorkflow")}
-        </Button>
+        </Gate>
       </div>
     </header>
   );

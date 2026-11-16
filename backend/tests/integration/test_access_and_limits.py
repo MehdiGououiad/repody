@@ -1,7 +1,6 @@
 """Who may do what, the limits a caller hits, and input the API refuses."""
 
 import json
-import uuid
 from collections.abc import AsyncIterator, Callable
 
 import pytest
@@ -13,7 +12,6 @@ from repody.api.deps import optional_user
 from repody.app import execute
 from repody.infra.auth import User
 from repody.main import create_app
-from repody.settings import get_settings
 from tests.conftest import BACKEND
 from tests.files import FILE, PDF
 from tests.integration.helpers import condition, document, invoice_workflow, rule
@@ -61,7 +59,6 @@ async def test_a_viewer_reads_but_cannot_change_or_run(api, as_user):
     assert (await viewer.post("/v1/workflows/wf-a/runs", files=FILE)).status_code == 401
     assert (await viewer.get("/v1/dashboard")).status_code == 403
     assert (await viewer.post("/v1/runs/run-any/cancel")).status_code == 403
-    assert (await viewer.post("/v1/operations/recover")).status_code == 403
 
 
 async def test_anonymous_callers_cannot_tell_which_workflows_exist(api, as_user):
@@ -84,19 +81,6 @@ async def test_an_api_key_only_reads_its_own_workflow_runs(api, as_user, model_a
     # Once the workflow is archived its key no longer works.
     await api.delete("/v1/workflows/wf-a")
     assert (await anonymous.get(run_path, headers=key_a)).status_code == 401
-
-
-async def test_runs_per_minute_are_limited_per_client(api, model_answer, monkeypatch):
-    await api.put("/v1/workflows/wf-a", json=invoice_workflow())
-    monkeypatch.setattr(get_settings(), "runs_per_minute_per_client", 2)
-    # Test runs are limited per user: a fresh one, so no earlier hits in Redis count.
-    user = User(subject=f"rate-{uuid.uuid4().hex}", roles=frozenset({"admin"}))
-    monkeypatch.setattr("repody.api.deps.DEV_USER", user)
-    for _ in range(2):
-        assert (await api.post("/v1/workflows/wf-a/runs", files=FILE)).status_code == 202
-    limited = await api.post("/v1/workflows/wf-a/runs", files=FILE)
-    assert limited.status_code == 429
-    assert int(limited.headers["Retry-After"]) >= 1
 
 
 async def test_files_map_to_documents_by_id_or_type_one_each(api, model_answer):
@@ -182,18 +166,16 @@ async def test_a_failure_inside_the_worker_fails_the_run(api, model_answer, monk
     assert state["error"] == execute.FAILURE_MESSAGE
 
 
-async def test_the_extraction_cache_answers_the_same_document_once(api, model_answer, monkeypatch):
-    await api.put("/v1/workflows/wf-a", json=invoice_workflow())
-    monkeypatch.setattr(get_settings(), "extraction_cache_ttl_seconds", 60)
-    model_answer["text"] = json.dumps({"total_amount": 6000})
-    nonce = f"cache-{uuid.uuid4().hex}"  # instructions no earlier test run cached
-    workflow = invoice_workflow()
-    workflow["documents"][0]["extractionInstructions"] = nonce
-    await api.put("/v1/workflows/wf-a", json=workflow)
-    runs = [
-        (await api.post("/v1/workflows/wf-a/runs", files=FILE)).json()["runId"] for _ in range(2)
-    ]
-    reports = [(await api.get(f"/v1/audits/{run_id}")).json() for run_id in runs]
-    hits = [r["documents"][0]["extraction"]["cacheHit"] for r in reports]
-    assert hits == [False, True]
-    assert len(model_answer["calls"]) == 1
+async def test_me_says_what_each_caller_may_do(api, as_user):
+    viewer = (await as_user(VIEWER).get("/v1/me")).json()
+    assert viewer == {
+        "roles": ["viewer"],
+        "permissions": ["workflow:read", "run:read"],
+        "withCredits": [],
+    }
+    operator = (
+        await as_user(User(subject="otto", roles=frozenset({"operator"}))).get("/v1/me")
+    ).json()
+    assert "workflow:deploy" in operator["permissions"]
+    assert "workflow:delete" not in operator["permissions"]
+    assert (await as_user(None).get("/v1/me")).json()["permissions"] == []

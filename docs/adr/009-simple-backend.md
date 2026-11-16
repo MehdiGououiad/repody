@@ -6,7 +6,7 @@
 
 The backend had grown to ~10k lines: a workflow split over four tables with diff-and-upsert
 code, rules passed around as camel/snake dictionaries and compiled to Python text before being
-parsed back, two Taskiq pools, presigned uploads with confirmation records, a progress model
+parsed back, two worker pools, presigned uploads with confirmation records, a progress model
 updated by four paths, three throttling layers and about 70 settings.
 
 ## Decision
@@ -21,14 +21,13 @@ updated by four paths, three throttling layers and about 70 settings.
   template type, so extracted values are stored as JSON (NULL when missing) and rules read
   them by that type: no amount or date guessing (`price-parser` removed), no money-specific
   rounding. Saving a workflow rejects operators that do not fit a field's type.
-- **One Taskiq queue and task**, `process_run(run_id)`, run with the official CLI. Send after
-  commit, resend from maintenance, conditional claim.
+- **One queue and task**, `process_run(run_id)`, on Hatchet ([ADR 011](./011-hatchet.md)):
+  triggered after the commit, bounded by Hatchet's timeouts, claimed with a conditional update.
 - **One upload path**: the run request is multipart (files, and for each file its workflow
   document); the API checks the bytes' type and stores the files in S3.
-- **Progress** is a Pydantic model stored on the run, which clients poll; queue position is
-  counted when a client reads a queued run. (1.0 removed the SSE stream and its Redis pub/sub:
-  runs take minutes, a 1 s poll is enough and works through every proxy.)
-- **Limits**: one per-client rate limit (`limits`), one queue cap, one run timeout.
+- **Progress** is a Pydantic model stored on the run, which clients poll (runs take minutes;
+  a 1 s poll is enough and works through every proxy).
+- **Limits**: one queue cap, and Hatchet's per-client rate limit, round robin and run timeout.
 - **One Alembic migration** for the new schema (local databases are recreated).
 
 ## Consequences

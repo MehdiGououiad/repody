@@ -2,7 +2,7 @@
 
 Install Repody on a **Kubernetes or OpenShift** cluster with one Helm chart,
 [`deploy/helm/repody`](../deploy/helm/repody). The chart runs the stateless app: API, web, the
-two Taskiq worker pools, a migrations Job, and an Ingress. Everything stateful is an external
+Hatchet workers, a migrations Job, and an Ingress. Everything stateful is an external
 service the chart points at.
 
 Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). Env keys: [deploy/ENV.md](../deploy/ENV.md).
@@ -12,7 +12,7 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 | Service | Typical choice | Chart setting |
 |---------|----------------|---------------|
 | PostgreSQL | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/)) | `AUDIT_DATABASE_URL` in the Secret |
-| Redis | Managed Redis/Valkey, or an operator | `AUDIT_REDIS_URL` in the Secret |
+| Hatchet | [Hatchet's Helm chart](https://docs.hatchet.run/self-hosting/kubernetes-quickstart) (on your Postgres), or Hatchet Cloud | `HATCHET_CLIENT_TOKEN` in the Secret; `config.HATCHET_CLIENT_HOST_PORT` when the token's address is not reachable in-cluster |
 | S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
 | OIDC provider | Keycloak (operator or managed), configured as in [Keycloak in production](#keycloak-in-production) | `config.AUDIT_OIDC_ISSUER`, `config.AUDIT_OIDC_AUDIENCE`, `web.keycloakClientId` |
 | Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_LLAMACPP_BASE_URL` |
@@ -58,7 +58,7 @@ ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example
 | Key | Used by |
 |-----|---------|
 | `AUDIT_DATABASE_URL` | API, workers, migrations (`postgresql+asyncpg://…`) |
-| `AUDIT_REDIS_URL` | API, workers |
+| `HATCHET_CLIENT_TOKEN` | API, workers (a Hatchet API token: dashboard → Settings → API Tokens) |
 | `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers |
 | `AUTH_SECRET` | web (Better Auth session encryption, as `BETTER_AUTH_SECRET`) |
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
@@ -131,7 +131,7 @@ with Grafana, Loki and Tempo. `BUGSINK_DSN` in the Secret enables error tracking
 
 | Env var | Default | Rule |
 |---------|---------|------|
-| `AUDIT_RUN_TIMEOUT_MINUTES` | 5 | A longer run fails; maintenance fails a `running` run past it |
+| `AUDIT_RUN_TIMEOUT_MINUTES` | 5 | Hatchet's execution timeout: a longer run is cancelled and failed |
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | 180 | Per model call, ≤ run timeout (checked at start) |
 | `workers.extract.terminationGracePeriodSeconds` | 240 | ≥ worker timeout in seconds |
 
@@ -141,21 +141,19 @@ Defaults: `AUDIT_DB_POOL_SIZE=10`, `AUDIT_WORKER_CONCURRENCY=1` (runs per worker
 
 ```
 Postgres connections ≈ (api + worker replicas) × (pool size + overflow)
-Redis connections    ≈ (api + worker replicas) × redis max connections
 ```
 
 Lower the pool settings when Postgres `max_connections` is tight (or put PgBouncer / the CNPG Pooler in front).
 
 ### Health and alerts
 
-- `GET /v1/healthz/live` - liveness; `GET /v1/healthz` - readiness (Postgres + Redis).
-- Workers have no probe: Taskiq redelivers a task whose worker stopped, and maintenance fails runs that stay `running`.
+- `GET /v1/healthz/live` - liveness; `GET /v1/healthz` - readiness (Postgres).
+- Workers: a liveness probe on the Hatchet SDK's `/health` (port 8001). When a worker stops, Hatchet fails its runs through the workflow's failure task. Hatchet's dashboard shows workers, runs and the cron.
 
 | Alert | Log event / signal | Threshold |
 |-------|--------------------|-----------|
 | Run failures | `run_failed` | >5% of runs / 15m |
-| Stuck runs reaped | `stale_run_reaped` | any |
-| Dispatch failure | `taskiq_dispatch_failed` (run stays queued; maintenance re-sends) | sustained |
+| Hatchet unreachable | `run_dispatch_failed` (the run fails; the API answers 503) | any |
 | Queue pressure | dashboard `queue.queuedRuns` vs `AUDIT_MAX_QUEUED_RUNS` | >80% for 10m |
 | Slow model | run metadata `extractionMs` | p99 > 80% of worker timeout |
 | Worker crash loop | `repody-worker` restarts | >3 / 15m |
@@ -170,6 +168,6 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 | Upload fails | `AUDIT_MAX_UPLOAD_BYTES` and the Ingress body size limit |
 | Sign-in loops / 401 | Issuer and JWKS reachable from API and web pods (`web.internalIssuer`) |
 | `ImagePullBackOff` | Pull secret; repository includes the registry host |
-| Run stuck `queued` | Redis; worker replicas; `runs.dispatched_at` NULL means not yet sent |
-| Run stuck `running` | Worker logs; model endpoint; maintenance fails it after `AUDIT_RUN_TIMEOUT_MINUTES` |
+| Run waits `queued` | Hatchet's dashboard: workers connected, the client's rate limit and round robin (`AUDIT_RUNS_PER_MINUTE_PER_CLIENT`, `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT`); after an hour Hatchet fails it |
+| Run long `running` | Worker logs; model endpoint; Hatchet fails it after `AUDIT_RUN_TIMEOUT_MINUTES` |
 | Progress not updating | The worker is running and reaches Postgres; `GET /api/v1/runs/{id}` answers |

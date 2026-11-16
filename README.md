@@ -2,7 +2,7 @@
 
 Open-source document audit platform for invoices and contracts. Repody uploads
 documents, extracts structured fields with an external vision-language model,
-validates business rules, and runs async workflows through Taskiq workers.
+validates business rules, and runs async workflows on Hatchet workers.
 
 [![CI](https://github.com/MehdiGououiad/repody/actions/workflows/ci.yml/badge.svg)](https://github.com/MehdiGououiad/repody/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
@@ -13,9 +13,10 @@ validates business rules, and runs async workflows through Taskiq workers.
 flowchart LR
   Web[Next.js UI] --> API[FastAPI API]
   API --> PG[(Postgres)]
-  API --> RD[(Redis)]
+  API --> HT[Hatchet]
   API --> S3[(S3 storage)]
-  RD --> W[Taskiq Workers]
+  HT --> W[Hatchet workers]
+  HT --> PG
   W --> VLM[External OpenAI-compatible VLM]
   W --> S3
   W --> PG
@@ -72,7 +73,7 @@ Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS
 
 - Frontend: Next.js 16, React 19, Tailwind
 - Backend: FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
-- Jobs: Taskiq over Redis Streams
+- Jobs: [Hatchet](https://hatchet.run) (Hatchet Lite on Postgres in Compose): queue, timeouts, per-client limits, cron
 - Local: Docker Compose, images built from the checkout (`pnpm platform`)
 - Storage: any S3-compatible object storage (SeaweedFS in Compose)
 

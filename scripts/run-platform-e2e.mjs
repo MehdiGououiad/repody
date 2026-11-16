@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Run full platform E2E: live API journey (pytest) + browser tests (Playwright).
+ * Run full platform E2E: the live API journey (pytest -m live: the demo workflow on a real
+ * document, through Hatchet and the model) and the browser tests (Playwright).
  * Prerequisites: local platform (pnpm platform) or Kubernetes lab with hosts entries.
  */
 import { spawnSync } from "node:child_process";
@@ -8,7 +9,6 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { uvBackend } from "../deploy/scripts/runtime-env.mjs";
-import { fetchKeycloakToken } from "../e2e/helpers/keycloak-token.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const apiURL = (process.env.E2E_API_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
@@ -52,37 +52,10 @@ function run(cmd, args, cwd = root, extraEnv = {}, options = {}) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-async function resolveAccessToken() {
-  try {
-    const health = await fetch(`${apiURL}/v1/healthz`, { signal: AbortSignal.timeout(5000) });
-    if (!health.ok) return process.env.REPODY_ACCESS_TOKEN?.trim() ?? "";
-    const body = await health.json();
-    if (!body.oidcEnabled) return process.env.REPODY_ACCESS_TOKEN?.trim() ?? "";
-    const token = await fetchKeycloakToken();
-    console.log("[platform-e2e] Acquired Keycloak bearer token for integration suite");
-    return token;
-  } catch (error) {
-    console.warn("[platform-e2e] Could not fetch Keycloak token:", error.message ?? error);
-    return process.env.REPODY_ACCESS_TOKEN?.trim() ?? "";
-  }
-}
-
 await waitForOk(`${apiURL}/v1/healthz`, "API");
 await waitForOk(webURL, "Web");
 
-const accessToken = await resolveAccessToken();
-const sharedEnv = {
-  E2E_API_URL: apiURL,
-  E2E_WEB_URL: webURL,
-  E2E_AUTH_URL: authURL,
-  ...(accessToken ? { REPODY_ACCESS_TOKEN: accessToken } : {}),
-};
-
-run(
-  ...uvBackend(["python", "scripts/platform_integration_suite.py", "--api", apiURL], { dev: true }),
-  root,
-  sharedEnv
-);
+const sharedEnv = { E2E_API_URL: apiURL, E2E_WEB_URL: webURL, E2E_AUTH_URL: authURL };
 
 run(
   ...uvBackend(["python", "-m", "pytest", "tests/live", "-v", "-m", "live"], { dev: true }),
@@ -90,12 +63,8 @@ run(
   sharedEnv
 );
 
-run(
-  process.platform === "win32" ? "pnpm" : "pnpm",
-  ["exec", "playwright", "test"],
-  root,
-  sharedEnv,
-  { shell: process.platform === "win32" }
-);
+run("pnpm", ["exec", "playwright", "test"], root, sharedEnv, {
+  shell: process.platform === "win32",
+});
 
 console.log("\n[platform-e2e] All platform tests passed.\n");

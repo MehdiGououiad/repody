@@ -1,7 +1,7 @@
 """Health, platform configuration and the dashboard."""
 
 from datetime import date, datetime
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import Field
 
@@ -10,11 +10,32 @@ from repody.schemas.rule import Severity
 from repody.schemas.run import AuditListItem, RunProgress, RunStatus, Source
 from repody.schemas.workflow import WorkflowOut
 
+Permission = Literal[
+    "workflow:read",
+    "workflow:write",
+    "workflow:deploy",
+    "workflow:delete",
+    "run:read",
+    "run:execute",
+    "metrics:read",
+]
+PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
+
+
+class Access(CamelModel):
+    """What the caller may do: the web app shows or disables each action from it."""
+
+    roles: list[str]
+    permissions: list[Permission]
+    with_credits: list[Permission] = Field(
+        default_factory=list,
+        description="A playground visitor's paid actions: offered, answered 402 (contact us).",
+    )
+
 
 class Health(CamelModel):
     status: Literal["ok", "degraded"]
     database: bool = True
-    redis: bool = True
     oidc_enabled: bool = Field(description="Whether API calls need a Keycloak token.")
 
 
@@ -22,7 +43,6 @@ class PlatformConfig(CamelModel):
     served_model: str
     llamacpp_base_url: str
     model_available: bool | None  # None: not probed (an endpoint that scales to zero)
-    cache_enabled: bool
     max_upload_bytes: int
     max_upload_files: int
     max_pages_per_document: int | None
@@ -114,7 +134,6 @@ class Dashboard(CamelModel):
     documents: DocumentStats
     workflow_activity: list[WorkflowActivity]
     failures_by_severity: list[SeverityShare]
-    stale_runs: int
     queue: QueueCounts
     recent_audits: list[AuditListItem]
     failed_audits: list[AuditListItem]
@@ -131,9 +150,6 @@ class ActiveRun(CamelModel):
     created_at: datetime
     started_at: datetime | None
     progress: RunProgress | None
-    stuck: bool = Field(
-        description="Past its time limit: the worker is gone; maintenance fails it, or cancel it now."
-    )
 
 
 class FailedRun(CamelModel):
@@ -155,16 +171,9 @@ class Operations(CamelModel):
     """The control room: what runs now, what broke, how fast the platform works."""
 
     queue: QueueCounts
-    stale_runs: int
     active: list[ActiveRun]
     errors: list[FailedRun] = Field(
         description="Runs that failed (not judged) in the last 24 hours."
     )
     throughput: list[HourThroughput] = Field(description="The last 24 UTC hours, oldest first.")
     timing: DurationStats
-
-
-class Recovered(CamelModel):
-    """Runs a recovery pass failed: running ones that lost their worker, queued ones too old."""
-
-    failed: list[str]

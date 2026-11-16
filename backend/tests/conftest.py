@@ -1,8 +1,8 @@
 """Test setup.
 
 Unit tests need nothing. Integration tests use a migrated Postgres database
-(``repody_test``) and Redis from the local stack, an in-memory object store, and run
-each queued run inline instead of on a Taskiq worker. Live tests (``-m live``) call a
+(``repody_test``) from the local stack, an in-memory object store, and run each queued
+run inline instead of on a Hatchet worker. Live tests (``-m live``) call a
 running stack at E2E_API_URL.
 """
 
@@ -16,7 +16,6 @@ os.environ.update(
     AUDIT_OIDC_ENABLED="false",
     AUDIT_OIDC_AUDIENCE="",
     AUDIT_SEED_ON_STARTUP="false",
-    AUDIT_EXTRACTION_CACHE_TTL_SECONDS="0",
     AUDIT_LLAMACPP_BASE_URL="http://llamacpp.test/v1",
     OTEL_SDK_DISABLED="true",
 )
@@ -107,19 +106,30 @@ def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
 
 
 @pytest.fixture
+def cancelled() -> list[str]:
+    """The Hatchet runs the ``api`` fixture's app cancelled."""
+    return []
+
+
+@pytest.fixture
 async def api(
-    database, monkeypatch: pytest.MonkeyPatch, model_answer
+    database, monkeypatch: pytest.MonkeyPatch, model_answer, cancelled: list[str]
 ) -> AsyncIterator[AsyncClient]:
-    """The app on a clean database; a dispatched run is processed before the request returns."""
+    """The app on a clean database, without Hatchet: a run is processed before the request
+    returns, and the ``cancelled`` fixture lists the Hatchet runs cancelled."""
     async with db.engine.begin() as conn:
         tables = ", ".join(t.name for t in reversed(db.Base.metadata.sorted_tables))
         await conn.execute(text(f"TRUNCATE {tables} CASCADE"))
 
-    async def run_inline(run_id: str) -> bool:
+    async def run_inline(run_id: str, _client_key: str) -> str:
         await execute.process_run(run_id)
-        return True
+        return f"task-{run_id}"
+
+    async def cancel(task_run_id: str) -> None:
+        cancelled.append(task_run_id)
 
     monkeypatch.setattr(queue, "dispatch", run_inline)
+    monkeypatch.setattr(queue, "cancel", cancel)
     use_store(MemoryStore())
     async with AsyncClient(
         transport=ASGITransport(app=create_app()), base_url="http://test"

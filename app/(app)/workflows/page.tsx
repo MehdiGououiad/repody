@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WorkflowsList } from "@/components/workflow/workflows-list";
-import { $server } from "@/lib/api/server";
+import { $server, fetchAccess } from "@/lib/api/server";
 import { getQueryClient } from "@/lib/query/get-query-client";
 
 export async function generateMetadata() {
@@ -16,7 +16,7 @@ export async function generateMetadata() {
 }
 
 export default async function WorkflowsPage() {
-  const tNav = await getTranslations("nav");
+  const [tNav, access] = await Promise.all([getTranslations("nav"), fetchAccess()]);
   const queryClient = getQueryClient();
   // Started, not awaited: the list streams in when the API answers.
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/workflows"));
@@ -26,11 +26,13 @@ export default async function WorkflowsPage() {
       title={tNav("workflows")}
       bleed
       actions={
-        <Button variant="primary" render={<Link href="/workflows/new" />}>
-          <Plus />
-          {tNav("newWorkflow")}
-          <Kbd className="ms-1">C</Kbd>
-        </Button>
+        access.permissions.includes("workflow:write") ? (
+          <Button variant="primary" render={<Link href="/workflows/new" />}>
+            <Plus />
+            {tNav("newWorkflow")}
+            <Kbd className="ms-1">C</Kbd>
+          </Button>
+        ) : null
       }
     >
       <HydrationBoundary state={dehydrate(queryClient)}>

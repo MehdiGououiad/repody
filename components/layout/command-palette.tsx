@@ -15,11 +15,11 @@ import { Monitor, Moon, Plus, Search, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
+import { useCan, useNavItems } from "@/components/auth/access-context";
 import { Dialog, DialogBackdrop, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { popupItem, popupLabel } from "@/components/ui/popup";
 import { StatusGlyph } from "@/components/ui/status-glyph";
 import { $api } from "@/lib/api/browser";
-import { MAIN_NAV_ITEMS } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const palette = createDialogController();
@@ -38,6 +38,8 @@ export function CommandPalette() {
   const tBar = useTranslations("topbar");
   const tAudits = useTranslations("audits");
   const { setTheme } = useTheme();
+  const navItems = useNavItems();
+  const canCreate = useCan("workflow:write");
   const workflows = $api.useQuery("get", "/v1/workflows").data?.workflows ?? [];
   const runs =
     $api.useQuery("get", "/v1/audits", { params: { query: { limit: 8, offset: 0 } } }).data
@@ -78,19 +80,21 @@ export function CommandPalette() {
               <CommandGroupLabel className={popupLabel}>
                 {tBar("commandGroups.actions")}
               </CommandGroupLabel>
-              <CommandItem value="new-workflow" className={item}>
-                <CommandItemIcon>
-                  <Plus />
-                </CommandItemIcon>
-                {tNav("newWorkflow")}
-                <span className="ms-auto text-xs text-ink-4">C</span>
-              </CommandItem>
+              {canCreate ? (
+                <CommandItem value="new-workflow" className={item}>
+                  <CommandItemIcon>
+                    <Plus />
+                  </CommandItemIcon>
+                  {tNav("newWorkflow")}
+                  <span className="ms-auto text-xs text-ink-4">C</span>
+                </CommandItem>
+              ) : null}
             </CommandGroup>
             <CommandGroup>
               <CommandGroupLabel className={popupLabel}>
                 {tBar("commandGroups.navigate")}
               </CommandGroupLabel>
-              {MAIN_NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => (
+              {navItems.map(({ href, labelKey, icon: Icon }) => (
                 <CommandItem key={href} value={href} keywords={[tNav(labelKey)]} className={item}>
                   <CommandItemIcon>
                     <Icon />

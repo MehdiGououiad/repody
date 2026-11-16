@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { useCan, useNavItems } from "@/components/auth/access-context";
 import { UserMenu } from "@/components/auth/user-menu";
 import { Button } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
@@ -14,7 +15,7 @@ import { StatusGlyph } from "@/components/ui/status-glyph";
 import { Tooltip } from "@/components/ui/tooltip";
 import { $api } from "@/lib/api/browser";
 import { reviewCount } from "@/lib/audits/review";
-import { isNavActive, MAIN_NAV_ITEMS } from "@/lib/navigation";
+import { isNavActive } from "@/lib/navigation";
 import { useBrand } from "@/lib/theme/brand-context";
 import { cn } from "@/lib/utils";
 import { BackendStatus } from "./backend-status";
@@ -72,7 +73,17 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("nav");
   const tShell = useTranslations("shell");
   const searchHint = useShortcutHint("mod+k");
-  const dashboard = $api.useQuery("get", "/v1/dashboard", {}, { refetchInterval: LIVE_MS }).data;
+  // Its own cache entry (`{}`, not the page's `undefined`): the layout renders before the
+  // dashboard page's HydrationBoundary, and a shared entry created here would keep the page's
+  // streamed prefetch from hydrating (its Suspense query then fails on the server).
+  const navItems = useNavItems();
+  const canCreate = useCan("workflow:write");
+  const dashboard = $api.useQuery(
+    "get",
+    "/v1/dashboard",
+    {},
+    { refetchInterval: LIVE_MS, enabled: useCan("metrics:read") }
+  ).data;
   const toReview = dashboard ? reviewCount(dashboard.performanceSeries) : 0;
   const running = (dashboard?.queue.runningRuns ?? 0) + (dashboard?.queue.queuedRuns ?? 0);
   const recent = (dashboard?.workflows ?? []).slice(0, 5);
@@ -81,16 +92,18 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     <div className="flex h-full flex-col gap-3 px-2 py-2.5">
       <div className="flex h-7 items-center justify-between gap-2 ps-1.5">
         <BrandMark />
-        <Tooltip label={tShell("create")} shortcut="C">
-          <Link
-            href="/workflows/new"
-            onClick={onNavigate}
-            aria-label={t("newWorkflow")}
-            className="flex size-7 shrink-0 items-center justify-center rounded-md bg-raised text-ink-2 shadow-[0_0_0_1px_var(--line)] transition-colors duration-100 hover:bg-hover hover:text-ink"
-          >
-            <Plus className="size-3.5" aria-hidden />
-          </Link>
-        </Tooltip>
+        {canCreate ? (
+          <Tooltip label={tShell("create")} shortcut="C">
+            <Link
+              href="/workflows/new"
+              onClick={onNavigate}
+              aria-label={t("newWorkflow")}
+              className="flex size-7 shrink-0 items-center justify-center rounded-md bg-raised text-ink-2 shadow-[0_0_0_1px_var(--line)] transition-colors duration-100 hover:bg-hover hover:text-ink"
+            >
+              <Plus className="size-3.5" aria-hidden />
+            </Link>
+          </Tooltip>
+        ) : null}
       </div>
 
       <Button
@@ -104,7 +117,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </Button>
 
       <nav className="flex flex-col gap-px" aria-label={t("main")}>
-        {MAIN_NAV_ITEMS.map(({ href, labelKey, icon: Icon }) => {
+        {navItems.map(({ href, labelKey, icon: Icon }) => {
           const active = isNavActive(pathname, href);
           return (
             <Link

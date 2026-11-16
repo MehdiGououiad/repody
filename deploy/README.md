@@ -14,7 +14,7 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](..
 
 | Path | Purpose |
 |------|---------|
-| `helm/repody` | The one chart: API, web, Taskiq workers, migrations Job, Ingress |
+| `helm/repody` | The one chart: API, web, Hatchet workers, migrations Job, Ingress |
 | `keycloak/` | Keycloak realm (Compose import; import it into the client's Keycloak) |
 | `client/` | Values templates, ExternalSecrets - [client/README.md](./client/README.md) |
 | `managed/` | CNPG, External Secrets examples |
