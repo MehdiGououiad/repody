@@ -37,7 +37,9 @@ class User:
 
     def access(self) -> Access:
         granted: list[Permission] = [p for p in PERMISSIONS if self.can(p)]
-        paid: list[Permission] = [p for p in PERMISSIONS if p not in granted] if self.visitor else []
+        paid: list[Permission] = (
+            [p for p in PERMISSIONS if p not in granted] if self.visitor else []
+        )
         return Access(roles=sorted(self.roles), permissions=granted, with_credits=paid)
 
     @property
