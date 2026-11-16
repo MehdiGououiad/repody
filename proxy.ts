@@ -66,6 +66,22 @@ function toBackend(request: NextRequest, headers?: Headers): NextResponse {
   return NextResponse.rewrite(target, headers ? { request: { headers } } : undefined);
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const APP_ORIGIN = process.env.BETTER_AUTH_URL ? new URL(process.env.BETTER_AUTH_URL).origin : null;
+
+/**
+ * A change sent with the session cookie from another site (cross-site request forgery). The
+ * session cookie is SameSite=Lax already; this also refuses what Lax lets through. Browsers
+ * send Origin with every cross-origin request that changes something; requests without it
+ * (servers, scripts with a workflow API key) are not a browser's and pass.
+ */
+function crossSite(request: NextRequest): boolean {
+  if (SAFE_METHODS.has(request.method)) return false;
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  return origin !== request.nextUrl.origin && origin !== APP_ORIGIN;
+}
+
 function redirectToLogin(request: NextRequest): NextResponse {
   const login = new URL("/login", request.url);
   login.searchParams.set("callbackUrl", request.nextUrl.pathname);
@@ -129,6 +145,16 @@ export default async function proxy(request: NextRequest) {
   }
 
   if (!token) return NextResponse.json({ detail: "Unauthorized" }, { status: 401 });
+  if (crossSite(request)) {
+    console.warn(
+      JSON.stringify({
+        event: "cross_site_request_refused",
+        path: request.nextUrl.pathname,
+        origin: request.headers.get("origin"),
+      })
+    );
+    return NextResponse.json({ detail: "Cross-site request refused." }, { status: 403 });
+  }
   return withCookies(toBackend(request, forwardedHeaders(request, token, true)), token);
 }
 

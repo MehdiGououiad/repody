@@ -1,18 +1,19 @@
 """Workflow use cases: list, read, create, save, duplicate, archive, deploy, and run
 statistics.
 
-``visitor`` is the playground visitor in demo mode (None elsewhere): they see their own
-workflows and the shared examples (no visitor), and change only their own."""
+``account`` is the caller's (repody.app.scope): they see their account's workflows and the shared
+ones (no account, read-only), and change only their own. None: everything."""
 
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from typing import NamedTuple
 
-from sqlalchemy import ColumnElement, delete, func, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.errors import AppError
+from repody.app.scope import own_workflow, sees_workflow, visible_workflows
 from repody.app.stats import daily_counts, last_days, midnight, pass_rate, today
 from repody.extraction.fields import leaves
 from repody.infra.auth import api_key_hint, hash_api_key, new_api_key
@@ -99,7 +100,7 @@ def _out(
     *,
     api_stats: ApiStats | None = None,
     api_key: str | None = None,
-    visitor: str | None = None,
+    account: str | None = None,
 ) -> WorkflowOut:
     return WorkflowOut(
         id=wf.id,
@@ -116,66 +117,52 @@ def _out(
         success_rate=stats.success_rate,
         last_run=stats.last_run,
         api_stats=api_stats,
-        read_only=visitor is not None and wf.visitor_id != visitor,
-    )
-
-
-def _visible(visitor: str | None) -> ColumnElement[bool]:
-    """The workflows a caller sees: all of them, or a visitor's own and the examples."""
-    if visitor is None:
-        return Workflow.status != "archived"
-    return (Workflow.status != "archived") & or_(
-        Workflow.visitor_id == visitor, Workflow.visitor_id.is_(None)
+        read_only=account is not None and wf.account_id != account,
     )
 
 
 async def find(
-    session: AsyncSession, workflow_id: str, *, visitor: str | None = None
+    session: AsyncSession, workflow_id: str, *, account: str | None = None
 ) -> Workflow | None:
-    """The workflow, or None when it does not exist, is archived, or is another visitor's."""
+    """The workflow, or None when it does not exist, is archived, or is another account's."""
     wf = await session.get(Workflow, workflow_id)
-    if wf is None or wf.status == "archived":
+    if wf is None or wf.status == "archived" or not sees_workflow(wf, account):
         return None
-    return None if visitor is not None and wf.visitor_id not in (None, visitor) else wf
+    return wf
 
 
-async def load(session: AsyncSession, workflow_id: str, *, visitor: str | None = None) -> Workflow:
-    if (wf := await find(session, workflow_id, visitor=visitor)) is None:
+async def load(session: AsyncSession, workflow_id: str, *, account: str | None = None) -> Workflow:
+    if (wf := await find(session, workflow_id, account=account)) is None:
         raise AppError(404, "Workflow not found.")
     return wf
 
 
-def _own(wf: Workflow, visitor: str | None) -> None:
-    """A visitor changes only their own workflows; the examples are shared."""
-    if visitor is not None and wf.visitor_id != visitor:
-        raise AppError(403, "Examples are shared: duplicate this workflow to edit it.")
-
-
-async def _room_for_one_more(session: AsyncSession, visitor: str | None) -> None:
-    if visitor is None:
+async def _room_for_one_more(session: AsyncSession, account: str | None) -> None:
+    """The playground keeps a limited number of workflows per visitor."""
+    if account is None or not get_settings().demo_mode:
         return
     count = await session.scalar(
-        select(func.count()).where(Workflow.visitor_id == visitor, Workflow.status != "archived")
+        select(func.count()).where(Workflow.account_id == account, Workflow.status != "archived")
     )
     if (count or 0) >= get_settings().demo_max_workflows:
         raise AppError(409, "The playground keeps a limited number of workflows: delete one.")
 
 
 async def list_workflows(
-    session: AsyncSession, *, limit: int | None = None, visitor: str | None = None
+    session: AsyncSession, *, limit: int | None = None, account: str | None = None
 ) -> list[WorkflowOut]:
     """Cards for the workflow list, most recently edited first: no definition, no API stats."""
     workflows = (
         await session.scalars(
             select(Workflow)
-            .where(_visible(visitor))
+            .where(visible_workflows(account))
             .order_by(Workflow.updated_at.desc())
             .limit(limit)
         )
     ).all()
     stats = await _run_stats(session, [wf.id for wf in workflows])
     empty = WorkflowDefinition()
-    return [_out(wf, empty, stats.get(wf.id, RunStats()), visitor=visitor) for wf in workflows]
+    return [_out(wf, empty, stats.get(wf.id, RunStats()), account=account) for wf in workflows]
 
 
 async def get_workflow(
@@ -183,19 +170,19 @@ async def get_workflow(
     workflow_id: str,
     *,
     api_key: str | None = None,
-    visitor: str | None = None,
+    account: str | None = None,
 ) -> WorkflowOut:
-    wf = await load(session, workflow_id, visitor=visitor)
+    wf = await load(session, workflow_id, account=account)
     stats = (await _run_stats(session, [wf.id])).get(wf.id, RunStats())
     api_stats = await _api_stats(session, wf.id) if wf.deployed_at else None
     definition = WorkflowDefinition.model_validate(wf.definition)
-    return _out(wf, definition, stats, api_stats=api_stats, api_key=api_key, visitor=visitor)
+    return _out(wf, definition, stats, api_stats=api_stats, api_key=api_key, account=account)
 
 
 async def create_workflow(
-    session: AsyncSession, body: CreateWorkflow, *, visitor: str | None = None
+    session: AsyncSession, body: CreateWorkflow, *, account: str | None = None
 ) -> WorkflowOut:
-    await _room_for_one_more(session, visitor)
+    await _room_for_one_more(session, account)
     definition = WorkflowDefinition(documents=[DocumentDef(id=new_id("doc"))])
     wf = Workflow(
         id=new_id("wf"),
@@ -203,30 +190,30 @@ async def create_workflow(
         description=body.description,
         owner=body.owner,
         definition=definition.model_dump(),
-        visitor_id=visitor,
+        account_id=account,
     )
     session.add(wf)
     await session.flush()
-    return _out(wf, definition, RunStats(), visitor=visitor)
+    return _out(wf, definition, RunStats(), account=account)
 
 
 async def duplicate_workflow(
-    session: AsyncSession, workflow_id: str, body: CreateWorkflow, *, visitor: str | None = None
+    session: AsyncSession, workflow_id: str, body: CreateWorkflow, *, account: str | None = None
 ) -> WorkflowOut:
     """A new draft with the workflow's documents and rules (no runs, no API key)."""
-    source = await load(session, workflow_id, visitor=visitor)
-    await _room_for_one_more(session, visitor)
+    source = await load(session, workflow_id, account=account)
+    await _room_for_one_more(session, account)
     wf = Workflow(
         id=new_id("wf"),
         name=body.name,
         description=source.description,
         owner=body.owner or source.owner,
         definition=source.definition,
-        visitor_id=visitor,
+        account_id=account,
     )
     session.add(wf)
     await session.flush()
-    return await get_workflow(session, wf.id, visitor=visitor)
+    return await get_workflow(session, wf.id, account=account)
 
 
 def schema_types(definition: WorkflowDefinition) -> SchemaTypes:
@@ -253,7 +240,7 @@ def schema_types(definition: WorkflowDefinition) -> SchemaTypes:
 
 
 async def save_workflow(
-    session: AsyncSession, workflow_id: str, body: WorkflowIn, *, visitor: str | None = None
+    session: AsyncSession, workflow_id: str, body: WorkflowIn, *, account: str | None = None
 ) -> WorkflowOut:
     """Create or replace the workflow's definition (the builder saves all of it); its status
     does not change."""
@@ -261,50 +248,53 @@ async def save_workflow(
     if issues := [issue for rule in body.rules for issue in rule_issues(rule, types)]:
         raise AppError(422, "; ".join(issues))
     if await session.get(Workflow, workflow_id) is None:
-        await _room_for_one_more(session, visitor)
+        await _room_for_one_more(session, account)
     # Create the draft if it is new: one statement, so two first saves cannot both insert it.
     await session.execute(
         insert(Workflow)
-        .values(id=workflow_id, status="draft", definition={}, visitor_id=visitor)
+        .values(id=workflow_id, status="draft", definition={}, account_id=account)
         .on_conflict_do_nothing(index_elements=[Workflow.id])
     )
     wf = await session.get_one(Workflow, workflow_id, with_for_update=True)
-    if wf.status == "archived" or (visitor is not None and wf.visitor_id not in (None, visitor)):
+    if wf.status == "archived" or not sees_workflow(wf, account):
         raise AppError(404, "Workflow not found.")
-    _own(wf, visitor)
+    own_workflow(wf, account)
     wf.name, wf.description, wf.owner = body.name, body.description, body.owner
     wf.definition = body.model_dump(include={"documents", "rules"})
     await session.flush()
-    return await get_workflow(session, workflow_id, visitor=visitor)
+    return await get_workflow(session, workflow_id, account=account)
 
 
 async def archive_workflows(
-    session: AsyncSession, workflow_ids: list[str], *, visitor: str | None = None
+    session: AsyncSession, workflow_ids: list[str], *, account: str | None = None
 ) -> None:
-    """Archive the workflows (final); their API keys stop working. A visitor archives only
-    their own."""
+    """Archive the workflows (final); their API keys stop working. An account archives
+    only its own."""
     query = update(Workflow).where(Workflow.id.in_(workflow_ids))
-    if visitor is not None:
-        query = query.where(Workflow.visitor_id == visitor)
+    if account is not None:
+        query = query.where(Workflow.account_id == account)
     await session.execute(query.values(status="archived"))
 
 
 async def archive_workflow(
-    session: AsyncSession, workflow_id: str, *, visitor: str | None = None
+    session: AsyncSession, workflow_id: str, *, account: str | None = None
 ) -> None:
     """Archive one workflow: 404 when the caller cannot see it, 403 for a shared example."""
-    _own(await load(session, workflow_id, visitor=visitor), visitor)
+    own_workflow(await load(session, workflow_id, account=account), account)
     await archive_workflows(session, [workflow_id])
 
 
-async def deploy_workflow(session: AsyncSession, workflow_id: str) -> WorkflowOut:
+async def deploy_workflow(
+    session: AsyncSession, workflow_id: str, *, account: str | None = None
+) -> WorkflowOut:
     """Activate the workflow with a new API key, returned once."""
-    wf = await load(session, workflow_id)
+    wf = await load(session, workflow_id, account=account)
+    own_workflow(wf, account)
     key = new_api_key()
     wf.deployed_at, wf.status = datetime.now(UTC), "active"
     wf.api_key_hash, wf.api_key_hint = hash_api_key(key), api_key_hint(key)
     await session.flush()
-    return await get_workflow(session, workflow_id, api_key=key)
+    return await get_workflow(session, workflow_id, api_key=key, account=account)
 
 
 def check_rules(definition: WorkflowDefinition) -> list[RuleCheck]:
@@ -329,7 +319,7 @@ async def purge_visitor_workflows(session: AsyncSession) -> int:
     before = datetime.now(UTC) - timedelta(days=settings.demo_retention_days)
     deleted = await session.scalars(
         delete(Workflow)
-        .where(Workflow.visitor_id.isnot(None), Workflow.updated_at < before)
+        .where(Workflow.account_id.like("visitor-%"), Workflow.updated_at < before)
         .returning(Workflow.id)
     )
     return len(deleted.all())

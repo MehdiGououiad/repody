@@ -128,6 +128,9 @@ Keycloak realm roles -> `infra/auth.py` (`ROLE_PERMISSIONS`). Routes declare `re
 | `viewer` | Read workflows, runs and audits |
 | `operator` | Viewer + write workflows, start runs, dashboard and platform config |
 | `admin` | Operator + delete workflows |
+| `platform_admin` | Admin + grant credits; sees every client |
+
+Roles say what a user may do; their **account** says on what (`app/scope.py`). A Keycloak group `client-<name>` makes the user's client company their account: they see and change only its workflows and runs, and shared workflows (no account) read-only. Users outside any client group see everything. **Credits** (`app/credits.py`, `credit_entries`): every run is metered by pages sent to the model and, with `AUDIT_CREDITS_ENFORCED`, refused (402) when its account cannot pay. Setup and sizing: [deploy/ENV.md](deploy/ENV.md#credits).
 
 ## Tests
 

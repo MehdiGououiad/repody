@@ -49,6 +49,14 @@ x-backend-env: &backend-env
   AUDIT_LLAMACPP_SERVED_MODEL: numind/NuExtract3
   AUDIT_LLAMACPP_PROBE: "false"
   AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
+  # The demo for invited clients: each client company (Keycloak group client-<name>) pays its
+  # runs with credits a platform admin grants (POST /v1/credits/grants). 1 credit = 1 page, plus
+  # 8 per run for the GPU's start and idle time: 200 credits cost about $1 of Modal GPU at most
+  # (deploy/ENV.md, "Credits").
+  AUDIT_CREDITS_ENFORCED: "true"
+  AUDIT_CREDIT_RUN_FEE: "8"
+  AUDIT_MAX_PAGES_PER_RUN: "30"
+  AUDIT_RUNS_PER_MINUTE_PER_CLIENT: "10"
   # Requests in flight to the model, per process: the vLLM server takes 4 at once (MAX_INPUTS).
   AUDIT_INFERENCE_CONCURRENCY: "4"
   # A cold model start right after a Modal deploy takes up to ~8.5 minutes (deploy/modal/README.md).
@@ -244,6 +252,10 @@ services:
         condition: service_completed_successfully
       seaweedfs:
         condition: service_healthy
+    # Uploads wait in /tmp (memory) until stored: bounded, so a burst of uploads fails a
+    # request instead of the whole API.
+    tmpfs:
+      - /tmp:size=256m
     environment:
       <<: *backend-env
       OTEL_SERVICE_NAME: repody-api

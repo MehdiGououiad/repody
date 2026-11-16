@@ -11,6 +11,7 @@ are rendered in worker threads, so every PDFium call holds ``_PDFIUM``.
 import base64
 import io
 import threading
+from dataclasses import dataclass
 from typing import Any, BinaryIO
 
 import pypdfium2 as pdfium
@@ -29,27 +30,40 @@ PDF = "application/pdf"
 _PDFIUM = threading.Lock()
 
 
-def file_type(file: BinaryIO) -> str | None:
-    """The MIME type of a PDF, PNG, JPEG or WebP file, or None when neither PDFium nor
-    Pillow opens it. The stream is read from the start and rewound."""
+@dataclass(frozen=True, slots=True)
+class FileInfo:
+    mime: str
+    pages: int  # a PDF's pages, 1 for an image
+
+
+def inspect(file: BinaryIO) -> FileInfo | None:
+    """What a PDF, PNG, JPEG or WebP file is, and its page count, from its headers (no page is
+    decoded); None when neither PDFium nor Pillow opens it. The stream is read from the start
+    and rewound. Blocking (PDFium holds a process-wide lock): call it in a thread."""
     try:
         file.seek(0)
         try:
             with Image.open(file, formats=IMAGE_FORMATS) as image:
                 image.verify()
-                return Image.MIME[image.format or ""]
+                return FileInfo(Image.MIME[image.format or ""], 1)
         except Image.DecompressionBombError:
             return None
         except OSError, SyntaxError, KeyError:  # UnidentifiedImageError is an OSError
             pass
         file.seek(0)
         try:
-            with _PDFIUM, pdfium.PdfDocument(file):
-                return PDF
+            with _PDFIUM, pdfium.PdfDocument(file) as pdf:
+                return FileInfo(PDF, len(pdf))
         except pdfium.PdfiumError:
             return None
     finally:
         file.seek(0)
+
+
+def file_type(file: BinaryIO) -> str | None:
+    """The MIME type of a PDF, PNG, JPEG or WebP file (see ``inspect``)."""
+    info = inspect(file)
+    return info.mime if info else None
 
 
 def _render(page: pdfium.PdfPage, dpi: int) -> Image.Image:

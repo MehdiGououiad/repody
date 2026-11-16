@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 import structlog
 from sqlalchemy.orm import selectinload
 
+from repody.app import credits
 from repody.app.lifecycle import fail_run, move_run
 from repody.app.progress import FINALIZE_STEP, MODEL_STEP, RULES_STEP, Tracker, extract_step
 from repody.extraction import client
@@ -132,6 +133,15 @@ async def _process(run_id: str) -> None:
             await session.rollback()
             log.warning("run_finished_elsewhere")
             return
+        await credits.settle_done(
+            session,
+            run_id,
+            pages=_pages_sent(run.documents),
+            model_ms=run.extraction_ms,
+            model_failed=any(
+                (doc.extraction or {}).get("error") == EXTRACTION_FAILED for doc in run.documents
+            ),
+        )
         await session.commit()
     log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
 
@@ -146,8 +156,35 @@ async def _wake_model(tracker: Tracker) -> None:
     await tracker.finish(MODEL_STEP, cold_start=asleep, duration_ms=duration_ms)
 
 
+def _pages_sent(documents: list[RunDocument]) -> int:
+    return sum(
+        ExtractionMeta.model_validate(doc.extraction).pages_sent
+        for doc in documents
+        if doc.extraction
+    )
+
+
+# Documents read and rendered at once in this process, all runs together: a document's file and
+# its page images are in memory from its download to the model's answer, so this bounds a
+# worker's memory, not only the model's requests (AUDIT_INFERENCE_CONCURRENCY).
+_documents: dict[asyncio.AbstractEventLoop, asyncio.Semaphore] = {}
+
+
+def _document_slots() -> asyncio.Semaphore:
+    loop = asyncio.get_running_loop()
+    if loop not in _documents:
+        _documents.clear()  # a new event loop (tests): the old semaphore belongs to the old one
+        _documents[loop] = asyncio.Semaphore(get_settings().inference_concurrency)
+    return _documents[loop]
+
+
 async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker) -> int:
     """Extract one uploaded document into its fields (one per schema leaf); its duration in ms."""
+    async with _document_slots():
+        return await _extract_one(run_doc, doc, tracker)
+
+
+async def _extract_one(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker) -> int:
     step_id = extract_step(doc.id)
     await tracker.start(step_id)
     try:

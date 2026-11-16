@@ -73,7 +73,31 @@ def instructions(doc: DocumentDef) -> str:
     return "\n\n".join(block for block in blocks if block)
 
 
-def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
+def _has_list(fields: list[SchemaField]) -> bool:
+    return any(
+        field.template_type in ("object-array", "multi-enum")
+        or scalar_type(field.template_type) != field.template_type
+        or _has_list(field.children)
+        for field in fields
+    )
+
+
+def _leaves(fields: list[SchemaField]) -> int:
+    return sum(_leaves(field.children) if field.children else 1 for field in fields)
+
+
+TOKENS_PER_FIELD = 256  # a long text value; most answers use a fraction of it
+
+
+def answer_budget(doc: DocumentDef, max_tokens: int) -> int:
+    """The longest answer a structured request may get: a schema without lists (tables, lists)
+    has a known size, so an answer that loops stops early; one with lists gets ``max_tokens``."""
+    if _has_list(doc.schema_fields):
+        return max_tokens
+    return min(max_tokens, TOKENS_PER_FIELD * (1 + _leaves(doc.schema_fields)))
+
+
+def structured_request(doc: DocumentDef, model: str, *, max_tokens: int) -> dict[str, Any]:
     """Request body; the page images go in the last (user) message."""
     examples = [ex for ex in doc.extraction_icl_examples if ex.input.strip() and ex.output.strip()]
     kwargs: dict[str, Any] = {
@@ -85,6 +109,7 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
     return {
         "model": model,
         "temperature": STRUCTURED_TEMPERATURE,
+        "max_tokens": answer_budget(doc, max_tokens),
         "messages": [
             *(
                 {
@@ -102,10 +127,11 @@ def structured_request(doc: DocumentDef, model: str) -> dict[str, Any]:
     }
 
 
-def markdown_request(model: str) -> dict[str, Any]:
+def markdown_request(model: str, *, max_tokens: int) -> dict[str, Any]:
     return {
         "model": model,
         "temperature": MARKDOWN_TEMPERATURE,
+        "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": []}],
         "extra_body": {"chat_template_kwargs": {"mode": "markdown", "enable_thinking": False}},
     }

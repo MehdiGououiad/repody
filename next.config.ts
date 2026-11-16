@@ -27,6 +27,22 @@ const nextConfig: NextConfig = {
   },
   // /api/v1/* is rewritten at runtime by proxy.ts to INTERNAL_API_URL (Compose: http://api:8000,
   // K8s: http://repody-api:8000). Do not bake it into rewrites: images must stay portable.
+  // Browser protections for every page: no framing (clickjacking on publish and delete), no
+  // MIME sniffing, no full URLs (report ids) in the Referer sent to other sites.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

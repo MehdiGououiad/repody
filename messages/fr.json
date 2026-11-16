@@ -778,6 +778,9 @@
       "allowed": "Autorisé",
       "notAllowed": "Non autorisé",
       "withCredits": "Avec des crédits",
+      "account": "Client",
+      "credits": "Crédits",
+      "creditsLeft": "{balance, plural, one {# page restante} other {# pages restantes}}",
       "permissions": {
         "workflow:read": "Voir les workflows",
         "workflow:write": "Créer et modifier des workflows",
@@ -785,7 +788,8 @@
         "workflow:delete": "Supprimer des workflows",
         "run:read": "Voir les exécutions et les rapports",
         "run:execute": "Lancer des documents et arrêter des exécutions",
-        "metrics:read": "Voir la vue d'ensemble et les détails de la plateforme"
+        "metrics:read": "Voir la vue d'ensemble et les détails de la plateforme",
+        "credits:grant": "Donner des crédits aux clients"
       },
       "roles": {
         "viewer": "Lecteur",

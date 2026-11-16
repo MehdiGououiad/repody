@@ -30,6 +30,7 @@ import structlog
 from sqlalchemy import ColumnElement, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from repody.app import credits
 from repody.infra import db
 from repody.infra.models import Run
 from repody.schemas.run import RunStatus
@@ -89,10 +90,21 @@ def failure(error: str) -> dict[str, Any]:
     return {"error": error, "finished_at": datetime.now(UTC)}
 
 
+async def fail(
+    session: AsyncSession, run_id: str, error: str, *, only_from: RunStatus | None = None
+) -> bool:
+    """Move a queued or running run to failed and settle its credits (repody.app.credits);
+    False when it was not in such a state. The caller commits."""
+    if not await move_run(session, run_id, "failed", only_from=only_from, **failure(error)):
+        return False
+    await credits.settle_failed(session, run_id)
+    return True
+
+
 async def fail_run(run_id: str, error: str, *, only_if: RunStatus | None = None) -> bool:
     """Mark a queued or running run failed (``only_if`` narrows the expected status)."""
     async with db.session_factory() as session:
-        failed = await move_run(session, run_id, "failed", only_from=only_if, **failure(error))
+        failed = await fail(session, run_id, error, only_from=only_if)
         await session.commit()
     if failed:
         log.warning("run_failed", run_id=run_id, error=error)

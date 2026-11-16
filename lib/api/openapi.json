@@ -428,7 +428,7 @@
           "runs"
         ],
         "summary": "Start Run",
-        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).\nPoll ``GET /v1/runs/{run_id}`` until its status is done or failed.\n\nA caller that is neither gets 401 whether or not the workflow exists.",
+        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).\nPoll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's\naccount has not enough credits for the files' pages.\n\nA caller that is neither gets 401 whether or not the workflow exists.",
         "operationId": "start_run_v1_workflows__workflow_id__runs_post",
         "security": [
           {
@@ -444,6 +444,25 @@
               "type": "string",
               "title": "Workflow Id"
             }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Retrying with the same key returns the run it started (202).",
+              "title": "Idempotency-Key"
+            },
+            "description": "Retrying with the same key returns the run it started (202)."
           }
         ],
         "requestBody": {
@@ -970,7 +989,7 @@
           "platform"
         ],
         "summary": "Me",
-        "description": "The caller's roles and permissions (none when signed out).",
+        "description": "The caller's roles, permissions and credits (none when signed out).",
         "operationId": "me_v1_me_get",
         "responses": {
           "200": {
@@ -1080,7 +1099,7 @@
           "platform"
         ],
         "summary": "Cancel",
-        "description": "Stop a queued or running run. 409 when it has already finished.",
+        "description": "Stop a queued or running run of the caller's account. 409 when it has already finished.",
         "operationId": "cancel_v1_runs__run_id__cancel_post",
         "security": [
           {
@@ -1187,6 +1206,130 @@
           }
         ]
       }
+    },
+    "/v1/credits/grants": {
+      "post": {
+        "tags": [
+          "credits"
+        ],
+        "summary": "Grant",
+        "description": "Add credits to an account (a negative amount takes them back); its new balance.",
+        "operationId": "grant_v1_credits_grants_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrantIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Credits"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/v1/credits/usage": {
+      "get": {
+        "tags": [
+          "credits"
+        ],
+        "summary": "Usage",
+        "description": "Each account's balance and the runs it paid for: the caller's account, or every account\nfor a caller outside any client (a platform admin).",
+        "operationId": "usage_v1_credits_usage_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "since",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Runs queued from (ISO 8601).",
+              "title": "Since"
+            },
+            "description": "Runs queued from (ISO 8601)."
+          },
+          {
+            "name": "until",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Runs queued before.",
+              "title": "Until"
+            },
+            "description": "Runs queued before."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsageReport"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1210,7 +1353,8 @@
                 "workflow:delete",
                 "run:read",
                 "run:execute",
-                "metrics:read"
+                "metrics:read",
+                "credits:grant"
               ]
             },
             "type": "array",
@@ -1226,22 +1370,94 @@
                 "workflow:delete",
                 "run:read",
                 "run:execute",
-                "metrics:read"
+                "metrics:read",
+                "credits:grant"
               ]
             },
             "type": "array",
             "title": "Withcredits",
             "description": "A playground visitor's paid actions: offered, answered 402 (contact us)."
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Credits"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "None when signed out."
           }
         },
         "type": "object",
         "required": [
           "roles",
           "permissions",
-          "withCredits"
+          "withCredits",
+          "credits"
         ],
         "title": "Access",
         "description": "What the caller may do: the web app shows or disables each action from it."
+      },
+      "AccountUsage": {
+        "properties": {
+          "account": {
+            "type": "string",
+            "title": "Account"
+          },
+          "balance": {
+            "type": "integer",
+            "title": "Balance"
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held"
+          },
+          "granted": {
+            "type": "integer",
+            "title": "Granted"
+          },
+          "runs": {
+            "type": "integer",
+            "title": "Runs",
+            "description": "Settled runs."
+          },
+          "pages": {
+            "type": "integer",
+            "title": "Pages",
+            "description": "Pages sent to the model by settled runs."
+          },
+          "modelMs": {
+            "type": "integer",
+            "title": "Modelms",
+            "description": "Extraction time of settled runs."
+          },
+          "lastActivity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastactivity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account",
+          "balance",
+          "held",
+          "granted",
+          "runs",
+          "pages",
+          "modelMs",
+          "lastActivity"
+        ],
+        "title": "AccountUsage"
       },
       "ActiveRun": {
         "properties": {
@@ -2224,6 +2440,45 @@
         "type": "object",
         "title": "CreateWorkflow"
       },
+      "Credits": {
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account",
+            "description": "client-<name>, or None for a caller outside any client (sees everything)."
+          },
+          "balance": {
+            "type": "integer",
+            "title": "Balance",
+            "description": "Credits left (1 credit = 1 page sent to the model)."
+          },
+          "held": {
+            "type": "integer",
+            "title": "Held",
+            "description": "Credits held by runs still in progress."
+          },
+          "enforced": {
+            "type": "boolean",
+            "title": "Enforced"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account",
+          "balance",
+          "held",
+          "enforced"
+        ],
+        "title": "Credits",
+        "description": "The caller's account and balance; ``enforced`` says whether runs are refused at zero."
+      },
       "Dashboard": {
         "properties": {
           "kpis": {
@@ -2368,6 +2623,7 @@
               "$ref": "#/components/schemas/SchemaField-Input"
             },
             "type": "array",
+            "maxItems": 300,
             "title": "Schema"
           },
           "extractionInstructions": {
@@ -2387,6 +2643,7 @@
               "$ref": "#/components/schemas/IclExample"
             },
             "type": "array",
+            "maxItems": 5,
             "title": "Extractioniclexamples"
           }
         },
@@ -2414,6 +2671,7 @@
               "$ref": "#/components/schemas/SchemaField-Output"
             },
             "type": "array",
+            "maxItems": 300,
             "title": "Schema"
           },
           "extractionInstructions": {
@@ -2433,6 +2691,7 @@
               "$ref": "#/components/schemas/IclExample"
             },
             "type": "array",
+            "maxItems": 5,
             "title": "Extractioniclexamples"
           }
         },
@@ -2703,6 +2962,34 @@
         "title": "FieldRef",
         "description": "A schema field: ``total`` or, with several documents, ``invoice.total``."
       },
+      "GrantIn": {
+        "properties": {
+          "account": {
+            "type": "string",
+            "pattern": "^(client-[a-z0-9][a-z0-9_.-]{0,62}|deployment)$",
+            "title": "Account"
+          },
+          "amount": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": -1000000.0,
+            "title": "Amount",
+            "description": "Credits to add (negative to take back)."
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 20000,
+            "title": "Note",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "account",
+          "amount"
+        ],
+        "title": "GrantIn"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2802,12 +3089,12 @@
         "properties": {
           "input": {
             "type": "string",
-            "maxLength": 100000,
+            "maxLength": 20000,
             "title": "Input"
           },
           "output": {
             "type": "string",
-            "maxLength": 100000,
+            "maxLength": 20000,
             "title": "Output"
           }
         },
@@ -3164,6 +3451,7 @@
               "maxLength": 64
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Appliesto"
           },
           "severity": {
@@ -3180,6 +3468,7 @@
               "$ref": "#/components/schemas/Condition-Input"
             },
             "type": "array",
+            "maxItems": 50,
             "title": "Conditions"
           }
         },
@@ -3218,6 +3507,7 @@
               "maxLength": 64
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Appliesto"
           },
           "severity": {
@@ -3234,6 +3524,7 @@
               "$ref": "#/components/schemas/Condition-Output"
             },
             "type": "array",
+            "maxItems": 50,
             "title": "Conditions"
           }
         },
@@ -3500,6 +3791,7 @@
               "maxLength": 200
             },
             "type": "array",
+            "maxItems": 100,
             "title": "Enumvalues"
           },
           "children": {
@@ -3507,6 +3799,7 @@
               "$ref": "#/components/schemas/SchemaField-Input"
             },
             "type": "array",
+            "maxItems": 300,
             "title": "Children"
           }
         },
@@ -3547,6 +3840,7 @@
               "maxLength": 200
             },
             "type": "array",
+            "maxItems": 100,
             "title": "Enumvalues"
           },
           "children": {
@@ -3554,6 +3848,7 @@
               "$ref": "#/components/schemas/SchemaField-Output"
             },
             "type": "array",
+            "maxItems": 300,
             "title": "Children"
           }
         },
@@ -3638,6 +3933,48 @@
         ],
         "title": "TemplateTypeInfo"
       },
+      "UsageReport": {
+        "properties": {
+          "since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AccountUsage"
+            },
+            "type": "array",
+            "title": "Accounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "since",
+          "until",
+          "accounts"
+        ],
+        "title": "UsageReport"
+      },
       "ValidationError": {
         "properties": {
           "loc": {
@@ -3712,6 +4049,7 @@
               "$ref": "#/components/schemas/DocumentDef-Input"
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Documents"
           },
           "rules": {
@@ -3719,6 +4057,7 @@
               "$ref": "#/components/schemas/Rule-Input"
             },
             "type": "array",
+            "maxItems": 200,
             "title": "Rules"
           }
         },
@@ -3733,6 +4072,7 @@
               "$ref": "#/components/schemas/DocumentDef-Input"
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Documents"
           },
           "rules": {
@@ -3740,6 +4080,7 @@
               "$ref": "#/components/schemas/Rule-Input"
             },
             "type": "array",
+            "maxItems": 200,
             "title": "Rules"
           },
           "name": {
@@ -3788,6 +4129,7 @@
               "$ref": "#/components/schemas/DocumentDef-Output"
             },
             "type": "array",
+            "maxItems": 20,
             "title": "Documents"
           },
           "rules": {
@@ -3795,6 +4137,7 @@
               "$ref": "#/components/schemas/Rule-Output"
             },
             "type": "array",
+            "maxItems": 200,
             "title": "Rules"
           },
           "name": {

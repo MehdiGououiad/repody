@@ -32,8 +32,13 @@ class Reply:
 def _client(base_url: str, api_key: str) -> AsyncOpenAI:
     """One client (connection pool) per server, reused across requests."""
     if (base_url, api_key) not in _clients:
+        # No retries: a request that timed out may have kept the GPU busy for the whole timeout,
+        # and the document reports its failure instead (the run's other documents go on).
         _clients[base_url, api_key] = AsyncOpenAI(
-            base_url=base_url, api_key=api_key, timeout=get_settings().inference_timeout_seconds
+            base_url=base_url,
+            api_key=api_key,
+            timeout=get_settings().inference_timeout_seconds,
+            max_retries=0,
         )
     return _clients[base_url, api_key]
 

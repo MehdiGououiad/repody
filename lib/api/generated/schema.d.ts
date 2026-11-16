@@ -130,7 +130,8 @@ export interface paths {
         /**
          * Start Run
          * @description Start a run with the workflow API key (production) or as a signed-in user (test run).
-         *     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed.
+         *     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's
+         *     account has not enough credits for the files' pages.
          *
          *     A caller that is neither gets 401 whether or not the workflow exists.
          */
@@ -298,7 +299,7 @@ export interface paths {
         };
         /**
          * Me
-         * @description The caller's roles and permissions (none when signed out).
+         * @description The caller's roles, permissions and credits (none when signed out).
          */
         get: operations["me_v1_me_get"];
         put?: never;
@@ -357,7 +358,7 @@ export interface paths {
         put?: never;
         /**
          * Cancel
-         * @description Stop a queued or running run. 409 when it has already finished.
+         * @description Stop a queued or running run of the caller's account. 409 when it has already finished.
          */
         post: operations["cancel_v1_runs__run_id__cancel_post"];
         delete?: never;
@@ -403,6 +404,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/credits/grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Grant
+         * @description Add credits to an account (a negative amount takes them back); its new balance.
+         */
+        post: operations["grant_v1_credits_grants_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/credits/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage
+         * @description Each account's balance and the runs it paid for: the caller's account, or every account
+         *     for a caller outside any client (a platform admin).
+         */
+        get: operations["usage_v1_credits_usage_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -415,12 +457,42 @@ export interface components {
             /** Roles */
             roles: string[];
             /** Permissions */
-            permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read")[];
+            permissions: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant")[];
             /**
              * Withcredits
              * @description A playground visitor's paid actions: offered, answered 402 (contact us).
              */
-            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read")[];
+            withCredits: ("workflow:read" | "workflow:write" | "workflow:deploy" | "workflow:delete" | "run:read" | "run:execute" | "metrics:read" | "credits:grant")[];
+            /** @description None when signed out. */
+            credits: components["schemas"]["Credits"] | null;
+        };
+        /** AccountUsage */
+        AccountUsage: {
+            /** Account */
+            account: string;
+            /** Balance */
+            balance: number;
+            /** Held */
+            held: number;
+            /** Granted */
+            granted: number;
+            /**
+             * Runs
+             * @description Settled runs.
+             */
+            runs: number;
+            /**
+             * Pages
+             * @description Pages sent to the model by settled runs.
+             */
+            pages: number;
+            /**
+             * Modelms
+             * @description Extraction time of settled runs.
+             */
+            modelMs: number;
+            /** Lastactivity */
+            lastActivity: string | null;
         };
         /** ActiveRun */
         ActiveRun: {
@@ -845,6 +917,29 @@ export interface components {
              */
             owner: string;
         };
+        /**
+         * Credits
+         * @description The caller's account and balance; ``enforced`` says whether runs are refused at zero.
+         */
+        Credits: {
+            /**
+             * Account
+             * @description client-<name>, or None for a caller outside any client (sees everything).
+             */
+            account: string | null;
+            /**
+             * Balance
+             * @description Credits left (1 credit = 1 page sent to the model).
+             */
+            balance: number;
+            /**
+             * Held
+             * @description Credits held by runs still in progress.
+             */
+            held: number;
+            /** Enforced */
+            enforced: boolean;
+        };
         /** Dashboard */
         Dashboard: {
             /** Kpis */
@@ -1076,6 +1171,21 @@ export interface components {
              * @default
              */
             field: string;
+        };
+        /** GrantIn */
+        GrantIn: {
+            /** Account */
+            account: string;
+            /**
+             * Amount
+             * @description Credits to add (negative to take back).
+             */
+            amount: number;
+            /**
+             * Note
+             * @default
+             */
+            note: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1520,6 +1630,15 @@ export interface components {
             /** Listable */
             listable: boolean;
         };
+        /** UsageReport */
+        UsageReport: {
+            /** Since */
+            since: string | null;
+            /** Until */
+            until: string | null;
+            /** Accounts */
+            accounts: components["schemas"]["AccountUsage"][];
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1942,7 +2061,10 @@ export interface operations {
     start_run_v1_workflows__workflow_id__runs_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Retrying with the same key returns the run it started (202). */
+                "idempotency-key"?: string | null;
+            };
             path: {
                 workflow_id: string;
             };
@@ -2377,6 +2499,73 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Dashboard"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    grant_v1_credits_grants_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GrantIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    usage_v1_credits_usage_get: {
+        parameters: {
+            query?: {
+                /** @description Runs queued from (ISO 8601). */
+                since?: string | null;
+                /** @description Runs queued before. */
+                until?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsageReport"];
                 };
             };
             /** @description Validation Error */

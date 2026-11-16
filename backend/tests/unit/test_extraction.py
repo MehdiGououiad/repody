@@ -50,7 +50,7 @@ def test_structured_request():
         extraction_instructions="French invoice.",
         extraction_icl_examples=[IclExample(input="Total 5", output='{"total": 5}')],
     )
-    request = structured_request(doc, "nuextract")
+    request = structured_request(doc, "nuextract", max_tokens=4096)
     assert request["temperature"] == 0.2  # the card's in-context example
     assert request["messages"][0]["role"] == "developer"
     assert request["messages"][-1] == {"role": "user", "content": []}
@@ -60,12 +60,17 @@ def test_structured_request():
         "French invoice.\n\nField guidance:\n- total: Amount due\n- vendor.name: Legal name"
     )
     assert instructions(DocumentDef(id="d")) == ""
-    markdown = markdown_request("m")
+    markdown = markdown_request("m", max_tokens=4096)
     assert markdown["extra_body"]["chat_template_kwargs"] == {
         "mode": "markdown",
         "enable_thinking": False,
     }
     assert markdown["temperature"] == 1.0  # the card's document-to-Markdown example
+    assert markdown["max_tokens"] == 4096
+    # No lists: the answer's size follows the schema (an answer that loops stops early).
+    assert request["max_tokens"] == 4096  # tables and lists: as long as they need
+    flat = DocumentDef(id="f", schema=[FIELDS[0], FIELDS[3]])  # total, vendor.name
+    assert nuextract.answer_budget(flat, 4096) == nuextract.TOKENS_PER_FIELD * (1 + 2)
 
 
 def test_leaf_values_keep_json_types():

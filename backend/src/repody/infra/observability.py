@@ -52,7 +52,9 @@ def setup() -> None:
         logging.getLogger(name).propagate = True
     # Errors only: tracing is the OpenTelemetry agent's. Leaving traces_sample_rate unset is
     # what turns Sentry tracing off (any value, even 0, enables it).
-    sentry_sdk.init(environment=settings.deployment_environment)
+    # No local variables in reports: on the extraction path they hold uploaded files, page images
+    # and extracted values (clients' documents). Tracebacks and messages are enough.
+    sentry_sdk.init(environment=settings.deployment_environment, include_local_variables=False)
     if os.environ.get("OTEL_SDK_DISABLED", "true") == "false":
         _trace_hatchet()
 

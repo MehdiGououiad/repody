@@ -6,7 +6,8 @@ import structlog
 from fastapi import APIRouter, Response
 from sqlalchemy import text
 
-from repody.api.deps import OptionalUser, SessionDep, VisitorScope, require
+from repody.api.deps import AccountScope, OptionalUser, SessionDep, require
+from repody.app.credits import credits_of
 from repody.app.dashboard import get_dashboard
 from repody.app.operations import cancel_run, get_operations
 from repody.extraction.client import model_available
@@ -57,9 +58,13 @@ async def ready(response: Response) -> Health:
 
 
 @router.get("/me")
-async def me(user: OptionalUser) -> Access:
-    """The caller's roles and permissions (none when signed out)."""
-    return user.access() if user else Access(roles=[], permissions=[])
+async def me(user: OptionalUser, session: SessionDep) -> Access:
+    """The caller's roles, permissions and credits (none when signed out)."""
+    if user is None:
+        return Access(roles=[], permissions=[])
+    access = user.access()
+    access.credits = await credits_of(session, user.account)
+    return access
 
 
 @router.get("/platform/config", dependencies=[require("metrics:read")])
@@ -78,17 +83,17 @@ async def platform_config() -> PlatformConfig:
 
 
 @router.get("/operations", dependencies=[require("run:read")])
-async def operations(session: SessionDep) -> Operations:
+async def operations(session: SessionDep, account: AccountScope) -> Operations:
     """The control room: runs in flight with their progress, recent failures, throughput."""
-    return await get_operations(session)
+    return await get_operations(session, account=account)
 
 
 @router.post("/runs/{run_id}/cancel", status_code=204)
 async def cancel(
     run_id: str, session: SessionDep, user: Annotated[User, require("run:execute")]
 ) -> None:
-    """Stop a queued or running run. 409 when it has already finished."""
-    await cancel_run(session, run_id, user.subject)
+    """Stop a queued or running run of the caller's account. 409 when it has already finished."""
+    await cancel_run(session, run_id, user.subject, account=user.account)
 
 
 @router.get("/catalog", dependencies=[require("workflow:read")])
@@ -98,5 +103,5 @@ async def get_catalog() -> Catalog:
 
 
 @router.get("/dashboard", dependencies=[require("metrics:read")])
-async def dashboard(session: SessionDep, visitor: VisitorScope) -> Dashboard:
-    return await get_dashboard(session, visitor=visitor)
+async def dashboard(session: SessionDep, account: AccountScope) -> Dashboard:
+    return await get_dashboard(session, account=account)
