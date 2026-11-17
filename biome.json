@@ -18,6 +18,7 @@
       "!next-env.d.ts",
       "!pnpm-lock.yaml",
       "!lib/api/openapi.json",
+      "!lib/api/catalog.json",
       "!lib/api/generated",
       "!deploy/helm",
       "!e2e/fixtures",

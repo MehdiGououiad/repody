@@ -4,7 +4,6 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
 import type { Account } from "@/lib/auth/account";
-import { rolesFromAccessToken } from "@/lib/auth/jwt-claims";
 
 /**
  * Sign-in with Keycloak through Better Auth, stateless: no database. The session and the
@@ -96,13 +95,9 @@ export async function accessToken(
   }
 }
 
-/** The account the app shell shows: who is signed in and the roles the API grants them. */
+/** Who is signed in, as the app shell shows them (their roles come from `GET /v1/me`). */
 export async function currentAccount(headers: Headers): Promise<Account | null> {
-  const [current, token] = await Promise.all([session(headers), accessToken(headers)]);
+  const current = await session(headers);
   if (!current) return null;
-  return {
-    name: current.user.name || null,
-    email: current.user.email || null,
-    roles: rolesFromAccessToken(token?.token),
-  };
+  return { name: current.user.name || null, email: current.user.email || null };
 }

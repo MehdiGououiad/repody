@@ -1,14 +1,18 @@
 "use client";
 
 import { useMutation } from "@tanstack/react-query";
-import { Button as ButtonPrimitive } from "@ui-sdk/react/button";
+import {
+  createFileInputController,
+  FileInput,
+  FileInputDropzone,
+  FileInputTrigger,
+} from "@ui-sdk/react/file-input";
 import { Resizable, ResizableHandle, ResizablePanel } from "@ui-sdk/react/resizable";
 import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
 import { FileUp, Play, Plus, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
-import { useDropzone } from "react-dropzone";
 import { useCan } from "@/components/auth/access-context";
 import { Gate } from "@/components/auth/gate";
 import { DocChip } from "@/components/shared/doc-chip";
@@ -25,15 +29,8 @@ import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import { errorMessage } from "@/lib/query/get-query-client";
 import { fieldKey } from "@/lib/rules/field-key";
 import type { DocumentDef, SchemaField, WorkflowRule } from "@/lib/types";
-import { cn } from "@/lib/utils";
+import { UPLOAD_ACCEPT } from "@/lib/uploads";
 import { newDocument } from "@/lib/workflow/new-items";
-
-const ACCEPT = {
-  "application/pdf": [".pdf"],
-  "image/png": [".png"],
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/webp": [".webp"],
-};
 
 const signature = (field: SchemaField) =>
   `${field.name}|${field.templateType}|${field.description}`;
@@ -49,80 +46,67 @@ function SamplePane({
   const t = useTranslations("workflows.builder.workbench");
   const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
   useEffect(() => () => (url ? URL.revokeObjectURL(url) : undefined), [url]);
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
-    accept: ACCEPT,
-    maxFiles: 1,
-    multiple: false,
-    noClick: Boolean(file),
-    // The visible buttons open the picker; the drop area itself is not a second tab stop.
-    noKeyboard: true,
-    onDropAccepted: ([accepted]) => onFileChange(accepted ?? null),
-  });
+  const [picker] = useState(createFileInputController);
 
   return (
-    <div
-      {...getRootProps({
-        className: "relative flex h-full min-h-0 flex-col bg-canvas outline-none",
-      })}
+    <FileInput
+      controller={picker}
+      accept={UPLOAD_ACCEPT}
+      value={[]}
+      onValueChange={([accepted]) => {
+        if (accepted) onFileChange(accepted);
+      }}
     >
-      <input {...getInputProps()} aria-hidden />
-      {file && url ? (
-        <>
-          <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-3">
-            <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">{file.name}</span>
-            <Button variant="ghost" size="xs" onClick={open}>
-              <FileUp />
-              {t("replace")}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={t("removeSample")}
-              onClick={() => onFileChange(null)}
-            >
-              <X />
-            </Button>
-          </div>
-          {file.type === "application/pdf" ? (
-            <iframe
-              src={`${url}#toolbar=0&navpanes=0&view=FitH`}
-              title={file.name}
-              className="min-h-0 w-full flex-1 bg-canvas"
-            />
-          ) : (
-            <div className="min-h-0 flex-1 overflow-auto p-4">
-              {/* biome-ignore lint/performance/noImgElement: a local sample, shown as dropped. */}
-              <img
-                src={url}
-                alt={file.name}
-                className="mx-auto h-auto max-w-full rounded-md shadow-[0_0_0_1px_var(--line)]"
-              />
+      {/* The whole pane takes a drop; the visible buttons open the picker. */}
+      <FileInputDropzone className="group relative flex h-full min-h-0 flex-col bg-canvas outline-none">
+        {file && url ? (
+          <>
+            <div className="flex h-11 shrink-0 items-center gap-2 border-b border-line px-3">
+              <span className="min-w-0 flex-1 truncate text-[13px] text-ink-2">{file.name}</span>
+              <Button variant="ghost" size="xs" onClick={() => picker.open()}>
+                <FileUp />
+                {t("replace")}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={t("removeSample")}
+                onClick={() => onFileChange(null)}
+              >
+                <X />
+              </Button>
             </div>
-          )}
-        </>
-      ) : (
-        <ButtonPrimitive
-          onClick={open}
-          className={cn(
-            "m-auto flex aspect-[1/1.2] w-[min(320px,calc(100%-2rem))] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-panel px-6 text-center transition-[border-color,background-color,scale] duration-150 hover:border-accent hover:bg-accent-wash/40 active:scale-[0.99]",
-            isDragActive && "border-accent bg-accent-wash"
-          )}
-        >
-          <motion.span
-            animate={isDragActive ? { y: -4, scale: 1.06 } : { y: 0, scale: 1 }}
-            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            className="flex size-10 items-center justify-center rounded-full bg-panel text-ink-3 shadow-[0_0_0_1px_var(--line)]"
-          >
-            <FileUp className="size-4" aria-hidden />
-          </motion.span>
-          <span className="text-[13px] font-medium text-ink">{t("samplePrompt")}</span>
-          <span className="max-w-64 text-xs text-ink-3">{t("sampleHint")}</span>
-        </ButtonPrimitive>
-      )}
-      {isDragActive && file ? (
-        <div className="pointer-events-none absolute inset-2 rounded-xl border-2 border-dashed border-accent bg-accent-wash" />
-      ) : null}
-    </div>
+            {file.type === "application/pdf" ? (
+              <iframe
+                src={`${url}#toolbar=0&navpanes=0&view=FitH`}
+                title={file.name}
+                className="min-h-0 w-full flex-1 bg-canvas"
+              />
+            ) : (
+              <div className="min-h-0 flex-1 overflow-auto p-4">
+                {/* biome-ignore lint/performance/noImgElement: a local sample, shown as dropped. */}
+                <img
+                  src={url}
+                  alt={file.name}
+                  className="mx-auto h-auto max-w-full rounded-md shadow-[0_0_0_1px_var(--line)]"
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <FileInputTrigger className="m-auto flex aspect-[1/1.2] w-[min(320px,calc(100%-2rem))] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-panel px-6 text-center transition-[border-color,background-color,scale] duration-150 hover:border-accent hover:bg-accent-wash/40 active:scale-[0.99] group-data-[dragging]:border-accent group-data-[dragging]:bg-accent-wash">
+            <span className="flex size-10 items-center justify-center rounded-full bg-panel text-ink-3 shadow-[0_0_0_1px_var(--line)] transition-transform duration-300 group-data-[dragging]:-translate-y-1 group-data-[dragging]:scale-105">
+              <FileUp className="size-4" aria-hidden />
+            </span>
+            <span className="text-[13px] font-medium text-ink">{t("samplePrompt")}</span>
+            <span className="max-w-64 text-xs text-ink-3">{t("sampleHint")}</span>
+          </FileInputTrigger>
+        )}
+        {file ? (
+          <div className="pointer-events-none absolute inset-2 hidden rounded-xl border-2 border-dashed border-accent bg-accent-wash group-data-[dragging]:block" />
+        ) : null}
+      </FileInputDropzone>
+    </FileInput>
   );
 }
 

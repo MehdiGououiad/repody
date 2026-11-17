@@ -3,9 +3,8 @@
 import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ConditionRow } from "@/components/workflow/rules/condition-builder-row";
-import { useCatalog } from "@/lib/hooks/use-catalog";
+import { catalog } from "@/lib/catalog";
 import { isTouched } from "@/lib/rules/conditions";
 import type { FieldOption, TableOption } from "@/lib/rules/document-fields";
 import type { RuleCondition } from "@/lib/types";
@@ -26,8 +25,6 @@ export function ConditionBuilder({
   onConditionsChange: (conditions: RuleCondition[]) => void;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
-  const catalog = useCatalog();
-  if (!catalog) return <Skeleton className="h-8" />;
   const incomplete = conditions.some(isTouched) && !checks.some(Boolean);
 
   return (

@@ -10,14 +10,14 @@ on:
       - "site/**"
       - "lib/theme/generate.ts"
       - "messages/*.json"
-      - "backend/src/repody/schemas/catalog.py"
+      - "lib/api/catalog.json"
       - ".github/workflows/site.yml"
   pull_request:
     paths:
       - "site/**"
       - "lib/theme/generate.ts"
       - "messages/*.json"
-      - "backend/src/repody/schemas/catalog.py"
+      - "lib/api/catalog.json"
       - ".github/workflows/site.yml"
   workflow_dispatch:
 
