@@ -5,7 +5,8 @@ import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 
 /** A document's Markdown transcription (GitHub-flavoured: tables, lists), styled by
- * `@tailwindcss/typography` with the app's colours. */
+ * `@tailwindcss/typography` with the app's colours. The model writes it from the document, so
+ * images are dropped: a crafted document could otherwise make the browser load a remote URL. */
 export function DocumentMarkdownPreview({ text, className }: { text: string; className?: string }) {
   if (!text.trim()) return null;
   return (
@@ -18,7 +19,9 @@ export function DocumentMarkdownPreview({ text, className }: { text: string; cla
         className
       )}
     >
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={["img"]}>
+        {text}
+      </ReactMarkdown>
     </article>
   );
 }

@@ -5,21 +5,22 @@ from typing import Annotated
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
     Header,
     HTTPException,
     Path,
     Query,
-    UploadFile,
+    Request,
 )
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import Response, StreamingResponse
-from pydantic import Json
+from pydantic import ValidationError
+from starlette.datastructures import UploadFile
 
 from repody.api.deps import AccountScope, OptionalUser, SessionDep, TokenDep, require
 from repody.app import runs, workflows
 from repody.app.scope import own_workflow, sees_workflow
-from repody.infra.auth import api_key_matches, hash_api_key
+from repody.infra.auth import User, api_key_matches, hash_api_key
+from repody.infra.models import Workflow
 from repody.schemas.run import (
     AuditDetail,
     AuditFilter,
@@ -30,6 +31,7 @@ from repody.schemas.run import (
     Source,
 )
 from repody.schemas.workflow import WorkflowDefinition
+from repody.settings import get_settings
 
 router = APIRouter(tags=["runs"])
 CSV = "text/csv; charset=utf-8"
@@ -44,20 +46,69 @@ def _upload(upload: UploadFile) -> runs.Upload:
     )
 
 
-@router.post("/workflows/{workflow_id}/runs", status_code=202)
+# The multipart body, documented by hand: the route reads it itself, after the caller is known.
+START_RUN_BODY = {
+    "required": True,
+    "content": {
+        "multipart/form-data": {
+            "schema": {
+                "type": "object",
+                "properties": {
+                    "files": {
+                        "type": "array",
+                        "items": {"type": "string", "format": "binary"},
+                        "description": "One file per workflow document.",
+                    },
+                    "documents": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Per file, in order: the workflow document id or type.",
+                    },
+                    "definition": {
+                        "type": "string",
+                        "description": "Test runs only: an unsaved workflow definition (JSON).",
+                    },
+                },
+            }
+        }
+    },
+}
+
+
+async def _caller(
+    session: SessionDep, workflow_id: str, token: str | None, user: User | None
+) -> tuple[Source, str, Workflow]:
+    """Who starts the run, from the headers alone: the workflow API key (production) or a
+    signed-in user with run:execute (test run). 401 for anyone else, whether or not the workflow
+    exists; 404 for a workflow the caller cannot see."""
+    wf = await workflows.find(session, workflow_id)
+    if wf is not None and token and api_key_matches(token, wf.api_key_hash):
+        return "api", hash_api_key(token)[:16], wf
+    if user is None or not user.can("run:execute"):
+        raise HTTPException(401, UNAUTHORIZED)
+    if wf is None or not sees_workflow(wf, user.account):
+        raise HTTPException(404, "Workflow not found.")  # another client's does not exist
+    own_workflow(wf, user.account)
+    return "test", user.subject, wf
+
+
+@router.post(
+    "/workflows/{workflow_id}/runs",
+    status_code=202,
+    openapi_extra={"requestBody": START_RUN_BODY},
+    responses={
+        400: {"description": "A malformed form, or more files or fields than allowed."},
+        401: {"description": UNAUTHORIZED},
+        402: {"description": "The workflow's account has not enough credits."},
+        413: {"description": "The request is larger than AUDIT_MAX_REQUEST_BYTES."},
+    },
+)
 async def start_run(
+    request: Request,
     workflow_id: str,
     session: SessionDep,
     token: TokenDep,
     user: OptionalUser,
-    files: Annotated[list[UploadFile], File(description="One file per workflow document.")] = [],  # noqa: B006
-    documents: Annotated[
-        list[str], Form(description="Per file, in order: the workflow document id or type.")
-    ] = [],  # noqa: B006
-    definition: Annotated[
-        Json[WorkflowDefinition] | None,
-        Form(description="Test runs only: an unsaved workflow definition (JSON)."),
-    ] = None,
     idempotency_key: Annotated[
         str | None,
         Header(
@@ -70,32 +121,34 @@ async def start_run(
     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's
     account has not enough credits for the files' pages.
 
-    A caller that is neither gets 401 whether or not the workflow exists."""
-    wf = await workflows.find(session, workflow_id)
-    caller: tuple[Source, str] | None = None
-    if wf is not None and token and api_key_matches(token, wf.api_key_hash):
-        caller = ("api", hash_api_key(token)[:16])
-    elif user is not None and user.can("run:execute"):
-        caller = ("test", user.subject)
-        if wf is not None and not sees_workflow(wf, user.account):
-            wf = None  # another client's: to this caller it does not exist
-        if wf is not None:
-            own_workflow(wf, user.account)
-    if caller is None:
-        raise HTTPException(401, UNAUTHORIZED)
-    if wf is None:
-        raise HTTPException(404, "Workflow not found.")
-    source, client_key = caller
-    return await runs.start_run(
-        session,
-        wf,
-        source=source,
-        uploads=[_upload(upload) for upload in files],
-        slots=documents,
-        client_key=client_key,
-        definition=definition if source == "test" else None,
-        idempotency_key=idempotency_key,
-    )
+    The caller is checked before the body is read: without a valid key or session, nothing is
+    uploaded (401)."""
+    source, client_key, wf = await _caller(session, workflow_id, token, user)
+    settings = get_settings()
+    async with request.form(
+        max_files=settings.max_upload_files,
+        max_fields=settings.max_upload_files + 1,
+        max_part_size=settings.max_json_bytes,
+    ) as form:
+        files = [f for f in form.getlist("files") if isinstance(f, UploadFile)]
+        documents = [d for d in form.getlist("documents") if isinstance(d, str)]
+        raw = form.get("definition")
+        definition = None
+        if source == "test" and isinstance(raw, str) and raw:
+            try:
+                definition = WorkflowDefinition.model_validate_json(raw)
+            except ValidationError as error:
+                raise RequestValidationError(error.errors(include_url=False)) from None
+        return await runs.start_run(
+            session,
+            wf,
+            source=source,
+            uploads=[_upload(upload) for upload in files],
+            slots=documents,
+            client_key=client_key,
+            definition=definition,
+            idempotency_key=idempotency_key,
+        )
 
 
 async def require_run_reader(

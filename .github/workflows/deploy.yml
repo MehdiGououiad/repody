@@ -160,6 +160,11 @@ jobs:
             [ -f "${tool}" ] && remote "cat > ${DIR}/tools/${tool##*/}" < "${tool}"
           done
           printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote "cat > ${DIR}/release.env"
+          # The stack stays inside itself (two stacks share the server). Releases before the
+          # check have none.
+          if [ -f deploy/vps/check_compose.py ]; then
+            remote "cd ${DIR} && ${compose} config --format json" | python3 deploy/vps/check_compose.py
+          fi
 
           # The token is valid for this run only, and the login is removed once the images are pulled.
           printf '%s' "${GH_TOKEN}" | remote "docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin > /dev/null \
@@ -228,8 +233,9 @@ jobs:
             echo "::notice::${TARGET} has no tester account: no smoke test (deploy/vps/README.md, \"Tools\")"
             exit 0
           fi
-          remote "cd ${DIR} && S=\$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-) \
-            && docker compose -p ${PROJECT} --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET=\"\$S\" api python - < tools/smoke_test.py" \
+          # The secret goes through the environment, never a command line (visible in ps).
+          remote "cd ${DIR} && export TESTER_CLIENT_SECRET=\$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-) \
+            && docker compose -p ${PROJECT} --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET api python - < tools/smoke_test.py" \
             | grep -v '^{'
 
       - name: Logs of the failed release

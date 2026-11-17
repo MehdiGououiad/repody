@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from sqlalchemy import func, select, update
 
+from repody.app import runs
 from repody.app.runs import purge_expired
 from repody.infra import db
 from repody.infra.models import Run
@@ -110,6 +111,7 @@ async def test_csv_cells_never_run_as_formulas(api, model_answer):
     await run(api, model_answer, {}, workflow_id="wf-a")
     export = (await api.get("/v1/audits/export.csv")).text
     assert "'=HYPERLINK(1)" in export
+    assert runs._csv_line(["  =HYPERLINK(2)", "a-b", 3]).startswith("'  =HYPERLINK(2),a-b,3")
 
 
 async def test_files_are_deleted_when_the_run_cannot_be_saved(api, monkeypatch):

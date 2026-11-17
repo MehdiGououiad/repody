@@ -441,9 +441,12 @@ _CSV = csv.writer(_Echo())
 
 
 def _csv_line(row: Iterable[Any]) -> str:
-    """One CSV line; a text cell a spreadsheet would run as a formula gets a leading apostrophe."""
+    """One CSV line; a text cell a spreadsheet would run as a formula gets a leading apostrophe,
+    also when spaces come first (some spreadsheets trim them)."""
     cells = (
-        f"'{cell}" if isinstance(cell, str) and cell.startswith(FORMULA_PREFIXES) else cell
+        f"'{cell}"
+        if isinstance(cell, str) and cell.lstrip(" ").startswith(FORMULA_PREFIXES)
+        else cell
         for cell in row
     )
     return str(_CSV.writerow(cells))

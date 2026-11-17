@@ -143,6 +143,11 @@ Cloudflare's guide: [create a tunnel (dashboard)](https://developers.cloudflare.
 3. In **Access → Applications**, add a self-hosted application for `kc-admin.example.com` that
    allows only your email. The admin console then needs a Cloudflare sign-in before Keycloak's
    own.
+4. In the zone's **Security → WAF → Rate limiting rules**, add one rule (the free plan's only
+   one): requests matching `(http.request.method eq "POST" and http.request.uri.path wildcard
+   "/api/v1/workflows/*/runs")`, 20 per 10 seconds per IP, then block for 10 seconds. Uploads are
+   the one public route that carries large bodies; the API refuses an unknown caller before
+   reading one, and this keeps a flood from reaching the server at all.
 
 ## 3. Secrets on the server
 
@@ -200,8 +205,8 @@ them from that directory (`/opt/repody`, or `/home/deploy/repody-staging` for st
 Each deploy runs the smoke test by itself once the stack has the tester account. To run it by hand:
 
 ```bash
-S=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
-docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET="$S" api python - < tools/smoke_test.py
+export TESTER_CLIENT_SECRET=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
+docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET api python - < tools/smoke_test.py
 ```
 
 The test company (`client-repody-test`) shows in Admin like any client: its credits are topped up

@@ -130,6 +130,67 @@ async def test_wrong_api_key_is_refused_when_signed_in_users_are_required(api, m
     assert refused.status_code == 401
 
 
+async def test_an_unknown_caller_uploads_nothing(api, monkeypatch):
+    """The caller is checked from the headers: the body of a refused request is never read."""
+    await deploy(api)
+    monkeypatch.setattr(get_settings(), "oidc_enabled", True)
+    read = 0
+
+    async def body():
+        nonlocal read
+        for _ in range(64):
+            read += 1
+            yield b"x" * 65536
+
+    refused = await api.post(
+        "/v1/workflows/wf-run/runs",
+        content=body(),
+        headers={
+            "Authorization": "Bearer wrong",
+            "Content-Type": "multipart/form-data; boundary=b",
+        },
+    )
+    assert refused.status_code == 401
+    assert read <= 1
+
+
+async def test_bodies_are_limited_as_they_arrive(api, monkeypatch):
+    """A declared length over the limit, and a chunked body that grows past it, are both 413."""
+    auth = await deploy(api)
+    monkeypatch.setattr(get_settings(), "max_request_bytes", 1000)
+    monkeypatch.setattr(get_settings(), "max_upload_bytes", 1000)
+    declared = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+    assert declared.status_code == 413
+
+    async def chunks():
+        yield (
+            b"--b\r\nContent-Disposition: form-data; name=files; filename=a.pdf\r\n"
+            b"Content-Type: application/pdf\r\n\r\n"
+        )
+        for _ in range(4):
+            yield b"x" * 600
+
+    chunked = await api.post(
+        "/v1/workflows/wf-run/runs",
+        content=chunks(),
+        headers={**auth, "Content-Type": "multipart/form-data; boundary=b"},
+    )
+    assert chunked.status_code == 413
+    monkeypatch.setattr(get_settings(), "max_json_bytes", 1000)
+    workflow = invoice_workflow()
+    workflow["description"] = "x" * 2000
+    body = json.dumps(workflow).encode()
+
+    async def json_chunks():
+        yield body[:500]
+        yield body[500:]
+
+    streamed = await api.put(
+        "/v1/workflows/wf-run", content=json_chunks(), headers={"Content-Type": "text/plain"}
+    )
+    assert streamed.status_code == 413
+
+
 async def test_queue_cap_and_position(api, monkeypatch):
     async def keep_queued(_run_id: str, _client_key: str) -> str:
         return "task"

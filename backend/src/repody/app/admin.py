@@ -393,12 +393,13 @@ async def reset_password(
 
 
 async def remove_user(session: AsyncSession, account: str, user_id: str, actor: str) -> None:
-    """Out of the client, and disabled: they keep no access (Keycloak keeps the account, for the
-    record; delete it there if needed)."""
+    """Disabled, then out of the client: they keep no access (Keycloak keeps the account, for the
+    record; delete it there if needed). Disabled first: if leaving fails, they are a disabled
+    member, never an enabled user outside every client."""
     kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
-    await call(kc.leave(user_id, await group_id(kc, account)))
     await call(kc.set_enabled(user_id, False))
+    await call(kc.leave(user_id, await group_id(kc, account)))
     await record(session, actor, "user.removed", account, user.email)
     await session.commit()
 

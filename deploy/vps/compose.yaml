@@ -23,8 +23,14 @@ x-hardening: &hardening
   security_opt:
     - no-new-privileges:true
 
+# The app's own containers run as non-root on a read-only filesystem and need no Linux
+# capability at all. (Postgres, Hatchet and SeaweedFS keep their images' defaults: they switch
+# users and own their data directories.)
+x-no-capabilities: &no-capabilities
+  cap_drop: [ALL]
+
 x-backend: &backend
-  <<: *hardening
+  <<: [*hardening, *no-capabilities]
   image: ${REPODY_REGISTRY:?}/repody-backend:${REPODY_VERSION:?}
   read_only: true
   tmpfs:
@@ -47,6 +53,9 @@ x-backend-env: &backend-env
   AUDIT_OIDC_ISSUER: https://${AUTH_HOST:?}/realms/repody
   AUDIT_OIDC_JWKS_URL: http://keycloak:8080/realms/repody/protocol/openid-connect/certs
   AUDIT_OIDC_AUDIENCE: repody-api
+  # Several client companies share this installation: a user outside every company (and not a
+  # platform admin) gets no permission, instead of seeing every company's work.
+  AUDIT_REQUIRE_CLIENT_GROUP: "true"
   # NuExtract3 on Modal (deploy/modal/README.md): the token is the Modal Proxy Token.
   AUDIT_LLAMACPP_BASE_URL: ${MODAL_URL:?}/v1
   AUDIT_LLAMACPP_API_KEY: ${MODAL_PROXY_TOKEN:?}
@@ -336,7 +345,7 @@ services:
   # reach are set on the tunnel in Cloudflare (deploy/vps/README.md, "Cloudflare Tunnel").
   # https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/
   cloudflared:
-    <<: *hardening
+    <<: [*hardening, *no-capabilities]
     image: cloudflare/cloudflared:2026.11.0@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344
     command: ["tunnel", "--no-autoupdate", "run"]
     environment:
@@ -349,7 +358,7 @@ services:
         limits: { memory: 128M }
 
   web:
-    <<: *hardening
+    <<: [*hardening, *no-capabilities]
     image: ${REPODY_REGISTRY:?}/repody-web:${REPODY_VERSION:?}
     read_only: true
     tmpfs:
