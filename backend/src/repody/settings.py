@@ -138,11 +138,12 @@ class Settings(BaseSettings):
     def _check(self) -> Self:
         if self.oidc_enabled and not self.oidc_issuer:
             raise ValueError("AUDIT_OIDC_ISSUER is required when AUDIT_OIDC_ENABLED=true.")
-        if self.deployment_environment == "production":
+        # Staging is production's rehearsal: the same rules.
+        if self.deployment_environment in ("production", "staging"):
             if not self.oidc_enabled:
-                raise ValueError("AUDIT_OIDC_ENABLED must be true in production.")
+                raise ValueError("AUDIT_OIDC_ENABLED must be true in production and staging.")
             if not self.oidc_audience:
-                raise ValueError("AUDIT_OIDC_AUDIENCE is required in production.")
+                raise ValueError("AUDIT_OIDC_AUDIENCE is required in production and staging.")
         if self.inference_timeout_seconds > self.run_timeout_minutes * 60:
             raise ValueError("AUDIT_INFERENCE_TIMEOUT_SECONDS must fit in the run timeout.")
         return self

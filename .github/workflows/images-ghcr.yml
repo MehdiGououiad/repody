@@ -1,9 +1,11 @@
 name: Publish images to GHCR
 
 # Build the images with docker-bake.hcl, attach BuildKit SBOM + provenance attestations,
-# sign the digests with cosign (keyless, GitHub OIDC), and publish Helm image values. A v* tag
-# then deploys itself (deploy.yml): merge, tag, and the release reaches production with no other
-# step. Tag right after merging: the build waits for the commit's CI.
+# sign the digests with cosign (keyless, GitHub OIDC), and publish Helm image values. Then each
+# build deploys itself (deploy.yml): every commit on master goes to staging (images tagged with the
+# commit), a v* tag to production (a pre-release tag, v1.2.3-rc.1, to staging). Merge, and staging
+# runs it minutes later; tag, and the release reaches production. The build waits for the
+# commit's CI.
 on:
   workflow_dispatch:
     inputs:
@@ -12,10 +14,16 @@ on:
         required: false
         type: string
   push:
+    branches: [master]
     tags:
       - "v*"
 
 permissions: {}
+
+# One build per branch or tag at a time; a newer master commit replaces a waiting one.
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -47,8 +55,6 @@ jobs:
               --limit 1 --json status,conclusion --jq '.[0] | if . == null then "none" elif .status == "completed" then .conclusion else "running" end')"
             case "${state}" in
               success) echo "CI passed on ${GITHUB_SHA}"; exit 0 ;;
-              none|running) ;;
-              *) echo "::error::CI on ${GITHUB_SHA} ended '${state}': release a commit whose CI passed."; exit 1 ;;
             esac
             for head in $(gh run list --repo "${GITHUB_REPOSITORY}" --workflow CI --event pull_request \
                 --status success --limit 20 --json headSha --jq '.[].headSha'); do
@@ -57,6 +63,12 @@ jobs:
                 exit 0
               fi
             done
+            # Ended without passing (failed, or cancelled by a newer push), and no pull request
+            # passed on these files.
+            if [ "${state}" != none ] && [ "${state}" != running ]; then
+              echo "::error::CI on ${GITHUB_SHA} ended '${state}': release a commit whose CI passed."
+              exit 1
+            fi
             echo "waiting for CI on ${GITHUB_SHA} (${state}), check ${attempt}/50"
             sleep 30
           done
@@ -150,10 +162,10 @@ jobs:
           path: dist/helm-images.yaml
           retention-days: 90
 
-  # A release tag deploys itself, with the release's own files (deploy.yml).
+  # A release tag deploys itself to production, with the release's own files (deploy.yml).
   deploy:
     needs: publish
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
     permissions:
       contents: read
       packages: read
@@ -161,4 +173,19 @@ jobs:
     uses: ./.github/workflows/deploy.yml
     with:
       version: ${{ needs.publish.outputs.tag }}
+      target: production
+    secrets: inherit
+
+  # Each master commit, and each pre-release tag, to staging.
+  deploy-staging:
+    needs: publish
+    if: github.ref == 'refs/heads/master' || (startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-'))
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.publish.outputs.tag }}
+      target: staging
     secrets: inherit

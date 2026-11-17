@@ -3,6 +3,10 @@
 #
 #   docker compose --env-file .env --env-file release.env up -d --wait
 #
+# The same file runs the staging stack beside it (README "Staging"): its own directory, Compose
+# project (COMPOSE_PROJECT_NAME in its .env, which wins over the name below), volumes, network,
+# secrets, tunnel and GPU. The variables that differ default to production's values.
+#
 # - Images are the signed releases from GHCR (the images-ghcr workflow), pinned by REPODY_VERSION
 #   (release.env, written by each deploy). Nothing is built on the server.
 # - No ports are published, except Hatchet's dashboard on the server's loopback (reach it through
@@ -27,7 +31,7 @@ x-backend: &backend
     - /tmp
 
 x-backend-env: &backend-env
-  AUDIT_DEPLOYMENT_ENVIRONMENT: production
+  AUDIT_DEPLOYMENT_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-production}
   AUDIT_LOG_JSON: "true"
   AUDIT_DATABASE_URL: postgresql+asyncpg://repody:${POSTGRES_PASSWORD:?}@postgres:5432/repody
   # Hatchet Lite on the stack network. The API and the worker also read its token from the file
@@ -113,8 +117,9 @@ services:
       SERVER_MSGQUEUE_KIND: postgres
       # Run history kept for a week: our own runs table is the record (AUDIT_RUN_RETENTION_DAYS).
       SERVER_LIMITS_DEFAULT_707d0855-80ab-4e1f-a156-f1c4546cbf52_RETENTION_PERIOD: 168h
-      # The dashboard, on the server's loopback only (plain HTTP through an SSH tunnel).
-      SERVER_URL: http://localhost:8888
+      # The dashboard, on the server's loopback only (plain HTTP through an SSH tunnel); each
+      # stack on the server has its own port.
+      SERVER_URL: http://localhost:${HATCHET_DASHBOARD_PORT:-8888}
       SERVER_AUTH_COOKIE_DOMAIN: localhost
       SERVER_AUTH_COOKIE_INSECURE: "t"
       SERVER_AUTH_SET_EMAIL_VERIFIED: "t"
@@ -128,7 +133,7 @@ services:
       SERVER_GRPC_BROADCAST_ADDRESS: hatchet-lite:7077
       SERVER_INTERNAL_CLIENT_INTERNAL_GRPC_BROADCAST_ADDRESS: localhost:7077
     ports:
-      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:${HATCHET_DASHBOARD_PORT:-8888}:8888"
     expose:
       - "7077"
     volumes:
@@ -268,9 +273,10 @@ services:
       AUDIT_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
       AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET: ${KEYCLOAK_ADMIN_CLIENT_SECRET:?}
       # Access requests from the site's form (repody.com posts to /api/v1/access-requests):
-      # its origin, and Cloudflare Turnstile's secret (empty: no anti-robot check).
-      AUDIT_ACCESS_REQUESTS_ENABLED: "true"
-      AUDIT_CORS_ORIGINS: https://repody.com
+      # its origin, and Cloudflare Turnstile's secret (empty: no anti-robot check). Staging
+      # turns them off: the site's form posts to production only.
+      AUDIT_ACCESS_REQUESTS_ENABLED: ${ACCESS_REQUESTS_ENABLED:-true}
+      AUDIT_CORS_ORIGINS: ${CORS_ORIGINS-https://repody.com}
       AUDIT_TURNSTILE_SECRET: ${TURNSTILE_SECRET:-}
     volumes:
       - hatchet-token:/run/hatchet:ro
