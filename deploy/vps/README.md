@@ -20,14 +20,16 @@ workers ──HTTPS──▶ Modal (NuExtract3 on vLLM)
 The API, workers, Postgres, Hatchet and SeaweedFS have no route at all. Hatchet's dashboard
 listens on the server's loopback only ([Hatchet](#hatchet)).
 
-**Deploys** come from [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml), run by
-hand with a version. It does the following:
+**Deploys** come from [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml). A
+`v*` tag deploys itself to production, and each commit on `master` to [staging](#staging). You can
+also run it by hand with a version and a target. It does the following:
 1. Checks that the three images carry this repository's release signature.
 2. Joins your tailnet as an ephemeral `tag:ci` node, signing in with GitHub's OIDC token; no
    Tailscale secret is stored.
 3. Sends `compose.yaml` over Tailscale SSH, and writes the version to `release.env`.
 4. Pulls with that run's short-lived token, then logs the server out of the registry.
 5. Runs `docker compose up -d --wait`, then checks that the public app answers.
+6. Runs the [smoke test](#tools) when the stack has a tester account.
 
 Secrets never leave the server.
 
@@ -186,16 +188,16 @@ in the admin console.
 
 ## Tools
 
-Each deploy copies these to `/opt/repody/tools/` (the release's own versions). Run them from
-`/opt/repody`:
+Each deploy copies these to `tools/` in the stack's directory (the release's own versions). Run
+them from that directory (`/opt/repody`, or `/home/deploy/repody-staging` for staging):
 
 | Tool | What it does |
 |---|---|
 | `sh tools/setup-admin-client.sh` | Adds the admin area's Keycloak account (`repody-admin`) to a realm imported before 1.5 |
-| `sh tools/setup-tester-client.sh` | Creates the smoke test's account: the service account `repody-tester`, operator in the client company `client-repody-test`; its secret (`TESTER_CLIENT_SECRET`) is created in `.env` and never printed |
+| `sh tools/setup-tester-client.sh` | Creates the smoke test's account: the service account `repody-tester`, operator in the client company `client-repody-test`; its secret (`TESTER_CLIENT_SECRET`) is created in `.env` and never printed. On staging only, also `tester@staging.repody.com`, a person in the same company who signs in in the browser for UI tests (password `UI_TESTER_PASSWORD` in `.env`) |
 | `tools/smoke_test.py` | One real run, end to end, as `repody-tester`: a generated one-page invoice through extraction on the GPU, the report, the credits charged, and nothing visible outside its company. A few credits and a little GPU time per run |
 
-Run the smoke test after a release, or whenever something looks wrong:
+Each deploy runs the smoke test by itself once the stack has the tester account. To run it by hand:
 
 ```bash
 S=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
@@ -204,6 +206,79 @@ docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_S
 
 The test company (`client-repody-test`) shows in Admin like any client: its credits are topped up
 automatically when low (100 at a time), and its runs count in the GPU spend.
+
+## Staging
+
+Staging is a second, separate copy of the stack on the same server. It runs every commit merged
+to `master` a few minutes after the merge, so production only ever gets what has already run
+there. It shares nothing with production except the server and the Docker engine:
+
+| | Production | Staging |
+|---|---|---|
+| Directory, Compose project | `/opt/repody`, `repody` | `/home/deploy/repody-staging`, `repody-staging` (`COMPOSE_PROJECT_NAME` in its `.env`) |
+| Data | its volumes and network | its own (`repody-staging_*`): its own Postgres, Keycloak, Hatchet and SeaweedFS |
+| Secrets | `/opt/repody/.env` | its own `.env`, generated on the server; never copied from production |
+| Hostnames | `app`, `auth`, `kc-admin` `.repody.com` | `staging`, `staging-auth`, `staging-kc-admin` `.repody.com` |
+| Tunnel | `repody` | `repody-staging`: its own token |
+| Who can reach it | the public (sign-in pages); the admin console behind Cloudflare Access | **everything** behind Cloudflare Access (application *Repody staging*): your email, and the deploy's service token |
+| GPU | Modal environment `main` | Modal environment `staging`: its own app, weights volume and proxy token, so staging never queues behind a client's run |
+| Deploys | a `v*` tag | each `master` commit (images tagged with the commit), or a pre-release tag such as `v1.7.0-rc.1` |
+| GitHub environment | `production` | `staging` |
+| Admin and testers | your account | `admin@staging.repody.com`, and the testers (`sh tools/setup-tester-client.sh`) |
+| Access requests | on (the site's form) | off |
+| Hatchet dashboard | `127.0.0.1:8888` | `127.0.0.1:8889` |
+
+Each deploy checks that the stack's `.env` names the Compose project it expects before it touches
+anything, so a wrong directory or variable stops the deploy instead of recreating the other
+stack. Both stacks share the server's memory, disk and Docker engine; the memory limits keep
+staging from starving production. Moving staging to its own server later means changing only the
+`DEPLOY_HOST` variable of the `staging` environment.
+
+### Setting it up (once)
+
+1. **Cloudflare.** Create a second tunnel, `repody-staging`, with the same routes as production
+   on the staging hostnames, and the self-hosted Access application *Repody staging* covering
+   the three hostnames. Give it two policies: **Allow** your email, and **Service Auth** for a
+   service token (`repody-staging-deploy`, Access → Service credentials). The token's client ID
+   and secret go in the `staging` environment's secrets `CF_ACCESS_CLIENT_ID` and
+   `CF_ACCESS_CLIENT_SECRET`, so the deploy's checks pass Access.
+2. **Modal.** `modal environment create staging`, then
+   `modal run --env staging deploy/modal/nuextract.py::download` and
+   `modal deploy --env staging deploy/modal/nuextract.py`. Create a proxy token for it
+   (`modal workspace proxy-tokens create --name repody-staging`).
+3. **Server.** As `deploy`, create `/home/deploy/repody-staging/.env` (mode 600) from
+   [`env.example`](env.example), with new secrets and these values:
+
+   ```bash
+   COMPOSE_PROJECT_NAME=repody-staging
+   DEPLOYMENT_ENVIRONMENT=staging
+   HATCHET_DASHBOARD_PORT=8889
+   ACCESS_REQUESTS_ENABLED=false
+   CORS_ORIGINS=
+   APP_HOST=staging.repody.com
+   AUTH_HOST=staging-auth.repody.com
+   KEYCLOAK_ADMIN_HOST=staging-kc-admin.repody.com
+   REPODY_ADMIN_EMAIL=admin@staging.repody.com
+   MODAL_URL=https://<workspace>-staging--repody-nuextract-vllm-serve.us-east.modal.run
+   ```
+
+4. **Tailscale.** Add a second federated identity like production's (step 4 of the setup), with
+   the subject `repo:<owner>/<repo>:environment:staging`, and the tag `tag:ci`. Each environment
+   has its own identity, so you can revoke one without the other.
+5. **GitHub.** Create the environment **`staging`** with:
+   - the secrets `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` from that identity, and
+     `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`;
+   - the variables `DEPLOY_HOST` (the same server), `APP_HOST=staging.repody.com`,
+     `STACK_DIR=/home/deploy/repody-staging` and `COMPOSE_PROJECT=repody-staging`.
+6. **First deploy.** Run **Actions → Deploy** with the target `staging` and the latest version.
+   Then, in the staging directory, run `sh tools/setup-tester-client.sh`. From then on, each deploy
+   runs the smoke test there too.
+
+To open staging, go to `https://staging.repody.com` and pass Cloudflare Access with your email.
+Then sign in as `tester@staging.repody.com` (a client operator) or `admin@staging.repody.com` (the
+platform admin: its first password is `REPODY_ADMIN_INITIAL_PASSWORD`, and like production it must
+change it and set up an authenticator app). Staging's data is test data only: never put a
+client's documents there.
 
 ## Backups
 
@@ -246,7 +321,8 @@ workers never need a token in `.env`: `hatchet-token` writes a new one on every 
 
 ## Operating it
 
-From your machine, run `tailscale ssh deploy@<server>`, then `cd /opt/repody`:
+From your machine, run `tailscale ssh deploy@<server>`, then `cd /opt/repody` (or
+`cd ~/repody-staging`: its `.env` names its own project, so the same commands act on staging only):
 
 | Task | Command |
 |---|---|

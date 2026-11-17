@@ -136,6 +136,13 @@ it. A start that builds a snapshot takes up to about 8.5 minutes, longer than th
 with the check below until it answers. Do it once per GPU type that comes up, or raise both settings,
 to `600` and `12`.
 
+## Staging
+
+Staging has its own copy in the Modal environment `staging` (deploy/vps/README.md, "Staging"):
+the same app, with its own weights volume, URL (`<workspace>-staging--repody-nuextract-vllm-serve…`)
+and proxy token. Add `--env staging` to the commands above. It costs only while staging runs
+documents, plus the first slow starts after each deploy.
+
 ## Check it
 
 ```bash

@@ -55,6 +55,22 @@ def check(ok: bool, what: str) -> None:
         sys.exit(1)
 
 
+class TesterAuth(httpx.Auth):
+    """Client credentials, signing in again when a token expires (Keycloak's last 5 minutes, and
+    a cold GPU start can take longer)."""
+
+    def __init__(self) -> None:
+        self.value = token()
+
+    def auth_flow(self, request: httpx.Request):
+        request.headers["Authorization"] = f"Bearer {self.value}"
+        response = yield request
+        if response.status_code == 401:
+            self.value = token()
+            request.headers["Authorization"] = f"Bearer {self.value}"
+            yield request
+
+
 def token() -> str:
     issuer = (
         get_settings().keycloak_internal_issuer or "http://keycloak:8080/realms/repody"
@@ -102,7 +118,7 @@ async def top_up() -> None:
 
 def main() -> None:
     started = time.monotonic()
-    api = httpx.Client(base_url=API, headers={"Authorization": f"Bearer {token()}"}, timeout=60)
+    api = httpx.Client(base_url=API, auth=TesterAuth(), timeout=60)
     me = api.get("/me").json()
     check(me.get("credits", {}).get("account") == ACCOUNT, f"signed in as {ACCOUNT}")
     check(
@@ -122,7 +138,10 @@ def main() -> None:
 
     deadline = time.monotonic() + RUN_TIMEOUT_SECONDS
     while True:
-        state = api.get(f"/runs/{run_id}").json()
+        polled = api.get(f"/runs/{run_id}")
+        if polled.status_code != 200:
+            check(False, f"run {run_id} readable ({polled.status_code})")
+        state = polled.json()
         if state["status"] in ("done", "failed") or time.monotonic() > deadline:
             break
         time.sleep(5)

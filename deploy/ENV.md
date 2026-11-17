@@ -25,7 +25,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `AUDIT_DEPLOYMENT_ENVIRONMENT` | `development` | `production` requires OIDC |
+| `AUDIT_DEPLOYMENT_ENVIRONMENT` | `development` | `production` and `staging` require OIDC |
 | `AUDIT_DEBUG` | `false` | Debug log level |
 | `AUDIT_LOG_JSON` | `true` | JSON log lines (`false`: console) |
 | `AUDIT_CORS_ORIGINS` | empty (no CORS) | Browser apps on other origins that call the API directly (the web app goes through its own server) |

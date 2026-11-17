@@ -1,23 +1,40 @@
 #!/bin/sh
-# The production smoke test's account (deploy/vps/smoke_test.py): a Keycloak service account,
-# repody-tester, in its own client company (group client-repody-test) with the operator role. It
-# signs in with client credentials (no password, no browser) and sees only its own company's work.
+# The smoke test's account (deploy/vps/smoke_test.py): a Keycloak service account, repody-tester,
+# in its own client company (group client-repody-test) with the operator role. It signs in with
+# client credentials (no password, no browser) and sees only its own company's work.
 # Safe to run again. Run it on the server, from the stack's directory:
 #
 #   sh tools/setup-tester-client.sh
 #
 # It reads TESTER_CLIENT_SECRET from .env (created there when missing, never printed), and signs
 # in to Keycloak inside its container as the bootstrap admin (KC_BOOTSTRAP_ADMIN_*).
+#
+# On staging only (DEPLOYMENT_ENVIRONMENT=staging in .env), it also creates a person to sign in
+# with in the browser, for UI tests: tester@<APP_HOST>, operator in the same company, with the
+# password UI_TESTER_PASSWORD (created in .env, never printed) and no required actions.
+# Production never gets a password account that skips them.
 set -eu
 
-if ! grep -q '^TESTER_CLIENT_SECRET=.' .env; then
-  sed -i '/^TESTER_CLIENT_SECRET=/d' .env
-  printf 'TESTER_CLIENT_SECRET=%s\n' "$(openssl rand -hex 32)" >> .env
-  echo "TESTER_CLIENT_SECRET created in .env"
-fi
-secret=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
+# The value of a secret in .env, created there first when missing or empty.
+secret_in_env() {
+  if ! grep -q "^$1=." .env; then
+    sed -i "/^$1=/d" .env
+    printf '%s=%s\n' "$1" "$(openssl rand -hex 32)" >> .env
+    echo "$1 created in .env" >&2
+  fi
+  grep "^$1=" .env | cut -d= -f2-
+}
 
-docker compose --env-file .env --env-file release.env exec -T -e SECRET="${secret}" keycloak \
+secret=$(secret_in_env TESTER_CLIENT_SECRET)
+ui_email=""
+ui_password=""
+if grep -qx 'DEPLOYMENT_ENVIRONMENT=staging' .env; then
+  ui_email="tester@$(grep '^APP_HOST=' .env | cut -d= -f2-)"
+  ui_password=$(secret_in_env UI_TESTER_PASSWORD)
+fi
+
+docker compose --env-file .env --env-file release.env exec -T -e SECRET="${secret}" \
+  -e UI_EMAIL="${ui_email}" -e UI_PASSWORD="${ui_password}" keycloak \
   sh -eu -c "$(cat <<'KCADM'
 kc=/opt/keycloak/bin/kcadm.sh
 $kc config credentials --server http://localhost:8080 --realm master \
@@ -47,5 +64,19 @@ fi
 uid=$($kc get users -r repody -q username=service-account-repody-tester --fields id --format csv --noquotes)
 $kc update "users/$uid/groups/$gid" -r repody -n
 echo "repody-tester: operator in client-repody-test."
+
+if [ -n "$UI_EMAIL" ]; then
+  uid=$($kc get users -r repody -q "email=$UI_EMAIL" -q exact=true --fields id --format csv --noquotes)
+  if [ -z "$uid" ]; then
+    $kc create users -r repody -s "username=$UI_EMAIL" -s "email=$UI_EMAIL" -s emailVerified=true \
+      -s enabled=true -s firstName=UI -s lastName=Tester >/dev/null
+    uid=$($kc get users -r repody -q "email=$UI_EMAIL" -q exact=true --fields id --format csv --noquotes)
+  fi
+  $kc update "users/$uid" -r repody -s 'requiredActions=[]'
+  $kc set-password -r repody --userid "$uid" --new-password "$UI_PASSWORD"
+  $kc add-roles -r repody --uid "$uid" --rolename operator
+  $kc update "users/$uid/groups/$gid" -r repody -n
+  echo "$UI_EMAIL: operator in client-repody-test (password: UI_TESTER_PASSWORD in .env)."
+fi
 KCADM
 )"

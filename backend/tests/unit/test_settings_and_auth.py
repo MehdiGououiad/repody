@@ -9,9 +9,10 @@ from repody.infra import auth
 from repody.settings import Settings, get_settings
 
 
-def test_production_requires_oidc():
+@pytest.mark.parametrize("environment", ["production", "staging"])
+def test_production_and_staging_require_oidc(environment):
     with pytest.raises(ValidationError, match="OIDC"):
-        Settings(deployment_environment="production", oidc_enabled=False)
+        Settings(deployment_environment=environment, oidc_enabled=False)
 
 
 def test_comma_separated_lists(monkeypatch):

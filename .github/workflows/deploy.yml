@@ -1,65 +1,99 @@
 name: Deploy
 
-# Deploys a published release to the VPS (deploy/vps/README.md). Runs by itself after the images
-# of a v* tag are published (images-ghcr.yml), or by hand (Actions > Deploy > Run workflow) to
-# deploy or roll back to any published version:
-#   1. the files deployed (compose.yaml) are the release's own, from its tag, whatever ref this
-#      workflow runs on: old images never meet newer configuration;
+# Deploys a published release to a stack on the VPS (deploy/vps/README.md): production, or staging
+# beside it (README "Staging"). It runs by itself after images are published (images-ghcr.yml):
+# a v* tag goes to production, each commit on master to staging. It can also run by hand
+# (Actions > Deploy > Run workflow) to deploy or roll back either stack to any published version.
+#   1. the files deployed (compose.yaml, the tools) are the release's own, from its tag or commit,
+#      whatever ref this workflow runs on: old images never meet newer configuration;
 #   2. the three images of that version must carry this repository's release signature (cosign);
 #   3. the runner joins the tailnet as an ephemeral tag:ci node, with workload identity federation
-#      (no Tailscale secret: https://tailscale.com/kb/1276/tailscale-github-action);
-#   4. over Tailscale SSH it backs up the databases (the last 10 dumps are kept), sends
-#      compose.yaml, pulls with this run's short-lived token (logged out right after), and starts
-#      the stack, waiting for every health check;
+#      bound to this job's GitHub environment (no Tailscale secret:
+#      https://tailscale.com/kb/1276/tailscale-github-action);
+#   4. over Tailscale SSH it checks it is about to touch the right stack, backs up its databases
+#      (the last 10 dumps are kept), sends compose.yaml, pulls with this run's short-lived token
+#      (logged out right after), and starts the stack, waiting for every health check;
 #   5. it checks the release: its version runs, the migrations passed, the public app answers,
-#      sign-in works, and the security headers and the site's CORS are in place.
+#      sign-in works, the security headers and the site's CORS are in place, and, when the stack
+#      has a tester account, one real run passes end to end (tools/smoke_test.py).
 # Rolling back is deploying the previous version: migrations only ever add, and the old code
 # ignores what it does not know. A deploy never downgrades the database.
-# Secrets stay on the server (/opt/repody/.env); this workflow never reads them.
+# Secrets stay on the server (<stack>/.env); this workflow never reads them.
 
 on:
   workflow_call:
     inputs:
       version:
-        description: Release to deploy (e.g. 1.0.0, published from the git tag v1.0.0)
+        description: Release to deploy (1.0.0 from the git tag v1.0.0, or a master build's 12-character commit)
         required: true
         type: string
+      target:
+        description: The stack (and GitHub environment) to deploy to
+        required: false
+        type: string
+        default: production
   workflow_dispatch:
     inputs:
       version:
-        description: Release to deploy (e.g. 1.0.0, published from the git tag v1.0.0)
+        description: Release to deploy (1.0.0 from the git tag v1.0.0, or a master build's 12-character commit)
         required: true
         type: string
+      target:
+        description: The stack to deploy to
+        required: true
+        type: choice
+        options: [production, staging]
+        default: production
 
 permissions: {}
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ inputs.target || 'production' }}
   cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment: production
+    timeout-minutes: 40
+    environment: ${{ inputs.target || 'production' }}
     permissions:
       contents: read
       packages: read # pull the private images on the server, with this run's token
       id-token: write # Tailscale workload identity federation
     env:
       VERSION: ${{ inputs.version }}
+      TARGET: ${{ inputs.target || 'production' }}
       HOST: ${{ vars.DEPLOY_HOST }}
       APP_HOST: ${{ vars.APP_HOST }}
-      SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://repody.com' }}
+      # Each stack's directory and Compose project on the server (staging: /opt/repody-staging,
+      # repody-staging). Its .env names the same project, which the deploy checks.
+      DIR: ${{ vars.STACK_DIR || '/opt/repody' }}
+      PROJECT: ${{ vars.COMPOSE_PROJECT || 'repody' }}
+      # The site whose form posts access requests: production only (staging takes none).
+      SITE_ORIGIN: ${{ (inputs.target || 'production') == 'production' && (vars.SITE_ORIGIN || 'https://repody.com') || '' }}
+      # A stack behind Cloudflare Access (staging) lets this job through with a service token.
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
     steps:
       - name: Check the inputs
+        id: inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::version must look like 1.2.3"; exit 1; }
-          [[ -n "${HOST}" && -n "${APP_HOST}" ]] || { echo "::error::set the DEPLOY_HOST and APP_HOST variables on the production environment"; exit 1; }
+          [[ -n "${HOST}" && -n "${APP_HOST}" ]] || { echo "::error::set the DEPLOY_HOST and APP_HOST variables on the ${TARGET} environment"; exit 1; }
+          if [[ "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "ref=refs/tags/v${VERSION}" >> "${GITHUB_OUTPUT}"
+          elif [[ "${TARGET}" != production && "${VERSION}" =~ ^[0-9a-f]{12}$ ]]; then
+            # A master build (images tagged with its commit): its own files.
+            echo "ref=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${VERSION}" --jq .sha)" >> "${GITHUB_OUTPUT}"
+          else
+            echo "::error::version must look like 1.2.3 (production) or a 12-character commit (staging)"; exit 1
+          fi
+          [[ "${TARGET}" == production || "${PROJECT}" != repody ]] || { echo "::error::set the COMPOSE_PROJECT variable on the ${TARGET} environment"; exit 1; }
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/v${{ inputs.version }}
+          ref: ${{ steps.inputs.outputs.ref }}
           persist-credentials: false
 
       - name: Install cosign
@@ -88,16 +122,26 @@ jobs:
           tags: tag:ci
           ping: ${{ vars.DEPLOY_HOST }}
 
+      - name: Check the stack on the server
+        run: |
+          remote() { tailscale ssh "deploy@${HOST}" "$@"; }
+          remote "test -s ${DIR}/.env" || { echo "::error::${DIR}/.env is missing on the server"; exit 1; }
+          # Two stacks share the server: a stack's own .env names its project, so a wrong
+          # directory or variable stops here instead of recreating the other stack.
+          named="$(remote "grep '^COMPOSE_PROJECT_NAME=' ${DIR}/.env | cut -d= -f2-" || true)"
+          [ "${named:-repody}" = "${PROJECT}" ] || { echo "::error::${DIR}/.env is project '${named:-repody}', not ${PROJECT}"; exit 1; }
+          echo "${TARGET}: ${DIR}, project ${PROJECT}"
+
       - name: Back up the databases
         run: |
           remote() { tailscale ssh "deploy@${HOST}" "$@"; }
-          remote 'test -s /opt/repody/.env' || { echo "::error::/opt/repody/.env is missing on the server"; exit 1; }
+          compose="docker compose -p ${PROJECT} --env-file .env --env-file release.env"
           # Every database of the stack's Postgres (Repody, Keycloak, Hatchet), when it runs; the
           # newest 10 dumps are kept.
-          remote "set -o pipefail; cd /opt/repody && mkdir -p backups && chmod 700 backups \
-            && if docker compose --env-file .env --env-file release.env ps --status running --services 2>/dev/null | grep -qx postgres; then \
+          remote "set -o pipefail; cd ${DIR} && mkdir -p backups && chmod 700 backups \
+            && if ${compose} ps --status running --services 2>/dev/null | grep -qx postgres; then \
                  f=backups/pre-${VERSION}-\$(date -u +%Y%m%dT%H%M%SZ).sql.gz \
-                 && docker compose --env-file .env --env-file release.env exec -T postgres pg_dumpall -U repody | gzip > \$f \
+                 && ${compose} exec -T postgres pg_dumpall -U repody | gzip > \$f \
                  && chmod 600 \$f && test -s \$f && echo \"backed up: \$f (\$(stat -c %s \$f) bytes)\"; \
                else echo 'no running Postgres: nothing to back up'; fi \
             && ls -1t backups/*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --"
@@ -107,62 +151,89 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           remote() { tailscale ssh "deploy@${HOST}" "$@"; }
-          compose="docker compose --env-file .env --env-file release.env"
+          compose="docker compose -p ${PROJECT} --env-file .env --env-file release.env"
 
-          remote 'cat > /opt/repody/compose.yaml' < deploy/vps/compose.yaml
+          remote "cat > ${DIR}/compose.yaml" < deploy/vps/compose.yaml
           # The server's tools, as this release has them (deploy/vps/README.md, "Tools").
-          remote 'mkdir -p /opt/repody/tools && chmod 700 /opt/repody/tools'
+          remote "mkdir -p ${DIR}/tools && chmod 700 ${DIR}/tools"
           for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/vps/smoke_test.py; do
-            remote "cat > /opt/repody/tools/${tool##*/}" < "${tool}"
+            [ -f "${tool}" ] && remote "cat > ${DIR}/tools/${tool##*/}" < "${tool}"
           done
-          printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote 'cat > /opt/repody/release.env'
+          printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote "cat > ${DIR}/release.env"
 
           # The token is valid for this run only, and the login is removed once the images are pulled.
           printf '%s' "${GH_TOKEN}" | remote "docker login ghcr.io -u '${GITHUB_ACTOR}' --password-stdin > /dev/null \
-            && cd /opt/repody && ${compose} pull --quiet; status=\$?; docker logout ghcr.io > /dev/null; exit \$status"
+            && cd ${DIR} && ${compose} pull --quiet; status=\$?; docker logout ghcr.io > /dev/null; exit \$status"
 
-          remote "cd /opt/repody && ${compose} up -d --wait --wait-timeout 600 --remove-orphans"
-          remote "cd /opt/repody && ${compose} ps --format 'table {{.Service}}\t{{.Status}}'"
+          remote "cd ${DIR} && ${compose} up -d --wait --wait-timeout 600 --remove-orphans"
+          remote "cd ${DIR} && ${compose} ps --format 'table {{.Service}}\t{{.Status}}'"
 
       - name: Check the release
         run: |
           remote() { tailscale ssh "deploy@${HOST}" "$@"; }
-          compose="docker compose --env-file .env --env-file release.env"
+          compose="docker compose -p ${PROJECT} --env-file .env --env-file release.env"
           fail() { local message="$1"; echo "::error::${message}"; exit 1; }
+          access=()
+          if [ -n "${CF_ACCESS_CLIENT_ID}" ]; then
+            access=(-H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}")
+          fi
+          get() { curl "${access[@]}" "$@"; }
 
-          running="$(remote 'cat /opt/repody/release.env')"
+          running="$(remote "cat ${DIR}/release.env")"
           [ "${running}" = "REPODY_VERSION=${VERSION}" ] || fail "the server runs '${running}', not ${VERSION}"
-          migrate="$(remote "cd /opt/repody && ${compose} ps -a migrate --format '{{.ExitCode}}'")"
+          migrate="$(remote "cd ${DIR} && ${compose} ps -a migrate --format '{{.ExitCode}}'")"
           [ "${migrate}" = "0" ] || fail "the migrations exited with ${migrate}"
 
           app="https://${APP_HOST}"
           for _ in $(seq 1 12); do
-            curl -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" && break
+            get -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" && break
             sleep 10
           done
-          curl -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" || fail "${app}/api/v1/healthz does not answer"
+          get -fsS --max-time 10 -o /dev/null "${app}/api/v1/healthz" || fail "${app}/api/v1/healthz does not answer"
 
-          signin="$(curl -fsS --max-time 15 -X POST "${app}/api/auth/sign-in/social" \
+          signin="$(get -fsS --max-time 15 -X POST "${app}/api/auth/sign-in/social" \
             -H 'content-type: application/json' -H "origin: ${app}" \
             -d '{"provider":"keycloak","callbackURL":"/dashboard","disableRedirect":true}')"
           [[ "${signin}" == *'/protocol/openid-connect/auth'* ]] || fail "sign-in returns no Keycloak URL: ${signin:0:200}"
 
-          headers="$(curl -fsS --max-time 10 -D - -o /dev/null "${app}/login" | tr -d '\r')"
+          headers="$(get -fsS --max-time 10 -D - -o /dev/null "${app}/login" | tr -d '\r')"
           grep -qi '^strict-transport-security:' <<<"${headers}" || fail "no HSTS header"
           grep -qi '^x-powered-by:' <<<"${headers}" && fail "X-Powered-By is sent"
 
           cors() {
             local origin="$1"
-            curl -sS --max-time 10 -X OPTIONS -D - -o /dev/null "${app}/api/v1/access-requests" \
+            get -sS --max-time 10 -X OPTIONS -D - -o /dev/null "${app}/api/v1/access-requests" \
               -H "Origin: ${origin}" -H 'Access-Control-Request-Method: POST' \
               -H 'Access-Control-Request-Headers: content-type' | tr -d '\r' | grep -i '^access-control-allow-origin:' || true
           }
-          [[ "$(cors "${SITE_ORIGIN}")" == *"${SITE_ORIGIN}"* ]] || fail "the site (${SITE_ORIGIN}) may not post access requests"
+          if [ -n "${SITE_ORIGIN}" ]; then
+            [[ "$(cors "${SITE_ORIGIN}")" == *"${SITE_ORIGIN}"* ]] || fail "the site (${SITE_ORIGIN}) may not post access requests"
+          else
+            [ -z "$(cors https://repody.com)" ] || fail "${TARGET} accepts the site's access requests"
+          fi
           [ -z "$(cors https://example.invalid)" ] || fail "CORS allows another origin"
-          echo "release ${VERSION}: running, migrated, answering, signing in, headers and CORS in place"
+          if [ -n "${CF_ACCESS_CLIENT_ID}" ]; then
+            code="$(curl -sS --max-time 10 -o /dev/null -w '%{http_code}' "${app}/login")"
+            [ "${code}" != 200 ] || fail "${app} answers without Cloudflare Access"
+          fi
+          echo "release ${VERSION} on ${TARGET}: running, migrated, answering, signing in, headers and CORS in place"
+
+      # One real run as the stack's tester account (deploy/keycloak/setup-tester-client.sh), when
+      # it has one: a document through extraction on the GPU, its credits, and its isolation.
+      - name: Smoke test
+        timeout-minutes: 20
+        run: |
+          remote() { tailscale ssh "deploy@${HOST}" "$@"; }
+          if ! remote "grep -q '^TESTER_CLIENT_SECRET=.' ${DIR}/.env"; then
+            echo "::notice::${TARGET} has no tester account: no smoke test (deploy/vps/README.md, \"Tools\")"
+            exit 0
+          fi
+          remote "cd ${DIR} && S=\$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-) \
+            && docker compose -p ${PROJECT} --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET=\"\$S\" api python - < tools/smoke_test.py" \
+            | grep -v '^{'
 
       - name: Logs of the failed release
         if: failure()
         run: |
-          tailscale ssh "deploy@${HOST}" "cd /opt/repody && docker compose --env-file .env --env-file release.env ps -a \
-            && docker compose --env-file .env --env-file release.env logs --no-color --tail 80 migrate api worker web keycloak" || true
+          tailscale ssh "deploy@${HOST}" "cd ${DIR} && docker compose -p ${PROJECT} --env-file .env --env-file release.env ps -a \
+            && docker compose -p ${PROJECT} --env-file .env --env-file release.env logs --no-color --tail 80 migrate api worker web keycloak" || true
