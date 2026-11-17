@@ -356,11 +356,6 @@ async def run_api_key_hash(session: AsyncSession, run_id: str) -> str | None:
 # --- Audits: finished runs ---
 
 
-def _like(text: str) -> str:
-    """``text`` as a literal inside an ILIKE pattern (its wildcards escaped)."""
-    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
 def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
     """Done runs matching the filter, newest first, each with its workflow (one join)."""
     query = (
@@ -384,9 +379,8 @@ def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
         start = midnight(audits.day)
         query = query.where(Run.created_at >= start, Run.created_at < start + timedelta(days=1))
     if q := audits.q.strip():
-        pattern = f"%{_like(q)}%"
         query = query.where(
-            or_(Run.id.ilike(pattern, escape="\\"), Workflow.name.ilike(pattern, escape="\\"))
+            or_(Run.id.icontains(q, autoescape=True), Workflow.name.icontains(q, autoescape=True))
         )
     return query
 

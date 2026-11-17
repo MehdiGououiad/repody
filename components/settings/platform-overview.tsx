@@ -68,7 +68,7 @@ export async function PlatformOverview({ platform }: { platform: PlatformConfig 
               [
                 t("endpoint"),
                 <span key="e" className="font-mono text-xs">
-                  {platform.llamacppBaseUrl}
+                  {platform.inferenceBaseUrl}
                 </span>,
               ],
             ]}

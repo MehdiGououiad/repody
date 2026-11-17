@@ -1,4 +1,5 @@
-"""Credits: grant them to a client company, read balances and usage."""
+"""Credits: read balances and usage (a platform admin grants them in the admin area,
+``POST /v1/admin/clients/{account}/credits``, which records who did it)."""
 
 from datetime import datetime
 from typing import Annotated
@@ -7,20 +8,9 @@ from fastapi import APIRouter, Query
 
 from repody.api.deps import AccountScope, SessionDep, require
 from repody.app import credits
-from repody.infra.auth import User
-from repody.schemas.credits import Credits, GrantIn, UsageReport
+from repody.schemas.credits import UsageReport
 
 router = APIRouter(prefix="/credits", tags=["credits"])
-
-
-@router.post("/grants", status_code=201)
-async def grant(
-    body: GrantIn, session: SessionDep, user: Annotated[User, require("credits:grant")]
-) -> Credits:
-    """Add credits to an account (a negative amount takes them back); its new balance."""
-    balance = await credits.grant(session, body.account, body.amount, body.note, user.subject)
-    await session.commit()
-    return balance
 
 
 @router.get("/usage", dependencies=[require("metrics:read")])

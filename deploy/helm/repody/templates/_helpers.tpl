@@ -82,9 +82,9 @@ envFrom:
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: {{ $key }} }
 {{- end }}
-- name: AUDIT_LLAMACPP_API_KEY
+- name: AUDIT_INFERENCE_API_KEY
   valueFrom:
-    secretKeyRef: { name: {{ $secret }}, key: AUDIT_LLAMACPP_API_KEY, optional: true }
+    secretKeyRef: { name: {{ $secret }}, key: AUDIT_INFERENCE_API_KEY, optional: true }
 # The admin area's Keycloak service account (repody-admin): without it, Admin cannot manage users.
 - name: AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET
   valueFrom:

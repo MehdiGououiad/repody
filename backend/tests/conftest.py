@@ -16,7 +16,7 @@ os.environ.update(
     AUDIT_OIDC_ENABLED="false",
     AUDIT_OIDC_AUDIENCE="",
     AUDIT_SEED_ON_STARTUP="false",
-    AUDIT_LLAMACPP_BASE_URL="http://llamacpp.test/v1",
+    AUDIT_INFERENCE_BASE_URL="http://llamacpp.test/v1",
     OTEL_SDK_DISABLED="true",
 )
 

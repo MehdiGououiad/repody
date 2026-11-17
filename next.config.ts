@@ -24,8 +24,6 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: "100mb",
     // A run upload goes through the /api/v1 rewrite; allow it as long as the browser does.
     proxyTimeout: 120_000,
-    // lucide-react and recharts are already in Next's default optimize list.
-    optimizePackageImports: ["radix-ui", "cmdk"],
   },
   // /api/v1/* is rewritten at runtime by proxy.ts to INTERNAL_API_URL (Compose: http://api:8000,
   // K8s: http://repody-api:8000). Do not bake it into rewrites: images must stay portable.

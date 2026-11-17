@@ -1184,53 +1184,6 @@
         ]
       }
     },
-    "/v1/credits/grants": {
-      "post": {
-        "tags": [
-          "credits"
-        ],
-        "summary": "Grant",
-        "description": "Add credits to an account (a negative amount takes them back); its new balance.",
-        "operationId": "grant_v1_credits_grants_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/GrantIn"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Credits"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ]
-      }
-    },
     "/v1/credits/usage": {
       "get": {
         "tags": [
@@ -1887,63 +1840,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/SharedWorkflow"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/admin/spend": {
-      "get": {
-        "tags": [
-          "admin"
-        ],
-        "summary": "Spend",
-        "operationId": "spend_v1_admin_spend_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "since",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Default: this month.",
-              "title": "Since"
-            },
-            "description": "Default: this month."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Spend"
                 }
               }
             }
@@ -4388,34 +4284,6 @@
         "title": "FieldRef",
         "description": "A schema field: ``total`` or, with several documents, ``invoice.total``."
       },
-      "GrantIn": {
-        "properties": {
-          "account": {
-            "type": "string",
-            "pattern": "^(client-[a-z0-9][a-z0-9_.-]{0,62}|deployment)$",
-            "title": "Account"
-          },
-          "amount": {
-            "type": "integer",
-            "maximum": 1000000.0,
-            "minimum": -1000000.0,
-            "title": "Amount",
-            "description": "Credits to add (negative to take back)."
-          },
-          "note": {
-            "type": "string",
-            "maxLength": 20000,
-            "title": "Note",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "account",
-          "amount"
-        ],
-        "title": "GrantIn"
-      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -4748,9 +4616,9 @@
             "type": "string",
             "title": "Servedmodel"
           },
-          "llamacppBaseUrl": {
+          "inferenceBaseUrl": {
             "type": "string",
-            "title": "Llamacppbaseurl"
+            "title": "Inferencebaseurl"
           },
           "modelAvailable": {
             "anyOf": [
@@ -4790,7 +4658,7 @@
         "type": "object",
         "required": [
           "servedModel",
-          "llamacppBaseUrl",
+          "inferenceBaseUrl",
           "modelAvailable",
           "maxUploadBytes",
           "maxUploadFiles",

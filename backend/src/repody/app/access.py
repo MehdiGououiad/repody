@@ -122,7 +122,7 @@ async def _person(
     new; joined when Keycloak already knows them but they belong to no client; and when a retry
     finds them already in it (an approval that stopped halfway), given a fresh password."""
     kc = admin.keycloak_admin_or_503()
-    existing = await admin.call(kc.find_user(request.email))
+    existing = await kc.find_user(request.email)
     if existing is None:
         first, _, last = request.name.partition(" ")
         invite = UserInvite(email=request.email, first_name=first, last_name=last, role=role)
@@ -130,16 +130,14 @@ async def _person(
     if existing.realm_roles & admin.PROTECTED_ROLES:
         raise AppError(409, f"{request.email} is a platform admin: approve with another email.")
     clients = {
-        g.name
-        for g in await admin.call(kc.user_groups(existing.id))
-        if g.name.startswith(CLIENT_GROUP_PREFIX)
+        g.name for g in await kc.user_groups(existing.id) if g.name.startswith(CLIENT_GROUP_PREFIX)
     }
     if clients - {account}:
         raise AppError(409, f"{request.email} already belongs to {', '.join(sorted(clients))}.")
     if account not in clients:
-        await admin.call(kc.join(existing.id, await admin.group_id(kc, account)))
-        await admin.call(kc.set_role(existing.id, role, admin.MANAGED_ROLES))
-        await admin.call(kc.set_enabled(existing.id, True))
+        await kc.join(existing.id, await admin.group_id(kc, account))
+        await kc.set_role(existing.id, role, admin.MANAGED_ROLES)
+        await kc.set_enabled(existing.id, True)
         await admin.record(session, actor, "user.invited", account, request.email, role=role)
         await session.commit()
     return await admin.reset_password(session, account, existing.id, actor)
@@ -152,7 +150,7 @@ async def approve(
     request = await _pending(session, request_id)
     account = f"{CLIENT_GROUP_PREFIX}{body.slug}"
     kc = admin.keycloak_admin_or_503()
-    if await admin.call(kc.group(account)) is None:
+    if await kc.group(account) is None:
         await admin.create_client(session, body.slug, actor)
     invited = await _person(session, request, account, body.role, actor)
     note = f"Access request {request.id}"

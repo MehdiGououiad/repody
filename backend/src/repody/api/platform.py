@@ -71,8 +71,8 @@ async def me(user: OptionalUser, session: SessionDep) -> Access:
 async def platform_config() -> PlatformConfig:
     settings = get_settings()
     return PlatformConfig(
-        served_model=settings.llamacpp_served_model,
-        llamacpp_base_url=settings.llamacpp_base_url,
+        served_model=settings.inference_model,
+        inference_base_url=settings.inference_base_url,
         model_available=await model_available(),
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,

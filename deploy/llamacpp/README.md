@@ -46,7 +46,7 @@ The launcher (`deploy/scripts/llama-serve.mjs`) passes only what the model card 
 | Flag | Why |
 |------|-----|
 | `-m` + `--mmproj` (or `-hf repo:quant`) | The weights and vision projector |
-| `-a <alias>` | The model id Repody sends (`AUDIT_LLAMACPP_SERVED_MODEL`) |
+| `-a <alias>` | The model id Repody sends (`AUDIT_INFERENCE_MODEL`) |
 | `--jinja` | The chat template reads `chat_template_kwargs` (`template`, `mode`, thinking off) |
 | `-c` (`LLAMACPP_CONTEXT`) `-np 1` | One request at a time with a 32768-token context (all pages in one request) |
 | `--image-min-tokens 1024` | llama.cpp's advice for this model's accuracy: small images (a cropped ID card) get enough vision tokens to read their text; larger pages are unchanged |
@@ -58,7 +58,7 @@ documented sampling.
 ## 4. Point Repody at the server
 
 ```powershell
-# backend/.env: AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1 (Compose: host.docker.internal)
+# backend/.env: AUDIT_INFERENCE_BASE_URL=http://127.0.0.1:8081/v1 (Compose: host.docker.internal)
 docker compose --env-file backend/.env --profile workers restart worker
 ```
 
@@ -87,7 +87,7 @@ docker compose --env-file backend/.env --profile workers restart worker
 |---------|-----|
 | Slow first request | The first image also loads the vision projector |
 | `/v1/models` has no multimodal capability | Check the `LLAMACPP_MMPROJ` path |
-| Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_LLAMACPP_SERVED_MODEL` |
+| Model alias mismatch | Align `LLAMACPP_MODEL_ALIAS` with `AUDIT_INFERENCE_MODEL` |
 | Vulkan `ErrorDeviceLost` on large pages | Update llama.cpp (`winget upgrade ggml.llamacpp`); report it upstream with the page |
 
 Logs: `deploy/llamacpp/logs/` (`<model>-llama-server.*.log`).

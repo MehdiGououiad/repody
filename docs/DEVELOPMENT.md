@@ -37,7 +37,7 @@ e2e/tests/                 # Playwright (defaults to the local stack on localhos
 | `pnpm test:unit` / `test:integration` | Fast layers |
 | `pnpm test:api` | Unit + integration (CI default) |
 | `pnpm test:live` | Needs running stack |
-| `pnpm test:e2e:smoke` | Playwright smoke |
+| `pnpm test:e2e:smoke` | Playwright smoke: sign-in and navigation |
 | `pnpm test:e2e` | All Playwright specs against `pnpm platform` |
 | `pnpm review:check` | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
 

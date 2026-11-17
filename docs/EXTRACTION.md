@@ -17,9 +17,9 @@ are derived for the UI and the rules. Markdown is stored as `extraction.markdown
 Only wiring and limits; requests follow the model card (`extraction/nuextract.py`).
 
 ```env
-AUDIT_LLAMACPP_BASE_URL=http://127.0.0.1:8081/v1
-AUDIT_LLAMACPP_SERVED_MODEL=nuextract3-q8_0
-AUDIT_LLAMACPP_API_KEY=
+AUDIT_INFERENCE_BASE_URL=http://127.0.0.1:8081/v1
+AUDIT_INFERENCE_MODEL=nuextract3-q8_0
+AUDIT_INFERENCE_API_KEY=
 
 AUDIT_INFERENCE_TIMEOUT_SECONDS=180
 AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
@@ -42,11 +42,11 @@ Set the endpoints in the chart's `config` (`deploy/helm/repody/values.yaml`):
 
 ```yaml
 config:
-  AUDIT_LLAMACPP_BASE_URL: https://your-inference-host/v1
-  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
+  AUDIT_INFERENCE_BASE_URL: https://your-inference-host/v1
+  AUDIT_INFERENCE_MODEL: nuextract3-q8_0
 ```
 
-Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires auth.
+Put `AUDIT_INFERENCE_API_KEY` in the runtime secret when the endpoint requires auth.
 
 ### NuExtract3 requests ([model card](https://huggingface.co/numind/NuExtract3), vLLM examples)
 
@@ -62,7 +62,7 @@ Put `AUDIT_LLAMACPP_API_KEY` in the runtime secret when the endpoint requires au
 ### Endpoint check
 
 ```bash
-curl -s "$AUDIT_LLAMACPP_BASE_URL/models"
+curl -s "$AUDIT_INFERENCE_BASE_URL/models"
 pnpm llamacpp:verify
 ```
 
@@ -83,8 +83,8 @@ Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not ha
 
 | Symptom | Check |
 |---------|-------|
-| `Repody VLM is unavailable` | Workers reach `$AUDIT_LLAMACPP_BASE_URL/models` |
-| 401/403 | `AUDIT_LLAMACPP_API_KEY` |
+| `Repody VLM is unavailable` | Workers reach `$AUDIT_INFERENCE_BASE_URL/models` |
+| 401/403 | `AUDIT_INFERENCE_API_KEY` |
 | Timeout | Raise `AUDIT_RUN_TIMEOUT_MINUTES` and `AUDIT_INFERENCE_TIMEOUT_SECONDS` (≤ run timeout). Compose extract defaults to 10 min / 600s |
 | Wrong JSON | llama-server started with `--jinja` |
 | Truncated output | Reduce schema size or set page cap |

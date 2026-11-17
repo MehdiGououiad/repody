@@ -8,7 +8,7 @@
   When Hatchet gives up on it (a timeout, a lost worker, a cancellation), the failure task fails
   the run in our database.
 - ``maintenance`` runs every minute (a Hatchet cron): it deletes runs past their retention and
-  the playground's old workflows.
+  declined access requests past theirs.
 
 The worker takes AUDIT_WORKER_CONCURRENCY runs at a time (Hatchet slots); scale it with replicas.
 The client's connection comes from the HATCHET_CLIENT_* environment.

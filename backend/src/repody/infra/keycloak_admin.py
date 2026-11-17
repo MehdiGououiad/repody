@@ -8,6 +8,7 @@ temporary ones Keycloak makes the user replace at the first sign-in.
 https://www.keycloak.org/docs-api/latest/rest-api/index.html
 """
 
+import asyncio
 import time
 from dataclasses import dataclass
 from functools import cache
@@ -149,19 +150,19 @@ class KeycloakAdmin:
             realm_roles=roles,
         )
 
-    async def members(self, group_id: str) -> list[KcUser]:
+    async def members(self, group_id: str, *, roles: bool = True) -> list[KcUser]:
+        """The group's users, with their realm roles (one request per user, sent together), or
+        without them (``roles=False``: counts and states only)."""
         response = await self._request(
             "GET",
             f"/groups/{group_id}/members",
             params={"briefRepresentation": "false", "max": 500},
         )
-        return [self._user(body, await self._roles(body["id"])) for body in response.json()]
-
-    async def member_count(self, group_id: str) -> int:
-        response = await self._request(
-            "GET", f"/groups/{group_id}/members", params={"briefRepresentation": "true", "max": 500}
-        )
-        return len(response.json())
+        bodies = response.json()
+        found = await asyncio.gather(*(self._roles(b["id"]) for b in bodies)) if roles else []
+        return [
+            self._user(body, found[i] if roles else frozenset()) for i, body in enumerate(bodies)
+        ]
 
     async def user(self, user_id: str) -> KcUser:
         response = await self._request("GET", f"/users/{user_id}")

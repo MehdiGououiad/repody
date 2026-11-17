@@ -58,10 +58,10 @@ x-backend-env: &backend-env
   # platform admin) gets no permission, instead of seeing every company's work.
   AUDIT_REQUIRE_CLIENT_GROUP: "true"
   # NuExtract3 on Modal (deploy/modal/README.md): the token is the Modal Proxy Token.
-  AUDIT_LLAMACPP_BASE_URL: ${MODAL_URL:?}/v1
-  AUDIT_LLAMACPP_API_KEY: ${MODAL_PROXY_TOKEN:?}
-  AUDIT_LLAMACPP_SERVED_MODEL: numind/NuExtract3
-  AUDIT_LLAMACPP_PROBE: "false"
+  AUDIT_INFERENCE_BASE_URL: ${MODAL_URL:?}/v1
+  AUDIT_INFERENCE_API_KEY: ${MODAL_PROXY_TOKEN:?}
+  AUDIT_INFERENCE_MODEL: numind/NuExtract3
+  AUDIT_INFERENCE_PROBE: "false"
   AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
   # The demo for invited clients: each client company (Keycloak group client-<name>) pays its
   # runs with credits a platform admin grants (POST /v1/credits/grants). 1 credit = 1 page, plus
@@ -381,6 +381,12 @@ services:
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
       INTERNAL_API_URL: http://api:8000
       BUGSINK_DSN: ${BUGSINK_DSN:-}
+      # Errors are tagged with the stack they come from (the backend's AUDIT_DEPLOYMENT_ENVIRONMENT).
+      BUGSINK_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-production}
+      # Where a client asks for more credits (lib/credits/contact.ts): defaults to Repody's contact
+      # page; a WhatsApp number adds a button.
+      REPODY_CONTACT_URL: ${REPODY_CONTACT_URL:-}
+      REPODY_CONTACT_WHATSAPP: ${REPODY_CONTACT_WHATSAPP:-}
       # The client's brand (lib/theme/brand.ts); unset values keep Repody's.
       REPODY_BRAND_NAME: ${REPODY_BRAND_NAME:-}
       REPODY_BRAND_LOGO_URL: ${REPODY_BRAND_LOGO_URL:-}

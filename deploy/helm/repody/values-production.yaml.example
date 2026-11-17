@@ -8,7 +8,7 @@
 #   AUDIT_S3_ACCESS_KEY      AUDIT_S3_SECRET_KEY
 #   AUTH_SECRET              (openssl rand -base64 32)
 #   AUTH_KEYCLOAK_CLIENT_SECRET
-#   AUDIT_LLAMACPP_API_KEY   (optional, when the inference endpoint needs a bearer token)
+#   AUDIT_INFERENCE_API_KEY   (optional, when the inference endpoint needs a bearer token)
 #   BUGSINK_DSN              (optional)
 
 images:
@@ -33,8 +33,8 @@ config:
   AUDIT_OIDC_AUDIENCE: repody-api
   AUDIT_S3_ENDPOINT_URL: https://s3.example.com
   AUDIT_S3_BUCKET: audit-documents
-  AUDIT_LLAMACPP_BASE_URL: https://vlm.example.com/v1
-  AUDIT_LLAMACPP_SERVED_MODEL: nuextract3-q8_0
+  AUDIT_INFERENCE_BASE_URL: https://vlm.example.com/v1
+  AUDIT_INFERENCE_MODEL: nuextract3-q8_0
   AUDIT_INFERENCE_TIMEOUT_SECONDS: "180"
   AUDIT_RUN_TIMEOUT_MINUTES: "5"
   AUDIT_CORS_ORIGINS: https://app.example.com

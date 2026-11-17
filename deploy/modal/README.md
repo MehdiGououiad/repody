@@ -79,7 +79,7 @@ The rules that follow from it:
 - Don't set the **Workspace budget** to $0. It caps usage *before* credits, so it blocks everything,
   the free credit included.
 - In the code: `min_containers=0` (nothing kept warm) and `max_containers=1` (never two GPUs).
-- In the backend: `AUDIT_LLAMACPP_PROBE=false`, so the Settings and builder pages never wake the GPU
+- In the backend: `AUDIT_INFERENCE_PROBE=false`, so the Settings and builder pages never wake the GPU
   just to show its status.
 
 ## Security
@@ -117,10 +117,10 @@ or with `modal workspace proxy-tokens create`. The secret is shown only once.
 Set these in the backend's environment (in production, the runtime Secret; never commit the token):
 
 ```bash
-AUDIT_LLAMACPP_BASE_URL=https://<workspace>--repody-nuextract-vllm-serve.<region>.modal.run/v1
-AUDIT_LLAMACPP_API_KEY=wk-….ws-…         # the token id, a dot, the token secret
-AUDIT_LLAMACPP_SERVED_MODEL=numind/NuExtract3
-AUDIT_LLAMACPP_PROBE=false
+AUDIT_INFERENCE_BASE_URL=https://<workspace>--repody-nuextract-vllm-serve.<region>.modal.run/v1
+AUDIT_INFERENCE_API_KEY=wk-….ws-…         # the token id, a dot, the token secret
+AUDIT_INFERENCE_MODEL=numind/NuExtract3
+AUDIT_INFERENCE_PROBE=false
 AUDIT_MAX_PAGES_PER_DOCUMENT=99
 ```
 
@@ -146,7 +146,7 @@ documents, plus the first slow starts after each deploy.
 ## Check it
 
 ```bash
-curl -L -H "Authorization: Bearer $AUDIT_LLAMACPP_API_KEY" "$MODAL_URL/v1/models"
+curl -L -H "Authorization: Bearer $AUDIT_INFERENCE_API_KEY" "$MODAL_URL/v1/models"
 ```
 
 Logs: `modal app logs repody-nuextract --since 1h`. Look for "Creating GPU memory snapshot" and

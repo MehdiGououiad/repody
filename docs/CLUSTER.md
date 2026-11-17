@@ -15,7 +15,7 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 | Hatchet | [Hatchet's Helm chart](https://docs.hatchet.run/self-hosting/kubernetes-quickstart) (on your Postgres), or Hatchet Cloud | `HATCHET_CLIENT_TOKEN` in the Secret; `config.HATCHET_CLIENT_HOST_PORT` when the token's address is not reachable in-cluster |
 | S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
 | OIDC provider | Keycloak (operator or managed), configured as in [Keycloak in production](#keycloak-in-production) | `config.AUDIT_OIDC_ISSUER`, `config.AUDIT_OIDC_AUDIENCE`, `web.keycloakClientId` |
-| Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_LLAMACPP_BASE_URL` |
+| Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_INFERENCE_BASE_URL` |
 | Secrets | External Secrets Operator + Vault | `existingSecret` |
 
 The pods run with the restricted security context (`runAsNonRoot`, `RuntimeDefault` seccomp,
@@ -66,7 +66,7 @@ ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example
 | `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers |
 | `AUTH_SECRET` | web (Better Auth session encryption, as `BETTER_AUTH_SECRET`) |
 | `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
-| `AUDIT_LLAMACPP_API_KEY` | workers, optional bearer token for the inference endpoint |
+| `AUDIT_INFERENCE_API_KEY` | workers, optional bearer token for the inference endpoint |
 | `BUGSINK_DSN` | optional error tracking |
 | `KEYCLOAK_ADMIN_CLIENT_SECRET` | API, optional: the admin area's Keycloak account (`repody-admin`) |
 
@@ -104,7 +104,7 @@ Then sign in on the app host and run a test extraction from the workflow builder
 - **Web to API:** the web pod gets `INTERNAL_API_URL=http://<release>-api:8000`; Next.js proxies browser `/api/v1/*` there, so the same image works on Compose and Kubernetes.
 - **OIDC:** browsers use `AUDIT_OIDC_ISSUER` (public URL). If pods cannot reach that URL, set `web.internalIssuer` and `config.AUDIT_OIDC_JWKS_URL` to the in-cluster Keycloak Service.
 - **Uploads:** files go to the API in the run request (multipart), and the API stores them in S3; only the API and workers reach the bucket.
-- **Inference:** `AUDIT_LLAMACPP_BASE_URL` must be reachable from the workers - never `host.docker.internal`.
+- **Inference:** `AUDIT_INFERENCE_BASE_URL` must be reachable from the workers - never `host.docker.internal`.
 - **NetworkPolicy:** off by default (platform teams usually own it). `networkPolicy.enabled: true` gives a default-deny policy that allows in-release traffic, DNS, ingress to web/API, and egress to `networkPolicy.egressCidrs`.
 
 ## Images and releases
@@ -172,7 +172,7 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 |---------|-------|
 | Pods `CreateContainerConfigError` | `repody-runtime-secrets` exists and has the keys above |
 | Migrations Job fails | `AUDIT_DATABASE_URL` reachable from the namespace |
-| Workers cannot extract | `AUDIT_LLAMACPP_BASE_URL` reachable; 401 means `AUDIT_LLAMACPP_API_KEY` |
+| Workers cannot extract | `AUDIT_INFERENCE_BASE_URL` reachable; 401 means `AUDIT_INFERENCE_API_KEY` |
 | Upload fails | `AUDIT_MAX_UPLOAD_BYTES` and the Ingress body size limit |
 | Sign-in loops / 401 | Issuer and JWKS reachable from API and web pods (`web.internalIssuer`) |
 | `ImagePullBackOff` | Pull secret; repository includes the registry host |

@@ -7,8 +7,8 @@ ever changed here, and only to a client role (viewer, operator, admin): a platfo
 edited, nor made, from the admin area.
 """
 
+import asyncio
 import secrets
-from collections.abc import Awaitable
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -20,7 +20,7 @@ from repody.app import credits
 from repody.app.errors import AppError
 from repody.infra import keycloak_admin
 from repody.infra.auth import CLIENT_GROUP_PREFIX
-from repody.infra.keycloak_admin import KcUser, KeycloakAdmin, KeycloakError
+from repody.infra.keycloak_admin import KcUser, KeycloakAdmin
 from repody.infra.models import AdminEvent, CreditEntry, Workflow, new_id
 from repody.schemas.admin import (
     CLIENT_ROLES,
@@ -41,7 +41,7 @@ from repody.schemas.admin import (
     UserChange,
     UserInvite,
 )
-from repody.schemas.credits import Credits
+from repody.schemas.credits import AccountUsage, Credits
 from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
@@ -59,13 +59,6 @@ def keycloak_admin_or_503() -> KeycloakAdmin:
     if not keycloak_admin.enabled():
         raise AppError(503, NOT_CONFIGURED)
     return keycloak_admin.keycloak_admin()
-
-
-async def call[T](call: Awaitable[T]) -> T:
-    try:
-        return await call
-    except KeycloakError as exc:
-        raise AppError(exc.status, exc.detail) from exc
 
 
 def _temporary_password() -> str:
@@ -116,27 +109,16 @@ def _client_user(user: KcUser) -> ClientUser:
 # --- Overview ---
 
 
-async def _usage_since(session: AsyncSession, since: datetime) -> dict[str, tuple[int, int, int]]:
-    """Per account: settled runs, pages and model time since ``since``."""
-    entry = CreditEntry
-    rows = await session.execute(
-        select(entry.account_id, func.count(), func.sum(entry.pages), func.sum(entry.model_ms))
-        .where(entry.kind == "run", ~entry.pending, entry.created_at >= since)
-        .group_by(entry.account_id)
-    )
-    return {acc: (runs, int(pages or 0), int(ms or 0)) for acc, runs, pages, ms in rows}
+async def _usage(
+    session: AsyncSession, since: datetime, account: str | None = None
+) -> dict[str, AccountUsage]:
+    """Per account: its balance now, and its settled runs since ``since`` (repody.app.credits)."""
+    report = await credits.usage(session, account=account, since=since)
+    return {u.account: u for u in report.accounts}
 
 
-async def _balances(session: AsyncSession) -> dict[str, tuple[int, int]]:
-    entry = CreditEntry
-    rows = await session.execute(
-        select(
-            entry.account_id,
-            func.sum(entry.amount),
-            -func.coalesce(func.sum(entry.amount).filter(entry.pending), 0),
-        ).group_by(entry.account_id)
-    )
-    return {acc: (int(balance), int(held)) for acc, balance, held in rows}
+def _thirty_days_ago() -> datetime:
+    return datetime.now(UTC) - timedelta(days=30)
 
 
 async def _workflow_counts(session: AsyncSession) -> dict[str, int]:
@@ -153,37 +135,41 @@ def _summary(
     *,
     users: int,
     active: int,
-    balances: dict[str, tuple[int, int]],
-    usage: dict[str, tuple[int, int, int]],
-    workflows: dict[str, int],
+    usage: AccountUsage | None,
+    workflows: int,
     in_keycloak: bool,
 ) -> ClientSummary:
-    balance, held = balances.get(account, (0, 0))
-    runs, pages, _ms = usage.get(account, (0, 0, 0))
+    balance = usage.balance if usage else 0
     return ClientSummary(
         account=account,
         users=users,
         active_users=active,
         balance=balance,
-        held=held,
+        held=usage.held if usage else 0,
         low_balance=balance < get_settings().credit_low_balance,
-        recent_runs=runs,
-        recent_pages=pages,
-        workflows=workflows.get(account, 0),
+        recent_runs=usage.runs if usage else 0,
+        recent_pages=usage.pages if usage else 0,
+        workflows=workflows,
         in_keycloak=in_keycloak,
     )
 
 
 async def spend(session: AsyncSession, since: datetime) -> Spend:
     rate = get_settings().gpu_dollars_per_hour
-    usage = await _usage_since(session, since)
 
     def dollars(ms: int) -> float:
         return round(ms / 3_600_000 * rate, 2)
 
+    used = [u for u in (await _usage(session, since)).values() if u.runs]
     accounts = [
-        SpendAccount(account=acc, runs=runs, pages=pages, model_ms=ms, dollars=dollars(ms))
-        for acc, (runs, pages, ms) in sorted(usage.items(), key=lambda item: -item[1][2])
+        SpendAccount(
+            account=u.account,
+            runs=u.runs,
+            pages=u.pages,
+            model_ms=u.model_ms,
+            dollars=dollars(u.model_ms),
+        )
+        for u in sorted(used, key=lambda u: -u.model_ms)
     ]
     total_ms = sum(a.model_ms for a in accounts)
     return Spend(
@@ -208,14 +194,14 @@ async def overview(session: AsyncSession) -> AdminOverview:
     active: dict[str, int] = {}
     if keycloak_admin.enabled():
         kc = keycloak_admin.keycloak_admin()
-        for group in await call(kc.groups(CLIENT_GROUP_PREFIX)):
-            members = await call(kc.members(group.id))
-            groups[group.name] = len(members)
-            active[group.name] = sum(m.enabled for m in members)
-    balances = await _balances(session)
-    usage = await _usage_since(session, datetime.now(UTC) - timedelta(days=30))
+        found = await kc.groups(CLIENT_GROUP_PREFIX)
+        members = await asyncio.gather(*(kc.members(g.id, roles=False) for g in found))
+        for group, users in zip(found, members, strict=True):
+            groups[group.name] = len(users)
+            active[group.name] = sum(u.enabled for u in users)
+    usage = await _usage(session, _thirty_days_ago())
     workflows = await _workflow_counts(session)
-    known = {acc for acc in (*groups, *balances, *workflows) if acc.startswith(CLIENT_GROUP_PREFIX)}
+    known = {acc for acc in (*groups, *usage, *workflows) if acc.startswith(CLIENT_GROUP_PREFIX)}
     return AdminOverview(
         enabled=keycloak_admin.enabled(),
         low_balance_threshold=get_settings().credit_low_balance,
@@ -224,9 +210,8 @@ async def overview(session: AsyncSession) -> AdminOverview:
                 acc,
                 users=groups.get(acc, 0),
                 active=active.get(acc, 0),
-                balances=balances,
-                usage=usage,
-                workflows=workflows,
+                usage=usage.get(acc),
+                workflows=workflows.get(acc, 0),
                 in_keycloak=acc in groups,
             )
             for acc in sorted(known)
@@ -241,24 +226,23 @@ async def overview(session: AsyncSession) -> AdminOverview:
 async def create_client(session: AsyncSession, slug: str, actor: str) -> ClientSummary:
     account = f"{CLIENT_GROUP_PREFIX}{slug}"
     kc = keycloak_admin_or_503()
-    if await call(kc.group(account)) is not None:
+    if await kc.group(account) is not None:
         raise AppError(409, f"{account} already exists.")
-    await call(kc.create_group(account))
+    await kc.create_group(account)
     await record(session, actor, "client.created", account)
     await session.commit()
     return _summary(
         account,
         users=0,
         active=0,
-        balances=await _balances(session),
-        usage={},
-        workflows={},
+        usage=(await _usage(session, _thirty_days_ago(), account)).get(account),
+        workflows=0,
         in_keycloak=True,
     )
 
 
 async def group_id(kc: KeycloakAdmin, account: str) -> str:
-    group = await call(kc.group(account))
+    group = await kc.group(account)
     if group is None:
         raise AppError(404, f"No client {account}.")
     return group.id
@@ -266,8 +250,8 @@ async def group_id(kc: KeycloakAdmin, account: str) -> str:
 
 async def client_detail(session: AsyncSession, account: str) -> ClientDetail:
     kc = keycloak_admin_or_503()
-    group = await call(kc.group(account))
-    users = [_client_user(u) for u in await call(kc.members(group.id))] if group else []
+    group = await kc.group(account)
+    users = [_client_user(u) for u in await kc.members(group.id)] if group else []
     if group is None and not await session.scalar(
         select(func.count()).where(CreditEntry.account_id == account)
     ):
@@ -278,19 +262,20 @@ async def client_detail(session: AsyncSession, account: str) -> ClientDetail:
         .order_by(CreditEntry.created_at.desc())
         .limit(LEDGER_ROWS)
     )
-    workflows = await session.scalars(
-        select(Workflow)
-        .where(Workflow.account_id == account, Workflow.status != "archived")
-        .order_by(Workflow.updated_at.desc())
-    )
+    workflows = (
+        await session.scalars(
+            select(Workflow)
+            .where(Workflow.account_id == account, Workflow.status != "archived")
+            .order_by(Workflow.updated_at.desc())
+        )
+    ).all()
     return ClientDetail(
         summary=_summary(
             account,
             users=len(users),
             active=sum(u.enabled for u in users),
-            balances=await _balances(session),
-            usage=await _usage_since(session, datetime.now(UTC) - timedelta(days=30)),
-            workflows=await _workflow_counts(session),
+            usage=(await _usage(session, _thirty_days_ago(), account)).get(account),
+            workflows=len(workflows),
             in_keycloak=group is not None,
         ),
         users=users,
@@ -321,9 +306,9 @@ async def set_client_enabled(
 ) -> None:
     """Disable (or enable again) every user of the client: they cannot sign in meanwhile."""
     kc = keycloak_admin_or_503()
-    for user in await call(kc.members(await group_id(kc, account))):
+    for user in await kc.members(await group_id(kc, account)):
         if not user.realm_roles & PROTECTED_ROLES:
-            await call(kc.set_enabled(user.id, enabled))
+            await kc.set_enabled(user.id, enabled)
     await record(session, actor, "client.enabled" if enabled else "client.disabled", account)
     await session.commit()
 
@@ -338,26 +323,24 @@ async def invite(
     replace it at the first sign-in)."""
     kc = keycloak_admin_or_503()
     gid = await group_id(kc, account)
-    user_id = await call(
-        kc.create_user(email=body.email, first_name=body.first_name, last_name=body.last_name)
+    user_id = await kc.create_user(
+        email=body.email, first_name=body.first_name, last_name=body.last_name
     )
     password = _temporary_password()
-    await call(kc.set_temporary_password(user_id, password))
-    await call(kc.set_role(user_id, body.role, MANAGED_ROLES))
-    await call(kc.join(user_id, gid))
+    await kc.set_temporary_password(user_id, password)
+    await kc.set_role(user_id, body.role, MANAGED_ROLES)
+    await kc.join(user_id, gid)
     await record(session, actor, "user.invited", account, body.email, role=body.role)
     await session.commit()
-    return TemporaryPassword(
-        user=_client_user(await call(kc.user(user_id))), temporary_password=password
-    )
+    return TemporaryPassword(user=_client_user(await kc.user(user_id)), temporary_password=password)
 
 
 async def _member(kc: KeycloakAdmin, account: str, user_id: str) -> KcUser:
     """The user, if they belong to this client and are not a platform admin."""
-    groups = {g.name for g in await call(kc.user_groups(user_id))}
+    groups = {g.name for g in await kc.user_groups(user_id)}
     if account not in groups:
         raise AppError(404, "No such user in this client.")
-    user = await call(kc.user(user_id))
+    user = await kc.user(user_id)
     if user.realm_roles & PROTECTED_ROLES:
         raise AppError(403, "Platform admins are managed in Keycloak, not here.")
     return user
@@ -369,15 +352,15 @@ async def change_user(
     kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
     if body.role is not None and body.role != _role(user):
-        await call(kc.set_role(user_id, body.role, MANAGED_ROLES))
+        await kc.set_role(user_id, body.role, MANAGED_ROLES)
         await record(session, actor, "user.role_changed", account, user.email, role=body.role)
     if body.enabled is not None and body.enabled != user.enabled:
-        await call(kc.set_enabled(user_id, body.enabled))
+        await kc.set_enabled(user_id, body.enabled)
         await record(
             session, actor, "user.enabled" if body.enabled else "user.disabled", account, user.email
         )
     await session.commit()
-    return _client_user(await call(kc.user(user_id)))
+    return _client_user(await kc.user(user_id))
 
 
 async def reset_password(
@@ -386,7 +369,7 @@ async def reset_password(
     kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
     password = _temporary_password()
-    await call(kc.set_temporary_password(user_id, password))
+    await kc.set_temporary_password(user_id, password)
     await record(session, actor, "user.password_reset", account, user.email)
     await session.commit()
     return TemporaryPassword(user=_client_user(user), temporary_password=password)
@@ -398,8 +381,8 @@ async def remove_user(session: AsyncSession, account: str, user_id: str, actor: 
     member, never an enabled user outside every client."""
     kc = keycloak_admin_or_503()
     user = await _member(kc, account, user_id)
-    await call(kc.set_enabled(user_id, False))
-    await call(kc.leave(user_id, await group_id(kc, account)))
+    await kc.set_enabled(user_id, False)
+    await kc.leave(user_id, await group_id(kc, account))
     await record(session, actor, "user.removed", account, user.email)
     await session.commit()
 

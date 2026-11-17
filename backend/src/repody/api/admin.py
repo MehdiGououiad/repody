@@ -1,7 +1,6 @@
 """The admin area (platform admins only): clients, their users, credits, workflows, spend and
 the audit log. Every change is recorded (repody.app.admin)."""
 
-from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Path, Query
@@ -18,7 +17,6 @@ from repody.schemas.admin import (
     ClientSummary,
     ClientUser,
     SharedWorkflow,
-    Spend,
     TemporaryPassword,
     UserChange,
     UserInvite,
@@ -109,15 +107,6 @@ async def assign_workflow(
     user: Admin,
 ) -> SharedWorkflow:
     return await admin.assign_workflow(session, workflow_id, body.account, user.subject)
-
-
-@router.get("/spend")
-async def spend(
-    session: SessionDep,
-    _admin: Admin,
-    since: Annotated[datetime | None, Query(description="Default: this month.")] = None,
-) -> Spend:
-    return await admin.spend(session, since or admin.month_start())
 
 
 @router.get("/events")

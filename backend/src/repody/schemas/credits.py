@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import Field
 
-from repody.schemas.common import CamelModel, Text
+from repody.schemas.common import CamelModel
 
 CreditKind = Literal["grant", "run"]
 
@@ -23,14 +23,6 @@ class Credits(CamelModel):
     held: int = Field(description="Credits held by runs still in progress.")
     enforced: bool
     low: bool = Field(default=False, description="Below AUDIT_CREDIT_LOW_BALANCE, enforced.")
-
-
-class GrantIn(CamelModel):
-    account: str = Field(pattern=ACCOUNT_PATTERN)
-    amount: int = Field(
-        ge=-1_000_000, le=1_000_000, description="Credits to add (negative to take back)."
-    )
-    note: Text = ""
 
 
 class AccountUsage(CamelModel):

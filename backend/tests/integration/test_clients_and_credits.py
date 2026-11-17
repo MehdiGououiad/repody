@@ -44,7 +44,7 @@ def enforced(monkeypatch: pytest.MonkeyPatch) -> None:
 
 async def grant(platform: AsyncClient, account: str, amount: int) -> dict:
     response = await platform.post(
-        "/v1/credits/grants", json={"account": account, "amount": amount, "note": "trial"}
+        f"/v1/admin/clients/{account}/credits", json={"amount": amount, "note": "trial"}
     )
     assert response.status_code == 201, response.text
     return response.json()
@@ -135,7 +135,7 @@ async def test_runs_wait_for_credits_and_pay_the_pages_they_send(as_user, model_
     ]
     # Only a platform admin grants; a client admin reads their own account only.
     assert (
-        await acme.post("/v1/credits/grants", json={"account": "client-acme", "amount": 5})
+        await acme.post("/v1/admin/clients/client-acme/credits", json={"amount": 5})
     ).status_code == 403
     await grant(platform, "client-globex", 3)
     assert [a["account"] for a in (await acme.get("/v1/credits/usage")).json()["accounts"]] == [

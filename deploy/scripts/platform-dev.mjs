@@ -129,10 +129,10 @@ function patchBackendEnv() {
     setEnvKeys(BACKEND_ENV, { HATCHET_DB_PASSWORD: randomBytes(24).toString("hex") });
   }
   setEnvKeys(BACKEND_ENV, {
-    AUDIT_LLAMACPP_BASE_URL: "http://127.0.0.1:8081/v1",
-    AUDIT_LLAMACPP_SERVED_MODEL:
+    AUDIT_INFERENCE_BASE_URL: "http://127.0.0.1:8081/v1",
+    AUDIT_INFERENCE_MODEL:
       (llamaEnv.LLAMACPP_MODEL_ALIAS || "").trim() ||
-      process.env.AUDIT_LLAMACPP_SERVED_MODEL ||
+      process.env.AUDIT_INFERENCE_MODEL ||
       "nuextract3-q8_0",
     // OpenTelemetry agent for containers (Compose reads this file for interpolation).
     OTEL_SDK_DISABLED: opts.withObs ? "false" : "true",

@@ -178,7 +178,8 @@ def test_rotated_photos_are_sent_upright():
 def test_file_type_is_what_the_decoders_can_open(data: bytes, mime: str | None):
     file = io.BytesIO(data)
     file.seek(5)
-    assert render.file_type(file) == mime
+    info = render.inspect(file)
+    assert (info.mime if info else None) == mime
     assert file.tell() == 0  # rewound for storage
 
 
@@ -196,7 +197,7 @@ def test_an_oversized_pdf_page_is_drawn_within_the_pixel_cap():
 def test_an_image_bomb_is_refused_from_its_header():
     buffer = io.BytesIO()
     Image.new("1", (10_000, 8_000)).save(buffer, format="PNG")  # 80 MP, a few KB on disk
-    assert render.file_type(buffer) is None
+    assert render.inspect(buffer) is None
 
 
 def test_an_oversized_image_is_drawn_within_the_pixel_cap():

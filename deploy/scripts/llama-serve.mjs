@@ -4,7 +4,7 @@
  *
  *   node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract]
  *
- * NuExtract3, AUDIT_LLAMACPP_* — https://huggingface.co/numind/NuExtract3-GGUF
+ * NuExtract3, AUDIT_INFERENCE_* — https://huggingface.co/numind/NuExtract3-GGUF
  *
  * Only what the model card and llama.cpp need: the weights, the served name, --jinja (the chat
  * template takes chat_template_kwargs) and a context per request. Everything else is llama.cpp's
