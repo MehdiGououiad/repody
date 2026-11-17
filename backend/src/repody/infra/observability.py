@@ -50,6 +50,9 @@ def setup() -> None:
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, _QuietHealthChecks) for f in access.filters):
+        access.addFilter(_QuietHealthChecks())
     # Errors only: tracing is the OpenTelemetry agent's. Leaving traces_sample_rate unset is
     # what turns Sentry tracing off (any value, even 0, enables it).
     # No local variables in reports: on the extraction path they hold uploaded files, page images
@@ -57,6 +60,20 @@ def setup() -> None:
     sentry_sdk.init(environment=settings.deployment_environment, include_local_variables=False)
     if os.environ.get("OTEL_SDK_DISABLED", "true") == "false":
         _trace_hatchet()
+
+
+class _QuietHealthChecks(logging.Filter):
+    """Drops the access lines of answered health checks (Docker asks every 15 seconds): they
+    were most of the log. A failed one is still written."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Uvicorn's access record: (client, method, path, HTTP version, status).
+        args = record.args
+        if isinstance(args, tuple) and len(args) == 5:
+            path, status = str(args[2]), args[4]
+            if path.startswith("/v1/healthz") and isinstance(status, int) and status < 400:
+                return False
+        return True
 
 
 def _trace_hatchet() -> None:

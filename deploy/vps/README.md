@@ -78,6 +78,7 @@ account is only for the stack:
 
 ```bash
 adduser --disabled-password --gecos "" deploy && usermod -aG docker deploy
+usermod -aG systemd-journal deploy   # reads the stack's logs ("Logs")
 install -d -o deploy -g deploy -m 750 /opt/repody
 ```
 
@@ -400,6 +401,7 @@ Measured on 12 November 2026, after a full extraction run (`docker stats`):
 | web | 77 MB | 512 MB | Next.js standalone server |
 | seaweedfs | 73 MB | 512 MB | |
 | cloudflared | (not measured) | 128 MB | |
+| bugsink | (not measured) | 512 MB | Only with the `errors` profile ("Errors") |
 | **Total** | **≈ 1.5 GB** | 6.5 GB | |
 
 The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memory free. Model calls
@@ -420,6 +422,54 @@ Then open `http://localhost:8888` and sign in as `REPODY_ADMIN_EMAIL` with `HATC
 Its config and keys live in the `hatchet-config` volume; run history is kept 7 days. The API and
 workers never need a token in `.env`: `hatchet-token` writes a new one on every deploy.
 
+## Logs
+
+Every container logs to the server's journal (`logging` in compose.yaml), tagged with its name:
+`repody-api-1`, `repody-worker-1`, `repody-web-1`, … and `repody-staging-api-1` for staging. The
+journal is on disk (`/var/log/journal`), so the logs outlive a release, which recreates the
+containers, and a reboot. journald keeps at most 10% of the disk, capped at 4 GB, dropping the
+oldest first. The API and worker write one JSON object per line; answered health checks are not
+logged.
+
+```bash
+journalctl -t repody-api-1 -t repody-worker-1 --since "1 hour ago" -o cat     # read
+journalctl -t repody-api-1 -t repody-worker-1 -f -o cat                       # follow
+journalctl -t repody-worker-1 --since today -o cat | grep '"level": "error"'  # errors
+journalctl -t repody-api-1 --since "2026-11-17 14:00" --until "2026-11-17 15:00" -o cat
+journalctl --disk-usage
+```
+
+`docker compose … logs` still works for the running containers. The deploy user reads the
+journal as a member of `systemd-journal` ("Prepare the server").
+
+## Errors
+
+The API, the workers and the web server report each error, with its traceback and request, to
+Bugsink on the same server (no outside service). Bugsink is at `ERRORS_HOST`, behind Cloudflare
+Access; its data is a `bugsink` database in the stack's Postgres, so the nightly backup has it.
+Events older than 90 days are deleted. The browser's own errors are not reported. There are no
+email alerts unless Bugsink gets an SMTP server (`EMAIL_HOST`, …): open its page to check.
+
+### Setting it up (once per stack)
+
+1. In `.env`: `COMPOSE_PROFILES=errors`, `ERRORS_HOST`, and three new secrets:
+   ```bash
+   printf 'BUGSINK_SECRET_KEY=%s\nBUGSINK_DB_PASSWORD=%s\nBUGSINK_ADMIN_PASSWORD=%s\n' \
+     "$(openssl rand -hex 32)" "$(openssl rand -hex 24)" "$(openssl rand -hex 16)" >> .env
+   ```
+2. In the tunnel, route `ERRORS_HOST` to `http://bugsink:8000`, and add it to an Access application
+   that allows only your email (as `kc-admin`).
+3. Deploy (or `docker compose … up -d --wait`). `bugsink-init` creates the database the first time.
+4. Make the project and point the app at it. The DSN uses the stack network, never the public
+   host:
+   ```bash
+   docker compose --env-file .env --env-file release.env exec -T bugsink bugsink-manage shell -c \
+     "from projects.models import Project; p, _ = Project.objects.get_or_create(name='repody'); print(p.dsn)"
+   ```
+   Put the printed DSN in `.env` as `BUGSINK_DSN`, with `https://<ERRORS_HOST>` replaced by
+   `http://bugsink:8000` (`http://<key>@bugsink:8000/1`), and run `up -d --wait` again.
+5. Sign in at `https://<ERRORS_HOST>` as `REPODY_ADMIN_EMAIL` with `BUGSINK_ADMIN_PASSWORD`.
+
 ## Operating it
 
 From your machine, run `tailscale ssh deploy@<server>`, then `cd /opt/repody` (or
@@ -428,7 +478,7 @@ From your machine, run `tailscale ssh deploy@<server>`, then `cd /opt/repody` (o
 | Task | Command |
 |---|---|
 | Status | `docker compose --env-file .env --env-file release.env ps` |
-| Logs | `docker compose --env-file .env --env-file release.env logs -f --tail 200 api worker` |
+| Logs | `journalctl -t repody-api-1 -t repody-worker-1 -f -o cat` ("Logs") |
 | Restart one service | `docker compose --env-file .env --env-file release.env restart worker` |
 | Disk | `docker system df` |
 

@@ -23,6 +23,13 @@ x-hardening: &hardening
   restart: unless-stopped
   security_opt:
     - no-new-privileges:true
+  # Logs go to the server's journal, not to a file beside the container: they outlive a release
+  # (which recreates the containers) and journald caps them by size. Each line is tagged with the
+  # container's name (repody-api-1, repody-staging-api-1). Reading them: README "Logs".
+  logging:
+    driver: journald
+    options:
+      tag: "{{.Name}}"
 
 # The app's own containers run as non-root on a read-only filesystem and need no Linux
 # capability at all. (Postgres, Hatchet and SeaweedFS keep their images' defaults: they switch
@@ -402,6 +409,77 @@ services:
       timeout: 3s
       retries: 10
       start_period: 20s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  # Errors with their tracebacks (Sentry SDK in the API, worker and web), kept on this server:
+  # Bugsink, on its own database in the Postgres above, at ERRORS_HOST behind Cloudflare Access.
+  # Only where the "errors" profile is on (COMPOSE_PROFILES=errors in .env; README "Errors").
+  # https://www.bugsink.com/docs/docker-install/
+  bugsink-init:
+    <<: *hardening
+    profiles: [errors]
+    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Creates Bugsink's role and database when they are missing, then exits: postgres-init only
+    # runs on an empty volume, and this stack's volume already has data. Compose interpolates
+    # every service, also those of a profile that is off, so Bugsink's settings default to empty
+    # (a stack without it needs none) and this job stops the deploy when one is missing.
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        : "$${BUGSINK_DB_PASSWORD:?}" "$${BUGSINK_SECRET_KEY:?}" "$${BUGSINK_ADMIN_PASSWORD:?}"
+        "$${ERRORS_HOST:?}" &&
+        { psql -v ON_ERROR_STOP=1 -h postgres -U repody -d repody -tAc
+        "SELECT 1 FROM pg_roles WHERE rolname = 'bugsink'" | grep -q 1 ||
+        psql -v ON_ERROR_STOP=1 -h postgres -U repody -d repody
+        -c "CREATE ROLE bugsink LOGIN PASSWORD '$$BUGSINK_DB_PASSWORD'"
+        -c "CREATE DATABASE bugsink OWNER bugsink"; }
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      BUGSINK_DB_PASSWORD: ${BUGSINK_DB_PASSWORD:-}
+      BUGSINK_SECRET_KEY: ${BUGSINK_SECRET_KEY:-}
+      BUGSINK_ADMIN_PASSWORD: ${BUGSINK_ADMIN_PASSWORD:-}
+      ERRORS_HOST: ${ERRORS_HOST:-}
+
+  bugsink:
+    <<: [*hardening, *no-capabilities]
+    profiles: [errors]
+    image: bugsink/bugsink:2.6.3@sha256:d19378dc3ad8fac46b2d554019540e84d607c176b3e0774a10c55458f1288fa0
+    depends_on:
+      bugsink-init:
+        condition: service_completed_successfully
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:-}
+      DATABASE_URL: postgresql://bugsink:${BUGSINK_DB_PASSWORD:-}@postgres:5432/bugsink
+      # The first sign-in; change the password in Bugsink, then this no longer matters.
+      CREATE_SUPERUSER: ${REPODY_ADMIN_EMAIL:?}:${BUGSINK_ADMIN_PASSWORD:-}
+      BASE_URL: https://${ERRORS_HOST:-}
+      # The SDKs send to http://bugsink:8000 on the stack network (BUGSINK_DSN), never through
+      # Cloudflare Access; people use ERRORS_HOST.
+      ALLOWED_HOSTS: ${ERRORS_HOST:-},bugsink
+      BEHIND_HTTPS_PROXY: "True"
+      PORT: "8000"
+      SINGLE_USER: "True"
+      SITE_TITLE: Repody ${DEPLOYMENT_ENVIRONMENT:-production}
+      PHONEHOME: "False"
+      MAX_EVENT_AGE_DAYS: "90"
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     deploy:
       resources:
         limits: { memory: 512M }
