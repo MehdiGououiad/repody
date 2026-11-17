@@ -1,7 +1,7 @@
 name: Release promotion
 
-# Verify a published tag before client handoff: both images must carry a cosign signature
-# made by the images-ghcr workflow of this repository.
+# Verify a published tag before client handoff: each image must carry a cosign signature made
+# by this repository's images-ghcr workflow building master (or, before 1.7, that very tag).
 on:
   workflow_dispatch:
     inputs:
@@ -43,5 +43,5 @@ jobs:
           for target in backend web keycloak; do
             cosign verify "${registry}/repody-${target}:${TAG}" \
               --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@"
+              --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/images-ghcr\.yml@refs/(heads/master|tags/v${TAG//./\\.})$"
           done

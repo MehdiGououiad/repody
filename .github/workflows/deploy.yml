@@ -1,12 +1,14 @@
 name: Deploy
 
-# Deploys a published release to a stack on the VPS (deploy/vps/README.md): production, or staging
-# beside it (README "Staging"). It runs by itself after images are published (images-ghcr.yml):
-# a v* tag goes to production, each commit on master to staging. It can also run by hand
-# (Actions > Deploy > Run workflow) to deploy or roll back either stack to any published version.
+# Deploys published images to a stack on the VPS (deploy/vps/README.md): production, or staging
+# beside it (README "Staging"). It runs by itself: CI deploys each master commit to staging
+# (ci.yml), and a release tag promotes that build to production (release.yml). It can also run
+# by hand (Actions > Deploy > Run workflow) to deploy or roll back either stack; for production,
+# run it from the release's tag (Use workflow from > Tags > v1.2.3).
 #   1. the files deployed (compose.yaml, the tools) are the release's own, from its tag or commit,
 #      whatever ref this workflow runs on: old images never meet newer configuration;
-#   2. the three images of that version must carry this repository's release signature (cosign);
+#   2. the three images must carry this repository's build signature from the expected ref
+#      (master for releases), and the server runs the digests it verified, not tags;
 #   3. the runner joins the tailnet as an ephemeral tag:ci node, with workload identity federation
 #      bound to this job's GitHub environment (no Tailscale secret:
 #      https://tailscale.com/kb/1276/tailscale-github-action);
@@ -90,6 +92,11 @@ jobs:
             echo "::error::version must look like 1.2.3 (production) or a 12-character commit (staging)"; exit 1
           fi
           [[ "${TARGET}" == production || "${PROJECT}" != repody ]] || { echo "::error::set the COMPOSE_PROJECT variable on the ${TARGET} environment"; exit 1; }
+          # Production runs from its own release tag only (the production environment also
+          # refuses any other ref): a rollback is run from the older tag.
+          if [[ "${TARGET}" == production && "${GITHUB_REF}" != "refs/tags/v${VERSION}" ]]; then
+            echo "::error::deploy ${VERSION} to production from its tag v${VERSION} (Run workflow > Use workflow from > Tags)"; exit 1
+          fi
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -99,20 +106,38 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
-      - name: Verify the release signatures
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Login to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      # Who signed each image: images-ghcr.yml building master (releases are master builds,
+      # promoted by release.yml), or, for releases before 1.7, building that very tag. Staging
+      # also takes pre-release tags' builds. The verified digest is what the server runs: a tag
+      # moved after this check changes nothing.
+      - name: Verify the signatures and pin the digests
+        id: images
         run: |
           registry="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
-          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          workflow="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml"
+          if [[ "${TARGET}" == production ]]; then
+            signer="^${workflow//./\\.}@refs/(heads/master|tags/v${VERSION//./\\.})$"
+          else
+            signer="^${workflow//./\\.}@refs/(heads/master|tags/v[0-9][^@]*)$"
+          fi
+          : > release.env
+          printf 'REPODY_VERSION=%s\n' "${VERSION}" >> release.env
           for target in backend web keycloak; do
-            cosign verify "${registry}/repody-${target}:${VERSION}" \
-              --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-              --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@" \
-              > /dev/null
-            echo "signed: repody-${target}:${VERSION}"
+            image="${registry}/repody-${target}"
+            verified="$(cosign verify "${image}:${VERSION}" --certificate-identity-regexp "${signer}" \
+              --certificate-oidc-issuer https://token.actions.githubusercontent.com --output json)"
+            digest="$(jq -r '.[0].critical.image["docker-manifest-digest"]' <<<"${verified}")"
+            [[ "${digest}" == sha256:* ]] || { echo "::error::no digest for ${image}:${VERSION}"; exit 1; }
+            printf 'REPODY_%s_IMAGE=%s:%s@%s\n' "${target^^}" "${image}" "${VERSION}" "${digest}" >> release.env
+            echo "signed: ${image}:${VERSION}@${digest}"
           done
-          docker logout ghcr.io
 
       - name: Join the tailnet
         uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c # v4.4.0
@@ -159,7 +184,7 @@ jobs:
           for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/vps/smoke_test.py; do
             [ -f "${tool}" ] && remote "cat > ${DIR}/tools/${tool##*/}" < "${tool}"
           done
-          printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote "cat > ${DIR}/release.env"
+          remote "cat > ${DIR}/release.env" < release.env
           # The stack stays inside itself (two stacks share the server). Releases before the
           # check have none.
           if [ -f deploy/vps/check_compose.py ]; then
@@ -184,7 +209,13 @@ jobs:
           fi
           get() { curl "${access[@]}" "$@"; }
 
-          running="$(remote "cat ${DIR}/release.env")"
+          running="$(remote "head -n 1 ${DIR}/release.env")"
+          # The server runs the verified digests (releases before 1.7 have no pinning to check).
+          grep -q REPODY_BACKEND_IMAGE deploy/vps/compose.yaml && for target in backend web keycloak; do
+            want="$(grep "^REPODY_${target^^}_IMAGE=" release.env | cut -d@ -f2)"
+            got="$(remote "cd ${DIR} && ${compose} config --images" | grep "/repody-${target}:" | sort -u)"
+            [[ "${got}" == *"@${want}" ]] || fail "repody-${target} runs ${got}, not the verified ${want}"
+          done
           [ "${running}" = "REPODY_VERSION=${VERSION}" ] || fail "the server runs '${running}', not ${VERSION}"
           migrate="$(remote "cd ${DIR} && ${compose} ps -a migrate --format '{{.ExitCode}}'")"
           [ "${migrate}" = "0" ] || fail "the migrations exited with ${migrate}"

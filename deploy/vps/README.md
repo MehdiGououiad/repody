@@ -20,10 +20,16 @@ workers ──HTTPS──▶ Modal (NuExtract3 on vLLM)
 The API, workers, Postgres, Hatchet and SeaweedFS have no route at all. Hatchet's dashboard
 listens on the server's loopback only ([Hatchet](#hatchet)).
 
-**Deploys** come from [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml). A
-`v*` tag deploys itself to production, and each commit on `master` to [staging](#staging). You can
-also run it by hand with a version and a target. It does the following:
-1. Checks that the three images carry this repository's release signature.
+**Deploys** come from [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml):
+
+- **Staging:** CI builds each `master` commit whose tests pass and deploys it to
+  [staging](#staging).
+- **Production:** a release tag promotes that same build ([Releasing](#releasing)).
+- **By hand:** you can run it yourself with a version and a target.
+
+It does the following:
+1. Checks that the three images carry this repository's build signature from `master`, and pins
+   the server to the digests it verified.
 2. Joins your tailnet as an ephemeral `tag:ci` node, signing in with GitHub's OIDC token; no
    Tailscale secret is stored.
 3. Sends `compose.yaml` over Tailscale SSH, and writes the version to `release.env`.
@@ -38,9 +44,10 @@ Secrets never leave the server.
 - A VPS: Ubuntu 24.04 LTS, 4 vCPU, 8 GB RAM, 80 GB disk. The stack uses about 1.5 GB (measured,
   below).
 - A domain on Cloudflare (free plan), and free Cloudflare Zero Trust and Tailscale accounts.
-- A release. Push the tag `v<version>` (for example `v1.0.0`), and the images-ghcr workflow
-  publishes `repody-backend`, `repody-web` and `repody-keycloak` as `<version>`, signed. It runs
-  only on a commit whose CI passed.
+- Published images. Every master commit whose CI passes publishes `repody-backend`,
+  `repody-web` and `repody-keycloak`, signed, tagged with the commit (`ci.yml` and
+  `images-ghcr.yml`). A release tag `v<version>` (for example `v1.0.0`) on such a commit promotes
+  those same images as `<version>` (`release.yml`).
 - NuExtract3 on Modal, with its URL and a Proxy Token ([deploy/modal/README.md](../modal/README.md)).
 
 ## 1. Prepare the server (once)
@@ -164,16 +171,19 @@ the deploy with its name.
 2. In the repository, create the environment **`production`** (Settings → Environments):
    - secrets `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE`, from the federated identity;
    - variables `DEPLOY_HOST` (the server's Tailscale name, for example `repody-vps`) and `APP_HOST`
-     (`app.example.com`).
+     (`app.example.com`);
+   - **Deployment branches and tags:** selected ones, only the tag pattern `v*`. Nothing but a
+     release tag can then deploy to production, or get its Tailscale identity.
 
 ## 5. Deploy
 
-Under **Actions → Deploy → Run workflow**, enter the version, for example `1.0.0`. The first
+Push a release tag ([Releasing](#releasing)), or run **Actions → Deploy → Run workflow** from
+that tag (*Use workflow from → Tags*), with its version, for example `1.0.0`. The first
 deploy creates the databases. Postgres and SeaweedFS turn healthy, then Hatchet Lite; `migrate`
 applies the migrations and `hatchet-token` writes a new Hatchet API token, and both exit; then
 Keycloak, the API, the workers, web and cloudflared start. The run fails if any health check fails, or if `https://app.example.com` doesn't answer.
 
-**Rolling back** is the same thing: run Deploy with the previous version. The migrations are
+**Rolling back** is the same thing: run Deploy from the previous version's tag. The migrations are
 forward-only, so check the release notes before going back across a schema change.
 
 ## 6. First sign-in
@@ -212,6 +222,29 @@ docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_S
 The test company (`client-repody-test`) shows in Admin like any client: its credits are topped up
 automatically when low (100 at a time), and its runs count in the GPU spend.
 
+## Releasing
+
+Build once, deploy twice: production runs exactly the images staging tested.
+
+1. **Merge to `master`.** CI tests the commit, builds and signs its images (tagged with the
+   commit's first 12 characters), and deploys them to staging with the smoke test.
+2. **Check staging**, then tag that commit:
+
+   ```bash
+   git tag v1.7.0 <commit> && git push origin v1.7.0
+   ```
+
+   `release.yml` checks that the commit is on `master` and that its images carry `master`'s
+   build signature. It tags those images `1.7.0` by digest, without rebuilding, and deploys them
+   to production. Tagging a commit CI has not built yet fails with a message: re-run it once
+   staging has that commit.
+3. **To try a branch on staging before merging**, tag it as a pre-release:
+   `git tag v1.7.0-rc.1 && git push origin v1.7.0-rc.1`. CI tests and builds it, and deploys it
+   to staging only. The next merge to `master` replaces it.
+
+**Rolling back:** run **Actions → Deploy** from the older release's tag (*Use workflow from →
+Tags → v1.6.2*) with that version and the target `production`.
+
 ## Staging
 
 Staging is a second, separate copy of the stack on the same server. It runs every commit merged
@@ -227,7 +260,7 @@ there. It shares nothing with production except the server and the Docker engine
 | Tunnel | `repody` | `repody-staging`: its own token |
 | Who can reach it | the public (sign-in pages); the admin console behind Cloudflare Access | **everything** behind Cloudflare Access (application *Repody staging*): your email, and the deploy's service token |
 | GPU | Modal environment `main` | Modal environment `staging`: its own app, weights volume and proxy token, so staging never queues behind a client's run |
-| Deploys | a `v*` tag | each `master` commit (images tagged with the commit), or a pre-release tag such as `v1.7.0-rc.1` |
+| Deploys | a `v*` tag, promoting the build staging ran | each `master` commit (images tagged with the commit), or a pre-release tag such as `v1.7.0-rc.1` |
 | GitHub environment | `production` | `staging` |
 | Admin and testers | your account | `admin@staging.repody.com`, and the testers (`sh tools/setup-tester-client.sh`) |
 | Access requests | on (the site's form) | off |
@@ -274,7 +307,10 @@ staging from starving production. Moving staging to its own server later means c
    - the secrets `TS_OAUTH_CLIENT_ID` and `TS_AUDIENCE` from that identity, and
      `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`;
    - the variables `DEPLOY_HOST` (the same server), `APP_HOST=staging.repody.com`,
-     `STACK_DIR=/home/deploy/repody-staging` and `COMPOSE_PROJECT=repody-staging`.
+     `STACK_DIR=/home/deploy/repody-staging` and `COMPOSE_PROJECT=repody-staging`;
+   - **Deployment branches and tags:** selected ones, the branch `master` and the tag pattern
+     `v*-*`. In the `production` environment, only the tag pattern `v*`. A branch then cannot
+     reach either stack, even by running the workflow by hand.
 6. **First deploy.** Run **Actions → Deploy** with the target `staging` and the latest version.
    Then, in the staging directory, run `sh tools/setup-tester-client.sh`. From then on, each deploy
    runs the smoke test there too.

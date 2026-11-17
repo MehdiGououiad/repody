@@ -1,0 +1,97 @@
+name: Release
+
+# A release tag (v1.2.3) promotes what staging already runs: the images CI built and signed from
+# that master commit (images-ghcr.yml), tagged 1.2.3 by digest, never rebuilt. Then it deploys
+# them to production (deploy.yml). Build once, deploy many: production gets the bytes staging
+# tested.
+#   git tag v1.2.3 <a master commit staging ran> && git push origin v1.2.3
+# The production environment accepts only v* tags (Settings > Environments). A pre-release tag
+# (v1.2.3-rc.1) is CI's: it builds and goes to staging only.
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  promote:
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write # tag the images with the version
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # master's history: the tagged commit must be on it
+
+      - name: Check the tag
+        id: release
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::a release tag looks like v1.2.3"; exit 1; }
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/master \
+            || { echo "::error::v${version} is not on master: tag a commit staging ran"; exit 1; }
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "build=${GITHUB_SHA::12}" >> "${GITHUB_OUTPUT}"
+
+      - name: Login to GHCR
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
+
+      # Each image of the commit must carry master's build signature; its verified digest gets
+      # the version tag. The signature belongs to the digest, so the new tag is signed too.
+      - name: Promote master's signed images
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+          BUILD: ${{ steps.release.outputs.build }}
+        run: |
+          registry="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          identity="https://github.com/${GITHUB_REPOSITORY}/.github/workflows/images-ghcr.yml@refs/heads/master"
+          mkdir -p dist
+          echo "images:" > dist/helm-images.yaml
+          for target in backend web keycloak; do
+            image="${registry}/repody-${target}"
+            if ! verified="$(cosign verify "${image}:${BUILD}" --certificate-identity "${identity}" \
+                --certificate-oidc-issuer https://token.actions.githubusercontent.com --output json)"; then
+              echo "::error::${image}:${BUILD} is not a signed master build: wait until CI deployed this commit to staging, then re-run this workflow"
+              exit 1
+            fi
+            digest="$(jq -r '.[0].critical.image["docker-manifest-digest"]' <<<"${verified}")"
+            docker buildx imagetools create --tag "${image}:${VERSION}" "${image}@${digest}"
+            tagged="$(docker buildx imagetools inspect "${image}:${VERSION}" --format '{{json .Manifest}}' | jq -r .digest)"
+            [ "${tagged}" = "${digest}" ] || { echo "::error::${image}:${VERSION} is ${tagged}, not ${digest}"; exit 1; }
+            echo "promoted: ${image}:${VERSION} = ${image}@${digest} (built as ${BUILD})"
+            printf '  %s:\n    repository: %s\n    tag: "%s"\n    digest: %s\n' \
+              "${target}" "${image}" "${VERSION}" "${digest}" >> dist/helm-images.yaml
+          done
+          cat dist/helm-images.yaml
+
+      - name: Upload Helm image values
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: repody-images-${{ steps.release.outputs.version }}
+          path: dist/helm-images.yaml
+          retention-days: 90
+
+  deploy:
+    needs: promote
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.promote.outputs.version }}
+      target: production
+    secrets: inherit

@@ -113,14 +113,17 @@ Then sign in on the app host and run a test extraction from the workflow builder
 REPODY_IMAGE_REGISTRY=ghcr.io/yourorg REPODY_IMAGE_TAG=1.2.3 pnpm images:release
 ```
 
-Tags must be immutable (`docker-bake.hcl` rejects empty and `latest`). In CI,
-[`images-ghcr.yml`](../.github/workflows/images-ghcr.yml) builds both images with BuildKit SBOM
-and provenance attestations, signs the digests with cosign (keyless), and uploads
-`helm-images.yaml` with the digests to pin in values. Before a client handoff,
-[`release-promote.yml`](../.github/workflows/release-promote.yml) verifies the signatures:
+Tags must be immutable (`docker-bake.hcl` rejects empty and `latest`). In CI, each master
+commit's images are built by [`images-ghcr.yml`](../.github/workflows/images-ghcr.yml) with
+BuildKit SBOM and provenance attestations, and their digests are signed with cosign (keyless). A
+release tag `v1.2.3` promotes that build, by digest, as `1.2.3`
+([`release.yml`](../.github/workflows/release.yml)), and uploads `helm-images.yaml` with the
+digests to pin in values. Before a client handoff,
+[`release-promote.yml`](../.github/workflows/release-promote.yml) verifies that master's build
+signed them:
 
 ```bash
-cosign verify ghcr.io/yourorg/repody-backend:1.2.3 --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity-regexp '^https://github.com/yourorg/repody/.github/workflows/images-ghcr.yml@'
+cosign verify ghcr.io/yourorg/repody-backend:1.2.3 --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity 'https://github.com/yourorg/repody/.github/workflows/images-ghcr.yml@refs/heads/master'
 ```
 
 Registry notes (GHCR, Docker Hub, Harbor): [deploy/registry/README.md](../deploy/registry/README.md).

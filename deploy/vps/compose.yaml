@@ -7,8 +7,9 @@
 # project (COMPOSE_PROJECT_NAME in its .env, which wins over the name below), volumes, network,
 # secrets, tunnel and GPU. The variables that differ default to production's values.
 #
-# - Images are the signed releases from GHCR (the images-ghcr workflow), pinned by REPODY_VERSION
-#   (release.env, written by each deploy). Nothing is built on the server.
+# - Images are the signed builds from GHCR (the images-ghcr workflow). Each deploy writes
+#   release.env: REPODY_VERSION, and REPODY_<IMAGE>_IMAGE, the tag pinned to the digest whose
+#   signature it verified, so a tag moved afterwards changes nothing. Nothing is built here.
 # - No ports are published, except Hatchet's dashboard on the server's loopback (reach it through
 #   Tailscale SSH, README "Hatchet"). cloudflared connects out to Cloudflare and forwards each
 #   public hostname to web or keycloak on the stack network; everything else stays internal.
@@ -31,7 +32,7 @@ x-no-capabilities: &no-capabilities
 
 x-backend: &backend
   <<: [*hardening, *no-capabilities]
-  image: ${REPODY_REGISTRY:?}/repody-backend:${REPODY_VERSION:?}
+  image: ${REPODY_BACKEND_IMAGE:-${REPODY_REGISTRY:?}/repody-backend:${REPODY_VERSION:?}}
   read_only: true
   tmpfs:
     - /tmp
@@ -202,7 +203,7 @@ services:
   # Behind the tunnel: https://www.keycloak.org/server/reverseproxy
   keycloak:
     <<: *hardening
-    image: ${REPODY_REGISTRY:?}/repody-keycloak:${REPODY_VERSION:?}
+    image: ${REPODY_KEYCLOAK_IMAGE:-${REPODY_REGISTRY:?}/repody-keycloak:${REPODY_VERSION:?}}
     depends_on:
       postgres:
         condition: service_healthy
@@ -359,7 +360,7 @@ services:
 
   web:
     <<: [*hardening, *no-capabilities]
-    image: ${REPODY_REGISTRY:?}/repody-web:${REPODY_VERSION:?}
+    image: ${REPODY_WEB_IMAGE:-${REPODY_REGISTRY:?}/repody-web:${REPODY_VERSION:?}}
     read_only: true
     tmpfs:
       - /tmp
