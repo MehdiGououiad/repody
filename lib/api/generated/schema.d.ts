@@ -405,26 +405,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/credits/grants": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Grant
-         * @description Add credits to an account (a negative amount takes them back); its new balance.
-         */
-        post: operations["grant_v1_credits_grants_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/credits/usage": {
         parameters: {
             query?: never;
@@ -648,23 +628,6 @@ export interface paths {
         get?: never;
         /** Assign Workflow */
         put: operations["assign_workflow_v1_admin_workflows__workflow_id__account_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/admin/spend": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Spend */
-        get: operations["spend_v1_admin_spend_get"];
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -1709,21 +1672,6 @@ export interface components {
              */
             field: string;
         };
-        /** GrantIn */
-        GrantIn: {
-            /** Account */
-            account: string;
-            /**
-             * Amount
-             * @description Credits to add (negative to take back).
-             */
-            amount: number;
-            /**
-             * Note
-             * @default
-             */
-            note: string;
-        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -1895,8 +1843,8 @@ export interface components {
         PlatformConfig: {
             /** Servedmodel */
             servedModel: string;
-            /** Llamacppbaseurl */
-            llamacppBaseUrl: string;
+            /** Inferencebaseurl */
+            inferenceBaseUrl: string;
             /** Modelavailable */
             modelAvailable: boolean | null;
             /** Maxuploadbytes */
@@ -3163,39 +3111,6 @@ export interface operations {
             };
         };
     };
-    grant_v1_credits_grants_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GrantIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Credits"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     usage_v1_credits_usage_get: {
         parameters: {
             query?: {
@@ -3582,38 +3497,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SharedWorkflow"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    spend_v1_admin_spend_get: {
-        parameters: {
-            query?: {
-                /** @description Default: this month. */
-                since?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Spend"];
                 };
             };
             /** @description Validation Error */

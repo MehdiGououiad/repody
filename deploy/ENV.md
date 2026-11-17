@@ -50,11 +50,11 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_MAX_UPLOAD_FILES` | `20` | Per run |
 | `AUDIT_MAX_REQUEST_BYTES` | 100 MiB | A whole upload request (all files and fields), counted as it arrives; keep the web app's `proxyClientMaxBodySize` (`next.config.ts`) at the same size |
 | `AUDIT_UPLOAD_ALLOWED_MIME_TYPES` | PDF, PNG, JPEG, WebP | Checked on the file's bytes |
-| `AUDIT_LLAMACPP_BASE_URL` | `http://127.0.0.1:8081/v1` | OpenAI-compatible llama-server serving NuExtract |
-| `AUDIT_LLAMACPP_API_KEY` | `local` | Bearer token for the endpoint (secret) |
-| `AUDIT_LLAMACPP_SERVED_MODEL` | `nuextract3-q8_0` | Model id from `/v1/models` |
+| `AUDIT_INFERENCE_BASE_URL` | `http://127.0.0.1:8081/v1` | OpenAI-compatible llama-server serving NuExtract |
+| `AUDIT_INFERENCE_API_KEY` | `local` | Bearer token for the endpoint (secret) |
+| `AUDIT_INFERENCE_MODEL` | `nuextract3-q8_0` | Model id from `/v1/models` |
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | `180` | Per model call; must fit in the run timeout |
-| `AUDIT_LLAMACPP_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
+| `AUDIT_INFERENCE_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to llama-server `--parallel`; documents and pages are sent concurrently up to it |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
 | `AUDIT_MAX_PAGES_PER_RUN` | all | Pages one run may send the model, all its documents together; checked from the files before the run is queued (422) |
@@ -90,11 +90,12 @@ Users outside any client group (every user of a single-client installation) and 
 see everything; their workflows are shared: every client reads and duplicates them, none edits or
 runs them. Their runs are charged to the `deployment` account, which is metered and never refused.
 
-**Granting.** A `platform_admin` grants credits (a negative amount takes them back):
+**Granting.** A `platform_admin` grants credits in Admin (a negative amount takes them back), or
+through its API, which records who did it in the audit log:
 
 ```bash
-curl -X POST https://<app>/api/v1/credits/grants -H "Authorization: Bearer <token>" \
-  -H "Content-Type: application/json" -d '{"account": "client-acme", "amount": 200, "note": "trial"}'
+curl -X POST https://<app>/api/v1/admin/clients/client-acme/credits -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" -d '{"amount": 200, "note": "trial"}'
 ```
 
 **Sizing for the Modal GPU** (measured in deploy/modal/README.md: about 10 s per page at worst,
@@ -110,6 +111,14 @@ that has neither: add them once in the admin console:
 2. Realm settings → Policies → Password policy: Minimum length 12, Not username, Password history 3.
 3. Groups → Create group `client-<name>` per client, and add its users (with the `operator` or
    `admin` role).
+
+**Asking for more credits.** A client out of credits sees a dialog pointing to the contact page.
+The web app reads where it points at runtime:
+
+| Variable (web) | Default | Notes |
+|---|---|---|
+| `REPODY_CONTACT_URL` | `https://repody.com/fr/contact/` | The contact page, per installation |
+| `REPODY_CONTACT_WHATSAPP` | — | A phone number (digits): adds a WhatsApp button |
 
 ## Admin area
 

@@ -41,7 +41,7 @@ class Health(CamelModel):
 
 class PlatformConfig(CamelModel):
     served_model: str
-    llamacpp_base_url: str
+    inference_base_url: str
     model_available: bool | None  # None: not probed (an endpoint that scales to zero)
     max_upload_bytes: int
     max_upload_files: int

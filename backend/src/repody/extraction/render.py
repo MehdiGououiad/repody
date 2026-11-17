@@ -1,7 +1,7 @@
 """Page images for the models, as OpenAI ``image_url`` content parts (base64 data URLs).
 
 PDF pages are rendered with PDFium (pypdfium2); Pillow decodes and encodes images. The same
-decoders tell what an upload is (``file_type``): a file is a PDF or an image only if they
+decoders tell what an upload is (``inspect``): a file is a PDF or an image only if they
 can open it, whatever its name or declared type.
 
 PDFium is not thread-safe (pypdfium2 docs, "Incompatibility with threading"), and documents
@@ -58,12 +58,6 @@ def inspect(file: BinaryIO) -> FileInfo | None:
             return None
     finally:
         file.seek(0)
-
-
-def file_type(file: BinaryIO) -> str | None:
-    """The MIME type of a PDF, PNG, JPEG or WebP file (see ``inspect``)."""
-    info = inspect(file)
-    return info.mime if info else None
 
 
 def _render(page: pdfium.PdfPage, dpi: int) -> Image.Image:

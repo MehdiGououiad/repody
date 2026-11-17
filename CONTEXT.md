@@ -88,7 +88,7 @@ shown by `GET /v1/platform/config`.
 
 | Concern | Configuration |
 |---------|---------------|
-| Document extraction | `AUDIT_LLAMACPP_BASE_URL`, `AUDIT_LLAMACPP_SERVED_MODEL` |
+| Document extraction | `AUDIT_INFERENCE_BASE_URL`, `AUDIT_INFERENCE_MODEL` |
 
 
 ## Frontend layout
@@ -138,7 +138,7 @@ Roles say what a user may do; their **account** says on what (`app/scope.py`). A
 |-------|---------|
 | Backend unit/integration | `pnpm test:api` |
 | Live stack | `pnpm test:live` (needs stack) |
-| Playwright smoke | `pnpm test:e2e:smoke` |
+| Playwright smoke (sign-in, navigation) | `pnpm test:e2e:smoke` |
 
 Full command list: [docs/COMMANDS.md](./docs/COMMANDS.md). Engineering notes: [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
 

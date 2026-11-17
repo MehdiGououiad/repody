@@ -15,6 +15,7 @@ from repody.app.errors import AppError
 from repody.app.seed import seed
 from repody.extraction import client
 from repody.infra import db, keycloak_admin, observability
+from repody.infra.keycloak_admin import KeycloakError
 from repody.infra.storage import S3Store, get_store
 from repody.settings import get_settings
 
@@ -93,6 +94,11 @@ def create_app() -> FastAPI:
     async def app_error(_request: Request, exc: AppError) -> JSONResponse:
         headers = {"Retry-After": str(exc.retry_after)} if exc.retry_after else None
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code, headers=headers)
+
+    # The admin area's Keycloak calls: their failures become clear statuses (repody.infra).
+    @app.exception_handler(KeycloakError)
+    async def keycloak_error(_request: Request, exc: KeycloakError) -> JSONResponse:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status)
 
     for router in (
         workflows.router,

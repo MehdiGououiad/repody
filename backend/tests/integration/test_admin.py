@@ -48,7 +48,7 @@ class FakeKeycloak:
             realm_roles=frozenset(u["roles"]),
         )
 
-    async def members(self, group_id: str) -> list[KcUser]:
+    async def members(self, group_id: str, *, roles: bool = True) -> list[KcUser]:
         return [self._kc_user(i) for i, u in self.users.items() if group_id in u["groups"]]
 
     async def user(self, user_id: str) -> KcUser:
@@ -234,7 +234,7 @@ async def test_spend_counts_this_months_runs(kc, as_user, model_answer):
     platform, acme = as_user(PLATFORM), as_user(CLIENT_ADMIN)
     await acme.put("/v1/workflows/wf-acme", json=invoice_workflow())
     await acme.post("/v1/workflows/wf-acme/runs", files=FILE)
-    spend = (await platform.get("/v1/admin/spend")).json()
+    spend = (await platform.get("/v1/admin")).json()["spend"]
     assert spend["runs"] == 1
     assert [a["account"] for a in spend["accounts"]] == ["client-acme"]
     assert spend["dollarsPerHour"] == 1.1
