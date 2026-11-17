@@ -47,4 +47,6 @@ jobs:
           cache-dependency-path: site/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
+      - name: Dead code (knip)
+        run: pnpm deadcode
       - run: pnpm build

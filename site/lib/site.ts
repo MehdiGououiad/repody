@@ -14,7 +14,6 @@ export const SITE = {
 
 export const LOCALES = ["fr", "en"] as const;
 export type Locale = (typeof LOCALES)[number];
-export const DEFAULT_LOCALE: Locale = "fr";
 
 /** Every page, by key; paths are the same in both languages, under /fr/ and /en/. */
 export const PAGES = {

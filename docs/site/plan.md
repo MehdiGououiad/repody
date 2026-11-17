@@ -10,7 +10,7 @@ end to end, because the buyers (and their engineering and security teams) decide
 |---|---|---|
 | Head of operations, back office (bank, insurer, telco) | Teams retype invoices, statements, claims, contracts | Repody reads them, checks them against their rules, and shows what to review |
 | CIO, CTO, architect | "Can we run it ourselves, and will it scale?" | One server or Kubernetes/OpenShift, their GPU or a managed one, documented, observable |
-| CISO, compliance (CNDP, Bank Al-Maghrib, ACAPS, ANRT expectations) | "Where does the data go, who can see it?" | Nowhere outside their infrastructure; SSO, roles, MFA, hardened and signed images |
+| CISO, compliance (CNDP, Bank Al-Maghrib, ACAPS, ANRT expectations) | "Where does the data go, who can see it?" | Nowhere outside their infrastructure; SSO, roles, two-factor for administrators, hardened and signed images |
 | Procurement, partner, integrator | "Can we resell it under our name?" | White label from six settings; licence, not subscription |
 | An engineer evaluating the build | "Is this real engineering?" | Every gate, scan, signature and runbook, with specifics |
 
@@ -80,7 +80,7 @@ Plus `sitemap.xml`, `robots.txt`, `llms.txt` (and `llms-full.txt`), Open Graph i
   runs (UI tests, API with per-workflow keys, live progress with the model warm-up step, queue
   position), reports (field ledger, rule notes, raw model output, print, CSV), overview, command
   palette, two languages, light and dark, keyboard first.
-- **Security:** Keycloak OIDC with PKCE, TOTP MFA, four roles and six permissions,
+- **Security:** Keycloak OIDC with PKCE, TOTP for administrators, four roles and six permissions,
   workflow API keys stored as SHA-256 and compared in constant time, upload type and size limits,
   rate limits and queue admission (429/503 with Retry-After), run retention purge; containers
   non-root, read-only, no-new-privileges, memory-capped, digests pinned; zero published ports

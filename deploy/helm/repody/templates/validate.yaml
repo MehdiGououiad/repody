@@ -7,9 +7,9 @@ credentials must never be put there; production also needs OIDC and immutable im
 {{- fail (printf "config.%s is a credential: put it in the %q Secret, not in config (rendered as a plaintext ConfigMap)" $key $.Values.existingSecret) }}
 {{- end }}
 {{- end }}
-{{- if eq (toString (index .Values.config "AUDIT_DEPLOYMENT_ENVIRONMENT")) "production" }}
+{{- if has (toString (index .Values.config "AUDIT_DEPLOYMENT_ENVIRONMENT")) (list "production" "staging") }}
 {{- if ne (toString (index .Values.config "AUDIT_OIDC_ENABLED")) "true" }}
-{{- fail "production requires config.AUDIT_OIDC_ENABLED=\"true\"" }}
+{{- fail "production and staging require config.AUDIT_OIDC_ENABLED=\"true\"" }}
 {{- end }}
 {{- range $name, $image := .Values.images }}
 {{- if and (not $image.digest) (has (toString $image.tag) (list "" "latest")) }}

@@ -20,7 +20,7 @@ Default document extraction: NuExtract via OpenAI-compatible llama-server (`repo
 |------|---------|
 | **Workflow** | Configured audit template: documents, field schema, validation rules |
 | **Run** | One execution of a workflow against uploaded files (test or production) |
-| **Document model** | `repody:vlm` — NuExtract3 on an OpenAI-compatible llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
+| **Document model** | `repody:vlm` — NuExtract3 on an OpenAI-compatible server: vLLM on Modal, or a local llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
 | **Logic rule** | Typed conditions on extracted fields (`rules/`); passed, failed or skipped |
 | **Audit** | A done run: its report, with an outcome of passed, warning or failed |
 | **Lifecycle** | The states of a run, workflow or builder flow, and their one owner: [docs/LIFECYCLES.md](./docs/LIFECYCLES.md) |
@@ -35,6 +35,7 @@ sequenceDiagram
   participant Q as Hatchet
   participant W as Worker
   participant Inf as External VLM
+  participant DB as Postgres
 
   UI->>API: POST /workflows/{id}/runs (multipart files)
   API->>Store: put files
@@ -44,7 +45,7 @@ sequenceDiagram
   W->>Inf: document-model chat completion
   Inf-->>W: structured JSON fields
   W->>W: check rules
-  W->>API: persist Run / RuleResults
+  W->>DB: save the report (Run, RuleResults)
   UI->>API: GET /runs/{id} (poll until done)
 ```
 
@@ -110,18 +111,19 @@ Next.js 16 App Router at repo root:
 | auth | External OIDC | Authentication |
 | inference | External OpenAI-compatible | Not in the Repody chart |
 
-Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). Production: Helm ([docs/CLUSTER.md](./docs/CLUSTER.md)). Packaging: [ADR 004](./docs/adr/004-cloud-kubernetes-packaging.md) · [ADR 005](./docs/adr/005-kubernetes-only-external-inference.md).
+Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). The hosted demo (app.repody.com) and its staging: one VPS with Compose, the model on Modal ([deploy/vps/README.md](./deploy/vps/README.md), [ADR 012](./docs/adr/012-hosted-demo-on-a-vps.md)). Client installations: Helm ([docs/CLUSTER.md](./docs/CLUSTER.md)). Packaging: [ADR 004](./docs/adr/004-cloud-kubernetes-packaging.md) · [ADR 005](./docs/adr/005-kubernetes-only-external-inference.md).
 
 | Lane | Command |
 |------|---------|
 | Run the product locally | `pnpm platform` |
 | Develop from source | `pnpm platform dev` |
-| Kubernetes production | [docs/CLUSTER.md](./docs/CLUSTER.md) |
+| Release the hosted demo | Merge (staging), then `git tag v1.2.3` ([deploy/vps/README.md](./deploy/vps/README.md#releasing)) |
+| Client Kubernetes installation | [docs/CLUSTER.md](./docs/CLUSTER.md) |
 | Release to client | `pnpm images:release` |
 
 ## Authorization
 
-Keycloak realm roles -> `infra/auth.py` (`ROLE_PERMISSIONS`). Routes declare `require("workflow:write")` and similar. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. Users and role assignments are managed in the Keycloak admin console.
+Keycloak realm roles -> `infra/auth.py` (`ROLE_PERMISSIONS`). Routes declare `require("workflow:write")` and similar. When `AUDIT_OIDC_ENABLED=false`, API uses a `platform_admin` dev principal. A platform admin manages client companies and their users in the app's Admin area; the Keycloak admin console is for everything else.
 
 | Role | Typical access |
 |------|----------------|
