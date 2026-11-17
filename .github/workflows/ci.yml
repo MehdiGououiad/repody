@@ -244,6 +244,9 @@ jobs:
   # ...and runs on staging, with its checks and smoke test (deploy.yml).
   deploy-staging:
     needs: publish
+    # Explicit: a job after a skipped one (tests skipped for unchanged files) is skipped too
+    # unless its condition says otherwise.
+    if: always() && needs.publish.result == 'success'
     permissions:
       contents: read
       packages: read
