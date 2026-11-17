@@ -161,14 +161,16 @@ jobs:
 
   # The images built from this commit (docker-bake.hcl) start as a Compose platform and every
   # container turns healthy (host models off). Browser tests run locally (pnpm test:e2e).
+  # Beside backend and frontend, not after them: CI takes as long as its slowest job. A failure
+  # anywhere still fails the run, and a release needs the whole run green (images-ghcr.yml).
   platform:
     runs-on: ubuntu-latest
-    needs: [changes, backend, frontend]
+    needs: changes
     if: |
-      always() &&
-      (needs.backend.result == 'success' || needs.backend.result == 'skipped') &&
-      (needs.frontend.result == 'success' || needs.frontend.result == 'skipped') &&
-      (needs.backend.result == 'success' || needs.frontend.result == 'success' || needs.changes.outputs.deploy == 'true')
+      github.event_name != 'push' ||
+      needs.changes.outputs.backend == 'true' ||
+      needs.changes.outputs.frontend == 'true' ||
+      needs.changes.outputs.deploy == 'true'
     timeout-minutes: 60
     env:
       REPODY_IMAGE_TAG: ci-${{ github.sha }}
