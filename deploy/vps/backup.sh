@@ -59,7 +59,7 @@ restore_test() {
   restic restore latest --host "${project}" --tag postgres --target /data/dump
   local dump="${work}/data/dump/postgres.sql"
   test -s "${dump}"
-  local db="repody-restore-test-$$"
+  db="repody-restore-test-$$"
   docker run -d --rm --name "${db}" -e POSTGRES_PASSWORD=restore-test postgres:18.6-alpine > /dev/null
   trap 'docker rm -f "${db}" > /dev/null 2>&1; rm -rf "${work}"' EXIT
   until docker exec "${db}" pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done

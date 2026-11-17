@@ -364,7 +364,10 @@ before it leaves the server, and runs from its pinned image: nothing is installe
 
    ```text
    15 3 * * * cd /opt/repody && bash tools/backup.sh >> backups/offsite.log 2>&1
+   45 4 * * 0 cd /opt/repody && bash tools/backup.sh check >> backups/offsite.log 2>&1
    ```
+
+   The second line checks the repository every Sunday.
 
 Check the repository now and then (`bash tools/backup.sh check`), and run the restore test after
 changing anything here. With `HEALTHCHECK_URL` set, a night without a good backup sends an email.
