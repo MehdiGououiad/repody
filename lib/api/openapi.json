@@ -472,6 +472,9 @@
           "401": {
             "description": "Use the workflow API key or sign in with run permission."
           },
+          "404": {
+            "description": "The workflow does not exist, or belongs to another client."
+          },
           "402": {
             "description": "The workflow's account has not enough credits."
           },

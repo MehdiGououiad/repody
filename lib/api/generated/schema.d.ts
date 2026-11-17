@@ -2767,6 +2767,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description The workflow does not exist, or belongs to another client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description The request is larger than AUDIT_MAX_REQUEST_BYTES. */
             413: {
                 headers: {

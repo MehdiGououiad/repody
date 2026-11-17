@@ -3,7 +3,7 @@ import time
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from repody.infra import auth
 from repody.settings import Settings, get_settings
@@ -24,8 +24,8 @@ def test_a_public_access_request_form_needs_turnstile_in_production():
         "access_requests_enabled": True,
     }
     with pytest.raises(ValidationError, match="TURNSTILE"):
-        Settings(**live, turnstile_secret="")
-    assert Settings(**live, turnstile_secret="s3cret").access_requests_enabled
+        Settings(**live, turnstile_secret=SecretStr(""))
+    assert Settings(**live, turnstile_secret=SecretStr("s3cret")).access_requests_enabled
 
 
 def test_comma_separated_lists(monkeypatch):

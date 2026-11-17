@@ -99,6 +99,7 @@ async def _caller(
     responses={
         400: {"description": "A malformed form, or more files or fields than allowed."},
         401: {"description": UNAUTHORIZED},
+        404: {"description": "The workflow does not exist, or belongs to another client."},
         402: {"description": "The workflow's account has not enough credits."},
         413: {"description": "The request is larger than AUDIT_MAX_REQUEST_BYTES."},
     },
@@ -128,7 +129,7 @@ async def start_run(
     async with request.form(
         max_files=settings.max_upload_files,
         max_fields=settings.max_upload_files + 1,
-        max_part_size=settings.max_json_bytes,
+        max_part_size=settings.max_json_bytes,  # NOSONAR - Starlette >=0.40 has it (its stubs lag)
     ) as form:
         files = [f for f in form.getlist("files") if isinstance(f, UploadFile)]
         documents = [d for d in form.getlist("documents") if isinstance(d, str)]

@@ -15,21 +15,30 @@ ESCALATIONS = ("privileged", "cap_add", "devices", "userns_mode")
 HOST_NAMESPACES = ("pid", "ipc", "network_mode", "uts")
 
 
+def _service_problems(name: str, service: dict) -> list[str]:
+    found = [
+        f"{name}: mounts the host path {volume.get('source')}"
+        for volume in service.get("volumes", [])
+        if volume.get("type") == "bind"
+    ]
+    found += [f"{name}: sets {key}" for key in ESCALATIONS if service.get(key)]
+    for key in HOST_NAMESPACES:
+        value = str(service.get(key) or "")
+        if value == "host" or value.startswith(("container:", "service:")):
+            found.append(f"{name}: {key} {value}")
+    return found
+
+
 def problems(config: dict) -> list[str]:
     found = []
     for name, service in config.get("services", {}).items():
-        for volume in service.get("volumes", []):
-            if volume.get("type") == "bind":
-                found.append(f"{name}: mounts the host path {volume.get('source')}")
-        found += [f"{name}: sets {key}" for key in ESCALATIONS if service.get(key)]
-        for key in HOST_NAMESPACES:
-            value = str(service.get(key) or "")
-            if value == "host" or value.startswith(("container:", "service:")):
-                found.append(f"{name}: {key} {value}")
+        found += _service_problems(name, service)
     for kind in ("volumes", "networks"):
-        for name, spec in (config.get(kind) or {}).items():
-            if (spec or {}).get("external"):
-                found.append(f"{kind[:-1]} {name} is external")
+        found += [
+            f"{kind[:-1]} {name} is external"
+            for name, spec in (config.get(kind) or {}).items()
+            if (spec or {}).get("external")
+        ]
     return found
 
 
