@@ -27,7 +27,19 @@ export function isPublicApi(path: string): boolean {
   return PUBLIC_API_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
 }
 
-/** Where to go after signing in: a same-origin path from `callbackUrl`, else the dashboard. */
+const SAME_ORIGIN = "https://same-origin.invalid";
+
+/** Where to go after signing in: a same-origin path from `callbackUrl`, else the dashboard.
+ * The path is resolved as a browser would: URL parsing drops tabs and newlines and reads `\` as
+ * `/`, so `/\evil.com` or `/<tab>/evil.com` would leave the site. Only what stays on the origin
+ * is kept, in its parsed form. */
 export function safeCallbackUrl(raw: string | null | undefined): string {
-  return raw?.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+  if (!raw?.startsWith("/")) return "/dashboard";
+  try {
+    const url = new URL(raw, SAME_ORIGIN);
+    if (url.origin !== SAME_ORIGIN) return "/dashboard";
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/dashboard";
+  }
 }
