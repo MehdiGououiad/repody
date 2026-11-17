@@ -181,7 +181,7 @@ jobs:
           remote "cat > ${DIR}/compose.yaml" < deploy/vps/compose.yaml
           # The server's tools, as this release has them (deploy/vps/README.md, "Tools").
           remote "mkdir -p ${DIR}/tools && chmod 700 ${DIR}/tools"
-          for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/vps/smoke_test.py; do
+          for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/vps/smoke_test.py deploy/vps/backup.sh; do
             [ -f "${tool}" ] && remote "cat > ${DIR}/tools/${tool##*/}" < "${tool}"
           done
           remote "cat > ${DIR}/release.env" < release.env

@@ -323,8 +323,65 @@ client's documents there.
 
 ## Backups
 
-Not set up yet. Postgres (`postgres-data`) and the uploaded documents (`seaweedfs-data`) are the
-data to protect. When you add backups, test a restore before relying on them.
+Two kinds, for two failures:
+
+| Copy | Where | When | Protects against |
+|---|---|---|---|
+| Database dump (`pg_dumpall`) | `backups/` on the server, last 10 kept | before every deploy | a bad release or migration |
+| **Off-site** (`tools/backup.sh`): every database, and the uploaded documents | Cloudflare R2, encrypted with restic | every night | losing the server |
+
+The off-site copy keeps 7 daily, 4 weekly and 12 monthly snapshots. restic encrypts everything
+before it leaves the server, and runs from its pinned image: nothing is installed.
+
+### Setting it up (once per stack)
+
+1. **R2.** In Cloudflare, create the bucket `repody-backups`, and an R2 API token with **Object
+   Read & Write** on that bucket only. Note its access key ID, its secret, and the S3 endpoint
+   (`https://<account id>.r2.cloudflarestorage.com`).
+2. **The settings**, as `deploy`, in `~/.config/repody-backup.env` (`chmod 600`), never in git:
+
+   ```bash
+   RESTIC_REPOSITORY=s3:https://<account id>.r2.cloudflarestorage.com/repody-backups
+   RESTIC_PASSWORD=<openssl rand -hex 32>
+   AWS_ACCESS_KEY_ID=<token access key id>
+   AWS_SECRET_ACCESS_KEY=<token secret>
+   HEALTHCHECK_URL=<optional: a healthchecks.io check, pinged after each backup>
+   ```
+
+   **Keep a copy of `RESTIC_PASSWORD` off the server** (a password manager). It is the
+   encryption key: without it, nobody, you included, can read the backups once the server is
+   gone.
+3. **First backup and a restore test**, from the stack's directory:
+
+   ```bash
+   bash tools/backup.sh
+   bash tools/backup.sh restore-test
+   ```
+
+   The restore test loads the latest dump into a throwaway Postgres and counts the workflows and
+   runs, then restores the documents to a temporary folder and counts them.
+4. **Every night**, with `crontab -e` as `deploy`:
+
+   ```text
+   15 3 * * * cd /opt/repody && bash tools/backup.sh >> backups/offsite.log 2>&1
+   ```
+
+Check the repository now and then (`bash tools/backup.sh check`), and run the restore test after
+changing anything here. With `HEALTHCHECK_URL` set, a night without a good backup sends an email.
+
+### Restoring after losing the server
+
+Set up a new server ([1. Prepare the server](#1-prepare-the-server-once)), put back
+`~/.config/repody-backup.env`, then from `/opt/repody`, before the first deploy starts the app:
+
+```bash
+docker run --rm --env-file ~/.config/repody-backup.env -v "$PWD/restore:/restore" \
+  restic/restic:0.19.1 restore latest --host repody --target /restore
+```
+
+Load `restore/data/dump/postgres.sql` into the new Postgres (`docker compose ... up -d postgres`,
+then `docker compose ... exec -T postgres psql -U repody -d postgres < restore/data/dump/postgres.sql`),
+copy `restore/data/documents` into the `repody_seaweedfs-data` volume, and deploy.
 
 ## Resources
 
