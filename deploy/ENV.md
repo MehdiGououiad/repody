@@ -48,6 +48,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 |----------|---------|---------|
 | `AUDIT_MAX_UPLOAD_BYTES` | 25 MiB | Per file |
 | `AUDIT_MAX_UPLOAD_FILES` | `20` | Per run |
+| `AUDIT_MAX_REQUEST_BYTES` | 100 MiB | A whole upload request (all files and fields), counted as it arrives; keep the web app's `proxyClientMaxBodySize` (`next.config.ts`) at the same size |
 | `AUDIT_UPLOAD_ALLOWED_MIME_TYPES` | PDF, PNG, JPEG, WebP | Checked on the file's bytes |
 | `AUDIT_LLAMACPP_BASE_URL` | `http://127.0.0.1:8081/v1` | OpenAI-compatible llama-server serving NuExtract |
 | `AUDIT_LLAMACPP_API_KEY` | `local` | Bearer token for the endpoint (secret) |
@@ -58,7 +59,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
 | `AUDIT_MAX_PAGES_PER_RUN` | all | Pages one run may send the model, all its documents together; checked from the files before the run is queued (422) |
 | `AUDIT_MAX_OUTPUT_TOKENS` | `16384` | The longest answer the model may write. A schema without tables or lists gets less, by its size, so an answer that loops stops early |
-| `AUDIT_MAX_JSON_BYTES` | 2 MiB | JSON request bodies (workflow definitions); larger ones get 413 |
+| `AUDIT_MAX_JSON_BYTES` | 2 MiB | Every other request body (workflow definitions), counted as it arrives, with or without a Content-Length; larger ones get 413 |
 
 ## Runs
 
@@ -126,6 +127,7 @@ this account grant any realm role, so keep its secret like the others.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET` | — | The `repody-admin` client's secret; without it, Admin shows credits and spend but cannot manage clients |
+| `AUDIT_REQUIRE_CLIENT_GROUP` | `false` | `true` on an installation shared by several client companies (the hosted demo): a user in no `client-*` group who is not a platform admin gets no permission instead of seeing everything |
 | `AUDIT_KEYCLOAK_ADMIN_CLIENT_ID` | `repody-admin` | |
 | `AUDIT_KEYCLOAK_INTERNAL_ISSUER` | `AUDIT_OIDC_ISSUER` | The realm as the API reaches it, e.g. `http://keycloak:8080/realms/repody` |
 | `AUDIT_CREDIT_LOW_BALANCE` | `20` | Admin flags a client below this; its users see a warning banner |
@@ -149,7 +151,7 @@ is stored, never the address).
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `AUDIT_ACCESS_REQUESTS_ENABLED` | `false` | Take requests at all (Repody's own installation, behind its site). Off: the route answers 404, so a client's installation opens no public form |
-| `AUDIT_TURNSTILE_SECRET` | — | Turnstile's secret key (widget `repody-access-requests`, site key in `site/lib/site.ts`); unset: no anti-robot check |
+| `AUDIT_TURNSTILE_SECRET` | — | Turnstile's secret key (widget `repody-access-requests`, site key in `site/lib/site.ts`); unset: no anti-robot check, which production and staging refuse to start with |
 | `AUDIT_ACCESS_REQUESTS_PER_HOUR` | `5` | Requests one network may send an hour (429 beyond). The network is Cloudflare's `CF-Connecting-IP`: meaningful only behind Cloudflare, since anyone can set that header elsewhere |
 | `AUDIT_ACCESS_REQUEST_RETENTION_DAYS` | `90` | Declined requests are deleted after this (the maintenance cron); the site's privacy page says so |
 | `AUDIT_CORS_ORIGINS` | — | Must list the site's origin (`https://repody.com`), or browsers refuse the form's request |

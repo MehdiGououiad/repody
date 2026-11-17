@@ -67,7 +67,12 @@ def _jwks(url: str) -> jwt.PyJWKClient:
 
 def user_from_token(token: str) -> User:
     """Verify a Keycloak access token (not an ID or refresh token: ``typ`` is Bearer) for the
-    configured audience; roles come from realm roles and groups."""
+    configured audience. Roles are the realm roles only (Keycloak adds the roles a group grants
+    to ``realm_access``); a group is only ever a client company, never a role.
+
+    With AUDIT_REQUIRE_CLIENT_GROUP, a user who is neither a platform admin nor in a client
+    company gets no role at all: a user left outside every company (a failed removal, an
+    account made in the Keycloak console) sees nothing instead of everything."""
     settings = get_settings()
     issuer = (settings.oidc_issuer or "").rstrip("/")
     jwks_url = settings.oidc_jwks_url or f"{issuer}/protocol/openid-connect/certs"
@@ -85,20 +90,20 @@ def user_from_token(token: str) -> User:
         raise InvalidTokenError(str(exc)) from exc
     if claims.get("typ") != "Bearer":
         raise InvalidTokenError("Not an access token.")
-    roles = {*((claims.get("realm_access") or {}).get("roles") or [])}
+    roles = (
+        frozenset((claims.get("realm_access") or {}).get("roles") or ()) & ROLE_PERMISSIONS.keys()
+    )
     groups = {str(group).strip("/").rsplit("/", 1)[-1] for group in claims.get("groups") or []}
-    roles |= groups
     # One client per user; a user put in several by mistake gets the first by name.
     clients = sorted(
         name
         for name in (g.lower() for g in groups)
         if name.startswith(CLIENT_GROUP_PREFIX) and len(name) > len(CLIENT_GROUP_PREFIX)
     )
-    return User(
-        subject=str(claims["sub"]),
-        roles=frozenset(roles) & ROLE_PERMISSIONS.keys(),
-        client=clients[0] if clients else None,
-    )
+    client = clients[0] if clients else None
+    if settings.require_client_group and client is None and "platform_admin" not in roles:
+        roles = frozenset()
+    return User(subject=str(claims["sub"]), roles=roles, client=client)
 
 
 def hash_api_key(key: str) -> str:

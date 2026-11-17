@@ -133,7 +133,8 @@ export interface paths {
          *     Poll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's
          *     account has not enough credits for the files' pages.
          *
-         *     A caller that is neither gets 401 whether or not the workflow exists.
+         *     The caller is checked before the body is read: without a valid key or session, nothing is
+         *     uploaded (401).
          */
         post: operations["start_run_v1_workflows__workflow_id__runs_post"];
         delete?: never;
@@ -1276,26 +1277,6 @@ export interface components {
             detail: string;
             /** Affectedfields */
             affectedFields: string[];
-        };
-        /** Body_start_run_v1_workflows__workflow_id__runs_post */
-        Body_start_run_v1_workflows__workflow_id__runs_post: {
-            /**
-             * Files
-             * @description One file per workflow document.
-             * @default []
-             */
-            files: string[];
-            /**
-             * Documents
-             * @description Per file, in order: the workflow document id or type.
-             * @default []
-             */
-            documents: string[];
-            /**
-             * Definition
-             * @description Test runs only: an unsaved workflow definition (JSON).
-             */
-            definition?: string | null;
         };
         /** BulkDelete */
         BulkDelete: {
@@ -2743,9 +2724,16 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
-                "multipart/form-data": components["schemas"]["Body_start_run_v1_workflows__workflow_id__runs_post"];
+                "multipart/form-data": {
+                    /** @description One file per workflow document. */
+                    files?: string[];
+                    /** @description Per file, in order: the workflow document id or type. */
+                    documents?: string[];
+                    /** @description Test runs only: an unsaved workflow definition (JSON). */
+                    definition?: string;
+                };
             };
         };
         responses: {
@@ -2757,6 +2745,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RunCreated"];
                 };
+            };
+            /** @description A malformed form, or more files or fields than allowed. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Use the workflow API key or sign in with run permission. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The workflow's account has not enough credits. */
+            402: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The workflow does not exist, or belongs to another client. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The request is larger than AUDIT_MAX_REQUEST_BYTES. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

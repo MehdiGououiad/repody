@@ -62,12 +62,18 @@ class Settings(BaseSettings):
     # the ``repody-admin`` service account; off without its secret. The internal issuer is the
     # realm as the API reaches it (Compose: http://keycloak:8080/realms/repody).
     keycloak_internal_issuer: str | None = None
+    # A multi-client installation (the hosted demo): a user outside every client company and not
+    # a platform admin gets no permission (repody.infra.auth.user_from_token). Off: a
+    # single-client installation, where users need no company.
+    require_client_group: bool = False
     keycloak_admin_client_id: str = "repody-admin"
     keycloak_admin_client_secret: SecretStr | None = None
 
-    # Uploads
+    # Uploads: each file, the files of one run, and the whole request (all files and fields).
+    # Keep the web app's proxyClientMaxBodySize (next.config.ts) at max_request_bytes.
     max_upload_bytes: PositiveInt = 25 * 1024 * 1024
     max_upload_files: PositiveInt = 20
+    max_request_bytes: PositiveInt = 100 * 1024 * 1024
     upload_allowed_mime_types: CommaList = [
         "application/pdf",
         "image/png",
@@ -144,6 +150,14 @@ class Settings(BaseSettings):
                 raise ValueError("AUDIT_OIDC_ENABLED must be true in production and staging.")
             if not self.oidc_audience:
                 raise ValueError("AUDIT_OIDC_AUDIENCE is required in production and staging.")
+            turnstile = self.turnstile_secret.get_secret_value() if self.turnstile_secret else ""
+            if self.access_requests_enabled and not turnstile:
+                raise ValueError(
+                    "AUDIT_TURNSTILE_SECRET is required for access requests in production and "
+                    "staging: the public form would have no anti-robot check."
+                )
+        if self.max_upload_bytes > self.max_request_bytes:
+            raise ValueError("AUDIT_MAX_UPLOAD_BYTES must fit in AUDIT_MAX_REQUEST_BYTES.")
         if self.inference_timeout_seconds > self.run_timeout_minutes * 60:
             raise ValueError("AUDIT_INFERENCE_TIMEOUT_SECONDS must fit in the run timeout.")
         return self

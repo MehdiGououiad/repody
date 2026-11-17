@@ -4,11 +4,11 @@ from contextlib import asynccontextmanager
 from importlib.metadata import version
 
 import structlog
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.datastructures import Headers
-from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from repody.api import access, admin, credits, platform, runs, workflows
 from repody.app.errors import AppError
@@ -37,32 +37,49 @@ async def lifespan(_app: FastAPI):
     await db.engine.dispose()
 
 
-class JsonBodyLimit:
-    """413 for a JSON body over AUDIT_MAX_JSON_BYTES, from its Content-Length, before it is read
-    (uploads are multipart and have their own limits)."""
+class BodyLimit:
+    """413 for a request body over its limit: AUDIT_MAX_REQUEST_BYTES for a multipart upload,
+    AUDIT_MAX_JSON_BYTES for anything else. Counted as the body arrives, so a body without a
+    Content-Length (chunked) or with a false one is limited too; a declared length over the
+    limit is refused before anything is read."""
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http":
-            headers = Headers(scope=scope)
-            length = headers.get("content-length", "")
-            json_body = headers.get("content-type", "").startswith("application/json")
-            limit = get_settings().max_json_bytes
-            if json_body and length.isdigit() and int(length) > limit:
-                detail = f"The request body is larger than {limit} bytes."
-                log.warning("request_too_large", path=scope.get("path"), bytes=int(length))
-                await JSONResponse({"detail": detail}, status_code=413)(scope, receive, send)
-                return
-        await self.app(scope, receive, send)
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        headers = Headers(scope=scope)
+        settings = get_settings()
+        multipart = headers.get("content-type", "").startswith("multipart/form-data")
+        limit = settings.max_request_bytes if multipart else settings.max_json_bytes
+        detail = f"The request body is larger than {limit} bytes."
+        length = headers.get("content-length", "")
+        if length.isdigit() and int(length) > limit:
+            log.warning("request_too_large", path=scope.get("path"), bytes=int(length))
+            await JSONResponse({"detail": detail}, status_code=413)(scope, receive, send)
+            return
+        received = 0
+
+        async def counted() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    log.warning("request_too_large", path=scope.get("path"), bytes=received)
+                    raise HTTPException(413, detail)
+            return message
+
+        await self.app(scope, counted, send)
 
 
 def create_app() -> FastAPI:
     observability.setup()
     settings = get_settings()
     app = FastAPI(title="Repody", version=version("repody"), lifespan=lifespan)
-    app.add_middleware(JsonBodyLimit)
+    app.add_middleware(BodyLimit)
     if settings.cors_origins:
         # Only for browser apps on other origins; requests carry a bearer token, no cookies.
         app.add_middleware(

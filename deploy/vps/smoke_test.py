@@ -4,8 +4,8 @@
 Runs inside the API container (the API, Postgres, storage, the Hatchet worker and the GPU it
 uses are the real ones), from the stack's directory on the server:
 
-    S=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
-    docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET="$S" \\
+    export TESTER_CLIENT_SECRET=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
+    docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET \\
       api python - < tools/smoke_test.py
 
 It signs in with client credentials (deploy/keycloak/setup-tester-client.sh), tops up its own

@@ -418,7 +418,7 @@
           "runs"
         ],
         "summary": "Start Run",
-        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).\nPoll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's\naccount has not enough credits for the files' pages.\n\nA caller that is neither gets 401 whether or not the workflow exists.",
+        "description": "Start a run with the workflow API key (production) or as a signed-in user (test run).\nPoll ``GET /v1/runs/{run_id}`` until its status is done or failed. 402 when the workflow's\naccount has not enough credits for the files' pages.\n\nThe caller is checked before the body is read: without a valid key or session, nothing is\nuploaded (401).",
         "operationId": "start_run_v1_workflows__workflow_id__runs_post",
         "security": [
           {
@@ -455,15 +455,6 @@
             "description": "Retrying with the same key returns the run it started (202)."
           }
         ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "$ref": "#/components/schemas/Body_start_run_v1_workflows__workflow_id__runs_post"
-              }
-            }
-          }
-        },
         "responses": {
           "202": {
             "description": "Successful Response",
@@ -475,12 +466,58 @@
               }
             }
           },
+          "400": {
+            "description": "A malformed form, or more files or fields than allowed."
+          },
+          "401": {
+            "description": "Use the workflow API key or sign in with run permission."
+          },
+          "404": {
+            "description": "The workflow does not exist, or belongs to another client."
+          },
+          "402": {
+            "description": "The workflow's account has not enough credits."
+          },
+          "413": {
+            "description": "The request is larger than AUDIT_MAX_REQUEST_BYTES."
+          },
           "422": {
             "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "description": "One file per workflow document."
+                  },
+                  "documents": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Per file, in order: the workflow document id or type."
+                  },
+                  "definition": {
+                    "type": "string",
+                    "description": "Test runs only: an unsaved workflow definition (JSON)."
+                  }
                 }
               }
             }
@@ -3308,47 +3345,6 @@
           "affectedFields"
         ],
         "title": "AuditRule"
-      },
-      "Body_start_run_v1_workflows__workflow_id__runs_post": {
-        "properties": {
-          "files": {
-            "items": {
-              "type": "string",
-              "contentMediaType": "application/octet-stream"
-            },
-            "type": "array",
-            "title": "Files",
-            "description": "One file per workflow document.",
-            "default": []
-          },
-          "documents": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Documents",
-            "description": "Per file, in order: the workflow document id or type.",
-            "default": []
-          },
-          "definition": {
-            "anyOf": [
-              {
-                "type": "string",
-                "contentMediaType": "application/json",
-                "contentSchema": {
-                  "$ref": "#/components/schemas/WorkflowDefinition"
-                }
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Definition",
-            "description": "Test runs only: an unsaved workflow definition (JSON)."
-          }
-        },
-        "type": "object",
-        "title": "Body_start_run_v1_workflows__workflow_id__runs_post"
       },
       "BulkDelete": {
         "properties": {

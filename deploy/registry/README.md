@@ -62,8 +62,10 @@ The `Publish images to GHCR` GitHub Actions workflow publishes:
 - `ghcr.io/<owner>/repody-backend:<tag>` (API and worker roles)
 - `ghcr.io/<owner>/repody-web:<tag>`
 
-It runs manually or when pushing `v*` tags, uses the repository `GITHUB_TOKEN`,
-and uploads a Helm values artifact with the generated image coordinates.
+CI runs it on every master commit whose tests pass (images tagged with the commit). A `v*` tag
+then promotes that commit's images, by digest, as `<version>` (`release.yml`): a release is never
+rebuilt. Both use the repository `GITHUB_TOKEN` and upload a Helm values artifact with the image
+coordinates and digests.
 
 For private GHCR packages, create a pull secret in the target namespace:
 

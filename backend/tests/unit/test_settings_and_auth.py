@@ -3,7 +3,7 @@ import time
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from repody.infra import auth
 from repody.settings import Settings, get_settings
@@ -13,6 +13,19 @@ from repody.settings import Settings, get_settings
 def test_production_and_staging_require_oidc(environment):
     with pytest.raises(ValidationError, match="OIDC"):
         Settings(deployment_environment=environment, oidc_enabled=False)
+
+
+def test_a_public_access_request_form_needs_turnstile_in_production():
+    live = {
+        "deployment_environment": "production",
+        "oidc_enabled": True,
+        "oidc_issuer": "https://auth.test/realms/repody",
+        "oidc_audience": "repody-api",
+        "access_requests_enabled": True,
+    }
+    with pytest.raises(ValidationError, match="TURNSTILE"):
+        Settings(**live, turnstile_secret=SecretStr(""))
+    assert Settings(**live, turnstile_secret=SecretStr("s3cret")).access_requests_enabled
 
 
 def test_comma_separated_lists(monkeypatch):
@@ -75,7 +88,7 @@ def test_user_from_token(monkeypatch, fresh_settings):
         )
     )
     assert user.subject == "alice"
-    assert user.roles == {"operator", "viewer"}
+    assert user.roles == {"operator"}  # a group is never a role, even one named like a role
     assert user.client is None
     assert user.account is None  # a single-client installation: sees everything
 
@@ -92,6 +105,25 @@ def test_user_from_token(monkeypatch, fresh_settings):
     assert admin.account is None  # a platform admin sees every client
     assert admin.can("credits:grant")
     assert not client_user.can("credits:grant")
+    escalated = auth.user_from_token(
+        token("http://kc.test/realms/repody", groups=["/platform_admin", "/client-acme"])
+    )
+    assert escalated.roles == frozenset()
+    assert escalated.account == "client-acme"
+
+    # A multi-client installation: outside every company, a user has no permission at all.
+    monkeypatch.setenv("AUDIT_REQUIRE_CLIENT_GROUP", "true")
+    get_settings.cache_clear()
+    stray = auth.user_from_token(
+        token("http://kc.test/realms/repody", realm_access={"roles": ["admin"]})
+    )
+    assert stray.roles == frozenset()
+    assert not stray.can("run:read")
+    assert client_user.can("run:read")
+    platform = auth.user_from_token(
+        token("http://kc.test/realms/repody", realm_access={"roles": ["platform_admin"]})
+    )
+    assert platform.can("clients:manage")
     with pytest.raises(auth.InvalidTokenError):
         auth.user_from_token(token("http://evil.test"))
     with pytest.raises(auth.InvalidTokenError):

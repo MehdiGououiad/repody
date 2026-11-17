@@ -1,9 +1,10 @@
 """Keycloak's Admin REST API, as the ``repody-admin`` service account (client credentials).
 
 That account holds only realm-management's ``manage-users``, ``view-users``, ``query-users`` and
-``query-groups``: it manages users and groups, never realm settings or clients, and Keycloak
-lets it grant only roles it holds itself (no admin role). Passwords are temporary ones Keycloak
-makes the user replace at the first sign-in.
+``query-groups``: it manages users and groups, never realm settings or clients. ``manage-users``
+lets it map any realm role, ``platform_admin`` included: ``set_role`` gives only the roles Repody
+manages, and its secret (KEYCLOAK_ADMIN_CLIENT_SECRET) is worth a platform admin's. Passwords are
+temporary ones Keycloak makes the user replace at the first sign-in.
 https://www.keycloak.org/docs-api/latest/rest-api/index.html
 """
 

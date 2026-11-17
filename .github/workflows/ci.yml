@@ -1,14 +1,20 @@
 name: CI
 
+# Every push and pull request is tested. A master commit, or a pre-release tag (v1.2.3-rc.1),
+# then publishes its signed images and runs on staging (publish, deploy-staging below). A
+# release tag (v1.2.3) is release.yml's: it promotes those images to production.
 on:
   push:
     branches: [main, master]
+    tags: ["v*-*"]
   pull_request:
   workflow_dispatch:
 
+# A newer push to a pull request cancels its older run. On master and tags the runs queue
+# (a newer one replaces a waiting one): a staging deploy is never cut off halfway.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -32,7 +38,9 @@ jobs:
           # The filter compares a push with the previous head: full history keeps that commit
           # local, so it needs no credentials to fetch it.
           fetch-depth: 0
+      # A tag has no previous commit to compare with: it runs every job.
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        if: github.ref_type != 'tag'
         id: filter
         with:
           filters: |
@@ -69,7 +77,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: changes
-    if: github.event_name != 'push' || needs.changes.outputs.backend == 'true'
+    if: github.event_name != 'push' || github.ref_type == 'tag' || needs.changes.outputs.backend == 'true'
     services:
       # The same images as compose.yaml.
       postgres:
@@ -121,7 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: changes
-    if: github.event_name != 'push' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    if: github.event_name != 'push' || github.ref_type == 'tag' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -147,8 +155,6 @@ jobs:
         run: pnpm deadcode
       - name: OpenAPI type drift check
         run: git diff --exit-code lib/api/generated/schema.d.ts
-      - name: Deploy checks
-        run: pnpm deploy:check
       - name: Markdown links and anchors
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
@@ -168,6 +174,7 @@ jobs:
     needs: changes
     if: |
       github.event_name != 'push' ||
+      github.ref_type == 'tag' ||
       needs.changes.outputs.backend == 'true' ||
       needs.changes.outputs.frontend == 'true' ||
       needs.changes.outputs.deploy == 'true'
@@ -189,6 +196,9 @@ jobs:
           cache: pnpm
       - name: Install frontend deps
         run: pnpm install --frozen-lockfile
+      # Here, not in frontend: this job also runs for a push that changes only deploy files.
+      - name: Deploy checks (Helm lint, kubeconform, Compose)
+        run: pnpm deploy:check
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build images (docker-bake.hcl)
@@ -215,3 +225,30 @@ jobs:
       - name: Tear down stack
         if: always()
         run: pnpm platform stop
+
+  # A master commit or a pre-release tag whose tests passed (a job skipped for unchanged files
+  # counts as passed) publishes its signed images, tagged with the commit...
+  publish:
+    needs: [changes, backend, frontend, platform]
+    if: |
+      always() && github.event_name == 'push' &&
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
+      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/images-ghcr.yml
+
+  # ...and runs on staging, with its checks and smoke test (deploy.yml).
+  deploy-staging:
+    needs: publish
+    permissions:
+      contents: read
+      packages: read
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      version: ${{ needs.publish.outputs.tag }}
+      target: staging
+    secrets: inherit

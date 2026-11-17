@@ -19,7 +19,8 @@ const nextConfig: NextConfig = {
   allowedDevOrigins,
   experimental: {
     // Proxy buffers request bodies and truncates past this size (default 10mb). Multipart
-    // run submissions carry several documents of up to AUDIT_MAX_UPLOAD_BYTES (25mb) each.
+    // run submissions carry several documents of up to AUDIT_MAX_UPLOAD_BYTES (25mb) each: keep
+    // it at the API's AUDIT_MAX_REQUEST_BYTES (100 MiB), the largest request either accepts.
     proxyClientMaxBodySize: "100mb",
     // A run upload goes through the /api/v1 rewrite; allow it as long as the browser does.
     proxyTimeout: 120_000,
@@ -36,7 +37,13 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+          // No framing, plugins or <base> tricks. Scripts, images and styles are not restricted
+          // here: the brand logo is any URL set at runtime, and model-written Markdown renders no
+          // images (document-markdown-preview.tsx).
+          {
+            key: "Content-Security-Policy",
+            value: "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+          },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
