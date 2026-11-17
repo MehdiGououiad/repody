@@ -335,7 +335,7 @@ async def invite(
     session: AsyncSession, account: str, body: UserInvite, actor: str
 ) -> TemporaryPassword:
     """A new user in the client, with a temporary password shown once (Keycloak makes them
-    replace it and set up two-factor sign-in at the first sign-in)."""
+    replace it at the first sign-in)."""
     kc = keycloak_admin_or_503()
     gid = await group_id(kc, account)
     user_id = await call(

@@ -110,6 +110,11 @@ jobs:
           compose="docker compose --env-file .env --env-file release.env"
 
           remote 'cat > /opt/repody/compose.yaml' < deploy/vps/compose.yaml
+          # The server's tools, as this release has them (deploy/vps/README.md, "Tools").
+          remote 'mkdir -p /opt/repody/tools && chmod 700 /opt/repody/tools'
+          for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/vps/smoke_test.py; do
+            remote "cat > /opt/repody/tools/${tool##*/}" < "${tool}"
+          done
           printf 'REPODY_VERSION=%s\n' "${VERSION}" | remote 'cat > /opt/repody/release.env'
 
           # The token is valid for this run only, and the login is removed once the images are pulled.

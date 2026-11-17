@@ -929,7 +929,7 @@
     "more": "Plus",
     "granted": "{account} a maintenant {balance} crédits",
     "inviteUser": "Inviter un utilisateur",
-    "inviteHint": "Il rejoint {account}. Vous obtenez un mot de passe temporaire à lui transmettre ; à sa première connexion, il choisit le sien et configure la double authentification.",
+    "inviteHint": "Il rejoint {account}. Vous obtenez un mot de passe temporaire à lui transmettre ; à sa première connexion, il choisit le sien.",
     "email": "E-mail",
     "emailInvalid": "Saisissez une adresse e-mail.",
     "firstName": "Prénom",

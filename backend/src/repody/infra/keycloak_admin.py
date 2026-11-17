@@ -188,7 +188,7 @@ class KeycloakAdmin:
                 "lastName": last_name,
                 "enabled": True,
                 "emailVerified": True,
-                "requiredActions": ["UPDATE_PASSWORD", "CONFIGURE_TOTP"],
+                "requiredActions": ["UPDATE_PASSWORD"],
             },
         )
         return response.headers["Location"].rstrip("/").rsplit("/", 1)[-1]
