@@ -447,7 +447,7 @@ journal as a member of `systemd-journal` ("Prepare the server").
 The API, the workers and the web server report each error, with its traceback and request, to
 Bugsink on the same server (no outside service). Bugsink is at `ERRORS_HOST`, behind Cloudflare
 Access; its data is a `bugsink` database in the stack's Postgres, so the nightly backup has it.
-Events older than 90 days are deleted. The browser's own errors are not reported. There are no
+Each project keeps its latest 10,000 events (Bugsink evicts older ones as new ones arrive). The browser's own errors are not reported. There are no
 email alerts unless Bugsink gets an SMTP server (`EMAIL_HOST`, …): open its page to check.
 
 ### Setting it up (once per stack)

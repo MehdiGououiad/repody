@@ -467,7 +467,6 @@ services:
       SINGLE_USER: "True"
       SITE_TITLE: Repody ${DEPLOYMENT_ENVIRONMENT:-production}
       PHONEHOME: "False"
-      MAX_EVENT_AGE_DAYS: "90"
     expose:
       - "8000"
     healthcheck:
