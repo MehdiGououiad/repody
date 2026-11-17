@@ -48,6 +48,7 @@ jobs:
             backend:
               - 'backend/**'
               - 'lib/api/openapi.json'
+              - 'lib/api/catalog.json'
               - '.github/workflows/ci.yml'
             frontend:
               - 'app/**'
@@ -123,7 +124,7 @@ jobs:
         run: uv run python scripts/export_openapi.py
       - name: OpenAPI drift check
         working-directory: ${{ github.workspace }}
-        run: git diff --exit-code lib/api/openapi.json
+        run: git diff --exit-code lib/api/openapi.json lib/api/catalog.json
 
   frontend:
     runs-on: ubuntu-latest

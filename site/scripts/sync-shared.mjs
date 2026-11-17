@@ -10,22 +10,10 @@ mkdirSync(out, { recursive: true });
 
 copyFileSync(path.join(root, "lib/theme/generate.ts"), path.join(out, "theme-generate.ts"));
 
-// backend/src/repody/schemas/catalog.py: LEAF_TYPES = {"type": "group", ...}; STRUCTURE_TYPES = ("type", ...)
-const catalog = readFileSync(path.join(root, "backend/src/repody/schemas/catalog.py"), "utf8");
-const leafBlock = catalog.match(/LEAF_TYPES[^{]*\{([^}]*)\}/)?.[1] ?? "";
-const structureBlock = catalog.match(/STRUCTURE_TYPES = \(([^)]*)\)/)?.[1] ?? "";
-const types = [
-  ...[...leafBlock.matchAll(/"([a-z-]+)":\s*"([a-z]+)"/g)].map(([, value, group]) => ({
-    value,
-    group,
-  })),
-  ...[...structureBlock.matchAll(/"([a-z-]+)"/g)].map(([, value]) => ({
-    value,
-    group: "structure",
-  })),
-];
-if (types.length < 20)
-  throw new Error(`sync-shared: read only ${types.length} field types from catalog.py`);
+// The backend's catalog, as the product reads it (lib/api/catalog.json, generated from
+// backend/src/repody/schemas/catalog.py with the OpenAPI schema).
+const catalog = JSON.parse(readFileSync(path.join(root, "lib/api/catalog.json"), "utf8"));
+const types = catalog.templateTypes.map(({ value, group }) => ({ value, group }));
 
 const fieldTypes = { types };
 for (const locale of ["fr", "en"]) {

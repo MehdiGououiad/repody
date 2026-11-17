@@ -9,6 +9,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ApiError, apiErrorMessage } from "@/lib/api/api-error";
 import { $api } from "@/lib/api/browser";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
+import { openCredits } from "@/lib/credits/dialog";
 import type { DocumentDef, RunAuditDetail, RunProgress, WorkflowRule } from "@/lib/types";
 
 const POLL_MS = 1_000;
@@ -42,6 +43,9 @@ export async function startRun({ workflowId, documents, files, rules, apiKey }: 
     signal: AbortSignal.timeout(120_000),
   });
   if (!response.ok) {
+    // Not browserFetch: its 403 would leave the page, and a bad API key's 401 is not the
+    // session's. The account out of credits (402) still opens the credits dialog.
+    if (response.status === 402) openCredits();
     const message = apiErrorMessage(await response.text()) || `HTTP ${response.status}`;
     throw new ApiError(message, response.status);
   }

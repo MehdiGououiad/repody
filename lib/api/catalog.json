@@ -1,0 +1,423 @@
+{
+  "templateTypes": [
+    {
+      "value": "verbatim-string",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "string",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "integer",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "number",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "date",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "time",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "date-time",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "boolean",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "currency",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "email-address",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "phone-number",
+      "group": "common",
+      "listable": true
+    },
+    {
+      "value": "duration",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "country",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "language",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "language-tag",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "script",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "url",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "iban",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "bic",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "unit-code",
+      "group": "advanced",
+      "listable": true
+    },
+    {
+      "value": "object",
+      "group": "structure",
+      "listable": false
+    },
+    {
+      "value": "object-array",
+      "group": "structure",
+      "listable": false
+    },
+    {
+      "value": "enum",
+      "group": "structure",
+      "listable": false
+    },
+    {
+      "value": "multi-enum",
+      "group": "structure",
+      "listable": false
+    }
+  ],
+  "defaultType": "verbatim-string",
+  "numberTypes": [
+    "integer",
+    "number"
+  ],
+  "orderedTypes": [
+    "date",
+    "date-time",
+    "integer",
+    "number",
+    "time"
+  ],
+  "tableType": "object-array",
+  "operatorsByType": {
+    "verbatim-string": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "string": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "integer": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "number": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "date": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "time": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "date-time": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      ">",
+      ">=",
+      "<",
+      "<=",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "boolean": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "currency": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "email-address": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "phone-number": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "duration": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "country": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "language": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "language-tag": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "script": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "url": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "iban": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "bic": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "unit-code": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "verbatim-string-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "string-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "integer-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "number-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "date-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "time-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "date-time-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "boolean-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "currency-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "email-address-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "phone-number-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "duration-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "country-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "language-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "language-tag-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "script-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "url-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "iban-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "bic-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "unit-code-list": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "object": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "object-array": [
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "enum": [
+      "==",
+      "!=",
+      "IN",
+      "NOT_IN",
+      "EXISTS",
+      "IS_EMPTY"
+    ],
+    "multi-enum": [
+      "EXISTS",
+      "IS_EMPTY"
+    ]
+  },
+  "presenceOperators": [
+    "EXISTS",
+    "IS_EMPTY"
+  ]
+}

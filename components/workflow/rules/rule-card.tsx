@@ -15,8 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { StatusGlyph } from "@/components/ui/status-glyph";
+import { catalog } from "@/lib/catalog";
 import { docColor } from "@/lib/doc-color";
-import { useCatalog } from "@/lib/hooks/use-catalog";
 import { fieldOptions, tableOptions } from "@/lib/rules/document-fields";
 import type {
   DocumentDef,
@@ -52,9 +52,8 @@ export function RuleCard({
   const t = useTranslations("workflows.builder.rules");
   const tCommon = useTranslations("common");
   const isCross = rule.scope === "cross";
-  const catalog = useCatalog();
   const fields = fieldOptions(documents, rule.appliesTo);
-  const tables = catalog ? tableOptions(documents, rule.appliesTo, catalog) : [];
+  const tables = tableOptions(documents, rule.appliesTo, catalog);
   const issues = validation?.issues ?? [];
 
   const switchScope = (scope: RuleScope) => {

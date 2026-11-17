@@ -3,8 +3,9 @@
 import { ChevronsUpDown, LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Suspense, useTransition } from "react";
+import { Suspense, use, useTransition } from "react";
 import { setLocale } from "@/app/actions/preferences";
+import { AccessProvider } from "@/components/auth/access-context";
 import { useAccount } from "@/components/auth/account-context";
 import {
   Menu,
@@ -42,6 +43,7 @@ function AccountMenu() {
   const t = useTranslations("auth");
   const tBar = useTranslations("topbar");
   const account = useAccount();
+  const { roles } = use(AccessProvider);
   const { theme, setTheme } = useTheme();
   const locale = useLocale() as Locale;
   const [pending, startTransition] = useTransition();
@@ -60,7 +62,7 @@ function AccountMenu() {
         <div className="px-2 pt-1.5 pb-2">
           <p className="truncate text-[13px] font-medium text-ink">{name}</p>
           <p className="truncate text-xs text-ink-3">
-            {account ? (account.email ?? account.roles[0]) : t("devModeHint")}
+            {account ? (account.email ?? roles[0]) : t("devModeHint")}
           </p>
           <SegmentedControl
             aria-label={tBar("toggleTheme")}

@@ -1,19 +1,13 @@
 "use client";
 
+import { FileInput, FileInputDropzone, FileInputTrigger } from "@ui-sdk/react/file-input";
 import { FileText, Upload, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useDropzone } from "react-dropzone";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { DocumentDef, WorkflowRule } from "@/lib/types";
-import { cn, formatBytes } from "@/lib/utils";
-
-/** The file types the API accepts (AUDIT_UPLOAD_ALLOWED_MIME_TYPES defaults). */
-const ACCEPT = {
-  "application/pdf": [".pdf"],
-  "image/png": [".png"],
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/webp": [".webp"],
-};
+import { UPLOAD_ACCEPT } from "@/lib/uploads";
+import { formatBytes } from "@/lib/utils";
 
 function DocumentSlot({
   doc,
@@ -30,13 +24,7 @@ function DocumentSlot({
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const fields = doc.schema.filter((f) => f.name.trim()).length;
-  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
-    accept: ACCEPT,
-    maxFiles: 1,
-    maxSize,
-    multiple: false,
-    onDropAccepted: ([accepted]) => onFileChange(accepted ?? null),
-  });
+  const [rejected, setRejected] = useState(false);
 
   return (
     <li className="grid grid-cols-1 items-center gap-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] sm:gap-4">
@@ -61,25 +49,28 @@ function DocumentSlot({
           </Button>
         </div>
       ) : (
-        <div
-          {...getRootProps({
-            className: cn(
-              "flex h-10 cursor-pointer items-center gap-2.5 rounded-md border border-dashed px-3 text-sm transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-focus",
-              isDragActive
-                ? "border-accent bg-accent-wash text-accent-ink"
-                : "border-line-strong text-ink-3 hover:bg-hover hover:text-ink-2"
-            ),
-          })}
+        <FileInput
+          accept={UPLOAD_ACCEPT}
+          maxSize={maxSize}
+          value={[]}
+          onValueChange={([accepted]) => {
+            setRejected(false);
+            if (accepted) onFileChange(accepted);
+          }}
+          onReject={() => setRejected(true)}
         >
-          <input {...getInputProps({ name: `upload-${doc.id}` })} />
-          <Upload className="size-4 shrink-0" aria-hidden />
-          <span className="truncate">{t("dropPrompt")}</span>
-          <span className="ms-auto hidden shrink-0 text-xs text-ink-4 sm:inline">
-            {t("fileHint")}
-          </span>
-        </div>
+          <FileInputDropzone className="group rounded-md border border-dashed border-line-strong text-ink-3 transition-colors duration-100 hover:bg-hover hover:text-ink-2 data-[dragging]:border-accent data-[dragging]:bg-accent-wash data-[dragging]:text-accent-ink">
+            <FileInputTrigger className="flex h-10 w-full cursor-pointer items-center gap-2.5 rounded-md px-3 text-start text-sm focus-visible:outline-2 focus-visible:outline-focus">
+              <Upload className="size-4 shrink-0" aria-hidden />
+              <span className="truncate">{t("dropPrompt")}</span>
+              <span className="ms-auto hidden shrink-0 text-xs text-ink-4 sm:inline">
+                {t("fileHint")}
+              </span>
+            </FileInputTrigger>
+          </FileInputDropzone>
+        </FileInput>
       )}
-      {fileRejections.length ? (
+      {rejected ? (
         <p role="alert" className="text-xs text-fail-ink sm:col-start-2">
           {t("fileRejected")}
         </p>

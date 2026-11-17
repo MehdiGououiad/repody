@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/input";
-import { useCatalog } from "@/lib/hooks/use-catalog";
+import { catalog } from "@/lib/catalog";
 import type { SchemaField } from "@/lib/types";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
@@ -47,11 +47,9 @@ export function ImportNuextractTemplateDialog({
   const t = useTranslations("workflows.builder.schema");
   const tCommon = useTranslations("common");
   const [raw, setRaw] = useState(EXAMPLE);
-  const catalog = useCatalog();
   const [errorKey, setErrorKey] = useState<"invalid_json" | "not_object" | "empty" | null>(null);
 
   const apply = (mode: "replace" | "append") => {
-    if (!catalog) return;
     const result = importNuextractTemplate(raw, catalog);
     if (!result.ok) {
       setErrorKey(result.error);
@@ -92,21 +90,11 @@ export function ImportNuextractTemplateDialog({
             {tCommon("cancel")}
           </Button>
           {hasExistingFields ? (
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!catalog}
-              onClick={() => apply("append")}
-            >
+            <Button type="button" variant="secondary" onClick={() => apply("append")}>
               {t("importTemplateAppend")}
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!catalog}
-            onClick={() => apply("replace")}
-          >
+          <Button type="button" variant="primary" onClick={() => apply("replace")}>
             {hasExistingFields ? t("importTemplateReplace") : t("importTemplateApply")}
           </Button>
         </DialogFooter>

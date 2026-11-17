@@ -11,8 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useCatalog } from "@/lib/hooks/use-catalog";
+import { catalog } from "@/lib/catalog";
 import { isListType, scalarType, withList } from "@/lib/schema/template-types";
 import type { TemplateTypeGroup } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -43,11 +42,9 @@ export function TemplateTypeSelect({
   className?: string;
 }) {
   const t = useTranslations("workflows.builder.schema");
-  const catalog = useCatalog();
   const text = useTypeText();
   const scalar = scalarType(value);
   const list = isListType(value);
-  if (!catalog) return <Skeleton className="h-7" />;
   const known = catalog.templateTypes.some((type) => type.value === scalar);
   const groups = GROUPS.filter((group) => structures || group !== "structure");
 
@@ -110,11 +107,8 @@ export function ListToggle({
   className?: string;
 }) {
   const t = useTranslations("workflows.builder.schema");
-  const catalog = useCatalog();
-  const listable = catalog?.templateTypes.find(
-    (type) => type.value === scalarType(value)
-  )?.listable;
-  if (!catalog || !listable) return <span className={className} />;
+  const listable = catalog.templateTypes.find((type) => type.value === scalarType(value))?.listable;
+  if (!listable) return <span className={className} />;
   return (
     <Toggle
       pressed={isListType(value)}

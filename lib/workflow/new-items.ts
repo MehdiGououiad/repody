@@ -1,9 +1,12 @@
 /** New, empty workflow items for the builder (every field the API returns is set). */
+
+import { catalog } from "@/lib/catalog";
 import { fieldRef, literal } from "@/lib/rules/conditions";
 import type { DocumentDef, RuleCondition, SchemaField, Workflow, WorkflowRule } from "@/lib/types";
 import { shortId } from "@/lib/utils";
 
-export const DEFAULT_TEMPLATE_TYPE = "verbatim-string";
+/** The type a new field starts with (the API's default). */
+export const DEFAULT_TEMPLATE_TYPE = catalog.defaultType;
 
 export function newSchemaField(partial: Partial<SchemaField> = {}): SchemaField {
   return {
