@@ -1,12 +1,13 @@
 # Deploy assets
 
-Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](../docs/LOCAL.md) (laptop) · [docs/CLUSTER.md](../docs/CLUSTER.md) (cluster).
+The hosted demo's stack, the Helm chart for client installations, and scripts. **Documentation:** [docs/LOCAL.md](../docs/LOCAL.md) (laptop) · [vps/README.md](./vps/README.md) (the hosted demo and its staging) · [docs/CLUSTER.md](../docs/CLUSTER.md) (client clusters).
 
 ## Quick links
 
 | Goal | Guide | Command |
 |------|-------|---------|
 | Local laptop | [LOCAL.md](../docs/LOCAL.md) | `pnpm platform` |
+| Release the hosted demo | [vps/README.md](./vps/README.md#releasing) | merge, then `git tag v1.2.3` |
 | Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#images-and-releases) | `pnpm images:release` |
 | OpenShift / client install | [CLUSTER.md](../docs/CLUSTER.md) | Helm / Argo CD |
 
@@ -14,7 +15,9 @@ Helm charts, client YAML kit, and scripts. **Documentation:** [docs/LOCAL.md](..
 
 | Path | Purpose |
 |------|---------|
-| `helm/repody` | The one chart: API, web, Hatchet workers, migrations Job, Ingress |
+| `vps/` | The hosted demo and its staging: Compose stack, deploy tools, smoke test - [vps/README.md](./vps/README.md) |
+| `modal/` | NuExtract3 on Modal (vLLM), the demo's model - [modal/README.md](./modal/README.md) |
+| `helm/repody` | The chart for client clusters: API, web, Hatchet workers, migrations Job, Ingress |
 | `keycloak/` | Keycloak realm (Compose import; import it into the client's Keycloak) |
 | `client/` | Values templates, ExternalSecrets - [client/README.md](./client/README.md) |
 | `managed/` | CNPG, External Secrets examples |

@@ -13,7 +13,7 @@ export function Container({
 }
 
 /** A section's number and label, as a lab notebook numbers its pages: `[02] HOW IT WORKS`. */
-export function SectionIndex({ index, label }: { index: number; label?: string }) {
+function SectionIndex({ index, label }: { index: number; label?: string }) {
   return (
     <p className="eyebrow flex items-center gap-3 text-ink-3">
       <span className="text-ink-4">[{String(index).padStart(2, "0")}]</span>

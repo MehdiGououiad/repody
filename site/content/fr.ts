@@ -174,7 +174,7 @@ export const fr = {
         },
         {
           title: "Votre SSO, vos rôles",
-          body: "OpenID Connect avec Keycloak, PKCE, double authentification et quatre rôles aux permissions précises.",
+          body: "OpenID Connect avec Keycloak, PKCE, double authentification pour les administrateurs et quatre rôles aux permissions précises.",
         },
         {
           title: "Clés d'API protégées",
@@ -563,7 +563,7 @@ export const fr = {
     meta: {
       title: "Sécurité : identité, souveraineté, chaîne logicielle",
       description:
-        "OIDC Keycloak avec MFA, rôles et permissions, clés d'API hachées, conteneurs durcis, aucun port ouvert, images signées et vérifiées : la sécurité de Repody en détail.",
+        "OIDC Keycloak avec double authentification pour les administrateurs, rôles et permissions, clés d'API hachées, conteneurs durcis, aucun port ouvert, images signées et vérifiées : la sécurité de Repody en détail.",
     },
     hero: {
       title: "La sécurité n'est pas une option du produit",

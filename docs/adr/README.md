@@ -7,6 +7,7 @@
 | [009](./009-simple-backend.md) | One workflow definition, typed rules, one queue, multipart uploads |
 | [010](./010-explicit-lifecycles.md) | Explicit lifecycles: one owner per status, DB constraints, UI unions |
 | [011](./011-hatchet.md) | Hatchet runs the queue, its limits and the maintenance cron |
+| [012](./012-hosted-demo-on-a-vps.md) | The hosted demo runs on one VPS with Compose; client installations use Helm |
 
 Current backend shape: [ADR 009](./009-simple-backend.md).
 

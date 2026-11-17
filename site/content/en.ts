@@ -176,7 +176,7 @@ export const en: Dict = {
         },
         {
           title: "Your SSO, your roles",
-          body: "OpenID Connect with Keycloak, PKCE, two-factor authentication and four roles with precise permissions.",
+          body: "OpenID Connect with Keycloak, PKCE, two-factor authentication for administrators and four roles with precise permissions.",
         },
         {
           title: "Protected API keys",
@@ -561,7 +561,7 @@ export const en: Dict = {
     meta: {
       title: "Security: identity, sovereignty, software supply chain",
       description:
-        "Keycloak OIDC with MFA, roles and permissions, hashed API keys, hardened containers, no open ports, signed and verified images: Repody's security in detail.",
+        "Keycloak OIDC with two-factor for administrators, roles and permissions, hashed API keys, hardened containers, no open ports, signed and verified images: Repody's security in detail.",
     },
     hero: {
       title: "Security is not a product option",

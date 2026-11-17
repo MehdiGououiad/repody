@@ -89,6 +89,10 @@ envFrom:
 - name: AUDIT_KEYCLOAK_ADMIN_CLIENT_SECRET
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: KEYCLOAK_ADMIN_CLIENT_SECRET, optional: true }
+# Cloudflare Turnstile, for access requests (only when they are on).
+- name: AUDIT_TURNSTILE_SECRET
+  valueFrom:
+    secretKeyRef: { name: {{ $secret }}, key: TURNSTILE_SECRET, optional: true }
 # Errors go to Bugsink through the Sentry SDK.
 - name: SENTRY_DSN
   valueFrom:

@@ -19,19 +19,23 @@ score is their mean; the model score is the mean over pages. Speed is the median
 
 ## Runners (official ways only)
 
+Repody kept NuExtract3, so `master` keeps only its runner. The other models' runners and scripts
+(`run_others.sh`, `run_dspark.sh`, `run_pages.sh`, `run_vulkan4.sh`, `rerun_nuextract.sh`) are on
+the git tag `benchmarks-2026-11`, which reproduces every result below:
+`git checkout benchmarks-2026-11 -- benchmarks/ocr`.
+
 | Model | Runner | Path |
 |---|---|---|
 | NuExtract3 Q8_0 | `runners/nuextract3.py` | llama.cpp (Vulkan), Markdown mode, as Repody calls it |
-| MiniCPM-OCR 1.0 | `runners/minicpm_ocr.py` | official SDK (PP-DocLayoutV3 on CPU) + llama.cpp service per the GGUF card |
-| Surya OCR 2.5 | `runners/surya_ocr.py` | `surya-ocr` with its llama.cpp backend (auto-spawned server) |
+| MiniCPM-OCR 1.0 | `runners/minicpm_ocr.py` (tag) | official SDK (PP-DocLayoutV3 on CPU) + llama.cpp service per the GGUF card |
+| Surya OCR 2.5 | `runners/surya_ocr.py` (tag) | `surya-ocr` with its llama.cpp backend (auto-spawned server) |
 
 Not run: OXR-1.0, Unlimited-OCR-2 and Nemotron 3.5 Parse (official paths are NVIDIA-only), and
 LightOnOCR-3-4B and Xiaomi-OCR-0 (official path here is CPU Transformers; dropped as too slow).
 
     uv run make_docs.py && uv run real_docs.py
     pnpm llamacpp:serve && uv run runners/nuextract3.py      # then pnpm llamacpp:stop
-    MODELS=~/models/ocr-bench bash run_others.sh            # MiniCPM, Surya, then score.py
-    MODELS=~/models/ocr-bench bash run_dspark.sh            # MiniCPM with its DSpark draft head
+    uv run score.py
 
 ## Results (2026-11-04, llama.cpp b12098)
 

@@ -48,8 +48,23 @@ config:
   # AUDIT_CREDITS_ENFORCED: "false"
   # AUDIT_CREDIT_RUN_FEE: "0"
   # AUDIT_MAX_PAGES_PER_RUN: "100"
-  # Access requests are Repody's own site's form: leave them off (the route answers 404).
+  # Access requests are Repody's own site's form: leave them off (the route answers 404). On,
+  # production needs TURNSTILE_SECRET in the Secret.
   # AUDIT_ACCESS_REQUESTS_ENABLED: "false"
+  # Several client companies on one installation: users outside every company see nothing.
+  # AUDIT_REQUIRE_CLIENT_GROUP: "false"
+  # Keys from the in-cluster Keycloak when the public issuer is not reachable from the pods.
+  # AUDIT_OIDC_JWKS_URL: http://keycloak.keycloak.svc:8080/realms/repody/protocol/openid-connect/certs
+  # The model server: requests in flight (its parallel slots), and whether the settings page asks
+  # it if it is up ("false" for one that scales to zero and would start, and bill, on the question).
+  # AUDIT_INFERENCE_CONCURRENCY: "1"
+  # AUDIT_INFERENCE_PROBE: "true"
+  # Limits: pages per document, runs a minute per client, a whole upload request (keep the web
+  # app's 100 MiB proxy limit in mind), and days runs are kept (0: forever).
+  # AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
+  # AUDIT_RUNS_PER_MINUTE_PER_CLIENT: "10"
+  # AUDIT_MAX_REQUEST_BYTES: "104857600"
+  # AUDIT_RUN_RETENTION_DAYS: "0"
   # Hatchet's gRPC address and API URL come from the token; set these to reach it in-cluster.
   # HATCHET_CLIENT_HOST_PORT: hatchet-engine.hatchet.svc:7070
   # HATCHET_CLIENT_SERVER_URL: http://hatchet-api.hatchet.svc:8080

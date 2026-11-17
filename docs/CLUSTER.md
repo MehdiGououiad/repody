@@ -1,5 +1,11 @@
 # Cluster and production
 
+> **Status: a reference, tested by hand.** Repody's own hosted demo runs on one VPS with Docker
+> Compose ([deploy/vps/README.md](../deploy/vps/README.md)), not on this chart. CI lints the chart
+> and validates its manifests (`pnpm deploy:check`) but does not install it: before a client
+> installation, install it on a local cluster ([Test it locally](#test-it-locally)) and check
+> the settings against [deploy/ENV.md](../deploy/ENV.md).
+
 Install Repody on a **Kubernetes or OpenShift** cluster with one Helm chart,
 [`deploy/helm/repody`](../deploy/helm/repody). The chart runs the stateless app: API, web, the
 Hatchet workers, a migrations Job, and an Ingress. Everything stateful is an external
@@ -22,6 +28,27 @@ The pods run with the restricted security context (`runAsNonRoot`, `RuntimeDefau
 no capabilities, no pinned UID, read-only root filesystem with `emptyDir` volumes for `/tmp` and
 the Next.js cache), which fits Kubernetes PSA **restricted** and OpenShift **restricted-v2**
 without a custom SCC.
+
+### Test it locally
+
+With [kind](https://kind.sigs.k8s.io/) and Helm. The services the chart points at can be the
+local Compose stack's (`pnpm platform dev`), reached from the cluster at `host.docker.internal`:
+
+```bash
+kind create cluster --name repody
+kubectl create namespace repody
+kubectl -n repody create secret generic repody-runtime \
+  --from-literal=AUDIT_DATABASE_URL=postgresql+asyncpg://<user>:<password>@host.docker.internal:5432/repody \
+  --from-literal=HATCHET_CLIENT_TOKEN=<token> \
+  --from-literal=AUDIT_S3_ACCESS_KEY=<key> --from-literal=AUDIT_S3_SECRET_KEY=<secret>
+helm install repody deploy/helm/repody -n repody --set existingSecret=repody-runtime \
+  --set config.AUDIT_DEPLOYMENT_ENVIRONMENT=development --set ingress.enabled=false
+kubectl -n repody get pods -w
+```
+
+The migrations Job runs first; then the API, web and workers turn ready. Images come from
+`images.*` (a release's `helm-images.yaml` pins their digests). Delete it all with
+`kind delete cluster --name repody`.
 
 ### Keycloak in production
 

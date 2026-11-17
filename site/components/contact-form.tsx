@@ -1,64 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import { useRef, useState } from "react";
 import type { Dict } from "@/content";
 import { type Locale, SITE } from "@/lib/site";
 
 const FIELD =
   "w-full rounded-md bg-field px-3 text-[0.9375rem] text-ink shadow-[inset_0_0_0_1px_var(--line-strong)] outline-none placeholder:text-ink-4 focus-visible:shadow-[inset_0_0_0_1px_var(--accent),0_0_0_3px_var(--accent-wash)] focus-visible:outline-none";
-const TURNSTILE = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-type Turnstile = {
-  render: (element: HTMLElement, options: Record<string, unknown>) => string;
-  reset: (id: string) => void;
-  remove: (id: string) => void;
-};
-declare global {
-  interface Window {
-    turnstile?: Turnstile;
-  }
-}
 
 type State = "idle" | "sending" | "sent" | "failed" | "tooMany" | "robot";
 const FAILURES: Record<number, State> = { 429: "tooMany", 400: "robot" };
-
-/** Loads Turnstile once and renders its widget; the token comes back through `onToken`. */
-function useTurnstile(container: React.RefObject<HTMLDivElement | null>, locale: Locale) {
-  const [token, setToken] = useState("");
-  const widget = useRef<string | null>(null);
-  useEffect(() => {
-    const element = container.current;
-    if (!element) return;
-    const render = () => {
-      if (!window.turnstile || widget.current) return;
-      widget.current = window.turnstile.render(element, {
-        sitekey: SITE.turnstileSiteKey,
-        language: locale,
-        callback: setToken,
-        "expired-callback": () => setToken(""),
-        "error-callback": () => setToken(""),
-      });
-    };
-    let script = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE}"]`);
-    if (!script) {
-      script = document.createElement("script");
-      script.src = TURNSTILE;
-      script.async = true;
-      document.head.append(script);
-    }
-    if (window.turnstile) render();
-    else script.addEventListener("load", render, { once: true });
-    return () => {
-      if (widget.current && window.turnstile) window.turnstile.remove(widget.current);
-      widget.current = null;
-    };
-  }, [container, locale]);
-  const reset = () => {
-    setToken("");
-    if (widget.current && window.turnstile) window.turnstile.reset(widget.current);
-  };
-  return { token, reset };
-}
 
 /** The access request: sent to Repody's API, which a platform admin approves in the app. */
 export function ContactForm({
@@ -66,8 +17,16 @@ export function ContactForm({
   locale,
 }: Readonly<{ t: Dict["contact"]["form"]; locale: Locale }>) {
   const [state, setState] = useState<State>("idle");
-  const box = useRef<HTMLDivElement>(null);
-  const turnstile = useTurnstile(box, locale);
+  // Cloudflare Turnstile: its token goes with the request, and is good for one request.
+  const turnstileWidget = useRef<TurnstileInstance | null>(null);
+  const [token, setToken] = useState("");
+  const turnstile = {
+    token,
+    reset: () => {
+      setToken("");
+      turnstileWidget.current?.reset();
+    },
+  };
 
   if (state === "sent") {
     return <output className="block text-[0.9375rem] text-ink">{t.sent}</output>;
@@ -165,7 +124,15 @@ export function ContactForm({
         <input name="consent" type="checkbox" required className="mt-0.5 size-4 accent-accent" />
         {t.consent}
       </label>
-      <div ref={box} className="min-h-[65px]" />
+      <Turnstile
+        ref={turnstileWidget}
+        siteKey={SITE.turnstileSiteKey}
+        options={{ language: locale }}
+        onSuccess={setToken}
+        onExpire={() => setToken("")}
+        onError={() => setToken("")}
+        className="min-h-[65px]"
+      />
       {problem ? (
         <p role="alert" className="text-sm text-fail-ink">
           {t[state]}{" "}
