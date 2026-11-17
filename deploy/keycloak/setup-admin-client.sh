@@ -1,9 +1,9 @@
 #!/bin/sh
 # Adds the admin area's Keycloak service account (repody-admin) to a realm imported before Repody
 # 1.5. New installations get it from the realm file. Safe to run again. Run it on the server, from
-# the stack's directory:
+# the stack's directory (each deploy copies it to tools/):
 #
-#   sh setup-admin-client.sh
+#   sh tools/setup-admin-client.sh
 #
 # It reads KEYCLOAK_ADMIN_CLIENT_SECRET from .env, and signs in to Keycloak inside its container
 # as the bootstrap admin (KC_BOOTSTRAP_ADMIN_*, the container's own environment).

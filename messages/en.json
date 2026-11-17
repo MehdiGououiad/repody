@@ -929,7 +929,7 @@
     "more": "More",
     "granted": "{account} now has {balance} credits",
     "inviteUser": "Invite user",
-    "inviteHint": "They join {account}. You get a temporary password to send them; at their first sign-in they choose their own and set up two-factor sign-in.",
+    "inviteHint": "They join {account}. You get a temporary password to send them; at their first sign-in they choose their own.",
     "email": "Email",
     "emailInvalid": "Enter an email address.",
     "firstName": "First name",

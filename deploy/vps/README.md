@@ -184,6 +184,27 @@ first time it starts. Later deploys don't import it again: Keycloak skips a real
 exists ([import and export](https://www.keycloak.org/server/importExport)). After that, change them
 in the admin console.
 
+## Tools
+
+Each deploy copies these to `/opt/repody/tools/` (the release's own versions). Run them from
+`/opt/repody`:
+
+| Tool | What it does |
+|---|---|
+| `sh tools/setup-admin-client.sh` | Adds the admin area's Keycloak account (`repody-admin`) to a realm imported before 1.5 |
+| `sh tools/setup-tester-client.sh` | Creates the smoke test's account: the service account `repody-tester`, operator in the client company `client-repody-test`; its secret (`TESTER_CLIENT_SECRET`) is created in `.env` and never printed |
+| `tools/smoke_test.py` | One real run, end to end, as `repody-tester`: a generated one-page invoice through extraction on the GPU, the report, the credits charged, and nothing visible outside its company. A few credits and a little GPU time per run |
+
+Run the smoke test after a release, or whenever something looks wrong:
+
+```bash
+S=$(grep '^TESTER_CLIENT_SECRET=' .env | cut -d= -f2-)
+docker compose --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET="$S" api python - < tools/smoke_test.py
+```
+
+The test company (`client-repody-test`) shows in Admin like any client: its credits are topped up
+automatically when low (100 at a time), and its runs count in the GPU spend.
+
 ## Backups
 
 Not set up yet. Postgres (`postgres-data`) and the uploaded documents (`seaweedfs-data`) are the

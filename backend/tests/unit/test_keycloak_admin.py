@@ -43,7 +43,7 @@ async def test_it_signs_in_once_and_creates_a_user(settings):
         assert request.headers["Authorization"] == "Bearer t"
         if request.method == "POST" and request.url.path.endswith("/users"):
             body = json.loads(request.content)
-            assert body["requiredActions"] == ["UPDATE_PASSWORD", "CONFIGURE_TOTP"]
+            assert body["requiredActions"] == ["UPDATE_PASSWORD"]
             return httpx.Response(201, headers={"Location": f"{ADMIN}/users/u-1"})
         return httpx.Response(204)
 
