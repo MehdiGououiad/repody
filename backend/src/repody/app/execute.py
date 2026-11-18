@@ -18,7 +18,7 @@ from repody.app import credits
 from repody.app.lifecycle import fail_run, move_run
 from repody.app.progress import FINALIZE_STEP, MODEL_STEP, RULES_STEP, Tracker, extract_step
 from repody.extraction import client
-from repody.extraction.pipeline import extract
+from repody.extraction.pipeline import ModelRequestError, extract
 from repody.infra import db
 from repody.infra.models import ExtractedField, RuleResult, Run, RunDocument, new_id
 from repody.infra.storage import get_store
@@ -156,13 +156,7 @@ async def _process(run_id: str) -> None:
             log.warning("run_finished_elsewhere")
             return
         await credits.settle_done(
-            session,
-            run_id,
-            pages=_pages_sent(run.documents),
-            model_ms=run.extraction_ms,
-            model_failed=any(
-                (doc.extraction or {}).get("error") == EXTRACTION_FAILED for doc in run.documents
-            ),
+            session, run_id, pages=_pages_sent(run.documents), model_ms=run.extraction_ms
         )
         await session.commit()
     log.info("run_done", outcome=outcome, rules_failed=run.rules_failed)
@@ -212,9 +206,11 @@ async def _extract_one(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker)
     try:
         data = await get_store().get(run_doc.storage_key)
         values, meta = await extract(doc, data, run_doc.mime_type)
-    except Exception:
+    except Exception as error:
         log.exception("document_extraction_failed", document_id=doc.id)
-        run_doc.extraction = ExtractionMeta(error=EXTRACTION_FAILED).model_dump()
+        # Pages that reached the model are paid for even when its answer never came.
+        sent = error.pages_sent if isinstance(error, ModelRequestError) else 0
+        run_doc.extraction = ExtractionMeta(error=EXTRACTION_FAILED, pages_sent=sent).model_dump()
         await tracker.finish(step_id, failed=True)
         return 0
     run_doc.extraction = meta.model_dump()

@@ -2,11 +2,13 @@ import base64
 import io
 import json
 
+import httpx2
+import openai
 import pypdfium2 as pdfium
 import pytest
 from PIL import ExifTags, Image
 
-from repody.extraction import nuextract, render
+from repody.extraction import nuextract, pipeline, render
 from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
@@ -205,3 +207,16 @@ def test_an_oversized_image_is_drawn_within_the_pixel_cap():
     Image.new("RGB", (6_000, 5_000), "white").save(buffer, format="JPEG")  # 30 MP: allowed
     page = render.open_image(buffer.getvalue())
     assert page.width * page.height <= render.MAX_RENDER_PIXELS
+
+
+def test_pages_reach_the_model_unless_it_refused_or_was_never_reached():
+    request = httpx2.Request("POST", "http://model.test/v1/chat/completions")
+
+    def status(code: int) -> openai.APIStatusError:
+        return openai.APIStatusError("", response=httpx2.Response(code, request=request), body=None)
+
+    assert pipeline._pages_reached(status(400), 3) == 0
+    assert pipeline._pages_reached(status(503), 3) == 3
+    assert pipeline._pages_reached(openai.APIConnectionError(request=request), 3) == 0
+    assert pipeline._pages_reached(openai.APITimeoutError(request=request), 3) == 3
+    assert pipeline._pages_reached(TimeoutError(), 3) == 3

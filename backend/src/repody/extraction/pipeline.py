@@ -8,6 +8,7 @@ import asyncio
 import time
 from typing import Any
 
+import openai
 import structlog
 from pydantic import BaseModel
 
@@ -21,6 +22,26 @@ log = structlog.get_logger(__name__)
 
 MAX_TEXT_CHARS = 80_000
 TRUNCATED = "The model's answer was cut off at its token limit, so its fields are not used."
+
+
+class ModelRequestError(Exception):
+    """The model request failed; ``pages_sent`` is how many of its pages reached the server (a
+    timeout or a server error: all of them, the GPU may have worked on them; a refusal or no
+    connection at all: none)."""
+
+    def __init__(self, pages_sent: int) -> None:
+        super().__init__(f"The model request failed ({pages_sent} pages sent).")
+        self.pages_sent = pages_sent
+
+
+def _pages_reached(error: Exception, pages: int) -> int:
+    if isinstance(error, openai.APIStatusError):  # the server answered: 4xx refused the request
+        return 0 if error.status_code < 500 else pages
+    if isinstance(error, openai.APIConnectionError) and not isinstance(
+        error, openai.APITimeoutError
+    ):
+        return 0  # never connected
+    return pages  # a timeout, or anything after the request went out
 
 
 class _Answer(BaseModel):
@@ -49,7 +70,10 @@ async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str
     parts, total = await asyncio.to_thread(
         nuextract.page_parts, data, mime, max_pages=get_settings().max_pages_per_document
     )
-    reply = await client.chat(_with_pages(request, parts))
+    try:
+        reply = await client.chat(_with_pages(request, parts))
+    except Exception as error:
+        raise ModelRequestError(_pages_reached(error, len(parts))) from error
     pages = {"pages_rendered": total, "pages_sent": len(parts), "truncated": reply.truncated}
     if doc.schema_fields:
         return _Answer(answer=reply.text, **pages)

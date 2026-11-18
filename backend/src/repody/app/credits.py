@@ -6,7 +6,8 @@ on the ``deployment`` account, which is metered but never refused.
 
 A run holds its estimate (its files' pages) when it is queued, in the transaction that saves it,
 under a per-account lock: two runs started together cannot both spend the last credits. It is
-settled once, in the transaction that ends it: done pays the pages it sent; failed after it
+settled once, in the transaction that ends it: done pays the pages it sent the model (those of a
+request that timed out too, not those of a file that could not be read); failed after it
 started pays its estimate (the model may have worked on every page; an admin can give credits
 back with a grant); failed before it started (cancelled while queued, never dispatched) pays
 nothing. The ledger is one table (repody.infra.models.CreditEntry): balance = sum of amounts.
@@ -100,31 +101,22 @@ async def hold(session: AsyncSession, run: Run, account: str, cost: int, actor: 
     )
 
 
-async def settle_done(
-    session: AsyncSession, run_id: str, *, pages: int, model_ms: int, model_failed: bool = False
-) -> None:
-    """The run is done: it pays the pages it sent, or its estimate when the model failed on a
-    document (a timeout: the model may have worked on its pages all along). The caller commits
-    (with the run)."""
-    values: dict[str, object] = {
-        "pages": pages,
-        "model_ms": model_ms,
-        "pending": False,
-        "settled_at": datetime.now(UTC),
-    }
-    if not model_failed:
-        values["amount"] = -run_cost(pages)
+async def settle_done(session: AsyncSession, run_id: str, *, pages: int, model_ms: int) -> None:
+    """The run is done: it pays the pages it sent the model, also those of a request that timed
+    out (the model may have worked on them all along), never those of a document that could not
+    be read or a request the server refused. The caller commits (with the run)."""
     await session.execute(
-        update(CreditEntry).where(CreditEntry.run_id == run_id, CreditEntry.pending).values(values)
+        update(CreditEntry)
+        .where(CreditEntry.run_id == run_id, CreditEntry.pending)
+        .values(
+            amount=-run_cost(pages),
+            pages=pages,
+            model_ms=model_ms,
+            pending=False,
+            settled_at=datetime.now(UTC),
+        )
     )
-    log.info(
-        "run_settled",
-        run_id=run_id,
-        outcome="done",
-        pages=pages,
-        model_ms=model_ms,
-        charged="estimate" if model_failed else "pages",
-    )
+    log.info("run_settled", run_id=run_id, outcome="done", pages=pages, model_ms=model_ms)
 
 
 async def settle_failed(session: AsyncSession, run_id: str) -> None:

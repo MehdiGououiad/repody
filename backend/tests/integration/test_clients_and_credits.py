@@ -4,6 +4,8 @@ import io
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 
+import httpx2
+import openai
 import pypdfium2 as pdfium
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -16,6 +18,7 @@ from repody.extraction import client as inference
 from repody.infra import db, queue
 from repody.infra.auth import User
 from repody.infra.models import Run
+from repody.infra.storage import get_store
 from repody.main import create_app
 from repody.settings import get_settings
 from tests.files import FILE, PDF
@@ -202,7 +205,9 @@ async def test_a_run_that_never_started_pays_nothing(as_user, model_answer, enfo
     }
 
 
-async def test_a_model_failure_pays_the_estimate(as_user, model_answer, enforced, monkeypatch):
+async def test_a_request_that_timed_out_pays_its_pages(
+    as_user, model_answer, enforced, monkeypatch
+):
     """A document the model failed on (a timeout) may have kept the GPU busy all along."""
     acme, platform = as_user(ACME), as_user(PLATFORM)
     await acme.put("/v1/workflows/wf-acme", json=invoice_workflow())
@@ -296,3 +301,47 @@ async def test_a_run_the_queue_lost_gives_its_hold_back(
     assert (await acme.get(f"/v1/runs/{run}")).json()["status"] == "failed"
     assert (await credits(acme))["balance"] == 10
     assert (await credits(acme))["held"] == 0
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        pytest.param("unreadable", id="the file cannot be read"),
+        pytest.param("refused", id="the model server refuses the request (4xx)"),
+        pytest.param("unreachable", id="the model server cannot be reached"),
+    ],
+)
+async def test_pages_the_model_never_saw_are_not_paid(
+    as_user, model_answer, enforced, monkeypatch, failure
+):
+    acme, platform = as_user(ACME), as_user(PLATFORM)
+    await acme.put("/v1/workflows/wf-acme", json=invoice_workflow())
+    await grant(platform, "client-acme", 10)
+    request = httpx2.Request("POST", "http://model.test/v1/chat/completions")
+
+    async def unreadable(_key: str) -> bytes:
+        raise OSError("storage unavailable")
+
+    async def refused(_request: dict) -> inference.Reply:
+        raise openai.BadRequestError(
+            "prompt too long", response=httpx2.Response(400, request=request), body=None
+        )
+
+    async def unreachable(_request: dict) -> inference.Reply:
+        raise openai.APIConnectionError(request=request)
+
+    if failure == "unreadable":
+        monkeypatch.setattr(get_store(), "get", unreadable)
+    else:
+        monkeypatch.setattr(inference, "chat", refused if failure == "refused" else unreachable)
+    run = (await acme.post("/v1/workflows/wf-acme/runs", files=FILE)).json()["runId"]
+    state = (await acme.get(f"/v1/runs/{run}")).json()
+    assert state["status"] == "done"
+    assert state["result"]["documents"][0]["extraction"]["pagesSent"] == 0
+    assert await credits(acme) == {
+        "account": "client-acme",
+        "balance": 10,
+        "held": 0,
+        "enforced": True,
+        "low": True,
+    }
