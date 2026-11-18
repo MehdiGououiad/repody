@@ -181,7 +181,7 @@ jobs:
           remote "cat > ${DIR}/compose.yaml" < deploy/vps/compose.yaml
           # The server's tools, as this release has them (deploy/vps/README.md, "Tools").
           remote "mkdir -p ${DIR}/tools && chmod 700 ${DIR}/tools"
-          for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/keycloak/setup-realm-audit.sh deploy/vps/smoke_test.py deploy/vps/backup.sh; do
+          for tool in deploy/keycloak/setup-admin-client.sh deploy/keycloak/setup-tester-client.sh deploy/keycloak/setup-realm-audit.sh deploy/vps/smoke_test.py deploy/vps/backup.sh deploy/vps/recreate_changed_configs.py; do
             [ -f "${tool}" ] && remote "cat > ${DIR}/tools/${tool##*/}" < "${tool}"
           done
           remote "cat > ${DIR}/release.env" < release.env
@@ -196,6 +196,11 @@ jobs:
             && cd ${DIR} && ${compose} pull --quiet; status=\$?; docker logout ghcr.io > /dev/null; exit \$status"
 
           remote "cd ${DIR} && ${compose} up -d --wait --wait-timeout 600 --remove-orphans"
+          # A config whose content alone changed does not recreate its service (Compose hashes
+          # the service definition, not the config's content): recreate those services.
+          if [ -f deploy/vps/recreate_changed_configs.py ]; then
+            remote "cd ${DIR} && python3 tools/recreate_changed_configs.py"
+          fi
           remote "cd ${DIR} && ${compose} ps --format 'table {{.Service}}\t{{.Status}}'"
 
       - name: Check the release
