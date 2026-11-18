@@ -59,7 +59,7 @@ export const fr = {
       rules: "Contrôle de 2 règles",
       save: "Enregistrement du rapport",
       verdict: "Rejeté",
-      verdictFacts: "1 règle sur 2 respectée · 4 champs · 2,1 s",
+      verdictFacts: "1 règle sur 2 respectée · 4 champs · 1,9 s",
       fields: [
         { key: "numero_facture", value: "FAC-2026-0412", ok: true },
         { key: "fournisseur", value: "Atlas Logistique SARL", ok: true },
@@ -67,13 +67,13 @@ export const fr = {
         { key: "total_ttc", value: "58 800,00 MAD", ok: false },
       ],
       note: "Total TTC ≠ HT + TVA 20 %",
-      gpuTime: "6,8 s",
-      extractTime: "0,4 s",
+      gpuTime: "15 s",
+      extractTime: "1,5 s",
     },
     proof: [
       { value: "1", label: "passage de l'image du document aux champs typés" },
       { value: "24", label: "types de champs, des dates aux IBAN et aux tableaux" },
-      { value: "99", label: "pages lues par document" },
+      { value: "40", label: "pages A4 lues en une seule passe" },
       { value: "0", label: "octet de vos documents hors de votre réseau" },
     ],
     video: {
@@ -174,7 +174,7 @@ export const fr = {
         },
         {
           title: "Votre SSO, vos rôles",
-          body: "OpenID Connect avec Keycloak, PKCE, double authentification pour les administrateurs et quatre rôles aux permissions précises.",
+          body: "OpenID Connect avec Keycloak, PKCE, double authentification pour les administrateurs, chaque connexion conservée 90 jours, et quatre rôles aux permissions précises.",
         },
         {
           title: "Clés d'API protégées",
@@ -200,7 +200,7 @@ export const fr = {
       options: [
         {
           title: "Un serveur",
-          body: "Docker Compose sur une machine Linux. Toute la pile, prête en une commande, déployée automatiquement.",
+          body: "Docker Compose sur une machine Linux : toute la pile avec ses journaux, le suivi des erreurs et des sauvegardes chiffrées chaque nuit, déployée automatiquement après une copie de préproduction.",
         },
         {
           title: "Kubernetes ou OpenShift",
@@ -227,7 +227,8 @@ export const fr = {
         "Analyse de vulnérabilités",
         "SBOM et provenance",
         "Signature",
-        "Vérification et déploiement",
+        "Préproduction et vraie exécution",
+        "Mêmes images promues",
       ],
     },
     industries: {
@@ -276,7 +277,7 @@ export const fr = {
         },
         {
           q: "Quels documents et quelles langues ?",
-          a: "PDF, PNG, JPEG et WebP, jusqu'à 99 pages par document et 20 fichiers par exécution. Le modèle lit le français, l'anglais et les principales langues européennes ; l'interface est en français et en anglais.",
+          a: "PDF, PNG, JPEG et WebP, 20 fichiers par exécution. Un document est lu en une seule passe, jusqu'à une quarantaine de pages A4 ; un document plus long est refusé tout de suite, avec la raison, avant toute facturation. Le modèle lit le français, l'anglais et les principales langues européennes ; l'interface est en français et en anglais.",
         },
         {
           q: "Quelle précision attendre ?",
@@ -295,8 +296,16 @@ export const fr = {
           a: "Les accès passent par votre fournisseur d'identité. Quatre rôles (lecteur, opérateur, administrateur, administrateur de la plateforme) donnent des permissions précises sur les workflows et les exécutions.",
         },
         {
+          q: "Que se passe-t-il si un serveur tombe pendant une exécution ?",
+          a: "L'exécution reprend d'elle-même : un worker qui s'arrête la passe à un autre, un redémarrage de la base est réessayé, et elle n'est facturée qu'une fois. Chaque base et chaque document sont sauvegardés, chiffrés, chaque nuit vers un stockage objet, et la restauration est testée.",
+        },
+        {
+          q: "Peut-on proposer Repody à nos propres clients ?",
+          a: "Oui. Une installation sert plusieurs entreprises clientes, chacune ne voyant que son propre travail. Vous invitez leurs utilisateurs, leur accordez des crédits (un par page lue) et suivez leur consommation et le coût GPU depuis l'espace d'administration.",
+        },
+        {
           q: "Comment se passent les mises à jour ?",
-          a: "Chaque version est construite, analysée, signée et publiée avec sa nomenclature logicielle. Vous choisissez la version à déployer ; sa signature est vérifiée avant l'installation.",
+          a: "Chaque version est construite une fois, analysée, signée et lancée sur une copie de préproduction avec un vrai document avant d'arriver en production. Vous choisissez la version à déployer ; sa signature est vérifiée avant l'installation, et revenir en arrière tient en une commande.",
         },
       ],
     },
@@ -310,7 +319,7 @@ export const fr = {
     meta: {
       title: "Plateforme : extraction, règles, rapports et API",
       description:
-        "Constructeur de workflows, 24 types de champs, règles sur un ou deux documents, rapports détaillés, API REST avec clés par workflow et suivi en direct de chaque exécution.",
+        "Constructeur de workflows, 24 types de champs, règles sur un ou deux documents, rapports détaillés à côté des pages, API REST avec clés par workflow, salle de contrôle, et entreprises clientes avec leurs utilisateurs et leurs crédits.",
     },
     hero: {
       title: "Toute la plateforme, écran par écran",
@@ -338,6 +347,14 @@ export const fr = {
           {
             title: "Instructions au modèle",
             body: "Des consignes propres à chaque document, en plus de la description de chaque champ.",
+          },
+          {
+            title: "Des exemples qui instruisent",
+            body: "Jusqu'à cinq exemples par document, une entrée et la réponse attendue, montrent au modèle vos mises en page et vos conventions.",
+          },
+          {
+            title: "Transcription complète",
+            body: "Un document sans champs est transcrit en entier en Markdown, tableaux compris, et conservé avec le rapport.",
           },
           {
             title: "Import de modèles NuExtract",
@@ -405,11 +422,11 @@ export const fr = {
           },
           {
             title: "Limites claires",
-            body: "20 fichiers et 25 Mo par fichier par défaut, types vérifiés (PDF, PNG, JPEG, WebP), délai maximal par exécution.",
+            body: "20 fichiers et 25 Mo par fichier par défaut, le type vérifié d'après le contenu (PDF, PNG, JPEG, WebP), et un document trop long pour le modèle refusé tout de suite, avec la raison, avant toute facturation.",
           },
           {
-            title: "Résultats en cache",
-            body: "Optionnel : le même fichier avec le même schéma ne repasse pas par le modèle (clé SHA-256 du contenu et du schéma).",
+            title: "Des exécutions qui reprennent",
+            body: "Un worker qui s'arrête ou une base qui redémarre en pleine exécution : l'exécution reprend d'elle-même et n'est facturée qu'une fois. Une exécution perdue par la file est mise en échec et ses crédits libérés.",
           },
         ],
       },
@@ -443,6 +460,14 @@ export const fr = {
             title: "Pages tronquées signalées",
             body: "Si un document dépasse la limite de pages, le rapport indique combien ont été lues.",
           },
+          {
+            title: "Les pages à côté des valeurs",
+            body: "Les pages de chaque document s'affichent à côté de ses champs, rendues pour l'écran : une valeur se vérifie contre sa page d'un coup d'œil.",
+          },
+          {
+            title: "Où regarder",
+            body: "Un champ qu'une règle n'a pas pu vérifier est signalé, et la liste nomme la règle : la personne qui relit sait où regarder.",
+          },
         ],
       },
       {
@@ -465,7 +490,7 @@ export const fr = {
           },
           {
             title: "Débit maîtrisé",
-            body: "Limite d'exécutions par minute et par client (429), file plafonnée (503), avec l'en-tête Retry-After.",
+            body: "Par client, les exécutions par minute et en cours sont plafonnées : les suivantes attendent leur tour et les clients alternent. Au-delà de la profondeur de la file, l'API répond 503 avec Retry-After.",
           },
           {
             title: "Contrat typé",
@@ -474,6 +499,14 @@ export const fr = {
           {
             title: "Essai depuis l'interface",
             body: "Lancez une exécution avec la vraie clé, exactement comme un client de l'API.",
+          },
+          {
+            title: "Nouvelles tentatives sans risque",
+            body: "Avec l'en-tête Idempotency-Key, une requête renvoyée rend l'exécution déjà lancée : une coupure réseau ne fait jamais traiter ni facturer deux fois un document.",
+          },
+          {
+            title: "Refus explicites",
+            body: "402 quand le compte n'a plus de crédits, 413 pour un fichier trop gros, 422 avec la raison pour un fichier ou une demande que le modèle ne peut pas lire.",
           },
         ],
       },
@@ -494,7 +527,71 @@ export const fr = {
           { title: "Volume par jour", body: "Chaque jour mène à ses exécutions." },
           {
             title: "État de la file",
-            body: "Exécutions en cours et en attente, alerte si une exécution ne répond plus.",
+            body: "Exécutions en cours et en attente sur toute la plateforme : une attente s'explique d'elle-même.",
+          },
+        ],
+      },
+      {
+        id: "operations",
+        title: "Salle de contrôle",
+        lead: "Ce qui tourne, ce qui a échoué et à quelle vitesse : la page que les opérateurs gardent ouverte.",
+        shot: null,
+        points: [
+          {
+            title: "Exécutions en cours",
+            body: "Chaque exécution en attente ou en cours, avec son étape en direct, ses fichiers et depuis combien de temps elle tourne.",
+          },
+          {
+            title: "Arrêter une exécution",
+            body: "Annulez une exécution depuis la liste : sa tâche est arrêtée et elle est soldée comme tout échec.",
+          },
+          {
+            title: "Ce qui a échoué",
+            body: "Les échecs des dernières 24 heures, chacun avec sa raison en clair.",
+          },
+          {
+            title: "Débit",
+            body: "Exécutions terminées et en échec heure par heure sur 24 heures, avec les durées médiane et au 95e centile.",
+          },
+        ],
+      },
+      {
+        id: "admin",
+        title: "Clients, utilisateurs et crédits",
+        lead: "Une installation sert plusieurs entreprises clientes. Chacune ne voit que son propre travail, et le paie avec les crédits que vous lui accordez.",
+        shot: null,
+        points: [
+          {
+            title: "Entreprises clientes",
+            body: "Un client est un groupe de votre fournisseur d'identité. Ses utilisateurs ne voient que ses workflows, exécutions et audits ; un utilisateur hors de tout client ne voit rien.",
+          },
+          {
+            title: "Utilisateurs et rôles",
+            body: "Invitez par e-mail, choisissez le rôle, réinitialisez un mot de passe, désactivez ou supprimez un compte, depuis l'espace d'administration.",
+          },
+          {
+            title: "Des crédits à la page",
+            body: "Un crédit correspond à une page lue par le modèle, plus des frais par exécution. Une exécution réserve son estimation au départ et paie les pages réellement lues.",
+          },
+          {
+            title: "Jamais de facture surprise",
+            body: "Une exécution que le compte ne peut pas payer est refusée avant tout envoi, et l'utilisateur peut demander des crédits.",
+          },
+          {
+            title: "Consommation et coûts",
+            body: "Crédits, exécutions et pages par client, et une estimation du coût GPU, sur la période voulue.",
+          },
+          {
+            title: "Demandes d'accès",
+            body: "Les prospects demandent un compte depuis votre site public, protégé par Turnstile ; vous les rattachez à un client en une étape.",
+          },
+          {
+            title: "Un journal d'audit",
+            body: "Chaque action d'administration, qui l'a faite, sur quel client et quand, conservée durablement.",
+          },
+          {
+            title: "Exemples partagés",
+            body: "Des workflows d'exemple que chaque client peut lire et dupliquer, sans jamais les modifier.",
           },
         ],
       },
@@ -600,6 +697,14 @@ export const fr = {
             title: "Console d'administration isolée",
             body: "La console Keycloak est sur son propre nom d'hôte, derrière une authentification Cloudflare Access ; le domaine public n'expose que le royaume de l'application.",
           },
+          {
+            title: "Connexions tracées",
+            body: "Connexions, échecs et modifications d'administration sont conservés 90 jours ; un compte se verrouille après 10 tentatives échouées.",
+          },
+          {
+            title: "Entreprises cloisonnées",
+            body: "Chaque entreprise cliente ne voit que son propre travail ; un utilisateur hors de toute entreprise n'a aucun accès.",
+          },
         ],
       },
       {
@@ -612,11 +717,11 @@ export const fr = {
           },
           {
             title: "Fichiers contrôlés",
-            body: "Nombre, taille et type de fichier vérifiés à l'entrée ; stockage objet privé.",
+            body: "Nombre, taille et type des fichiers vérifiés à l'entrée, le type lu dans le contenu, jamais dans le nom ; stockage objet privé.",
           },
           {
             title: "Débit et file maîtrisés",
-            body: "Limite par client (HTTP 429) et file d'attente plafonnée (HTTP 503), avec Retry-After.",
+            body: "Par client, les exécutions par minute et en cours sont plafonnées et les suivantes attendent leur tour ; une file plafonnée répond 503 avec Retry-After.",
           },
           {
             title: "Durée de conservation",
@@ -629,6 +734,14 @@ export const fr = {
           {
             title: "Erreurs sans fuite",
             body: "Les erreurs renvoyées aux clients décrivent le problème, jamais l'intérieur du système.",
+          },
+          {
+            title: "Exports sûrs",
+            body: "Une cellule CSV qu'un tableur exécuterait comme une formule est neutralisée.",
+          },
+          {
+            title: "Un formulaire public protégé",
+            body: "Les demandes d'accès passent un contrôle Cloudflare Turnstile et une limite par réseau ; seule une empreinte à sens unique de l'adresse est conservée.",
           },
         ],
       },
@@ -660,6 +773,14 @@ export const fr = {
             title: "Mises à jour du système",
             body: "Mises à jour de sécurité automatiques sur le serveur, images de base suivies et mises à jour.",
           },
+          {
+            title: "Sauvegardes hors du serveur",
+            body: "Chaque base et chaque document, chiffrés chaque nuit vers un stockage objet ; la restauration est testée sur les vraies sauvegardes.",
+          },
+          {
+            title: "La préproduction d'abord",
+            body: "Chaque changement tourne sur une pile de préproduction séparée, avec un vrai document, avant qu'une version n'arrive en production.",
+          },
         ],
       },
       {
@@ -680,15 +801,15 @@ export const fr = {
           },
           {
             title: "Dépendances épinglées",
-            body: "Images par empreinte, actions de CI par commit ; Dependabot propose chaque mise à jour.",
+            body: "Images par empreinte, actions de CI par commit ; Dependabot propose chaque mise à jour après quelques jours de délai.",
           },
           {
-            title: "Résultats centralisés",
-            body: "Les analyses sont publiées dans l'onglet de sécurité du dépôt (SARIF).",
+            title: "Analyses hebdomadaires",
+            body: "Le code publié est réanalysé chaque semaine ; une alerte acceptée porte sa raison et une date de fin.",
           },
           {
             title: "Versions immuables",
-            body: "Une version est une étiquette et un ensemble d'images signées ; on déploie une version, pas une branche.",
+            body: "Une version promeut, par empreinte, les images exactes testées en préproduction ; rien n'est reconstruit.",
           },
         ],
       },
@@ -770,7 +891,7 @@ export const fr = {
           },
           {
             title: "Pages en 170 DPI",
-            body: "Chaque page est rendue en image à la résolution attendue par le modèle, jusqu'à 99 pages par document.",
+            body: "Chaque page est rendue à la résolution attendue par le modèle. Un document est lu en une requête, une quarantaine de pages A4 au plus ; un document plus long est refusé, avec la raison, avant de partir.",
           },
           {
             title: "GPU à la demande",
@@ -782,7 +903,7 @@ export const fr = {
           },
           {
             title: "Mesuré",
-            body: "Appel au modèle chaud : environ 0,4 s pour une facture d'une page ; démarrage à froid : environ 7 s.",
+            body: "Sur un GPU de 24 Go : environ 1,5 s pour une facture d'une page, 6 à 10 s pour cinq pages, 30 à 45 s pour vingt ; un démarrage depuis l'instantané mémoire prend environ 15 s.",
           },
         ],
       },
@@ -799,8 +920,8 @@ export const fr = {
             body: "Une exécution n'est traitée qu'une fois, même si plusieurs workers la reçoivent.",
           },
           {
-            title: "Délais et reprise",
-            body: "Chaque exécution a un délai maximal ; celle qui le dépasse, ou dont le worker s'arrête, échoue avec sa raison.",
+            title: "Reprise sans intervention",
+            body: "Un worker qui s'arrête passe son exécution à un autre, qui la reprend ; un redémarrage de la base est réessayé ; une exécution qui dépasse son délai, ou perdue par la file, est mise en échec avec la raison et ses crédits soldés.",
           },
           {
             title: "Admission contrôlée",
@@ -808,7 +929,7 @@ export const fr = {
           },
           {
             title: "Concurrence bornée",
-            body: "Le nombre de requêtes simultanées vers le modèle est réglé pour ne jamais saturer le GPU, et les clients passent à tour de rôle : un gros envoi n'occupe pas tous les workers.",
+            body: "Les requêtes au modèle et les pages rendues en mémoire sont plafonnées : ni le GPU ni un worker ne sont saturés, et les clients alternent pour qu'un envoi massif n'accapare pas tous les workers.",
           },
           {
             title: "PostgreSQL en haute disponibilité",
@@ -829,12 +950,12 @@ export const fr = {
             body: "OpenTelemetry de l'API aux workers, collectées par un OpenTelemetry Collector.",
           },
           {
-            title: "Pile complète fournie",
-            body: "Prometheus, Grafana, Loki, Tempo et Alloy, configurés.",
+            title: "Journaux, erreurs et alertes",
+            body: "Journaux consultables dans Grafana (Loki, Alloy), erreurs avec leur pile d'appels dans Bugsink, alertes sur les erreurs et sur une sauvegarde manquée, le tout sur vos serveurs.",
           },
           {
-            title: "Suivi des erreurs",
-            body: "Erreurs de l'interface et du serveur remontées à un service compatible Sentry, hébergeable chez vous.",
+            title: "Statistiques des requêtes",
+            body: "Chaque requête à la base est mesurée (pg_stat_statements), et les plus lentes sont journalisées sans leurs valeurs, qui peuvent être des données clientes.",
           },
           {
             title: "Sondes de santé",
@@ -882,7 +1003,7 @@ export const fr = {
       lead: "Chaque choix d'architecture a son document dans le dépôt, avec le contexte et les alternatives écartées.",
       items: [
         {
-          adr: "001",
+          adr: "011",
           title: "Exécutions asynchrones avec Hatchet",
           body: "L'API répond tout de suite ; Hatchet confie chaque exécution à un worker et fait respecter ses délais.",
         },
@@ -905,6 +1026,11 @@ export const fr = {
           adr: "010",
           title: "Cycles de vie explicites",
           body: "Chaque état d'un workflow et d'une exécution, et ses transitions, sont nommés.",
+        },
+        {
+          adr: "012",
+          title: "Le service hébergé sur un serveur",
+          body: "Docker Compose sur un VPS avec une copie de préproduction à côté et le modèle sur un GPU managé ; Kubernetes reste pour les installations clientes.",
         },
       ],
     },
@@ -929,7 +1055,9 @@ export const fr = {
           "Docker Compose : interface, API, workers, PostgreSQL, Hatchet, stockage, Keycloak, tunnel",
           "Chaque service avec son contrôle de santé et sa limite de mémoire",
           "Migrations appliquées automatiquement avant le démarrage",
-          "Déploiement par la chaîne de CI, signature vérifiée, retour arrière en une commande",
+          "Déploiement par la chaîne après une copie de préproduction, signature vérifiée, retour arrière en une commande",
+          "Journaux, suivi des erreurs et alertes sur le même serveur, derrière votre contrôle d'accès",
+          "Sauvegardes chiffrées chaque nuit vers un stockage objet, restauration testée",
         ],
       },
       {
@@ -982,10 +1110,11 @@ export const fr = {
         "Le fichier Docker Compose de production et son modèle de configuration",
         "Le chart Helm et ses exemples de valeurs de production",
         "Les manifestes CloudNativePG, External Secrets et Argo CD",
-        "La configuration d'observabilité (Prometheus, Grafana, Loki, Tempo)",
+        "La journalisation, le suivi des erreurs et les règles d'alerte, prêts à l'emploi (Loki, Alloy, Grafana, Bugsink)",
+        "L'outil de sauvegarde chiffrée et de restauration (restic)",
         "Le serveur de modèle prêt à déployer",
         "La documentation d'installation, d'exploitation et de dépannage",
-        "Les décisions d'architecture et le guide de migration",
+        "Les décisions d'architecture et les diagrammes de cycle de vie",
       ],
     },
     steps: {
@@ -1078,17 +1207,27 @@ export const fr = {
             name: "Blocage",
             detail: "Une vulnérabilité haute ou critique fait échouer la chaîne.",
           },
-          { name: "Code scanning", detail: "Résultats publiés en SARIF dans le dépôt." },
+          {
+            name: "Chaque semaine",
+            detail:
+              "Les analyses repassent chaque semaine sur le code publié : une nouvelle vulnérabilité est trouvée sans attendre une modification.",
+          },
+          {
+            name: "Exceptions datées",
+            detail:
+              "Une alerte acceptée porte sa raison et une date de fin ; passée cette date, la chaîne échoue de nouveau.",
+          },
         ],
       },
       {
         id: "release",
         title: "Version",
-        lead: "Une étiquette de version déclenche la publication, seulement si l'intégration continue est verte sur ce commit.",
+        lead: "Chaque commit de master est construit une fois, signé et lancé en préproduction ; une étiquette de version promeut ces mêmes images en production.",
         gates: [
           {
-            name: "Garde",
-            detail: "Pas de version sans intégration continue réussie sur le même commit.",
+            name: "Construit une fois",
+            detail:
+              "Les images ne sont construites et signées que pour un commit de master dont les tests sont passés.",
           },
           { name: "Docker Bake", detail: "Les trois images construites ensemble, avec cache." },
           { name: "SBOM et provenance", detail: "Attestations BuildKit attachées à chaque image." },
@@ -1102,14 +1241,15 @@ export const fr = {
           },
           {
             name: "Promotion",
-            detail: "Une chaîne dédiée vérifie les signatures avant de promouvoir une version.",
+            detail:
+              "Une étiquette de version vérifie la signature de master et ajoute la version aux mêmes empreintes : rien n'est reconstruit.",
           },
         ],
       },
       {
         id: "deploy",
         title: "Déploiement",
-        lead: "On déploie une version, sur un environnement protégé, après vérification.",
+        lead: "Chaque version passe d'abord en préproduction, puis en production, vérifiée à chaque étape.",
         gates: [
           {
             name: "Environnement protégé",
@@ -1133,8 +1273,18 @@ export const fr = {
             detail: "La chaîne vérifie que l'application répond depuis Internet.",
           },
           {
+            name: "Sauvegarde d'abord",
+            detail: "Chaque base de données est sauvegardée avant tout changement.",
+          },
+          {
+            name: "Une vraie exécution",
+            detail:
+              "La chaîne fait passer un vrai document par l'extraction sur le GPU et vérifie le rapport, les crédits et le cloisonnement.",
+          },
+          {
             name: "Retour arrière",
-            detail: "Redéployer la version précédente est la même commande.",
+            detail:
+              "Redéployer la version précédente est la même commande, répétée en préproduction.",
           },
         ],
       },
@@ -1148,7 +1298,7 @@ export const fr = {
         },
         {
           title: "Dépendances suivies",
-          body: "Dependabot sur npm, Python, Docker, Compose et les actions ; tout est épinglé.",
+          body: "Dependabot sur npm, Python, Docker, Compose et les actions, avec quelques jours de délai avant de proposer une version ; tout est épinglé.",
         },
         {
           title: "Documentation vérifiée",
@@ -1165,6 +1315,14 @@ export const fr = {
         {
           title: "Système de design",
           body: "Jetons, composants et règles d'interface documentés, appliqués partout.",
+        },
+        {
+          title: "Exercices de panne",
+          body: "Workers arrêtés net, base et file redémarrées en pleine exécution, retours arrière répétés : en préproduction, avec de vraies exécutions.",
+        },
+        {
+          title: "Mesuré, pas supposé",
+          body: "Requêtes chronométrées sur un demi-million d'exécutions ; mémoire et nombre réel de jetons du modèle mesurés sous charge.",
         },
       ],
     },
