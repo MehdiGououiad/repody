@@ -259,8 +259,6 @@ jobs:
           fi
           echo "release ${VERSION} on ${TARGET}: running, migrated, answering, signing in, headers and CORS in place"
 
-      # One real run as the stack's tester account (deploy/keycloak/setup-tester-client.sh), when
-      # it has one: a document through extraction on the GPU, its credits, and its isolation.
       - name: Smoke test
         timeout-minutes: 20
         run: |
@@ -274,6 +272,16 @@ jobs:
             && docker compose -p ${PROJECT} --env-file .env --env-file release.env exec -T -e TESTER_CLIENT_SECRET api python - < tools/smoke_test.py" \
             | grep -v '^{'
 
+      # Every deploy of either stack pulls a new set of images and nothing else removes old
+      # ones (120 Repody images, 8 GB reclaimable, on 18 November). Once this release checks
+      # out (its smoke test included), images no container uses (any stack, stopped one-shot jobs included) and older than
+      # 3 days go. A rollback does not need them: it pulls the verified image from GHCR again.
+      - name: Remove unused images
+        run: |
+          tailscale ssh "deploy@${HOST}" "docker image prune --all --force --filter until=72h | tail -n 1"
+
+      # One real run as the stack's tester account (deploy/keycloak/setup-tester-client.sh), when
+      # it has one: a document through extraction on the GPU, its credits, and its isolation.
       - name: Logs of the failed release
         if: failure()
         run: |
