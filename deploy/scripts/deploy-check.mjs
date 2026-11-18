@@ -77,7 +77,9 @@ const steps = [
 /** Dependabot updates compose.yaml, not the image pinned in backup.sh: they must not drift. */
 function samePostgres() {
   const stack = readFileSync("deploy/vps/compose.yaml", "utf8").match(/image: (postgres:\S+)/)?.[1];
-  const backup = readFileSync("deploy/vps/backup.sh", "utf8").match(/POSTGRES_IMAGE="([^"]+)"/)?.[1];
+  const backup = readFileSync("deploy/vps/backup.sh", "utf8").match(
+    /POSTGRES_IMAGE="([^"]+)"/
+  )?.[1];
   return stack && stack === backup
     ? { status: 0 }
     : { status: 1, stderr: `compose.yaml runs ${stack}, backup.sh restores into ${backup}` };

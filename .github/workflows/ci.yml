@@ -72,6 +72,9 @@ jobs:
               - 'e2e/**'
               - 'scripts/**'
               - '**/*.md' # the link check
+              # Everything Biome checks (`biome ci .` lints the whole repository, deploy scripts
+              # and the site included).
+              - '**/*.{js,mjs,cjs,ts,tsx,json,jsonc,css}'
               - '.github/workflows/ci.yml'
             deploy:
               - 'deploy/**'
