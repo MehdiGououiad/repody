@@ -181,14 +181,3 @@ async def test_scale_to_zero_model_server_is_not_probed(monkeypatch, fresh_setti
 
     monkeypatch.setenv("AUDIT_INFERENCE_PROBE", "false")
     assert await client.model_available() is None
-
-
-def test_the_model_server_settings_keep_their_old_names(monkeypatch, fresh_settings):
-    monkeypatch.delenv("AUDIT_INFERENCE_BASE_URL", raising=False)
-    monkeypatch.setenv("AUDIT_LLAMACPP_BASE_URL", "http://old.test/v1")
-    monkeypatch.setenv("AUDIT_LLAMACPP_PROBE", "false")
-    assert get_settings().inference_base_url == "http://old.test/v1"
-    assert get_settings().inference_probe is False
-    monkeypatch.setenv("AUDIT_INFERENCE_BASE_URL", "http://new.test/v1")
-    get_settings.cache_clear()
-    assert get_settings().inference_base_url == "http://new.test/v1"  # the new name wins

@@ -8,7 +8,6 @@ from functools import lru_cache
 from typing import Annotated, Self
 
 from pydantic import (
-    AliasChoices,
     BeforeValidator,
     Field,
     NonNegativeInt,
@@ -30,10 +29,7 @@ CommaList = Annotated[
 
 
 class Settings(BaseSettings):
-    # validate_by_name: fields with an alias (the old names below) are still set by name.
-    model_config = SettingsConfigDict(
-        env_prefix="AUDIT_", env_file=".env", extra="ignore", validate_by_name=True
-    )
+    model_config = SettingsConfigDict(env_prefix="AUDIT_", env_file=".env", extra="ignore")
 
     # Platform
     deployment_environment: str = "development"
@@ -86,27 +82,14 @@ class Settings(BaseSettings):
     ]
 
     # Inference: NuExtract on an OpenAI-compatible server (vLLM on Modal, or a local
-    # llama-server). Until 1.7 these were AUDIT_LLAMACPP_BASE_URL, _API_KEY, _SERVED_MODEL and
-    # _PROBE: the old names still work. (An alias replaces the AUDIT_ prefix, hence full names.)
-    inference_base_url: str = Field(
-        default="http://127.0.0.1:8081/v1",
-        validation_alias=AliasChoices("AUDIT_INFERENCE_BASE_URL", "AUDIT_LLAMACPP_BASE_URL"),
-    )
-    inference_api_key: SecretStr = Field(
-        default=SecretStr("local"),
-        validation_alias=AliasChoices("AUDIT_INFERENCE_API_KEY", "AUDIT_LLAMACPP_API_KEY"),
-    )
-    inference_model: str = Field(
-        default="nuextract3-q8_0",
-        validation_alias=AliasChoices("AUDIT_INFERENCE_MODEL", "AUDIT_LLAMACPP_SERVED_MODEL"),
-    )
+    # llama-server).
+    inference_base_url: str = "http://127.0.0.1:8081/v1"
+    inference_api_key: SecretStr = SecretStr("local")
+    inference_model: str = "nuextract3-q8_0"
     inference_timeout_seconds: float = Field(default=180.0, ge=10)
     # Whether /platform/config asks the model server if it is up. Off for an endpoint that scales
     # to zero: the question would start it (and bill it); the model then shows as on demand.
-    inference_probe: bool = Field(
-        default=True,
-        validation_alias=AliasChoices("AUDIT_INFERENCE_PROBE", "AUDIT_LLAMACPP_PROBE"),
-    )
+    inference_probe: bool = True
     # Requests in flight per model server: set to its parallel slots (llama-server --parallel).
     # Documents and pages beyond it wait their turn.
     inference_concurrency: PositiveInt = 1
