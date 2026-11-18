@@ -128,15 +128,15 @@ AUDIT_INFERENCE_CONTEXT_TOKENS=131072
 A request takes at most 99 images (the card's `--limit-mm-per-prompt`), so
 `AUDIT_MAX_PAGES_PER_DOCUMENT=99` cuts a longer PDF to its first 99 pages instead of failing.
 
-The tighter limit is the context, 131,072 tokens (`--max-model-len`). One token covers 28 × 28
+The tighter limit is the context, 131,072 tokens (`--max-model-len`). One token covers 32 × 32
 pixels, so the page sizes are:
 
 | Page at 170 DPI | Tokens | Pages that fit, with the 16k answer budget of a schema with lists |
 |---|---|---|
-| A4 | ~3,600 | ~31 |
-| Letter | ~3,500 | ~32 |
-| Legal | ~4,400 | ~25 |
-| A3 | ~7,200 | ~15 |
+| A4 | ~2,700 | ~41 |
+| Letter | ~2,600 | ~43 |
+| Legal | ~3,400 | ~33 |
+| A3 | ~5,500 | ~20 |
 
 In-context examples come on top. `AUDIT_INFERENCE_CONTEXT_TOKENS=131072` makes the backend refuse a
 document that would not fit (422, when the run starts), instead of vLLM refusing it on the GPU.

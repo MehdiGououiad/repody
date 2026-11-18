@@ -68,8 +68,10 @@ def _request(doc: DocumentDef) -> dict[str, Any]:
 
 
 # NuExtract3's image processor as it is served (Qwen2-VL's; deploy/modal/nuextract.py): one token
-# per 28 x 28 pixels, each image first scaled into [IMAGE_MIN_PIXELS, IMAGE_MAX_PIXELS].
-TOKEN_PIXELS = 28 * 28
+# per 32 x 32 pixels (16-pixel patches, merged 2 x 2), each image first scaled into
+# [IMAGE_MIN_PIXELS, IMAGE_MAX_PIXELS]. Measured against vLLM's usage.prompt_tokens on staging
+# (18 November): a 170 DPI A4 page is 2,778 tokens with the prompt, this count 2,728 without.
+TOKEN_PIXELS = 32 * 32
 IMAGE_MIN_PIXELS = 1024 * 1024
 IMAGE_MAX_PIXELS = 16_777_216
 CHARS_PER_TOKEN = 3  # text, counted on the high side

@@ -292,7 +292,7 @@ def test_a_requests_tokens_are_its_pages_text_and_answer():
         }
     )
     one, thirty = pipeline.request_tokens(doc, [a4]), pipeline.request_tokens(doc, [a4] * 30)
-    assert thirty - one == 29 * math.ceil(a4 / (28 * 28))  # ~3.6k tokens a page
-    assert thirty > 100_000
+    assert thirty - one == 29 * math.ceil(a4 / (32 * 32))  # ~2.7k tokens a page
+    assert thirty > 80_000  # 30 A4 pages: ~82k tokens and the answer budget
     small_image = pipeline.request_tokens(doc, [515 * 321])  # raised to ~1 MP by the processor
-    assert small_image - pipeline.request_tokens(doc, []) == math.ceil(1024 * 1024 / 784)
+    assert small_image - pipeline.request_tokens(doc, []) == math.ceil(1024 * 1024 / 1024)
