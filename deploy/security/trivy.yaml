@@ -25,6 +25,9 @@ severity:
 vulnerability:
   ignore-unfixed: true
 
+# Accepted findings, each with its reason and expiry date.
+ignorefile: deploy/security/trivyignore.yaml
+
 secret:
   config: deploy/security/trivy-secret.yaml
 

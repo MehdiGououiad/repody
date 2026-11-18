@@ -50,6 +50,7 @@ jobs:
           scan-type: fs
           scan-ref: .
           trivy-config: deploy/security/trivy.yaml
+          skip-setup-trivy: true # the version set up above, not the action's own default
           # License findings are reported for review; only vuln/secret/misconfig gate below.
           scanners: vuln,secret,misconfig,license
           format: sarif
@@ -62,6 +63,7 @@ jobs:
           scan-type: fs
           scan-ref: .
           trivy-config: deploy/security/trivy.yaml
+          skip-setup-trivy: true # the version set up above, not the action's own default
           scanners: vuln,secret,misconfig
           severity: CRITICAL,HIGH
           exit-code: "1"
@@ -116,6 +118,7 @@ jobs:
         with:
           image-ref: repody-${{ matrix.target }}:${{ env.SCAN_TAG }}
           trivy-config: deploy/security/trivy.yaml
+          skip-setup-trivy: true # the version set up above, not the action's own default
           format: sarif
           output: trivy-${{ matrix.target }}.sarif
           exit-code: "0"
@@ -125,6 +128,7 @@ jobs:
         with:
           image-ref: repody-${{ matrix.target }}:${{ env.SCAN_TAG }}
           trivy-config: deploy/security/trivy.yaml
+          skip-setup-trivy: true # the version set up above, not the action's own default
           severity: CRITICAL,HIGH
           exit-code: "1"
 

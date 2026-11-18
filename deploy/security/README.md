@@ -4,11 +4,17 @@
 
 | Scan | Covers | CI gate |
 |------|--------|---------|
-| Repository (`trivy fs`) | `pnpm-lock.yaml`, `backend/uv.lock`, secrets, Dockerfiles / Compose / Helm misconfig | CRITICAL or HIGH fails |
-| Images (`trivy image`) | OS and language packages in `repody-backend` and `repody-web` | CRITICAL or HIGH fails |
+| Repository (`trivy fs`) | `pnpm-lock.yaml`, `site/pnpm-lock.yaml`, `backend/uv.lock`, secrets, Dockerfiles / Compose / Helm misconfig | CRITICAL or HIGH fails |
+| Images (`trivy image`) | OS and language packages in `repody-backend`, `repody-web` and `repody-keycloak` | CRITICAL or HIGH fails |
 
-Results are uploaded to GitHub code scanning (SARIF). Unfixed vulnerabilities are ignored
-(`deploy/security/trivy.yaml`); secret rules live in `trivy-secret.yaml`.
+Both run on every pull request and master push, and weekly on master, so a vulnerability
+published after the last merge is found too. The SARIF results go to GitHub code scanning when
+the repository variable `CODE_SCANNING` is `true` (it needs code scanning on the repository).
+
+- Vulnerabilities without a fix are ignored (`trivy.yaml`).
+- An accepted finding goes in [`trivyignore.yaml`](trivyignore.yaml), with its reason and an
+  expiry date; past that date it fails the scan again.
+- Secret rules live in `trivy-secret.yaml`.
 
 Released images also carry BuildKit SBOM and provenance attestations and a cosign keyless
 signature ([`.github/workflows/images-ghcr.yml`](../../.github/workflows/images-ghcr.yml));
