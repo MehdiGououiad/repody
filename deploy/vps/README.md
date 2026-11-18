@@ -453,6 +453,11 @@ containers, and a reboot. journald keeps at most 10% of the disk, capped at 4 GB
 oldest first. The API and worker write one JSON object per line; answered health checks are not
 logged.
 
+This is how one server with journald keeps its logs. Another installation sends the same JSON
+lines to the logging it already has: on Kubernetes, the cluster's node agent reads them from
+stdout ([docs/CLUSTER.md](../../docs/CLUSTER.md#observability), "Observability"); on a client's own
+Compose server, the `logs` and `errors` profiles are optional.
+
 ```bash
 journalctl -t repody-api-1 -t repody-worker-1 --since "1 hour ago" -o cat     # read
 journalctl -t repody-api-1 -t repody-worker-1 -f -o cat                       # follow

@@ -157,10 +157,17 @@ Registry notes (GHCR, Docker Hub, Harbor): [deploy/registry/README.md](../deploy
 
 ## Observability
 
-Repody writes JSON logs (`AUDIT_LOG_JSON`) and optional OTLP traces
-(the OpenTelemetry agent runs when `OTEL_SDK_DISABLED=false`; set `OTEL_EXPORTER_OTLP_ENDPOINT`). Bring your own collector and backends -
-for example the [OpenTelemetry Collector chart](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector)
-with Grafana, Loki and Tempo. `BUGSINK_DSN` in the Secret enables error tracking.
+The chart ships no logging stack: Repody speaks the open standards, and the cluster's own tools
+collect them (OpenShift logging, Elastic, Splunk, Datadog, Grafana Loki, …).
+
+| Signal | What Repody emits | How the cluster collects it |
+|---|---|---|
+| Logs | One JSON object per line on stdout (`AUDIT_LOG_JSON=true`): `level`, `event`, `timestamp`, the ids it concerns (`run_id`, `workflow_id`, `account`) and the request's `trace_id`. Never a document's content or an extracted value | The cluster's node agent (Fluent Bit, the OpenTelemetry Collector, Grafana Alloy) reads container stdout like any pod's |
+| Errors | Exceptions with their stack trace, through the Sentry SDK, when `BUGSINK_DSN` is in the Secret (API, workers and web) | Any Sentry-compatible server: [Bugsink](https://www.bugsink.com/) (Repody's own, PolyForm Shield license), [GlitchTip](https://glitchtip.com/) (MIT) or Sentry. Events carry the image tag as their release |
+| Traces | OTLP, when `OTEL_SDK_DISABLED=false` and `OTEL_EXPORTER_OTLP_ENDPOINT` is set | An OpenTelemetry Collector (for example its [Helm chart](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector)) and any trace backend |
+
+The Compose profiles of `deploy/vps` (Loki, Alloy, Grafana, Bugsink) are for a single server whose
+containers log to journald; they have no role on Kubernetes.
 
 ### Timeouts (extract pool)
 

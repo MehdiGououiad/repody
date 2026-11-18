@@ -58,6 +58,8 @@ spec:
               valueFrom:
                 secretKeyRef: { name: {{ $.Values.existingSecret }}, key: BUGSINK_DSN, optional: true }
             {{- end }}
+            - name: SENTRY_RELEASE
+              value: {{ .Values.images.web.tag | default .Chart.AppVersion | quote }}
           readinessProbe:
             httpGet: { path: /, port: http }
             initialDelaySeconds: 10

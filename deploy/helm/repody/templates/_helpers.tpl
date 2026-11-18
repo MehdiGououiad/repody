@@ -93,8 +93,11 @@ envFrom:
 - name: AUDIT_TURNSTILE_SECRET
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: TURNSTILE_SECRET, optional: true }
-# Errors go to Bugsink through the Sentry SDK.
+# Errors go to Bugsink (or any Sentry-compatible server) through the Sentry SDK, tagged with the
+# release that raised them.
 - name: SENTRY_DSN
   valueFrom:
     secretKeyRef: { name: {{ $secret }}, key: BUGSINK_DSN, optional: true }
+- name: SENTRY_RELEASE
+  value: {{ .Values.images.backend.tag | default .Chart.AppVersion | quote }}
 {{- end }}
