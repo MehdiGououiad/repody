@@ -76,8 +76,9 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 
 Every run is metered: 1 credit = 1 page sent to the model, plus `AUDIT_CREDIT_RUN_FEE` per run.
 A run holds its estimate (its files' pages) when it is queued. It then pays the pages it sent
-when done, its estimate when it failed after it started or the model failed on a document, and
-nothing when it never started. Usage per account: `GET /v1/credits/usage?since=&until=`.
+when done (those of a request that timed out too, never those of a file that could not be read
+or a request the model server refused), its estimate when it failed after it started, and nothing
+when it never started. Usage per account: `GET /v1/credits/usage?since=&until=`.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
