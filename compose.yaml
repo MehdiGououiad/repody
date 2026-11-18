@@ -199,7 +199,7 @@ services:
       bugsink-db:
         condition: service_healthy
     ports:
-      - "8090:8000"
+      - "127.0.0.1:8090:8000"
     environment:
       SECRET_KEY: local-dev-bugsink-secret-key-at-least-fifty-characters-long
       CREATE_SUPERUSER: admin@repody.local:repody-dev
@@ -207,13 +207,14 @@ services:
       DATABASE_URL: postgresql://bugsink:bugsink-local-dev@bugsink-db:5432/bugsink
       BEHIND_HTTPS_PROXY: "false"
       BASE_URL: http://localhost:8090
+      PHONEHOME: "False"
 
   loki:
     profiles: [observability]
     image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
     command: -config.file=/etc/loki/config.yaml
     ports:
-      - "3100:3100"
+      - "127.0.0.1:3100:3100"
     volumes:
       - ./deploy/observability/loki-config.yaml:/etc/loki/config.yaml:ro
       - repody-loki:/loki
@@ -226,7 +227,7 @@ services:
       - --web.enable-remote-write-receiver
       - --enable-feature=exemplar-storage
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - repody-prometheus:/prometheus
@@ -236,7 +237,7 @@ services:
     image: grafana/tempo:2.10.10@sha256:12b0820f13ffa10ce956b6e9acc3b03f3cffded99109be6cc09d106fe56e5d38
     command: ["-config.file=/etc/tempo/config.yaml"]
     ports:
-      - "3200:3200"
+      - "127.0.0.1:3200:3200"
     volumes:
       - ./deploy/observability/tempo-config.yaml:/etc/tempo/config.yaml:ro
       - repody-tempo:/var/tempo
@@ -249,8 +250,8 @@ services:
     image: otel/opentelemetry-collector-contrib:0.165.0@sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
     command: ["--config=/etc/otel/config.yaml"]
     ports:
-      - "4318:4318"
-      - "4317:4317"
+      - "127.0.0.1:4318:4318"
+      - "127.0.0.1:4317:4317"
     volumes:
       - ./deploy/observability/otel-collector-config.yaml:/etc/otel/config.yaml:ro
     depends_on:
@@ -261,7 +262,7 @@ services:
   alloy:
     profiles: [observability]
     image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
-    command: ["run", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
     volumes:
       - ./deploy/observability/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -274,13 +275,17 @@ services:
     profiles: [observability]
     image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
     ports:
-      - "3030:3000"
+      - "127.0.0.1:3030:3000"
     environment:
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
       GF_AUTH_DISABLE_LOGIN_FORM: "false"
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
+      # No usage reports or update checks to grafana.com.
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
     volumes:
       - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
       - repody-grafana:/var/lib/grafana

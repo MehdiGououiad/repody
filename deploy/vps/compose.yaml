@@ -463,6 +463,9 @@ services:
       # Cloudflare Access; people use ERRORS_HOST.
       ALLOWED_HOSTS: ${ERRORS_HOST:-},bugsink
       BEHIND_HTTPS_PROXY: "True"
+      # cloudflared sends X-Forwarded-For, not X-Real-IP (which BEHIND_HTTPS_PROXY turns on). The
+      # only callers are the stack's SDKs and people through Access, so the client IP is unused.
+      USE_X_REAL_IP: "False"
       PORT: "8000"
       SINGLE_USER: "True"
       SITE_TITLE: Repody ${DEPLOYMENT_ENVIRONMENT:-production}

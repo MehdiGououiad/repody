@@ -49,20 +49,24 @@ loki.source.file "host_api" {
   forward_to = [loki.process.json.receiver]
 }
 
-// structlog JSON lines: promote level + service.name to labels, keep trace_id/event extracted.
+// structlog JSON lines: the level becomes a label; the trace id (one per request, too many
+// values for a label) is structured metadata, so Grafana finds a trace's lines without parsing.
+// https://grafana.com/docs/loki/latest/get-started/labels/structured-metadata/
 loki.process "json" {
   stage.json {
     expressions = {
-      trace_id     = "trace_id",
-      level        = "level",
-      service_name = "\"service.name\"",
-      event        = "event",
+      level    = "level",
+      trace_id = "trace_id",
     }
   }
   stage.labels {
     values = {
-      level        = "",
-      service_name = "",
+      level = "",
+    }
+  }
+  stage.structured_metadata {
+    values = {
+      trace_id = "",
     }
   }
   forward_to = [loki.write.local.receiver]

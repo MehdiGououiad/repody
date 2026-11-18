@@ -154,6 +154,26 @@ def test_uvicorn_logs_are_written_once_as_json_without_health_checks(capsys):
     ]
 
 
+def test_with_tracing_on_each_log_line_names_its_trace(monkeypatch, capsys):
+    import json
+    import logging
+
+    from opentelemetry import trace
+
+    from repody.infra import observability
+
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
+    monkeypatch.setattr(observability, "_trace_hatchet", lambda: None)
+    observability.setup()
+    span = trace.NonRecordingSpan(trace.SpanContext(trace_id=0xABC, span_id=0xDEF, is_remote=False))
+    with trace.use_span(span):
+        logging.getLogger("repody.test").info("inside")
+    logging.getLogger("repody.test").info("outside")
+    lines = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    assert lines[0]["trace_id"] == "00000000000000000000000000000abc"
+    assert "trace_id" not in lines[1]
+
+
 async def test_scale_to_zero_model_server_is_not_probed(monkeypatch, fresh_settings):
     """The platform page does not ask an endpoint that scales to zero whether it is up: the
     question would start it (and bill it)."""
