@@ -125,8 +125,9 @@ async def fail_run(run_id: str, error: str, *, only_if: RunStatus | None = None)
 
 async def fail_stuck() -> int:
     """Fail the runs Hatchet will never report on: queued past QUEUE_TIMEOUT (it never got the
-    task: the API stopped between saving the run and queueing it), or running past the run
-    timeout (the task was lost with Hatchet's history). Each is settled like any failure: a
+    task: the API stopped between saving the run and queueing it), or running for twice the run
+    timeout since it first started (the task was lost with Hatchet's history; a run delivered
+    again just inside its limit has one more full attempt, repody.app.execute._claim). Each is settled like any failure: a
     run that never started pays nothing. Run by the maintenance cron; the count failed."""
     now = datetime.now(UTC)
     timeout = timedelta(minutes=get_settings().run_timeout_minutes)
@@ -138,7 +139,10 @@ async def fail_stuck() -> int:
                         (Run.status == "queued")
                         & (Run.created_at < now - QUEUE_TIMEOUT - STUCK_MARGIN)
                     )
-                    | ((Run.status == "running") & (Run.started_at < now - timeout - STUCK_MARGIN))
+                    | (
+                        (Run.status == "running")
+                        & (Run.started_at < now - 2 * timeout - STUCK_MARGIN)
+                    )
                 )
             )
         )

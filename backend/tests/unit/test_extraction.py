@@ -238,3 +238,34 @@ async def test_rendered_pages_in_memory_are_bounded():
     # b waits for a; c (more than the budget) takes all of it, alone.
     assert order == ["a in", "a out", "b in", "b out", "c in", "c out"]
     assert budget.free == 40
+
+
+async def test_a_long_document_is_not_overtaken_by_short_ones():
+    budget = pipeline._PageBudget(40)
+    order: list[str] = []
+
+    async def document(name: str, pages: int, start: float) -> None:
+        await asyncio.sleep(start)
+        async with budget.hold(pages):
+            order.append(name)
+            await asyncio.sleep(0.02)
+
+    await asyncio.gather(
+        document("short-1", 20, 0),
+        document("short-2", 20, 0),
+        document("long", 30, 0.005),  # waits for both shorts
+        document("short-3", 5, 0.01),  # would fit beside long's wait, but came after it
+    )
+    assert order == ["short-1", "short-2", "long", "short-3"]
+    assert budget.free == 40
+
+
+async def test_a_cancelled_wait_gives_nothing_away():
+    budget = pipeline._PageBudget(10)
+    async with budget.hold(10):
+        waiter = asyncio.ensure_future(budget.hold(5).__aenter__())
+        await asyncio.sleep(0)
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+    assert budget.free == 10

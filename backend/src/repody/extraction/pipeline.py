@@ -5,6 +5,7 @@ mode, documents without fields in its Markdown mode.
 """
 
 import asyncio
+import collections
 import contextlib
 import io
 import time
@@ -78,24 +79,43 @@ PAGES_IN_FLIGHT = 40
 
 
 class _PageBudget:
-    """A semaphore counted in pages."""
+    """A semaphore counted in pages, first come first served: a long document waiting for its
+    pages is not overtaken by a stream of short ones (its run's time limit is running)."""
 
     def __init__(self, pages: int) -> None:
         self.size = self.free = pages
-        self._changed = asyncio.Condition()
+        self._waiting: collections.deque[tuple[int, asyncio.Future[None]]] = collections.deque()
+
+    def _wake(self) -> None:
+        while self._waiting and self._waiting[0][0] <= self.free:
+            pages, waiter = self._waiting.popleft()
+            if not waiter.done():
+                self.free -= pages
+                waiter.set_result(None)
 
     @contextlib.asynccontextmanager
     async def hold(self, pages: int) -> AsyncIterator[None]:
         pages = min(max(pages, 1), self.size)
-        async with self._changed:
-            await self._changed.wait_for(lambda: self.free >= pages)
+        if not self._waiting and pages <= self.free:
             self.free -= pages
+        else:
+            waiter = asyncio.get_running_loop().create_future()
+            self._waiting.append((pages, waiter))
+            try:
+                await waiter
+            except asyncio.CancelledError:
+                if waiter.done() and not waiter.cancelled():
+                    self.free += pages  # granted just as it was cancelled: give them back
+                    self._wake()
+                else:
+                    self._waiting.remove((pages, waiter))
+                    self._wake()
+                raise
         try:
             yield
         finally:
-            async with self._changed:
-                self.free += pages
-                self._changed.notify_all()
+            self.free += pages
+            self._wake()
 
 
 _budgets: dict[asyncio.AbstractEventLoop, _PageBudget] = {}
