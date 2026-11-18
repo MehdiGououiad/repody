@@ -11,7 +11,9 @@ from repody.schemas.rule import Arithmetic, Condition, FieldRef, Rule
 from repody.schemas.workflow import DocumentDef, SchemaField, WorkflowDefinition
 
 SEED_WORKFLOW_ID = "wf-invoice-audit"
-SEED_API_KEY = "wbk_live_4f8a2c1e9d3b7f6a0c5e2d8b1a4f7c3e"
+# Public on purpose: local development and the live tests use it. A production or staging stack
+# never seeds (repody.settings refuses AUDIT_SEED_ON_STARTUP there).
+SEED_API_KEY = "wbk_demo_local_development_only"
 
 _INVOICE_FIELDS = [
     ("f1", "invoice_number", "Unique identifier, usually near the header.", "verbatim-string"),

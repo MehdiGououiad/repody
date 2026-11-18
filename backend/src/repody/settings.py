@@ -155,6 +155,11 @@ class Settings(BaseSettings):
                 raise ValueError("AUDIT_OIDC_ENABLED must be true in production and staging.")
             if not self.oidc_audience:
                 raise ValueError("AUDIT_OIDC_AUDIENCE is required in production and staging.")
+            if self.seed_on_startup:
+                raise ValueError(
+                    "AUDIT_SEED_ON_STARTUP must be false in production and staging: the demo data"
+                    " has a public API key."
+                )
             turnstile = self.turnstile_secret.get_secret_value() if self.turnstile_secret else ""
             if self.access_requests_enabled and not turnstile:
                 raise ValueError(

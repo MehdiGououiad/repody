@@ -181,3 +181,15 @@ async def test_scale_to_zero_model_server_is_not_probed(monkeypatch, fresh_setti
 
     monkeypatch.setenv("AUDIT_INFERENCE_PROBE", "false")
     assert await client.model_available() is None
+
+
+@pytest.mark.parametrize("environment", ["production", "staging"])
+def test_production_and_staging_never_seed_the_demo_data(environment):
+    with pytest.raises(ValidationError, match="SEED_ON_STARTUP"):
+        Settings(
+            deployment_environment=environment,
+            oidc_enabled=True,
+            oidc_issuer="https://auth.test/realms/repody",
+            oidc_audience="repody-api",
+            seed_on_startup=True,
+        )

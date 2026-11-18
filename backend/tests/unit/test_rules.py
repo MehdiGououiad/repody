@@ -296,3 +296,15 @@ def test_prefixed_names_resolve_with_one_document_and_bare_names_when_unique():
     values = field_values(two, rule=rule, doc_types_by_id={"d1": "Invoice", "d2": "Receipt"})
     assert "total" not in values  # ambiguous: name the document
     assert values["receipt__total"] == (6.0, "number")
+
+
+@pytest.mark.parametrize("text_value", ["nan", "inf", "-Infinity"])
+def test_a_literal_must_be_a_finite_number(text_value):
+    """float() reads these, but NaN compares false to everything: the rule would always fail."""
+    with pytest.raises(ValueError, match="is not a number"):
+        literal(text_value, "number")
+
+
+def test_a_non_finite_value_from_the_model_counts_as_missing():
+    assert typed(float("nan"), "number") is None
+    assert typed(float("inf"), "number") is None
