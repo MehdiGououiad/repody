@@ -26,6 +26,39 @@ env:
   SCAN_TAG: security-${{ github.sha }}
 
 jobs:
+  # The image scans build the three images (minutes against the free quota): on a pull request
+  # or a master push only when something that goes into an image changed; weekly and by hand,
+  # always.
+  changes:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            images:
+              - 'Dockerfile*'
+              - 'docker-bake.hcl'
+              - 'backend/Dockerfile'
+              - 'backend/pyproject.toml'
+              - 'backend/uv.lock'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'deploy/keycloak/**'
+              - 'deploy/security/**'
+              - '.github/workflows/security.yml'
+
   repository:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -76,6 +109,8 @@ jobs:
           category: trivy-repository
 
   images:
+    needs: changes
+    if: always() && (needs.changes.result == 'skipped' || needs.changes.outputs.images == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
