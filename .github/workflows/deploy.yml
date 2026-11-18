@@ -67,7 +67,7 @@ jobs:
       TARGET: ${{ inputs.target || 'production' }}
       HOST: ${{ vars.DEPLOY_HOST }}
       APP_HOST: ${{ vars.APP_HOST }}
-      # Each stack's directory and Compose project on the server (staging: /opt/repody-staging,
+      # Each stack's directory and Compose project on the server (staging: /home/deploy/repody-staging,
       # repody-staging). Its .env names the same project, which the deploy checks.
       DIR: ${{ vars.STACK_DIR || '/opt/repody' }}
       PROJECT: ${{ vars.COMPOSE_PROJECT || 'repody' }}

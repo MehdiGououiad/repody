@@ -389,26 +389,46 @@ copy `restore/data/documents` into the `repody_seaweedfs-data` volume, and deplo
 
 ## Resources
 
-Measured on 12 November 2026, after a full extraction run (`docker stats`):
+Measured on 18 November 2026 on production, idle after a day of use (`docker stats`):
 
 | Service | Used | Limit | Notes |
 |---|---|---|---|
-| keycloak | 645 MB | 1.5 GB | Optimized build; the JVM takes 70% of the limit, and Keycloak advises at least 750 MB; healthy in about 14 s |
-| worker | 247 MB | 1.5 GB | Renders PDF pages; up to `AUDIT_WORKER_CONCURRENCY` runs at once |
-| api | 166 MB | 768 MB | |
-| hatchet-lite | (not measured) | 768 MB | Hatchet's engine, API and dashboard; its queue is the `hatchet` database |
-| postgres | 105 MB | 1 GB | `shared_buffers=256MB`, 256 MB `shm_size` |
-| web | 77 MB | 512 MB | Next.js standalone server |
+| keycloak | 594 MB | 1.5 GB | Optimized build; the JVM takes 70% of the limit, and Keycloak advises at least 750 MB |
+| worker | 349 MB | 1.5 GB | Renders PDF pages; up to `AUDIT_WORKER_CONCURRENCY` runs at once |
+| postgres | 339 MB | 1 GB | `shared_buffers=256MB`, 256 MB `shm_size`; holds the Repody, Keycloak, Hatchet (and Bugsink) databases |
+| api | 193 MB | 768 MB | One Uvicorn process; uploads wait in a 256 MB `/tmp` in memory |
+| web | 95 MB | 512 MB | Next.js standalone server |
 | seaweedfs | 73 MB | 512 MB | |
-| cloudflared | (not measured) | 128 MB | |
-| bugsink | (not measured) | 512 MB | Only with the `errors` profile ("Errors") |
-| loki, alloy, grafana | (not measured) | 1 GB, 256 MB, 512 MB | Only with the `logs` profile ("Logs") |
-| **Total** | **≈ 1.5 GB** | 6.5 GB | |
+| hatchet-lite | 62 MB | 768 MB | Hatchet's engine, API and dashboard; its queue is the `hatchet` database |
+| cloudflared | 17 MB | 128 MB | |
+| bugsink | (not yet run) | 512 MB | Only with the `errors` profile ("Errors") |
+| loki, alloy, grafana | (not yet run) | 1 GB, 256 MB, 512 MB | Only with the `logs` profile ("Logs") |
+| **Total** | **≈ 1.7 GB** | 6.7 GB (9 GB with both profiles) | |
 
 The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memory free. Model calls
 go to Modal, 4 at a time (`AUDIT_INFERENCE_CONCURRENCY`, the vLLM server's `MAX_INPUTS`). Every
 container runs with `no-new-privileges`, and the backend and web containers have read-only
 filesystems with `/tmp` in memory.
+
+## Postgres
+
+One Postgres per stack holds every database. Its connection budget and settings are in
+`compose.yaml` (the `postgres` service). Two of them are for looking at queries:
+
+- **Statements slower than 500 ms** are logged without their parameters, which can be client data.
+  They go to the journal and to Grafana, like every log line (service `postgres`).
+- **Query statistics** (`pg_stat_statements`). A new volume creates the extension at its first
+  start; a volume from before 1.8 needs it once, after the release that loads the library:
+
+  ```bash
+  docker compose --env-file .env --env-file release.env exec postgres psql -U repody -d repody -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+  ```
+
+  The slowest statements on average, then:
+
+  ```bash
+  docker compose --env-file .env --env-file release.env exec postgres psql -U repody -d repody -c "SELECT calls, round(mean_exec_time) AS mean_ms, left(query, 120) FROM pg_stat_statements ORDER BY mean_exec_time DESC LIMIT 15"
+  ```
 
 ## Hatchet
 

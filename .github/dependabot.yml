@@ -1,27 +1,48 @@
 # Version updates for every dependency source, so pinned versions and image digests stay current.
+# A release is proposed only once it is a few days old (cooldown), so a version that is pulled
+# soon after it is published, as compromised packages are, never reaches a pull request; pnpm
+# itself refuses versions under a day old (minimumReleaseAge, its default).
 # https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 version: 2
 updates:
-  - package-ecosystem: npm # pnpm workspace (package.json + pnpm-lock.yaml)
+  - package-ecosystem: npm # the app (package.json + pnpm-lock.yaml)
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 3, semver-major-days: 7 }
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+
+  - package-ecosystem: npm # the marketing site, its own project and lockfile
+    directory: /site
+    schedule: { interval: weekly }
+    cooldown: { default-days: 3, semver-major-days: 7 }
     groups:
       minor-and-patch: { update-types: [minor, patch] }
 
   - package-ecosystem: uv
     directory: /backend
     schedule: { interval: weekly }
+    cooldown: { default-days: 3, semver-major-days: 7 }
     groups:
       minor-and-patch: { update-types: [minor, patch] }
 
   - package-ecosystem: docker # Dockerfile base images
     directories: [/, /backend, /deploy/keycloak]
     schedule: { interval: weekly }
+    cooldown: { default-days: 3 }
+    groups:
+      base-images: { update-types: [minor, patch] }
 
   - package-ecosystem: docker-compose # Compose images (tag + digest)
     directories: [/, /deploy/vps]
     schedule: { interval: weekly }
+    cooldown: { default-days: 3 }
+    groups:
+      compose-images: { update-types: [minor, patch] }
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
+    cooldown: { default-days: 3 }
+    groups:
+      actions: { update-types: [minor, patch] }

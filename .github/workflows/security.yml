@@ -1,14 +1,18 @@
 name: Security
 
 # Trivy only: the repository scan covers both lockfiles (pnpm-lock.yaml, backend/uv.lock),
-# secrets, and IaC (Dockerfiles, Compose, Helm); the image scan covers OS packages.
+# secrets, and IaC (Dockerfiles, Compose, Helm); the image scan covers the three images' OS and
+# language packages.
 # CRITICAL/HIGH fixable findings fail the job. The SARIF results are uploaded to GitHub code
 # scanning when the repository has it (public repositories, or GitHub Code Security on private
 # ones): set the repository variable CODE_SCANNING=true to turn the upload on.
 on:
   push:
-    branches: [main, master]
+    branches: [master]
   pull_request:
+  # Weekly on master too: a vulnerability published after the last merge is found without a change.
+  schedule:
+    - cron: "17 5 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -79,7 +83,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [backend, web]
+        target: [backend, web, keycloak]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
