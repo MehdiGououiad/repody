@@ -145,7 +145,7 @@ services:
   # https://docs.hatchet.run/self-hosting/hatchet-lite
   hatchet-lite:
     <<: *hardening
-    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.120.9@sha256:36070118d237759ebf44146c78743628c3459e32a9034bbd0bdbc466d34d0507
     depends_on:
       postgres:
         condition: service_healthy
@@ -193,7 +193,7 @@ services:
   # goes in .env, and it always matches the keys in hatchet-config.
   hatchet-token:
     <<: *hardening
-    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
+    image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.120.9@sha256:36070118d237759ebf44146c78743628c3459e32a9034bbd0bdbc466d34d0507
     restart: "no"
     entrypoint: ["sh", "-c"]
     command:
