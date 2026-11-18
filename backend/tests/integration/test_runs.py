@@ -1,10 +1,13 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from repody.app import execute
-from repody.app.lifecycle import move_run
+from sqlalchemy import update
+
+from repody.app import execute, maintenance
+from repody.app.lifecycle import QUEUE_TIMEOUT, STUCK, STUCK_MARGIN, move_run
 from repody.extraction import client
 from repody.infra import db, queue
+from repody.infra.models import Run
 from repody.settings import get_settings
 from tests.files import FILE, PDF
 from tests.integration.helpers import condition, invoice_workflow, rule
@@ -274,3 +277,51 @@ async def test_stopping_a_run_cancels_its_hatchet_run(api, monkeypatch, cancelle
     run_id = (await api.post("/v1/workflows/wf-run/runs")).json()["runId"]
     assert (await api.post(f"/v1/runs/{run_id}/cancel")).status_code == 204
     assert cancelled == ["task-hatchet-1"]
+
+
+async def test_a_run_whose_worker_died_starts_over_on_the_next(api, model_answer, monkeypatch):
+    """Hatchet gives a dead worker's task to another worker: the run is still running, and the
+    new delivery runs it to the end instead of leaving it running for ever."""
+
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", keep_queued)
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000})
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)).json()["runId"]
+    async with db.session_factory() as session:  # the first worker took it, then died
+        await move_run(session, run_id, "running", started_at=datetime.now(UTC))
+        await session.commit()
+
+    await execute.process_run(run_id)  # the same task, delivered again
+    assert (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["status"] == "done"
+    await execute.process_run(run_id)  # a finished run is never taken again
+    assert len(model_answer["calls"]) == 1
+
+
+async def test_maintenance_fails_the_runs_the_queue_lost(api, monkeypatch):
+    async def lost(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", lost)
+    await deploy(api)
+    queued, running, recent = [
+        (await api.post("/v1/workflows/wf-run/runs")).json()["runId"] for _ in range(3)
+    ]
+    long_ago = datetime.now(UTC) - QUEUE_TIMEOUT - STUCK_MARGIN - timedelta(minutes=1)
+    async with db.session_factory() as session:
+        await session.execute(update(Run).where(Run.id == queued).values(created_at=long_ago))
+        await move_run(session, running, "running", started_at=long_ago)
+        await session.commit()
+
+    await maintenance.upkeep()
+    states = {
+        run_id: (await api.get(f"/v1/runs/{run_id}")).json() for run_id in (queued, running, recent)
+    }
+    assert [states[r]["status"] for r in (queued, running, recent)] == [
+        "failed",
+        "failed",
+        "queued",
+    ]
+    assert states[queued]["error"] == STUCK

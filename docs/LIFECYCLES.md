@@ -23,9 +23,10 @@ holds each async flow as one discriminated union, so a contradictory state canno
 stateDiagram-v2
   [*] --> queued: POST /v1/workflows/{id}/runs
   queued --> running: worker claims the task
-  queued --> failed: Hatchet unreachable, or waited over 1 h for a worker
+  queued --> failed: Hatchet unreachable, waited over 1 h for a worker, or lost by the queue
+  running --> running: its worker died, another one starts it over
   running --> done: rules checked, report saved
-  running --> failed: error, AUDIT_RUN_TIMEOUT_MINUTES, worker lost, or stopped by an operator
+  running --> failed: error, AUDIT_RUN_TIMEOUT_MINUTES, lost by the queue, or stopped by an operator
   done --> [*]
   failed --> [*]
 ```
@@ -38,6 +39,14 @@ stateDiagram-v2
 - Hatchet bounds each run (repody/worker.py): it fails a run that waits an hour for a worker
   or runs past `AUDIT_RUN_TIMEOUT_MINUTES` through the workflow's failure task
   (`execute.fail_unfinished`). A run Hatchet could not take is failed when it is started.
+- A worker that stops heartbeating (a crash, an out-of-memory kill, a deploy's grace period
+  running out) loses its tasks to another worker ([Hatchet FAQ](https://docs.hatchet.run/v1/faq)).
+  The new delivery finds the run still `running` and starts it over (`execute._claim`); nothing
+  but its progress was saved by the lost attempt.
+- Runs Hatchet will never report on fail on the maintenance cron (`lifecycle.fail_stuck`): queued
+  for over an hour and 10 minutes (the API stopped between saving the run and queueing it), or
+  running for 10 minutes past `AUDIT_RUN_TIMEOUT_MINUTES`. Like every failure, such a run pays
+  nothing when it never started.
 - Clients poll it as `RunState.status` (`GET /v1/runs/{id}`) until it is `done` or `failed`
   (`lib/api/runs.ts` `useRun`). The server owns the timeout, so polling always ends.
 
@@ -63,8 +72,9 @@ stateDiagram-v2
 
 Set once per rule when a run finishes (`rules/evaluate.py` `evaluate_rule`):
 `failed` when a condition does not hold, `skipped` when a value it needs was not extracted or a
-field is unknown, `passed` otherwise. A run's `outcome` follows: any failed `reject` rule → failed,
-any other failed rule → warning, else passed.
+field is unknown, `passed` otherwise. A run's `outcome` follows (`execute.run_outcome`): any failed
+`reject` rule → failed; any other failed rule, a document that could not be read, or no field read
+at all → warning; else passed.
 
 ## Run progress step
 

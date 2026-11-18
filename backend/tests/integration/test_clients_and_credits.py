@@ -2,15 +2,20 @@
 
 import io
 from collections.abc import AsyncIterator, Callable
+from datetime import UTC, datetime, timedelta
 
 import pypdfium2 as pdfium
 import pytest
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import update
 
 from repody.api.deps import optional_user
-from repody.app import execute
+from repody.app import execute, maintenance
+from repody.app.lifecycle import QUEUE_TIMEOUT, STUCK_MARGIN
 from repody.extraction import client as inference
+from repody.infra import db, queue
 from repody.infra.auth import User
+from repody.infra.models import Run
 from repody.main import create_app
 from repody.settings import get_settings
 from tests.files import FILE, PDF
@@ -265,3 +270,29 @@ async def test_audit_search_matches_wildcards_literally(api, model_answer):
     assert (await api.get("/v1/audits", params={"q": "Invoices"})).json()["total"] == 1
     assert (await api.get("/v1/audits", params={"q": "%"})).json()["total"] == 0
     assert (await api.get("/v1/audits", params={"q": "Inv_ices"})).json()["total"] == 0
+
+
+async def test_a_run_the_queue_lost_gives_its_hold_back(
+    as_user, model_answer, enforced, monkeypatch
+):
+    """Saved and holding its estimate, but never handed to Hatchet (the API stopped between the
+    two): the maintenance sweep fails it, and it pays nothing."""
+    acme, platform = as_user(ACME), as_user(PLATFORM)
+    await acme.put("/v1/workflows/wf-acme", json=invoice_workflow())
+    await grant(platform, "client-acme", 10)
+
+    async def lost(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", lost)
+    run = (await acme.post("/v1/workflows/wf-acme/runs", files=FILE)).json()["runId"]
+    assert (await credits(acme))["held"] == PAGES
+    async with db.session_factory() as session:
+        long_ago = datetime.now(UTC) - QUEUE_TIMEOUT - STUCK_MARGIN - timedelta(minutes=1)
+        await session.execute(update(Run).where(Run.id == run).values(created_at=long_ago))
+        await session.commit()
+
+    await maintenance.upkeep()
+    assert (await acme.get(f"/v1/runs/{run}")).json()["status"] == "failed"
+    assert (await credits(acme))["balance"] == 10
+    assert (await credits(acme))["held"] == 0

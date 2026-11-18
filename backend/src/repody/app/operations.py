@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from repody.app.dashboard import timing
+from repody.app.dashboard import queue_counts, timing
 from repody.app.errors import AppError
 from repody.app.lifecycle import fail
 from repody.app.progress import stored
@@ -18,7 +18,6 @@ from repody.schemas.platform import (
     FailedRun,
     HourThroughput,
     Operations,
-    QueueCounts,
 )
 
 ACTIVE = 25
@@ -51,14 +50,6 @@ async def get_operations(session: AsyncSession, *, account: str | None = None) -
         .limit(ERRORS)
         .options(selectinload(Run.workflow))
     )
-    queued, running = (
-        await session.execute(
-            select(
-                func.count().filter(Run.status == "queued"),
-                func.count().filter(Run.status == "running"),
-            )
-        )
-    ).one()
     hour = func.date_trunc("hour", Run.finished_at)
     per_hour = {
         start: (done, broke)
@@ -75,7 +66,7 @@ async def get_operations(session: AsyncSession, *, account: str | None = None) -
     first = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=HOURS - 1)
     hours = [first + timedelta(hours=i) for i in range(HOURS)]
     return Operations(
-        queue=QueueCounts(queued_runs=queued, running_runs=running),
+        queue=await queue_counts(session),
         active=[
             ActiveRun(
                 id=run.id,

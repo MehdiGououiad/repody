@@ -41,6 +41,16 @@ What stays ours: every run status change still goes through `app/lifecycle.py`'s
 updates ([ADR 010](./010-explicit-lifecycles.md)). Hatchet delivers a task at least once, and
 the claim makes a second delivery a no-op. The failure task only fails a run that is not finished.
 
+**Amended (1.8).** Two assumptions above were wrong:
+
+- **A lost worker is not reported to the failure task.** A worker that stops heartbeating loses its
+  tasks to another worker ([Hatchet FAQ](https://docs.hatchet.run/v1/faq)). The claim treated that
+  second delivery as a no-op, so the run stayed `running` for good. Now the new delivery starts the
+  run over (`execute._claim`).
+- **Some runs never reach Hatchet.** A run saved but never queued (the API stopped in between) has
+  no Hatchet task, so neither timeout applies. A small sweep is back in the maintenance cron
+  (`lifecycle.fail_stuck`): it fails such runs, and running runs well past the run timeout.
+
 Deployment: Hatchet Lite (one container, its queue in a `hatchet` database on our Postgres) in
 Compose, locally and on the VPS. On Kubernetes, Hatchet's own Helm chart or Hatchet Cloud, as an
 external service like Postgres. The client is `hatchet-sdk` 1.x, written against the APIs that
