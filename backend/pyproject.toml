@@ -138,7 +138,7 @@ forbidden_modules = ["sqlalchemy", "hatchet_sdk", "repody.infra", "repody.settin
 
 [tool.pyright]
 include = ["src", "tests", "scripts", "alembic/env.py"]
-pythonVersion = "3.14"
+pythonVersion = "3.15"
 typeCheckingMode = "standard"
 reportMissingTypeStubs = false
 venvPath = "."

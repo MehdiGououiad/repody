@@ -2,7 +2,7 @@
 # One backend image for api + workers (role chosen by the container command).
 #   docker buildx bake -f docker-bake.hcl backend --load      (see docker-bake.hcl)
 
-FROM python:3.14.10-slim@sha256:9aaa474097d094040649f2162a627c0049b408f52138d980916788d80f04802f AS runtime-base
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS runtime-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -13,13 +13,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PYTHON_DOWNLOADS=0 \
     PATH="/opt/venv/bin:$PATH"
 
-# Upgrade Debian security packages, then drop the base-image pip (vendored msgpack and setuptools).
+# Upgrade Debian security packages, then drop the base-image pip (vendored msgpack and setuptools)
+# whatever the Python version, and fail the build if any of it is left.
 # Every dependency ships a wheel (asyncpg, pypdfium2, Pillow, ...): no system libraries needed.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get upgrade -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
-    && rm -rf /usr/local/lib/python3.14/site-packages/pip \
-      /usr/local/lib/python3.14/site-packages/pip-*.dist-info \
-      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.14 \
+    && rm -rf /usr/local/lib/python3.*/site-packages/pip \
+      /usr/local/lib/python3.*/site-packages/pip-*.dist-info \
+      /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.* \
+    && python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('pip') is not None)" \
+    && ! ls /usr/local/bin/pip* >/dev/null 2>&1 \
     && groupadd --system --gid 10001 repody \
     && useradd --system --uid 10001 --gid repody --home-dir /app --shell /usr/sbin/nologin repody \
     && mkdir -p /app \
