@@ -7,6 +7,7 @@ compared as dates and times (``2024-01-02T10:00:00+05:00`` is before ``…T06:00
 text.
 """
 
+import math
 from collections.abc import Callable
 from datetime import date, datetime, time
 from typing import Any
@@ -23,7 +24,8 @@ _TEMPORAL: dict[str, Callable[[str], date | datetime | time]] = {
 
 
 def is_number(value: Any) -> bool:
-    return isinstance(value, int | float) and not isinstance(value, bool)
+    """A real, finite number (``NaN`` and infinities compare false to everything)."""
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def typed(value: Any, field_type: str) -> Any:
@@ -49,7 +51,10 @@ def literal(text: str, field_type: str | None) -> Any:
     """
     text = text.strip()
     if field_type in NUMBER_TYPES:
-        return float(text)
+        number = float(text)
+        if not math.isfinite(number):
+            raise ValueError(f"{text!r} is not a number")
+        return number
     if field_type == "boolean":
         if text.lower() not in ("true", "false"):
             raise ValueError(f"{text!r} is not true or false")
