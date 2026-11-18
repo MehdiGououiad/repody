@@ -590,7 +590,7 @@
         "severityFlag": "Signaler pour examen",
         "newLogicName": "Règle logique sans titre",
         "emptyActive": "Aucune règle. Ajoutez une règle logique ci-dessous.",
-        "hint": "Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites.",
+        "hint": "Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites. Une règle de rejet dont la valeur n'a pas été lue envoie l'exécution en examen.",
         "appliesTo": "Périmètre",
         "scopeIntraShort": "Un document",
         "scopeCrossShort": "Deux documents",
