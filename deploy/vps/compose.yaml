@@ -71,6 +71,9 @@ x-backend-env: &backend-env
   AUDIT_INFERENCE_API_KEY: ${MODAL_PROXY_TOKEN:?}
   AUDIT_INFERENCE_MODEL: numind/NuExtract3
   AUDIT_INFERENCE_PROBE: "false"
+  # vLLM's --max-model-len (deploy/modal/nuextract.py): a document whose request would not fit
+  # is refused when the run starts, not on the GPU. 30 A4 pages take ~109k tokens, 15 A3 ~108k.
+  AUDIT_INFERENCE_CONTEXT_TOKENS: "131072"
   AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
   # The demo for invited clients: each client company (Keycloak group client-<name>) pays its
   # runs with credits a platform admin grants in the admin area. 1 credit = 1 page, plus

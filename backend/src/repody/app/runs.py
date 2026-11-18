@@ -21,6 +21,7 @@ from repody.app.lifecycle import fail
 from repody.app.progress import plan, stored
 from repody.app.scope import visible_runs
 from repody.app.stats import midnight
+from repody.extraction.pipeline import request_tokens
 from repody.extraction.render import FileInfo, inspect, page_preview
 from repody.infra import db, queue
 from repody.infra.models import RuleResult, Run, RunDocument, Workflow, new_id
@@ -114,6 +115,30 @@ def _inspect(upload: Upload) -> FileInfo:
     return info
 
 
+def _check_context(
+    definition: WorkflowDefinition, document_ids: list[str], files: list[FileInfo]
+) -> None:
+    """422 when one document's request would not fit in the model's context
+    (AUDIT_INFERENCE_CONTEXT_TOKENS): a vLLM server refuses it, after the run was queued."""
+    settings = get_settings()
+    if not (limit := settings.inference_context_tokens):
+        return
+    docs = {doc.id: doc for doc in definition.documents}
+    for document_id, info in zip(document_ids, files, strict=True):
+        doc = docs[document_id]
+        if not doc.wants_extraction:
+            continue
+        pixels = info.page_pixels[: settings.max_pages_per_document]
+        if (needed := request_tokens(doc, pixels)) > limit:
+            log.warning("run_refused_too_large", tokens=needed, limit=limit, pages=len(pixels))
+            raise AppError(
+                422,
+                f"{doc.document_type or doc.id}: about {needed:,} tokens for the model, which"
+                f" reads {limit:,} at most in one request (its pages, examples and answer)."
+                " Send fewer pages.",
+            )
+
+
 def _pages(definition: WorkflowDefinition, document_ids: list[str], files: list[FileInfo]) -> int:
     """The pages the run will send the model: its documents that are extracted, each up to
     AUDIT_MAX_PAGES_PER_DOCUMENT."""
@@ -179,6 +204,7 @@ async def start_run(
     files = [await asyncio.to_thread(_inspect, upload) for upload in uploads]
     types = {doc.id: doc.document_type for doc in definition.documents}
     account = credits.payer(wf.account_id)
+    _check_context(definition, document_ids, files)
     cost = credits.run_cost(_pages(definition, document_ids, files))
     await credits.can_pay(session, account, cost)
     await session.commit()  # end the read transaction before the uploads

@@ -8,8 +8,10 @@ import asyncio
 import collections
 import contextlib
 import io
+import json
+import math
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from typing import Any
 
 import openai
@@ -63,6 +65,26 @@ def _request(doc: DocumentDef) -> dict[str, Any]:
     if doc.schema_fields:
         return nuextract.structured_request(doc, model, max_tokens=max_tokens)
     return nuextract.markdown_request(model, max_tokens=max_tokens)
+
+
+# NuExtract3's image processor as it is served (Qwen2-VL's; deploy/modal/nuextract.py): one token
+# per 28 x 28 pixels, each image first scaled into [IMAGE_MIN_PIXELS, IMAGE_MAX_PIXELS].
+TOKEN_PIXELS = 28 * 28
+IMAGE_MIN_PIXELS = 1024 * 1024
+IMAGE_MAX_PIXELS = 16_777_216
+CHARS_PER_TOKEN = 3  # text, counted on the high side
+
+
+def request_tokens(doc: DocumentDef, page_pixels: Sequence[int]) -> int:
+    """About how much of the model's context one document's request takes: its page images, its
+    text (template, instructions, in-context examples) and the longest answer it may get."""
+    request = _request(doc)
+    images = sum(
+        math.ceil(min(max(pixels, IMAGE_MIN_PIXELS), IMAGE_MAX_PIXELS) / TOKEN_PIXELS)
+        for pixels in page_pixels
+    )
+    text = len(json.dumps([request["messages"], request["extra_body"]])) // CHARS_PER_TOKEN
+    return images + text + request["max_tokens"]
 
 
 def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[str, Any]:

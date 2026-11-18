@@ -369,3 +369,19 @@ async def test_a_reject_rule_the_model_gave_no_value_for_sends_the_run_to_review
     assert fields == {"total_amount": True, "tva": False}
     [audit] = (await api.get("/v1/audits")).json()["audits"]
     assert (audit["firstFailedRule"], audit["uncheckedRule"]) == (None, "total")
+
+
+async def test_a_document_too_large_for_the_model_is_refused_before_it_runs(
+    api, model_answer, monkeypatch
+):
+    auth = await deploy(api)
+    monkeypatch.setattr(get_settings(), "inference_context_tokens", 2_000)
+    refused = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+    assert refused.status_code == 422
+    assert "tokens for the model" in refused.json()["detail"]
+    assert model_answer["calls"] == []
+    assert (await api.get("/v1/operations")).json()["queue"]["queuedRuns"] == 0
+
+    monkeypatch.setattr(get_settings(), "inference_context_tokens", 131_072)
+    started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+    assert started.status_code == 202

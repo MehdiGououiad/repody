@@ -2,6 +2,7 @@ import asyncio
 import base64
 import io
 import json
+import math
 
 import httpx2
 import openai
@@ -13,6 +14,7 @@ from repody.extraction import nuextract, pipeline, render
 from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
+from tests.files import PDF
 
 FIELDS = [
     SchemaField(name="total", description="Amount due", template_type="number"),
@@ -269,3 +271,28 @@ async def test_a_cancelled_wait_gives_nothing_away():
         with pytest.raises(asyncio.CancelledError):
             await waiter
     assert budget.free == 10
+
+
+def test_inspect_gives_each_page_the_pixels_it_is_drawn_with():
+    info = render.inspect(io.BytesIO(PDF))
+    assert info is not None
+    assert info.page_pixels
+    parts, _ = render.pdf_page_parts(PDF, max_pages=1)
+    drawn = Image.open(io.BytesIO(base64.b64decode(parts[0]["image_url"]["url"].split(",")[1])))
+    assert info.page_pixels[0] == pytest.approx(drawn.width * drawn.height, rel=0.005)
+
+
+def test_a_requests_tokens_are_its_pages_text_and_answer():
+    a4 = 1405 * 1987  # an A4 page at 170 DPI
+    doc = DocumentDef.model_validate(
+        {
+            "id": "d",
+            "documentType": "Invoice",
+            "schemaFields": [{"name": "total", "type": "number"}],
+        }
+    )
+    one, thirty = pipeline.request_tokens(doc, [a4]), pipeline.request_tokens(doc, [a4] * 30)
+    assert thirty - one == 29 * math.ceil(a4 / (28 * 28))  # ~3.6k tokens a page
+    assert thirty > 100_000
+    small_image = pipeline.request_tokens(doc, [515 * 321])  # raised to ~1 MP by the processor
+    assert small_image - pipeline.request_tokens(doc, []) == math.ceil(1024 * 1024 / 784)

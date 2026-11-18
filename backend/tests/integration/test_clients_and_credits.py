@@ -345,3 +345,21 @@ async def test_pages_the_model_never_saw_are_not_paid(
         "enforced": True,
         "low": True,
     }
+
+
+async def test_a_run_whose_documents_never_reached_the_model_still_pays_its_fee(
+    as_user, model_answer, enforced, monkeypatch
+):
+    """The run fee covers the model's start and idle time, which waking it for the run costs."""
+    monkeypatch.setattr(get_settings(), "credit_run_fee", 8)
+    acme, platform = as_user(ACME), as_user(PLATFORM)
+    await acme.put("/v1/workflows/wf-acme", json=invoice_workflow())
+    await grant(platform, "client-acme", 20)
+
+    async def unreadable(_key: str) -> bytes:
+        raise OSError("storage unavailable")
+
+    monkeypatch.setattr(get_store(), "get", unreadable)
+    run = (await acme.post("/v1/workflows/wf-acme/runs", files=FILE)).json()["runId"]
+    assert (await acme.get(f"/v1/runs/{run}")).json()["status"] == "done"
+    assert (await credits(acme))["balance"] == 20 - 8
