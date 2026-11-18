@@ -553,7 +553,15 @@ export const en: Dict = {
           },
           {
             title: "Throughput",
-            body: "Runs finished and failed hour by hour over 24 hours, with median and 95th-percentile durations.",
+            body: "Runs finished and failed, hour by hour, over the last 24 hours.",
+          },
+          {
+            title: "Durations",
+            body: "Median and 95th-percentile run time, and the model's share of it.",
+          },
+          {
+            title: "The whole queue",
+            body: "Runs waiting and in progress across the platform, so a wait explains itself.",
           },
         ],
       },

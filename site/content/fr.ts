@@ -551,7 +551,15 @@ export const fr = {
           },
           {
             title: "Débit",
-            body: "Exécutions terminées et en échec heure par heure sur 24 heures, avec les durées médiane et au 95e centile.",
+            body: "Exécutions terminées et en échec, heure par heure, sur les dernières 24 heures.",
+          },
+          {
+            title: "Durées",
+            body: "Durée médiane et au 95e centile des exécutions, et la part du modèle.",
+          },
+          {
+            title: "Toute la file",
+            body: "Exécutions en attente et en cours sur toute la plateforme : une attente s'explique d'elle-même.",
           },
         ],
       },
