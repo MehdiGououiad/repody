@@ -402,6 +402,7 @@ Measured on 12 November 2026, after a full extraction run (`docker stats`):
 | seaweedfs | 73 MB | 512 MB | |
 | cloudflared | (not measured) | 128 MB | |
 | bugsink | (not measured) | 512 MB | Only with the `errors` profile ("Errors") |
+| loki, alloy, grafana | (not measured) | 1 GB, 256 MB, 512 MB | Only with the `logs` profile ("Logs") |
 | **Total** | **≈ 1.5 GB** | 6.5 GB | |
 
 The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memory free. Model calls
@@ -441,6 +442,31 @@ journalctl --disk-usage
 
 `docker compose … logs` still works for the running containers. The deploy user reads the
 journal as a member of `systemd-journal` ("Prepare the server").
+
+### Searching them in Grafana
+
+With the `logs` profile, Alloy reads this stack's lines from the journal (read only; staging's
+and the system's stay out), Loki keeps them 30 days, and Grafana shows them at `LOGS_HOST` behind
+Cloudflare Access. In Grafana, **Drilldown → Logs** or **Explore** with the Loki source:
+
+```logql
+{service="api"} | json                                    # the API
+{service=~"api|worker", level="error"}                     # errors from the backend
+{service="worker"} |= "Traceback"                          # a word
+{service=~"api|worker"} | trace_id="4bf92f3577b34da6a3ce929d0e0e4736"
+```
+
+Each line has the labels `service` (compose service), `container`, `environment` and, for the
+API and worker's JSON, `level`. Traces, metrics and their tools (Tempo, Prometheus) are for local
+development only (docs/LOCAL.md): tracing is off in production.
+
+Setting it up (once per stack):
+
+1. In `.env`: add `logs` to `COMPOSE_PROFILES` (`COMPOSE_PROFILES=errors,logs`), `LOGS_HOST`,
+   and `GRAFANA_ADMIN_PASSWORD="$(openssl rand -hex 16)"`.
+2. In Access, an application for `LOGS_HOST` that allows only your email; then the tunnel route
+   `LOGS_HOST` → `http://grafana:3000`.
+3. Deploy. Sign in as `REPODY_ADMIN_EMAIL` with `GRAFANA_ADMIN_PASSWORD`.
 
 ## Errors
 
