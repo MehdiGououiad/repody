@@ -325,3 +325,27 @@ async def test_maintenance_fails_the_runs_the_queue_lost(api, monkeypatch):
         "queued",
     ]
     assert states[queued]["error"] == STUCK
+
+
+async def test_a_run_that_keeps_losing_its_worker_fails_at_its_time_limit(
+    api, model_answer, monkeypatch
+):
+    """A document that kills its worker (out of memory) would be delivered again and again:
+    every attempt counts from the run's first start, so it fails at the time limit."""
+
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", keep_queued)
+    await deploy(api)
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE)).json()["runId"]
+    first_start = datetime.now(UTC) - timedelta(minutes=get_settings().run_timeout_minutes + 1)
+    async with db.session_factory() as session:
+        await move_run(session, run_id, "running", started_at=first_start)
+        await session.commit()
+
+    await execute.process_run(run_id)  # delivered again, past the limit
+    state = (await api.get(f"/v1/runs/{run_id}")).json()
+    assert state["status"] == "failed"
+    assert state["error"].startswith("The run stopped before it finished")
+    assert model_answer["calls"] == []

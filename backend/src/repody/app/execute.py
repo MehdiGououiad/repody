@@ -8,10 +8,10 @@ skipped); any other error fails the run, and so does running past AUDIT_RUN_TIME
 
 import asyncio
 import time
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import structlog
-from sqlalchemy import update
+from sqlalchemy import select
 from sqlalchemy.orm import selectinload, undefer
 
 from repody.app import credits
@@ -67,23 +67,25 @@ async def _claim(run_id: str) -> bool:
     """Take the run: queued becomes running. A run already running is this task delivered again:
     Hatchet re-queues a task whose worker stopped heartbeating (it crashed, was killed at the end
     of a deploy's grace period, or the server restarted), so it starts over here; nothing of the
-    lost attempt was saved but its progress. A finished run is never taken."""
+    lost attempt was saved but its progress. Every attempt counts against the run's time limit
+    from its first start, so a document that kills its worker each time (out of memory) fails
+    the run instead of starting it for ever. A finished run is never taken."""
     async with db.session_factory() as session:
-        now = datetime.now(UTC)
-        claimed = await move_run(session, run_id, "running", started_at=now)
+        claimed = await move_run(session, run_id, "running", started_at=datetime.now(UTC))
+        started = None
         if not claimed:
-            claimed = bool(
-                await session.scalar(
-                    update(Run)
-                    .where(Run.id == run_id, Run.status == "running")
-                    .values(started_at=now)
-                    .returning(Run.id)
-                )
+            started = await session.scalar(
+                select(Run.started_at).where(Run.id == run_id, Run.status == "running")
             )
-            if claimed:
-                log.warning("run_redelivered")
         await session.commit()
+    if claimed or started is None:  # taken, or already finished
         return claimed
+    limit = timedelta(minutes=get_settings().run_timeout_minutes)
+    if datetime.now(UTC) - started < limit:
+        log.warning("run_redelivered")
+        return True
+    await fail_unfinished(run_id)
+    return False
 
 
 async def _process(run_id: str) -> None:

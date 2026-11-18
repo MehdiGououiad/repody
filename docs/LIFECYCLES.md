@@ -42,10 +42,13 @@ stateDiagram-v2
 - A worker that stops heartbeating (a crash, an out-of-memory kill, a deploy's grace period
   running out) loses its tasks to another worker ([Hatchet FAQ](https://docs.hatchet.run/v1/faq)).
   The new delivery finds the run still `running` and starts it over (`execute._claim`); nothing
-  but its progress was saved by the lost attempt.
+  but its progress was saved by the lost attempt. Only within `AUDIT_RUN_TIMEOUT_MINUTES` of its
+  first start: after that the run fails, so a document that kills its worker every time (out of
+  memory) cannot restart for ever.
 - Runs Hatchet will never report on fail on the maintenance cron (`lifecycle.fail_stuck`): queued
   for over an hour and 10 minutes (the API stopped between saving the run and queueing it), or
-  running for 10 minutes past `AUDIT_RUN_TIMEOUT_MINUTES`. Like every failure, such a run pays
+  running for twice `AUDIT_RUN_TIMEOUT_MINUTES` and 10 minutes since its first start (one
+  re-delivery just inside the limit gets one more full attempt). Like every failure, such a run pays
   nothing when it never started.
 - Clients poll it as `RunState.status` (`GET /v1/runs/{id}`) until it is `done` or `failed`
   (`lib/api/runs.ts` `useRun`). The server owns the timeout, so polling always ends.
