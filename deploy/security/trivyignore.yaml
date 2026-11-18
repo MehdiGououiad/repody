@@ -1,0 +1,12 @@
+# Findings accepted for a while, each with why and until when (Trivy's YAML ignore file:
+# https://trivy.dev/latest/docs/configuration/filtering/#trivyignoreyaml). An entry past its
+# date stops being ignored, so the scan fails again and the finding is looked at once more.
+vulnerabilities:
+  - id: CVE-2026-102554
+    purls:
+      - pkg:maven/com.google.guava/guava@33.6.0-jre
+    statement: >-
+      Guava inside Keycloak 26.8.2, the latest release (5 November 2026); the fix (Guava 33.7.2)
+      needs a Keycloak release. Keycloak is reached only through the Cloudflare Tunnel, behind its
+      brute-force protection. Update Keycloak (Dependabot) as soon as a release has it.
+    expired_at: 2026-12-31

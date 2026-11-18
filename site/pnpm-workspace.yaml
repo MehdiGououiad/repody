@@ -2,8 +2,6 @@
 packages:
   - "."
 
-minimumReleaseAge: 0
-
 allowBuilds:
   "@parcel/watcher": true
   "@tailwindcss/oxide": true

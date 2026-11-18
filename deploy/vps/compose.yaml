@@ -73,7 +73,7 @@ x-backend-env: &backend-env
   AUDIT_INFERENCE_PROBE: "false"
   AUDIT_MAX_PAGES_PER_DOCUMENT: "99"
   # The demo for invited clients: each client company (Keycloak group client-<name>) pays its
-  # runs with credits a platform admin grants (POST /v1/credits/grants). 1 credit = 1 page, plus
+  # runs with credits a platform admin grants in the admin area. 1 credit = 1 page, plus
   # 8 per run for the GPU's start and idle time: 200 credits cost about $1 of Modal GPU at most
   # (deploy/ENV.md, "Credits").
   AUDIT_CREDITS_ENFORCED: "true"
@@ -89,15 +89,36 @@ x-backend-env: &backend-env
   AUDIT_SEED_ON_STARTUP: "false"
   OTEL_SDK_DISABLED: "true"
   SENTRY_DSN: ${BUGSINK_DSN:-}
+  # Errors are tagged with the release that raised them (the SDK reads SENTRY_RELEASE).
+  SENTRY_RELEASE: ${REPODY_VERSION:?}
 
 services:
   postgres:
     <<: *hardening
     image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
     # Sized for one small VPS; the official image's default shm (64 MB) is too small for parallel
-    # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size"). It also holds
-    # Hatchet's queue (its own database), hence the connections.
-    command: ["postgres", "-c", "shared_buffers=256MB", "-c", "max_connections=150"]
+    # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size").
+    # Connections, at most: Hatchet 30 (DATABASE_MAX_CONNS), Keycloak 20 (KC_DB_POOL_MAX_SIZE),
+    # the API and the worker 20 each (AUDIT_DB_POOL_SIZE 10 + 10 overflow), Bugsink, backups
+    # and psql a few: well under 150.
+    # Query statistics (pg_stat_statements, README "Postgres") and statements slower than 500 ms
+    # in the log, without their parameters (they can be client data).
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - max_connections=150
+      - -c
+      - shared_preload_libraries=pg_stat_statements
+      - -c
+      - pg_stat_statements.track=top
+      - -c
+      - log_min_duration_statement=500ms
+      - -c
+      - log_parameter_max_length=0
+      - -c
+      - track_io_timing=on
     shm_size: 256mb
     environment:
       POSTGRES_USER: repody
@@ -223,6 +244,8 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
       KC_PROXY_TRUSTED_ADDRESSES: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
+      # Its share of Postgres' connections (Keycloak's default pool is 100).
+      KC_DB_POOL_MAX_SIZE: "20"
       # Sign-in pages on the public host; the admin console only on its own host (behind
       # Cloudflare Access). Containers reach keycloak:8080 directly (backchannel).
       KC_HOSTNAME: https://${AUTH_HOST:?}
@@ -390,6 +413,7 @@ services:
       AUTH_KEYCLOAK_INTERNAL_ISSUER: http://keycloak:8080/realms/repody
       INTERNAL_API_URL: http://api:8000
       BUGSINK_DSN: ${BUGSINK_DSN:-}
+      SENTRY_RELEASE: ${REPODY_VERSION:?}
       # Errors are tagged with the stack they come from (the backend's AUDIT_DEPLOYMENT_ENVIRONMENT).
       BUGSINK_ENVIRONMENT: ${DEPLOYMENT_ENVIRONMENT:-production}
       # Where a client asks for more credits (lib/credits/contact.ts): defaults to Repody's contact
@@ -675,8 +699,8 @@ configs:
           isDefault: true
           jsonData:
             maxLines: 5000
-  # Creates Keycloak's and Hatchet's databases and roles on the first start of an empty
-  # Postgres volume.
+  # Creates Keycloak's and Hatchet's databases and roles, and the query statistics, on the first
+  # start of an empty Postgres volume.
   postgres-init:
     content: |
       #!/bin/sh
@@ -686,6 +710,7 @@ configs:
       CREATE DATABASE keycloak OWNER keycloak;
       CREATE ROLE hatchet LOGIN PASSWORD '$$HATCHET_DB_PASSWORD';
       CREATE DATABASE hatchet OWNER hatchet;
+      CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
       SQL
   # One S3 identity, for the backend.
   seaweedfs-s3:
