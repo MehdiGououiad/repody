@@ -1,4 +1,5 @@
-# Local dev - single-node Tempo (OTLP in, local blocks).
+# Local dev - single-node Tempo 3 (OTLP in, local blocks). Tempo 3 removed the metrics
+# generator's local-blocks processor and its traces_storage (its 3.0 migration guide).
 # https://grafana.com/docs/tempo/latest/configuration/
 stream_over_http_enabled: true
 
@@ -27,12 +28,6 @@ metrics_generator:
     remote_write:
       - url: http://prometheus:9090/api/v1/write
         send_exemplars: true
-  traces_storage:
-    path: /var/tempo/generator/traces
-  processor:
-    local_blocks:
-      filter_server_spans: false
-      flush_to_storage: true
 
 storage:
   trace:
@@ -45,4 +40,4 @@ storage:
 overrides:
   defaults:
     metrics_generator:
-      processors: [service-graphs, span-metrics, local-blocks]
+      processors: [service-graphs, span-metrics]
