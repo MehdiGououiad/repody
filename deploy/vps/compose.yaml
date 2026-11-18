@@ -597,6 +597,8 @@ services:
     configs:
       - source: grafana-datasources
         target: /etc/grafana/provisioning/datasources/loki.yaml
+      - source: grafana-alerts
+        target: /etc/grafana/provisioning/alerting/repody.yaml
     volumes:
       - grafana-data:/var/lib/grafana
     expose:
@@ -689,11 +691,84 @@ configs:
         }
         forward_to = [loki.write.local.receiver]
       }
+      // The stack's off-site backups (tools/backup.sh, run by cron as <project>-backup).
+      loki.source.journal "backup" {
+        matches    = "SYSLOG_IDENTIFIER=${COMPOSE_PROJECT_NAME:-repody}-backup"
+        labels     = {environment = "${DEPLOYMENT_ENVIRONMENT:-production}", service = "backup"}
+        forward_to = [loki.write.local.receiver]
+      }
       loki.write "local" {
         endpoint {
           url = "http://loki:3100/loki/api/v1/push"
         }
       }
+  # Alert rules (README "Logs"): a night without a good backup, and error-level lines. They
+  # notify the default contact point: set one in Grafana (Alerting > Contact points).
+  # https://grafana.com/docs/grafana/latest/alerting/set-up/provision-alerting-resources/file-provisioning/
+  grafana-alerts:
+    content: |
+      apiVersion: 1
+      groups:
+        - orgId: 1
+          name: repody
+          folder: Repody
+          interval: 5m
+          rules:
+            - uid: repody-backup-missing
+              title: No good backup in 26 hours
+              # A stack without off-site backups (staging) sets BACKUP_ALERT_PAUSED=true.
+              isPaused: ${BACKUP_ALERT_PAUSED:-false}
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 600, to: 0 }
+                  datasourceUid: loki
+                  model:
+                    refId: A
+                    expr: 'sum(count_over_time({service="backup"} |= "backed up" [26h]))'
+                    queryType: instant
+                - refId: B
+                  datasourceUid: __expr__
+                  model: { refId: B, type: reduce, expression: A, reducer: last, settings: { mode: replaceNN, replaceWithValue: 0 } }
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: B
+                    conditions: [{ evaluator: { type: lt, params: [1] } }]
+              # No line at all is the very case to report.
+              noDataState: Alerting
+              execErrState: Error
+              for: 0s
+              annotations:
+                summary: The nightly off-site backup has not succeeded for 26 hours (backups/offsite.log).
+            - uid: repody-error-logs
+              title: Error-level log lines
+              condition: C
+              data:
+                - refId: A
+                  relativeTimeRange: { from: 300, to: 0 }
+                  datasourceUid: loki
+                  model:
+                    refId: A
+                    expr: 'sum by (service) (count_over_time({level=~"error|critical"} [5m]))'
+                    queryType: instant
+                - refId: B
+                  datasourceUid: __expr__
+                  model: { refId: B, type: reduce, expression: A, reducer: last, settings: { mode: replaceNN, replaceWithValue: 0 } }
+                - refId: C
+                  datasourceUid: __expr__
+                  model:
+                    refId: C
+                    type: threshold
+                    expression: B
+                    conditions: [{ evaluator: { type: gt, params: [0] } }]
+              noDataState: OK
+              execErrState: Error
+              for: 0s
+              annotations:
+                summary: '{{ $$labels.service }} logged errors in the last 5 minutes (Bugsink has their traces).'
   grafana-datasources:
     content: |
       apiVersion: 1

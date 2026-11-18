@@ -365,11 +365,14 @@ before it leaves the server, and runs from its pinned image: nothing is installe
 4. **Every night**, with `crontab -e` as `deploy`:
 
    ```text
-   15 3 * * * cd /opt/repody && bash tools/backup.sh >> backups/offsite.log 2>&1
-   45 4 * * 0 cd /opt/repody && bash tools/backup.sh check >> backups/offsite.log 2>&1
+   15 3 * * * cd /opt/repody && bash tools/backup.sh 2>&1 | tee -a backups/offsite.log | systemd-cat -t repody-backup
+   45 4 * * 0 cd /opt/repody && bash tools/backup.sh check 2>&1 | tee -a backups/offsite.log | systemd-cat -t repody-backup
    ```
 
-   The second line checks the repository every Sunday.
+   The second line checks the repository every Sunday. Each run's output goes to
+   `backups/offsite.log` and to the journal as `repody-backup` (`repody-staging-backup` for
+   staging), where Alloy collects it: Grafana alerts when no backup has succeeded for 26 hours
+   ("Logs").
 
 Check the repository now and then (`bash tools/backup.sh check`), and run the restore test after
 changing anything here. With `HEALTHCHECK_URL` set, a night without a good backup sends an email.
