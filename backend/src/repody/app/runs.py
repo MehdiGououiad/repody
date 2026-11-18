@@ -387,7 +387,9 @@ def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
         .options(
             contains_eager(Run.workflow),
             selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
-            selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
+            selectinload(Run.rule_results).load_only(
+                RuleResult.name, RuleResult.status, RuleResult.severity
+            ),
         )
     )
     return _audit_filter(query, audits, account)
@@ -402,6 +404,10 @@ def _duration_ms(run: Run) -> int:
 def audit_item(run: Run) -> AuditListItem:
     """Needs the run's documents and rule results loaded (``_audits`` does)."""
     failed = next((r.name for r in run.rule_results if r.status == "failed"), None)
+    unchecked = next(
+        (r.name for r in run.rule_results if r.status == "skipped" and r.severity == "reject"),
+        None,
+    )
     return AuditListItem(
         id=run.id,
         status=_outcome(run),
@@ -414,6 +420,7 @@ def audit_item(run: Run) -> AuditListItem:
         failed_rules=run.rules_failed,
         files=[doc.file_name for doc in run.documents if doc.file_name],
         first_failed_rule=failed,
+        unchecked_rule=unchecked,
     )
 
 

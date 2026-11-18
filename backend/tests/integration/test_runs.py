@@ -364,3 +364,8 @@ async def test_a_reject_rule_the_model_gave_no_value_for_sends_the_run_to_review
     report = (await api.get(f"/v1/runs/{started.json()['runId']}", headers=auth)).json()["result"]
     assert [r["status"] for r in report["ruleResults"]] == ["skipped", "passed"]
     assert report["status"] == "warning"
+    # The report and the list say why: the field to look for, and the rule not checked.
+    fields = {f["key"]: f["flagged"] for f in report["documents"][0]["fields"]}
+    assert fields == {"total_amount": True, "tva": False}
+    [audit] = (await api.get("/v1/audits")).json()["audits"]
+    assert (audit["firstFailedRule"], audit["uncheckedRule"]) == (None, "total")

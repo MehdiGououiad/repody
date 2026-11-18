@@ -249,6 +249,7 @@
     "row": {
       "fields": "{count, plural, one {# champ} other {# champs}}",
       "noFields": "Aucun champ extrait",
+      "unchecked": "Non vérifiée : {rule}",
       "source": {
         "api": "API",
         "test": "Test"

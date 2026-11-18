@@ -249,8 +249,14 @@ def run_outcome(results: list[RuleOutcome], *, extraction_complete: bool) -> Out
 
 
 def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> None:
-    """Flag the fields a failed rule read: by bare name or ``<document type>.<field>``."""
-    failed = {field_key(f) for r in results if r.status == "failed" for f in r.affected_fields}
+    """Flag the fields a failed rule read, and those a reject rule could not check (the values a
+    person must look for): by bare name or ``<document type>.<field>``."""
+    failed = {
+        field_key(f)
+        for r in results
+        if r.status == "failed" or (r.status == "skipped" and r.rule.severity == "reject")
+        for f in r.affected_fields
+    }
     for doc in documents:
         for field in doc.fields:
             names = {field_key(field.key), field_key(f"{doc.document_type}.{field.key}")}

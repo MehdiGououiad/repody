@@ -485,7 +485,7 @@ export const fr = {
         points: [
           {
             title: "À examiner",
-            body: "Les exécutions dont des règles ont échoué, les plus anciennes d'abord.",
+            body: "Les exécutions dont des règles ont échoué ou n'ont pas pu être vérifiées, les plus anciennes d'abord.",
           },
           {
             title: "La semaine en chiffres",

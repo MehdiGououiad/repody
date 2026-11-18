@@ -221,7 +221,10 @@ function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
                         audit.status === "failed" ? "text-fail-ink" : "text-warn-ink"
                       )}
                     >
-                      {audit.firstFailedRule ?? tAudits("row.noFields")}
+                      {audit.firstFailedRule ??
+                        (audit.uncheckedRule
+                          ? tAudits("row.unchecked", { rule: audit.uncheckedRule })
+                          : tAudits("row.noFields"))}
                     </span>
                   </span>
                   <span className="text-xs tabular-nums text-ink-4">

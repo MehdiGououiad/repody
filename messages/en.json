@@ -249,6 +249,7 @@
     "row": {
       "fields": "{count, plural, one {# field} other {# fields}}",
       "noFields": "Nothing extracted",
+      "unchecked": "Not checked: {rule}",
       "source": {
         "api": "API",
         "test": "Test"

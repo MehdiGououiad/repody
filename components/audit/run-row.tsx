@@ -27,7 +27,8 @@ export function When({ value }: { value: string }) {
   );
 }
 
-/** Why a run looks the way it does, in one phrase: the failing rule, or nothing read, or the count. */
+/** Why a run looks the way it does, in one phrase: the failing rule, a reject rule that could not
+ * be checked, nothing read, or the count. */
 function Reason({ audit }: { audit: Audit }) {
   const t = useTranslations("audits.row");
   if (audit.firstFailedRule) {
@@ -39,6 +40,13 @@ function Reason({ audit }: { audit: Audit }) {
         {audit.failedRules > 1 ? (
           <span className="text-ink-4"> +{audit.failedRules - 1}</span>
         ) : null}
+      </span>
+    );
+  }
+  if (audit.uncheckedRule) {
+    return (
+      <span className="truncate text-warn-ink">
+        {t("unchecked", { rule: audit.uncheckedRule })}
       </span>
     );
   }

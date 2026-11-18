@@ -143,6 +143,11 @@ class AuditListItem(CamelModel):
     first_failed_rule: str | None = Field(
         default=None, description="The name of the first failed rule, to say why at a glance."
     )
+    unchecked_rule: str | None = Field(
+        default=None,
+        description="The first reject rule that could not be checked (a value it needs was not "
+        "read): why a run without failed rules needs review.",
+    )
 
 
 class AuditList(CamelModel):

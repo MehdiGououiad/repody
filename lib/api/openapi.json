@@ -3155,6 +3155,18 @@
             ],
             "title": "Firstfailedrule",
             "description": "The name of the first failed rule, to say why at a glance."
+          },
+          "uncheckedRule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uncheckedrule",
+            "description": "The first reject rule that could not be checked (a value it needs was not read): why a run without failed rules needs review."
           }
         },
         "type": "object",
@@ -3169,7 +3181,8 @@
           "rows",
           "failedRules",
           "files",
-          "firstFailedRule"
+          "firstFailedRule",
+          "uncheckedRule"
         ],
         "title": "AuditListItem"
       },
