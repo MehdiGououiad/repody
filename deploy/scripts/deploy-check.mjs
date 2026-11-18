@@ -3,7 +3,8 @@
  * Deploy assets check with the standard tools:
  *   helm lint, helm template | kubeconform (Kubernetes schemas), kubectl kustomize,
  *   docker buildx bake --print (bake variable validation), docker compose config for the
- *   VPS stack (every required variable from deploy/vps/env.example), and the docs link check.
+ *   VPS stack (every required variable from deploy/vps/env.example), the docs link check, and
+ *   that backup.sh restores into the stack's own Postgres image.
  *
  * kubeconform runs from its official image when the binary is not installed.
  */
@@ -70,7 +71,17 @@ const steps = [
       ),
   ],
   ["docs links and commands", () => run("node", ["deploy/scripts/check-command-docs.mjs"])],
+  ["backup restore test uses the stack's Postgres", samePostgres],
 ];
+
+/** Dependabot updates compose.yaml, not the image pinned in backup.sh: they must not drift. */
+function samePostgres() {
+  const stack = readFileSync("deploy/vps/compose.yaml", "utf8").match(/image: (postgres:\S+)/)?.[1];
+  const backup = readFileSync("deploy/vps/backup.sh", "utf8").match(/POSTGRES_IMAGE="([^"]+)"/)?.[1];
+  return stack && stack === backup
+    ? { status: 0 }
+    : { status: 1, stderr: `compose.yaml runs ${stack}, backup.sh restores into ${backup}` };
+}
 
 let failed = false;
 for (const [label, check] of steps) {

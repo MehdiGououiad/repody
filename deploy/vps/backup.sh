@@ -18,6 +18,8 @@
 set -euo pipefail
 
 IMAGE="restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510"
+# The restore test loads the dump into the same Postgres the stack runs (compose.yaml).
+POSTGRES_IMAGE="postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015"
 CONFIG="${HOME}/.config/repody-backup.env"
 [ -s "${CONFIG}" ] || { echo "Create ${CONFIG} first (see the top of this script)." >&2; exit 1; }
 # shellcheck disable=SC1090
@@ -60,7 +62,7 @@ restore_test() {
   local dump="${work}/data/dump/postgres.sql"
   test -s "${dump}"
   db="repody-restore-test-$$"
-  docker run -d --rm --name "${db}" -e POSTGRES_PASSWORD=restore-test postgres:18.6-alpine > /dev/null
+  docker run -d --rm --name "${db}" -e POSTGRES_PASSWORD=restore-test "${POSTGRES_IMAGE}" > /dev/null
   trap 'docker rm -f "${db}" > /dev/null 2>&1; rm -rf "${work}"' EXIT
   until docker exec "${db}" pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
   docker exec -i "${db}" psql -q -U postgres -v ON_ERROR_STOP=0 < "${dump}" > /dev/null 2>&1 || true
