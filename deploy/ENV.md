@@ -79,7 +79,8 @@ Every run is metered: 1 credit = 1 page sent to the model, plus `AUDIT_CREDIT_RU
 A run holds its estimate (its files' pages) when it is queued. It then pays the pages it sent
 when done (those of a request that timed out too, never those of a file that could not be read
 or a request the model server refused), its estimate when it failed after it started, and nothing
-when it never started. Usage per account: `GET /v1/credits/usage?since=&until=`.
+when it never started. A done run always pays the run fee, even one whose documents never reached
+the model: the model was woken for it. Usage per account: `GET /v1/credits/usage?since=&until=`.
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
