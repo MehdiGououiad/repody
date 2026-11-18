@@ -56,6 +56,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_INFERENCE_TIMEOUT_SECONDS` | `180` | Per model call; must fit in the run timeout |
 | `AUDIT_INFERENCE_PROBE` | `true` | `false` for an endpoint that scales to zero: Settings then shows the model as on demand instead of waking it |
 | `AUDIT_INFERENCE_CONCURRENCY` | `1` | Model requests in flight per process: set to the server's parallel slots (llama-server `--parallel`, Modal `MAX_INPUTS`). Whatever it is, a process holds at most 40 rendered pages at once (`extraction.pipeline.PAGES_IN_FLIGHT`), so a long scan waits its turn instead of filling the worker's memory |
+| `AUDIT_INFERENCE_CONTEXT_TOKENS` | unset | The model's context (vLLM `--max-model-len`; 131072 on Modal). Set, a document whose request would not fit (its pages at 170 DPI, about 3.6k tokens an A4 page; its examples; its answer) is refused with 422 when the run starts, before it is queued or paid for. Unset: no check |
 | `AUDIT_MAX_PAGES_PER_DOCUMENT` | all | Cap pages sent to the model (match `--limit-mm-per-prompt`) |
 | `AUDIT_MAX_PAGES_PER_RUN` | all | Pages one run may send the model, all its documents together; checked from the files before the run is queued (422) |
 | `AUDIT_MAX_OUTPUT_TOKENS` | `16384` | The longest answer the model may write. A schema without tables or lists gets less, by its size, so an answer that loops stops early |

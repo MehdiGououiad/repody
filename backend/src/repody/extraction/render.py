@@ -34,18 +34,27 @@ _PDFIUM = threading.Lock()
 class FileInfo:
     mime: str
     pages: int  # a PDF's pages, 1 for an image
+    # Each page's pixels as the model gets it (a PDF page drawn at PDF_DPI), for its token count.
+    page_pixels: tuple[int, ...] = ()
+
+
+def _scale(width: float, height: float, dpi: int) -> float:
+    """The scale a page of ``width`` x ``height`` points is drawn at: ``dpi``, or smaller when
+    that would exceed MAX_RENDER_PIXELS."""
+    return min(dpi / 72, (MAX_RENDER_PIXELS / max(width * height, 1)) ** 0.5)
 
 
 def inspect(file: BinaryIO) -> FileInfo | None:
-    """What a PDF, PNG, JPEG or WebP file is, and its page count, from its headers (no page is
-    decoded); None when neither PDFium nor Pillow opens it. The stream is read from the start
+    """What a PDF, PNG, JPEG or WebP file is, its page count and page sizes, from its headers (no
+    page is decoded); None when neither PDFium nor Pillow opens it. The stream is read from the start
     and rewound. Blocking (PDFium holds a process-wide lock): call it in a thread."""
     try:
         file.seek(0)
         try:
             with Image.open(file, formats=IMAGE_FORMATS) as image:
                 image.verify()
-                return FileInfo(Image.MIME[image.format or ""], 1)
+                pixels = min(image.width * image.height, MAX_RENDER_PIXELS)  # see open_image
+                return FileInfo(Image.MIME[image.format or ""], 1, (pixels,))
         except Image.DecompressionBombError:
             return None
         except OSError, SyntaxError, KeyError:  # UnidentifiedImageError is an OSError
@@ -53,7 +62,11 @@ def inspect(file: BinaryIO) -> FileInfo | None:
         file.seek(0)
         try:
             with _PDFIUM, pdfium.PdfDocument(file) as pdf:
-                return FileInfo(PDF, len(pdf))
+                sizes = [pdf.get_page_size(index) for index in range(len(pdf))]
+            pixels = tuple(
+                int(w * _scale(w, h, PDF_DPI)) * int(h * _scale(w, h, PDF_DPI)) for w, h in sizes
+            )
+            return FileInfo(PDF, len(sizes), pixels)
         except pdfium.PdfiumError:
             return None
     finally:
@@ -63,7 +76,7 @@ def inspect(file: BinaryIO) -> FileInfo | None:
 def _render(page: pdfium.PdfPage, dpi: int) -> Image.Image:
     """The page at ``dpi``, or smaller when that would exceed MAX_RENDER_PIXELS."""
     width, height = page.get_size()  # PDF points, 1/72 inch
-    scale = min(dpi / 72, (MAX_RENDER_PIXELS / max(width * height, 1)) ** 0.5)
+    scale = _scale(width, height, dpi)
     # `scale` is documented as a float; its default (1) makes type checkers read it as int.
     return page.render(scale=scale).to_pil()  # pyright: ignore[reportArgumentType]
 

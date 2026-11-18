@@ -101,6 +101,10 @@ class Settings(BaseSettings):
         validation_alias=AliasChoices("AUDIT_INFERENCE_MODEL", "AUDIT_LLAMACPP_SERVED_MODEL"),
     )
     inference_timeout_seconds: float = Field(default=180.0, ge=10)
+    # The model's context in tokens (vLLM --max-model-len). Set, a document whose request would
+    # not fit (its pages, examples and answer) is refused when the run starts (422), before it
+    # is queued or paid for, instead of failing on the GPU. Unset: no check.
+    inference_context_tokens: PositiveInt | None = None
     # Whether /platform/config asks the model server if it is up. Off for an endpoint that scales
     # to zero: the question would start it (and bill it); the model then shows as on demand.
     inference_probe: bool = Field(
