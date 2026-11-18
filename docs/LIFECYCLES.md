@@ -45,6 +45,9 @@ stateDiagram-v2
   but its progress was saved by the lost attempt. Only within `AUDIT_RUN_TIMEOUT_MINUTES` of its
   first start: after that the run fails, so a document that kills its worker every time (out of
   memory) cannot restart for ever.
+- When the database cannot be reached while a run is processed (Postgres restarting), the run is
+  not failed: Hatchet retries its task after 3, 9 and 27 s, and the retry starts it over. Its
+  progress, display only, is skipped while the database is away.
 - Runs Hatchet will never report on fail on the maintenance cron (`lifecycle.fail_stuck`): queued
   for over an hour and 10 minutes (the API stopped between saving the run and queueing it), or
   running for twice `AUDIT_RUN_TIMEOUT_MINUTES` and 10 minutes since its first start (one

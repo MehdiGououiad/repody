@@ -6,12 +6,16 @@ Queue position is not stored: it is counted when a client reads a queued run.
 import asyncio
 from typing import Any
 
+import structlog
 from sqlalchemy import update
+from sqlalchemy.exc import InterfaceError, OperationalError
 
 from repody.infra import db
 from repody.infra.models import Run
 from repody.schemas.run import ProgressStep, RunProgress
 from repody.schemas.workflow import WorkflowDefinition
+
+log = structlog.get_logger(__name__)
 
 QUEUE_STEP = "queue"
 MODEL_STEP = "model"
@@ -93,10 +97,15 @@ class Tracker:
         return self.progress.model_dump()
 
     async def _save(self) -> None:
+        """Save the progress; it is display only, so a save that fails (the database restarting)
+        is logged and the run goes on."""
         async with self._lock:
             data = self.progress.model_dump()
-            async with db.session_factory() as session:
-                await session.execute(
-                    update(Run).where(Run.id == self.run_id).values(progress=data)
-                )
-                await session.commit()
+            try:
+                async with db.session_factory() as session:
+                    await session.execute(
+                        update(Run).where(Run.id == self.run_id).values(progress=data)
+                    )
+                    await session.commit()
+            except OperationalError, InterfaceError, OSError:
+                log.warning("run_progress_not_saved", run_id=self.run_id, exc_info=True)

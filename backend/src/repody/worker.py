@@ -58,6 +58,12 @@ runs = hatchet().workflow(
 @runs.task(
     execution_timeout=timedelta(minutes=settings.run_timeout_minutes),
     schedule_timeout=QUEUE_TIMEOUT,
+    # Only an unreachable database reaches Hatchet as an error (repody.app.execute.process_run):
+    # retried after 3, 9 and 27 s (backoff_factor ** retry, docs.hatchet.run/v1/retry-policies),
+    # each retry starting the run over.
+    retries=3,
+    backoff_factor=3.0,
+    backoff_max_seconds=60,
     rate_limits=[
         RateLimit(
             dynamic_key="input.client_key",
