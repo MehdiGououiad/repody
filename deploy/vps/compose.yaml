@@ -95,7 +95,7 @@ x-backend-env: &backend-env
 services:
   postgres:
     <<: *hardening
-    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
     # Sized for one small VPS; the official image's default shm (64 MB) is too small for parallel
     # queries, so it gets 256 MB (https://hub.docker.com/_/postgres, "--shm-size").
     # Connections, at most: Hatchet 30 (DATABASE_MAX_CONNS), Keycloak 20 (KC_DB_POOL_MAX_SIZE),
@@ -446,7 +446,7 @@ services:
   bugsink-init:
     <<: *hardening
     profiles: [errors]
-    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
     restart: "no"
     depends_on:
       postgres:
@@ -520,7 +520,7 @@ services:
   loki:
     <<: [*hardening, *no-capabilities]
     profiles: [logs]
-    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    image: grafana/loki:3.7.10@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
     command: ["-config.file=/etc/loki/config.yaml"]
     configs:
       - source: loki
@@ -544,7 +544,7 @@ services:
   alloy:
     <<: [*hardening, *no-capabilities]
     profiles: [logs]
-    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
     command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
     depends_on:
       loki:
@@ -570,7 +570,7 @@ services:
   grafana:
     <<: [*hardening, *no-capabilities]
     profiles: [logs]
-    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
     depends_on:
       loki:
         condition: service_healthy

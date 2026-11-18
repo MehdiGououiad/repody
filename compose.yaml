@@ -9,7 +9,7 @@ name: repody
 
 services:
   postgres:
-    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
     # Hatchet's queue runs on Postgres too: more connections, and more shared memory than the
     # image's 64 MB (https://docs.hatchet.run/self-hosting/docker-compose, "shared memory").
     command: ["postgres", "-c", "max_connections=200"]
@@ -90,7 +90,7 @@ services:
       start_period: 10s
 
   keycloak:
-    image: quay.io/keycloak/keycloak:26.8.2@sha256:723b1d6e254c0fc96d5cffec860c7e0744d6a3277822b865bb538cf891575e41
+    image: quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
     command: start-dev --import-realm
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
@@ -179,7 +179,7 @@ services:
   # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
   bugsink-db:
     profiles: [observability]
-    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
     environment:
       POSTGRES_USER: bugsink
       POSTGRES_PASSWORD: bugsink-local-dev
@@ -211,7 +211,7 @@ services:
 
   loki:
     profiles: [observability]
-    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    image: grafana/loki:3.7.10@sha256:b43c257ccfc925d4a50b8717cac61a3b51df8c48d01847936057e5c4075a24a7
     command: -config.file=/etc/loki/config.yaml
     ports:
       - "127.0.0.1:3100:3100"
@@ -261,7 +261,7 @@ services:
   # Log collector (Grafana Alloy - successor to the EOL Promtail).
   alloy:
     profiles: [observability]
-    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
     command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
     volumes:
       - ./deploy/observability/alloy-config.alloy:/etc/alloy/config.alloy:ro
@@ -273,7 +273,7 @@ services:
 
   grafana:
     profiles: [observability]
-    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    image: grafana/grafana:13.3.1@sha256:0615ec4fbd4072004b7d86b46ded63013a74b7d6eb1119273dd89e8fa25c13cf
     ports:
       - "127.0.0.1:3030:3000"
     environment:
