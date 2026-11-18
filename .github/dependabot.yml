@@ -1,7 +1,10 @@
 # Version updates for every dependency source, so pinned versions and image digests stay current.
 # A release is proposed only once it is a few days old (cooldown), so a version that is pulled
 # soon after it is published, as compromised packages are, never reaches a pull request; pnpm
-# itself refuses versions under a day old (minimumReleaseAge, its default).
+# itself refuses versions under a day old (minimumReleaseAge, its default). Registries publish
+# no date for an image, so Docker updates get no cooldown (Dependabot says so on each PR).
+# The Python runtime and Hatchet (the queue engine, with its own migrations) are never grouped:
+# each comes as a pull request of its own, to be tested by itself.
 # https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 version: 2
 updates:
@@ -31,14 +34,18 @@ updates:
     schedule: { interval: weekly }
     cooldown: { default-days: 3 }
     groups:
-      base-images: { update-types: [minor, patch] }
+      base-images:
+        update-types: [minor, patch]
+        exclude-patterns: [python]
 
   - package-ecosystem: docker-compose # Compose images (tag + digest)
     directories: [/, /deploy/vps]
     schedule: { interval: weekly }
     cooldown: { default-days: 3 }
     groups:
-      compose-images: { update-types: [minor, patch] }
+      compose-images:
+        update-types: [minor, patch]
+        exclude-patterns: ["*hatchet*"]
 
   - package-ecosystem: github-actions
     directory: /
