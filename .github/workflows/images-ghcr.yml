@@ -68,18 +68,13 @@ jobs:
           push: true
           provenance: mode=max
           sbom: true
-          # The layers CI built for this code (its GitHub Actions cache, per image), then the
-          # registry cache of the last release.
+          # The layers CI's platform job built for this commit (its GitHub Actions cache, per
+          # image). No registry cache: it would store every build layer in GHCR, whose free
+          # storage for a private repository is 500 MB.
           set: |
             backend.cache-from=type=gha,scope=backend
             web.cache-from=type=gha,scope=web
             keycloak.cache-from=type=gha,scope=keycloak
-            backend.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache
-            backend.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-backend:buildcache,mode=max
-            web.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache
-            web.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-web:buildcache,mode=max
-            keycloak.cache-from=type=registry,ref=${{ steps.images.outputs.registry }}/repody-keycloak:buildcache
-            keycloak.cache-to=type=registry,ref=${{ steps.images.outputs.registry }}/repody-keycloak:buildcache,mode=max
 
       - name: Install cosign
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
