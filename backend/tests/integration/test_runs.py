@@ -1,9 +1,12 @@
 import json
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
+import pytest
 from sqlalchemy import update
+from sqlalchemy.exc import OperationalError
 
-from repody.app import execute, maintenance
+from repody.app import execute, maintenance, progress
 from repody.app.lifecycle import QUEUE_TIMEOUT, STUCK, STUCK_MARGIN, move_run
 from repody.extraction import client
 from repody.infra import db, queue
@@ -385,3 +388,39 @@ async def test_a_document_too_large_for_the_model_is_refused_before_it_runs(
     monkeypatch.setattr(get_settings(), "inference_context_tokens", 131_072)
     started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
     assert started.status_code == 202
+
+
+async def test_an_unreachable_database_leaves_the_run_to_hatchets_retry(api, monkeypatch):
+    """A Postgres restart while a run is saved must not fail it: the error goes to Hatchet,
+    whose retry starts the run over (worker.py), instead of throwing the model's work away."""
+
+    async def keep_queued(_run_id: str, _client_key: str) -> str:
+        return "task"
+
+    monkeypatch.setattr(queue, "dispatch", keep_queued)
+    await deploy(api)
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE)).json()["runId"]
+
+    async def database_restarting(_run_id: str) -> None:
+        raise OperationalError("SELECT 1", {}, ConnectionRefusedError("connection refused"))
+
+    monkeypatch.setattr(execute, "_process", database_restarting)
+    with pytest.raises(OperationalError):
+        await execute.process_run(run_id)
+    assert (await api.get(f"/v1/runs/{run_id}")).json()["status"] == "queued"  # not failed
+
+
+async def test_progress_saves_that_fail_do_not_stop_the_run(api, model_answer, monkeypatch):
+    """Progress is display only: with every progress save failing, the run still finishes, and
+    its final progress is saved with the report."""
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000})
+
+    def unreachable():
+        raise OSError("connection reset")
+
+    monkeypatch.setattr(progress, "db", SimpleNamespace(session_factory=unreachable))
+    started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+    state = (await api.get(f"/v1/runs/{started.json()['runId']}", headers=auth)).json()
+    assert state["status"] == "done"
+    assert all(step["status"] == "done" for step in state["progress"]["steps"])

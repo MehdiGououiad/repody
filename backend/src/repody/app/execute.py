@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 
 import structlog
 from sqlalchemy import select
+from sqlalchemy.exc import InterfaceError, OperationalError
 from sqlalchemy.orm import selectinload, undefer
 
 from repody.app import credits
@@ -36,13 +37,25 @@ EXTRACTION_FAILED = (
 )
 
 
+# The database could not be reached (a restart, a network blip): not the run's fault.
+DATABASE_UNREACHABLE = (OperationalError, InterfaceError, OSError)
+
+
 async def process_run(run_id: str) -> None:
     """The ``process-run`` task: run it to the end, or mark it failed. Its time limit is the
     Hatchet task's execution timeout (``repody.worker``): past it the task is cancelled and
-    ``fail_unfinished`` records why."""
+    ``fail_unfinished`` records why.
+
+    When the database cannot be reached, the run is not failed: the error goes to Hatchet,
+    which retries the task (``repody.worker``), and the retry starts the run over once the
+    database is back (a Postgres restart takes seconds; without this, a run that had already
+    been through the model was thrown away)."""
     with structlog.contextvars.bound_contextvars(run_id=run_id):
         try:
             await _process(run_id)
+        except DATABASE_UNREACHABLE:
+            log.warning("run_database_unreachable", exc_info=True)
+            raise
         except Exception:
             log.exception("run_processing_failed")
             await fail_run(run_id, FAILURE_MESSAGE)
