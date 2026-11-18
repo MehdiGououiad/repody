@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import io
 import json
@@ -220,3 +221,20 @@ def test_pages_reach_the_model_unless_it_refused_or_was_never_reached():
     assert pipeline._pages_reached(openai.APIConnectionError(request=request), 3) == 0
     assert pipeline._pages_reached(openai.APITimeoutError(request=request), 3) == 3
     assert pipeline._pages_reached(TimeoutError(), 3) == 3
+
+
+async def test_rendered_pages_in_memory_are_bounded():
+    budget = pipeline._PageBudget(40)
+    order: list[str] = []
+
+    async def document(name: str, pages: int) -> None:
+        async with budget.hold(pages):
+            order.append(f"{name} in")
+            assert budget.free >= 0
+            await asyncio.sleep(0.01)
+            order.append(f"{name} out")
+
+    await asyncio.gather(document("a", 30), document("b", 30), document("c", 99))
+    # b waits for a; c (more than the budget) takes all of it, alone.
+    assert order == ["a in", "a out", "b in", "b out", "c in", "c out"]
+    assert budget.free == 40

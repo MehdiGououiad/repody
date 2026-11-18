@@ -5,14 +5,17 @@ mode, documents without fields in its Markdown mode.
 """
 
 import asyncio
+import contextlib
+import io
 import time
+from collections.abc import AsyncIterator
 from typing import Any
 
 import openai
 import structlog
 from pydantic import BaseModel
 
-from repody.extraction import client, nuextract
+from repody.extraction import client, nuextract, render
 from repody.extraction.fields import FieldValue, leaf_values, parse_answer
 from repody.schemas.run import ExtractionMeta
 from repody.schemas.workflow import DocumentDef
@@ -66,10 +69,65 @@ def _with_pages(request: dict[str, Any], parts: list[dict[str, Any]]) -> dict[st
     return {**request, "messages": [*request["messages"][:-1], {"role": "user", "content": parts}]}
 
 
+# Pages rendered and waiting for the model at once in this process, all documents together. A
+# page is held three times while its request is in flight (the image parts, the JSON body and
+# its bytes), and a scanned A4 page at 170 DPI is up to ~5 MB as base64 PNG: four documents of
+# 30 such pages measured 1.5 GB, the worker's whole memory. 40 pages stay under ~600 MB; a
+# longer document waits until it can have them all.
+PAGES_IN_FLIGHT = 40
+
+
+class _PageBudget:
+    """A semaphore counted in pages."""
+
+    def __init__(self, pages: int) -> None:
+        self.size = self.free = pages
+        self._changed = asyncio.Condition()
+
+    @contextlib.asynccontextmanager
+    async def hold(self, pages: int) -> AsyncIterator[None]:
+        pages = min(max(pages, 1), self.size)
+        async with self._changed:
+            await self._changed.wait_for(lambda: self.free >= pages)
+            self.free -= pages
+        try:
+            yield
+        finally:
+            async with self._changed:
+                self.free += pages
+                self._changed.notify_all()
+
+
+_budgets: dict[asyncio.AbstractEventLoop, _PageBudget] = {}
+
+
+def _page_budget() -> _PageBudget:
+    loop = asyncio.get_running_loop()
+    if loop not in _budgets:
+        _budgets.clear()  # a new event loop (tests): the old budget belongs to the old one
+        _budgets[loop] = _PageBudget(PAGES_IN_FLIGHT)
+    return _budgets[loop]
+
+
+def _pages_to_send(data: bytes, mime: str, max_pages: int | None) -> int:
+    if mime != render.PDF:
+        return 1
+    info = render.inspect(io.BytesIO(data))
+    pages = info.pages if info else 1
+    return min(pages, max_pages or pages)
+
+
 async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any]) -> _Answer:
-    parts, total = await asyncio.to_thread(
-        nuextract.page_parts, data, mime, max_pages=get_settings().max_pages_per_document
-    )
+    max_pages = get_settings().max_pages_per_document
+    pages = await asyncio.to_thread(_pages_to_send, data, mime, max_pages)
+    async with _page_budget().hold(pages):
+        return await _render_and_ask(doc, data, mime, request, max_pages)
+
+
+async def _render_and_ask(
+    doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any], max_pages: int | None
+) -> _Answer:
+    parts, total = await asyncio.to_thread(nuextract.page_parts, data, mime, max_pages=max_pages)
     try:
         reply = await client.chat(_with_pages(request, parts))
     except Exception as error:
