@@ -77,9 +77,11 @@ migrations:
 
 api:
   replicas: 2
+  # ephemeral-storage bounds /tmp, where uploads wait (up to AUDIT_MAX_REQUEST_BYTES each), so a
+  # burst of uploads evicts this pod instead of filling the node's disk.
   resources:
-    requests: { cpu: 250m, memory: 512Mi }
-    limits: { memory: 1Gi }
+    requests: { cpu: 250m, memory: 512Mi, ephemeral-storage: 256Mi }
+    limits: { memory: 1Gi, ephemeral-storage: 2Gi }
   autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 6, targetCPUUtilizationPercentage: 70 }
   podDisruptionBudget: { enabled: true, minAvailable: 1 }
 
@@ -90,8 +92,8 @@ worker:
   concurrency: 1
   terminationGracePeriodSeconds: 240
   resources:
-    requests: { cpu: 250m, memory: 768Mi }
-    limits: { memory: 2Gi }
+    requests: { cpu: 250m, memory: 768Mi, ephemeral-storage: 128Mi }
+    limits: { memory: 2Gi, ephemeral-storage: 1Gi }
   autoscaling: { enabled: true, minReplicas: 1, maxReplicas: 10, targetCPUUtilizationPercentage: 75 }
   podDisruptionBudget: { enabled: true, maxUnavailable: 1 }
 
@@ -105,8 +107,8 @@ web:
   # Public URL of the web app when it differs from the request host (BETTER_AUTH_URL).
   authUrl: ""
   resources:
-    requests: { cpu: 100m, memory: 256Mi }
-    limits: { memory: 768Mi }
+    requests: { cpu: 100m, memory: 256Mi, ephemeral-storage: 128Mi }
+    limits: { memory: 768Mi, ephemeral-storage: 1Gi }
   autoscaling: { enabled: false, minReplicas: 2, maxReplicas: 4, targetCPUUtilizationPercentage: 70 }
   podDisruptionBudget: { enabled: true, minAvailable: 1 }
 

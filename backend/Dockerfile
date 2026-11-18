@@ -33,12 +33,13 @@ WORKDIR /app
 
 # The optional dependencies to install (otel: the OpenTelemetry agent; empty for none).
 # As uv's Docker guide does: dependencies first (a cached layer), then the project; never the
-# dev group.
+# dev group. Dependencies are installed from wheels only (--no-build): no package's build
+# script runs here. The project itself is then built from its own source.
 ARG BACKEND_EXTRAS=otel
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-dev --no-install-project ${BACKEND_EXTRAS:+--extra $BACKEND_EXTRAS}
+    uv sync --locked --no-dev --no-install-project --no-build ${BACKEND_EXTRAS:+--extra $BACKEND_EXTRAS}
 
 COPY pyproject.toml uv.lock ./
 COPY src/ ./src/

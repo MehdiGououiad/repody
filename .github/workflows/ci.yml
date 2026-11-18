@@ -120,18 +120,18 @@ jobs:
       - name: Install backend
         run: uv sync --locked
       - name: Lint and format check (ruff)
-        run: uv run ruff format --check src tests scripts alembic && uv run ruff check src tests scripts alembic
+        run: uv run --locked ruff format --check src tests scripts alembic && uv run --locked ruff check src tests scripts alembic
       - name: Typecheck (pyright)
-        run: uv run pyright
+        run: uv run --locked pyright
       - name: Layer contracts (import-linter)
-        run: uv run lint-imports
+        run: uv run --locked lint-imports
       - name: Pytest (unit + integration, Postgres + Alembic)
-        run: uv run pytest -q --tb=short
+        run: uv run --locked pytest -q --tb=short
         env:
           AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit@localhost:5432/repody_test
           AUDIT_SEED_ON_STARTUP: "false"
       - name: Export OpenAPI
-        run: uv run python scripts/export_openapi.py
+        run: uv run --locked python scripts/export_openapi.py
       - name: OpenAPI drift check
         working-directory: ${{ github.workspace }}
         run: git diff --exit-code lib/api/openapi.json lib/api/catalog.json
