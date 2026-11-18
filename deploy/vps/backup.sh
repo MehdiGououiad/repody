@@ -6,7 +6,8 @@
 #   bash tools/backup.sh             back up now, then keep 7 daily, 4 weekly, 12 monthly
 #   bash tools/backup.sh check       verify the repository and 5% of its data
 #   bash tools/backup.sh restore-test   restore the latest database dump into a throwaway
-#                                    Postgres and the latest documents into a temporary folder
+#                                    Postgres (Repody, Keycloak and Hatchet checked) and the
+#                                    latest documents into a temporary folder
 #
 # Its settings live outside the stack, in ~/.config/repody-backup.env (mode 600):
 #   RESTIC_REPOSITORY=s3:https://<account>.r2.cloudflarestorage.com/repody-backups
@@ -66,10 +67,15 @@ restore_test() {
   trap 'docker rm -f "${db}" > /dev/null 2>&1; rm -rf "${work}"' EXIT
   until docker exec "${db}" pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
   docker exec -i "${db}" psql -q -U postgres -v ON_ERROR_STOP=0 < "${dump}" > /dev/null 2>&1 || true
-  local runs workflows
+  local runs workflows users tenants
   runs="$(docker exec "${db}" psql -U postgres -d repody -Atc 'select count(*) from runs')"
   workflows="$(docker exec "${db}" psql -U postgres -d repody -Atc 'select count(*) from workflows')"
   echo "database restored: ${workflows} workflows, ${runs} runs"
+  # The same dump holds the sign-ins (Keycloak) and the queue (Hatchet): a restore needs them too.
+  users="$(docker exec "${db}" psql -U postgres -d keycloak -Atc     "select count(*) from user_entity where realm_id = (select id from realm where name = 'repody')")"
+  tenants="$(docker exec "${db}" psql -U postgres -d hatchet -Atc 'select count(*) from "Tenant"')"
+  echo "keycloak restored: ${users} users in the repody realm; hatchet restored: ${tenants} tenants"
+  [ "${users}" -gt 0 ] && [ "${tenants}" -gt 0 ]
   restic restore latest --host "${project}" --tag documents --target /data/dump
   echo "documents restored: $(find "${work}/data/documents" -type f | wc -l) files"
 }
