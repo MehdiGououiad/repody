@@ -211,6 +211,7 @@ them from that directory (`/opt/repody`, or `/home/deploy/repody-staging` for st
 |---|---|
 | `sh tools/setup-admin-client.sh` | Adds the admin area's Keycloak account (`repody-admin`) to a realm imported before 1.5 |
 | `sh tools/setup-tester-client.sh` | Creates the smoke test's account: the service account `repody-tester`, operator in the client company `client-repody-test`; its secret (`TESTER_CLIENT_SECRET`) is created in `.env` and never printed. On staging only, also `tester@staging.repody.com`, a person in the same company who signs in in the browser for UI tests (password `UI_TESTER_PASSWORD` in `.env`) |
+| `sh tools/setup-realm-audit.sh` | Keycloak's audit trail on a realm imported before 1.8: sign-in events (sign-ins, failures, sign-outs, password and two-factor changes) and admin events, kept 90 days, and a lockout after 10 failed sign-ins instead of 30. Read them in the admin console, Realm settings > Events |
 | `tools/smoke_test.py` | One real run, end to end, as `repody-tester`: a generated one-page invoice through extraction on the GPU, the report, the credits charged, and nothing visible outside its company. A few credits and a little GPU time per run |
 
 Each deploy runs the smoke test by itself once the stack has the tester account. To run it by hand:
