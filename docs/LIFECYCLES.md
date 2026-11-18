@@ -76,8 +76,9 @@ stateDiagram-v2
 Set once per rule when a run finishes (`rules/evaluate.py` `evaluate_rule`):
 `failed` when a condition does not hold, `skipped` when a value it needs was not extracted or a
 field is unknown, `passed` otherwise. A run's `outcome` follows (`execute.run_outcome`): any failed
-`reject` rule → failed; any other failed rule, a document that could not be read, or no field read
-at all → warning; else passed.
+`reject` rule → failed; any other failed rule, a skipped `reject` rule (its check did not happen),
+a document that could not be read, or no field read at all → warning; else passed. A skipped `flag`
+rule changes nothing.
 
 ## Run progress step
 

@@ -373,7 +373,7 @@ export const fr = {
           },
           {
             title: "Rejeter ou signaler",
-            body: "Un échec rejette l'exécution, ou la signale pour examen humain.",
+            body: "Un échec rejette l'exécution, ou la signale pour examen humain. Une règle de rejet qui ne peut pas être vérifiée, faute de valeur lue, envoie l'exécution en examen.",
           },
           {
             title: "Vérifiées pendant l'écriture",
@@ -485,7 +485,7 @@ export const fr = {
         points: [
           {
             title: "À examiner",
-            body: "Les exécutions dont des règles ont échoué, les plus anciennes d'abord.",
+            body: "Les exécutions dont des règles ont échoué ou n'ont pas pu être vérifiées, les plus anciennes d'abord.",
           },
           {
             title: "La semaine en chiffres",

@@ -212,7 +212,7 @@ export function Activity({ audits }: { audits: Audit[] }) {
                     <span
                       className={cn(
                         "block truncate text-xs",
-                        audit.firstFailedRule
+                        audit.firstFailedRule || audit.uncheckedRule
                           ? audit.status === "failed"
                             ? "text-fail-ink"
                             : "text-warn-ink"
@@ -220,7 +220,9 @@ export function Activity({ audits }: { audits: Audit[] }) {
                       )}
                     >
                       {audit.firstFailedRule ??
-                        (audit.files.join(", ") || tAudits(`row.source.${audit.source}`))}
+                        (audit.uncheckedRule
+                          ? tAudits("row.unchecked", { rule: audit.uncheckedRule })
+                          : audit.files.join(", ") || tAudits(`row.source.${audit.source}`))}
                     </span>
                   </span>
                   <span className="text-xs tabular-nums text-ink-4">

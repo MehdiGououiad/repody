@@ -375,7 +375,7 @@ export const en: Dict = {
           },
           {
             title: "Reject or flag",
-            body: "A failure rejects the run, or flags it for human review.",
+            body: "A failure rejects the run, or flags it for human review. A reject rule that cannot be checked, because a value was not read, sends the run to review.",
           },
           {
             title: "Checked as you write",
@@ -485,7 +485,10 @@ export const en: Dict = {
         lead: "The home page starts with what needs a person.",
         shot: "overview",
         points: [
-          { title: "Needs review", body: "Runs whose rules failed, oldest first." },
+          {
+            title: "Needs review",
+            body: "Runs whose rules failed or could not be checked, oldest first.",
+          },
           {
             title: "The week in numbers",
             body: "Runs, pass rate and rule failures, compared with the previous week.",

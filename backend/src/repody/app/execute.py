@@ -237,17 +237,26 @@ async def _extract_one(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker)
 
 
 def run_outcome(results: list[RuleOutcome], *, extraction_complete: bool) -> Outcome:
-    """Failed when a rejecting rule fails; needs review when another rule fails, or when the
-    model read nothing or a document could not be read: a run is never green on no evidence."""
+    """Failed when a rejecting rule fails. Needs review when another rule fails, when a
+    rejecting rule could not be checked (a value it needs was not read), or when the model read
+    nothing or a document could not be read: a run is never green on no evidence. A flag rule
+    that could not be checked changes nothing."""
     failed = [r for r in results if r.status == "failed"]
     if any(r.rule.severity == "reject" for r in failed):
         return "failed"
-    return "warning" if failed or not extraction_complete else "passed"
+    unchecked = any(r.status == "skipped" and r.rule.severity == "reject" for r in results)
+    return "warning" if failed or unchecked or not extraction_complete else "passed"
 
 
 def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> None:
-    """Flag the fields a failed rule read: by bare name or ``<document type>.<field>``."""
-    failed = {field_key(f) for r in results if r.status == "failed" for f in r.affected_fields}
+    """Flag the fields a failed rule read, and those a reject rule could not check (the values a
+    person must look for): by bare name or ``<document type>.<field>``."""
+    failed = {
+        field_key(f)
+        for r in results
+        if r.status == "failed" or (r.status == "skipped" and r.rule.severity == "reject")
+        for f in r.affected_fields
+    }
     for doc in documents:
         for field in doc.fields:
             names = {field_key(field.key), field_key(f"{doc.document_type}.{field.key}")}

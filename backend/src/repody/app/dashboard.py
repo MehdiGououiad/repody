@@ -200,7 +200,9 @@ async def _audits(
             .options(
                 selectinload(Run.workflow),
                 selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
-                selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
+                selectinload(Run.rule_results).load_only(
+                    RuleResult.name, RuleResult.status, RuleResult.severity
+                ),
             )
         )
     ]

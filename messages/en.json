@@ -249,6 +249,7 @@
     "row": {
       "fields": "{count, plural, one {# field} other {# fields}}",
       "noFields": "Nothing extracted",
+      "unchecked": "Not checked: {rule}",
       "source": {
         "api": "API",
         "test": "Test"
@@ -590,7 +591,7 @@
         "severityFlag": "Flag for review",
         "newLogicName": "Untitled logic rule",
         "emptyActive": "No rules yet. Add a logic rule below.",
-        "hint": "Each rule references fields from step 1 and runs on extracted values.",
+        "hint": "Each rule references fields from step 1 and runs on extracted values. A reject rule whose value was not read sends the run to review.",
         "appliesTo": "Scope",
         "scopeIntraShort": "One document",
         "scopeCrossShort": "Two documents",

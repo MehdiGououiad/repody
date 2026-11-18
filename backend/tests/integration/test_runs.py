@@ -349,3 +349,23 @@ async def test_a_run_that_keeps_losing_its_worker_fails_at_its_time_limit(
     assert state["status"] == "failed"
     assert state["error"].startswith("The run stopped before it finished")
     assert model_answer["calls"] == []
+
+
+async def test_a_reject_rule_the_model_gave_no_value_for_sends_the_run_to_review(api, model_answer):
+    """Never green on a check that did not happen: the total was not read, so its rule is
+    skipped, and the run needs a person."""
+    auth = await deploy(
+        api,
+        rule("total", condition("total_amount", "==", "6000")),
+        rule("tva", condition("tva", "<", "500"), severity="flag"),
+    )
+    model_answer["text"] = json.dumps({"total_amount": None, "tva": 100})
+    started = await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)
+    report = (await api.get(f"/v1/runs/{started.json()['runId']}", headers=auth)).json()["result"]
+    assert [r["status"] for r in report["ruleResults"]] == ["skipped", "passed"]
+    assert report["status"] == "warning"
+    # The report and the list say why: the field to look for, and the rule not checked.
+    fields = {f["key"]: f["flagged"] for f in report["documents"][0]["fields"]}
+    assert fields == {"total_amount": True, "tva": False}
+    [audit] = (await api.get("/v1/audits")).json()["audits"]
+    assert (audit["firstFailedRule"], audit["uncheckedRule"]) == (None, "total")

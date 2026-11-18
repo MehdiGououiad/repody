@@ -1210,6 +1210,11 @@ export interface components {
              * @description The name of the first failed rule, to say why at a glance.
              */
             firstFailedRule: string | null;
+            /**
+             * Uncheckedrule
+             * @description The first reject rule that could not be checked (a value it needs was not read): why a run without failed rules needs review.
+             */
+            uncheckedRule: string | null;
         };
         /** AuditRule */
         AuditRule: {
