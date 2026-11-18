@@ -360,8 +360,9 @@ before it leaves the server, and runs from its pinned image: nothing is installe
    bash tools/backup.sh restore-test
    ```
 
-   The restore test loads the latest dump into a throwaway Postgres and counts the workflows and
-   runs, then restores the documents to a temporary folder and counts them.
+   The restore test loads the latest dump into a throwaway Postgres and counts Repody's workflows
+   and runs, Keycloak's users and Hatchet's tenants (it fails when either of the last two is
+   empty), then restores the documents to a temporary folder and counts them.
 4. **Every night**, with `crontab -e` as `deploy`:
 
    ```text
