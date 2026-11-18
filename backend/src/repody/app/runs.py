@@ -170,6 +170,8 @@ async def start_run(
     for upload in uploads:
         _check_upload(upload)
     await _check_queue(session)
+    # No transaction (and so no pooled connection) is held while the files are inspected.
+    await session.commit()
 
     if source == "api" or definition is None:
         definition = WorkflowDefinition.model_validate(wf.definition)
@@ -356,18 +358,10 @@ async def run_api_key_hash(session: AsyncSession, run_id: str) -> str | None:
 # --- Audits: finished runs ---
 
 
-def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
-    """Done runs matching the filter, newest first, each with its workflow (one join)."""
-    query = (
-        select(Run)
-        .join(Run.workflow)
-        .options(
-            contains_eager(Run.workflow),
-            selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
-            selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
-        )
-        .where(Run.status == "done", visible_runs(account))
-        .order_by(Run.created_at.desc(), Run.id.desc())
+def _audit_filter[*T](query: Select[*T], audits: AuditFilter, account: str | None) -> Select[*T]:
+    """Done runs matching the filter, newest first; ``query`` joins the run's workflow."""
+    query = query.where(Run.status == "done", visible_runs(account)).order_by(
+        Run.created_at.desc(), Run.id.desc()
     )
     if audits.outcome == "review":
         query = query.where(Run.outcome.in_(REVIEW_OUTCOMES))
@@ -383,6 +377,20 @@ def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
             or_(Run.id.icontains(q, autoescape=True), Workflow.name.icontains(q, autoescape=True))
         )
     return query
+
+
+def _audits(audits: AuditFilter, account: str | None) -> Select[Run]:
+    """The matching runs with their workflow (one join), file names and rule results."""
+    query = (
+        select(Run)
+        .join(Run.workflow)
+        .options(
+            contains_eager(Run.workflow),
+            selectinload(Run.documents).load_only(RunDocument.file_name, RunDocument.position),
+            selectinload(Run.rule_results).load_only(RuleResult.name, RuleResult.status),
+        )
+    )
+    return _audit_filter(query, audits, account)
 
 
 def _duration_ms(run: Run) -> int:
@@ -414,7 +422,8 @@ async def list_audits(
 ) -> AuditList:
     query = _audits(page, account)
     runs = await session.scalars(query.offset(page.offset).limit(page.limit))
-    total = await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
+    ids = _audit_filter(select(Run.id).join(Run.workflow), page, account).order_by(None)
+    total = await session.scalar(select(func.count()).select_from(ids.subquery()))
     return AuditList(
         audits=[audit_item(run) for run in runs],
         total=total or 0,
@@ -460,22 +469,24 @@ AUDIT_COLUMNS = [
 async def export_audits(
     session: AsyncSession, audits: AuditFilter, *, account: str | None = None
 ) -> AsyncIterator[str]:
-    """Every matching audit as CSV, streamed from a server-side cursor (no row limit)."""
+    """Every matching audit as CSV, streamed from a server-side cursor (no row limit). Only the
+    exported columns are read: no entities, JSON or related rows."""
     yield BOM + _csv_line(AUDIT_COLUMNS)
-    runs = await session.stream_scalars(
-        _audits(audits, account).execution_options(yield_per=EXPORT_BATCH)
+    columns = select(
+        Run.id,
+        Run.outcome,
+        Run.workflow_id,
+        Workflow.name,
+        Run.created_at,
+        Run.fields_extracted,
+        Run.rules_failed,
+    ).join(Workflow, Workflow.id == Run.workflow_id)
+    rows = await session.stream(
+        _audit_filter(columns, audits, account).execution_options(yield_per=EXPORT_BATCH)
     )
-    async for run in runs:
+    async for run_id, outcome, workflow_id, name, created_at, fields, failed in rows:
         yield _csv_line(
-            [
-                run.id,
-                run.outcome,
-                run.workflow_id,
-                run.workflow.name,
-                run.created_at.isoformat(),
-                run.fields_extracted,
-                run.rules_failed,
-            ]
+            [run_id, outcome, workflow_id, name, created_at.isoformat(), fields, failed]
         )
 
 

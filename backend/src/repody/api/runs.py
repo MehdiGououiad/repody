@@ -125,6 +125,8 @@ async def start_run(
     The caller is checked before the body is read: without a valid key or session, nothing is
     uploaded (401)."""
     source, client_key, wf = await _caller(session, workflow_id, token, user)
+    # The body arrives next: its transaction ends first, so the upload holds no connection.
+    await session.commit()
     settings = get_settings()
     async with request.form(
         max_files=settings.max_upload_files,

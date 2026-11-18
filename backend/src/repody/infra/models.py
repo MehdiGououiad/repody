@@ -85,7 +85,11 @@ class Run(Base):
     status: Mapped[RunStatus] = mapped_column(default="queued")
     outcome: Mapped[Outcome | None]  # set when done
     error: Mapped[str | None] = mapped_column(Text)
-    definition: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # The workflow as it was when the run started, up to a few hundred KB with in-context
+    # examples. Only the worker reads it (``undefer``); lists and polls never load it.
+    definition: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, deferred=True, deferred_raiseload=True
+    )
     progress: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     rules_total: Mapped[int] = mapped_column(default=0)
     rules_passed: Mapped[int] = mapped_column(default=0)

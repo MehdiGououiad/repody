@@ -11,7 +11,8 @@ import time
 from datetime import UTC, datetime
 
 import structlog
-from sqlalchemy.orm import selectinload
+from sqlalchemy import update
+from sqlalchemy.orm import selectinload, undefer
 
 from repody.app import credits
 from repody.app.lifecycle import fail_run, move_run
@@ -63,19 +64,40 @@ async def fail_unfinished(run_id: str) -> None:
 
 
 async def _claim(run_id: str) -> bool:
+    """Take the run: queued becomes running. A run already running is this task delivered again:
+    Hatchet re-queues a task whose worker stopped heartbeating (it crashed, was killed at the end
+    of a deploy's grace period, or the server restarted), so it starts over here; nothing of the
+    lost attempt was saved but its progress. A finished run is never taken."""
     async with db.session_factory() as session:
-        claimed = await move_run(session, run_id, "running", started_at=datetime.now(UTC))
+        now = datetime.now(UTC)
+        claimed = await move_run(session, run_id, "running", started_at=now)
+        if not claimed:
+            claimed = bool(
+                await session.scalar(
+                    update(Run)
+                    .where(Run.id == run_id, Run.status == "running")
+                    .values(started_at=now)
+                    .returning(Run.id)
+                )
+            )
+            if claimed:
+                log.warning("run_redelivered")
         await session.commit()
         return claimed
 
 
 async def _process(run_id: str) -> None:
     if not await _claim(run_id):
-        log.info("run_already_claimed")
+        log.info("run_already_finished")
         return
     async with db.session_factory() as session:
         run = await session.get_one(
-            Run, run_id, options=[selectinload(Run.documents).selectinload(RunDocument.fields)]
+            Run,
+            run_id,
+            options=[
+                undefer(Run.definition),
+                selectinload(Run.documents).selectinload(RunDocument.fields),
+            ],
         )
         definition = WorkflowDefinition.model_validate(run.definition)
         tracker = Tracker(run_id, RunProgress.model_validate(run.progress))

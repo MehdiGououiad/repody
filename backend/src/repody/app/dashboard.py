@@ -68,6 +68,19 @@ async def timing(
     )
 
 
+async def queue_counts(session: AsyncSession) -> QueueCounts:
+    """The platform's runs waiting and in progress (every account's: they explain a wait)."""
+    queued, running = (
+        await session.execute(
+            select(
+                func.count().filter(Run.status == "queued"),
+                func.count().filter(Run.status == "running"),
+            ).where(Run.status.in_(("queued", "running")))  # the status index, not the table
+        )
+    ).one()
+    return QueueCounts(queued_runs=queued, running_runs=running)
+
+
 async def _sources(
     session: AsyncSession, since: datetime, mine: ColumnElement[bool]
 ) -> SourceCounts:
@@ -202,14 +215,6 @@ async def get_dashboard(session: AsyncSession, *, account: str | None = None) ->
     this_week = [daily.get(d, DayCounts()) for d in week]
     last_week = [daily.get(d, DayCounts()) for d in previous_week]
 
-    queued, running = (
-        await session.execute(
-            select(
-                func.count().filter(Run.status == "queued"),
-                func.count().filter(Run.status == "running"),
-            )
-        )
-    ).one()
     failures = dict(
         (
             await session.execute(
@@ -260,7 +265,7 @@ async def get_dashboard(session: AsyncSession, *, account: str | None = None) ->
             SeverityShare(severity=severity, share=count / total_failures)
             for severity, count in failures.items()
         ],
-        queue=QueueCounts(queued_runs=queued, running_runs=running),
+        queue=await queue_counts(session),
         recent_audits=await _audits(session, mine, failed=False, limit=RECENT_AUDITS),
         failed_audits=await _audits(session, mine, failed=True, limit=FAILED_AUDITS),
         workflows=workflows,

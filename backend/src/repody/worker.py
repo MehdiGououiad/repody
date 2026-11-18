@@ -5,10 +5,11 @@
   most AUDIT_RUNS_PER_MINUTE_PER_CLIENT a minute (a dynamic rate limit: more wait their turn)
   and has at most AUDIT_RUNS_IN_PROGRESS_PER_CLIENT in progress, clients taking turns (round
   robin), so one bulk upload cannot hold every worker slot.
-  When Hatchet gives up on it (a timeout, a lost worker, a cancellation), the failure task fails
-  the run in our database.
-- ``maintenance`` runs every minute (a Hatchet cron): it deletes runs past their retention and
-  declined access requests past theirs.
+  When Hatchet gives up on it (a timeout, a cancellation), the failure task fails the run in our
+  database. A task whose worker died is given to another worker, which starts the run over
+  (repody.app.execute._claim).
+- ``maintenance`` runs every minute (a Hatchet cron): it fails runs the queue lost, deletes runs
+  past their retention and declined access requests past theirs.
 
 The worker takes AUDIT_WORKER_CONCURRENCY runs at a time (Hatchet slots); scale it with replicas.
 The client's connection comes from the HATCHET_CLIENT_* environment.
@@ -29,12 +30,11 @@ from pydantic import BaseModel
 
 from repody.app import maintenance
 from repody.app.execute import fail_unfinished, process_run
+from repody.app.lifecycle import QUEUE_TIMEOUT
 from repody.extraction import client
 from repody.infra import db, observability
 from repody.infra.queue import MAINTENANCE_WORKFLOW, RUN_WORKFLOW, hatchet
 from repody.settings import get_settings
-
-QUEUE_TIMEOUT = timedelta(hours=1)  # a run that waits longer for a worker fails
 
 
 class RunInput(BaseModel):
