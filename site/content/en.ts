@@ -61,7 +61,7 @@ export const en: Dict = {
       rules: "Check 2 rules",
       save: "Save the report",
       verdict: "Rejected",
-      verdictFacts: "1 of 2 rules passed · 4 fields · 2.1 s",
+      verdictFacts: "1 of 2 rules passed · 4 fields · 1.9 s",
       fields: [
         { key: "invoice_number", value: "FAC-2026-0412", ok: true },
         { key: "supplier", value: "Atlas Logistique SARL", ok: true },
@@ -69,13 +69,13 @@ export const en: Dict = {
         { key: "total", value: "MAD 58,800.00", ok: false },
       ],
       note: "Total ≠ net + 20% VAT",
-      gpuTime: "6.8 s",
-      extractTime: "0.4 s",
+      gpuTime: "15 s",
+      extractTime: "1.5 s",
     },
     proof: [
       { value: "1", label: "pass from the document image to typed fields" },
       { value: "24", label: "field types, from dates to IBANs and tables" },
-      { value: "99", label: "pages read per document" },
+      { value: "40", label: "A4 pages read in a single pass" },
       { value: "0", label: "bytes of your documents leaving your network" },
     ],
     video: {
@@ -176,7 +176,7 @@ export const en: Dict = {
         },
         {
           title: "Your SSO, your roles",
-          body: "OpenID Connect with Keycloak, PKCE, two-factor authentication for administrators and four roles with precise permissions.",
+          body: "OpenID Connect with Keycloak, PKCE, two-factor authentication for administrators, every sign-in kept 90 days, and four roles with precise permissions.",
         },
         {
           title: "Protected API keys",
@@ -202,7 +202,7 @@ export const en: Dict = {
       options: [
         {
           title: "One server",
-          body: "Docker Compose on a Linux machine. The whole stack, ready in one command, deployed automatically.",
+          body: "Docker Compose on a Linux machine: the whole stack with its logs, error tracking and encrypted nightly backups, deployed automatically after a staging copy.",
         },
         {
           title: "Kubernetes or OpenShift",
@@ -229,7 +229,8 @@ export const en: Dict = {
         "Vulnerability scan",
         "SBOM and provenance",
         "Signing",
-        "Verify and deploy",
+        "Staging and a real run",
+        "The same images promoted",
       ],
     },
     industries: {
@@ -278,7 +279,7 @@ export const en: Dict = {
         },
         {
           q: "Which documents and languages?",
-          a: "PDF, PNG, JPEG and WebP, up to 99 pages per document and 20 files per run. The model reads French, English and the main European languages; the interface is in French and English.",
+          a: "PDF, PNG, JPEG and WebP, 20 files per run. A document is read in a single pass, up to about 40 A4 pages; a longer one is refused at once, with the reason, before anything is charged. The model reads French, English and the main European languages; the interface is in French and English.",
         },
         {
           q: "What accuracy should we expect?",
@@ -297,8 +298,16 @@ export const en: Dict = {
           a: "Access goes through your identity provider. Four roles (viewer, operator, admin, platform admin) grant precise permissions on workflows and runs.",
         },
         {
+          q: "What happens if a server fails during a run?",
+          a: "The run recovers by itself: a worker that stops hands it to another, a database restart is retried, and it is charged once. Every database and every document is backed up, encrypted, each night to object storage, and restoring is tested.",
+        },
+        {
+          q: "Can we offer Repody to our own clients?",
+          a: "Yes. One installation serves several client companies, each seeing only its own work. You invite their users, grant them credits (one per page read) and follow their usage and the GPU cost from the admin area.",
+        },
+        {
           q: "How do updates work?",
-          a: "Every release is built, scanned, signed and published with its software bill of materials. You choose the version to deploy; its signature is verified before installation.",
+          a: "Every release is built once, scanned, signed and run on a staging copy with a real document before it reaches production. You choose the version to deploy; its signature is verified before installation, and rolling back is the same command.",
         },
       ],
     },
@@ -312,7 +321,7 @@ export const en: Dict = {
     meta: {
       title: "Platform: extraction, rules, reports and API",
       description:
-        "Workflow builder, 24 field types, rules on one or two documents, detailed reports, a REST API with per-workflow keys and live tracking of every run.",
+        "Workflow builder, 24 field types, rules on one or two documents, detailed reports beside the pages, a REST API with per-workflow keys, a control room, and client companies with their users and credits.",
     },
     hero: {
       title: "The whole platform, screen by screen",
@@ -340,6 +349,14 @@ export const en: Dict = {
           {
             title: "Model instructions",
             body: "Guidance specific to each document, on top of each field's description.",
+          },
+          {
+            title: "Examples that teach",
+            body: "Up to five worked examples per document, an input and the expected answer, show the model your layouts and conventions.",
+          },
+          {
+            title: "Full transcription",
+            body: "A document with no fields is transcribed whole into Markdown, tables included, and kept with the report.",
           },
           {
             title: "NuExtract template import",
@@ -407,11 +424,11 @@ export const en: Dict = {
           },
           {
             title: "Clear limits",
-            body: "20 files and 25 MB per file by default, types checked (PDF, PNG, JPEG, WebP), a maximum duration per run.",
+            body: "20 files and 25 MB per file by default, the type checked from the content (PDF, PNG, JPEG, WebP), and a document too long for the model refused at once, with the reason, before anything is charged.",
           },
           {
-            title: "Cached results",
-            body: "Optional: the same file with the same schema skips the model (SHA-256 key of content and schema).",
+            title: "Runs that recover",
+            body: "A worker that stops or a database that restarts mid-run: the run starts over by itself and is charged once. A run the queue lost is failed and its credits released.",
           },
         ],
       },
@@ -445,6 +462,14 @@ export const en: Dict = {
             title: "Truncated pages flagged",
             body: "If a document exceeds the page limit, the report says how many were read.",
           },
+          {
+            title: "The pages beside the values",
+            body: "Each document's pages are shown next to its fields, rendered for the screen: a value is checked against its page at a glance.",
+          },
+          {
+            title: "Where to look",
+            body: "A field that a rule could not check is flagged, and the list names the rule: the reviewer knows where to look.",
+          },
         ],
       },
       {
@@ -467,7 +492,7 @@ export const en: Dict = {
           },
           {
             title: "Controlled throughput",
-            body: "Runs per minute per client (429), a capped queue (503), both with Retry-After.",
+            body: "Per client, runs per minute and runs in progress are capped: extra runs wait their turn and clients take turns. Past the queue's depth, the API answers 503 with Retry-After.",
           },
           {
             title: "Typed contract",
@@ -476,6 +501,14 @@ export const en: Dict = {
           {
             title: "Try it from the interface",
             body: "Start a run with the real key, exactly like an API client.",
+          },
+          {
+            title: "Safe retries",
+            body: "With an Idempotency-Key header, a retried request returns the run it already started: a network error never processes or bills a document twice.",
+          },
+          {
+            title: "Clear refusals",
+            body: "402 when the account has no credits left, 413 for a file too large, 422 with the reason for a file or a request the model cannot read.",
           },
         ],
       },
@@ -496,7 +529,79 @@ export const en: Dict = {
           { title: "Volume per day", body: "Each day leads to its runs." },
           {
             title: "Queue status",
-            body: "Runs in progress and waiting, an alert if a run stops responding.",
+            body: "Runs in progress and waiting across the platform, so a wait explains itself.",
+          },
+        ],
+      },
+      {
+        id: "operations",
+        title: "Control room",
+        lead: "What is running, what broke and how fast runs go: the page operators keep open.",
+        shot: null,
+        points: [
+          {
+            title: "Runs in flight",
+            body: "Every queued or running run with its live step, its files and how long it has been going.",
+          },
+          {
+            title: "Stop a run",
+            body: "Cancel a run from the list: its queue task stops and it is settled like any failure.",
+          },
+          {
+            title: "What broke",
+            body: "The last day's failed runs, each with its reason in plain words.",
+          },
+          {
+            title: "Throughput",
+            body: "Runs finished and failed, hour by hour, over the last 24 hours.",
+          },
+          {
+            title: "Durations",
+            body: "Median and 95th-percentile run time, and the model's share of it.",
+          },
+          {
+            title: "The whole queue",
+            body: "Runs waiting and in progress across the platform, so a wait explains itself.",
+          },
+        ],
+      },
+      {
+        id: "admin",
+        title: "Clients, users and credits",
+        lead: "One installation serves several client companies. Each sees only its own work, and pays for it with the credits you grant.",
+        shot: null,
+        points: [
+          {
+            title: "Client companies",
+            body: "A client is a group in your identity provider. Its users see only its workflows, runs and audits; a user outside every client sees nothing.",
+          },
+          {
+            title: "Users and roles",
+            body: "Invite users by email, choose their role, reset a password, disable or remove an account, all from the admin area.",
+          },
+          {
+            title: "Credits by the page",
+            body: "One credit is one page read by the model, plus a fee per run. A run holds its estimate when it starts and pays the pages actually read.",
+          },
+          {
+            title: "No surprise bills",
+            body: "A run the account cannot pay is refused before anything is uploaded, and the user is offered a way to ask for more credits.",
+          },
+          {
+            title: "Usage and spend",
+            body: "Credits, runs and pages per client, and an estimate of the GPU cost, for the period you choose.",
+          },
+          {
+            title: "Access requests",
+            body: "Prospects ask for an account from your public site, protected by Turnstile; you approve them into a client in one step.",
+          },
+          {
+            title: "An audit log",
+            body: "Every admin action, who did it, to which client and when, kept for good.",
+          },
+          {
+            title: "Shared examples",
+            body: "Example workflows every client can read and duplicate, but never change.",
           },
         ],
       },
@@ -601,6 +706,14 @@ export const en: Dict = {
             title: "Isolated admin console",
             body: "The Keycloak console has its own hostname behind Cloudflare Access; the public domain only exposes the application realm.",
           },
+          {
+            title: "Sign-ins on record",
+            body: "Sign-ins, failures and admin changes are kept 90 days; an account locks after 10 failed attempts.",
+          },
+          {
+            title: "Client companies kept apart",
+            body: "Each client company sees only its own work; a user outside every company gets no access at all.",
+          },
         ],
       },
       {
@@ -613,11 +726,11 @@ export const en: Dict = {
           },
           {
             title: "Checked uploads",
-            body: "File count, size and type verified on entry; private object storage.",
+            body: "File count, size and type verified on entry, the type read from the content, never the name; private object storage.",
           },
           {
             title: "Controlled throughput",
-            body: "A per-client limit (HTTP 429) and a capped queue (HTTP 503), with Retry-After.",
+            body: "Per client, runs per minute and runs in progress are capped and extra runs wait their turn; a capped queue answers 503 with Retry-After.",
           },
           {
             title: "Retention",
@@ -630,6 +743,14 @@ export const en: Dict = {
           {
             title: "Errors that don't leak",
             body: "Errors returned to clients describe the problem, never the system's internals.",
+          },
+          {
+            title: "Safe exports",
+            body: "A CSV cell that a spreadsheet would run as a formula is neutralised.",
+          },
+          {
+            title: "A protected public form",
+            body: "Access requests pass a Cloudflare Turnstile check and a per-network limit; only a one-way fingerprint of the address is kept.",
           },
         ],
       },
@@ -661,6 +782,14 @@ export const en: Dict = {
             title: "System updates",
             body: "Automatic security updates on the server, base images tracked and updated.",
           },
+          {
+            title: "Backups off the server",
+            body: "Every database and every document, encrypted each night to object storage; the restore is tested on the real backups.",
+          },
+          {
+            title: "Staging before production",
+            body: "Every change runs on a separate staging stack, with a real document, before a release reaches production.",
+          },
         ],
       },
       {
@@ -681,15 +810,15 @@ export const en: Dict = {
           },
           {
             title: "Pinned dependencies",
-            body: "Images by digest, CI actions by commit; Dependabot proposes every update.",
+            body: "Images by digest, CI actions by commit; Dependabot proposes every update after a few days' delay.",
           },
           {
-            title: "Central results",
-            body: "Scan results are published to the repository's security tab (SARIF).",
+            title: "Weekly scans",
+            body: "The released code is scanned again every week; an accepted finding carries its reason and an end date.",
           },
           {
             title: "Immutable releases",
-            body: "A release is a tag and a set of signed images; you deploy a release, not a branch.",
+            body: "A release promotes, by digest, the exact images staging tested; nothing is rebuilt.",
           },
         ],
       },
@@ -771,7 +900,7 @@ export const en: Dict = {
           },
           {
             title: "Pages at 170 DPI",
-            body: "Each page is rendered at the resolution the model expects, up to 99 pages per document.",
+            body: "Each page is rendered at the resolution the model expects. A document is read in one request, about 40 A4 pages at most; a longer one is refused, with the reason, before it runs.",
           },
           {
             title: "GPU on demand",
@@ -783,7 +912,7 @@ export const en: Dict = {
           },
           {
             title: "Measured",
-            body: "Warm model call: about 0.4 s for a one-page invoice; cold start: about 7 s.",
+            body: "On a 24 GB GPU: about 1.5 s for a one-page invoice, 6 to 10 s for five pages, 30 to 45 s for twenty; a start from the memory snapshot takes about 15 s.",
           },
         ],
       },
@@ -800,8 +929,8 @@ export const en: Dict = {
             body: "A run is processed once, even when several workers receive it.",
           },
           {
-            title: "Timeouts and recovery",
-            body: "Every run has a maximum duration; a run that exceeds it, or whose worker stops, is failed with the reason.",
+            title: "Recovery without a person",
+            body: "A worker that stops hands its run to another, which starts it over; a database restart is retried; a run past its time limit, or lost by the queue, is failed with the reason and its credits settled.",
           },
           {
             title: "Admission control",
@@ -809,7 +938,7 @@ export const en: Dict = {
           },
           {
             title: "Bounded concurrency",
-            body: "Simultaneous requests to the model are capped so the GPU is never overloaded, and clients take turns so one bulk upload cannot hold every worker.",
+            body: "Requests to the model and rendered pages in memory are capped, so neither the GPU nor a worker is overloaded, and clients take turns so one bulk upload cannot hold every worker.",
           },
           {
             title: "Highly available PostgreSQL",
@@ -830,12 +959,12 @@ export const en: Dict = {
             body: "OpenTelemetry from the API to the workers, collected by an OpenTelemetry Collector.",
           },
           {
-            title: "Full stack included",
-            body: "Prometheus, Grafana, Loki, Tempo and Alloy, configured.",
+            title: "Logs, errors and alerts",
+            body: "Logs searchable in Grafana (Loki, Alloy), errors with their stack trace in Bugsink, alerts on errors and on a missed backup, all on your servers.",
           },
           {
-            title: "Error tracking",
-            body: "Interface and server errors reported to a Sentry-compatible service you can host yourself.",
+            title: "Query statistics",
+            body: "Every database query is measured (pg_stat_statements), and slow ones are logged without their values, which can be client data.",
           },
           {
             title: "Health probes",
@@ -883,7 +1012,7 @@ export const en: Dict = {
       lead: "Every architecture choice has its record in the repository, with the context and the alternatives set aside.",
       items: [
         {
-          adr: "001",
+          adr: "011",
           title: "Asynchronous runs with Hatchet",
           body: "The API answers at once; Hatchet hands each run to a worker and enforces its time limits.",
         },
@@ -906,6 +1035,11 @@ export const en: Dict = {
           adr: "010",
           title: "Explicit lifecycles",
           body: "Every state of a workflow and a run, and its transitions, has a name.",
+        },
+        {
+          adr: "012",
+          title: "The hosted service on one server",
+          body: "Docker Compose on a VPS with a staging copy beside it and the model on a managed GPU; Kubernetes stays for client installations.",
         },
       ],
     },
@@ -930,7 +1064,9 @@ export const en: Dict = {
           "Docker Compose: interface, API, workers, PostgreSQL, Hatchet, storage, Keycloak, tunnel",
           "Every service with its health check and memory limit",
           "Migrations applied automatically before start-up",
-          "Deployed by the CI pipeline, signature verified, rollback in one command",
+          "Deployed by the pipeline after a staging copy, signature verified, rollback in one command",
+          "Logs, error tracking and alerts on the same server, behind your access control",
+          "Encrypted nightly backups to object storage, with a tested restore",
         ],
       },
       {
@@ -980,10 +1116,11 @@ export const en: Dict = {
         "The production Docker Compose file and its configuration template",
         "The Helm chart and production value examples",
         "CloudNativePG, External Secrets and Argo CD manifests",
-        "The observability configuration (Prometheus, Grafana, Loki, Tempo)",
+        "Logging, error tracking and alert rules, ready to run (Loki, Alloy, Grafana, Bugsink)",
+        "The encrypted backup and restore tool (restic)",
         "The model server, ready to deploy",
         "Installation, operations and troubleshooting documentation",
-        "Architecture decision records and the migration guide",
+        "Architecture decision records and lifecycle diagrams",
       ],
     },
     steps: {
@@ -1067,15 +1204,27 @@ export const en: Dict = {
           { name: "Trivy, repository", detail: "Dependencies, secrets and configuration scanned." },
           { name: "Trivy, images", detail: "Every built image is scanned." },
           { name: "Blocking", detail: "A high or critical vulnerability fails the pipeline." },
-          { name: "Code scanning", detail: "Results published as SARIF in the repository." },
+          {
+            name: "Every week",
+            detail:
+              "The scans run again each week on the released code, so a new vulnerability is found without waiting for a change.",
+          },
+          {
+            name: "Dated exceptions",
+            detail:
+              "An accepted finding carries its reason and an end date; past it, the pipeline fails again.",
+          },
         ],
       },
       {
         id: "release",
         title: "Release",
-        lead: "A version tag triggers publication, only if continuous integration is green on that commit.",
+        lead: "Every master commit is built once, signed and run on staging; a version tag promotes those exact images to production.",
         gates: [
-          { name: "Guard", detail: "No release without successful CI on the same commit." },
+          {
+            name: "Built once",
+            detail: "Images are built and signed only for a master commit whose tests passed.",
+          },
           { name: "Docker Bake", detail: "The three images built together, with cache." },
           { name: "SBOM and provenance", detail: "BuildKit attestations attached to every image." },
           {
@@ -1085,14 +1234,15 @@ export const en: Dict = {
           { name: "Helm values", detail: "Digests published for Kubernetes deployments." },
           {
             name: "Promotion",
-            detail: "A dedicated pipeline verifies signatures before promoting a release.",
+            detail:
+              "A version tag checks the master signature and adds the version to the same digests: nothing is rebuilt.",
           },
         ],
       },
       {
         id: "deploy",
         title: "Deployment",
-        lead: "A release is deployed, to a protected environment, after verification.",
+        lead: "Every release goes to staging first, then to production, checked at every step.",
         gates: [
           {
             name: "Protected environment",
@@ -1115,7 +1265,16 @@ export const en: Dict = {
             name: "Public check",
             detail: "The pipeline checks the application answers from the internet.",
           },
-          { name: "Rollback", detail: "Redeploying the previous release is the same command." },
+          { name: "Backup first", detail: "Every database is dumped before anything changes." },
+          {
+            name: "A real run",
+            detail:
+              "The pipeline sends a real document through extraction on the GPU and checks the report, the credits and the isolation.",
+          },
+          {
+            name: "Rollback",
+            detail: "Redeploying the previous release is the same command, rehearsed on staging.",
+          },
         ],
       },
     ],
@@ -1128,7 +1287,7 @@ export const en: Dict = {
         },
         {
           title: "Tracked dependencies",
-          body: "Dependabot on npm, Python, Docker, Compose and actions; everything pinned.",
+          body: "Dependabot on npm, Python, Docker, Compose and actions, with a few days' delay before a release is proposed; everything pinned.",
         },
         {
           title: "Checked documentation",
@@ -1145,6 +1304,14 @@ export const en: Dict = {
         {
           title: "Design system",
           body: "Tokens, components and interface rules documented and applied everywhere.",
+        },
+        {
+          title: "Failure drills",
+          body: "Workers killed, the database and the queue restarted mid-run, rollbacks rehearsed: on staging, with real runs.",
+        },
+        {
+          title: "Measured, not assumed",
+          body: "Queries timed on half a million runs; memory and the model's real token counts measured under load.",
         },
       ],
     },
