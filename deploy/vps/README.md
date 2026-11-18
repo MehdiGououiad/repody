@@ -402,9 +402,9 @@ Measured on 18 November 2026 on production, idle after a day of use (`docker sta
 | seaweedfs | 73 MB | 512 MB | |
 | hatchet-lite | 62 MB | 768 MB | Hatchet's engine, API and dashboard; its queue is the `hatchet` database |
 | cloudflared | 17 MB | 128 MB | |
-| bugsink | (not yet run) | 512 MB | Only with the `errors` profile ("Errors") |
-| loki, alloy, grafana | (not yet run) | 1 GB, 256 MB, 512 MB | Only with the `logs` profile ("Logs") |
-| **Total** | **≈ 1.7 GB** | 6.7 GB (9 GB with both profiles) | |
+| bugsink | 349 MB | 768 MB | Only with the `errors` profile ("Errors"); measured on staging |
+| loki, alloy, grafana | 70 MB, 62 MB, 354 MB | 1 GB, 256 MB, 768 MB | Only with the `logs` profile ("Logs"); measured on staging |
+| **Total** | **≈ 1.7 GB** (≈ 2.5 GB with both profiles) | 6.7 GB (9.5 GB with both profiles) | |
 
 The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memory free. Model calls
 go to Modal, 4 at a time (`AUDIT_INFERENCE_CONCURRENCY`, the vLLM server's `MAX_INPUTS`). Every
