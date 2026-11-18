@@ -62,12 +62,12 @@
     "@tanstack/react-query": "^5.107.1",
     "@ui-sdk/core": "0.1.0-beta.1",
     "@ui-sdk/react": "0.1.0-beta.1",
-    "better-auth": "1.7.23",
+    "better-auth": "1.7.25",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "culori": "^4.0.2",
     "dequal": "^2.0.3",
-    "lucide-react": "^1.72.0",
+    "lucide-react": "^1.73.0",
     "motion": "^14.14.0",
     "negotiator": "^1.1.0",
     "next": "16.4.6",
@@ -85,7 +85,7 @@
     "use-debounce": "^10.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.7",
+    "@biomejs/biome": "2.6.8",
     "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/typography": "^0.5.20",
