@@ -132,16 +132,46 @@ def test_user_from_token(monkeypatch, fresh_settings):
         auth.user_from_token(token("http://localhost/realms/repody", typ="ID"))
 
 
-def test_uvicorn_logs_go_through_the_json_formatter():
+def test_uvicorn_logs_are_written_once_as_json_without_health_checks(capsys):
+    import json
     import logging
 
     from repody.infra import observability
 
-    logging.getLogger("uvicorn.access").addHandler(logging.StreamHandler())
+    access = logging.getLogger("uvicorn.access")
+    access.disabled = False  # alembic.ini's fileConfig, run in-process by another test, disables it
+    access.addHandler(logging.StreamHandler())  # as uvicorn does
     observability.setup()
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
-        assert logging.getLogger(name).handlers == []
-        assert logging.getLogger(name).propagate
+    # Uvicorn's access line: client, method, path, HTTP version, status.
+    line = '%s - "%s %s HTTP/%s" %d'
+    access.info(line, "10.0.0.1:1", "GET", "/v1/workflows", "1.1", 200)
+    access.info(line, "127.0.0.1:2", "GET", "/v1/healthz", "1.1", 200)  # Docker's health check
+    access.info(line, "127.0.0.1:3", "GET", "/v1/healthz", "1.1", 503)
+    lines = capsys.readouterr().err.splitlines()
+    assert [json.loads(line)["event"] for line in lines] == [
+        '10.0.0.1:1 - "GET /v1/workflows HTTP/1.1" 200',
+        '127.0.0.1:3 - "GET /v1/healthz HTTP/1.1" 503',
+    ]
+
+
+def test_with_tracing_on_each_log_line_names_its_trace(monkeypatch, capsys):
+    import json
+    import logging
+
+    from opentelemetry import trace
+
+    from repody.infra import observability
+
+    monkeypatch.setenv("OTEL_SDK_DISABLED", "false")
+    monkeypatch.setattr(observability, "_trace_hatchet", lambda: None)
+    observability.setup()
+    span = trace.NonRecordingSpan(trace.SpanContext(trace_id=0xABC, span_id=0xDEF, is_remote=False))
+    with trace.use_span(span):
+        logging.getLogger("repody.test").info("inside")
+    logging.getLogger("repody.test").info("outside")
+    lines = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    assert lines[0]["trace_id"] == "00000000000000000000000000000abc"
+    assert "trace_id" not in lines[1]
 
 
 async def test_scale_to_zero_model_server_is_not_probed(monkeypatch, fresh_settings):

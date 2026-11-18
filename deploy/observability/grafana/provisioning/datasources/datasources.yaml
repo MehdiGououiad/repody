@@ -32,8 +32,9 @@ datasources:
         filterByTraceID: false
         filterBySpanID: false
         customQuery: true
-        # Docker labels the API container compose_service=api. The host log file uses repody-api.
-        query: '{compose_service=~"api|repody-api|worker-.+"} | json | trace_id="$${__trace.traceId}"'
+        # Docker labels the containers compose_service=api / worker; the host log file uses
+        # repody-api. The trace id is structured metadata (alloy-config.alloy).
+        query: '{compose_service=~"api|worker|repody-api"} | trace_id="$${__trace.traceId}"'
       serviceMap:
         datasourceUid: prometheus
       nodeGraph:

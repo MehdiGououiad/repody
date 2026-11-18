@@ -25,6 +25,9 @@ def setup() -> None:
         structlog.stdlib.add_logger_name,
         structlog.processors.TimeStamper(fmt="iso"),
     ]
+    tracing = os.environ.get("OTEL_SDK_DISABLED", "true") == "false"
+    if tracing:
+        shared.append(_trace_context)
     structlog.configure(
         processors=[*shared, structlog.stdlib.ProcessorFormatter.wrap_for_formatter],
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -50,13 +53,44 @@ def setup() -> None:
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(name).handlers.clear()
         logging.getLogger(name).propagate = True
+    access = logging.getLogger("uvicorn.access")
+    if not any(isinstance(f, _QuietHealthChecks) for f in access.filters):
+        access.addFilter(_QuietHealthChecks())
     # Errors only: tracing is the OpenTelemetry agent's. Leaving traces_sample_rate unset is
     # what turns Sentry tracing off (any value, even 0, enables it).
     # No local variables in reports: on the extraction path they hold uploaded files, page images
     # and extracted values (clients' documents). Tracebacks and messages are enough.
     sentry_sdk.init(environment=settings.deployment_environment, include_local_variables=False)
-    if os.environ.get("OTEL_SDK_DISABLED", "true") == "false":
+    if tracing:
         _trace_hatchet()
+
+
+def _trace_context(
+    _logger: object, _method: str, event: structlog.types.EventDict
+) -> structlog.types.EventDict:
+    """The current span's ids on each line, so Grafana opens a trace's logs (Tempo -> Loki)."""
+    # The `otel` extra, installed wherever tracing is on.
+    from opentelemetry import trace
+
+    span = trace.get_current_span().get_span_context()
+    if span.is_valid:
+        event["trace_id"] = format(span.trace_id, "032x")
+        event["span_id"] = format(span.span_id, "016x")
+    return event
+
+
+class _QuietHealthChecks(logging.Filter):
+    """Drops the access lines of answered health checks (Docker asks every 15 seconds): they
+    were most of the log. A failed one is still written."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        # Uvicorn's access record: (client, method, path, HTTP version, status).
+        args = record.args
+        if isinstance(args, tuple) and len(args) == 5:
+            path, status = str(args[2]), args[4]
+            if path.startswith("/v1/healthz") and isinstance(status, int) and status < 400:
+                return False
+        return True
 
 
 def _trace_hatchet() -> None:

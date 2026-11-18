@@ -23,6 +23,15 @@ x-hardening: &hardening
   restart: unless-stopped
   security_opt:
     - no-new-privileges:true
+  # Logs go to the server's journal, not to a file beside the container: they outlive a release
+  # (which recreates the containers) and journald caps them by size. Each line is tagged with the
+  # container's name (repody-api-1, repody-staging-api-1), its Compose service and project (which
+  # Alloy keeps and filters on). Reading them: README "Logs".
+  logging:
+    driver: journald
+    options:
+      tag: "{{.Name}}"
+      labels: com.docker.compose.service,com.docker.compose.project
 
 # The app's own containers run as non-root on a read-only filesystem and need no Linux
 # capability at all. (Postgres, Hatchet and SeaweedFS keep their images' defaults: they switch
@@ -406,7 +415,266 @@ services:
       resources:
         limits: { memory: 512M }
 
+  # Errors with their tracebacks (Sentry SDK in the API, worker and web), kept on this server:
+  # Bugsink, on its own database in the Postgres above, at ERRORS_HOST behind Cloudflare Access.
+  # Only where the "errors" profile is on (COMPOSE_PROFILES=errors in .env; README "Errors").
+  # https://www.bugsink.com/docs/docker-install/
+  bugsink-init:
+    <<: *hardening
+    profiles: [errors]
+    image: postgres:18.6-alpine@sha256:9ba53c7d41ea093baf5c1ba635ba5434c4f979880527d49bb7d9237d3193085b
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Creates Bugsink's role and database when they are missing, then exits: postgres-init only
+    # runs on an empty volume, and this stack's volume already has data. Compose interpolates
+    # every service, also those of a profile that is off, so Bugsink's settings default to empty
+    # (a stack without it needs none) and this job stops the deploy when one is missing.
+    entrypoint: ["sh", "-c"]
+    command:
+      - >-
+        : "$${BUGSINK_DB_PASSWORD:?}" "$${BUGSINK_SECRET_KEY:?}" "$${BUGSINK_ADMIN_PASSWORD:?}"
+        "$${ERRORS_HOST:?}" &&
+        { psql -v ON_ERROR_STOP=1 -h postgres -U repody -d repody -tAc
+        "SELECT 1 FROM pg_roles WHERE rolname = 'bugsink'" | grep -q 1 ||
+        psql -v ON_ERROR_STOP=1 -h postgres -U repody -d repody
+        -c "CREATE ROLE bugsink LOGIN PASSWORD '$$BUGSINK_DB_PASSWORD'"
+        -c "CREATE DATABASE bugsink OWNER bugsink"; }
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?}
+      BUGSINK_DB_PASSWORD: ${BUGSINK_DB_PASSWORD:-}
+      BUGSINK_SECRET_KEY: ${BUGSINK_SECRET_KEY:-}
+      BUGSINK_ADMIN_PASSWORD: ${BUGSINK_ADMIN_PASSWORD:-}
+      ERRORS_HOST: ${ERRORS_HOST:-}
+
+  bugsink:
+    <<: [*hardening, *no-capabilities]
+    profiles: [errors]
+    image: bugsink/bugsink:2.6.3@sha256:d19378dc3ad8fac46b2d554019540e84d607c176b3e0774a10c55458f1288fa0
+    depends_on:
+      bugsink-init:
+        condition: service_completed_successfully
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:-}
+      DATABASE_URL: postgresql://bugsink:${BUGSINK_DB_PASSWORD:-}@postgres:5432/bugsink
+      # The first sign-in; change the password in Bugsink, then this no longer matters.
+      CREATE_SUPERUSER: ${REPODY_ADMIN_EMAIL:?}:${BUGSINK_ADMIN_PASSWORD:-}
+      BASE_URL: https://${ERRORS_HOST:-}
+      # The SDKs send to http://bugsink:8000 on the stack network (BUGSINK_DSN), never through
+      # Cloudflare Access; people use ERRORS_HOST.
+      ALLOWED_HOSTS: ${ERRORS_HOST:-},bugsink
+      BEHIND_HTTPS_PROXY: "True"
+      # cloudflared sends X-Forwarded-For, not X-Real-IP (which BEHIND_HTTPS_PROXY turns on). The
+      # only callers are the stack's SDKs and people through Access, so the client IP is unused.
+      USE_X_REAL_IP: "False"
+      PORT: "8000"
+      SINGLE_USER: "True"
+      SITE_TITLE: Repody ${DEPLOYMENT_ENVIRONMENT:-production}
+      PHONEHOME: "False"
+    expose:
+      - "8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  # Searchable logs, kept 30 days on this server: Alloy reads this stack's lines from the journal,
+  # Loki stores them, Grafana shows them at LOGS_HOST behind Cloudflare Access. Only where the
+  # "logs" profile is on (README "Logs"). No traces or metrics here: tracing is off in production
+  # (OTEL_SDK_DISABLED) and nothing exports metrics, so Tempo and Prometheus would hold nothing.
+  # https://grafana.com/docs/loki/latest/ · https://grafana.com/docs/alloy/latest/
+  loki:
+    <<: [*hardening, *no-capabilities]
+    profiles: [logs]
+    image: grafana/loki:3.7.9@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28
+    command: ["-config.file=/etc/loki/config.yaml"]
+    configs:
+      - source: loki
+        target: /etc/loki/config.yaml
+    volumes:
+      - loki-data:/loki
+    expose:
+      - "3100"
+    healthcheck:
+      test: ["CMD", "/usr/bin/loki", "-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { memory: 1G }
+
+  # Reads the journal (read only, the guard's one allowed host path) as root without any
+  # capability: the journal files belong to root. It keeps only this Compose project's lines.
+  alloy:
+    <<: [*hardening, *no-capabilities]
+    profiles: [logs]
+    image: grafana/alloy:v1.21.3@sha256:8ab871206bd2d8f89277f53abffee5f452a293980788d52f85fa183a87a505a4
+    command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
+    depends_on:
+      loki:
+        condition: service_healthy
+    configs:
+      - source: alloy
+        target: /etc/alloy/config.alloy
+    volumes:
+      - type: bind
+        source: /var/log/journal
+        target: /var/log/journal
+        read_only: true
+      - type: bind
+        source: /etc/machine-id
+        target: /etc/machine-id
+        read_only: true
+      # Where it stopped reading: a restart neither skips nor repeats lines.
+      - alloy-data:/var/lib/alloy/data
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  grafana:
+    <<: [*hardening, *no-capabilities]
+    profiles: [logs]
+    image: grafana/grafana:13.3.0@sha256:488984b716c0862639f91a698adbe2862677a5a07bad42da5f03f3030883b205
+    depends_on:
+      loki:
+        condition: service_healthy
+    # Refuses to start without its admin password (Grafana's own default is admin/admin).
+    entrypoint: ["sh", "-c", ': "$${GF_SECURITY_ADMIN_PASSWORD:?}" && exec /run.sh']
+    environment:
+      GF_SERVER_ROOT_URL: https://${LOGS_HOST:-localhost}
+      GF_SECURITY_ADMIN_USER: ${REPODY_ADMIN_EMAIL:?}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_SECURITY_COOKIE_SECURE: "true"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+    configs:
+      - source: grafana-datasources
+        target: /etc/grafana/provisioning/datasources/loki.yaml
+    volumes:
+      - grafana-data:/var/lib/grafana
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
 configs:
+  # https://grafana.com/docs/loki/latest/configure/ (single binary, filesystem); retention:
+  # https://grafana.com/docs/loki/latest/operations/storage/retention/
+  loki:
+    content: |
+      auth_enabled: false
+      server:
+        http_listen_port: 3100
+      common:
+        path_prefix: /loki
+        storage:
+          filesystem:
+            chunks_directory: /loki/chunks
+            rules_directory: /loki/rules
+        replication_factor: 1
+        ring:
+          kvstore:
+            store: inmemory
+      schema_config:
+        configs:
+          - from: 2026-11-01
+            store: tsdb
+            object_store: filesystem
+            schema: v13
+            index:
+              prefix: index_
+              period: 24h
+      compactor:
+        working_directory: /loki/compactor
+        retention_enabled: true
+        delete_request_store: filesystem
+      limits_config:
+        retention_period: 720h
+        allow_structured_metadata: true
+      analytics:
+        reporting_enabled: false
+  # This project's containers only (the journald labels in x-hardening); the JSON level becomes a
+  # label, the trace id structured metadata.
+  # https://grafana.com/docs/alloy/latest/reference/components/loki/loki.source.journal/
+  alloy:
+    content: |
+      loki.relabel "journal" {
+        forward_to = []
+        rule {
+          source_labels = ["__journal_com_docker_compose_service"]
+          target_label  = "service"
+        }
+        rule {
+          source_labels = ["__journal_container_name"]
+          target_label  = "container"
+        }
+      }
+      loki.source.journal "stack" {
+        matches       = "COM_DOCKER_COMPOSE_PROJECT=${COMPOSE_PROJECT_NAME:-repody}"
+        relabel_rules = loki.relabel.journal.rules
+        labels        = {environment = "${DEPLOYMENT_ENVIRONMENT:-production}"}
+        forward_to    = [loki.process.json.receiver]
+      }
+      loki.process "json" {
+        stage.json {
+          expressions = {
+            level    = "level",
+            trace_id = "trace_id",
+          }
+        }
+        stage.labels {
+          values = {
+            level = "",
+          }
+        }
+        stage.structured_metadata {
+          values = {
+            trace_id = "",
+          }
+        }
+        forward_to = [loki.write.local.receiver]
+      }
+      loki.write "local" {
+        endpoint {
+          url = "http://loki:3100/loki/api/v1/push"
+        }
+      }
+  grafana-datasources:
+    content: |
+      apiVersion: 1
+      datasources:
+        - name: Loki
+          uid: loki
+          type: loki
+          access: proxy
+          url: http://loki:3100
+          isDefault: true
+          jsonData:
+            maxLines: 5000
   # Creates Keycloak's and Hatchet's databases and roles on the first start of an empty
   # Postgres volume.
   postgres-init:
@@ -431,3 +699,6 @@ volumes:
   hatchet-config:
   hatchet-token:
   seaweedfs-data:
+  loki-data:
+  alloy-data:
+  grafana-data:
