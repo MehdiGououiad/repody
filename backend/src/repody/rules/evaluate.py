@@ -52,16 +52,24 @@ class RuleOutcome:
     affected_fields: list[str]
 
 
+def _text(value: str) -> str:
+    """Text as rules compare it: case and runs of spaces ignored (``ACME  SARL`` is ``Acme SARL``),
+    as the same company is often written both ways on two documents."""
+    return " ".join(value.split()).casefold()
+
+
 def _equal(left: Any, right: Any) -> bool:
     if is_number(left) and is_number(right):
         return math.isclose(left, right, rel_tol=1e-9, abs_tol=1e-9)
+    if isinstance(left, str) and isinstance(right, str):
+        return _text(left) == _text(right)
     return left == right
 
 
 def _contains(left: Any, right: Any) -> bool:
-    """``IN``: one of the listed values, or part of a text field's value."""
+    """``IN``: one of the listed values, or part of a text field's value (case ignored)."""
     if isinstance(right, str):
-        return str(left) in right
+        return _text(str(left)) in _text(right)
     return any(_equal(left, value) for value in right)
 
 

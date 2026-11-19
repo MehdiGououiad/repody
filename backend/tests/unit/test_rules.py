@@ -259,6 +259,18 @@ def test_in_with_one_value_is_membership_not_a_substring_or_an_error():
     assert check(cond(field("w"), "IN", text("pear, apple")), words) is True
 
 
+def test_text_compares_without_case_or_extra_spaces():
+    names = {"seller": ("Acme SARL", "verbatim-string"), "vendor": ("ACME  sarl ", "string")}
+    assert check(cond(field("seller"), "==", field("vendor")), names) is True
+    assert check(cond(field("seller"), "!=", text("acme sarl")), names) is False
+    assert check(cond(field("seller"), "==", text("Acme SA")), names) is False
+    currency = {"cur": ("USD", "currency")}
+    assert check(cond(field("cur"), "IN", text("usd, eur")), currency) is True
+    assert check(cond(field("cur"), "NOT_IN", text("Usd")), currency) is False
+    labels = {"name": ("acme", "string"), "label": ("ACME Corp", "string")}
+    assert check(cond(field("name"), "IN", field("label")), labels) is True
+
+
 def test_dates_and_times_compare_as_dates_not_text():
     when = {"t": ("2024-01-02T10:00:00+05:00", "date-time")}  # 05:00 UTC
     assert check(cond(field("t"), ">", text("2024-01-02T06:00:00Z")), when) is False
