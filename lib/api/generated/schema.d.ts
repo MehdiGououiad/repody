@@ -1144,7 +1144,7 @@ export interface components {
             description: string;
             /**
              * Type
-             * @description NuExtract template type the value follows.
+             * @description Repody VLM template type the value follows.
              */
             type: string;
             /**
@@ -1731,7 +1731,7 @@ export interface components {
         };
         /**
          * IclExample
-         * @description A NuExtract in-context example: input text and the JSON it should produce.
+         * @description An in-context example for Repody VLM: input text and the JSON it should produce.
          */
         IclExample: {
             /** Input */
@@ -2057,9 +2057,9 @@ export interface components {
         };
         /**
          * SchemaField
-         * @description One NuExtract template field.
+         * @description One field of the Repody VLM template.
          *
-         *     ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+         *     ``template_type`` is a leaf type (``verbatim-string``, ``number``, …),
          *     ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
          *     ``object-array`` (with ``children``).
          */
@@ -2088,9 +2088,9 @@ export interface components {
         };
         /**
          * SchemaField
-         * @description One NuExtract template field.
+         * @description One field of the Repody VLM template.
          *
-         *     ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+         *     ``template_type`` is a leaf type (``verbatim-string``, ``number``, …),
          *     ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
          *     ``object-array`` (with ``children``).
          */

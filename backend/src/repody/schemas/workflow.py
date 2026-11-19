@@ -27,9 +27,9 @@ MAX_EXAMPLE_CHARS = 20_000
 
 
 class SchemaField(CamelModel):
-    """One NuExtract template field.
+    """One field of the Repody VLM template.
 
-    ``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, …),
+    ``template_type`` is a leaf type (``verbatim-string``, ``number``, …),
     ``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /
     ``object-array`` (with ``children``).
     """
@@ -49,7 +49,7 @@ class SchemaField(CamelModel):
 
 
 class IclExample(CamelModel):
-    """A NuExtract in-context example: input text and the JSON it should produce."""
+    """An in-context example for Repody VLM: input text and the JSON it should produce."""
 
     input: Annotated[str, StringConstraints(max_length=MAX_EXAMPLE_CHARS)]
     output: Annotated[str, StringConstraints(max_length=MAX_EXAMPLE_CHARS)]
