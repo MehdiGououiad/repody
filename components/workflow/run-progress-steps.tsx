@@ -1,6 +1,13 @@
 "use client";
 
 import {
+  Progress,
+  ProgressIndicator,
+  ProgressLabel,
+  ProgressTrack,
+  ProgressValue,
+} from "@ui-sdk/react/progress";
+import {
   Check,
   Clock,
   Cpu,
@@ -19,9 +26,6 @@ import { cn, formatDurationMs } from "@/lib/utils";
 
 type Step = RunProgress["steps"][number];
 
-/** A start from the snapshot takes 5–15 s (deploy/modal/README.md): the bar eases towards it. */
-const COLD_START_ESTIMATE_S = 15;
-
 const KIND_ICON: Record<Step["kind"], LucideIcon> = {
   queue: Users,
   model: Cpu,
@@ -32,7 +36,6 @@ const KIND_ICON: Record<Step["kind"], LucideIcon> = {
 
 const spring = { type: "spring", stiffness: 420, damping: 28 } as const;
 
-/** Milliseconds since the active step started (restarts when another step becomes active). */
 function useElapsed(activeStepId: string | undefined): number {
   const [elapsed, setElapsed] = useState({ id: activeStepId, ms: 0 });
   useEffect(() => {
@@ -47,7 +50,6 @@ function useElapsed(activeStepId: string | undefined): number {
   return elapsed.id === activeStepId ? elapsed.ms : 0;
 }
 
-/** The step's dot on the rail: a ring, a pulsing dot while it runs, a tick or a cross. */
 function Node({ step }: { step: Step }) {
   const failed = step.status === "done" && step.failed;
   return (
@@ -99,7 +101,6 @@ function Node({ step }: { step: Step }) {
   );
 }
 
-/** The rail between two steps, filling downwards once the step above is done. */
 function Connector({ done }: { done: boolean }) {
   return (
     <span className="absolute left-[11px] top-7 bottom-[-6px] w-0.5 overflow-hidden rounded-full bg-line">
@@ -113,21 +114,16 @@ function Connector({ done }: { done: boolean }) {
   );
 }
 
-/** Work in progress with no known end: a highlight sweeping across a thin track. */
-function Sweep() {
+function Sweep({ label }: { label: string }) {
   return (
-    <span className="relative mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent/10">
-      <motion.span
-        className="absolute inset-y-0 w-1/3 rounded-full    "
-        initial={{ x: "-100%" }}
-        animate={{ x: "300%" }}
-        transition={{ duration: 1.3, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-      />
-    </span>
+    <Progress value={null} aria-label={label} className="mt-2">
+      <ProgressTrack className="relative h-1 w-full overflow-hidden rounded-full bg-accent/10">
+        <ProgressIndicator className="block h-full rounded-full bg-accent data-indeterminate:w-1/3 data-indeterminate:animate-[sweep_1.3s_ease-in-out_infinite] motion-reduce:data-indeterminate:w-full motion-reduce:data-indeterminate:animate-none" />
+      </ProgressTrack>
+    </Progress>
   );
 }
 
-/** The GPU starting after idle time: what is happening, why, and how long it usually takes. */
 function ColdStart({ elapsedMs }: { elapsedMs: number }) {
   const t = useTranslations("runProgress");
   return (
@@ -168,20 +164,16 @@ function ColdStart({ elapsedMs }: { elapsedMs: number }) {
           </span>
         </div>
         <p className="mt-2.5 text-2xs leading-relaxed text-ink-3">{t("steps.modelWakingHint")}</p>
-        <span className="mt-2.5 block h-1.5 w-full overflow-hidden rounded-full bg-accent/10">
-          <motion.span
-            className="block h-full rounded-full bg-accent"
-            initial={{ width: "4%" }}
-            animate={{ width: "92%" }}
-            transition={{ duration: COLD_START_ESTIMATE_S, ease: [0.1, 0.6, 0.3, 1] }}
-          />
-        </span>
+        <Progress value={null} aria-label={t("steps.modelWaking")} className="mt-2.5">
+          <ProgressTrack className="relative h-1.5 w-full overflow-hidden rounded-full bg-accent/10">
+            <ProgressIndicator className="block h-full rounded-full bg-accent data-indeterminate:w-1/3 data-indeterminate:animate-[sweep_1.6s_ease-in-out_infinite] motion-reduce:data-indeterminate:w-full motion-reduce:data-indeterminate:animate-none" />
+          </ProgressTrack>
+        </Progress>
       </div>
     </motion.div>
   );
 }
 
-/** A step's name in the reader's language: "Waking the model", "Extract · Invoice"… */
 export function useStepTitle() {
   const t = useTranslations("runProgress");
   return (step: Step) => {
@@ -204,9 +196,11 @@ export function useStepTitle() {
 
 export function RunProgressSteps({
   progress,
+  totalElapsedMs,
   className,
 }: {
   progress: RunProgress;
+  totalElapsedMs?: number;
   className?: string;
 }) {
   const t = useTranslations("runProgress");
@@ -242,41 +236,42 @@ export function RunProgressSteps({
           ) : null}
         </AnimatePresence>
 
-        <div className="rounded-lg px-1 py-1">
+        <Progress
+          value={steps.length ? doneCount : null}
+          max={Math.max(steps.length, 1)}
+          className="rounded-lg px-1 py-1"
+        >
           <div className="flex items-center justify-between gap-2 text-xs">
-            <div className="relative h-4 min-w-0 flex-1 overflow-hidden">
+            <ProgressLabel className="relative h-4 min-w-0 flex-1 overflow-hidden">
               <AnimatePresence mode="popLayout" initial={false}>
-                <motion.p
+                <motion.span
                   key={current}
-                  className="truncate font-medium text-ink"
+                  className="block truncate font-medium text-ink"
                   initial={{ y: 14, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: -14, opacity: 0 }}
                   transition={{ duration: 0.25 }}
                 >
                   {current}
-                </motion.p>
+                </motion.span>
               </AnimatePresence>
-            </div>
-            <span className="shrink-0 tabular-nums text-ink-3/70">
-              {doneCount}/{steps.length}
+            </ProgressLabel>
+            <span className="flex shrink-0 items-center gap-2 tabular-nums text-ink-3/70">
+              {totalElapsedMs ? <span>{formatDurationMs(totalElapsedMs)}</span> : null}
+              <ProgressValue>{`${doneCount}/${steps.length}`}</ProgressValue>
             </span>
           </div>
-          <span className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent/10">
-            <motion.span
-              className="block h-full rounded-full bg-accent"
-              initial={false}
-              animate={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}
-              transition={{ type: "spring", stiffness: 120, damping: 20 }}
-            />
-          </span>
-        </div>
+          <ProgressTrack className="mt-2 block h-1 w-full overflow-hidden rounded-full bg-accent/10">
+            <ProgressIndicator className="block h-full rounded-full bg-accent transition-[width] duration-300 ease-out data-indeterminate:w-1/3 data-indeterminate:animate-[sweep_1.3s_ease-in-out_infinite] motion-reduce:transition-none" />
+          </ProgressTrack>
+        </Progress>
 
         <ol className="max-h-[30rem] space-y-1.5 overflow-y-auto pr-1">
           {steps.map((step, index) => {
             const Icon = KIND_ICON[step.kind];
             const active = step.status === "active";
             const failed = step.status === "done" && step.failed;
+            const stepTitle = title(step);
             return (
               <motion.li
                 key={step.id}
@@ -309,7 +304,7 @@ export function RunProgressSteps({
                           active ? "text-accent-ink" : "text-ink-3"
                         )}
                       />
-                      {title(step)}
+                      {stepTitle}
                     </p>
                     <AnimatePresence mode="wait" initial={false}>
                       {step.durationMs ? (
@@ -359,7 +354,7 @@ export function RunProgressSteps({
                     ) : null}
                   </AnimatePresence>
                   {active && !(step.kind === "model" && step.coldStart) && step.kind !== "queue" ? (
-                    <Sweep />
+                    <Sweep label={stepTitle} />
                   ) : null}
                 </div>
               </motion.li>

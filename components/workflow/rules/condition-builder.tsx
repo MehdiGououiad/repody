@@ -10,19 +10,20 @@ import type { FieldOption, TableOption } from "@/lib/rules/document-fields";
 import type { RuleCondition } from "@/lib/types";
 import { newCondition } from "@/lib/workflow/new-items";
 
-/** The conditions of a rule, joined by "and", each with the check the API will run under it. */
 export function ConditionBuilder({
   conditions,
   fields,
   tables,
   checks,
   onConditionsChange,
+  onSwitchFieldToNumber,
 }: {
   conditions: RuleCondition[];
   fields: FieldOption[];
   tables: TableOption[];
   checks: string[];
   onConditionsChange: (conditions: RuleCondition[]) => void;
+  onSwitchFieldToNumber?: (fieldName: string) => void;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
   const incomplete = conditions.some(isTouched) && !checks.some(Boolean);
@@ -41,11 +42,9 @@ export function ConditionBuilder({
               onConditionsChange(conditions.map((c) => (c.id === condition.id ? next : c)))
             }
             onRemove={() => onConditionsChange(conditions.filter((c) => c.id !== condition.id))}
+            onSwitchFieldToNumber={onSwitchFieldToNumber}
             canRemove={conditions.length > 1}
           />
-          {checks[index] ? (
-            <code className="break-all font-mono text-xs text-ink-4">{checks[index]}</code>
-          ) : null}
         </div>
       ))}
       {incomplete ? <p className="text-xs text-warn-ink">{t("expressionIncomplete")}</p> : null}

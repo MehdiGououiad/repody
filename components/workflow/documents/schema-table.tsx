@@ -22,12 +22,12 @@ import type { SchemaField } from "@/lib/types";
 import { cn, formatExtractedFieldValue } from "@/lib/utils";
 import { newSchemaField } from "@/lib/workflow/new-items";
 
-/** What the last extraction found for a field: its value, or nothing. */
 export type FieldResult = { extracted: boolean; value: unknown };
 
-const ROW_GRID = "grid grid-cols-[14px_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-2";
+const ROW_BASE = "grid grid-cols-[minmax(0,1fr)_9.5rem_28px_24px] items-center gap-x-1.5";
+const ROW_WITH_RESULTS =
+  "grid grid-cols-[14px_minmax(0,1fr)_9rem_28px_minmax(0,0.9fr)_24px] items-center gap-x-1.5";
 
-/** A field's value from the sample, landing with a short status wash. */
 function FieldValue({ result, stale }: { result: FieldResult | undefined; stale: boolean }) {
   const t = useTranslations("workflows.builder.schema");
   const locale = useLocale();
@@ -59,6 +59,7 @@ function FieldValue({ result, stale }: { result: FieldResult | undefined; stale:
 function SchemaFieldRow({
   field,
   duplicate,
+  showResults,
   result,
   stale,
   focusName,
@@ -67,7 +68,7 @@ function SchemaFieldRow({
 }: {
   field: SchemaField;
   duplicate: boolean;
-  /** A field just added: its name takes the focus. */
+  showResults: boolean;
   focusName: boolean;
   result: FieldResult | undefined;
   stale: boolean;
@@ -75,7 +76,7 @@ function SchemaFieldRow({
   onRemove: () => void;
 }) {
   const t = useTranslations("workflows.builder.schema");
-  const missing = result && !result.extracted && !stale;
+  const missing = Boolean(result && !result.extracted && !stale);
   return (
     <motion.li
       layout="position"
@@ -85,27 +86,47 @@ function SchemaFieldRow({
       transition={{ duration: 0.18, ease: EASE_OUT }}
       className={cn("group relative px-2 py-1.5", missing && "bg-warn-wash/40")}
     >
-      <div className={ROW_GRID}>
-        <StatusGlyph
-          status={!result || stale ? "waiting" : result.extracted ? "passed" : "warning"}
-          className="justify-self-center"
-        />
-        <div className="flex min-w-0 items-center gap-1">
-          <BareInput
-            value={field.name}
-            onChange={(e) => onUpdate({ name: e.target.value })}
-            placeholder={t("namePlaceholder")}
-            aria-label={t("name")}
-            autoFocus={focusName}
-            aria-invalid={duplicate}
-            className={cn(CELL_INPUT, "font-mono text-xs", duplicate && "text-fail-ink")}
+      <div className={showResults ? ROW_WITH_RESULTS : ROW_BASE}>
+        {showResults ? (
+          <StatusGlyph
+            status={!result || stale ? "waiting" : result.extracted ? "passed" : "warning"}
+            className="justify-self-center"
           />
-        </div>
-        <div className="flex min-w-0 items-center justify-end gap-1">
-          <FieldValue result={result} stale={stale} />
-        </div>
+        ) : null}
+        <BareInput
+          value={field.name}
+          onChange={(e) => onUpdate({ name: e.target.value })}
+          placeholder={t("namePlaceholder")}
+          aria-label={t("name")}
+          autoFocus={focusName}
+          aria-invalid={duplicate}
+          className={cn(CELL_INPUT, "font-mono text-xs", duplicate && "text-fail-ink")}
+        />
+        <TemplateTypeSelect
+          value={field.templateType}
+          onChange={(templateType) => onUpdate({ templateType })}
+          className="h-7 text-xs"
+        />
+        <ListToggle
+          value={field.templateType}
+          onChange={(templateType) => onUpdate({ templateType })}
+        />
+        {showResults ? (
+          <div className="flex min-w-0 items-center justify-end">
+            <FieldValue result={result} stale={stale} />
+          </div>
+        ) : null}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          className="text-ink-4 hover:text-fail-ink pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100"
+          onClick={onRemove}
+          aria-label={t("removeField", { name: field.name || t("namePlaceholder") })}
+        >
+          <X />
+        </Button>
       </div>
-      <div className="ms-[22px] mt-0.5 grid grid-cols-[minmax(0,1fr)_minmax(0,10rem)_28px_28px] items-center gap-1">
+      <div className={cn("mt-0.5 pe-7", showResults && "ms-[20px]")}>
         <BareInput
           value={field.description}
           onChange={(e) => onUpdate({ description: e.target.value })}
@@ -117,36 +138,13 @@ function SchemaFieldRow({
             missing && "placeholder:text-warn-ink"
           )}
         />
-        <TemplateTypeSelect
-          value={field.templateType}
-          onChange={(templateType) => onUpdate({ templateType })}
-          className="h-6 text-xs"
-        />
-        <ListToggle
-          value={field.templateType}
-          onChange={(templateType) => onUpdate({ templateType })}
-        />
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="text-ink-4 hover:text-fail-ink pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100"
-          onClick={onRemove}
-          aria-label={t("removeField", { name: field.name || t("namePlaceholder") })}
-        >
-          <X />
-        </Button>
-      </div>
-      {duplicate ? (
-        <p className="ms-[22px] px-2 text-xs text-fail-ink">{t("duplicateName")}</p>
-      ) : null}
-      <div className="ms-[22px]">
+        {duplicate ? <p className="px-2 text-xs text-fail-ink">{t("duplicateName")}</p> : null}
         <SchemaFieldExtraConfig field={field} onUpdate={onUpdate} />
       </div>
     </motion.li>
   );
 }
 
-/** The fields to read from a document: name, value found in the sample, description, type. */
 export function SchemaTable({
   schema,
   results,
@@ -161,6 +159,7 @@ export function SchemaTable({
   const t = useTranslations("workflows.builder.schema");
   const [importOpen, setImportOpen] = useState(false);
   const [addedId, setAddedId] = useState<string | null>(null);
+  const showResults = results !== undefined;
   const duplicates = useMemo(() => {
     const keys = schema.map((field) => fieldKey(field.name)).filter(Boolean);
     return new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
@@ -176,10 +175,18 @@ export function SchemaTable({
         hasExistingFields={schema.some((f) => f.name.trim())}
         onImport={(fields, mode) => onChange(mode === "append" ? [...schema, ...fields] : fields)}
       />
-      <div className={cn("h-7 border-b border-line px-2 text-xs font-medium text-ink-4", ROW_GRID)}>
-        <span />
+      <div
+        className={cn(
+          "h-7 border-b border-line px-2 text-xs font-medium text-ink-4",
+          showResults ? ROW_WITH_RESULTS : ROW_BASE
+        )}
+      >
+        {showResults ? <span /> : null}
         <span className="px-2">{t("name")}</span>
-        <span className="px-1.5 text-end">{t("valueColumn")}</span>
+        <span className="px-2">{t("type")}</span>
+        <span />
+        {showResults ? <span className="px-1.5 text-end">{t("valueColumn")}</span> : null}
+        <span />
       </div>
       {schema.length ? (
         <ul className="divide-y divide-line">
@@ -189,6 +196,7 @@ export function SchemaTable({
                 key={field.id}
                 field={field}
                 duplicate={duplicates.has(fieldKey(field.name))}
+                showResults={showResults}
                 result={results?.get(fieldKey(field.name))}
                 stale={staleFields?.has(field.id) ?? false}
                 focusName={field.id === addedId}

@@ -32,20 +32,20 @@ import { ScopeToggle } from "./scope-toggle";
 
 const LABEL = "w-24 shrink-0 pt-1.5 text-xs text-ink-3";
 
-/** One rule, read as a sentence: on these documents, when these conditions, if it fails. */
 export function RuleCard({
   rule,
   documents,
   validation,
   result,
+  onSwitchFieldToNumber,
   onChange,
   onRemove,
 }: {
   rule: WorkflowRule;
   documents: DocumentDef[];
   validation?: RuleCheck;
-  /** This rule's result in the last extraction of the samples. */
   result?: RunAuditRule;
+  onSwitchFieldToNumber?: (fieldName: string) => void;
   onChange: (patch: Partial<WorkflowRule>) => void;
   onRemove: () => void;
 }) {
@@ -99,7 +99,7 @@ export function RuleCard({
           <span
             title={result.detail || undefined}
             className={cn(
-              "hidden h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium lg:inline-flex",
+              "inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium",
               result.status === "passed" && "bg-pass-wash text-pass-ink",
               result.status === "failed" && "bg-fail-wash text-fail-ink",
               result.status === "skipped" && "bg-selected text-ink-3"
@@ -183,6 +183,7 @@ export function RuleCard({
               fields={fields}
               tables={tables}
               checks={validation?.checks ?? []}
+              onSwitchFieldToNumber={onSwitchFieldToNumber}
               onConditionsChange={(conditions) => onChange({ conditions })}
             />
             {issues.length ? (

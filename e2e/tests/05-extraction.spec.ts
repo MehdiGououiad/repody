@@ -22,38 +22,45 @@ test.describe("Extraction", () => {
     await dropWorkflow(request, workflow.id);
   });
 
-  test("a sample is read, values land in the fields, rules judge the sample", async ({ page }) => {
+  test("a sample is read in Test & deploy, values land in Fields, rules judge the sample", async ({
+    page,
+  }) => {
     const watch = watchErrors(page);
     await openBuilder(page, workflow.id);
-    const extract = page.getByRole("button", { name: /^Extract/ });
-    await expect(extract).toBeDisabled();
 
+    // Drop a sample in Fields; it carries over to Test & deploy.
     await page.locator('input[type="file"]').first().setInputFiles(SAMPLE_DOCUMENT);
     await expect(page.getByText("Facture.pdf")).toBeVisible();
-    await expect(extract).toBeEnabled();
     await expect(page.getByRole("tab", { name: /Invoice/ })).toBeVisible();
 
-    await page.keyboard.press("Control+Enter");
-    await expect(page.getByRole("button", { name: /Extracting/ })).toBeVisible();
-    await expect(page.getByText(/\d+ of \d+ found/)).toBeVisible({ timeout: 540_000 });
+    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    await expect(page.getByText("Facture.pdf")).toBeVisible();
+    const extract = page.getByRole("button", { name: /Extract and validate/ });
+    await expect(extract).toBeEnabled();
 
-    // At least one field shows the value read from the invoice.
+    await extract.click();
+    await expect(page.getByRole("button", { name: /Running/ }).first()).toBeVisible();
+    const openReport = page.getByRole("link", { name: "Open report" }).first();
+    await expect(openReport).toBeVisible({ timeout: 540_000 });
+
+    // The report opens in a new tab.
+    const tab = page.waitForEvent("popup");
+    await openReport.click();
+    const report = await tab;
+    await expect(report).toHaveURL(/\/audits\/[^/]+$/);
+    await expect(report.getByText("Facture.pdf").first()).toBeVisible();
+
+    // The rules step shows how each rule did on the sample.
+    await page.getByRole("tab", { name: /Rules/ }).click();
+    await expect(page.getByText(/(Holds|Fails) on the sample|Not evaluated/).first()).toBeVisible();
+
+    // Back in Fields, extracted values appear next to the fields.
+    await page.getByRole("tab", { name: /Fields/ }).click();
+    await expect(page.getByText(/\d+ of \d+ found/)).toBeVisible();
     const invoice = page.getByRole("region", { name: "Invoice" });
     const values = invoice.locator("li").filter({ hasNotText: "—" });
     await expect(values.first()).toBeVisible();
 
-    // The rules step says how each rule did on the sample.
-    await page.getByRole("tab", { name: /Rules/ }).click();
-    await expect(page.getByText(/(Holds|Fails) on the sample|Not evaluated/).first()).toBeVisible();
-
-    // Publish shows the last extraction; its report opens in a new tab (the sample stays here).
-    await page.getByRole("tab", { name: /Publish/ }).click();
-    await expect(page.getByRole("heading", { name: "Last extraction" })).toBeVisible();
-    const tab = page.waitForEvent("popup");
-    await page.getByRole("link", { name: "Open report" }).first().click();
-    const report = await tab;
-    await expect(report).toHaveURL(/\/audits\/[^/]+$/);
-    await expect(report.getByText("Facture.pdf").first()).toBeVisible();
     watch.expectNoErrors();
   });
 });

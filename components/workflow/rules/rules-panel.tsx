@@ -8,16 +8,17 @@ import type { DocumentDef, RunAuditRule, WorkflowRule } from "@/lib/types";
 import { newRule } from "@/lib/workflow/new-items";
 import { RuleCard } from "./rule-card";
 
-/** The checks every run must pass, on one document or across two. */
 export function RulesPanel({
   rules,
   documents,
   results,
+  onSwitchFieldToNumber,
   onChange,
 }: {
   rules: WorkflowRule[];
   documents: DocumentDef[];
   results?: RunAuditRule[];
+  onSwitchFieldToNumber?: (fieldName: string) => void;
   onChange: (rules: WorkflowRule[]) => void;
 }) {
   const t = useTranslations("workflows.builder.rules");
@@ -40,6 +41,7 @@ export function RulesPanel({
               documents={documents}
               validation={validationById[rule.id]}
               result={results?.find((r) => r.ruleId === rule.id)}
+              onSwitchFieldToNumber={onSwitchFieldToNumber}
               onChange={(patch) => updateRule(rule.id, patch)}
               onRemove={() => onChange(rules.filter((r) => r.id !== rule.id))}
             />

@@ -1,5 +1,6 @@
 "use client";
 
+import { Progress, ProgressIndicator, ProgressLabel, ProgressTrack } from "@ui-sdk/react/progress";
 import { ArrowUpRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
@@ -8,9 +9,17 @@ import { ReportBody, ReportVerdict } from "@/components/audit/report";
 import { Button } from "@/components/ui/button";
 import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
 import type { RunView } from "@/lib/api/runs";
+import { formatDurationMs } from "@/lib/utils";
 
-/** The live run timeline while it runs, then the report; nothing before the first run. */
-export function TestRunResults({ run, starting }: { run: RunView; starting: boolean }) {
+export function TestRunResults({
+  run,
+  starting,
+  elapsedMs = 0,
+}: {
+  run: RunView;
+  starting: boolean;
+  elapsedMs?: number;
+}) {
   const t = useTranslations("workflows.builder.test");
   const phase = starting ? "running" : run.phase;
   if (phase === "idle" || phase === "failed") return null;
@@ -23,12 +32,22 @@ export function TestRunResults({ run, starting }: { run: RunView; starting: bool
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            className="max-w-md"
+            className="max-w-lg rounded-xl bg-panel p-4 shadow-[0_0_0_1px_var(--line)]"
           >
             {run.phase === "running" && run.progress ? (
-              <RunProgressSteps progress={run.progress} />
+              <RunProgressSteps progress={run.progress} totalElapsedMs={elapsedMs} />
             ) : (
-              <p className="text-sm text-ink-3">{t("progress.starting")}</p>
+              <Progress value={null} className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <ProgressLabel className="font-medium text-ink">
+                    {t("progress.starting")}
+                  </ProgressLabel>
+                  <span className="tabular-nums text-ink-3">{formatDurationMs(elapsedMs)}</span>
+                </div>
+                <ProgressTrack className="relative h-1.5 w-full overflow-hidden rounded-full bg-accent/10">
+                  <ProgressIndicator className="block h-full rounded-full bg-accent data-indeterminate:w-1/3 data-indeterminate:animate-[sweep_1.3s_ease-in-out_infinite] motion-reduce:data-indeterminate:w-full motion-reduce:data-indeterminate:animate-none" />
+                </ProgressTrack>
+              </Progress>
             )}
           </motion.div>
         ) : null}

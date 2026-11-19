@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { Button } from "@/components/ui/button";
+import { SegmentedControl, SegmentedControlOption } from "@/components/ui/segmented-control";
 import {
   Select,
   SelectContent,
@@ -16,7 +16,6 @@ import type { LiteralInputKind } from "@/lib/rules/operators";
 import type { ConditionOperand, FieldRef } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** A select of schema fields (or columns), showing each one's type. */
 export function FieldSelect({
   value,
   options,
@@ -31,8 +30,6 @@ export function FieldSelect({
   className?: string;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
-  // A stored name that no longer fits (renamed field, changed type) still shows, so the rule's
-  // check error points at something visible.
   // An unqualified name (`total`) still matches its qualified option (`Invoice.total`): the
   // API reads both, and a rule written before a second document was added keeps working.
   const match =
@@ -56,12 +53,17 @@ export function FieldSelect({
       </SelectTrigger>
       <SelectContent>
         {stale ? (
-          <SelectItem value={value} className="font-mono text-xs text-fail-ink">
+          <SelectItem value={value} label={value} className="font-mono text-xs text-fail-ink">
             {value}
           </SelectItem>
         ) : null}
         {options.map((option) => (
-          <SelectItem key={option.name} value={option.name} className="font-mono text-xs">
+          <SelectItem
+            key={option.name}
+            value={option.name}
+            label={option.name}
+            className="font-mono text-xs"
+          >
             {option.name}
             <span className="ms-auto ps-3 font-sans text-xs text-ink-4">{option.type}</span>
           </SelectItem>
@@ -74,7 +76,6 @@ export function FieldSelect({
   );
 }
 
-/** A field reference only (left sides and arithmetic operands). */
 export function FieldRefPicker({
   value,
   fields,
@@ -95,7 +96,6 @@ export function FieldRefPicker({
   );
 }
 
-/** The right side: a field, or a value typed by the user. */
 export function OperandPicker({
   operand,
   fields,
@@ -108,33 +108,36 @@ export function OperandPicker({
   inputKind: LiteralInputKind;
 }) {
   const t = useTranslations("workflows.builder.rules.conditions");
-  const switchButton = (label: string, next: ConditionOperand) => (
-    <Button variant="ghost" size="sm" className="text-ink-3" onClick={() => onChange(next)}>
-      {label}
-    </Button>
-  );
 
-  if (operand.kind === "literal") {
-    return (
-      <div className="flex items-center gap-1">
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      {fields.length > 0 ? (
+        <SegmentedControl
+          aria-label={t("right")}
+          value={operand.kind}
+          onValueChange={(kind) => {
+            if (kind === "literal") onChange(literal());
+            else if (kind === "field") onChange(fieldRef(fields[0]?.name));
+          }}
+        >
+          <SegmentedControlOption value="literal">{t("kinds.value")}</SegmentedControlOption>
+          <SegmentedControlOption value="field">{t("kinds.field")}</SegmentedControlOption>
+        </SegmentedControl>
+      ) : null}
+      {operand.kind === "literal" ? (
         <LiteralValueInput
           value={operand.value}
           onChange={(value) => onChange(literal(value))}
           inputKind={inputKind}
         />
-        {fields.length > 0 ? switchButton(t("switchToField"), fieldRef(fields[0]?.name)) : null}
-      </div>
-    );
-  }
-  return (
-    <div className="flex items-center gap-1">
-      <FieldSelect
-        value={operand.field}
-        options={fields}
-        onChange={(name) => onChange(fieldRef(name))}
-        placeholder={t("pickFieldOrValue")}
-      />
-      {switchButton(t("switchToValue"), literal())}
+      ) : (
+        <FieldSelect
+          value={operand.field}
+          options={fields}
+          onChange={(name) => onChange(fieldRef(name))}
+          placeholder={t("pickFieldOrValue")}
+        />
+      )}
     </div>
   );
 }
