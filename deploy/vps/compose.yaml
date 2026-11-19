@@ -105,7 +105,8 @@ services:
     # the API and the worker 20 each (AUDIT_DB_POOL_SIZE 10 + 10 overflow), Bugsink, backups
     # and psql a few: well under 150.
     # Query statistics (pg_stat_statements, README "Postgres") and statements slower than 500 ms
-    # in the log, without their parameters (they can be client data).
+    # in the log, without their parameters (they can be client data). Only queries are counted,
+    # not utility commands: a CREATE ROLE ... PASSWORD would be kept with its password in clear.
     command:
       - postgres
       - -c
@@ -116,6 +117,8 @@ services:
       - shared_preload_libraries=pg_stat_statements
       - -c
       - pg_stat_statements.track=top
+      - -c
+      - pg_stat_statements.track_utility=off
       - -c
       - log_min_duration_statement=500ms
       - -c
