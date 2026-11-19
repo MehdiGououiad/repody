@@ -55,8 +55,8 @@
     "edit": "Edit",
     "open": "Open",
     "viewAll": "View all",
-    "deployWorkflow": "Publish",
-    "redeployWorkflow": "Publish again",
+    "deployWorkflow": "Deploy",
+    "redeployWorkflow": "Redeploy",
     "skipToContent": "Skip to main content",
     "newWorkflow": "New workflow",
     "copy": "Copy",
@@ -81,7 +81,7 @@
       "modelWaking": "GPU waking up",
       "modelReady": "Model ready",
       "modelStarted": "GPU started",
-      "modelWakingHint": "No documents for a little while, so the GPU went to sleep to save cost. It is starting again from a snapshot: usually 5 to 15 seconds, once. The runs right after are fast.",
+      "modelWakingHint": "Starting the model: usually under a minute, up to 5 minutes the first time after an update.",
       "modelStartedHint": "The GPU was asleep; it stays awake for a minute after the last document.",
       "waiting": "Waiting for a worker…",
       "complete": "All steps done",
@@ -289,26 +289,29 @@
       "steps": {
         "navTitle": "Steps",
         "blockedHint": "Name a document and add a field first",
-        "extract": "Documents",
+        "fields": "Fields",
         "rules": "Rules",
-        "continueBlockedSchema": "Name a document and add at least one field to continue.",
-        "publish": "Publish",
-        "extraction": "Extraction"
+        "testDeploy": "Test & deploy",
+        "back": "Back",
+        "next": "Next",
+        "continueBlockedSchema": "Name a document and add at least one field to continue."
+      },
+      "runChip": {
+        "running": "Running",
+        "passed": "Passed",
+        "warning": "Warnings",
+        "failed": "Failed"
       },
       "namePlaceholder": "Untitled workflow",
       "backToWorkflows": "Workflows",
       "statusLive": "Live",
       "statusDraft": "Draft",
       "test": {
+        "sectionTitle": "Test",
+        "sectionHint": "Run every document with your rules and inspect the full report.",
+        "extractAndValidate": "Extract and validate",
+        "needSample": "Add at least one sample to run a test.",
         "running": "Running…",
-        "idle": "No test run yet",
-        "status": {
-          "passed": "All checks passed",
-          "failed": "Validation failed",
-          "warning": "Passed with warnings"
-        },
-        "fieldsExtracted": "fields extracted",
-        "rulesPassed": "rules passed",
         "viewReport": "Open report",
         "openFullReport": "Open report",
         "errorTitle": "The test did not run",
@@ -317,16 +320,18 @@
         }
       },
       "deploy": {
-        "tabLabel": "Publish",
-        "readyHint": "Publishing creates an API key; documents sent to it run this workflow.",
+        "tabLabel": "Deploy",
+        "readyHint": "Deploying creates an API key; documents sent to it run this workflow.",
         "liveTitle": "Live",
-        "liveHint": "Send documents to the endpoint below with the workflow's key."
+        "liveHint": "Send documents to the endpoint below with the workflow's key.",
+        "untestedWarning": "No passing test yet. You can still deploy, or run a test first.",
+        "testNotPassedWarning": "The last test did not pass. You can still deploy, or fix the rules and test again."
       },
       "ingestion": {
         "severityReject": "Reject",
         "severityFlag": "Flag",
         "fileHint": "PDF, PNG, JPEG, WebP",
-        "noDocsHint": "Name a document in the Documents step first.",
+        "noDocsHint": "Name a document in the Fields step first.",
         "unnamedDoc": "Document",
         "fieldCount": "{count, plural, one {# field} other {# fields}}",
         "fileRejected": "Use one PDF, PNG, JPEG or WebP file within the upload limit.",
@@ -609,8 +614,6 @@
           "literalDateTimePlaceholder": "YYYY-MM-DD HH:MM",
           "literalTimePlaceholder": "HH:MM",
           "literalNumberPlaceholder": "0",
-          "switchToField": "→ field",
-          "switchToValue": "→ value",
           "pickField": "Pick field",
           "pickFieldOrValue": "Field or value",
           "noFields": "No fields defined",
@@ -622,6 +625,8 @@
           "addCondition": "Add a condition",
           "alsoCheck": "and",
           "expressionIncomplete": "Pick a field and a value for each condition.",
+          "textComparedWithNumber": "{field} is a text field. Switch its type to Number to compare numbers.",
+          "useNumberType": "Use Number",
           "opEquals": "= equals",
           "opNotEquals": "≠ not equals",
           "opGt": "> greater than",
@@ -642,6 +647,7 @@
           "arithmeticOp": "Arithmetic operator",
           "kinds": {
             "field": "Field",
+            "value": "Value",
             "arithmetic": "Arithmetic",
             "aggregate": "Table"
           }
@@ -663,14 +669,14 @@
         "showKey": "Show API key",
         "hideKey": "Hide API key",
         "testUploadRequired": "Add a file for at least one document",
-        "pollHint": "POST starts a run and returns 202 with its runId. GET it with the same key until status is done (the report is in result: its status is passed, warning or failed, and documents[].fields holds the values) or failed (see error). The first run after a few idle minutes takes up to 15 s while the model starts.",
+        "pollHint": "POST starts a run and returns 202 with its runId. GET it with the same key until status is done (the report is in result: its status is passed, warning or failed, and documents[].fields holds the values) or failed (see error). Starting the model after idle time usually takes under a minute, up to 5 minutes the first time after an update.",
         "runTest": "Try it with the key",
         "runTestHint": "Runs exactly as an API client would, with this workflow's key.",
         "processingHint": "Extracting fields and validating rules for {name}",
         "parseStep": "Parsing document structure",
         "backToApi": "API",
         "viewFullReport": "Open report",
-        "keyUnavailable": "The full key is shown once, when you publish. Publish again to get a new one.",
+        "keyUnavailable": "The full key is shown once, when you deploy. Redeploy to get a new one.",
         "lang": {
           "curl": "cURL",
           "python": "Python",
@@ -707,22 +713,14 @@
       "nameLabel": "Workflow name",
       "workbench": {
         "samplePrompt": "Drop a sample of this document",
-        "sampleHint": "PDF, PNG, JPEG or WebP. It stays in your browser until you extract.",
+        "sampleHint": "PDF, PNG, JPEG or WebP. Carried over to Test & deploy.",
         "replace": "Replace",
         "removeSample": "Remove the sample",
-        "extract": "Extract",
-        "extracting": "Extracting…",
-        "extractHint": "Reads the sample with the draft as it is on screen.",
-        "needSample": "Add a sample to extract.",
         "addDocument": "Document",
         "resize": "Resize the sample",
         "found": "{found} of {total} found"
       },
       "saved": "Saved",
-      "publish": {
-        "lastExtraction": "Last extraction",
-        "noExtraction": "No extraction yet: drop a sample in the Extraction step."
-      },
       "unsaved": "Unsaved changes",
       "notSaved": "Not saved",
       "viewOnly": "View only",

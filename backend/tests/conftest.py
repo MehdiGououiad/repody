@@ -87,9 +87,10 @@ def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """What the fake model server answers: set ``model_answer["text"]`` (and ``["truncated"]``
     for an answer cut off at the token limit, ``["asleep"]`` for a server that has to start);
     ``model_answer["calls"]`` lists each request."""
-    answer: dict = {"text": "{}", "truncated": False, "asleep": False, "calls": []}
+    answer: dict = {"text": "{}", "truncated": False, "asleep": False, "calls": [], "wakes": 0}
 
     async def wake(on_asleep) -> bool:
+        answer["wakes"] += 1
         if answer["asleep"]:
             await on_asleep()
         return answer["asleep"]

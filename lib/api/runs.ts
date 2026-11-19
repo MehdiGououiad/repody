@@ -8,11 +8,27 @@
 import { useMutation } from "@tanstack/react-query";
 import { ApiError, apiErrorMessage } from "@/lib/api/api-error";
 import { $api } from "@/lib/api/browser";
+import type { paths } from "@/lib/api/generated/schema";
 import { isFullWorkflowApiKey } from "@/lib/api/workflow-api-key";
 import { openCredits } from "@/lib/credits/dialog";
 import type { DocumentDef, RunAuditDetail, RunProgress, WorkflowRule } from "@/lib/types";
 
 const POLL_MS = 1_000;
+const WAKE_COOLDOWN_MS = 60_000;
+const WAKE_PATH: keyof paths = "/v1/model/wake";
+
+let lastWakeAt = -Infinity;
+
+export function wakeModel(): void {
+  const now = Date.now();
+  if (now - lastWakeAt < WAKE_COOLDOWN_MS) return;
+  lastWakeAt = now;
+  void fetch(`/api${WAKE_PATH}`, { method: "POST" }).catch(() => undefined);
+}
+
+export function resetWakeCooldownForTests(): void {
+  lastWakeAt = -Infinity;
+}
 
 export type StartRun = {
   workflowId: string;

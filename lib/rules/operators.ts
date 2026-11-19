@@ -1,4 +1,5 @@
-import type { Catalog, ComparisonOp } from "@/lib/types";
+import { type FieldOption, typeOf } from "@/lib/rules/document-fields";
+import type { Catalog, ComparisonOp, RuleCondition } from "@/lib/types";
 
 /** Comparison operators, in the order the builder offers them, with their message keys. */
 export const COMPARISON_OPS = [
@@ -45,4 +46,36 @@ export function literalInputKind(type: string | undefined, catalog: Catalog): Li
     default:
       return "text";
   }
+}
+
+const TEXT_TYPES = new Set(["verbatim-string", "string"]);
+const NUMERIC_LITERAL = /^-?\d+(?:[.,]\d+)?$/;
+
+export function textComparedWithNumber(
+  condition: RuleCondition,
+  fields: FieldOption[],
+  catalog: Catalog
+): string | null {
+  if (!condition.right || isPresenceOp(condition.operator, catalog)) return null;
+  const leftField = condition.left.kind === "field" ? condition.left.field : null;
+  const leftType = leftField ? typeOf(leftField, fields) : "number";
+  const right = condition.right;
+  const rightType = right.kind === "field" ? typeOf(right.field, fields) : undefined;
+
+  if (leftField && leftType && TEXT_TYPES.has(leftType)) {
+    const rightIsNumber =
+      (right.kind === "literal" && NUMERIC_LITERAL.test(right.value.trim())) ||
+      (right.kind === "field" && Boolean(rightType && catalog.numberTypes.includes(rightType)));
+    if (rightIsNumber) return leftField;
+  }
+  if (
+    right.kind === "field" &&
+    rightType &&
+    TEXT_TYPES.has(rightType) &&
+    leftType &&
+    catalog.numberTypes.includes(leftType)
+  ) {
+    return right.field;
+  }
+  return null;
 }

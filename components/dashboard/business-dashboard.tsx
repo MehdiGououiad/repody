@@ -344,7 +344,7 @@ function WorkflowTable({ data }: { data: Dashboard }) {
 function GetStarted() {
   const t = useTranslations("dashboard.getStarted");
   const tSteps = useTranslations("workflows.builder.steps");
-  const steps = ["extraction", "rules", "publish"] as const;
+  const steps = ["fields", "rules", "testDeploy"] as const;
   return (
     <section className={cn(card, "flex-col gap-4 p-5 md:flex-row md:items-center")}>
       <div className="flex-1">

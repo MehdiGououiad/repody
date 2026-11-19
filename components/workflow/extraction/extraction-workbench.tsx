@@ -1,6 +1,5 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
 import {
   createFileInputController,
   FileInput,
@@ -8,34 +7,22 @@ import {
   FileInputTrigger,
 } from "@ui-sdk/react/file-input";
 import { Resizable, ResizableHandle, ResizablePanel } from "@ui-sdk/react/resizable";
-import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
-import { FileUp, Play, Plus, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { FileUp, Plus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { useCan } from "@/components/auth/access-context";
-import { Gate } from "@/components/auth/gate";
 import { DocChip } from "@/components/shared/doc-chip";
 import { Button } from "@/components/ui/button";
-import { Kbd } from "@/components/ui/kbd";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
-import type { TestSession } from "@/components/workflow/builder/use-builder-workflow";
+import type { TestRun } from "@/components/workflow/builder/use-test-run";
 import { DocumentCard } from "@/components/workflow/documents/document-card";
 import type { FieldResult } from "@/components/workflow/documents/schema-table";
-import { RunErrorAlert } from "@/components/workflow/run-error-alert";
-import { RunProgressSteps } from "@/components/workflow/run-progress-steps";
-import { startRun, useRun } from "@/lib/api/runs";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
-import { errorMessage } from "@/lib/query/get-query-client";
 import { fieldKey } from "@/lib/rules/field-key";
-import type { DocumentDef, SchemaField, WorkflowRule } from "@/lib/types";
+import type { DocumentDef } from "@/lib/types";
 import { UPLOAD_ACCEPT } from "@/lib/uploads";
 import { newDocument } from "@/lib/workflow/new-items";
 
-const signature = (field: SchemaField) =>
-  `${field.name}|${field.templateType}|${field.description}`;
-
-/** The sample: dropped once, then shown as the browser renders it (PDF viewer or image). */
 function SamplePane({
   file,
   onFileChange,
@@ -53,6 +40,7 @@ function SamplePane({
       controller={picker}
       accept={UPLOAD_ACCEPT}
       value={[]}
+      className="h-full"
       onValueChange={([accepted]) => {
         if (accepted) onFileChange(accepted);
       }}
@@ -110,63 +98,28 @@ function SamplePane({
   );
 }
 
-/**
- * Extraction, as a workbench: a sample of each document on the left, its fields on the right
- * with the value the model found in the sample. Extract (⌘↵) runs the unsaved draft.
- */
 export function ExtractionWorkbench({
   documents,
-  rules,
+  test,
   onChange,
-  session,
-  onSessionChange,
-  saveForTestRun,
 }: {
   documents: DocumentDef[];
-  rules: WorkflowRule[];
+  test: TestRun;
   onChange: (documents: DocumentDef[]) => void;
-  session: TestSession;
-  onSessionChange: (session: TestSession) => void;
-  saveForTestRun: () => Promise<string>;
 }) {
   const t = useTranslations("workflows.builder.workbench");
   const tDoc = useTranslations("workflows.builder.docSource");
-  const tTest = useTranslations("workflows.builder.test");
   const [activeId, setActiveId] = useState(documents[0]?.id);
   const active = documents.find((d) => d.id === activeId) ?? documents[0];
   const activeIndex = documents.indexOf(active);
-  const [snapshot, setSnapshot] = useState<Map<string, string>>(new Map());
-  const extractHint = useShortcutHint("mod+enter");
   const wide = useMediaQuery("(min-width: 1024px)");
-
-  const start = useMutation({
-    mutationFn: async () =>
-      startRun({ workflowId: await saveForTestRun(), documents, rules, files: session.files }),
-    onMutate: () => {
-      setSnapshot(
-        new Map(documents.flatMap((d) => d.schema.map((f) => [f.id, signature(f)] as const)))
-      );
-      onSessionChange({ ...session, runId: null });
-    },
-    onSuccess: ({ runId }) => onSessionChange({ ...session, runId }),
-  });
-  const run = useRun(session.runId);
-  const busy = start.isPending || run.phase === "running";
   const canEdit = useCan("workflow:write");
-  const canRun = useCan("run:execute");
-  const canExtract = canEdit && canRun && Object.keys(session.files).length > 0 && !busy;
-  const extract = () => start.mutate();
-  useShortcut("mod+enter", extract, {
-    allowInInput: true,
-    when: () => canExtract,
-    description: t("extract"),
-  });
 
   const results = useMemo(() => {
     const byDoc = new Map<string, Map<string, FieldResult>>();
-    if (run.phase !== "done") return byDoc;
+    if (test.run.phase !== "done") return byDoc;
     for (const doc of documents) {
-      const found = run.result.documents.find(
+      const found = test.run.result.documents.find(
         (d) => d.documentType.trim() === doc.documentType.trim()
       );
       if (!found) continue;
@@ -178,24 +131,15 @@ export function ExtractionWorkbench({
       );
     }
     return byDoc;
-  }, [run, documents]);
-  const stale = new Set(
-    active?.schema
-      .filter((f) => snapshot.size && snapshot.get(f.id) !== signature(f))
-      .map((f) => f.id) ?? []
-  );
+  }, [test.run, documents]);
+  const stale = new Set(active?.schema.filter(test.isStale).map((f) => f.id) ?? []);
   const activeResults = active ? results.get(active.id) : undefined;
   const found = activeResults ? [...activeResults.values()].filter((r) => r.extracted).length : 0;
 
   if (!active) return null;
   const updateDoc = (patch: Partial<DocumentDef>) =>
     onChange(documents.map((d) => (d.id === active.id ? { ...d, ...patch } : d)));
-  const setFile = (file: File | null) => {
-    const files = { ...session.files };
-    if (file) files[active.id] = file;
-    else delete files[active.id];
-    onSessionChange({ ...session, files });
-  };
+  const setFile = (file: File | null) => test.setFile(active.id, file);
 
   const fieldsPane = (
     // Read-only roles see the schema with every control disabled (the API refuses saves too).
@@ -214,41 +158,13 @@ export function ExtractionWorkbench({
           setActiveId(rest[0]?.id);
         }}
         actions={
-          <div className="flex shrink-0 items-center gap-2">
-            {activeResults ? (
-              <span className="hidden text-xs tabular-nums text-ink-3 sm:inline">
-                {t("found", { found, total: activeResults.size })}
-              </span>
-            ) : null}
-            <Gate permission="run:execute">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={extract}
-                disabled={!canExtract}
-                title={Object.keys(session.files).length ? t("extractHint") : t("needSample")}
-              >
-                <Play />
-                {busy ? t("extracting") : t("extract")}
-                <Kbd className="ms-0.5">{extractHint.text}</Kbd>
-              </Button>
-            </Gate>
-          </div>
+          activeResults ? (
+            <span className="shrink-0 text-xs tabular-nums text-ink-3">
+              {t("found", { found, total: activeResults.size })}
+            </span>
+          ) : undefined
         }
       />
-      {start.isError ? (
-        <div className="border-t border-line p-3">
-          <RunErrorAlert
-            title={tTest("errorTitle")}
-            message={errorMessage(start.error, tTest("errorTitle"))}
-          />
-        </div>
-      ) : null}
-      {run.phase === "failed" ? (
-        <div className="border-t border-line p-3">
-          <RunErrorAlert title={tTest("errorTitle")} message={run.error} runId={session.runId} />
-        </div>
-      ) : null}
     </fieldset>
   );
 
@@ -268,7 +184,7 @@ export function ExtractionWorkbench({
               <span className="text-xs tabular-nums text-ink-4">
                 {doc.schema.filter((f) => f.name.trim()).length}
               </span>
-              {session.files[doc.id] ? (
+              {test.files[doc.id] ? (
                 <span className="size-1.5 rounded-full bg-pass" aria-hidden />
               ) : null}
             </TabsTab>
@@ -302,7 +218,7 @@ export function ExtractionWorkbench({
             minSize={wide ? 26 : 20}
             className="min-h-0 min-w-0"
           >
-            <SamplePane key={active.id} file={session.files[active.id]} onFileChange={setFile} />
+            <SamplePane key={active.id} file={test.files[active.id]} onFileChange={setFile} />
           </ResizablePanel>
           <ResizableHandle
             aria-label={t("resize")}
@@ -312,20 +228,6 @@ export function ExtractionWorkbench({
             {fieldsPane}
           </ResizablePanel>
         </Resizable>
-
-        <AnimatePresence>
-          {run.phase === "running" && run.progress ? (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12, transition: { duration: 0.15 } }}
-              transition={{ type: "spring", duration: 0.32, bounce: 0 }}
-              className="absolute end-4 bottom-4 z-20 w-[min(380px,calc(100%-2rem))] rounded-xl bg-overlay p-4 shadow-pop"
-            >
-              <RunProgressSteps progress={run.progress} />
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
       </TabsPanel>
     </Tabs>
   );

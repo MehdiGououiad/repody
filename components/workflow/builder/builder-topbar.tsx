@@ -6,34 +6,86 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCan } from "@/components/auth/access-context";
-import { Gate } from "@/components/auth/gate";
 import { Button } from "@/components/ui/button";
 import { BareInput, inlineFieldClass } from "@/components/ui/input";
+import { StatusGlyph } from "@/components/ui/status-glyph";
 import { Tooltip } from "@/components/ui/tooltip";
 import type { BuilderSync, SaveState } from "@/components/workflow/builder/use-builder-workflow";
-import { cn } from "@/lib/utils";
+import type { TestRun } from "@/components/workflow/builder/use-test-run";
+import { cn, formatDurationMs } from "@/lib/utils";
 
-/** The builder's one header row: trail and name, state, the steps, saving, publishing. ⌘S saves. */
+function RunStatusChip({ test, onOpenTest }: { test: TestRun; onOpenTest: () => void }) {
+  const t = useTranslations("workflows.builder.runChip");
+
+  if (test.busy) {
+    return (
+      <button
+        type="button"
+        onClick={onOpenTest}
+        className="inline-flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-accent-wash px-2.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-focus"
+      >
+        <StatusGlyph status="running" className="size-3" />
+        <span>{t("running")}</span>
+        <span className="tabular-nums">{formatDurationMs(test.elapsedMs)}</span>
+      </button>
+    );
+  }
+
+  if (test.run.phase === "done") {
+    const status = test.run.result.status;
+    return (
+      <button
+        type="button"
+        onClick={onOpenTest}
+        className={cn(
+          "inline-flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-focus",
+          status === "passed" && "bg-pass-wash text-pass-ink",
+          status === "warning" && "bg-warn-wash text-warn-ink",
+          status === "failed" && "bg-fail-wash text-fail-ink"
+        )}
+      >
+        <StatusGlyph status={status} className="size-3" />
+        <span>{t(status)}</span>
+      </button>
+    );
+  }
+
+  if (test.run.phase === "failed" || test.startError) {
+    return (
+      <button
+        type="button"
+        onClick={onOpenTest}
+        className="inline-flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-fail-wash px-2.5 text-xs font-medium text-fail-ink transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-focus"
+      >
+        <StatusGlyph status="failed" className="size-3" />
+        <span>{t("failed")}</span>
+      </button>
+    );
+  }
+
+  return null;
+}
+
 export function BuilderTopbar({
   name,
   deployed,
   sync,
   saveState,
-  schemaReady,
   steps,
+  test,
   onNameChange,
   onSaveDraft,
-  onDeploy,
+  onOpenTest,
 }: {
   name: string;
   deployed: boolean;
   sync: BuilderSync;
   saveState: SaveState;
-  schemaReady: boolean;
   steps?: React.ReactNode;
+  test: TestRun;
   onNameChange: (name: string) => void;
   onSaveDraft: () => void;
-  onDeploy: () => void;
+  onOpenTest: () => void;
 }) {
   const t = useTranslations("workflows.builder");
   const tCommon = useTranslations("common");
@@ -80,7 +132,8 @@ export function BuilderTopbar({
 
       {steps ? <div className="mx-auto overflow-x-auto">{steps}</div> : <span className="flex-1" />}
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex shrink-0 items-center gap-2">
+        <RunStatusChip test={test} onOpenTest={onOpenTest} />
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={saveState.kind}
@@ -129,16 +182,6 @@ export function BuilderTopbar({
             </Button>
           </Tooltip>
         ) : null}
-        <Gate permission="workflow:deploy">
-          <Button
-            variant={deployed ? "secondary" : "primary"}
-            disabled={!schemaReady || sync !== "idle"}
-            onClick={onDeploy}
-            title={!schemaReady ? t("steps.continueBlockedSchema") : undefined}
-          >
-            {deployed ? tCommon("redeployWorkflow") : tCommon("deployWorkflow")}
-          </Button>
-        </Gate>
       </div>
     </header>
   );

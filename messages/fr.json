@@ -55,8 +55,8 @@
     "edit": "Modifier",
     "open": "Ouvrir",
     "viewAll": "Tout voir",
-    "deployWorkflow": "Publier",
-    "redeployWorkflow": "Republier",
+    "deployWorkflow": "Déployer",
+    "redeployWorkflow": "Redéployer",
     "skipToContent": "Aller au contenu principal",
     "newWorkflow": "Nouveau workflow",
     "copy": "Copier",
@@ -81,7 +81,7 @@
       "modelWaking": "Démarrage du GPU",
       "modelReady": "Modèle prêt",
       "modelStarted": "GPU démarré",
-      "modelWakingHint": "Aucun document depuis un moment : le GPU s'est mis en veille pour réduire les coûts. Il redémarre depuis un instantané, en 5 à 15 secondes, une seule fois. Les exécutions suivantes sont rapides.",
+      "modelWakingHint": "Démarrage du modèle : généralement moins d'une minute, jusqu'à 5 minutes la première fois après une mise à jour.",
       "modelStartedHint": "Le GPU était en veille ; il reste actif une minute après le dernier document.",
       "waiting": "En attente d'un worker…",
       "complete": "Toutes les étapes sont terminées",
@@ -289,26 +289,29 @@
       "steps": {
         "navTitle": "Étapes",
         "blockedHint": "Nommez un document et ajoutez un champ d'abord",
-        "extract": "Documents",
+        "fields": "Champs",
         "rules": "Règles",
-        "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer.",
-        "publish": "Publier",
-        "extraction": "Extraction"
+        "testDeploy": "Tester et déployer",
+        "back": "Retour",
+        "next": "Suivant",
+        "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer."
+      },
+      "runChip": {
+        "running": "En cours",
+        "passed": "Conforme",
+        "warning": "Avertissements",
+        "failed": "Échoué"
       },
       "namePlaceholder": "Workflow sans titre",
       "backToWorkflows": "Workflows",
       "statusLive": "En ligne",
       "statusDraft": "Brouillon",
       "test": {
+        "sectionTitle": "Tester",
+        "sectionHint": "Exécutez chaque document avec vos règles et consultez le rapport complet.",
+        "extractAndValidate": "Extraire et valider",
+        "needSample": "Ajoutez au moins un exemple pour lancer un test.",
         "running": "En cours…",
-        "idle": "Aucun test effectué",
-        "status": {
-          "passed": "Toutes les vérifications sont passées",
-          "failed": "Échec de la validation",
-          "warning": "Passé avec des avertissements"
-        },
-        "fieldsExtracted": "champs extraits",
-        "rulesPassed": "règles validées",
         "viewReport": "Ouvrir le rapport",
         "openFullReport": "Ouvrir le rapport",
         "errorTitle": "Le test n'a pas pu s'exécuter",
@@ -317,16 +320,18 @@
         }
       },
       "deploy": {
-        "tabLabel": "Publier",
-        "readyHint": "La publication crée une clé d'API ; les documents envoyés exécutent ce workflow.",
+        "tabLabel": "Déployer",
+        "readyHint": "Le déploiement crée une clé d'API ; les documents envoyés exécutent ce workflow.",
         "liveTitle": "En ligne",
-        "liveHint": "Envoyez des documents au point d'accès ci-dessous avec la clé du workflow."
+        "liveHint": "Envoyez des documents au point d'accès ci-dessous avec la clé du workflow.",
+        "untestedWarning": "Aucun test réussi pour l'instant. Vous pouvez déployer quand même ou lancer un test d'abord.",
+        "testNotPassedWarning": "Le dernier test n'a pas réussi. Vous pouvez déployer quand même ou corriger les règles avant de réessayer."
       },
       "ingestion": {
         "severityReject": "Rejeter",
         "severityFlag": "Signaler",
         "fileHint": "PDF, PNG, JPEG, WebP",
-        "noDocsHint": "Nommez d'abord un document à l'étape Documents.",
+        "noDocsHint": "Nommez d'abord un document à l'étape Champs.",
         "unnamedDoc": "Document",
         "fieldCount": "{count, plural, one {# champ} other {# champs}}",
         "fileRejected": "Choisissez un fichier PDF, PNG, JPEG ou WebP dans la limite d'envoi.",
@@ -609,8 +614,6 @@
           "literalDateTimePlaceholder": "AAAA-MM-JJ HH:MM",
           "literalTimePlaceholder": "HH:MM",
           "literalNumberPlaceholder": "0",
-          "switchToField": "→ champ",
-          "switchToValue": "→ valeur",
           "pickField": "Choisir un champ",
           "pickFieldOrValue": "Champ ou valeur",
           "noFields": "Aucun champ défini",
@@ -622,6 +625,8 @@
           "addCondition": "Ajouter une condition",
           "alsoCheck": "et",
           "expressionIncomplete": "Choisissez un champ et une valeur pour chaque condition.",
+          "textComparedWithNumber": "{field} est un champ texte. Passez son type sur Nombre pour comparer des nombres.",
+          "useNumberType": "Passer en Nombre",
           "opEquals": "= égal",
           "opNotEquals": "≠ différent",
           "opGt": "> supérieur",
@@ -642,6 +647,7 @@
           "arithmeticOp": "Opérateur arithmétique",
           "kinds": {
             "field": "Champ",
+            "value": "Valeur",
             "arithmetic": "Calcul",
             "aggregate": "Tableau"
           }
@@ -663,14 +669,14 @@
         "showKey": "Afficher la clé API",
         "hideKey": "Masquer la clé API",
         "testUploadRequired": "Ajoutez un fichier pour au moins un document",
-        "pollHint": "POST lance une exécution et renvoie 202 avec son runId. Interrogez-la en GET avec la même clé jusqu'à ce que status soit done (le rapport est dans result : son status vaut passed, warning ou failed, et documents[].fields contient les valeurs) ou failed (voir error). La première exécution après quelques minutes d'inactivité prend jusqu'à 15 s, le temps que le modèle démarre.",
+        "pollHint": "POST lance une exécution et renvoie 202 avec son runId. Interrogez-la en GET avec la même clé jusqu'à ce que status soit done (le rapport est dans result : son status vaut passed, warning ou failed, et documents[].fields contient les valeurs) ou failed (voir error). Le démarrage du modèle après une période d'inactivité prend généralement moins d'une minute, jusqu'à 5 minutes la première fois après une mise à jour.",
         "runTest": "Essayer avec la clé",
         "runTestHint": "Exécute exactement comme un client de l'API, avec la clé de ce workflow.",
         "processingHint": "Extraction des champs et validation des règles pour {name}",
         "parseStep": "Analyse de la structure du document",
         "backToApi": "API",
         "viewFullReport": "Ouvrir le rapport",
-        "keyUnavailable": "La clé complète n'est affichée qu'une fois, à la publication. Republiez pour en obtenir une nouvelle.",
+        "keyUnavailable": "La clé complète n'est affichée qu'une fois, au déploiement. Redéployez pour en obtenir une nouvelle.",
         "lang": {
           "curl": "cURL",
           "python": "Python",
@@ -707,22 +713,14 @@
       "nameLabel": "Nom du workflow",
       "workbench": {
         "samplePrompt": "Déposez un exemple de ce document",
-        "sampleHint": "PDF, PNG, JPEG ou WebP. Il reste dans votre navigateur jusqu’à l’extraction.",
+        "sampleHint": "PDF, PNG, JPEG ou WebP. Repris à l’étape Tester et déployer.",
         "replace": "Remplacer",
         "removeSample": "Retirer l’exemple",
-        "extract": "Extraire",
-        "extracting": "Extraction…",
-        "extractHint": "Lit l’exemple avec le brouillon tel qu’il est à l’écran.",
-        "needSample": "Ajoutez un exemple pour extraire.",
         "addDocument": "Document",
         "resize": "Redimensionner l’exemple",
         "found": "{found} sur {total} trouvés"
       },
       "saved": "Enregistré",
-      "publish": {
-        "lastExtraction": "Dernière extraction",
-        "noExtraction": "Aucune extraction pour l’instant : déposez un exemple à l’étape Extraction."
-      },
       "unsaved": "Modifications non enregistrées",
       "notSaved": "Non enregistré",
       "viewOnly": "Lecture seule",

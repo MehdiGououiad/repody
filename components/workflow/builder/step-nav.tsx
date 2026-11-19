@@ -7,7 +7,7 @@ import type { DocumentDef, WorkflowRule } from "@/lib/types";
 
 export type BuilderStep = 0 | 1 | 2;
 
-const STEP_KEYS = ["extraction", "rules", "publish"] as const;
+const STEP_KEYS = ["fields", "rules", "testDeploy"] as const;
 
 export function stepComplete(
   step: BuilderStep,
@@ -20,7 +20,6 @@ export function stepComplete(
   return false;
 }
 
-/** Rules and testing wait until a document has a name and a field. */
 export function stepBlocked(
   step: BuilderStep,
   documents: DocumentDef[],
@@ -31,7 +30,6 @@ export function stepBlocked(
 
 export const STEP_VALUES = STEP_KEYS;
 
-/** The builder's steps as tabs in the header, each with its status glyph. A blocked step says why. */
 export function BuilderTabs({
   documents,
   rules,

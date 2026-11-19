@@ -212,11 +212,11 @@ test.describe("Builder", () => {
     watch.expectNoErrors();
   });
 
-  test("publish shows the API with a key", async ({ page }) => {
+  test("deploy shows the API with a key", async ({ page }) => {
     const watch = watchErrors(page);
     await openBuilder(page, workflow.id);
-    await page.getByRole("tab", { name: /Publish/ }).click();
-    await page.getByRole("tabpanel").getByRole("button", { name: "Publish" }).click();
+    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    await page.getByRole("tabpanel").getByRole("button", { name: "Deploy" }).click();
     await expect(page.getByText("Live").first()).toBeVisible();
     await expect(page.getByText(/wbk_/).first()).toBeVisible();
     const saved = await fetchWorkflow(page, workflow.id);

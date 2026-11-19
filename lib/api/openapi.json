@@ -1158,6 +1158,31 @@
         ]
       }
     },
+    "/v1/model/wake": {
+      "post": {
+        "tags": [
+          "platform"
+        ],
+        "summary": "Wake Model",
+        "description": "Start waking the model server in the background, at most once per minute per process.",
+        "operationId": "wake_model_v1_model_wake_post",
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
     "/v1/dashboard": {
       "get": {
         "tags": [

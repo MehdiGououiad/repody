@@ -1,4 +1,5 @@
 import asyncio
+import time
 from collections.abc import Awaitable, Callable
 from typing import Annotated
 
@@ -10,7 +11,7 @@ from repody.api.deps import AccountScope, OptionalUser, SessionDep, require
 from repody.app.credits import credits_of
 from repody.app.dashboard import get_dashboard
 from repody.app.operations import cancel_run, get_operations
-from repody.extraction.client import model_available
+from repody.extraction import client as inference
 from repody.infra import db
 from repody.infra.auth import User
 from repody.schemas.catalog import Catalog, catalog
@@ -19,6 +20,21 @@ from repody.settings import get_settings
 
 log = structlog.get_logger(__name__)
 router = APIRouter(tags=["platform"])
+
+WAKE_COOLDOWN_SECONDS = 60.0
+_last_wake: float | None = None
+_wake_tasks: set[asyncio.Task[None]] = set()
+
+
+async def _noop() -> None:
+    pass
+
+
+async def _wake_in_background() -> None:
+    try:
+        await inference.wake(_noop)
+    except Exception as exc:
+        log.warning("model_wake_failed", error=repr(exc))
 
 
 @router.get("/healthz/live")
@@ -73,7 +89,7 @@ async def platform_config() -> PlatformConfig:
     return PlatformConfig(
         served_model=settings.inference_model,
         inference_base_url=settings.inference_base_url,
-        model_available=await model_available(),
+        model_available=await inference.model_available(),
         max_upload_bytes=settings.max_upload_bytes,
         max_upload_files=settings.max_upload_files,
         max_pages_per_document=settings.max_pages_per_document,
@@ -99,6 +115,22 @@ async def cancel(
 async def get_catalog() -> Catalog:
     """Field types the builder offers, and which of them rules compare in order or add up."""
     return catalog()
+
+
+@router.post("/model/wake", status_code=202, dependencies=[require("run:execute")])
+async def wake_model() -> None:
+    """Start waking the model server in the background, at most once per minute per process."""
+    global _last_wake
+    try:
+        now = time.monotonic()
+        if _last_wake is not None and now - _last_wake < WAKE_COOLDOWN_SECONDS:
+            return
+        _last_wake = now
+        task = asyncio.create_task(_wake_in_background())
+        _wake_tasks.add(task)
+        task.add_done_callback(_wake_tasks.discard)
+    except Exception as exc:
+        log.warning("model_wake_schedule_failed", error=repr(exc))
 
 
 @router.get("/dashboard", dependencies=[require("metrics:read")])

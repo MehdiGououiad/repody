@@ -1,10 +1,16 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import update
 
+from repody.api import platform as platform_api
+from repody.api.deps import optional_user
 from repody.app.maintenance import upkeep
 from repody.infra import db
+from repody.infra.auth import User
 from repody.infra.models import Run
+from repody.main import create_app
 
 
 async def test_health_and_config(api):
@@ -70,3 +76,30 @@ async def test_a_run_is_cancelled_once_and_never_finishes_afterwards(api, seeded
     again = await api.post("/v1/runs/AUD-2023-8902/cancel")
     assert again.status_code == 409
     assert (await api.post("/v1/runs/run-unknown/cancel")).status_code == 404
+
+
+async def test_model_wake_starts_in_background_with_cooldown_and_requires_permission(
+    api, model_answer, monkeypatch
+):
+    monkeypatch.setattr(platform_api, "_last_wake", None)
+
+    first = await api.post("/v1/model/wake")
+    assert first.status_code == 202
+    if platform_api._wake_tasks:
+        await asyncio.gather(*platform_api._wake_tasks)
+    assert model_answer["wakes"] == 1
+
+    # Second call within the 60 s cooldown returns 202 without waking again.
+    second = await api.post("/v1/model/wake")
+    assert second.status_code == 202
+    if platform_api._wake_tasks:
+        await asyncio.gather(*platform_api._wake_tasks)
+    assert model_answer["wakes"] == 1
+
+    # A viewer (no run:execute permission) is refused with 403.
+    app = create_app()
+    app.dependency_overrides[optional_user] = lambda: User(
+        subject="vera", roles=frozenset({"viewer"})
+    )
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as viewer:
+        assert (await viewer.post("/v1/model/wake")).status_code == 403

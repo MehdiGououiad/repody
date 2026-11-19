@@ -31,7 +31,7 @@ test("a viewer reads workflows and runs, and the app offers nothing they cannot 
     await expect(page.getByText("Viewer", { exact: true })).toBeVisible();
     await expect(page.getByText("Document model")).toHaveCount(0);
 
-    // The builder opens read only: no save, fields disabled, publishing explained.
+    // The builder opens read only: no save, fields disabled, deploying explained in step 3.
     await openBuilder(page, "wf-invoice-audit");
     await expect(page.getByText("View only")).toBeVisible();
     await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
@@ -39,9 +39,10 @@ test("a viewer reads workflows and runs, and the app offers nothing they cannot 
       "readonly",
       ""
     );
-    const publish = page.getByRole("button", { name: /Publish|Deploy/ }).first();
-    await expect(publish).toHaveAttribute("aria-disabled", "true");
-    await publish.hover();
+    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    const deploy = page.getByRole("button", { name: /Deploy|Redeploy/ }).first();
+    await expect(deploy).toHaveAttribute("aria-disabled", "true");
+    await deploy.hover();
     await expect(page.getByRole("tooltip")).toContainText("Your role does not allow this.");
 
     await expect(page).not.toHaveURL(/unauthorized/);

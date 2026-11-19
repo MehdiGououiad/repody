@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { conditionFields, isTouched } from "@/lib/rules/conditions";
 import { fieldOptions, tableOptions, typeOf } from "@/lib/rules/document-fields";
 import { fieldKey } from "@/lib/rules/field-key";
-import { literalInputKind, operatorsFor } from "@/lib/rules/operators";
+import { literalInputKind, operatorsFor, textComparedWithNumber } from "@/lib/rules/operators";
 import type { Catalog, DocumentDef, RuleCondition } from "@/lib/types";
 import { newCondition, newDocument, newSchemaField } from "@/lib/workflow/new-items";
 
@@ -97,5 +97,60 @@ describe("operators", () => {
     expect(ops("region:FR")).toEqual(ops("verbatim-string")); // unlisted: the default's
     expect(literalInputKind("integer", CATALOG)).toBe("number");
     expect(literalInputKind("date-time", CATALOG)).toBe("datetime-local");
+  });
+
+  it("warns when a text field is compared with a number", () => {
+    const fields = [
+      { name: "net_a_payer", type: "verbatim-string" },
+      { name: "total", type: "number" },
+    ];
+    expect(
+      textComparedWithNumber(
+        {
+          id: "c1",
+          left: { kind: "field", field: "net_a_payer" },
+          operator: "==",
+          right: { kind: "literal", value: "20000" },
+        },
+        fields,
+        CATALOG
+      )
+    ).toBe("net_a_payer");
+    expect(
+      textComparedWithNumber(
+        {
+          id: "c2",
+          left: { kind: "field", field: "net_a_payer" },
+          operator: "==",
+          right: { kind: "field", field: "total" },
+        },
+        fields,
+        CATALOG
+      )
+    ).toBe("net_a_payer");
+    expect(
+      textComparedWithNumber(
+        {
+          id: "c3",
+          left: { kind: "field", field: "net_a_payer" },
+          operator: "==",
+          right: { kind: "literal", value: "FAC-001" },
+        },
+        fields,
+        CATALOG
+      )
+    ).toBeNull();
+    expect(
+      textComparedWithNumber(
+        {
+          id: "c4",
+          left: { kind: "field", field: "total" },
+          operator: ">",
+          right: { kind: "literal", value: "20000" },
+        },
+        fields,
+        CATALOG
+      )
+    ).toBeNull();
   });
 });
