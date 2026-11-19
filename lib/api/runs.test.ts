@@ -4,7 +4,7 @@ const openCredits = vi.fn();
 vi.mock("@/lib/credits/dialog", () => ({ openCredits }));
 vi.mock("@/lib/api/browser", () => ({ $api: {} }));
 
-const { startRun } = await import("./runs");
+const { resetWakeCooldownForTests, startRun, wakeModel } = await import("./runs");
 
 function answer(status: number, body: unknown) {
   vi.stubGlobal(
@@ -40,5 +40,19 @@ describe("startRun", () => {
   it("returns the run it started", async () => {
     answer(202, { runId: "run-1" });
     await expect(startRun(run)).resolves.toEqual({ runId: "run-1" });
+  });
+});
+
+describe("wakeModel", () => {
+  it("posts at most once per minute and ignores errors", () => {
+    resetWakeCooldownForTests();
+    const fetchMock = vi.fn(async () => {
+      throw new Error("offline");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    wakeModel();
+    wakeModel();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledWith("/api/v1/model/wake", { method: "POST" });
   });
 });

@@ -15,7 +15,7 @@ examples), so the backend needs no change.
 | Web function (`@app.cls` + `@modal.concurrent` + `@modal.web_server`), not a Modal Server | [High-performance LLM inference](https://modal.com/docs/guide/high-performance-llm-inference): for bursty workloads Servers are "generally not worth it". A web function waits for a cold container instead of [answering 503](https://modal.com/docs/guide/servers#zero-to-one-scaling) |
 | CPU + GPU memory snapshot, vLLM sleep mode, warm-up before the snapshot | [vLLM snapshot example](https://modal.com/docs/examples/vllm_snapshot), [Memory Snapshots](https://modal.com/docs/guide/memory-snapshots) |
 | Weights downloaded once by a CPU function into a Volume, revision pinned | [Model weights](https://modal.com/docs/guide/model-weights) |
-| `gpu=["L4", "A10"]` | [GPU fallbacks](https://modal.com/docs/guide/gpu). Both have 24 GB; a T4 has no BF16 |
+| `gpu="L4"` | One GPU type halves snapshot-creation starts after each deploy (Modal builds 2–3 snapshots per GPU type). L4 has 24 GB (the model fits) and is cheaper than A10 ($0.80/h vs $1.10/h); a T4 has no BF16 |
 | `requires_proxy_auth=True` | [Proxy Tokens](https://modal.com/docs/guide/webhook-proxy-auth): any other request gets 401 and starts nothing |
 | CUDA 12.9 devel image, `vllm==0.33.0`, `transformers==5.20.2` | vLLM's wheels are built for CUDA 12.9 ([vLLM GPU install](https://docs.vllm.ai/en/latest/getting_started/installation/gpu/)); Modal's vLLM examples use this base |
 
@@ -66,12 +66,11 @@ $0.96 of compute, all of it covered by the credit.
 - 73% was billed on A10s, because no L4 was free; the fallback is about 40% dearer per second.
 
 The rules that follow from it:
-- **Deploy rarely.** Each deploy discards the snapshots, and the next 2–3 starts per GPU type (up to
-  about 6 with two GPU types) rebuild them at ~8 minutes each, roughly $0.35–0.70 per deploy. Ordinary
-  starts after that take 15 s.
+- **Deploy rarely.** Each deploy discards the snapshots, and the next 2–3 starts on L4 rebuild them
+  at ~5–8 minutes each, roughly $0.25–0.35 per deploy. Pinning `gpu="L4"` avoids paying for a second
+  set of snapshots on A10 (and avoids A10's 40% higher rate). Ordinary starts after that restore a
+  snapshot in seconds.
 - **Wake it once after a deploy** with the check below, so the slow starts don't fall on real runs.
-- **Want it cheaper still?** Use `gpu="L4"` alone: half as many snapshots, and no A10 price. A run then
-  waits whenever no L4 is free. Waiting is not billed, but the run can time out.
 
 - In [Usage & Billing](https://modal.com/settings/usage), set the **spend limit** to **$0**. It caps
   what you pay after credits; once the credit is used, Modal
@@ -172,7 +171,7 @@ Logs: `modal app logs repody-nuextract --since 1h`. Look for "Creating GPU memor
 | Symptom | Cause and fix |
 |---|---|
 | Nothing starts; a tiny function also waits forever | The Workspace budget is $0: raise it, and keep the spend limit at $0 |
-| "waiting to be scheduled on a GPU_L4 worker" | No L4 free right now; the fallback list takes an A10 |
+| "waiting to be scheduled on a GPU_L4 worker" | No L4 free right now; Modal waits for one (waiting is not billed) |
 | `Cannot change … between Server and non-Server` on deploy | Modal keeps the kind of a name; use a new class name |
 | 401 | No Proxy Token, or the wrong one |
 | A slow start after every deploy | Expected: a deploy invalidates the snapshots (2–3 per GPU type are taken again) |
