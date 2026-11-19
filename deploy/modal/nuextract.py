@@ -87,9 +87,10 @@ def download() -> None:
 
 @app.cls(
     image=image,
-    # One GPU type halves snapshot-creation starts after a deploy (Modal builds 2-3 per GPU type).
-    # L4 has 24 GB (enough for BF16 weights + 131k KV cache) and is cheaper than A10; T4 has no BF16.
-    gpu="L4",
+    # Tried in order: L4 (24 GB, $0.80/h), else A10 (24 GB, $1.10/h). A T4 has no BF16. Not L4
+    # alone: on 19 November staging waited 3-11 minutes for a free L4, past the 10-minute run
+    # timeout. The fallback costs a second set of snapshots after each deploy (README).
+    gpu=["L4", "A10"],
     volumes={HF_CACHE: hf_cache, VLLM_CACHE: vllm_cache},
     # Scale to zero, and one container at most: a second GPU would double the cost.
     min_containers=0,
