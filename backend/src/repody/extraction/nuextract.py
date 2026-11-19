@@ -13,10 +13,11 @@ from repody.extraction import render
 from repody.schemas.catalog import scalar_type
 from repody.schemas.workflow import DocumentDef, SchemaField
 
-# The card's non-thinking mode ("temperature = 0.2"), used by its extraction and in-context
-# examples; its document-to-Markdown example uses 1.
-STRUCTURED_TEMPERATURE = 0.2
-MARKDOWN_TEMPERATURE = 1.0
+# The card's non-thinking mode, "for fast and deterministic extraction or Markdown conversion"
+# ("temperature = 0.2"). Its document-to-Markdown code example uses 1, which measured worse on
+# staging's vLLM (18 November, 11 hard pages: 96.1 at 1, 98.4 at 0.2; a handwritten invoice 73.9
+# and 93.8). Structured answers were the same at 0.2 and 0 (16 documents, 234 fields).
+TEMPERATURE = 0.2
 
 
 def page_parts(
@@ -108,7 +109,7 @@ def structured_request(doc: DocumentDef, model: str, *, max_tokens: int) -> dict
         kwargs["instructions"] = text
     return {
         "model": model,
-        "temperature": STRUCTURED_TEMPERATURE,
+        "temperature": TEMPERATURE,
         "max_tokens": answer_budget(doc, max_tokens),
         "messages": [
             *(
@@ -130,7 +131,7 @@ def structured_request(doc: DocumentDef, model: str, *, max_tokens: int) -> dict
 def markdown_request(model: str, *, max_tokens: int) -> dict[str, Any]:
     return {
         "model": model,
-        "temperature": MARKDOWN_TEMPERATURE,
+        "temperature": TEMPERATURE,
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": []}],
         "extra_body": {"chat_template_kwargs": {"mode": "markdown", "enable_thinking": False}},

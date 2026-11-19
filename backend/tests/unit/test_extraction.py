@@ -56,7 +56,7 @@ def test_structured_request():
         extraction_icl_examples=[IclExample(input="Total 5", output='{"total": 5}')],
     )
     request = structured_request(doc, "nuextract", max_tokens=4096)
-    assert request["temperature"] == 0.2  # the card's in-context example
+    assert request["temperature"] == 0.2  # the card's non-thinking mode
     assert request["messages"][0]["role"] == "developer"
     assert request["messages"][-1] == {"role": "user", "content": []}
     kwargs = request["extra_body"]["chat_template_kwargs"]
@@ -70,7 +70,7 @@ def test_structured_request():
         "mode": "markdown",
         "enable_thinking": False,
     }
-    assert markdown["temperature"] == 1.0  # the card's document-to-Markdown example
+    assert markdown["temperature"] == 0.2  # the same: 1 measured worse on handwriting
     assert markdown["max_tokens"] == 4096
     # No lists: the answer's size follows the schema (an answer that loops stops early).
     assert request["max_tokens"] == 4096  # tables and lists: as long as they need
