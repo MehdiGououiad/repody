@@ -57,7 +57,7 @@ class ExtractionMeta(CamelModel):
 class AuditField(CamelModel):
     key: str
     description: str = ""
-    type: str = Field(description="NuExtract template type the value follows.")
+    type: str = Field(description="Repody VLM template type the value follows.")
     value: Any = Field(default=None, description="JSON value; null when not extracted.")
     flagged: bool = False
 

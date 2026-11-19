@@ -3029,7 +3029,7 @@
           "type": {
             "type": "string",
             "title": "Type",
-            "description": "NuExtract template type the value follows."
+            "description": "Repody VLM template type the value follows."
           },
           "value": {
             "title": "Value",
@@ -4411,7 +4411,7 @@
           "output"
         ],
         "title": "IclExample",
-        "description": "A NuExtract in-context example: input text and the JSON it should produce."
+        "description": "An in-context example for Repody VLM: input text and the JSON it should produce."
       },
       "Kpi": {
         "properties": {
@@ -5185,7 +5185,7 @@
           "name"
         ],
         "title": "SchemaField",
-        "description": "One NuExtract template field.\n\n``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
+        "description": "One field of the Repody VLM template.\n\n``template_type`` is a leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
       },
       "SchemaField-Output": {
         "properties": {
@@ -5239,7 +5239,7 @@
           "children"
         ],
         "title": "SchemaField",
-        "description": "One NuExtract template field.\n\n``template_type`` is a NuExtract leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
+        "description": "One field of the Repody VLM template.\n\n``template_type`` is a leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
       },
       "SeverityShare": {
         "properties": {

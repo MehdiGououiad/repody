@@ -116,7 +116,7 @@ export const fr = {
         "Latences qui s'additionnent",
       ],
       newTitle: "Repody",
-      newSteps: ["Image de la page", "NuExtract3", "Champs typés"],
+      newSteps: ["Image de la page", "Repody VLM", "Champs typés"],
       newPoints: [
         "Un modèle spécialisé lit l'image de la page directement",
         "Sortie contrainte par votre schéma : JSON valide et typé",
@@ -357,7 +357,7 @@ export const fr = {
             body: "Un document sans champs est transcrit en entier en Markdown, tableaux compris, et conservé avec le rapport.",
           },
           {
-            title: "Import de modèles NuExtract",
+            title: "Import de modèles JSON",
             body: "Collez un modèle JSON existant : champs, types et structures sont créés d'un coup.",
           },
           {
@@ -850,7 +850,7 @@ export const fr = {
       idp: "Identité",
       idpTech: "Keycloak · OIDC",
       model: "Serveur de modèle",
-      modelTech: "vLLM · NuExtract3",
+      modelTech: "vLLM · Repody VLM",
       userTech: "Navigateur",
       clientTech: "REST · clé d'API",
     },
@@ -890,7 +890,7 @@ export const fr = {
         title: "Le modèle d'extraction",
         points: [
           {
-            title: "NuExtract3",
+            title: "Repody VLM",
             body: "Modèle de vision spécialisé dans l'extraction structurée : il reçoit l'image des pages et un modèle JSON, et renvoie les champs.",
           },
           {

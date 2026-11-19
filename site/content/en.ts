@@ -118,7 +118,7 @@ export const en: Dict = {
         "Latencies add up",
       ],
       newTitle: "Repody",
-      newSteps: ["Page image", "NuExtract3", "Typed fields"],
+      newSteps: ["Page image", "Repody VLM", "Typed fields"],
       newPoints: [
         "A specialised model reads the page image directly",
         "Output constrained by your schema: valid, typed JSON",
@@ -359,7 +359,7 @@ export const en: Dict = {
             body: "A document with no fields is transcribed whole into Markdown, tables included, and kept with the report.",
           },
           {
-            title: "NuExtract template import",
+            title: "JSON template import",
             body: "Paste an existing JSON template: fields, types and structures are created at once.",
           },
           {
@@ -851,7 +851,7 @@ export const en: Dict = {
       idp: "Identity",
       idpTech: "Keycloak · OIDC",
       model: "Model server",
-      modelTech: "vLLM · NuExtract3",
+      modelTech: "vLLM · Repody VLM",
       userTech: "Browser",
       clientTech: "REST · API key",
     },
@@ -891,7 +891,7 @@ export const en: Dict = {
         title: "The extraction model",
         points: [
           {
-            title: "NuExtract3",
+            title: "Repody VLM",
             body: "A vision model specialised in structured extraction: it receives the page images and a JSON template, and returns the fields.",
           },
           {

@@ -150,7 +150,7 @@ test.describe("Builder", () => {
     const fields = page.getByRole("region", { name: "Invoice" }).getByRole("listitem");
     const before = await fields.count();
     await page.getByRole("button", { name: "Import template" }).click();
-    const dialog = page.getByRole("dialog", { name: "Import NuExtract template" });
+    const dialog = page.getByRole("dialog", { name: "Import a JSON template" });
     const template = dialog.getByRole("textbox");
     await template.fill("{ not json");
     await dialog.getByRole("button", { name: "Append fields" }).click();
