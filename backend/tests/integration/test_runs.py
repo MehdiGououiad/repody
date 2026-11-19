@@ -12,7 +12,7 @@ from repody.extraction import client
 from repody.infra import db, queue
 from repody.infra.models import Run
 from repody.settings import get_settings
-from tests.files import FILE, PDF
+from tests.files import FILE, LOCKED_PDF, PDF
 from tests.integration.helpers import condition, invoice_workflow, rule
 
 
@@ -114,6 +114,15 @@ async def test_run_input_errors(api):
     )
     assert text_file.status_code == 422
     assert "unsupported file type" in text_file.json()["detail"]
+    locked = await api.post(
+        "/v1/workflows/wf-run/runs",
+        files={"files": ("locked.pdf", LOCKED_PDF, "application/pdf")},
+        headers=auth,
+    )
+    assert locked.status_code == 422
+    assert locked.json()["detail"] == (
+        "locked.pdf is password-protected: remove the password and upload it again."
+    )
     unknown = await api.post(
         "/v1/workflows/wf-run/runs", files=FILE, data={"documents": "Receipt"}, headers=auth
     )

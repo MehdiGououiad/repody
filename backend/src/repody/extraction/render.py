@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import Any, BinaryIO
 
 import pypdfium2 as pdfium
+import pypdfium2.raw as pdfium_c
 from PIL import Image, ImageOps
 
 PDF_DPI = 170  # NuExtract3's documented rendering resolution
@@ -28,6 +29,10 @@ IMAGE_FORMATS = ("PNG", "JPEG", "WEBP")
 PDF = "application/pdf"
 
 _PDFIUM = threading.Lock()
+
+
+class LockedPdfError(ValueError):
+    """A PDF that needs a password to open: Repody cannot read it, and says so."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +52,8 @@ def _scale(width: float, height: float, dpi: int) -> float:
 def inspect(file: BinaryIO) -> FileInfo | None:
     """What a PDF, PNG, JPEG or WebP file is, its page count and page sizes, from its headers (no
     page is decoded); None when neither PDFium nor Pillow opens it. The stream is read from the start
-    and rewound. Blocking (PDFium holds a process-wide lock): call it in a thread."""
+    and rewound. Raises LockedPdfError for a password-protected PDF. Blocking (PDFium holds a
+    process-wide lock): call it in a thread."""
     try:
         file.seek(0)
         try:
@@ -67,7 +73,9 @@ def inspect(file: BinaryIO) -> FileInfo | None:
                 int(w * _scale(w, h, PDF_DPI)) * int(h * _scale(w, h, PDF_DPI)) for w, h in sizes
             )
             return FileInfo(PDF, len(sizes), pixels)
-        except pdfium.PdfiumError:
+        except pdfium.PdfiumError as error:
+            if getattr(error, "err_code", None) == pdfium_c.FPDF_ERR_PASSWORD:
+                raise LockedPdfError from error
             return None
     finally:
         file.seek(0)

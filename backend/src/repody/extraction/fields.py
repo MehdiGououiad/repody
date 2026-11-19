@@ -59,11 +59,35 @@ def parse_answer(answer: str | None) -> tuple[dict[str, Any], str | None]:
     return data, None
 
 
+def _shaped(value: Any, field: SchemaField) -> Any:
+    """The value in its field's shape. A single-choice (``enum``) answer sometimes comes back as
+    a one-item list (``["Virement"]``, measured on staging): it is that one choice, which rules
+    compare as text. Table rows and objects in them are shaped column by column."""
+    match field.template_type:
+        case "enum" if isinstance(value, list) and len(value) == 1 and isinstance(value[0], str):
+            return value[0]
+        case "object-array" if isinstance(value, list):
+            return [_row(row, field.children) for row in value]
+        case "object" if isinstance(value, dict):
+            return _row(value, field.children)
+    return value
+
+
+def _row(row: Any, children: list[SchemaField]) -> Any:
+    if not isinstance(row, dict):
+        return row
+    by_name = {child.name: child for child in children}
+    return {k: _shaped(v, by_name[k]) if k in by_name else v for k, v in row.items()}
+
+
 def leaf_values(fields: list[SchemaField], data: dict[str, Any]) -> list[FieldValue]:
     """Every leaf with its value in the model's answer."""
     return [
         FieldValue(
-            key=key, description=field.description, type=field.template_type, value=_clean(value)
+            key=key,
+            description=field.description,
+            type=field.template_type,
+            value=_clean(_shaped(value, field)),
         )
         for key, field, value in leaves(fields, data)
     ]
