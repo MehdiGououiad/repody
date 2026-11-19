@@ -14,7 +14,7 @@ from repody.extraction import nuextract, pipeline, render
 from repody.extraction.fields import leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
-from tests.files import PDF
+from tests.files import LOCKED_PDF, PDF
 
 FIELDS = [
     SchemaField(name="total", description="Amount due", template_type="number"),
@@ -96,6 +96,21 @@ def test_leaf_values_keep_json_types():
     assert values["lines"].value == [{"label": "x"}]
     assert values["tags"].value is None
     assert not values["tags"].extracted
+
+
+def test_a_single_choice_given_as_a_one_item_list_is_that_choice():
+    payment = SchemaField(name="payment", template_type="enum", enum_values=["Virement", "Carte"])
+    rows = SchemaField(name="rows", template_type="object-array", children=[payment])
+    fields = [payment, rows, FIELDS[1]]
+    data = {
+        "payment": ["Virement"],
+        "rows": [{"payment": ["Carte"]}, {"payment": "Virement"}, "not a row"],
+        "currency": ["MAD", "EUR"],  # two choices: left as the model gave them
+    }
+    values = {v.key: v.value for v in leaf_values(fields, data)}
+    assert values["payment"] == "Virement"
+    assert values["rows"] == [{"payment": "Carte"}, {"payment": "Virement"}, "not a row"]
+    assert values["currency"] == ["MAD", "EUR"]
 
 
 def test_slightly_malformed_answers_are_repaired_and_unusable_ones_reported():
@@ -271,6 +286,12 @@ async def test_a_cancelled_wait_gives_nothing_away():
         with pytest.raises(asyncio.CancelledError):
             await waiter
     assert budget.free == 10
+
+
+def test_a_password_protected_pdf_is_told_apart_from_an_unreadable_file():
+    with pytest.raises(render.LockedPdfError):
+        render.inspect(io.BytesIO(LOCKED_PDF))
+    assert render.inspect(io.BytesIO(b"%PDF-1.7 not really")) is None
 
 
 def test_inspect_gives_each_page_the_pixels_it_is_drawn_with():

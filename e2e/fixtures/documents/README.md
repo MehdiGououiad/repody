@@ -16,6 +16,7 @@ gitignored `private/` folder at the repo root.
 | `Facture RETOUCHE remplie AVEC TVA.png` · `facturehandwritten.png` · `handwritten.jpg` | Handwritten invoices and receipts |
 | `fiche.webp` · `../bulletin-pdf.png` | Payslip templates (demo data) |
 | `Carte_identité_électronique_marocaine_(2020,_recto).png` | Public specimen of the Moroccan e-ID card |
+| `locked.pdf` | Synthetic one-page PDF that needs a password (`secret`): uploads must refuse it by name |
 
 ## Prerequisites
 

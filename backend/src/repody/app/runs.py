@@ -22,7 +22,7 @@ from repody.app.progress import plan, stored
 from repody.app.scope import visible_runs
 from repody.app.stats import midnight
 from repody.extraction.pipeline import request_tokens
-from repody.extraction.render import FileInfo, inspect, page_preview
+from repody.extraction.render import FileInfo, LockedPdfError, inspect, page_preview
 from repody.infra import db, queue
 from repody.infra.models import RuleResult, Run, RunDocument, Workflow, new_id
 from repody.infra.storage import get_store
@@ -107,7 +107,13 @@ def _inspect(upload: Upload) -> FileInfo:
     """What the file is, by its content (see ``render.inspect``), if that type is allowed, and
     its page count. Blocking: call it in a thread."""
     allowed = get_settings().upload_allowed_mime_types
-    info = inspect(upload.file)
+    try:
+        info = inspect(upload.file)
+    except LockedPdfError:
+        raise AppError(
+            422,
+            f"{upload.file_name} is password-protected: remove the password and upload it again.",
+        ) from None
     if info is None or info.mime not in allowed:
         raise AppError(
             422, f"{upload.file_name}: unsupported file type. Allowed: {', '.join(allowed)}."
