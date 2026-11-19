@@ -57,7 +57,7 @@ Put `AUDIT_INFERENCE_API_KEY` in the runtime secret when the endpoint requires a
 | Structured | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples |
 | `instructions` | The document's notes, then a `Field guidance:` list built from the field descriptions |
 | In-context examples | `developer` messages, input then expected output |
-| Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **1** (the card's document-to-Markdown example) |
+| Markdown | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **0.2** (the card's non-thinking mode; its Markdown code example uses 1, which on staging scored 96.1 against 98.4 on 11 hard pages, and 73.9 against 93.8 on a handwritten invoice) |
 
 ### Endpoint check
 
@@ -78,6 +78,7 @@ Follow the [NuExtract3 guide](https://github.com/numindai/nuextract) - do not ha
 | Import NuExtract JSON templates in the builder | Same constructors as the docs |
 | Prefer one **full name** field on ID photos | Split nom/prenom often swaps on holograms |
 | Missing fields are `null` | Official empty result |
+| Read ambiguous numeric dates (US `10/01/2014`) as `verbatim-string` | A `date` field reads them day first, even with an instruction or a field description saying otherwise (measured on staging, 18 November) |
 
 ### Troubleshooting (NuExtract)
 
