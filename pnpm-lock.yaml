@@ -183,11 +183,11 @@ importers:
         specifier: ^5.107.1
         version: 5.107.1(@types/react@19.3.0)(react@19.3.1)
       '@ui-sdk/core':
-        specifier: 0.1.0-beta.5
-        version: 0.1.0-beta.5
+        specifier: 0.1.0-beta.13
+        version: 0.1.0-beta.13
       '@ui-sdk/react':
-        specifier: 0.1.0-beta.5
-        version: 0.1.0-beta.5(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 0.1.0-beta.13
+        version: 0.1.0-beta.13(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.13)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       better-auth:
         specifier: 1.7.25
         version: 1.7.25(@opentelemetry/api@1.9.1)(next@16.4.6(@babel/core@7.29.7(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.65.1)(@types/node@26.6.6)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@opentelemetry/api@1.9.1)(@types/node@26.6.6)(vite@8.3.7(@types/node@26.6.6)(jiti@2.7.0)(terser@5.51.2)(yaml@2.9.1)))
@@ -2181,14 +2181,14 @@ packages:
     resolution: {integrity: sha512-mbCddXd+jm7hfx7w2YU64/Av4/NqqeG3GoRZgxPcgoTxYjhrcfJRw9ULch71SS4G+Q3bOXFhRvPqjguN0Hyp5w==}
     hasBin: true
 
-  '@ui-sdk/core@0.1.0-beta.5':
-    resolution: {integrity: sha512-dmunrxWrZ+vwldKJ6THQNYyyfbLFY6K82hBvIZSnuGwpEQmXKmM0iuANgGXtaqw8unSB2p9E5s3y7zfE9rgP6Q==}
+  '@ui-sdk/core@0.1.0-beta.13':
+    resolution: {integrity: sha512-URjk9hqdc/cZKDtw6Gb9NqjY48U8l0EgoP4d5ghlooa3av+GrR0iSmsav133UU4oelcuKIO1ZPJ4j7gIPMr1Vg==}
 
-  '@ui-sdk/react@0.1.0-beta.5':
-    resolution: {integrity: sha512-Zfvl94ulACX511lQKQDnK7wVjhYUYsR5LLnCZ800NzQ3983TxZasHxXyC+KYNlvppkYfpELPlAbVslsSIGQ9/A==}
+  '@ui-sdk/react@0.1.0-beta.13':
+    resolution: {integrity: sha512-Gz85tAcPJHwnv90WMIAtED3fDamqVD3F3FF3uKsA/TsL+KbaeHSgX1gGdIpNcnzkmDO8YZk9aZBKgCFgpaCcHA==}
     peerDependencies:
       '@types/react': '>=19.2.10'
-      '@ui-sdk/core': ^0.1.0-beta.5
+      '@ui-sdk/core': ^0.1.0-beta.13
       react: '>=19'
       react-dom: '>=19'
     peerDependenciesMeta:
@@ -6022,11 +6022,11 @@ snapshots:
     dependencies:
       '@typescript/old': typescript@6.0.3
 
-  '@ui-sdk/core@0.1.0-beta.5': {}
+  '@ui-sdk/core@0.1.0-beta.13': {}
 
-  '@ui-sdk/react@0.1.0-beta.5(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.5)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@ui-sdk/react@0.1.0-beta.13(@types/react@19.3.0)(@ui-sdk/core@0.1.0-beta.13)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@ui-sdk/core': 0.1.0-beta.5
+      '@ui-sdk/core': 0.1.0-beta.13
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
     optionalDependencies:
