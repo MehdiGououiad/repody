@@ -9,6 +9,7 @@ Also: model weights (/docs/guide/model-weights), GPU fallbacks (/docs/guide/gpu)
 
     modal run deploy/modal/nuextract.py::download   # once: the checkpoint into a Volume (CPU)
     modal deploy deploy/modal/nuextract.py          # prints the URL
+    uv run --no-project --with modal python deploy/modal/prewarm.py  # after each deploy
 """
 
 import base64
@@ -95,9 +96,9 @@ def download() -> None:
     # Scale to zero, and one container at most: a second GPU would double the cost.
     min_containers=0,
     max_containers=1,
-    # Idle time before the container stops (Modal's default). A restore takes ~15 s, so a
-    # longer window would mostly bill idle GPU time.
-    scaledown_window=60,
+    # Idle time before the container stops: ten minutes, so a person testing in the builder (run,
+    # adjust, run again) keeps a warm model. Up to ~$0.13 of idle L4 time after the last request.
+    scaledown_window=10 * MINUTES,
     timeout=10 * MINUTES,  # per request
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},  # alpha
@@ -142,6 +143,11 @@ class Vllm:
     @modal.web_server(port=PORT, startup_timeout=15 * MINUTES, requires_proxy_auth=True)
     def serve(self) -> None:
         pass
+
+    @modal.method()
+    def ping(self) -> str:
+        """Answers once the model is up: what prewarm.py starts containers with."""
+        return "ready"
 
     @modal.exit()
     def stop(self) -> None:
