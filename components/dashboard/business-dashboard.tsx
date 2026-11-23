@@ -121,9 +121,15 @@ function StatStrip({ data }: { data: Dashboard }) {
       {rate ? (
         <Figure
           label={t("passRate")}
-          value={<AnimatedNumber value={rate.value} format={percent} />}
+          value={runs?.value ? <AnimatedNumber value={rate.value} format={percent} /> : "—"}
           tone={rate.value < 0.8 && runs?.value ? "text-warn-ink" : undefined}
-          foot={<Delta metric={rate} />}
+          foot={
+            runs?.value ? (
+              <Delta metric={rate} />
+            ) : (
+              <span className="text-xs text-ink-4">{t("noRunsYet")}</span>
+            )
+          }
           chart={<Sparkline values={rate.series.map((p) => p.value)} className="text-pass" />}
         />
       ) : null}
@@ -146,7 +152,13 @@ function StatStrip({ data }: { data: Dashboard }) {
       />
       <Figure
         label={t("duration")}
-        value={<AnimatedNumber value={data.timing.medianMs} format={duration} />}
+        value={
+          data.timing.medianMs ? (
+            <AnimatedNumber value={data.timing.medianMs} format={duration} />
+          ) : (
+            "—"
+          )
+        }
         foot={
           <span className="text-xs tabular-nums text-ink-4">
             {t("p95", { value: formatDurationMs(data.timing.p95Ms) })} ·{" "}

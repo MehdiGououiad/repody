@@ -90,7 +90,8 @@ function StepTrack({ run }: { run: ActiveRun }) {
 function Elapsed({ since }: { since: string }) {
   const now = useNow({ updateInterval: 1000 });
   return (
-    <span className="tabular-nums">
+    // The clock moves between the server's render and the browser's.
+    <span className="tabular-nums" suppressHydrationWarning>
       {formatDurationMs(Math.max(0, now.getTime() - new Date(since).getTime()))}
     </span>
   );

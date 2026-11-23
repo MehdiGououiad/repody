@@ -76,14 +76,14 @@ function SamplePane({
                 <img
                   src={url}
                   alt={file.name}
-                  className="mx-auto h-auto max-w-full rounded-md shadow-[0_0_0_1px_var(--line)]"
+                  className="mx-auto h-auto max-w-full rounded-md shadow-panel"
                 />
               </div>
             )}
           </>
         ) : (
           <FileInputTrigger className="m-auto flex aspect-[1/1.2] w-[min(320px,calc(100%-2rem))] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-line-strong bg-panel px-6 text-center transition-[border-color,background-color,scale] duration-150 hover:border-accent hover:bg-accent-wash/40 active:scale-[0.99] group-data-[dragging]:border-accent group-data-[dragging]:bg-accent-wash">
-            <span className="flex size-10 items-center justify-center rounded-full bg-panel text-ink-3 shadow-[0_0_0_1px_var(--line)] transition-transform duration-300 group-data-[dragging]:-translate-y-1 group-data-[dragging]:scale-105">
+            <span className="flex size-10 items-center justify-center rounded-full bg-panel text-ink-3 shadow-panel transition-transform duration-300 group-data-[dragging]:-translate-y-1 group-data-[dragging]:scale-105">
               <FileUp className="size-4" aria-hidden />
             </span>
             <span className="text-[13px] font-medium text-ink">{t("samplePrompt")}</span>

@@ -32,7 +32,7 @@ export function TestRunResults({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            className="max-w-lg rounded-xl bg-panel p-4 shadow-[0_0_0_1px_var(--line)]"
+            className="max-w-lg rounded-xl bg-panel p-4 shadow-panel"
           >
             {run.phase === "running" && run.progress ? (
               <RunProgressSteps progress={run.progress} totalElapsedMs={elapsedMs} />

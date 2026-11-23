@@ -39,7 +39,10 @@ test("a viewer reads workflows and runs, and the app offers nothing they cannot 
       "readonly",
       ""
     );
-    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Test & deploy/ })
+      .click();
     const deploy = page.getByRole("button", { name: /Deploy|Redeploy/ }).first();
     await expect(deploy).toHaveAttribute("aria-disabled", "true");
     await deploy.hover();

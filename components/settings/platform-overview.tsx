@@ -7,7 +7,7 @@ import { formatBytes } from "@/lib/utils";
 
 export function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
-    <dl className="divide-y divide-line overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]">
+    <dl className="divide-y divide-line overflow-hidden rounded-lg bg-panel shadow-panel">
       {rows.map(([label, value]) => (
         <div
           key={label}
@@ -104,7 +104,7 @@ export async function PlatformOverview({ platform }: { platform: PlatformConfig 
           />
         </Section>
         <Section title={t("palette")} hint={t("paletteHint")}>
-          <div className="flex flex-col gap-4 rounded-lg bg-panel p-4 shadow-[0_0_0_1px_var(--line)]">
+          <div className="flex flex-col gap-4 rounded-lg bg-panel p-4 shadow-panel">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-ink-3 w-28">{t("actions")}</span>
               <span className="inline-flex h-7 items-center rounded-md bg-accent px-3 text-[13px] font-medium text-on-accent">

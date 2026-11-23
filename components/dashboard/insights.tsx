@@ -12,8 +12,7 @@ import { EASE_OUT } from "@/lib/motion";
 import type { Audit, Dashboard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-export const card =
-  "flex flex-col overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]";
+export const card = "flex flex-col overflow-hidden rounded-xl bg-panel shadow-panel";
 
 export function CardHeader({
   title,

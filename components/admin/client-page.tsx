@@ -72,7 +72,7 @@ export function ClientPage({ account }: { account: string }) {
           </Section>
           <Section title={t("workflows")} count={data.workflows.length}>
             {data.workflows.length ? (
-              <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
+              <ul className="divide-y divide-line rounded-lg shadow-panel">
                 {data.workflows.map((wf) => (
                   <li key={wf.id} className="flex h-9 items-center px-3 text-[13px]">
                     <Link href={`/workflows/${wf.id}`} className="text-ink hover:underline">
@@ -193,7 +193,7 @@ function UsersTable({
   const t = useTranslations("admin");
   if (!users.length) return <p className="text-[13px] text-ink-3">{t("noUsers")}</p>;
   return (
-    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_var(--line)]">
+    <div className="overflow-x-auto rounded-lg shadow-panel">
       <table className="w-full border-collapse">
         <thead className="border-b border-line bg-raised">
           <tr>
@@ -315,7 +315,7 @@ function Ledger({ entries }: { entries: LedgerEntry[] }) {
   const format = useFormatter();
   if (!entries.length) return <p className="text-[13px] text-ink-3">{t("noLedger")}</p>;
   return (
-    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_var(--line)]">
+    <div className="overflow-x-auto rounded-lg shadow-panel">
       <table className="w-full border-collapse">
         <thead className="border-b border-line bg-raised">
           <tr>

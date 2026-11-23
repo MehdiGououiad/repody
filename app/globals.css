@@ -91,20 +91,19 @@
   --font-weight-semibold: 590;
 
   --shadow-pop: 0 0 0 1px var(--line), 0 4px 12px -2px var(--shadow-color), 0 12px 32px -8px var(--shadow-color);
-  --shadow-panel: 0 0 0 1px var(--line);
+  --shadow-panel: 0 0 0 1px var(--line), 0 1px 3px var(--shadow-color);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 }
 
-/* A section or card label: small monospace capitals, the lab-notebook voice of the interface. */
+/* A section or card title: the interface's one sans voice, a step above body text. */
 @utility eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  line-height: 1rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  font-weight: 590;
+  letter-spacing: -0.006em;
 }
 
 /* Ruled paper: faint horizontal lines every 28px, for open canvases (sign-in, empty states). */

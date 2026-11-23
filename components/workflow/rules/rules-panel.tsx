@@ -48,7 +48,7 @@ export function RulesPanel({
           ))}
         </div>
       ) : (
-        <p className="rounded-lg bg-raised px-4 py-6 text-[13px] text-ink-3 shadow-[0_0_0_1px_var(--line)]">
+        <p className="rounded-lg bg-raised px-4 py-6 text-[13px] text-ink-3 shadow-panel">
           {t("emptyActive")}
         </p>
       )}

@@ -137,7 +137,8 @@
       "extraction": "extraction {value}",
       "api": "Through the API",
       "apiSplit": "{api} API · {test} tests",
-      "reviewSplit": "{failed} rejected · {warning} to check"
+      "reviewSplit": "{failed} rejected · {warning} to check",
+      "noRunsYet": "No runs this week"
     },
     "volume": {
       "title": "Volume · 14 days",
@@ -292,9 +293,9 @@
         "fields": "Fields",
         "rules": "Rules",
         "testDeploy": "Test & deploy",
-        "back": "Back",
-        "next": "Next",
-        "continueBlockedSchema": "Name a document and add at least one field to continue."
+        "continueBlockedSchema": "Name a document and add at least one field to continue.",
+        "backTo": "Back to {step}",
+        "nextTo": "Next: {step}"
       },
       "runChip": {
         "running": "Running",
@@ -317,7 +318,9 @@
         "errorTitle": "The test did not run",
         "progress": {
           "starting": "Starting test run…"
-        }
+        },
+        "emptyTitle": "Results appear here",
+        "emptyHint": "Extract and validate reads each sample, checks your rules, and shows the verdict with every field and rule."
       },
       "deploy": {
         "tabLabel": "Deploy",
@@ -1017,5 +1020,13 @@
     "exampleHint": "Edit it freely: saving creates your own copy.",
     "copyName": "{name} (my copy)",
     "copied": "Your copy is saved"
+  },
+  "pageHints": {
+    "dashboard": "How your documents did, and what needs a look.",
+    "operations": "Runs in progress, the model and errors, live.",
+    "workflows": "Each workflow reads a set of documents and checks them with your rules.",
+    "audits": "Every document run, with its fields, rules and verdict.",
+    "settings": "Your access, language and appearance.",
+    "admin": "Clients, their users and credits."
   }
 }

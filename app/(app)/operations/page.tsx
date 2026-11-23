@@ -18,6 +18,7 @@ export default async function OperationsPage() {
 
   return (
     <Page
+      description={(await getTranslations("pageHints"))("operations")}
       title={tNav("operations")}
       className="max-w-[1440px] py-5"
       status={

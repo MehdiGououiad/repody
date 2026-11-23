@@ -19,7 +19,7 @@ const DEFAULT_BRAND: Brand = {
   base: "oklch(0.6 0.006 75)", // a warm grey
   accent: "oklch(0.55 0.15 255)", // ink blue
   contrast: 50,
-  radius: 4,
+  radius: 6,
 };
 
 const number = (value: string | undefined, fallback: number) => {

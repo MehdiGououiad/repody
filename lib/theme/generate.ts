@@ -63,11 +63,11 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
 
   // Surfaces step up in lightness: canvas (behind the chrome), panel (where work happens, the
   // brightest), raised (inside a panel), overlay (menus, dialogs), field (inputs, inset).
-  // Dark is AMOLED: true black behind the chrome, near-black panels a step up, elevation by
-  // lightness and hairlines (shadows vanish on black), and off-white text that does not bloom.
+  // Dark is graphite, not black: panels a clear step above the canvas so cards and shadows
+  // still read, and off-white text that does not bloom.
   const surface = light
-    ? { canvas: 0.966 - 0.012 * k, panel: 0.995, raised: 0.976, overlay: 1, field: 0.988 }
-    : { canvas: 0, panel: 0.145, raised: 0.175, overlay: 0.205, field: 0.12 };
+    ? { canvas: 0.968 - 0.012 * k, panel: 0.998, raised: 0.978, overlay: 1, field: 0.99 }
+    : { canvas: 0.16, panel: 0.215, raised: 0.245, overlay: 0.265, field: 0.19 };
   const ink = light
     ? [0.235 - 0.06 * k, 0.43 - 0.07 * k, 0.56 - 0.06 * k, 0.7 - 0.05 * k]
     : [0.93 + 0.03 * k, 0.76 + 0.04 * k, 0.6 + 0.04 * k, 0.47 + 0.04 * k];
@@ -146,7 +146,7 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
     "--fail-ink": fail.ink,
     "--fail-wash": fail.wash,
     ...documentTokens,
-    "--shadow-color": light ? css(0.2, inkC, h, 0.1) : "oklch(0 0 0 / 0.8)",
+    "--shadow-color": light ? css(0.2, inkC, h, 0.08) : "oklch(0 0 0 / 0.45)",
     // Charts: the accent leads, neutral steps follow.
     "--chart-1": css(accentFill.l, accentFill.c, accentFill.h ?? 0),
     "--chart-2": css(ink[2], inkC, h),
