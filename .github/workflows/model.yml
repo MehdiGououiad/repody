@@ -1,0 +1,56 @@
+name: Deploy model
+
+# The NuExtract model app on Modal (deploy/modal): deploy it, then pre-warm it so the slow starts
+# that build its memory snapshots happen here, not on a client's run (deploy/modal/README.md).
+# Run by hand (Actions -> Deploy model) after changing deploy/modal/nuextract.py, staging first.
+# Modal's guide: https://modal.com/docs/guide/continuous-deployment
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Modal environment (staging, or main for production)
+        type: choice
+        options: [staging, main]
+        default: staging
+      deploy:
+        description: Deploy the app before pre-warming (off pre-warms what is deployed)
+        type: boolean
+        default: true
+      starts:
+        description: Model starts to pre-warm
+        type: number
+        default: 4
+
+# One model change at a time per environment; a second one waits instead of racing the first.
+concurrency:
+  group: model-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    # Four cold starts of up to ~8 minutes each, with the stops in between.
+    timeout-minutes: 60
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      MODAL_ENVIRONMENT: ${{ inputs.environment }}
+      # The client the app was written and tested with, and its dependencies, locked with hashes
+      # (deploy/modal/requirements.txt, from requirements.in): no unpinned or built package runs
+      # with the token.
+      MODAL: uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+      - name: Deploy
+        if: inputs.deploy
+        run: $MODAL modal deploy deploy/modal/nuextract.py
+      - name: Pre-warm
+        env:
+          STARTS: ${{ inputs.starts }}
+        run: $MODAL python deploy/modal/prewarm.py --env "$MODAL_ENVIRONMENT" --starts "$STARTS"

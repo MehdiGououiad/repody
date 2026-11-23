@@ -47,17 +47,17 @@ Notes from the [Memory Snapshots](https://modal.com/docs/guide/memory-snapshots)
 
 The Starter plan includes [$30 of compute a month](https://modal.com/pricing): about 37 hours on an L4
 ($0.80/h) or 27 on an A10 ($1.10/h). CPU and memory cost a little more on top. A burst of runs costs
-the 15 s start, the extractions, and the idle minute before the container stops
-(`scaledown_window=60`, Modal's default).
+the 15 s start, the extractions, and ten idle minutes before the container stops
+(`scaledown_window=10 * MINUTES`). The ten minutes keep the model warm while someone tests in the
+builder (run, adjust, run again), for up to ~$0.13 of idle time after the last request.
 
 | Usage (L4; A10 about 1.4×) | GPU time | Cost |
 |---|---|---|
-| One invoice, then idle | ~76 s | ~$0.02 |
-| 100 invoices in one burst | ~175 s | ~$0.04 |
+| One invoice, then idle | ~10 min | ~$0.14 |
+| 100 invoices in one burst | ~12 min | ~$0.16 |
 | The first 2–3 starts per GPU type after a deploy (snapshots) | ~507 s each | ~$0.11 each |
 
-So $30 covers about 1,500 isolated invoices, or far more when they come in batches. These estimates
-are GPU time only.
+So $30 covers about 200 isolated sessions or bursts. These estimates are GPU time only.
 
 **What actually cost money on 12 November** (`modal billing report --for today --show-resources`):
 $0.96 of compute, all of it covered by the credit.
@@ -69,9 +69,20 @@ The rules that follow from it:
 - **Deploy rarely.** Each deploy discards the snapshots, and the next 2–3 starts per GPU type
   rebuild them at ~5–8 minutes each, roughly $0.25–0.70 per deploy. Ordinary starts after that
   restore a snapshot in 13–18 s (measured on staging, 19 November).
-- **Wake it a few times after a deploy** with the check below, waiting a minute or more between
-  calls so the container stops, so the slow starts don't fall on real runs. The builder also wakes
-  the model when someone opens Test & deploy with a sample (`POST /v1/model/wake`).
+- **Pre-warm after every deploy**, so the slow starts don't fall on real runs:
+  ```bash
+  uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt \
+    python deploy/modal/prewarm.py --env main      # production; --env staging for staging
+  ```
+  It starts the deployed model four times and stops it in between, printing each start's time:
+  minutes while a snapshot is built, seconds once one is restored. Run it again if the last start
+  is still slow (a start can land on the other GPU type). The builder also wakes the model when someone
+  opens Test & deploy with a sample (`POST /v1/model/wake`).
+- **Or from GitHub:** Actions → **Deploy model** deploys the app to the chosen environment and
+  pre-warms it, with a record in GitHub. Staging first, then `main`. Once, create a token in
+  Modal ([Settings → API Tokens](https://modal.com/settings/tokens)) and save it as the repository
+  secrets `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET`
+  ([Modal's guide](https://modal.com/docs/guide/continuous-deployment)).
 
 - In [Usage & Billing](https://modal.com/settings/usage), set the **spend limit** to **$0**. It caps
   what you pay after credits; once the credit is used, Modal
@@ -175,9 +186,10 @@ Logs: `modal app logs repody-nuextract --since 1h`. Look for "Creating GPU memor
 | "waiting to be scheduled on a GPU_L4 worker" | No L4 free right now; the fallback list takes an A10 |
 | `Cannot change … between Server and non-Server` on deploy | Modal keeps the kind of a name; use a new class name |
 | 401 | No Proxy Token, or the wrong one |
-| A slow start after every deploy | Expected: a deploy invalidates the snapshots (2–3 per GPU type are taken again) |
+| A slow start after every deploy | Expected: a deploy invalidates the snapshots (2–3 per GPU type are taken again). Run `prewarm.py` |
+| "Container terminated due to preemption" | Modal took the GPU back; it restarts the request by itself, from the start of the model load if no snapshot exists yet |
 
 ## Update
 
 To move to a new vLLM release or model revision, change the pins in `nuextract.py`. Run `download`
-again if the revision changed, then `modal deploy`.
+again if the revision changed, then `modal deploy`, then `prewarm.py`.

@@ -57,6 +57,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # bash -eo pipefail: a failing command fails its step even when piped (the smoke test's output
+    # goes through grep, which alone would report success).
+    defaults:
+      run:
+        shell: bash
     environment: ${{ inputs.target || 'production' }}
     permissions:
       contents: read
@@ -259,6 +264,8 @@ jobs:
           fi
           echo "release ${VERSION} on ${TARGET}: running, migrated, answering, signing in, headers and CORS in place"
 
+      # One real run as the stack's tester account (deploy/keycloak/setup-tester-client.sh), when
+      # it has one: a document through extraction on the GPU, its credits, and its isolation.
       - name: Smoke test
         timeout-minutes: 20
         run: |
@@ -280,8 +287,6 @@ jobs:
         run: |
           tailscale ssh "deploy@${HOST}" "docker image prune --all --force --filter until=72h | tail -n 1"
 
-      # One real run as the stack's tester account (deploy/keycloak/setup-tester-client.sh), when
-      # it has one: a document through extraction on the GPU, its credits, and its isolation.
       - name: Logs of the failed release
         if: failure()
         run: |

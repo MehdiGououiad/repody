@@ -51,7 +51,7 @@ export function TestDeployStep({
     description: t("test.extractAndValidate"),
   });
 
-  // Pre-warm the GPU only here (never in Fields), since the container stops after 60 s idle.
+  // Pre-warm the GPU only here, where a test is about to run: it costs GPU time until it stops.
   useEffect(() => {
     if (test.canRun && test.sampleCount > 0) wakeModel();
   }, [test.canRun, test.sampleCount]);
