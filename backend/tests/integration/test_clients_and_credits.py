@@ -1,5 +1,6 @@
 """Client companies are kept apart, and runs are metered and paid for with credits."""
 
+import asyncio
 import io
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
@@ -363,3 +364,20 @@ async def test_a_run_whose_documents_never_reached_the_model_still_pays_its_fee(
     run = (await acme.post("/v1/workflows/wf-acme/runs", files=FILE)).json()["runId"]
     assert (await acme.get(f"/v1/runs/{run}")).json()["status"] == "done"
     assert (await credits(acme))["balance"] == 20 - 8
+
+
+async def test_an_account_that_cannot_pay_wakes_no_gpu(
+    as_user, model_answer, enforced, monkeypatch
+):
+    from repody.api import platform as platform_api
+
+    monkeypatch.setattr(platform_api, "_last_wake", None)
+    acme, platform = as_user(ACME), as_user(PLATFORM)
+    assert (await acme.post("/v1/model/wake")).status_code == 202
+    await asyncio.gather(*platform_api._wake_tasks)
+    assert model_answer["wakes"] == 0
+
+    await grant(platform, "client-acme", 10)
+    assert (await acme.post("/v1/model/wake")).status_code == 202
+    await asyncio.gather(*platform_api._wake_tasks)
+    assert model_answer["wakes"] == 1

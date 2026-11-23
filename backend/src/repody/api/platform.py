@@ -8,7 +8,7 @@ from fastapi import APIRouter, Response
 from sqlalchemy import text
 
 from repody.api.deps import AccountScope, OptionalUser, SessionDep, require
-from repody.app.credits import credits_of
+from repody.app.credits import credits_of, run_cost
 from repody.app.dashboard import get_dashboard
 from repody.app.operations import cancel_run, get_operations
 from repody.extraction import client as inference
@@ -118,9 +118,14 @@ async def get_catalog() -> Catalog:
 
 
 @router.post("/model/wake", status_code=202, dependencies=[require("run:execute")])
-async def wake_model() -> None:
-    """Start waking the model server in the background, at most once per minute per process."""
+async def wake_model(user: OptionalUser, session: SessionDep) -> None:
+    """Start waking the model server in the background, at most once per minute per process.
+    An account that cannot pay for a run wakes nothing: the GPU is billed while it is up."""
     global _last_wake
+    if user is not None:
+        credits = await credits_of(session, user.account)
+        if credits.enforced and credits.balance < run_cost(1):
+            return
     try:
         now = time.monotonic()
         if _last_wake is not None and now - _last_wake < WAKE_COOLDOWN_SECONDS:
