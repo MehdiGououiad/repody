@@ -38,8 +38,10 @@ jobs:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
       MODAL_ENVIRONMENT: ${{ inputs.environment }}
-      # The client the app was written and tested with; bump it with the app.
-      MODAL_CLIENT: modal==1.6.4
+      # The client the app was written and tested with, and its dependencies, locked with hashes
+      # (deploy/modal/requirements.txt, from requirements.in): no unpinned or built package runs
+      # with the token.
+      MODAL: uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -47,10 +49,8 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       - name: Deploy
         if: inputs.deploy
-        run: uv run --no-project --with "$MODAL_CLIENT" modal deploy deploy/modal/nuextract.py
+        run: $MODAL modal deploy deploy/modal/nuextract.py
       - name: Pre-warm
         env:
           STARTS: ${{ inputs.starts }}
-        run: >-
-          uv run --no-project --with "$MODAL_CLIENT"
-          python deploy/modal/prewarm.py --env "$MODAL_ENVIRONMENT" --starts "$STARTS"
+        run: $MODAL python deploy/modal/prewarm.py --env "$MODAL_ENVIRONMENT" --starts "$STARTS"

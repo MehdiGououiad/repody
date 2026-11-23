@@ -71,8 +71,8 @@ The rules that follow from it:
   restore a snapshot in 13–18 s (measured on staging, 19 November).
 - **Pre-warm after every deploy**, so the slow starts don't fall on real runs:
   ```bash
-  uv run --no-project --with modal python deploy/modal/prewarm.py --env main     # production
-  uv run --no-project --with modal python deploy/modal/prewarm.py --env staging  # staging
+  uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt \
+    python deploy/modal/prewarm.py --env main      # production; --env staging for staging
   ```
   It starts the deployed model four times and stops it in between, printing each start's time:
   minutes while a snapshot is built, seconds once one is restored. Run it again if the last start

@@ -9,7 +9,7 @@ Also: model weights (/docs/guide/model-weights), GPU fallbacks (/docs/guide/gpu)
 
     modal run deploy/modal/nuextract.py::download   # once: the checkpoint into a Volume (CPU)
     modal deploy deploy/modal/nuextract.py          # prints the URL
-    uv run --no-project --with modal python deploy/modal/prewarm.py  # after each deploy
+    python deploy/modal/prewarm.py                  # after each deploy (see prewarm.py)
 """
 
 import base64

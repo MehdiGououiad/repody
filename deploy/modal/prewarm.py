@@ -7,18 +7,21 @@ It calls the *deployed* app (snapshots are only made for deployed apps, never fo
 then stops its container, so each call is a fresh start. Each line says how long a start took:
 minutes while a snapshot is built, seconds once one is restored.
 
-    uv run --no-project --with modal python deploy/modal/prewarm.py --env main
-    uv run --no-project --with modal python deploy/modal/prewarm.py --env staging
+    uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt \
+        python deploy/modal/prewarm.py --env staging
 """
 
 import argparse
 import json
+import re
 import subprocess
 import time
 
 import modal
 
 APP = "repody-nuextract"
+ENVIRONMENTS = ("main", "staging")
+CONTAINER_ID = re.compile(r"ta-[A-Za-z0-9]+")
 
 
 def modal_cli(*args: str) -> str:
@@ -34,7 +37,11 @@ def stop_containers(env: str, app_id: str) -> None:
     """Stop the app's containers and wait until none is left, so the next call starts cold."""
     while True:
         containers = json.loads(modal_cli("container", "list", "--env", env, "--json"))
-        ids = [c["container_id"] for c in containers if c["app_id"] == app_id]
+        ids = [
+            c["container_id"]
+            for c in containers
+            if c["app_id"] == app_id and CONTAINER_ID.fullmatch(c["container_id"])
+        ]
         if not ids:
             return
         for container_id in ids:
@@ -44,8 +51,10 @@ def stop_containers(env: str, app_id: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--env", default="main", help="Modal environment (main is production)")
-    parser.add_argument("--starts", type=int, default=4)
+    parser.add_argument(
+        "--env", choices=ENVIRONMENTS, default="main", help="Modal environment (main is production)"
+    )
+    parser.add_argument("--starts", type=int, choices=range(1, 11), default=4, metavar="1-10")
     args = parser.parse_args()
 
     app_id = deployed_app_id(args.env)
