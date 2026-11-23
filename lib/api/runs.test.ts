@@ -4,7 +4,7 @@ const openCredits = vi.fn();
 vi.mock("@/lib/credits/dialog", () => ({ openCredits }));
 vi.mock("@/lib/api/browser", () => ({ $api: {} }));
 
-const { resetWakeCooldownForTests, startRun, wakeModel } = await import("./runs");
+const { startRun, wakeModel } = await import("./runs");
 
 function answer(status: number, body: unknown) {
   vi.stubGlobal(
@@ -45,7 +45,7 @@ describe("startRun", () => {
 
 describe("wakeModel", () => {
   it("posts at most once per minute and ignores errors", () => {
-    resetWakeCooldownForTests();
+    vi.useFakeTimers();
     const fetchMock = vi.fn(async () => {
       throw new Error("offline");
     });
@@ -54,5 +54,9 @@ describe("wakeModel", () => {
     wakeModel();
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith("/api/v1/model/wake", { method: "POST" });
+    vi.advanceTimersByTime(60_000);
+    wakeModel();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });

@@ -26,9 +26,6 @@ export function wakeModel(): void {
   void fetch(`/api${WAKE_PATH}`, { method: "POST" }).catch(() => undefined);
 }
 
-export function resetWakeCooldownForTests(): void {
-  lastWakeAt = -Infinity;
-}
 
 export type StartRun = {
   workflowId: string;

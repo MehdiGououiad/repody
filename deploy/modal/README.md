@@ -172,7 +172,7 @@ Logs: `modal app logs repody-nuextract --since 1h`. Look for "Creating GPU memor
 | Symptom | Cause and fix |
 |---|---|
 | Nothing starts; a tiny function also waits forever | The Workspace budget is $0: raise it, and keep the spend limit at $0 |
-| "waiting to be scheduled on a GPU_L4 worker" | No L4 free right now; Modal waits for one (waiting is not billed) |
+| "waiting to be scheduled on a GPU_L4 worker" | No L4 free right now; the fallback list takes an A10 |
 | `Cannot change … between Server and non-Server` on deploy | Modal keeps the kind of a name; use a new class name |
 | 401 | No Proxy Token, or the wrong one |
 | A slow start after every deploy | Expected: a deploy invalidates the snapshots (2–3 per GPU type are taken again) |
