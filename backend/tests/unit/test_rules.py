@@ -211,6 +211,8 @@ def test_rule_issues_are_labelled():
     incomplete = cond(Arithmetic(left=field("ttc")), "==", text("1"))
     rule = Rule(id="r", name="Sum", conditions=[incomplete])
     assert rule_issues(rule) == ["Sum: Condition 1: Choose both fields of the arithmetic."]
+    # An unnamed rule is called so, never by its internal id.
+    assert rule_issues(Rule(id="r694f7977")) == ["Unnamed rule: Add at least one condition."]
 
 
 def test_conditions_round_trip_in_the_wire_shape():

@@ -52,15 +52,22 @@ test.describe("Workflows list", () => {
     await context.close();
   });
 
-  test("C opens a new workflow with its name focused; Ctrl+S saves it", async ({ page }) => {
+  test("C asks for the workflow's and first document's names; Ctrl+S saves it", async ({
+    page,
+  }) => {
     const watch = watchErrors(page);
     await open(page, "/workflows");
     await page.keyboard.press("c");
     await expect(page).toHaveURL(/\/workflows\/new$/);
-    const name = page.getByRole("textbox", { name: "Workflow name" });
+    const start = page.getByRole("dialog", { name: "New workflow" });
+    const name = start.getByRole("textbox", { name: "Workflow name" });
     await expect(name).toBeFocused();
     const title = `QA new ${Date.now()}`;
     await name.fill(title);
+    await start.getByRole("textbox", { name: "First document" }).fill("Invoice");
+    await start.getByRole("button", { name: "Create workflow" }).click();
+    await expect(start).toBeHidden();
+    await expect(page.getByRole("tab", { name: /Invoice/ })).toBeVisible();
     await page.keyboard.press("Control+s");
     await expect(page).toHaveURL(/\/workflows\/[^/]+\/edit$/);
     const id = page.url().split("/").at(-2) ?? "";

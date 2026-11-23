@@ -23,6 +23,16 @@ import type { DocumentDef } from "@/lib/types";
 import { UPLOAD_ACCEPT } from "@/lib/uploads";
 import { newDocument } from "@/lib/workflow/new-items";
 
+/** "facture_mars-2026.pdf" -> "Facture mars 2026": a document name from its file. */
+function nameFromFile(fileName: string): string {
+  const base = fileName
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
+}
+
 function SamplePane({
   file,
   onFileChange,
@@ -139,7 +149,10 @@ export function ExtractionWorkbench({
   if (!active) return null;
   const updateDoc = (patch: Partial<DocumentDef>) =>
     onChange(documents.map((d) => (d.id === active.id ? { ...d, ...patch } : d)));
-  const setFile = (file: File | null) => test.setFile(active.id, file);
+  const setFile = (file: File | null) => {
+    test.setFile(active.id, file);
+    if (file && !active.documentType.trim()) updateDoc({ documentType: nameFromFile(file.name) });
+  };
 
   const fieldsPane = (
     // Read-only roles see the schema with every control disabled (the API refuses saves too).

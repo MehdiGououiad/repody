@@ -164,6 +164,11 @@ export function SchemaTable({
     const keys = schema.map((field) => fieldKey(field.name)).filter(Boolean);
     return new Set(keys.filter((key, i) => keys.indexOf(key) !== i));
   }, [schema]);
+  const addField = () => {
+    const field = newSchemaField();
+    setAddedId(field.id);
+    onChange([...schema, field]);
+  };
   const update = (id: string, patch: Partial<SchemaField>) =>
     onChange(schema.map((f) => (f.id === id ? { ...f, ...patch } : f)));
 
@@ -207,18 +212,20 @@ export function SchemaTable({
           </AnimatePresence>
         </ul>
       ) : (
-        <p className="px-4 py-6 text-[13px] text-ink-3">{t("empty")}</p>
+        <button
+          type="button"
+          onClick={addField}
+          className="m-3 flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border border-dashed border-line-strong px-4 py-8 text-center outline-none transition-colors duration-150 hover:border-accent hover:bg-accent-wash/40 focus-visible:shadow-[0_0_0_2px_var(--focus)]"
+        >
+          <span className="flex size-8 items-center justify-center rounded-full bg-accent-wash text-accent-ink">
+            <Plus className="size-4" aria-hidden />
+          </span>
+          <span className="text-[13px] font-medium text-ink">{t("addFirstField")}</span>
+          <span className="max-w-xs text-xs text-ink-3">{t("empty")}</span>
+        </button>
       )}
       <div className="flex items-center gap-1 border-t border-line px-1.5 py-1">
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => {
-            const field = newSchemaField();
-            setAddedId(field.id);
-            onChange([...schema, field]);
-          }}
-        >
+        <Button variant="ghost" size="xs" onClick={addField}>
           <Plus />
           {t("addField")}
         </Button>

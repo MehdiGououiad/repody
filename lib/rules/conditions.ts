@@ -38,6 +38,23 @@ export function conditionFields(condition: RuleCondition): string[] {
   return [...new Set(names.filter((name) => name.trim()))];
 }
 
+/** Whether every part of the condition is chosen: the fields it reads and, unless it only
+ * checks presence, the value or field it is compared with. */
+export function isComplete(condition: RuleCondition): boolean {
+  const left = condition.left;
+  const leftDone =
+    left.kind === "field"
+      ? Boolean(left.field.trim())
+      : left.kind === "arithmetic"
+        ? Boolean(left.left.field.trim() && left.right.field.trim())
+        : Boolean(left.table.trim());
+  const right = condition.right;
+  const rightDone =
+    !right ||
+    (right.kind === "literal" ? Boolean(right.value.trim()) : Boolean(right.field.trim()));
+  return leftDone && rightDone;
+}
+
 /** Whether the user has started filling the condition (for the "incomplete" hint). */
 export function isTouched(condition: RuleCondition): boolean {
   return (
