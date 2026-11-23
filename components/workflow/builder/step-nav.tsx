@@ -60,7 +60,10 @@ export function BuilderSteps({
             {i > 0 ? (
               <span
                 aria-hidden
-                className={cn("h-px w-6 shrink-0", index <= step ? "bg-accent" : "bg-line-strong")}
+                className={cn(
+                  "h-px w-6 shrink-0 max-md:w-3",
+                  index <= step ? "bg-accent" : "bg-line-strong"
+                )}
               />
             ) : null}
             <ToolbarButton
@@ -85,7 +88,9 @@ export function BuilderSteps({
               >
                 {done ? <Check className="size-3" strokeWidth={3} aria-hidden /> : i + 1}
               </span>
-              {t(key)}
+              {/* On a phone only the current step is named; the others keep their name for
+                  screen readers. */}
+              <span className={cn(!current && "max-md:sr-only")}>{t(key)}</span>
             </ToolbarButton>
           </Fragment>
         );

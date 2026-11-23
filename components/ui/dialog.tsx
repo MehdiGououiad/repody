@@ -13,7 +13,7 @@ import type * as React from "react";
 import { cn, partClass } from "@/lib/utils";
 
 export const backdropClass =
-  "fixed inset-0 z-50 bg-[oklch(0.15_0_0/0.32)] transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0 data-ending-style:duration-120 motion-reduce:transition-none";
+  "fixed inset-0 z-50 bg-[oklch(0.12_0_0/0.5)] backdrop-blur-[2px] transition-opacity duration-200 data-starting-style:opacity-0 data-ending-style:opacity-0 data-ending-style:duration-120 motion-reduce:transition-none";
 
 export const dialogSurface =
   "fixed start-1/2 top-[14vh] z-50 flex max-h-[76vh] w-[min(560px,calc(100vw-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-xl bg-overlay text-ink shadow-pop outline-none transition-[opacity,scale] duration-200 ease-out data-starting-style:scale-[0.96] data-starting-style:opacity-0 data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-ending-style:duration-120 motion-reduce:transition-none rtl:translate-x-1/2";

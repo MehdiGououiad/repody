@@ -225,7 +225,7 @@ function DocumentFields({
                 className="translate-y-0.5"
               />
               <span className="min-w-0">
-                <span className="block truncate font-mono text-xs text-ink-2">{field.key}</span>
+                <span className="block truncate text-[13px] font-medium text-ink">{field.key}</span>
                 {field.description ? (
                   <span className="block truncate text-xs text-ink-4">{field.description}</span>
                 ) : null}

@@ -16,7 +16,8 @@ async def test_create_save_and_read(api):
 
     listed = (await api.get("/v1/workflows")).json()["workflows"]
     assert [w["id"] for w in listed] == [created["id"]]
-    assert listed[0]["documents"] == []  # list cards carry no definition
+    # List cards name each document, without its fields.
+    assert [(d["documentType"], d["schema"]) for d in listed[0]["documents"]] == [("Invoice", [])]
 
 
 async def test_save_rejects_incomplete_rules_and_duplicate_fields(api):

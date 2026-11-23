@@ -139,7 +139,8 @@ async def load(session: AsyncSession, workflow_id: str, *, account: str | None =
 async def list_workflows(
     session: AsyncSession, *, limit: int | None = None, account: str | None = None
 ) -> list[WorkflowOut]:
-    """Cards for the workflow list, most recently edited first: no definition, no API stats."""
+    """Cards for the workflow list, most recently edited first: each document's name only (no
+    fields, no rules), no API stats."""
     workflows = (
         await session.scalars(
             select(Workflow)
@@ -149,8 +150,20 @@ async def list_workflows(
         )
     ).all()
     stats = await _run_stats(session, [wf.id for wf in workflows])
-    empty = WorkflowDefinition()
-    return [_out(wf, empty, stats.get(wf.id, RunStats()), account=account) for wf in workflows]
+    return [
+        _out(wf, _names_only(wf), stats.get(wf.id, RunStats()), account=account) for wf in workflows
+    ]
+
+
+def _names_only(wf: Workflow) -> WorkflowDefinition:
+    documents = (wf.definition or {}).get("documents", [])
+    return WorkflowDefinition.model_validate(
+        {
+            "documents": [
+                {"id": d["id"], "documentType": d.get("documentType", "")} for d in documents
+            ]
+        }
+    )
 
 
 async def get_workflow(
