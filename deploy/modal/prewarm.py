@@ -25,7 +25,11 @@ CONTAINER_ID = re.compile(r"ta-[A-Za-z0-9]+")
 
 
 def modal_cli(*args: str) -> str:
-    return subprocess.run(["modal", *args], capture_output=True, text=True, check=True).stdout
+    # Arguments are this file's constants, an environment from ENVIRONMENTS (argparse choices)
+    # and container ids matching CONTAINER_ID: nothing free-form reaches the command line.
+    return subprocess.run(  # NOSONAR
+        ["modal", *args], capture_output=True, text=True, check=True
+    ).stdout
 
 
 def deployed_app_id(env: str) -> str:
