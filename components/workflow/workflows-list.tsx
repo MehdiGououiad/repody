@@ -76,7 +76,7 @@ function WorkflowRow({
       <span className="relative hidden min-w-0 items-center gap-1 overflow-hidden md:flex">
         {workflow.documents.slice(0, 3).map((doc, i) => (
           <DocChip key={doc.id} index={i} variant="chip">
-            {doc.documentType}
+            {doc.documentType || `${t("builder.docSource.unnamedDoc")} ${i + 1}`}
           </DocChip>
         ))}
         {workflow.documents.length > 3 ? (

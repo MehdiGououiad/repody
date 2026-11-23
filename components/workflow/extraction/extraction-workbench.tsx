@@ -216,7 +216,7 @@ export function ExtractionWorkbench({
           <ResizablePanel
             defaultSize={wide ? 46 : 36}
             minSize={wide ? 26 : 20}
-            className="min-h-0 min-w-0"
+            className="min-h-0 min-w-0 overflow-hidden"
           >
             <SamplePane key={active.id} file={test.files[active.id]} onFileChange={setFile} />
           </ResizablePanel>

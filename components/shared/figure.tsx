@@ -29,7 +29,7 @@ export function Figure({
         </span>
         {foot ? <span className="truncate text-xs text-ink-4">{foot}</span> : null}
       </div>
-      {chart}
+      {chart ? <span className="max-sm:hidden">{chart}</span> : null}
     </div>
   );
 }
