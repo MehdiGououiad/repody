@@ -69,10 +69,12 @@ export function RuleCard({
       onChange({ appliesTo: [docId] });
       return;
     }
-    if (rule.appliesTo.includes(docId)) return;
-    const slot =
-      rule.appliesTo.length >= 2 ? [rule.appliesTo[0], docId] : [...rule.appliesTo, docId];
-    onChange({ appliesTo: slot.slice(0, 2) });
+    if (rule.appliesTo.includes(docId)) {
+      if (rule.appliesTo.length > 2)
+        onChange({ appliesTo: rule.appliesTo.filter((d) => d !== docId) });
+      return;
+    }
+    onChange({ appliesTo: [...rule.appliesTo, docId] });
   };
 
   return (
@@ -143,8 +145,7 @@ export function RuleCard({
           ) : (
             <div className="flex flex-wrap gap-1">
               {documents.map((doc, idx) => {
-                const pos = rule.appliesTo.indexOf(doc.id);
-                const selected = pos !== -1;
+                const selected = rule.appliesTo.includes(doc.id);
                 return (
                   <Toggle
                     key={doc.id}
@@ -158,9 +159,6 @@ export function RuleCard({
                     )}
                   >
                     <span className={cn("size-1.5 rounded-full", docColor(idx).dot)} aria-hidden />
-                    {isCross && selected ? (
-                      <span className="text-xs font-semibold">{pos === 0 ? "A" : "B"}</span>
-                    ) : null}
                     {doc.documentType || `${t("unnamedDoc")} ${idx + 1}`}
                   </Toggle>
                 );

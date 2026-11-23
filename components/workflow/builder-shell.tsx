@@ -2,12 +2,15 @@
 
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { EASE_OUT } from "@/lib/motion";
 import { fieldKey } from "@/lib/rules/field-key";
 import type { Workflow } from "@/lib/types";
 import { BuilderTopbar } from "./builder/builder-topbar";
+import { NameWorkflowDialog } from "./builder/name-workflow-dialog";
 import { type BuilderStep, BuilderSteps, STEP_KEYS, stepComplete } from "./builder/step-nav";
 import { TestDeployStep } from "./builder/test-run-panel";
 import { useBuilderWorkflow } from "./builder/use-builder-workflow";
@@ -19,6 +22,8 @@ type BuilderMode = "new" | "edit";
 
 function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: BuilderMode }) {
   const t = useTranslations("workflows.builder.steps");
+  const router = useRouter();
+  const [naming, setNaming] = useState(mode === "new");
   const {
     step,
     setStep,
@@ -80,6 +85,17 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
 
   return (
     <div className="flex h-full flex-col">
+      <NameWorkflowDialog
+        open={naming}
+        onCancel={() => router.push("/workflows")}
+        onStart={(names) => {
+          setName(names.workflow);
+          setDocuments(
+            documents.map((doc, i) => (i === 0 ? { ...doc, documentType: names.document } : doc))
+          );
+          setNaming(false);
+        }}
+      />
       <BuilderTopbar
         name={name}
         deployed={deployed}
@@ -156,15 +172,15 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
         ) : (
           <span />
         )}
-        {step === 0 && !schemaReady ? (
+        {step === 1 && !schemaReady ? (
           <p className="hidden text-xs text-ink-3 sm:block">{t("continueBlockedSchema")}</p>
         ) : null}
         {step < 2 ? (
           <Button
             variant="primary"
             size="md"
-            disabled={step === 0 && !schemaReady}
-            title={step === 0 && !schemaReady ? t("continueBlockedSchema") : undefined}
+            disabled={step === 1 && !schemaReady}
+            title={step === 1 && !schemaReady ? t("continueBlockedSchema") : undefined}
             onClick={() => setStep((step + 1) as BuilderStep)}
           >
             {t("nextTo", { step: t(STEP_KEYS[step + 1]) })}

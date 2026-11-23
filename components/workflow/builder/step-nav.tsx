@@ -27,7 +27,7 @@ export function stepBlocked(
   documents: DocumentDef[],
   rules: WorkflowRule[]
 ): boolean {
-  return (step === 1 || step === 2) && !stepComplete(0, documents, rules);
+  return step === 2 && !stepComplete(0, documents, rules);
 }
 
 /**

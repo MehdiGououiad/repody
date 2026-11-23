@@ -225,7 +225,7 @@ def condition_issue(condition: Condition, schema: SchemaTypes | None = None) -> 
 
 def rule_issues(rule: Rule, schema: SchemaTypes | None = None) -> list[str]:
     """Problems that keep a rule from being saved, prefixed with the rule's name."""
-    label = rule.name.strip() or rule.id
+    label = rule.name.strip() or "Unnamed rule"
     if not rule.conditions:
         return [f"{label}: Add at least one condition."]
     return [

@@ -289,11 +289,11 @@
     "builder": {
       "steps": {
         "navTitle": "Étapes",
-        "blockedHint": "Nommez un document et ajoutez un champ d'abord",
+        "blockedHint": "Ajoutez d'abord un champ à un document",
         "fields": "Champs",
         "rules": "Règles",
         "testDeploy": "Tester et déployer",
-        "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer.",
+        "continueBlockedSchema": "Ajoutez au moins un champ à un document pour le tester.",
         "backTo": "Retour : {step}",
         "nextTo": "Suivant : {step}"
       },
@@ -582,14 +582,15 @@
             "description": "Format régional pour les documents coréens"
           }
         },
-        "empty": "Aucun champ pour le moment. Ajoutez-en un pour décrire ce qui doit être extrait.",
+        "empty": "Chaque champ est une valeur à lire dans le document, comme un total ou une date.",
         "fieldCount": "{count, plural, one {# champ} other {# champs}}",
         "addDescription": "Ajouter une description : où trouver la valeur ?",
         "valueColumn": "Valeur extraite",
         "notFound": "Introuvable",
         "stale": "À réextraire",
         "missingHint": "Introuvable : précisez où la valeur se trouve.",
-        "removeField": "Retirer {name}"
+        "removeField": "Retirer {name}",
+        "addFirstField": "Ajouter le premier champ"
       },
       "rules": {
         "title": "Règles",
@@ -602,10 +603,10 @@
         "hint": "Chaque règle référence les champs de l'étape 1 et s'applique aux valeurs extraites. Une règle de rejet dont la valeur n'a pas été lue envoie l'exécution en examen.",
         "appliesTo": "Périmètre",
         "scopeIntraShort": "Un document",
-        "scopeCrossShort": "Deux documents",
+        "scopeCrossShort": "Plusieurs documents",
         "selectOneDoc": "Document",
         "selectTwoDocs": "Documents",
-        "crossRequiresTwoDocs": "Ajoutez un second type de document à l'étape 1 pour activer les règles inter-documents.",
+        "crossRequiresTwoDocs": "Ajoutez un deuxième document dans Champs pour comparer des documents.",
         "ruleName": "Nom de la règle…",
         "noDocsYet": "Définissez d'abord des documents à l'étape 1.",
         "unnamedDoc": "Document",
@@ -727,7 +728,17 @@
       "unsaved": "Modifications non enregistrées",
       "notSaved": "Non enregistré",
       "viewOnly": "Lecture seule",
-      "viewOnlyHint": "Votre rôle permet de lire ce workflow, pas de le modifier."
+      "viewOnlyHint": "Votre rôle permet de lire ce workflow, pas de le modifier.",
+      "start": {
+        "title": "Nouveau workflow",
+        "hint": "Nommez-le, ainsi que le premier document qu'il lit. Vous pourrez renommer les deux plus tard.",
+        "workflowName": "Nom du workflow",
+        "workflowPlaceholder": "Factures fournisseurs",
+        "documentName": "Premier document",
+        "documentPlaceholder": "Facture",
+        "documentHint": "Le type de document que vous allez déposer, comme Facture ou Bulletin de paie.",
+        "create": "Créer le workflow"
+      }
     },
     "row": {
       "neverRun": "Jamais exécuté"

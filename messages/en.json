@@ -289,11 +289,11 @@
     "builder": {
       "steps": {
         "navTitle": "Steps",
-        "blockedHint": "Name a document and add a field first",
+        "blockedHint": "Add a field to a document first",
         "fields": "Fields",
         "rules": "Rules",
         "testDeploy": "Test & deploy",
-        "continueBlockedSchema": "Name a document and add at least one field to continue.",
+        "continueBlockedSchema": "Add at least one field to a document to test it.",
         "backTo": "Back to {step}",
         "nextTo": "Next: {step}"
       },
@@ -582,14 +582,15 @@
             "description": "Regional field format for Korean documents"
           }
         },
-        "empty": "No fields yet. Add one to describe what should be extracted from the document.",
+        "empty": "Each field is one value to read from the document, like a total or a date.",
         "fieldCount": "{count, plural, one {# field} other {# fields}}",
         "addDescription": "Add a description: where is the value?",
         "valueColumn": "Extracted value",
         "notFound": "Not found",
         "stale": "Extract again",
         "missingHint": "Not found: say where the value is.",
-        "removeField": "Remove {name}"
+        "removeField": "Remove {name}",
+        "addFirstField": "Add the first field"
       },
       "rules": {
         "title": "Rules",
@@ -602,10 +603,10 @@
         "hint": "Each rule references fields from step 1 and runs on extracted values. A reject rule whose value was not read sends the run to review.",
         "appliesTo": "Scope",
         "scopeIntraShort": "One document",
-        "scopeCrossShort": "Two documents",
+        "scopeCrossShort": "Several documents",
         "selectOneDoc": "Document",
         "selectTwoDocs": "Documents",
-        "crossRequiresTwoDocs": "Add a second document type in step 1 to enable cross-document rules.",
+        "crossRequiresTwoDocs": "Add a second document in Fields to compare documents.",
         "ruleName": "Rule name…",
         "noDocsYet": "Define documents in step 1 first.",
         "unnamedDoc": "Document",
@@ -727,7 +728,17 @@
       "unsaved": "Unsaved changes",
       "notSaved": "Not saved",
       "viewOnly": "View only",
-      "viewOnlyHint": "Your role can read this workflow but not change it."
+      "viewOnlyHint": "Your role can read this workflow but not change it.",
+      "start": {
+        "title": "New workflow",
+        "hint": "Name it, and the first document it reads. You can rename both later.",
+        "workflowName": "Workflow name",
+        "workflowPlaceholder": "Supplier invoices",
+        "documentName": "First document",
+        "documentPlaceholder": "Invoice",
+        "documentHint": "The kind of document you will upload, like Invoice or Payslip.",
+        "create": "Create workflow"
+      }
     },
     "row": {
       "neverRun": "Never run"

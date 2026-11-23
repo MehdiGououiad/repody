@@ -11,6 +11,7 @@ import type { BuilderStep } from "@/components/workflow/builder/step-nav";
 import { $api } from "@/lib/api/browser";
 import { useUnsavedChangesWarning } from "@/lib/hooks/use-unsaved-changes-warning";
 import { errorMessage } from "@/lib/query/get-query-client";
+import { isComplete } from "@/lib/rules/conditions";
 import type { DocumentDef, Workflow, WorkflowRule } from "@/lib/types";
 
 const AUTOSAVE_MS = 2_500;
@@ -97,13 +98,26 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     (value: Draft[K]) =>
       setDraft((previous) => ({ ...previous, [key]: value }));
 
-  /** Save the draft; the first save of a new workflow moves the URL to its edit page. */
-  const persist = async ({ navigate }: { navigate: boolean }): Promise<string> => {
+  /**
+   * Save the draft; the first save of a new workflow moves the URL to its edit page. Autosave
+   * and test runs leave out a rule still being written (it stays on screen); an explicit save
+   * or a deploy sends every rule, so the server says what is missing.
+   */
+  const persist = async ({
+    navigate,
+    finishedRulesOnly = false,
+  }: {
+    navigate: boolean;
+    finishedRulesOnly?: boolean;
+  }): Promise<string> => {
     const snapshot = draft;
     if (!snapshot.name.trim()) throw new Error(t("toasts.nameRequired"));
+    const rules = finishedRulesOnly
+      ? snapshot.rules.filter((r) => r.conditions.length > 0 && r.conditions.every(isComplete))
+      : snapshot.rules;
     await saveMutation.mutateAsync({
       params: { path: { workflow_id: workflow.id } },
-      body: { ...snapshot, description: workflow.description, owner: workflow.owner },
+      body: { ...snapshot, rules, description: workflow.description, owner: workflow.owner },
     });
     if (!persisted) {
       const href = `/workflows/${workflow.id}/edit`;
@@ -141,7 +155,7 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
         await saveAsCopy();
         return;
       }
-      await persist({ navigate: !silent });
+      await persist({ navigate: !silent, finishedRulesOnly: silent });
       if (!silent) {
         toast.success(t("toasts.draftSaved"), { description: t("toasts.draftSavedDetail") });
       }
@@ -191,6 +205,6 @@ export function useBuilderWorkflow(workflow: Workflow, mode: "new" | "edit" = "e
     handleDeploy,
     handleSaveDraft,
     /** Save before a test run, so it uses what the builder shows (returns the workflow id). */
-    saveForTestRun: () => persist({ navigate: false }),
+    saveForTestRun: () => persist({ navigate: false, finishedRulesOnly: true }),
   };
 }
