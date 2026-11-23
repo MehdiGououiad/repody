@@ -180,11 +180,9 @@ test.describe("Builder", () => {
     await names.last().fill("QA rule");
 
     const rule = page.locator("article, section, li").filter({ has: names.last() }).last();
-    await rule.getByRole("combobox", { name: "If it fails" }).click();
-    await page.getByRole("option", { name: "Flag for review" }).click();
-    await expect(rule.getByRole("combobox", { name: "If it fails" })).toContainText(
-      "Flag for review"
-    );
+    const severity = rule.getByRole("radiogroup", { name: "If it fails" });
+    await severity.getByRole("radio", { name: /Flag for review/ }).click();
+    await expect(severity.getByRole("radio", { name: /Flag for review/ })).toBeChecked();
 
     // Half written, the rule cannot be saved: the header says so, with the reason.
     await page.keyboard.press("Control+s");

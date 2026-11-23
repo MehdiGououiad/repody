@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button";
 import { BareInput } from "@/components/ui/input";
 import { Menu, MenuContent, MenuItem, MenuTrigger } from "@/components/ui/menu";
 import { confirmAction } from "@/components/ui/overlays";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SegmentedControl, SegmentedControlOption } from "@/components/ui/segmented-control";
 import { StatusGlyph } from "@/components/ui/status-glyph";
 import { catalog } from "@/lib/catalog";
 import { docColor } from "@/lib/doc-color";
@@ -30,7 +24,7 @@ import { cn } from "@/lib/utils";
 import { ConditionBuilder } from "./condition-builder";
 import { ScopeToggle } from "./scope-toggle";
 
-const LABEL = "w-24 shrink-0 pt-1.5 text-xs text-ink-3";
+const LABEL = "w-28 shrink-0 pt-1.5 text-xs font-medium text-ink-3";
 
 export function RuleCard({
   rule,
@@ -82,8 +76,8 @@ export function RuleCard({
   };
 
   return (
-    <section className="overflow-hidden rounded-lg bg-panel shadow-panel">
-      <header className="flex h-10 items-center gap-2 border-b border-line bg-raised px-3">
+    <section className="overflow-hidden rounded-xl bg-panel shadow-panel">
+      <header className="flex h-12 items-center gap-2 border-b border-line px-4">
         <StatusGlyph
           status={issues.length ? "warning" : "passed"}
           label={issues.length ? t("hasIssues") : t("valid")}
@@ -93,7 +87,7 @@ export function RuleCard({
           onChange={(e) => onChange({ name: e.target.value })}
           placeholder={t("ruleName")}
           aria-label={t("ruleName")}
-          className="h-7 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[13px] font-semibold text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none"
+          className="h-8 min-w-0 flex-1 rounded-md bg-transparent px-1.5 text-[14px] font-semibold text-ink outline-none transition-colors duration-100 placeholder:text-ink-4 hover:bg-hover focus-visible:bg-field focus-visible:shadow-[inset_0_0_0_1px_var(--accent)] focus-visible:outline-none"
         />
         {result ? (
           <span
@@ -141,7 +135,7 @@ export function RuleCard({
         </Menu>
       </header>
 
-      <div className="flex flex-col gap-3 p-3.5">
+      <div className="flex flex-col gap-4 p-4">
         <div className="flex gap-3">
           <span className={LABEL}>{isCross ? t("selectTwoDocs") : t("selectOneDoc")}</span>
           {documents.length === 0 ? (
@@ -198,30 +192,20 @@ export function RuleCard({
 
         <div className="flex items-center gap-3">
           <span className={cn(LABEL, "pt-0")}>{t("onFail")}</span>
-          <Select
+          <SegmentedControl
+            aria-label={t("onFail")}
             value={rule.severity}
-            onValueChange={(v: string | null) =>
-              v !== null && onChange({ severity: v as RuleSeverity })
-            }
+            onValueChange={(v) => v && onChange({ severity: v as RuleSeverity })}
           >
-            <SelectTrigger className="w-auto min-w-44" aria-label={t("onFail")}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="reject">
-                <span className="flex items-center gap-2">
-                  <StatusGlyph status="failed" />
-                  {t("severityReject")}
-                </span>
-              </SelectItem>
-              <SelectItem value="flag">
-                <span className="flex items-center gap-2">
-                  <StatusGlyph status="warning" />
-                  {t("severityFlag")}
-                </span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <SegmentedControlOption value="reject">
+              <StatusGlyph status="failed" />
+              {t("severityReject")}
+            </SegmentedControlOption>
+            <SegmentedControlOption value="flag">
+              <StatusGlyph status="warning" />
+              {t("severityFlag")}
+            </SegmentedControlOption>
+          </SegmentedControl>
         </div>
       </div>
     </section>

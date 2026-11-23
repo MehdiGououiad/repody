@@ -32,7 +32,7 @@ export function AdminArea() {
   if (!overview.data) return <Skeleton.Lines count={8} />;
   const data = overview.data;
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-10">
       {data.enabled ? null : (
         <p className="rounded-md bg-warn-wash px-3 py-2 text-[13px] text-warn-ink">
           {t("notConfigured")}
@@ -99,7 +99,12 @@ function SpendSection({ data }: { data: AdminOverview }) {
 function ClientsTable({ clients }: { clients: ClientSummary[] }) {
   const t = useTranslations("admin");
   const format = useFormatter();
-  if (!clients.length) return <p className="py-6 text-[13px] text-ink-3">{t("noClients")}</p>;
+  if (!clients.length)
+    return (
+      <p className="rounded-xl border border-dashed border-line-strong px-5 py-8 text-center text-[13px] text-ink-3">
+        {t("noClients")}
+      </p>
+    );
   return (
     <div className="overflow-x-auto rounded-lg shadow-panel">
       <table className="w-full border-collapse">
@@ -165,7 +170,9 @@ function WorkflowsSection({ clients }: { clients: ClientSummary[] }) {
             ))}
           </ul>
         ) : (
-          <p className="py-6 text-[13px] text-ink-3">{t("noWorkflows")}</p>
+          <p className="rounded-xl border border-dashed border-line-strong px-5 py-8 text-center text-[13px] text-ink-3">
+            {t("noWorkflows")}
+          </p>
         )
       ) : (
         <Skeleton.Lines count={3} />
@@ -244,7 +251,9 @@ export function EventsSection({ account }: { account?: string }) {
             ))}
           </ul>
         ) : (
-          <p className="py-6 text-[13px] text-ink-3">{t("noEvents")}</p>
+          <p className="rounded-xl border border-dashed border-line-strong px-5 py-8 text-center text-[13px] text-ink-3">
+            {t("noEvents")}
+          </p>
         )
       ) : (
         <Skeleton.Lines count={4} />

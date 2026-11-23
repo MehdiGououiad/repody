@@ -24,7 +24,7 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
 
   const report = (
     <div className="flex flex-col gap-6 px-5 py-5 md:px-6">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-xl bg-panel p-5 shadow-panel">
         <ReportVerdict audit={audit} />
         <div className="flex items-center gap-1 ps-8">
           <code className="font-mono text-xs text-ink-4">{audit.id}</code>
