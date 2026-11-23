@@ -26,7 +26,6 @@ export function wakeModel(): void {
   void fetch(`/api${WAKE_PATH}`, { method: "POST" }).catch(() => undefined);
 }
 
-
 export type StartRun = {
   workflowId: string;
   documents: DocumentDef[];

@@ -400,6 +400,7 @@ export interface paths {
         /**
          * Wake Model
          * @description Start waking the model server in the background, at most once per minute per process.
+         *     An account that cannot pay for a run wakes nothing: the GPU is billed while it is up.
          */
         post: operations["wake_model_v1_model_wake_post"];
         delete?: never;
