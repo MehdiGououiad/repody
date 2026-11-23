@@ -160,8 +160,12 @@ def main() -> None:
     charged = before - after["balance"]
     check(charged > 0 and after["held"] == 0, f"charged {charged} credits, nothing left held")
 
-    audits = api.get("/audits", params={"limit": 100}).json()["audits"]
-    check(all(a["workflowId"] == WORKFLOW for a in audits), "its audits are its own only")
+    # The account may have run other workflows of its own (load or accuracy tests): what it must
+    # never see is a run of a workflow it cannot open, which would be another company's.
+    audits = api.get("/audits", params={"limit": 200}).json()["audits"]
+    visible = {w["id"] for w in api.get("/workflows").json()["workflows"]}
+    check(any(a["id"] == run_id for a in audits), "its run is in its audits")
+    check(all(a["workflowId"] in visible for a in audits), "its audits are its own company's only")
     check(api.get("/admin").status_code == 403, "the admin area is refused")
     check(api.get("/audits/run-not-its-own").status_code == 404, "an unknown run is not found")
     print(f"smoke test passed in {round(time.monotonic() - started)} s", flush=True)
