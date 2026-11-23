@@ -78,7 +78,9 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
   // The fill of primary buttons: text on it reaches 4.5:1 with white or near-black, and when a
   // mid-lightness accent allows neither, the fill darkens until white text does.
   const darkText = { mode: "oklch" as const, l: 0.2, c: inkC, h };
-  let accentFill: Oklch = light ? accent : { ...accent, l: Math.max(accent.l, 0.6) };
+  let accentFill: Oklch = light
+    ? accent
+    : { ...accent, l: Math.min(Math.max(accent.l, 0.5), 0.58) };
   const readable = (text: string) => wcagContrast(text, formatHex(accentFill)) >= 4.5;
   if (!readable("#ffffff") && !readable(formatHex(darkText))) {
     accentFill = withContrast(accentFill, "#ffffff", 4.5, -1);

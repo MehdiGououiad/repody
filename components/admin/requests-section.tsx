@@ -79,7 +79,12 @@ function RequestList({
   onApprove: (request: AccessRequest) => void;
 }>) {
   if (!items) return <Skeleton.Lines count={3} />;
-  if (!items.length) return <p className="py-6 text-[13px] text-ink-3">{empty}</p>;
+  if (!items.length)
+    return (
+      <p className="rounded-xl border border-dashed border-line-strong px-5 py-8 text-center text-[13px] text-ink-3">
+        {empty}
+      </p>
+    );
   return (
     <ul className="divide-y divide-line rounded-lg shadow-panel">
       {items.slice(0, 30).map((request) => (
