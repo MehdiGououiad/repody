@@ -98,7 +98,7 @@ export function IngestionSection({
     return <p className="text-sm text-ink-3">{t("noDocsHint")}</p>;
   }
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--line)]">
+    <ul className="divide-y divide-line overflow-hidden rounded-lg shadow-panel">
       {named.map((doc) => (
         <DocumentSlot
           key={doc.id}

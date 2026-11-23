@@ -39,10 +39,10 @@ describe("theme generation", () => {
     }
   }
 
-  it("draws dark mode on true black for OLED screens", () => {
+  it("draws dark mode on graphite, with panels a visible step above the canvas", () => {
     const theme = generateTheme(BRANDS[0], "dark");
-    expect(hex(theme["--canvas"])).toBe("#000000");
-    expect(wcagContrast(hex(theme["--panel"]), "#000000")).toBeLessThan(1.3);
+    expect(hex(theme["--canvas"])).not.toBe("#000000");
+    expect(wcagContrast(hex(theme["--panel"]), hex(theme["--canvas"]))).toBeGreaterThan(1.1);
   });
 
   it("writes both modes and the radius scale", () => {

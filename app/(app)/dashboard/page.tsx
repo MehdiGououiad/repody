@@ -27,6 +27,7 @@ export default async function DashboardPage() {
 
   return (
     <Page
+      description={(await getTranslations("pageHints"))("dashboard")}
       title={tNav("dashboard")}
       className="max-w-[1440px] py-5"
       actions={

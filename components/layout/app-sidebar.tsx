@@ -98,7 +98,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               href="/workflows/new"
               onClick={onNavigate}
               aria-label={t("newWorkflow")}
-              className="flex size-7 shrink-0 items-center justify-center rounded-md bg-raised text-ink-2 shadow-[0_0_0_1px_var(--line)] transition-colors duration-100 hover:bg-hover hover:text-ink"
+              className="flex size-7 shrink-0 items-center justify-center rounded-md bg-raised text-ink-2 shadow-panel transition-colors duration-100 hover:bg-hover hover:text-ink"
             >
               <Plus className="size-3.5" aria-hidden />
             </Link>

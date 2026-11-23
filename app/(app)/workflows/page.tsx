@@ -23,6 +23,7 @@ export default async function WorkflowsPage() {
 
   return (
     <Page
+      description={(await getTranslations("pageHints"))("workflows")}
       title={tNav("workflows")}
       bleed
       actions={

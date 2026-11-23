@@ -137,7 +137,8 @@
       "extraction": "extraction {value}",
       "api": "Via l’API",
       "apiSplit": "{api} API · {test} tests",
-      "reviewSplit": "{failed} rejetées · {warning} à vérifier"
+      "reviewSplit": "{failed} rejetées · {warning} à vérifier",
+      "noRunsYet": "Aucun traitement cette semaine"
     },
     "volume": {
       "title": "Volume · 14 jours",
@@ -292,9 +293,9 @@
         "fields": "Champs",
         "rules": "Règles",
         "testDeploy": "Tester et déployer",
-        "back": "Retour",
-        "next": "Suivant",
-        "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer."
+        "continueBlockedSchema": "Nommez un document et ajoutez au moins un champ pour continuer.",
+        "backTo": "Retour : {step}",
+        "nextTo": "Suivant : {step}"
       },
       "runChip": {
         "running": "En cours",
@@ -317,7 +318,9 @@
         "errorTitle": "Le test n'a pas pu s'exécuter",
         "progress": {
           "starting": "Démarrage du test…"
-        }
+        },
+        "emptyTitle": "Les résultats s'afficheront ici",
+        "emptyHint": "Extraire et valider lit chaque exemple, applique vos règles et affiche le verdict avec chaque champ et chaque règle."
       },
       "deploy": {
         "tabLabel": "Déployer",
@@ -1017,5 +1020,13 @@
     "exampleHint": "Modifiez-le librement : votre copie est créée à l’enregistrement.",
     "copyName": "{name} (ma copie)",
     "copied": "Votre copie est enregistrée"
+  },
+  "pageHints": {
+    "dashboard": "Comment se sont passés vos documents, et ce qui demande un coup d'œil.",
+    "operations": "Les traitements en cours, le modèle et les erreurs, en direct.",
+    "workflows": "Chaque workflow lit un ensemble de documents et les vérifie avec vos règles.",
+    "audits": "Chaque document traité, avec ses champs, ses règles et son verdict.",
+    "settings": "Votre accès, votre langue et l'apparence.",
+    "admin": "Les clients, leurs utilisateurs et leurs crédits."
   }
 }

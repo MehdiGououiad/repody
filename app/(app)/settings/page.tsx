@@ -12,7 +12,7 @@ export default async function SettingsPage() {
   const [tNav, access] = await Promise.all([getTranslations("nav"), fetchAccess()]);
   const platform = access.permissions.includes("metrics:read") ? await fetchPlatformConfig() : null;
   return (
-    <Page title={tNav("settings")}>
+    <Page description={(await getTranslations("pageHints"))("settings")} title={tNav("settings")}>
       <div className="flex flex-col gap-8">
         <AccessOverview access={access} />
         {platform ? <PlatformOverview platform={platform} /> : null}

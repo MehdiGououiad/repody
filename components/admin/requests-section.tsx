@@ -81,7 +81,7 @@ function RequestList({
   if (!items) return <Skeleton.Lines count={3} />;
   if (!items.length) return <p className="py-6 text-[13px] text-ink-3">{empty}</p>;
   return (
-    <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
+    <ul className="divide-y divide-line rounded-lg shadow-panel">
       {items.slice(0, 30).map((request) => (
         <RequestRow key={request.id} request={request} onApprove={onApprove} />
       ))}

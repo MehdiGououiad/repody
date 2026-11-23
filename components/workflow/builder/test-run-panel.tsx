@@ -1,7 +1,7 @@
 "use client";
 
 import { useShortcut, useShortcutHint } from "@ui-sdk/react/shortcuts";
-import { Play } from "lucide-react";
+import { Play, ScanSearch } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { Gate } from "@/components/auth/gate";
@@ -110,10 +110,20 @@ export function TestDeployStep({
           <RunErrorAlert title={t("test.errorTitle")} message={test.run.error} runId={test.runId} />
         ) : null}
 
-        <TestRunResults run={test.run} starting={test.starting} elapsedMs={test.elapsedMs} />
+        {test.run.phase === "idle" && !test.starting ? (
+          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-line-strong px-6 py-12 text-center">
+            <span className="flex size-10 items-center justify-center rounded-full bg-accent-wash text-accent-ink">
+              <ScanSearch className="size-5" aria-hidden />
+            </span>
+            <p className="text-[13px] font-medium text-ink">{t("test.emptyTitle")}</p>
+            <p className="max-w-sm text-xs text-ink-3">{t("test.emptyHint")}</p>
+          </div>
+        ) : (
+          <TestRunResults run={test.run} starting={test.starting} elapsedMs={test.elapsedMs} />
+        )}
       </div>
 
-      <section className="flex flex-col gap-4 rounded-xl bg-panel p-5 shadow-[0_0_0_1px_var(--line)]">
+      <section className="flex flex-col gap-4 rounded-xl bg-panel p-5 shadow-panel">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="eyebrow text-ink-2">{t("deploy.tabLabel")}</h2>

@@ -169,7 +169,10 @@ test.describe("Builder", () => {
   test("rules: add, name, documents, severity, remove", async ({ page }) => {
     const watch = watchErrors(page);
     await openBuilder(page, workflow.id);
-    await page.getByRole("tab", { name: /Rules/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Rules/ })
+      .click();
     const names = page.getByRole("textbox", { name: "Rule name…" });
     await expect(names).toHaveCount(1);
     await page.getByRole("button", { name: "Add a rule" }).click();
@@ -215,7 +218,10 @@ test.describe("Builder", () => {
   test("deploy shows the API with a key", async ({ page }) => {
     const watch = watchErrors(page);
     await openBuilder(page, workflow.id);
-    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Test & deploy/ })
+      .click();
     await page.getByRole("tabpanel").getByRole("button", { name: "Deploy" }).click();
     await expect(page.getByText("Live").first()).toBeVisible();
     await expect(page.getByText(/wbk_/).first()).toBeVisible();

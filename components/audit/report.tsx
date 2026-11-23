@@ -106,7 +106,7 @@ function RuleList({
   const t = useTranslations("audits.report");
   const sorted = [...rules].sort((a, b) => RULE_ORDER[a.status] - RULE_ORDER[b.status]);
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]">
+    <ul className="divide-y divide-line overflow-hidden rounded-lg bg-panel shadow-panel">
       {sorted.map((rule) => {
         const failed = rule.status === "failed";
         const status = failed ? (rule.severity === "flag" ? "warning" : "failed") : rule.status;
@@ -170,7 +170,7 @@ function DocumentFields({
   const found = doc.fields.filter((f) => f.extracted).length;
 
   return (
-    <section className="overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)] print-keep">
+    <section className="overflow-hidden rounded-lg bg-panel shadow-panel print-keep">
       <header className="flex h-9 items-center gap-2 border-b border-line bg-raised px-3.5">
         <DocChip index={index} className="text-[13px] font-medium text-ink">
           {doc.documentType}

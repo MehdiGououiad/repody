@@ -30,7 +30,7 @@ export default async function AuditsPage({
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/workflows"));
 
   return (
-    <Page title={tNav("audits")} bleed>
+    <Page description={(await getTranslations("pageHints"))("audits")} title={tNav("audits")} bleed>
       <HydrationBoundary state={dehydrate(queryClient)}>
         <Suspense fallback={<Skeleton.Lines count={10} className="p-4" />}>
           <AuditList />

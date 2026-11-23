@@ -82,7 +82,7 @@ function SpendSection({ data }: { data: AdminOverview }) {
         rate: spend.dollarsPerHour,
       })}
     >
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line shadow-[0_0_0_1px_var(--line)] sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line shadow-panel sm:grid-cols-4">
         {stats.map(([label, value]) => (
           <div key={label} className="bg-panel px-4 py-3">
             <dt className="text-xs text-ink-3">{label}</dt>
@@ -101,7 +101,7 @@ function ClientsTable({ clients }: { clients: ClientSummary[] }) {
   const format = useFormatter();
   if (!clients.length) return <p className="py-6 text-[13px] text-ink-3">{t("noClients")}</p>;
   return (
-    <div className="overflow-x-auto rounded-lg shadow-[0_0_0_1px_var(--line)]">
+    <div className="overflow-x-auto rounded-lg shadow-panel">
       <table className="w-full border-collapse">
         <thead className="border-b border-line bg-raised">
           <tr>
@@ -159,7 +159,7 @@ function WorkflowsSection({ clients }: { clients: ClientSummary[] }) {
     <Section title={t("workflowsTitle")} hint={t("workflowsHint")}>
       {workflows.data ? (
         workflows.data.length ? (
-          <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
+          <ul className="divide-y divide-line rounded-lg shadow-panel">
             {workflows.data.map((wf) => (
               <WorkflowRow key={wf.id} workflow={wf} clients={clients} />
             ))}
@@ -238,7 +238,7 @@ export function EventsSection({ account }: { account?: string }) {
     <Section title={t("auditLog")} hint={t("auditLogHint")}>
       {events.data ? (
         events.data.length ? (
-          <ul className="divide-y divide-line rounded-lg shadow-[0_0_0_1px_var(--line)]">
+          <ul className="divide-y divide-line rounded-lg shadow-panel">
             {events.data.map((event) => (
               <EventRow key={event.id} event={event} />
             ))}

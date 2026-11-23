@@ -82,7 +82,7 @@ export function RuleCard({
   };
 
   return (
-    <section className="overflow-hidden rounded-lg bg-panel shadow-[0_0_0_1px_var(--line)]">
+    <section className="overflow-hidden rounded-lg bg-panel shadow-panel">
       <header className="flex h-10 items-center gap-2 border-b border-line bg-raised px-3">
         <StatusGlyph
           status={issues.length ? "warning" : "passed"}

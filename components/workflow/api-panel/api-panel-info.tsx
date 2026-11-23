@@ -12,7 +12,7 @@ import { buildWorkflowRunSnippets, runStateEndpoint } from "@/lib/api/workflow-r
 import { useHydrated } from "@/lib/hooks/use-hydrated";
 import type { DocumentDef } from "@/lib/types";
 
-const FRAME = "overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--line)]";
+const FRAME = "overflow-hidden rounded-lg shadow-panel";
 
 function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (

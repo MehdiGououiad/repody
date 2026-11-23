@@ -80,7 +80,7 @@ export function CopyableOutputPanel({
   return (
     <Tabs
       defaultValue="preview"
-      className={cn("overflow-hidden rounded-md shadow-[0_0_0_1px_var(--line)]", className)}
+      className={cn("overflow-hidden rounded-md shadow-panel", className)}
     >
       <div className="flex h-9 items-center gap-2 border-b border-line ps-1.5 pe-1">
         <TabsList aria-label={labels.title}>

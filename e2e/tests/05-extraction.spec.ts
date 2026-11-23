@@ -33,7 +33,10 @@ test.describe("Extraction", () => {
     await expect(page.getByText("Facture.pdf")).toBeVisible();
     await expect(page.getByRole("tab", { name: /Invoice/ })).toBeVisible();
 
-    await page.getByRole("tab", { name: /Test & deploy/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Test & deploy/ })
+      .click();
     await expect(page.getByText("Facture.pdf")).toBeVisible();
     const extract = page.getByRole("button", { name: /Extract and validate/ });
     await expect(extract).toBeEnabled();
@@ -51,11 +54,17 @@ test.describe("Extraction", () => {
     await expect(report.getByText("Facture.pdf").first()).toBeVisible();
 
     // The rules step shows how each rule did on the sample.
-    await page.getByRole("tab", { name: /Rules/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Rules/ })
+      .click();
     await expect(page.getByText(/(Holds|Fails) on the sample|Not evaluated/).first()).toBeVisible();
 
     // Back in Fields, extracted values appear next to the fields.
-    await page.getByRole("tab", { name: /Fields/ }).click();
+    await page
+      .getByRole("toolbar", { name: "Steps" })
+      .getByRole("button", { name: /Fields/ })
+      .click();
     await expect(page.getByText(/\d+ of \d+ found/)).toBeVisible();
     const invoice = page.getByRole("region", { name: "Invoice" });
     const values = invoice.locator("li").filter({ hasNotText: "—" });

@@ -11,7 +11,7 @@ export default async function AdminPage() {
   await requirePermission("clients:manage");
   const t = await getTranslations("admin");
   return (
-    <Page title={t("title")}>
+    <Page description={(await getTranslations("pageHints"))("admin")} title={t("title")}>
       <AdminArea />
     </Page>
   );

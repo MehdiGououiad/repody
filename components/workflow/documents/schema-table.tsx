@@ -100,7 +100,7 @@ function SchemaFieldRow({
           aria-label={t("name")}
           autoFocus={focusName}
           aria-invalid={duplicate}
-          className={cn(CELL_INPUT, "font-mono text-xs", duplicate && "text-fail-ink")}
+          className={cn(CELL_INPUT, "font-medium", duplicate && "text-fail-ink")}
         />
         <TemplateTypeSelect
           value={field.templateType}

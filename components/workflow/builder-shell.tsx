@@ -4,12 +4,11 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsPanel } from "@/components/ui/tabs";
 import { EASE_OUT } from "@/lib/motion";
 import { fieldKey } from "@/lib/rules/field-key";
 import type { Workflow } from "@/lib/types";
 import { BuilderTopbar } from "./builder/builder-topbar";
-import { type BuilderStep, BuilderTabs, STEP_VALUES, stepComplete } from "./builder/step-nav";
+import { type BuilderStep, BuilderSteps, STEP_KEYS, stepComplete } from "./builder/step-nav";
 import { TestDeployStep } from "./builder/test-run-panel";
 import { useBuilderWorkflow } from "./builder/use-builder-workflow";
 import { useTestRun } from "./builder/use-test-run";
@@ -80,14 +79,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
   };
 
   return (
-    <Tabs
-      value={STEP_VALUES[step]}
-      onValueChange={(value) => {
-        const next = STEP_VALUES.indexOf(value as (typeof STEP_VALUES)[number]);
-        if (next >= 0) setStep(next as BuilderStep);
-      }}
-      className="flex h-full flex-col"
-    >
+    <div className="flex h-full flex-col">
       <BuilderTopbar
         name={name}
         deployed={deployed}
@@ -99,7 +91,15 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
         onOpenTest={() => {
           if (schemaReady) setStep(2);
         }}
-        steps={<BuilderTabs documents={documents} rules={rules} done={deployed} />}
+        steps={
+          <BuilderSteps
+            step={step}
+            documents={documents}
+            rules={rules}
+            deployed={deployed}
+            onStepChange={setStep}
+          />
+        }
       />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
@@ -110,7 +110,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
           transition={{ duration: 0.18, ease: EASE_OUT }}
           className="min-h-0 flex-1"
         >
-          <TabsPanel value={STEP_VALUES[step]} className="h-full">
+          <section aria-label={t(STEP_KEYS[step])} className="h-full">
             {step === 0 ? (
               <ExtractionWorkbench documents={documents} test={test} onChange={setDocuments} />
             ) : (
@@ -144,36 +144,37 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
                 </div>
               </div>
             )}
-          </TabsPanel>
+          </section>
         </motion.div>
       </AnimatePresence>
-      <footer className="flex h-12 shrink-0 items-center justify-between gap-3 border-t border-line bg-panel px-4 md:px-6">
-        <Button
-          variant="secondary"
-          disabled={step === 0}
-          onClick={() => setStep((step - 1) as BuilderStep)}
-        >
-          <ArrowLeft />
-          {t("back")}
-        </Button>
+      <footer className="flex h-14 shrink-0 items-center justify-between gap-3 border-t border-line bg-panel px-4 md:px-6">
+        {step > 0 ? (
+          <Button variant="ghost" size="md" onClick={() => setStep((step - 1) as BuilderStep)}>
+            <ArrowLeft />
+            {t("backTo", { step: t(STEP_KEYS[step - 1]) })}
+          </Button>
+        ) : (
+          <span />
+        )}
         {step === 0 && !schemaReady ? (
           <p className="hidden text-xs text-ink-3 sm:block">{t("continueBlockedSchema")}</p>
+        ) : null}
+        {step < 2 ? (
+          <Button
+            variant="primary"
+            size="md"
+            disabled={step === 0 && !schemaReady}
+            title={step === 0 && !schemaReady ? t("continueBlockedSchema") : undefined}
+            onClick={() => setStep((step + 1) as BuilderStep)}
+          >
+            {t("nextTo", { step: t(STEP_KEYS[step + 1]) })}
+            <ArrowRight />
+          </Button>
         ) : (
-          <span className="text-xs tabular-nums text-ink-4">
-            {step + 1} / {STEP_VALUES.length}
-          </span>
+          <span />
         )}
-        <Button
-          variant={step === 2 ? "secondary" : "primary"}
-          disabled={step === 2 || (step === 0 && !schemaReady)}
-          title={step === 0 && !schemaReady ? t("continueBlockedSchema") : undefined}
-          onClick={() => setStep((step + 1) as BuilderStep)}
-        >
-          {t("next")}
-          <ArrowRight />
-        </Button>
       </footer>
-    </Tabs>
+    </div>
   );
 }
 

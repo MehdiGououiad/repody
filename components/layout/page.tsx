@@ -1,11 +1,13 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Every page: a 40px header bar (trail, title, status, actions), an optional toolbar row
- * (filters, view options), then the body. Lists bleed edge to edge; reading pages are capped.
+ * Every page: a header (trail, title and what the page is for, status, actions), an optional
+ * toolbar row (filters, view options), then the body. Lists bleed edge to edge; reading pages
+ * are capped.
  */
 export function Page({
   title,
+  description,
   trail,
   status,
   actions,
@@ -15,6 +17,7 @@ export function Page({
   children,
 }: {
   title: React.ReactNode;
+  description?: React.ReactNode;
   trail?: React.ReactNode;
   status?: React.ReactNode;
   actions?: React.ReactNode;
@@ -26,18 +29,23 @@ export function Page({
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-20 shrink-0 border-b border-line bg-panel/90 backdrop-blur-md">
-        <div className="flex h-10 items-center gap-2 px-4 md:px-5">
-          <h1 className="flex min-w-0 items-center gap-1.5 truncate text-[13px] font-semibold text-ink">
-            {trail}
-            {title}
-          </h1>
+        <div className="flex min-h-14 items-center gap-3 px-4 py-2 md:px-6">
+          <div className="min-w-0">
+            <h1 className="flex min-w-0 items-center gap-1.5 truncate text-[15px] font-semibold tracking-[-0.01em] text-ink">
+              {trail}
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-0.5 truncate text-xs text-ink-3">{description}</p>
+            ) : null}
+          </div>
           {status}
           {actions ? (
             <div className="ms-auto flex shrink-0 items-center gap-1">{actions}</div>
           ) : null}
         </div>
         {toolbar ? (
-          <div className="flex h-10 items-center gap-1.5 border-t border-line px-3 md:px-4">
+          <div className="flex h-11 items-center gap-1.5 border-t border-line px-3 md:px-5">
             {toolbar}
           </div>
         ) : null}
@@ -45,7 +53,7 @@ export function Page({
       <div
         className={cn(
           "flex-1",
-          !bleed && "mx-auto w-full max-w-[1080px] px-4 py-6 md:px-8",
+          !bleed && "mx-auto w-full max-w-[1160px] px-4 py-7 md:px-8",
           className
         )}
       >

@@ -15,18 +15,14 @@ export function formatDurationMs(ms: number | null | undefined): string {
   return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
-/** Byte size with Intl unit formatting, e.g. "512 byte", "300 kB", "25 MB". */
+/** Byte size with Intl unit formatting, e.g. "0.5 kB", "300 kB", "25 MB". */
 export function formatBytes(bytes: number, locale: string): string {
   const [value, unit] =
-    bytes < 1024
-      ? [bytes, "byte"]
-      : bytes < 1024 ** 2
-        ? [bytes / 1024, "kilobyte"]
-        : [bytes / 1024 ** 2, "megabyte"];
+    bytes < 1024 ** 2 ? [bytes / 1024, "kilobyte"] : [bytes / 1024 ** 2, "megabyte"];
   return new Intl.NumberFormat(locale, {
     style: "unit",
     unit,
-    maximumFractionDigits: unit === "megabyte" ? 1 : 0,
+    maximumFractionDigits: unit === "megabyte" || bytes < 10 * 1024 ? 1 : 0,
   }).format(value);
 }
 
