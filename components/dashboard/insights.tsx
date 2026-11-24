@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { Fragment } from "react";
-import { When } from "@/components/audit/run-row";
+import { useReviewReason, When } from "@/components/audit/run-row";
 import { DocChip } from "@/components/shared/doc-chip";
 import { StatusGlyph } from "@/components/ui/status-glyph";
 import { docColor } from "@/lib/doc-color";
@@ -176,6 +176,7 @@ export function DocumentsRead({ stats }: { stats: Dashboard["documents"] }) {
 export function Activity({ audits }: { audits: Audit[] }) {
   const t = useTranslations("dashboard.activity");
   const tAudits = useTranslations("audits");
+  const reason = useReviewReason();
   return (
     <section className={card}>
       <CardHeader
@@ -211,17 +212,13 @@ export function Activity({ audits }: { audits: Audit[] }) {
                     <span
                       className={cn(
                         "block truncate text-xs",
-                        audit.firstFailedRule || audit.uncheckedRule
-                          ? audit.status === "failed"
-                            ? "text-fail-ink"
-                            : "text-warn-ink"
-                          : "text-ink-4"
+                        !reason(audit) && "text-ink-4",
+                        reason(audit) &&
+                          (audit.status === "failed" ? "text-fail-ink" : "text-warn-ink")
                       )}
                     >
-                      {audit.firstFailedRule ??
-                        (audit.uncheckedRule
-                          ? tAudits("row.unchecked", { rule: audit.uncheckedRule })
-                          : audit.files.join(", ") || tAudits(`row.source.${audit.source}`))}
+                      {reason(audit) ??
+                        (audit.files.join(", ") || tAudits(`row.source.${audit.source}`))}
                     </span>
                   </span>
                   <span className="text-xs tabular-nums text-ink-4">

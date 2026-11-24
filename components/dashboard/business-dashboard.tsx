@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useCallback, useRef } from "react";
-import { When } from "@/components/audit/run-row";
+import { useReviewReason, When } from "@/components/audit/run-row";
 import { ListKeysHint, useListKeys } from "@/components/layout/list-keys";
 import { AnimatedNumber } from "@/components/shared/animated-number";
 import { Figure } from "@/components/shared/figure";
@@ -193,6 +193,7 @@ function StatStrip({ data }: { data: Dashboard }) {
 function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
   const t = useTranslations("dashboard");
   const tAudits = useTranslations("audits");
+  const reason = useReviewReason();
   const tCommon = useTranslations("common");
   const ref = useRef<HTMLUListElement>(null);
   useListKeys(ref);
@@ -233,10 +234,7 @@ function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
                         audit.status === "failed" ? "text-fail-ink" : "text-warn-ink"
                       )}
                     >
-                      {audit.firstFailedRule ??
-                        (audit.uncheckedRule
-                          ? tAudits("row.unchecked", { rule: audit.uncheckedRule })
-                          : tAudits("row.noFields"))}
+                      {reason(audit) ?? tAudits("row.noFields")}
                     </span>
                   </span>
                   <span className="text-xs tabular-nums text-ink-4">
