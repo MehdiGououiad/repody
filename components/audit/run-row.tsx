@@ -27,6 +27,18 @@ export function When({ value }: { value: string }) {
   );
 }
 
+/** Why a run needs a person, in one phrase, or null when nothing says why: the first failed rule,
+ * a reject rule that could not be checked, or the fields a second read did not confirm. */
+export function useReviewReason(): (audit: Audit) => string | null {
+  const t = useTranslations("audits.row");
+  return (audit) => {
+    if (audit.firstFailedRule) return audit.firstFailedRule;
+    if (audit.uncheckedRule) return t("unchecked", { rule: audit.uncheckedRule });
+    if (audit.unconfirmedFields) return t("unconfirmed", { count: audit.unconfirmedFields });
+    return null;
+  };
+}
+
 /** Why a run looks the way it does, in one phrase: the failing rule, a reject rule that could not
  * be checked, fields a second read did not confirm, nothing read, or the count. */
 function Reason({ audit }: { audit: Audit }) {
