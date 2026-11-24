@@ -1,6 +1,6 @@
 # ruff: noqa: T201, S603, S607 - a script: it prints progress and runs the Modal CLI
 """Pre-warm the deployed NuExtract app after a deploy, so the slow starts that build its memory
-snapshots (2-3 per GPU type, https://modal.com/docs/guide/memory-snapshots) happen here and not
+snapshots (2-3 per GPU type, one per worker type, https://modal.com/docs/guide/memory-snapshots) happen here and not
 on a client's run.
 
 It calls the *deployed* app (snapshots are only made for deployed apps, never for `modal run`),
@@ -58,7 +58,7 @@ def main() -> None:
     parser.add_argument(
         "--env", choices=ENVIRONMENTS, default="main", help="Modal environment (main is production)"
     )
-    parser.add_argument("--starts", type=int, choices=range(1, 11), default=4, metavar="1-10")
+    parser.add_argument("--starts", type=int, choices=range(1, 11), default=8, metavar="1-10")
     args = parser.parse_args()
 
     app_id = deployed_app_id(args.env)

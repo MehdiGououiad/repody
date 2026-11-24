@@ -19,7 +19,7 @@ on:
       starts:
         description: Model starts to pre-warm
         type: number
-        default: 4
+        default: 8
 
 # One model change at a time per environment; a second one waits instead of racing the first.
 concurrency:
@@ -32,8 +32,8 @@ permissions:
 jobs:
   model:
     runs-on: ubuntu-latest
-    # Four cold starts of up to ~8 minutes each, with the stops in between.
-    timeout-minutes: 60
+    # Eight starts: up to ~6 build a snapshot (~8 minutes each), the rest restore in seconds.
+    timeout-minutes: 75
     env:
       MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
       MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
