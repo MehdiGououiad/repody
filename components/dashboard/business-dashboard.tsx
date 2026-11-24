@@ -236,7 +236,9 @@ function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
                       {audit.firstFailedRule ??
                         (audit.uncheckedRule
                           ? tAudits("row.unchecked", { rule: audit.uncheckedRule })
-                          : tAudits("row.noFields"))}
+                          : audit.unconfirmedFields
+                            ? tAudits("row.unconfirmed", { count: audit.unconfirmedFields })
+                            : tAudits("row.noFields"))}
                     </span>
                   </span>
                   <span className="text-xs tabular-nums text-ink-4">
