@@ -40,7 +40,9 @@ memory profiling and flashinfer's one-off kernel build, which is what the snapsh
 
 Notes from the [Memory Snapshots](https://modal.com/docs/guide/memory-snapshots) guide:
 - GPU snapshots are an **alpha** feature.
-- Each GPU type needs 2–3 snapshots, so expect a few slow starts after each deploy.
+- A snapshot only restores on the worker type that made it ("e.g. CPU flags"), so each GPU type
+  needs 2–3 of them: up to ~6 with the fallback. A start that lands on a new worker type builds one,
+  even long after a deploy (staging, 23 November: 2 built, 3 restores, then the next run built a third).
 - A redeploy makes the old snapshots obsolete.
 
 ## Staying inside the free $30/month
@@ -74,9 +76,9 @@ The rules that follow from it:
   uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt \
     python deploy/modal/prewarm.py --env main      # production; --env staging for staging
   ```
-  It starts the deployed model four times and stops it in between, printing each start's time:
+  It starts the deployed model eight times and stops it in between, printing each start's time:
   minutes while a snapshot is built, seconds once one is restored. Run it again if the last start
-  is still slow (a start can land on the other GPU type). The builder also wakes the model when someone
+  is still slow (it can land on a worker or GPU type without a snapshot). The builder also wakes the model when someone
   opens Test & deploy with a sample (`POST /v1/model/wake`).
 - **Or from GitHub:** Actions → **Deploy model** deploys the app to the chosen environment and
   pre-warms it, with a record in GitHub. Staging first, then `main`. Once, create a token in
