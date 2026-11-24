@@ -165,8 +165,16 @@ function DocumentFields({
   const t = useTranslations("audits.report");
   const locale = useLocale();
   const error = doc.extraction?.error;
+  const unconfirmed = doc.extraction?.unconfirmed ?? {};
   const failedBy = (key: string) =>
     rules.filter((r) => r.status === "failed" && r.affectedFields.includes(key)).map((r) => r.name);
+  /** Why a field is flagged: the rules it failed, and a second read that gave another value. */
+  const notesFor = (key: string) => [
+    ...failedBy(key),
+    ...(key in unconfirmed
+      ? [t("unconfirmed", { value: formatExtractedFieldValue(unconfirmed[key], locale) })]
+      : []),
+  ];
   const found = doc.fields.filter((f) => f.extracted).length;
 
   return (
@@ -197,6 +205,11 @@ function DocumentFields({
           </span>
         </p>
       ) : null}
+      {doc.extraction && !error && doc.extraction.secondRead === "failed" ? (
+        <p className="border-b border-line px-3.5 py-2 text-xs text-warn-ink">
+          {t("secondReadFailed")}
+        </p>
+      ) : null}
       {doc.extraction && !error && doc.extraction.pagesSent < doc.extraction.pagesRendered ? (
         <p className="border-b border-line px-3.5 py-2 text-xs text-warn-ink">
           {t("pagesTruncated", {
@@ -207,7 +220,9 @@ function DocumentFields({
       ) : null}
       <ul className="divide-y divide-line">
         {doc.fields.map((field) => {
-          const notes = field.flagged ? failedBy(field.key) : [];
+          const notes = field.flagged ? notesFor(field.key) : [];
+          // Flagged only because a second read disagreed: a value to check, not a failed rule.
+          const toCheck = field.flagged && !failedBy(field.key).length && field.key in unconfirmed;
           const lit = focused.has(field.key) || focused.has(`${doc.documentType}.${field.key}`);
           return (
             <li
@@ -215,13 +230,29 @@ function DocumentFields({
               data-lit={lit || undefined}
               className={cn(
                 "grid grid-cols-[14px_minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 px-3.5 py-2 transition-[background-color,box-shadow] duration-150",
-                field.flagged && "bg-fail-wash/40",
+                field.flagged && (toCheck ? "bg-warn-wash/40" : "bg-fail-wash/40"),
                 "data-lit:bg-accent-wash data-lit:shadow-[inset_2px_0_0_var(--accent)]"
               )}
             >
               <StatusGlyph
-                status={!field.extracted ? "waiting" : field.flagged ? "failed" : "passed"}
-                label={!field.extracted ? t("notFound") : field.flagged ? t("failed") : t("passed")}
+                status={
+                  !field.extracted
+                    ? "waiting"
+                    : toCheck
+                      ? "warning"
+                      : field.flagged
+                        ? "failed"
+                        : "passed"
+                }
+                label={
+                  !field.extracted
+                    ? t("notFound")
+                    : toCheck
+                      ? t("toCheck")
+                      : field.flagged
+                        ? t("failed")
+                        : t("passed")
+                }
                 className="translate-y-0.5"
               />
               <span className="min-w-0">
@@ -240,7 +271,14 @@ function DocumentFields({
                   {field.extracted ? formatExtractedFieldValue(field.value, locale) : t("notFound")}
                 </span>
                 {notes.length ? (
-                  <span className="mt-0.5 block text-xs text-fail-ink">{notes.join(", ")}</span>
+                  <span
+                    className={cn(
+                      "mt-0.5 block text-xs",
+                      toCheck ? "text-warn-ink" : "text-fail-ink"
+                    )}
+                  >
+                    {notes.join(", ")}
+                  </span>
                 ) : null}
               </span>
             </li>

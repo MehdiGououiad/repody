@@ -11,7 +11,7 @@ import pytest
 from PIL import ExifTags, Image
 
 from repody.extraction import nuextract, pipeline, render
-from repody.extraction.fields import leaf_values, parse_answer
+from repody.extraction.fields import disagreements, leaf_values, parse_answer
 from repody.extraction.nuextract import instructions, markdown_request, structured_request, template
 from repody.schemas.workflow import DocumentDef, IclExample, SchemaField
 from tests.files import LOCKED_PDF, PDF
@@ -152,18 +152,56 @@ def _size(part: dict) -> tuple[int, int]:
     return Image.open(io.BytesIO(data)).size
 
 
+def _pixels(part: dict) -> int:
+    width, height = _size(part)
+    return width * height
+
+
 def test_nuextract_gets_pdf_pages_at_170_dpi_and_images_as_png():
-    parts, total = nuextract.page_parts(_pdf(3), "application/pdf", max_pages=2)
-    assert total == 3
-    assert len(parts) == 2
-    width, height = _size(parts[0])
-    assert abs(width - 595 * 170 / 72) < 1
-    assert abs(height - 842 * 170 / 72) < 1
+    """170 DPI (the model card's), or larger for a page that would be under MIN_MODEL_PIXELS."""
+    a3 = pdfium.PdfDocument.new()
+    a3.new_page(842, 1191)  # A3: 5.6 MP at 170 DPI, drawn at 170 DPI
+    buffer = io.BytesIO()
+    a3.save(buffer)
+    [part], _ = nuextract.page_parts(buffer.getvalue(), "application/pdf", max_pages=None)
+    width, height = _size(part)
+    assert abs(width - 842 * 170 / 72) < 1
+    assert abs(height - 1191 * 170 / 72) < 1
     for fmt, mime in [("JPEG", "image/jpeg"), ("WEBP", "image/webp"), ("PNG", "image/png")]:
-        [part], total = nuextract.page_parts(_image(fmt, (10, 12)), mime, max_pages=None)
+        [part], total = nuextract.page_parts(_image(fmt, (2000, 1600)), mime, max_pages=None)
         assert total == 1
         assert part["image_url"]["url"].startswith("data:image/png;base64,")  # stb_image reads it
-        assert _size(part) == (10, 12)
+        assert _size(part) == (2000, 1600)  # 3.2 MP: as it is
+
+
+def test_every_page_reaches_the_model_with_at_least_the_minimum_pixels():
+    """A small page (an A4 at 170 DPI is 2.8 MP, a photo of an ID card 0.2 MP) is drawn or
+    enlarged to MIN_MODEL_PIXELS, its proportions kept."""
+    parts, total = nuextract.page_parts(_pdf(3), "application/pdf", max_pages=2)
+    assert (total, len(parts)) == (3, 2)
+    width, height = _size(parts[0])
+    assert width * height == pytest.approx(render.MIN_MODEL_PIXELS, rel=0.002)
+    assert width / height == pytest.approx(595 / 842, rel=0.002)
+    [part], _ = nuextract.page_parts(_image("JPEG", (515, 321)), "image/jpeg", max_pages=None)
+    width, height = _size(part)
+    assert width * height == pytest.approx(render.MIN_MODEL_PIXELS, rel=0.002)
+    assert width / height == pytest.approx(515 / 321, rel=0.005)
+
+
+def test_a_second_read_sees_the_page_at_half_the_pixels():
+    for data, mime in [(_pdf(1), "application/pdf"), (_image("PNG", (515, 321)), "image/png")]:
+        [first], _ = nuextract.page_parts(data, mime, max_pages=None)
+        [second], _ = nuextract.page_parts(
+            data, mime, max_pages=None, area=pipeline.SECOND_READ_AREA
+        )
+        assert _pixels(second) == pytest.approx(_pixels(first) / 2, rel=0.005)
+
+
+def test_report_previews_are_not_enlarged():
+    preview = render.page_preview(_pdf(1), render.PDF, 0)
+    assert preview is not None
+    width, _ = Image.open(io.BytesIO(preview)).size
+    assert abs(width - 595 * render.SCREEN_DPI / 72) < 1
 
 
 def test_transparent_images_are_flattened_on_white():
@@ -179,7 +217,8 @@ def test_rotated_photos_are_sent_upright():
     rotated = _image("JPEG", (40, 20), orientation=6)
     [part], _ = nuextract.page_parts(rotated, "image/jpeg", max_pages=None)
     assert part["image_url"]["url"].startswith("data:image/png;base64,")
-    assert _size(part) == (20, 40)
+    width, height = _size(part)
+    assert width / height == pytest.approx(0.5, rel=0.01)  # portrait, enlarged
 
 
 @pytest.mark.parametrize(
@@ -295,12 +334,12 @@ def test_a_password_protected_pdf_is_told_apart_from_an_unreadable_file():
 
 
 def test_inspect_gives_each_page_the_pixels_it_is_drawn_with():
-    info = render.inspect(io.BytesIO(PDF))
-    assert info is not None
-    assert info.page_pixels
-    parts, _ = render.pdf_page_parts(PDF, max_pages=1)
-    drawn = Image.open(io.BytesIO(base64.b64decode(parts[0]["image_url"]["url"].split(",")[1])))
-    assert info.page_pixels[0] == pytest.approx(drawn.width * drawn.height, rel=0.005)
+    for data, mime in [(PDF, "application/pdf"), (_image("JPEG", (515, 321)), "image/jpeg")]:
+        info = render.inspect(io.BytesIO(data))
+        assert info is not None
+        assert info.page_pixels
+        parts, _ = nuextract.page_parts(data, mime, max_pages=1)
+        assert info.page_pixels[0] == pytest.approx(_pixels(parts[0]), rel=0.005)
 
 
 def test_a_requests_tokens_are_its_pages_text_and_answer():
@@ -317,3 +356,57 @@ def test_a_requests_tokens_are_its_pages_text_and_answer():
     assert thirty > 80_000  # 30 A4 pages: ~82k tokens and the answer budget
     small_image = pipeline.request_tokens(doc, [515 * 321])  # raised to ~1 MP by the processor
     assert small_image - pipeline.request_tokens(doc, []) == math.ceil(1024 * 1024 / 1024)
+
+
+def test_two_reads_disagree_on_values_not_on_case_spacing_or_number_spelling():
+    fields = [
+        SchemaField(name="name"),
+        SchemaField(name="total", template_type="number"),
+        SchemaField(name="date", template_type="date"),
+        SchemaField(name="lines", template_type="object-array", children=[SchemaField(name="a")]),
+    ]
+    first = leaf_values(
+        fields, {"name": "ACME  SARL", "total": 1317.24, "date": None, "lines": [{"a": "x"}]}
+    )
+    same = leaf_values(
+        fields, {"name": "acme sarl", "total": 1317.240, "date": None, "lines": [{"a": " X "}]}
+    )
+    assert disagreements(first, same) == {}
+    other = leaf_values(fields, {"name": "ACME SARL", "total": 3117.24, "date": "2018-01-21"})
+    assert disagreements(first, other) == {"total": 3117.24, "date": "2018-01-21", "lines": None}
+
+
+def _doc() -> DocumentDef:
+    return DocumentDef.model_validate({"id": "d", "documentType": "Bill", "schema": FIELDS[:1]})
+
+
+@pytest.mark.parametrize(
+    ("first", "check", "check_failed", "expected"),
+    [
+        ('{"total": 1317.24}', '{"total": 1317.24}', False, ("agreed", {})),
+        ('{"total": 1317.24}', '{"total": 3117.24}', False, ("disagreed", {"total": 3117.24})),
+        ('{"total": 1317.24}', None, True, ("failed", {})),
+        ('{"total": 1317.24}', "not json", False, ("failed", {})),
+        ('{"total": 1317.24}', None, False, (None, {})),  # no second read
+    ],
+)
+def test_the_second_read_confirms_or_flags_the_first(first, check, check_failed, expected):
+    answer = pipeline._Answer(answer=first, check=check, check_failed=check_failed)
+    fields = leaf_values(_doc().schema_fields, parse_answer(first)[0])
+    assert pipeline._compare(_doc(), fields, answer) == expected
+
+
+@pytest.mark.parametrize(
+    ("mode", "mime", "fields", "twice"),
+    [
+        ("all", "application/pdf", True, True),
+        ("images", "application/pdf", True, False),
+        ("images", "image/jpeg", True, True),
+        ("off", "image/jpeg", True, False),
+        ("all", "image/jpeg", False, False),  # Markdown: nothing to compare
+    ],
+)
+def test_which_documents_are_read_twice(monkeypatch, mode, mime, fields, twice):
+    monkeypatch.setattr(pipeline, "get_settings", lambda: type("S", (), {"second_read": mode}))
+    doc = DocumentDef.model_validate({"id": "d", "schema": FIELDS[:1] if fields else []})
+    assert pipeline._reads_twice(doc, mime) is twice

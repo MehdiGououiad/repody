@@ -10,6 +10,7 @@ are rendered in worker threads, so every PDFium call holds ``_PDFIUM``.
 
 import base64
 import io
+import math
 import threading
 from dataclasses import dataclass
 from typing import Any, BinaryIO
@@ -19,6 +20,11 @@ import pypdfium2.raw as pdfium_c
 from PIL import Image, ImageOps
 
 PDF_DPI = 170  # NuExtract3's documented rendering resolution
+# Every page reaches the model with at least this many pixels: about an A4 page at PDF_DPI (2.8 MP),
+# the input the model card benchmarks. Smaller pages (A5, A6 or receipt PDFs, photos, ID cards,
+# screenshots) are drawn or enlarged to it. Measured on staging (24 November, six small documents,
+# 5 reads each): 89.5 % of values right at the model server's own 1 MP floor, 99.0 % at 3 MP.
+MIN_MODEL_PIXELS = 3_000_000
 # A page renders to at most this many pixels: an oversized page (a PDF can declare one of
 # 200 x 200 inches) is drawn smaller instead of filling the worker's memory.
 MAX_RENDER_PIXELS = 4096 * 4096
@@ -39,14 +45,23 @@ class LockedPdfError(ValueError):
 class FileInfo:
     mime: str
     pages: int  # a PDF's pages, 1 for an image
-    # Each page's pixels as the model gets it (a PDF page drawn at PDF_DPI), for its token count.
+    # Each page's pixels as the model gets it (see model_size), for its token count.
     page_pixels: tuple[int, ...] = ()
 
 
-def _scale(width: float, height: float, dpi: int) -> float:
-    """The scale a page of ``width`` x ``height`` points is drawn at: ``dpi``, or smaller when
-    that would exceed MAX_RENDER_PIXELS."""
-    return min(dpi / 72, (MAX_RENDER_PIXELS / max(width * height, 1)) ** 0.5)
+def _scale(width: float, height: float, dpi: int, min_pixels: int = 0) -> float:
+    """The scale a page of ``width`` x ``height`` points (or pixels, at ``dpi`` 72) is drawn at:
+    ``dpi``, larger when that gives fewer than ``min_pixels``, and never past MAX_RENDER_PIXELS."""
+    area = max(width * height, 1)
+    return min(max(dpi / 72, (min_pixels / area) ** 0.5), (MAX_RENDER_PIXELS / area) ** 0.5)
+
+
+def model_size(width: float, height: float, dpi: int = 72, area: float = 1.0) -> tuple[int, int]:
+    """The pixel size a page of ``width`` x ``height`` (points at ``dpi`` 72 for a PDF page, pixels
+    for an image) is sent to the model at: at least MIN_MODEL_PIXELS, at most MAX_RENDER_PIXELS,
+    then times ``area`` (a second read is sent at another size, repody.extraction.pipeline)."""
+    scale = _scale(width, height, dpi, MIN_MODEL_PIXELS) * area**0.5
+    return max(1, round(width * scale)), max(1, round(height * scale))
 
 
 def inspect(file: BinaryIO) -> FileInfo | None:
@@ -59,8 +74,8 @@ def inspect(file: BinaryIO) -> FileInfo | None:
         try:
             with Image.open(file, formats=IMAGE_FORMATS) as image:
                 image.verify()
-                pixels = min(image.width * image.height, MAX_RENDER_PIXELS)  # see open_image
-                return FileInfo(Image.MIME[image.format or ""], 1, (pixels,))
+                width, height = model_size(image.width, image.height)
+                return FileInfo(Image.MIME[image.format or ""], 1, (width * height,))
         except Image.DecompressionBombError:
             return None
         except OSError, SyntaxError, KeyError:  # UnidentifiedImageError is an OSError
@@ -69,9 +84,7 @@ def inspect(file: BinaryIO) -> FileInfo | None:
         try:
             with _PDFIUM, pdfium.PdfDocument(file) as pdf:
                 sizes = [pdf.get_page_size(index) for index in range(len(pdf))]
-            pixels = tuple(
-                int(w * _scale(w, h, PDF_DPI)) * int(h * _scale(w, h, PDF_DPI)) for w, h in sizes
-            )
+            pixels = tuple(math.prod(model_size(w, h, PDF_DPI)) for w, h in sizes)
             return FileInfo(PDF, len(sizes), pixels)
         except pdfium.PdfiumError as error:
             if getattr(error, "err_code", None) == pdfium_c.FPDF_ERR_PASSWORD:
@@ -81,22 +94,34 @@ def inspect(file: BinaryIO) -> FileInfo | None:
         file.seek(0)
 
 
-def _render(page: pdfium.PdfPage, dpi: int) -> Image.Image:
-    """The page at ``dpi``, or smaller when that would exceed MAX_RENDER_PIXELS."""
-    width, height = page.get_size()  # PDF points, 1/72 inch
-    scale = _scale(width, height, dpi)
+def _render(page: pdfium.PdfPage, scale: float) -> Image.Image:
     # `scale` is documented as a float; its default (1) makes type checkers read it as int.
     return page.render(scale=scale).to_pil()  # pyright: ignore[reportArgumentType]
 
 
-def pdf_page_parts(data: bytes, *, max_pages: int | None) -> tuple[list[dict[str, Any]], int]:
-    """``(image parts, page count)``: the pages at NuExtract3's 170 DPI, each encoded as soon as
-    it is drawn, so one page's bitmap is in memory at a time (an A4 page is ~8 MB raw, a few
-    hundred KB as PNG)."""
+def _screen(page: pdfium.PdfPage, dpi: int) -> Image.Image:
+    """The page at ``dpi``, or smaller when that would exceed MAX_RENDER_PIXELS."""
+    width, height = page.get_size()  # PDF points, 1/72 inch
+    return _render(page, _scale(width, height, dpi))
+
+
+def _for_model(page: pdfium.PdfPage, area: float) -> Image.Image:
+    """The page as the model gets it (``model_size``): drawn at that size, so small text stays
+    sharp instead of being enlarged as a bitmap."""
+    width, height = page.get_size()
+    return _render(page, _scale(width, height, PDF_DPI, MIN_MODEL_PIXELS) * area**0.5)
+
+
+def pdf_page_parts(
+    data: bytes, *, max_pages: int | None, area: float = 1.0
+) -> tuple[list[dict[str, Any]], int]:
+    """``(image parts, page count)``: the pages at NuExtract3's 170 DPI, or larger for a page
+    under MIN_MODEL_PIXELS (``model_size``), each encoded as soon as it is drawn, so one page's
+    bitmap is in memory at a time (an A4 page is ~8 MB raw, a few hundred KB as PNG)."""
     with _PDFIUM, pdfium.PdfDocument(data) as pdf:
         total = len(pdf)
         count = min(total, max_pages or total)
-        parts = [image_part(_render(pdf[index], PDF_DPI)) for index in range(count)]
+        parts = [image_part(_for_model(pdf[index], area)) for index in range(count)]
     return parts, total
 
 
@@ -116,6 +141,13 @@ def open_image(data: bytes) -> Image.Image:
             page.paste(rgba, mask=rgba.getchannel("A"))
             return page
         return upright.convert("RGB")
+
+
+def model_image(image: Image.Image, area: float = 1.0) -> Image.Image:
+    """An upright image (``open_image``) at the size the model gets it (``model_size``): a small
+    photo or scan is enlarged (bicubic, as the model's own image processor resizes)."""
+    size = model_size(image.width, image.height, area=area)
+    return image if size == image.size else image.resize(size, Image.Resampling.BICUBIC)
 
 
 def image_part(image: Image.Image | bytes, mime: str = "image/png") -> dict[str, Any]:
@@ -138,7 +170,7 @@ def page_preview(data: bytes, mime: str, index: int) -> bytes | None:
         with _PDFIUM, pdfium.PdfDocument(data) as pdf:
             if not 0 <= index < len(pdf):
                 return None
-            image = _render(pdf[index], SCREEN_DPI)
+            image = _screen(pdf[index], SCREEN_DPI)
     elif index == 0:
         image = open_image(data)
     else:

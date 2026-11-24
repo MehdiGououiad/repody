@@ -1236,6 +1236,12 @@ export interface components {
              * @description The first reject rule that could not be checked (a value it needs was not read): why a run without failed rules needs review.
              */
             uncheckedRule: string | null;
+            /**
+             * Unconfirmedfields
+             * @description Fields the second read did not confirm (``ExtractionMeta.unconfirmed``): another reason a run needs review.
+             * @default 0
+             */
+            unconfirmedFields: number;
         };
         /** AuditRule */
         AuditRule: {
@@ -1632,6 +1638,18 @@ export interface components {
              * @description Why extraction failed or its answer was unusable.
              */
             error: string | null;
+            /**
+             * Secondread
+             * @description The check read of the document at another size (AUDIT_SECOND_READ): its fields all agreed with the first read, some did not (``unconfirmed``), or it could not be read. None: no second read.
+             */
+            secondRead: ("agreed" | "disagreed" | "failed") | null;
+            /**
+             * Unconfirmed
+             * @description The fields the two reads disagree on, with the second read's value (the report shows the first). They are flagged, and the run needs review.
+             */
+            unconfirmed: {
+                [key: string]: unknown;
+            };
         };
         /** FailedRun */
         FailedRun: {

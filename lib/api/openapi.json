@@ -3192,6 +3192,12 @@
             ],
             "title": "Uncheckedrule",
             "description": "The first reject rule that could not be checked (a value it needs was not read): why a run without failed rules needs review."
+          },
+          "unconfirmedFields": {
+            "type": "integer",
+            "title": "Unconfirmedfields",
+            "description": "Fields the second read did not confirm (``ExtractionMeta.unconfirmed``): another reason a run needs review.",
+            "default": 0
           }
         },
         "type": "object",
@@ -3207,7 +3213,8 @@
           "failedRules",
           "files",
           "firstFailedRule",
-          "uncheckedRule"
+          "uncheckedRule",
+          "unconfirmedFields"
         ],
         "title": "AuditListItem"
       },
@@ -4196,6 +4203,29 @@
             ],
             "title": "Error",
             "description": "Why extraction failed or its answer was unusable."
+          },
+          "secondRead": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "agreed",
+                  "disagreed",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secondread",
+            "description": "The check read of the document at another size (AUDIT_SECOND_READ): its fields all agreed with the first read, some did not (``unconfirmed``), or it could not be read. None: no second read."
+          },
+          "unconfirmed": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Unconfirmed",
+            "description": "The fields the two reads disagree on, with the second read's value (the report shows the first). They are flagged, and the run needs review."
           }
         },
         "type": "object",
@@ -4206,7 +4236,9 @@
           "pagesSent",
           "rawText",
           "markdownText",
-          "error"
+          "error",
+          "secondRead",
+          "unconfirmed"
         ],
         "title": "ExtractionMeta"
       },

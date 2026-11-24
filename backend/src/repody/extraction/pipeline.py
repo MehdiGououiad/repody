@@ -2,6 +2,12 @@
 
 Everything goes to NuExtract3, all pages in one request: documents with fields in structured
 mode, documents without fields in its Markdown mode.
+
+A document with fields is read twice (AUDIT_SECOND_READ), at once: as the model gets it
+(``render.model_size``) and at half those pixels. The model's misreads depend on the size of the
+page it sees and repeat at that size, so two reads at different sizes rarely make the same one: a
+field they disagree on is reported as unconfirmed (flagged, the run needs review) instead of
+passing on a value the model may have misread.
 """
 
 import asyncio
@@ -19,8 +25,8 @@ import structlog
 from pydantic import BaseModel
 
 from repody.extraction import client, nuextract, render
-from repody.extraction.fields import FieldValue, leaf_values, parse_answer
-from repody.schemas.run import ExtractionMeta
+from repody.extraction.fields import FieldValue, disagreements, leaf_values, parse_answer
+from repody.schemas.run import ExtractionMeta, SecondRead
 from repody.schemas.workflow import DocumentDef
 from repody.settings import get_settings
 
@@ -56,6 +62,17 @@ class _Answer(BaseModel):
     truncated: bool = False
     pages_rendered: int = 0
     pages_sent: int = 0
+    check: str | None = None  # the second read's JSON, when it answered in full
+    check_failed: bool = False  # a second read was asked and gave no usable answer
+
+
+# The second read sees each page at this share of the first read's pixels (render.model_size).
+SECOND_READ_AREA = 0.5
+
+
+def _reads_twice(doc: DocumentDef, mime: str) -> bool:
+    mode = get_settings().second_read
+    return bool(doc.schema_fields) and (mode == "all" or (mode == "images" and mime != render.PDF))
 
 
 def _request(doc: DocumentDef) -> dict[str, Any]:
@@ -164,21 +181,56 @@ def _pages_to_send(data: bytes, mime: str, max_pages: int | None) -> int:
 async def _ask_model(doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any]) -> _Answer:
     max_pages = get_settings().max_pages_per_document
     pages = await asyncio.to_thread(_pages_to_send, data, mime, max_pages)
-    async with _page_budget().hold(pages):
-        return await _render_and_ask(doc, data, mime, request, max_pages)
+    twice = _reads_twice(doc, mime)
+    async with _page_budget().hold(pages * (2 if twice else 1)):
+        return await _render_and_ask(doc, data, mime, request, max_pages, twice=twice)
+
+
+async def _check_read(
+    request: dict[str, Any], data: bytes, mime: str, max_pages: int | None
+) -> client.Reply | None:
+    """The second read's reply, or None when it failed (the first read stands, unconfirmed)."""
+    parts, _ = await asyncio.to_thread(
+        nuextract.page_parts, data, mime, max_pages=max_pages, area=SECOND_READ_AREA
+    )
+    try:
+        return await client.chat(_with_pages(request, parts))
+    except Exception:
+        log.warning("second_read_failed", exc_info=True)
+        return None
 
 
 async def _render_and_ask(
-    doc: DocumentDef, data: bytes, mime: str, request: dict[str, Any], max_pages: int | None
+    doc: DocumentDef,
+    data: bytes,
+    mime: str,
+    request: dict[str, Any],
+    max_pages: int | None,
+    *,
+    twice: bool = False,
 ) -> _Answer:
     parts, total = await asyncio.to_thread(nuextract.page_parts, data, mime, max_pages=max_pages)
+    check_task = asyncio.create_task(_check_read(request, data, mime, max_pages)) if twice else None
     try:
         reply = await client.chat(_with_pages(request, parts))
     except Exception as error:
+        if check_task:
+            check_task.cancel()
         raise ModelRequestError(_pages_reached(error, len(parts))) from error
+    except BaseException:  # cancelled (the run's time limit): the check read goes too
+        if check_task:
+            check_task.cancel()
+        raise
     pages = {"pages_rendered": total, "pages_sent": len(parts), "truncated": reply.truncated}
     if doc.schema_fields:
-        return _Answer(answer=reply.text, **pages)
+        check = await check_task if check_task else None
+        usable = check is not None and not check.truncated
+        return _Answer(
+            answer=reply.text,
+            check=check.text if check is not None and usable else None,
+            check_failed=twice and not usable,
+            **pages,
+        )
     if not reply.text:
         raise RuntimeError("The model returned no Markdown for the document.")
     return _Answer(markdown=reply.text[:MAX_TEXT_CHARS], **pages)
@@ -198,6 +250,7 @@ async def extract(
         parsed, parse_error = ({}, None) if answer.truncated else parse_answer(answer.answer)
         error = error or parse_error
         fields = leaf_values(doc.schema_fields, parsed)
+    second_read, unconfirmed = _compare(doc, fields, answer) if error is None else (None, {})
     meta = ExtractionMeta(
         extraction_ms=elapsed,
         fields_extracted=sum(f.extracted for f in fields),
@@ -206,6 +259,8 @@ async def extract(
         raw_text=answer.answer[:MAX_TEXT_CHARS] if answer.answer else None,
         markdown_text=answer.markdown,
         error=error,
+        second_read=second_read,
+        unconfirmed=unconfirmed,
     )
     log.info(
         "document_extracted",
@@ -215,5 +270,22 @@ async def extract(
         fields=meta.fields_extracted,
         pages=answer.pages_sent,
         error=error,
+        second_read=second_read,
+        unconfirmed=len(unconfirmed),
     )
     return fields, meta
+
+
+def _compare(
+    doc: DocumentDef, fields: list[FieldValue], answer: _Answer
+) -> tuple[SecondRead | None, dict[str, Any]]:
+    """``(second_read, unconfirmed)`` for ExtractionMeta: what the second read says of the first."""
+    if answer.check_failed:
+        return "failed", {}
+    if answer.check is None:
+        return None, {}  # no second read
+    checked, check_error = parse_answer(answer.check)
+    if check_error:
+        return "failed", {}
+    unconfirmed = disagreements(fields, leaf_values(doc.schema_fields, checked))
+    return ("disagreed" if unconfirmed else "agreed"), unconfirmed

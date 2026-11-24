@@ -155,6 +155,11 @@ async def _process(run_id: str) -> None:
         run.fields_extracted = sum(
             field.value is not None for doc in run.documents for field in doc.fields
         )
+        run.fields_unconfirmed = sum(
+            len(ExtractionMeta.model_validate(doc.extraction).unconfirmed)
+            for doc in run.documents
+            if doc.extraction
+        )
         run.progress = tracker.complete()
         outcome = run_outcome(
             results,
@@ -162,6 +167,7 @@ async def _process(run_id: str) -> None:
                 doc.extraction and not doc.extraction.get("error") for doc in run.documents
             )
             and (run.fields_extracted > 0 or not any(doc.fields for doc in run.documents)),
+            confirmed=all(_confirmed(doc) for doc in run.documents),
         )
         if not await move_run(
             session, run_id, "done", outcome=outcome, finished_at=datetime.now(UTC)
@@ -249,21 +255,34 @@ async def _extract_one(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker)
     return meta.extraction_ms
 
 
-def run_outcome(results: list[RuleOutcome], *, extraction_complete: bool) -> Outcome:
+def _confirmed(doc: RunDocument) -> bool:
+    """Whether a document's second read (if any) agreed with its first on every field."""
+    return not doc.extraction or ExtractionMeta.model_validate(doc.extraction).second_read in (
+        None,
+        "agreed",
+    )
+
+
+def run_outcome(
+    results: list[RuleOutcome], *, extraction_complete: bool, confirmed: bool = True
+) -> Outcome:
     """Failed when a rejecting rule fails. Needs review when another rule fails, when a
-    rejecting rule could not be checked (a value it needs was not read), or when the model read
-    nothing or a document could not be read: a run is never green on no evidence. A flag rule
-    that could not be checked changes nothing."""
+    rejecting rule could not be checked (a value it needs was not read), when the model read
+    nothing or a document could not be read, or when a second read did not confirm every field
+    (or could not be done): a run is never green on no evidence. A flag rule that could not be
+    checked changes nothing."""
     failed = [r for r in results if r.status == "failed"]
     if any(r.rule.severity == "reject" for r in failed):
         return "failed"
     unchecked = any(r.status == "skipped" and r.rule.severity == "reject" for r in results)
-    return "warning" if failed or unchecked or not extraction_complete else "passed"
+    review = failed or unchecked or not extraction_complete or not confirmed
+    return "warning" if review else "passed"
 
 
 def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> None:
-    """Flag the fields a failed rule read, and those a reject rule could not check (the values a
-    person must look for): by bare name or ``<document type>.<field>``."""
+    """Flag the fields a failed rule read, those a reject rule could not check, and those the
+    second read did not confirm (the values a person must look at): by bare name or
+    ``<document type>.<field>``."""
     failed = {
         field_key(f)
         for r in results
@@ -271,9 +290,10 @@ def _flag_fields(documents: list[RunDocument], results: list[RuleOutcome]) -> No
         for f in r.affected_fields
     }
     for doc in documents:
+        unconfirmed = ExtractionMeta.model_validate(doc.extraction or {}).unconfirmed
         for field in doc.fields:
             names = {field_key(field.key), field_key(f"{doc.document_type}.{field.key}")}
-            field.flagged = bool(names & failed)
+            field.flagged = bool(names & failed) or field.key in unconfirmed
 
 
 def _rule_row(run_id: str, position: int, result: RuleOutcome) -> RuleResult:

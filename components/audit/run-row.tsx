@@ -28,7 +28,7 @@ export function When({ value }: { value: string }) {
 }
 
 /** Why a run looks the way it does, in one phrase: the failing rule, a reject rule that could not
- * be checked, nothing read, or the count. */
+ * be checked, fields a second read did not confirm, nothing read, or the count. */
 function Reason({ audit }: { audit: Audit }) {
   const t = useTranslations("audits.row");
   if (audit.firstFailedRule) {
@@ -47,6 +47,13 @@ function Reason({ audit }: { audit: Audit }) {
     return (
       <span className="truncate text-warn-ink">
         {t("unchecked", { rule: audit.uncheckedRule })}
+      </span>
+    );
+  }
+  if (audit.unconfirmedFields) {
+    return (
+      <span className="truncate text-warn-ink">
+        {t("unconfirmed", { count: audit.unconfirmedFields })}
       </span>
     );
   }

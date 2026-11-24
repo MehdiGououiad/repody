@@ -21,16 +21,17 @@ TEMPERATURE = 0.2
 
 
 def page_parts(
-    data: bytes, mime: str, *, max_pages: int | None
+    data: bytes, mime: str, *, max_pages: int | None, area: float = 1.0
 ) -> tuple[list[dict[str, Any]], int]:
     """``(image parts, page count)``: PDF pages at 170 DPI and images as PNG (as the model
-    card sends them; images upright, see ``render.open_image``).
+    card sends them; images upright, see ``render.open_image``), each at least
+    ``render.MIN_MODEL_PIXELS``, then times ``area`` (a second read, repody.extraction.pipeline).
 
     All pages go in one request, as the model card sends a multi-page PDF.
     """
     if mime == "application/pdf":
-        return render.pdf_page_parts(data, max_pages=max_pages)
-    return [render.image_part(render.open_image(data))], 1
+        return render.pdf_page_parts(data, max_pages=max_pages, area=area)
+    return [render.image_part(render.model_image(render.open_image(data), area))], 1
 
 
 def template_node(field: SchemaField) -> Any:
