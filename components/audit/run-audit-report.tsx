@@ -14,7 +14,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useMediaQuery } from "@/lib/hooks/use-media-query";
 import type { RunAuditDetail } from "@/lib/types";
 
-/** One finished run: the documents on one side, the verdict, rules and fields on the other. */
+/** One finished run: the documents beside the verdict, rules and fields (above them on narrow screens). */
 export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
   const t = useTranslations("audits.report");
   const tNav = useTranslations("nav");
@@ -89,7 +89,14 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
           </ResizablePanel>
         </Resizable>
       ) : (
-        report
+        <>
+          {audit.documents.length > 0 && (
+            <div className="h-[65dvh] min-h-80 border-b border-line">
+              <DocumentViewer audit={audit} />
+            </div>
+          )}
+          {report}
+        </>
       )}
     </Page>
   );
