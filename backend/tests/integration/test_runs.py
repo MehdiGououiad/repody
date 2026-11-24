@@ -309,7 +309,7 @@ async def test_a_run_whose_worker_died_starts_over_on_the_next(api, model_answer
     await execute.process_run(run_id)  # the same task, delivered again
     assert (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["status"] == "done"
     await execute.process_run(run_id)  # a finished run is never taken again
-    assert len(model_answer["calls"]) == 1
+    assert [call["check"] for call in model_answer["calls"]] == [False, True]  # one run's reads
 
 
 async def test_maintenance_fails_the_runs_the_queue_lost(api, monkeypatch):
@@ -433,3 +433,67 @@ async def test_progress_saves_that_fail_do_not_stop_the_run(api, model_answer, m
     state = (await api.get(f"/v1/runs/{started.json()['runId']}", headers=auth)).json()
     assert state["status"] == "done"
     assert all(step["status"] == "done" for step in state["progress"]["steps"])
+
+
+async def test_a_field_the_second_read_disagrees_on_is_flagged_and_sent_to_review(
+    api, model_answer
+):
+    """The two reads (at two sizes) agree on the TVA but not on the total: the total is flagged
+    with the second read's value, and the run needs review although every rule passed."""
+    auth = await deploy(api, rule("total", condition("total_amount", "EXISTS")))
+    model_answer["text"] = json.dumps({"total_amount": 1317.24, "tva": 1000})
+    model_answer["check_text"] = json.dumps({"total_amount": 3117.24, "tva": 1000})
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)).json()["runId"]
+
+    assert [call["check"] for call in model_answer["calls"]] == [False, True]
+    report = (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["result"]
+    assert report["status"] == "warning"
+    assert [r["status"] for r in report["ruleResults"]] == ["passed"]
+    document = report["documents"][0]
+    assert document["extraction"]["secondRead"] == "disagreed"
+    assert document["extraction"]["unconfirmed"] == {"total_amount": 3117.24}
+    fields = {f["key"]: f for f in document["fields"]}
+    assert fields["total_amount"]["value"] == 1317.24  # the first read is reported
+    assert fields["total_amount"]["flagged"]
+    assert not fields["tva"]["flagged"]
+
+    [audit] = (await api.get("/v1/audits")).json()["audits"]
+    assert audit["unconfirmedFields"] == 1
+    csv_text = (await api.get(f"/v1/audits/{run_id}/export.csv")).text
+    assert "Not confirmed: a second read gave 3117.24." in csv_text
+
+
+async def test_two_reads_that_agree_let_the_run_pass(api, model_answer):
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000, "tva": 1000})
+    model_answer["check_text"] = json.dumps({"total_amount": 6000.0, "tva": 1000})
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)).json()["runId"]
+    report = (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["result"]
+    assert report["status"] == "passed"
+    assert report["documents"][0]["extraction"]["secondRead"] == "agreed"
+
+
+async def test_a_second_read_that_fails_leaves_the_first_but_sends_the_run_to_review(
+    api, model_answer
+):
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000, "tva": 1000})
+    model_answer["check_error"] = TimeoutError()
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)).json()["runId"]
+    report = (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["result"]
+    document = report["documents"][0]
+    assert document["extraction"]["error"] is None
+    assert document["extraction"]["secondRead"] == "failed"
+    assert {f["key"]: f["value"] for f in document["fields"]}["total_amount"] == 6000
+    assert report["status"] == "warning"
+
+
+async def test_without_a_second_read_a_document_is_read_once(api, model_answer, monkeypatch):
+    monkeypatch.setattr(get_settings(), "second_read", "off")
+    auth = await deploy(api)
+    model_answer["text"] = json.dumps({"total_amount": 6000, "tva": 1000})
+    run_id = (await api.post("/v1/workflows/wf-run/runs", files=FILE, headers=auth)).json()["runId"]
+    report = (await api.get(f"/v1/runs/{run_id}", headers=auth)).json()["result"]
+    assert [call["check"] for call in model_answer["calls"]] == [False]
+    assert report["documents"][0]["extraction"]["secondRead"] is None
+    assert report["status"] == "passed"

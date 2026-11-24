@@ -15,6 +15,7 @@ Outcome = Literal["passed", "warning", "failed"]  # a done run's result
 OutcomeFilter = Literal["passed", "warning", "failed", "review"]
 REVIEW_OUTCOMES: tuple[Outcome, ...] = ("warning", "failed")
 RuleStatus = Literal["passed", "failed", "skipped"]
+SecondRead = Literal["agreed", "disagreed", "failed"]  # ExtractionMeta.second_read
 
 
 StepKind = Literal["queue", "model", "extract", "rules", "finalize"]
@@ -51,6 +52,17 @@ class ExtractionMeta(CamelModel):
     markdown_text: str | None = None
     error: str | None = Field(
         default=None, description="Why extraction failed or its answer was unusable."
+    )
+    second_read: SecondRead | None = Field(
+        default=None,
+        description="The check read of the document at another size (AUDIT_SECOND_READ): its "
+        "fields all agreed with the first read, some did not (``unconfirmed``), or it could not "
+        "be read. None: no second read.",
+    )
+    unconfirmed: dict[str, Any] = Field(
+        default_factory=dict,
+        description="The fields the two reads disagree on, with the second read's value (the "
+        "report shows the first). They are flagged, and the run needs review.",
     )
 
 
@@ -147,6 +159,11 @@ class AuditListItem(CamelModel):
         default=None,
         description="The first reject rule that could not be checked (a value it needs was not "
         "read): why a run without failed rules needs review.",
+    )
+    unconfirmed_fields: int = Field(
+        default=0,
+        description="Fields the second read did not confirm (``ExtractionMeta.unconfirmed``): "
+        "another reason a run needs review.",
     )
 
 

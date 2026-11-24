@@ -42,3 +42,12 @@ def test_a_reject_rule_that_could_not_be_checked_needs_review():
 
 def test_a_flag_rule_that_could_not_be_checked_changes_nothing():
     assert run_outcome([PASSING, _unchecked("flag")], extraction_complete=True) == "passed"
+
+
+def test_a_run_whose_second_read_did_not_confirm_every_field_needs_review():
+    assert run_outcome([PASSING], extraction_complete=True, confirmed=False) == "warning"
+    failed = evaluate_rule(
+        Rule(id="f", conditions=[Condition(id="c", left=FieldRef(field="a"), operator="IS_EMPTY")]),
+        {"a": (1, "number")},
+    )
+    assert run_outcome([failed], extraction_complete=True, confirmed=False) == "failed"

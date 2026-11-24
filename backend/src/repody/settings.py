@@ -5,7 +5,7 @@ serialises local variables); code reads them with ``get_secret_value()`` where i
 """
 
 from functools import lru_cache
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import (
     BeforeValidator,
@@ -97,6 +97,14 @@ class Settings(BaseSettings):
     # Requests in flight per model server: set to its parallel slots (llama-server --parallel).
     # Documents and pages beyond it wait their turn.
     inference_concurrency: PositiveInt = 1
+    # A second read of each document with fields, at half the pixels, compared field by field:
+    # a field the two reads disagree on is flagged and the run needs review instead of passing
+    # (repody.extraction.pipeline). The model's misreads depend on the page's size and repeat at
+    # that size, so a second read at another size catches them (24 November, six small documents:
+    # 45 of 45 wrong values, against 2.4 % of right values flagged). "images": PNG, JPEG and WebP
+    # files only (photos and scans, where nearly all misreads were); "all": PDFs too; "off". It
+    # doubles the model time of the documents it reads; credits count the first read only.
+    second_read: Literal["off", "images", "all"] = "all"
 
     max_pages_per_document: PositiveInt | None = None
     # Pages one run may send the model, all its documents together (checked before it is

@@ -91,3 +91,29 @@ def leaf_values(fields: list[SchemaField], data: dict[str, Any]) -> list[FieldVa
         )
         for key, field, value in leaves(fields, data)
     ]
+
+
+def _comparable(value: Any) -> Any:
+    """A value as two reads are compared: text without case or extra spaces, numbers by value."""
+    match value:
+        case bool() | None:
+            return value
+        case int() | float():
+            return round(float(value), 6)
+        case str():
+            return " ".join(value.split()).casefold()
+        case list():
+            return [_comparable(item) for item in value]
+        case dict():
+            return {key: _comparable(item) for key, item in value.items()}
+    return value
+
+
+def disagreements(first: list[FieldValue], second: list[FieldValue]) -> dict[str, Any]:
+    """The fields two reads of one document disagree on, with the second read's value."""
+    other = {field.key: field.value for field in second}
+    return {
+        field.key: other.get(field.key)
+        for field in first
+        if _comparable(field.value) != _comparable(other.get(field.key))
+    }

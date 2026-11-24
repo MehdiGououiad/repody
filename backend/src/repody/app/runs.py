@@ -453,6 +453,7 @@ def audit_item(run: Run) -> AuditListItem:
         files=[doc.file_name for doc in run.documents if doc.file_name],
         first_failed_rule=failed,
         unchecked_rule=unchecked,
+        unconfirmed_fields=run.fields_unconfirmed,
     )
 
 
@@ -535,6 +536,7 @@ async def export_report(session: AsyncSession, run_id: str, *, account: str | No
     lines = [_csv_line(["section", "document", "name", "value", "type", "status", "detail"])]
     for doc in report.documents:
         error = (doc.extraction.error if doc.extraction else None) or ""
+        unconfirmed = doc.extraction.unconfirmed if doc.extraction else {}
         for f in doc.fields:
             value = (
                 json.dumps(f.value, ensure_ascii=False)
@@ -542,8 +544,12 @@ async def export_report(session: AsyncSession, run_id: str, *, account: str | No
                 else f.value
             )
             status = "flagged" if f.flagged else ("extracted" if f.extracted else "missing")
+            detail = error
+            if f.key in unconfirmed:
+                second = json.dumps(unconfirmed[f.key], ensure_ascii=False)
+                detail = f"Not confirmed: a second read gave {second}."
             lines.append(
-                _csv_line(["field", doc.document_type, f.key, value, f.type, status, error])
+                _csv_line(["field", doc.document_type, f.key, value, f.type, status, detail])
             )
     for r in report.rule_results:
         lines.append(_csv_line(["rule", "", r.name, r.expression, r.severity, r.status, r.detail]))

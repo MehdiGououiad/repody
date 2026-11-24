@@ -95,6 +95,8 @@ class Run(Base):
     rules_passed: Mapped[int] = mapped_column(default=0)
     rules_failed: Mapped[int] = mapped_column(default=0)
     fields_extracted: Mapped[int] = mapped_column(default=0)
+    # Fields a second read did not confirm (ExtractionMeta.unconfirmed), all documents together.
+    fields_unconfirmed: Mapped[int] = mapped_column(default=0, server_default="0")
     extraction_ms: Mapped[int] = mapped_column(default=0)
     validation_ms: Mapped[int] = mapped_column(default=0)
     task_run_id: Mapped[str | None]  # its Hatchet run, to cancel it

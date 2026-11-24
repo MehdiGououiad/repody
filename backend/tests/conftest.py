@@ -21,6 +21,8 @@ os.environ.update(
 )
 
 import asyncio
+import base64
+import io
 import subprocess
 import sys
 from collections.abc import AsyncIterator
@@ -30,11 +32,13 @@ from typing import BinaryIO
 import asyncpg
 import pytest
 from httpx import ASGITransport, AsyncClient
+from PIL import Image
 from sqlalchemy import text
 
 from repody.app import execute
 from repody.app.seed import seed
 from repody.extraction import client as inference
+from repody.extraction import render
 from repody.infra import db, queue
 from repody.infra.storage import use_store
 from repody.main import create_app
@@ -82,12 +86,32 @@ async def database() -> AsyncIterator[None]:
     await db.engine.dispose()
 
 
+def _is_second_read(payload: dict) -> bool:
+    """Whether a request is a second read: its first page is sent at half the pixels."""
+    parts = payload["messages"][-1]["content"]
+    if not parts or parts[0].get("type") != "image_url":
+        return False
+    png = base64.b64decode(parts[0]["image_url"]["url"].split(",", 1)[1])
+    width, height = Image.open(io.BytesIO(png)).size
+    return width * height < 0.75 * render.MIN_MODEL_PIXELS
+
+
 @pytest.fixture
 def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     """What the fake model server answers: set ``model_answer["text"]`` (and ``["truncated"]``
-    for an answer cut off at the token limit, ``["asleep"]`` for a server that has to start);
-    ``model_answer["calls"]`` lists each request."""
-    answer: dict = {"text": "{}", "truncated": False, "asleep": False, "calls": [], "wakes": 0}
+    for an answer cut off at the token limit, ``["asleep"]`` for a server that has to start).
+    The second read (AUDIT_SECOND_READ) gets the same answer, or ``["check_text"]`` when set,
+    and raises ``["check_error"]`` when set. ``model_answer["calls"]`` lists each request, with
+    ``check`` true for a second read."""
+    answer: dict = {
+        "text": "{}",
+        "truncated": False,
+        "asleep": False,
+        "calls": [],
+        "wakes": 0,
+        "check_text": None,
+        "check_error": None,
+    }
 
     async def wake(on_asleep) -> bool:
         answer["wakes"] += 1
@@ -98,8 +122,12 @@ def model_answer(monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     async def chat(
         payload: dict,
     ) -> inference.Reply:
-        answer["calls"].append({"request": payload})
-        return inference.Reply(text=answer["text"], truncated=answer["truncated"])
+        check = _is_second_read(payload)
+        answer["calls"].append({"request": payload, "check": check})
+        if check and answer["check_error"]:
+            raise answer["check_error"]
+        text = answer["check_text"] if check and answer["check_text"] is not None else None
+        return inference.Reply(text=text or answer["text"], truncated=answer["truncated"])
 
     monkeypatch.setattr(inference, "chat", chat)
     monkeypatch.setattr(inference, "wake", wake)

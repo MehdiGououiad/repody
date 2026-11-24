@@ -205,6 +205,9 @@
       "info": "Info",
       "docExtracted": "{done} sur {total} trouvés",
       "extractionFailed": "Le document n'a pas pu être lu",
+      "unconfirmed": "Lu autrement à la seconde lecture : {value}",
+      "toCheck": "À vérifier",
+      "secondReadFailed": "Non revérifié : la seconde lecture de ce document a échoué, vérifiez ses valeurs.",
       "viaApi": "via l'API",
       "viaTest": "test",
       "notFound": "Introuvable",
@@ -251,6 +254,7 @@
       "fields": "{count, plural, one {# champ} other {# champs}}",
       "noFields": "Aucun champ extrait",
       "unchecked": "Non vérifiée : {rule}",
+      "unconfirmed": "{count, plural, one {# champ à vérifier} other {# champs à vérifier}}",
       "source": {
         "api": "API",
         "test": "Test"
