@@ -11,11 +11,11 @@ you ───────────Tailscale SSH──▶ deploy@vps
 workers ──HTTPS──▶ Modal (NuExtract3 on vLLM)
 ```
 
-| Hostname | Tunnel route | Public |
-|---|---|---|
-| `app.example.com` | `http://web:3000`: the UI, and the API at `/api/v1` for workflow API keys | Yes |
-| `auth.example.com` | `http://keycloak:8080`, paths `realms/repody` and `resources` only | Yes |
-| `kc-admin.example.com` | `http://keycloak:8080`, the admin console | No, Cloudflare Access only |
+| Hostname               | Tunnel route                                                              | Public                     |
+| ---------------------- | ------------------------------------------------------------------------- | -------------------------- |
+| `app.example.com`      | `http://web:3000`: the UI, and the API at `/api/v1` for workflow API keys | Yes                        |
+| `auth.example.com`     | `http://keycloak:8080`, paths `realms/repody` and `resources` only        | Yes                        |
+| `kc-admin.example.com` | `http://keycloak:8080`, the admin console                                 | No, Cloudflare Access only |
 
 The API, workers, Postgres, Hatchet and SeaweedFS have no route at all. Hatchet's dashboard
 listens on the server's loopback only ([Hatchet](#hatchet)).
@@ -28,6 +28,7 @@ listens on the server's loopback only ([Hatchet](#hatchet)).
 - **By hand:** you can run it yourself with a version and a target.
 
 It does the following:
+
 1. Checks that the three images carry this repository's build signature from `master`, and pins
    the server to the digests it verified.
 2. Joins your tailnet as an ephemeral `tag:ci` node, signing in with GitHub's OIDC token; no
@@ -69,8 +70,12 @@ containers running through daemon restarts and rotates logs, so a noisy containe
 disk:
 
 ```json
-{ "live-restore": true, "userland-proxy": false,
-  "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "3" } }
+{
+  "live-restore": true,
+  "userland-proxy": false,
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3" }
+}
 ```
 
 **Deploy user and directory.** Membership of the `docker` group is root-equivalent, so this
@@ -104,8 +109,18 @@ expiry**):
     { "src": ["tag:ci"], "dst": ["tag:repody-server"], "ip": ["22"] }
   ],
   "ssh": [
-    { "action": "accept", "src": ["autogroup:member"], "dst": ["autogroup:self"], "users": ["autogroup:nonroot", "root"] },
-    { "action": "accept", "src": ["autogroup:admin"], "dst": ["tag:repody-server"], "users": ["deploy", "root"] },
+    {
+      "action": "accept",
+      "src": ["autogroup:member"],
+      "dst": ["autogroup:self"],
+      "users": ["autogroup:nonroot", "root"]
+    },
+    {
+      "action": "accept",
+      "src": ["autogroup:admin"],
+      "dst": ["tag:repody-server"],
+      "users": ["deploy", "root"]
+    },
     { "action": "accept", "src": ["tag:ci"], "dst": ["tag:repody-server"], "users": ["deploy"] }
   ],
   "sshTests": [
@@ -148,6 +163,7 @@ Cloudflare's guide: [create a tunnel (dashboard)](https://developers.cloudflare.
 
    Keycloak's [reverse proxy guide](https://www.keycloak.org/server/reverseproxy) exposes only
    the realm and resource paths publicly.
+
 3. In **Access → Applications**, add a self-hosted application for `kc-admin.example.com` that
    allows only your email. The admin console then needs a Cloudflare sign-in before Keycloak's
    own.
@@ -179,7 +195,7 @@ the deploy with its name.
 ## 5. Deploy
 
 Push a release tag ([Releasing](#releasing)), or run **Actions → Deploy → Run workflow** from
-that tag (*Use workflow from → Tags*), with its version, for example `1.0.0`. The first
+that tag (_Use workflow from → Tags_), with its version, for example `1.0.0`. The first
 deploy creates the databases. Postgres and SeaweedFS turn healthy, then Hatchet Lite; `migrate`
 applies the migrations and `hatchet-token` writes a new Hatchet API token, and both exit; then
 Keycloak, the API, the workers, web and cloudflared start. The run fails if any health check fails, or if `https://app.example.com` doesn't answer.
@@ -207,12 +223,12 @@ in the admin console.
 Each deploy copies these to `tools/` in the stack's directory (the release's own versions). Run
 them from that directory (`/opt/repody`, or `/home/deploy/repody-staging` for staging):
 
-| Tool | What it does |
-|---|---|
-| `sh tools/setup-admin-client.sh` | Adds the admin area's Keycloak account (`repody-admin`) to a realm imported before 1.5 |
+| Tool                              | What it does                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sh tools/setup-admin-client.sh`  | Adds the admin area's Keycloak account (`repody-admin`) to a realm imported before 1.5                                                                                                                                                                                                                                                                                     |
 | `sh tools/setup-tester-client.sh` | Creates the smoke test's account: the service account `repody-tester`, operator in the client company `client-repody-test`; its secret (`TESTER_CLIENT_SECRET`) is created in `.env` and never printed. On staging only, also `tester@staging.repody.com`, a person in the same company who signs in in the browser for UI tests (password `UI_TESTER_PASSWORD` in `.env`) |
-| `sh tools/setup-realm-audit.sh` | Keycloak's audit trail on a realm imported before 1.8: sign-in events (sign-ins, failures, sign-outs, password and two-factor changes) and admin events, kept 90 days, and a lockout after 10 failed sign-ins instead of 30. Read them in the admin console, Realm settings > Events |
-| `tools/smoke_test.py` | One real run, end to end, as `repody-tester`: a generated one-page invoice through extraction on the GPU, the report, the credits charged, and nothing visible outside its company. A few credits and a little GPU time per run |
+| `sh tools/setup-realm-audit.sh`   | Keycloak's audit trail on a realm imported before 1.8: sign-in events (sign-ins, failures, sign-outs, password and two-factor changes) and admin events, kept 90 days, and a lockout after 10 failed sign-ins instead of 30. Read them in the admin console, Realm settings > Events                                                                                       |
+| `tools/smoke_test.py`             | One real run, end to end, as `repody-tester`: a generated one-page invoice through extraction on the GPU, the report, the credits charged, and nothing visible outside its company. A few credits and a little GPU time per run                                                                                                                                            |
 
 Each deploy runs the smoke test by itself once the stack has the tester account. To run it by hand:
 
@@ -240,12 +256,13 @@ Build once, deploy twice: production runs exactly the images staging tested.
    build signature. It tags those images `1.7.0` by digest, without rebuilding, and deploys them
    to production. Tagging a commit CI has not built yet fails with a message: re-run it once
    staging has that commit.
+
 3. **To try a branch on staging before merging**, tag it as a pre-release:
    `git tag v1.7.0-rc.1 && git push origin v1.7.0-rc.1`. CI tests and builds it, and deploys it
    to staging only. The next merge to `master` replaces it.
 
-**Rolling back:** run **Actions → Deploy** from the older release's tag (*Use workflow from →
-Tags → v1.6.2*) with that version and the target `production`.
+**Rolling back:** run **Actions → Deploy** from the older release's tag (_Use workflow from →
+Tags → v1.6.2_) with that version and the target `production`.
 
 ## Staging
 
@@ -253,20 +270,20 @@ Staging is a second, separate copy of the stack on the same server. It runs ever
 to `master` a few minutes after the merge, so production only ever gets what has already run
 there. It shares nothing with production except the server and the Docker engine:
 
-| | Production | Staging |
-|---|---|---|
-| Directory, Compose project | `/opt/repody`, `repody` | `/home/deploy/repody-staging`, `repody-staging` (`COMPOSE_PROJECT_NAME` in its `.env`) |
-| Data | its volumes and network | its own (`repody-staging_*`): its own Postgres, Keycloak, Hatchet and SeaweedFS |
-| Secrets | `/opt/repody/.env` | its own `.env`, generated on the server; never copied from production |
-| Hostnames | `app`, `auth`, `kc-admin` `.repody.com` | `staging`, `staging-auth`, `staging-kc-admin` `.repody.com` |
-| Tunnel | `repody` | `repody-staging`: its own token |
-| Who can reach it | the public (sign-in pages); the admin console behind Cloudflare Access | **everything** behind Cloudflare Access (application *Repody staging*): your email, and the deploy's service token |
-| GPU | Modal environment `main` | Modal environment `staging`: its own app, weights volume and proxy token, so staging never queues behind a client's run |
-| Deploys | a `v*` tag, promoting the build staging ran | each `master` commit (images tagged with the commit), or a pre-release tag such as `v1.7.0-rc.1` |
-| GitHub environment | `production` | `staging` |
-| Admin and testers | your account | `admin@staging.repody.com`, and the testers (`sh tools/setup-tester-client.sh`) |
-| Access requests | on (the site's form) | off |
-| Hatchet dashboard | `127.0.0.1:8888` | `127.0.0.1:8889` |
+|                            | Production                                                             | Staging                                                                                                                 |
+| -------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Directory, Compose project | `/opt/repody`, `repody`                                                | `/home/deploy/repody-staging`, `repody-staging` (`COMPOSE_PROJECT_NAME` in its `.env`)                                  |
+| Data                       | its volumes and network                                                | its own (`repody-staging_*`): its own Postgres, Keycloak, Hatchet and SeaweedFS                                         |
+| Secrets                    | `/opt/repody/.env`                                                     | its own `.env`, generated on the server; never copied from production                                                   |
+| Hostnames                  | `app`, `auth`, `kc-admin` `.repody.com`                                | `staging`, `staging-auth`, `staging-kc-admin` `.repody.com`                                                             |
+| Tunnel                     | `repody`                                                               | `repody-staging`: its own token                                                                                         |
+| Who can reach it           | the public (sign-in pages); the admin console behind Cloudflare Access | **everything** behind Cloudflare Access (application _Repody staging_): your email, and the deploy's service token      |
+| GPU                        | Modal environment `main`                                               | Modal environment `staging`: its own app, weights volume and proxy token, so staging never queues behind a client's run |
+| Deploys                    | a `v*` tag, promoting the build staging ran                            | each `master` commit (images tagged with the commit), or a pre-release tag such as `v1.7.0-rc.1`                        |
+| GitHub environment         | `production`                                                           | `staging`                                                                                                               |
+| Admin and testers          | your account                                                           | `admin@staging.repody.com`, and the testers (`sh tools/setup-tester-client.sh`)                                         |
+| Access requests            | on (the site's form)                                                   | off                                                                                                                     |
+| Hatchet dashboard          | `127.0.0.1:8888`                                                       | `127.0.0.1:8889`                                                                                                        |
 
 Each deploy checks that the stack's `.env` names the Compose project it expects before it touches
 anything, so a wrong directory or variable stops the deploy instead of recreating the other
@@ -277,7 +294,7 @@ staging from starving production. Moving staging to its own server later means c
 ### Setting it up (once)
 
 1. **Cloudflare.** Create a second tunnel, `repody-staging`, with the same routes as production
-   on the staging hostnames, and the self-hosted Access application *Repody staging* covering
+   on the staging hostnames, and the self-hosted Access application _Repody staging_ covering
    the three hostnames. Give it two policies: **Allow** your email, and **Service Auth** for a
    service token (`repody-staging-deploy`, Access → Service credentials). The token's client ID
    and secret go in the `staging` environment's secrets `CF_ACCESS_CLIENT_ID` and
@@ -327,10 +344,10 @@ client's documents there.
 
 Two kinds, for two failures:
 
-| Copy | Where | When | Protects against |
-|---|---|---|---|
-| Database dump (`pg_dumpall`) | `backups/` on the server, last 10 kept | before every deploy | a bad release or migration |
-| **Off-site** (`tools/backup.sh`): every database, and the uploaded documents | Cloudflare R2, encrypted with restic | every night | losing the server |
+| Copy                                                                         | Where                                  | When                | Protects against           |
+| ---------------------------------------------------------------------------- | -------------------------------------- | ------------------- | -------------------------- |
+| Database dump (`pg_dumpall`)                                                 | `backups/` on the server, last 10 kept | before every deploy | a bad release or migration |
+| **Off-site** (`tools/backup.sh`): every database, and the uploaded documents | Cloudflare R2, encrypted with restic   | every night         | losing the server          |
 
 The off-site copy keeps 7 daily, 4 weekly and 12 monthly snapshots. restic encrypts everything
 before it leaves the server, and runs from its pinned image: nothing is installed.
@@ -353,6 +370,7 @@ before it leaves the server, and runs from its pinned image: nothing is installe
    **Keep a copy of `RESTIC_PASSWORD` off the server** (a password manager). It is the
    encryption key: without it, nobody, you included, can read the backups once the server is
    gone.
+
 3. **First backup and a restore test**, from the stack's directory:
 
    ```bash
@@ -363,6 +381,7 @@ before it leaves the server, and runs from its pinned image: nothing is installe
    The restore test loads the latest dump into a throwaway Postgres and counts Repody's workflows
    and runs, Keycloak's users and Hatchet's tenants (it fails when either of the last two is
    empty), then restores the documents to a temporary folder and counts them.
+
 4. **Every night**, with `crontab -e` as `deploy`:
 
    ```text
@@ -396,19 +415,19 @@ copy `restore/data/documents` into the `repody_seaweedfs-data` volume, and deplo
 
 Measured on 18 November 2026 on production, idle after a day of use (`docker stats`):
 
-| Service | Used | Limit | Notes |
-|---|---|---|---|
-| keycloak | 594 MB | 1.5 GB | Optimized build; the JVM takes 70% of the limit, and Keycloak advises at least 750 MB |
-| worker | 349 MB | 1.5 GB | Renders PDF pages; up to `AUDIT_WORKER_CONCURRENCY` runs at once |
-| postgres | 339 MB | 1 GB | `shared_buffers=256MB`, 256 MB `shm_size`; holds the Repody, Keycloak, Hatchet (and Bugsink) databases |
-| api | 193 MB | 768 MB | One Uvicorn process; uploads wait in a 256 MB `/tmp` in memory |
-| web | 95 MB | 512 MB | Next.js standalone server |
-| seaweedfs | 73 MB | 512 MB | |
-| hatchet-lite | 62 MB | 768 MB | Hatchet's engine, API and dashboard; its queue is the `hatchet` database |
-| cloudflared | 17 MB | 128 MB | |
-| bugsink | 349 MB | 768 MB | Only with the `errors` profile ("Errors"); measured on staging |
-| loki, alloy, grafana | 70 MB, 62 MB, 354 MB | 1 GB, 256 MB, 768 MB | Only with the `logs` profile ("Logs"); measured on staging |
-| **Total** | **≈ 1.7 GB** (≈ 2.5 GB with both profiles) | 6.7 GB (9.5 GB with both profiles) | |
+| Service              | Used                                       | Limit                              | Notes                                                                                                  |
+| -------------------- | ------------------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| keycloak             | 594 MB                                     | 1.5 GB                             | Optimized build; the JVM takes 70% of the limit, and Keycloak advises at least 750 MB                  |
+| worker               | 349 MB                                     | 1.5 GB                             | Renders PDF pages; up to `AUDIT_WORKER_CONCURRENCY` runs at once                                       |
+| postgres             | 339 MB                                     | 1 GB                               | `shared_buffers=256MB`, 256 MB `shm_size`; holds the Repody, Keycloak, Hatchet (and Bugsink) databases |
+| api                  | 193 MB                                     | 768 MB                             | One Uvicorn process; uploads wait in a 256 MB `/tmp` in memory                                         |
+| web                  | 95 MB                                      | 512 MB                             | Next.js standalone server                                                                              |
+| seaweedfs            | 73 MB                                      | 512 MB                             |                                                                                                        |
+| hatchet-lite         | 62 MB                                      | 768 MB                             | Hatchet's engine, API and dashboard; its queue is the `hatchet` database                               |
+| cloudflared          | 17 MB                                      | 128 MB                             |                                                                                                        |
+| bugsink              | 349 MB                                     | 768 MB                             | Only with the `errors` profile ("Errors"); measured on staging                                         |
+| loki, alloy, grafana | 70 MB, 62 MB, 354 MB                       | 1 GB, 256 MB, 768 MB               | Only with the `logs` profile ("Logs"); measured on staging                                             |
+| **Total**            | **≈ 1.7 GB** (≈ 2.5 GB with both profiles) | 6.7 GB (9.5 GB with both profiles) |                                                                                                        |
 
 The limits are ceilings, not reservations, so an 8 GB VPS keeps most of its memory free. Model calls
 go to Modal, 4 at a time (`AUDIT_INFERENCE_CONCURRENCY`, the vLLM server's `MAX_INPUTS`). Every
@@ -531,20 +550,20 @@ email alerts unless Bugsink gets an SMTP server (`EMAIL_HOST`, …): open its pa
 From your machine, run `tailscale ssh deploy@<server>`, then `cd /opt/repody` (or
 `cd ~/repody-staging`: its `.env` names its own project, so the same commands act on staging only):
 
-| Task | Command |
-|---|---|
-| Status | `docker compose --env-file .env --env-file release.env ps` |
-| Logs | `journalctl -t repody-api-1 -t repody-worker-1 -f -o cat` ("Logs") |
+| Task                | Command                                                                |
+| ------------------- | ---------------------------------------------------------------------- |
+| Status              | `docker compose --env-file .env --env-file release.env ps`             |
+| Logs                | `journalctl -t repody-api-1 -t repody-worker-1 -f -o cat` ("Logs")     |
 | Restart one service | `docker compose --env-file .env --env-file release.env restart worker` |
-| Disk | `docker system df` |
+| Disk                | `docker system df`                                                     |
 
 ## Troubleshooting
 
-| Symptom | Check |
-|---|---|
-| Deploy stops with `required variable … is missing` | That variable in `/opt/repody/.env` |
-| `Join the tailnet` fails | The federated identity's tag is `tag:ci`, and the policy has the `tag:ci` owner, grant and SSH rule |
-| 502 from the app host | `docker compose … logs cloudflared`; the tunnel routes use the service names `web` and `keycloak` |
-| Sign-in fails with `invalid redirect_uri` | `APP_HOST` matches the domain; it was baked into the realm on first import (fix it in the admin console) |
-| A run fails with a model timeout right after a Modal deploy | Wake the model first (deploy/modal/README.md, "Check it") |
-| `migrate` exited with an error | `docker compose … logs migrate`; the API and workers wait for it |
+| Symptom                                                     | Check                                                                                                    |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Deploy stops with `required variable … is missing`          | That variable in `/opt/repody/.env`                                                                      |
+| `Join the tailnet` fails                                    | The federated identity's tag is `tag:ci`, and the policy has the `tag:ci` owner, grant and SSH rule      |
+| 502 from the app host                                       | `docker compose … logs cloudflared`; the tunnel routes use the service names `web` and `keycloak`        |
+| Sign-in fails with `invalid redirect_uri`                   | `APP_HOST` matches the domain; it was baked into the realm on first import (fix it in the admin console) |
+| A run fails with a model timeout right after a Modal deploy | Wake the model first (deploy/modal/README.md, "Check it")                                                |
+| `migrate` exited with an error                              | `docker compose … logs migrate`; the API and workers wait for it                                         |

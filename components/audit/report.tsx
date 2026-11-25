@@ -28,7 +28,7 @@ export function ReportVerdict({ audit, className }: { audit: RunAuditDetail; cla
   // Fields a second read did not confirm: why a run whose rules all passed needs review.
   const toCheck = audit.documents.reduce(
     (count, doc) => count + Object.keys(doc.extraction?.unconfirmed ?? {}).length,
-    0
+    0,
   );
   const facts = [
     toCheck ? t("fieldsToCheck", { count: toCheck }) : null,
@@ -84,7 +84,7 @@ export function TimingBar({ audit }: { audit: RunAuditDetail }) {
               animate={{ width: `${(part.ms / total) * 100}%` }}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.1 + i * 0.08 }}
             />
-          ) : null
+          ) : null,
         )}
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-3">
@@ -124,7 +124,7 @@ function RuleList({
             onPointerLeave={() => onFocusRule(null)}
             className={cn(
               "grid grid-cols-[14px_minmax(0,1fr)] gap-x-3 gap-y-1 px-3.5 py-2.5 transition-colors duration-100 hover:bg-hover print-keep",
-              failed && (rule.severity === "flag" ? "bg-warn-wash/50" : "bg-fail-wash/50")
+              failed && (rule.severity === "flag" ? "bg-warn-wash/50" : "bg-fail-wash/50"),
             )}
           >
             <StatusGlyph status={status} label={t(rule.status)} className="translate-y-0.5" />
@@ -137,7 +137,7 @@ function RuleList({
                 <span
                   className={cn(
                     "ms-auto text-xs font-medium",
-                    rule.severity === "flag" ? "text-warn-ink" : "text-fail-ink"
+                    rule.severity === "flag" ? "text-warn-ink" : "text-fail-ink",
                   )}
                 >
                   {t(rule.severity === "reject" ? "reject" : "flag")}
@@ -265,7 +265,7 @@ function DocumentFields({
               className={cn(
                 "grid grid-cols-[14px_minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 px-3.5 py-2 transition-[background-color,box-shadow] duration-150",
                 field.flagged && (toCheck ? "bg-warn-wash/40" : "bg-fail-wash/40"),
-                "data-lit:bg-accent-wash data-lit:shadow-[inset_2px_0_0_var(--accent)]"
+                "data-lit:bg-accent-wash data-lit:shadow-[inset_2px_0_0_var(--accent)]",
               )}
             >
               <StatusGlyph
@@ -299,7 +299,7 @@ function DocumentFields({
                 <span
                   className={cn(
                     "block break-words text-[13px] tabular-nums",
-                    field.extracted ? "font-medium text-ink" : "text-ink-4"
+                    field.extracted ? "font-medium text-ink" : "text-ink-4",
                   )}
                 >
                   {field.extracted ? formatExtractedFieldValue(field.value, locale) : t("notFound")}
@@ -308,7 +308,7 @@ function DocumentFields({
                   <span
                     className={cn(
                       "mt-0.5 block text-xs",
-                      toCheck ? "text-warn-ink" : "text-fail-ink"
+                      toCheck ? "text-warn-ink" : "text-fail-ink",
                     )}
                   >
                     {notes.join(", ")}

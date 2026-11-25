@@ -14,7 +14,7 @@ export const STEP_KEYS = ["fields", "rules", "testDeploy"] as const;
 export function stepComplete(
   step: BuilderStep,
   documents: DocumentDef[],
-  rules: WorkflowRule[]
+  rules: WorkflowRule[],
 ): boolean {
   if (step === 0)
     return documents.some((d) => d.documentType.trim() && d.schema.some((f) => f.name.trim()));
@@ -25,7 +25,7 @@ export function stepComplete(
 export function stepBlocked(
   step: BuilderStep,
   documents: DocumentDef[],
-  rules: WorkflowRule[]
+  rules: WorkflowRule[],
 ): boolean {
   return step === 2 && !stepComplete(0, documents, rules);
 }
@@ -62,7 +62,7 @@ export function BuilderSteps({
                 aria-hidden
                 className={cn(
                   "h-px w-6 shrink-0 max-md:w-3",
-                  index <= step ? "bg-accent" : "bg-line-strong"
+                  index <= step ? "bg-accent" : "bg-line-strong",
                 )}
               />
             ) : null}
@@ -75,7 +75,7 @@ export function BuilderSteps({
                 "group flex h-8 cursor-pointer items-center gap-2 rounded-full px-2.5 text-[13px] font-medium outline-none transition-colors duration-150 focus-visible:shadow-[0_0_0_2px_var(--focus)] data-disabled:cursor-not-allowed data-disabled:opacity-45",
                 current
                   ? "bg-accent-wash text-accent-ink"
-                  : "text-ink-3 hover:bg-hover hover:text-ink"
+                  : "text-ink-3 hover:bg-hover hover:text-ink",
               )}
             >
               <span
@@ -83,7 +83,7 @@ export function BuilderSteps({
                   "flex size-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums",
                   current && "bg-accent text-on-accent",
                   done && "bg-pass text-white",
-                  !current && !done && "shadow-[inset_0_0_0_1.5px_var(--line-strong)] text-ink-3"
+                  !current && !done && "shadow-[inset_0_0_0_1.5px_var(--line-strong)] text-ink-3",
                 )}
               >
                 {done ? <Check className="size-3" strokeWidth={3} aria-hidden /> : i + 1}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -12,7 +13,7 @@ export default function Root() {
   return (
     <p style={{ fontFamily: "system-ui", padding: 24 }}>
       <meta httpEquiv="refresh" content="0;url=/fr/" />
-      <a href="/fr/">Repody (français)</a> · <a href="/en/">Repody (English)</a>
+      <Link href="/fr/">Repody (français)</Link> · <Link href="/en/">Repody (English)</Link>
     </p>
   );
 }

@@ -26,9 +26,9 @@ function TabsList({
       className={partClass(
         cn(
           "relative isolate flex items-center gap-0.5",
-          variant === "segmented" && "rounded-lg bg-selected p-0.5"
+          variant === "segmented" && "rounded-lg bg-selected p-0.5",
         ),
-        className
+        className,
       )}
       {...props}
     >
@@ -38,7 +38,7 @@ function TabsList({
           "absolute start-0 top-0 -z-10 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) rounded-md transition-[translate,width,height] duration-200 ease-out motion-reduce:transition-none",
           variant === "segmented"
             ? "bg-overlay shadow-[0_0_0_1px_var(--line),0_1px_2px_var(--shadow-color)]"
-            : "bg-selected"
+            : "bg-selected",
         )}
       />
     </TabsListPrimitive>
@@ -50,9 +50,9 @@ function TabsTab({ className, ...props }: React.ComponentProps<typeof TabsTabPri
     <TabsTabPrimitive
       className={partClass(
         cn(
-          "relative z-0 inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-ink-3 outline-none transition-colors duration-150 hover:text-ink focus-visible:shadow-[0_0_0_2px_var(--focus)] data-selected:text-ink [&_svg]:size-3.5"
+          "relative z-0 inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-[13px] font-medium text-ink-3 outline-none transition-colors duration-150 hover:text-ink focus-visible:shadow-[0_0_0_2px_var(--focus)] data-selected:text-ink [&_svg]:size-3.5",
         ),
-        className
+        className,
       )}
       {...props}
     />

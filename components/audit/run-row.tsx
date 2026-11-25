@@ -85,7 +85,7 @@ export function RunRow({ audit, index }: { audit: Audit; index: number }) {
         className={cn(
           "group grid h-11 grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-3 px-4 text-[13px] outline-none transition-colors duration-100 hover:bg-hover focus-visible:bg-selected md:grid-cols-[14px_56px_minmax(0,1.3fr)_minmax(0,1fr)_44px_52px_80px] md:px-5",
           audit.status === "failed" && "bg-fail-wash/40",
-          audit.status === "warning" && "bg-warn-wash/40"
+          audit.status === "warning" && "bg-warn-wash/40",
         )}
       >
         <StatusGlyph status={audit.status} label={t(`status.${audit.status}`)} />
@@ -103,7 +103,7 @@ export function RunRow({ audit, index }: { audit: Audit; index: number }) {
           <span
             className={cn(
               "inline-flex h-5 items-center rounded-full px-2 text-2xs font-medium",
-              audit.source === "api" ? "bg-accent-wash text-accent-ink" : "bg-selected text-ink-3"
+              audit.source === "api" ? "bg-accent-wash text-accent-ink" : "bg-selected text-ink-3",
             )}
           >
             {t(`row.source.${audit.source}`)}
@@ -147,7 +147,7 @@ export function RunGroups({
           <h3
             className={cn(
               "sticky z-[5] flex h-9 items-center gap-2 border-y border-line bg-canvas/95 px-4 text-xs font-semibold text-ink-2 backdrop-blur-sm md:px-5",
-              stickyTop
+              stickyTop,
             )}
           >
             {key === today

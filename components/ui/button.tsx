@@ -28,7 +28,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: { variant: "secondary", size: "sm" },
-  }
+  },
 );
 
 type ButtonProps = React.ComponentProps<typeof ButtonPrimitive> &

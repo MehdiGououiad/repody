@@ -42,7 +42,7 @@ export function auditsQuery({ q, outcome, workflow, day, page }: AuditSearch) {
 export function auditsExportHref(search: AuditSearch): string {
   const { limit: _limit, offset: _offset, ...filters } = auditsQuery(search);
   const params = new URLSearchParams(
-    Object.entries(filters).filter((entry): entry is [string, string] => entry[1] !== undefined)
+    Object.entries(filters).filter((entry): entry is [string, string] => entry[1] !== undefined),
   );
   return `/api/v1/audits/export.csv${params.size ? `?${params}` : ""}`;
 }

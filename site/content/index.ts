@@ -13,7 +13,7 @@ type Named = { label: string; description: string };
 
 /** The backend's field types, grouped and named as the product names them (synced, never retyped). */
 export function fieldTypeGroups(
-  locale: Locale
+  locale: Locale,
 ): { group: string; title: string; types: (Named & { value: string })[] }[] {
   const text = shared[locale] as { groups: Record<string, string>; names: Record<string, Named> };
   return Object.entries(text.groups).map(([group, title]) => ({

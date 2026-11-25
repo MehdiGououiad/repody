@@ -8,7 +8,7 @@ const RunAuditReport = dynamic(
     import("@/components/audit/run-audit-report").then((m) => ({
       default: m.RunAuditReport,
     })),
-  { loading: () => <RunAuditReportLoader /> }
+  { loading: () => <RunAuditReportLoader /> },
 );
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {

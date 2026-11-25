@@ -31,8 +31,8 @@ export function fieldOptions(documents: DocumentDef[], appliesTo: string[]): Fie
                 name: qualified(doc, `${field.name}.${child.name}`, multi),
                 type: child.templateType,
               }))
-          : [{ name: qualified(doc, field.name, multi), type: field.templateType }]
-      )
+          : [{ name: qualified(doc, field.name, multi), type: field.templateType }],
+      ),
   );
 }
 
@@ -40,7 +40,7 @@ export function fieldOptions(documents: DocumentDef[], appliesTo: string[]): Fie
 export function tableOptions(
   documents: DocumentDef[],
   appliesTo: string[],
-  catalog: Catalog
+  catalog: Catalog,
 ): TableOption[] {
   const multi = documents.length > 1;
   return ruleDocuments(documents, appliesTo).flatMap((doc) =>
@@ -51,7 +51,7 @@ export function tableOptions(
         columns: field.children
           .filter((child) => child.name.trim())
           .map((child) => ({ name: child.name, type: child.templateType })),
-      }))
+      })),
   );
 }
 

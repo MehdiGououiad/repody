@@ -24,26 +24,26 @@ Repody kept NuExtract3, so `master` keeps only its runner. The other models' run
 the git tag `benchmarks-2026-11`, which reproduces every result below:
 `git checkout benchmarks-2026-11 -- benchmarks/ocr`.
 
-| Model | Runner | Path |
-|---|---|---|
-| NuExtract3 Q8_0 | `runners/nuextract3.py` | llama.cpp (Vulkan), Markdown mode, as Repody calls it |
+| Model           | Runner                         | Path                                                                       |
+| --------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| NuExtract3 Q8_0 | `runners/nuextract3.py`        | llama.cpp (Vulkan), Markdown mode, as Repody calls it                      |
 | MiniCPM-OCR 1.0 | `runners/minicpm_ocr.py` (tag) | official SDK (PP-DocLayoutV3 on CPU) + llama.cpp service per the GGUF card |
-| Surya OCR 2.5 | `runners/surya_ocr.py` (tag) | `surya-ocr` with its llama.cpp backend (auto-spawned server) |
+| Surya OCR 2.5   | `runners/surya_ocr.py` (tag)   | `surya-ocr` with its llama.cpp backend (auto-spawned server)               |
 
 Not run: OXR-1.0, Unlimited-OCR-2 and Nemotron 3.5 Parse (official paths are NVIDIA-only), and
 LightOnOCR-3-4B and Xiaomi-OCR-0 (official path here is CPU Transformers; dropped as too slow).
 
     uv run make_docs.py && uv run real_docs.py
-    pnpm llamacpp:serve && uv run runners/nuextract3.py      # then pnpm llamacpp:stop
+    bun run llamacpp:serve && uv run runners/nuextract3.py      # then bun run llamacpp:stop
     uv run score.py
 
 ## Results (2026-11-04, llama.cpp b12098)
 
-| Model | Score | Values | Lines | Tables | Digital | Scan | Low-res | Photo | Fax | Payslip | s/page |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| NuExtract3 Q8_0 | **99.2** | 98.9 | 99.1 | 99.5 | 100.0 | 100.0 | 100.0 | 100.0 | 96.4 | 86.9 | 38.1 |
-| Surya OCR 2.5 | **98.2** | 97.8 | 100.0 | 95.1 | 100.0 | 100.0 | 100.0 | 100.0 | 97.1 | 53.5 | 23.6 |
-| MiniCPM-OCR 1.0 | **94.3** | 94.6 | 97.3 | 90.9 | 100.0 | 100.0 | 100.0 | 83.2 | 84.2 | 61.7 | 40.2 |
+| Model           | Score    | Values | Lines | Tables | Digital | Scan  | Low-res | Photo | Fax  | Payslip | s/page |
+| --------------- | -------- | ------ | ----- | ------ | ------- | ----- | ------- | ----- | ---- | ------- | ------ |
+| NuExtract3 Q8_0 | **99.2** | 98.9   | 99.1  | 99.5   | 100.0   | 100.0 | 100.0   | 100.0 | 96.4 | 86.9    | 38.1   |
+| Surya OCR 2.5   | **98.2** | 97.8   | 100.0 | 95.1   | 100.0   | 100.0 | 100.0   | 100.0 | 97.1 | 53.5    | 23.6   |
+| MiniCPM-OCR 1.0 | **94.3** | 94.6   | 97.3  | 90.9   | 100.0   | 100.0 | 100.0   | 83.2  | 84.2 | 61.7    | 40.2   |
 
 On the payslip, Surya and MiniCPM write the French decimal comma as a point (`3 500.00€` for
 `3 500,00€`), which the exact score counts as wrong. Treating `,` and `.` as equal, the payslip scores
@@ -65,13 +65,13 @@ a handwritten invoice, a dense Moroccan customs invoice, a faded 1981 till recei
 receipt, a 1921 invoice and an 1832 delivery note. Each model as its documentation sets it up, on the
 Arc 140V through llama.cpp's Vulkan backend (`run_vulkan4.sh`, `rerun_nuextract.sh`). Lenient score.
 
-| Model | Mean | Asia Home | Babani 1921 | C&A 1981 | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan 1832 | s/page |
-|---|---|---|---|---|---|---|---|---|---|---|
-| NuExtract3 Q8_0, llama.cpp default flags | **96.9** | 89 | 98 | 100 | 99 | 100 | 97 | 100 | 92 | 105 |
-| LightOnOCR-3-4B Q8_0 (prithivMLmods GGUF) | 93.2 | 88 | 67 | 100 | 100 | 99 | 100 | 100 | 92 | 62 |
-| Surya OCR 2.5 | 87.6 | 89 | 84 | 100 | 98 | 98 | 59 | 100 | 72 | 30 |
-| MinerU 4 standard, middle_json | 75.1 | 43 | 62 | 75 | 97 | 97 | 62 | 100 | 64 | 29 |
-| MinerU 4 standard, Markdown | 68.9 | 43 | 32 | 75 | 78 | 97 | 62 | 100 | 64 | 31 |
+| Model                                     | Mean     | Asia Home | Babani 1921 | C&A 1981 | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan 1832 | s/page |
+| ----------------------------------------- | -------- | --------- | ----------- | -------- | -------------- | ------- | --------- | -------- | ---------- | ------ |
+| NuExtract3 Q8_0, llama.cpp default flags  | **96.9** | 89        | 98          | 100      | 99             | 100     | 97        | 100      | 92         | 105    |
+| LightOnOCR-3-4B Q8_0 (prithivMLmods GGUF) | 93.2     | 88        | 67          | 100      | 100            | 99      | 100       | 100      | 92         | 62     |
+| Surya OCR 2.5                             | 87.6     | 89        | 84          | 100      | 98             | 98      | 59        | 100      | 72         | 30     |
+| MinerU 4 standard, middle_json            | 75.1     | 43        | 62          | 75       | 97             | 97      | 62        | 100      | 64         | 29     |
+| MinerU 4 standard, Markdown               | 68.9     | 43        | 32          | 75       | 78             | 97      | 62        | 100      | 64         | 31     |
 
 - NuExtract3 with llama.cpp's default server flags scores 100 on the payslip; with Repody's server flags
   (`--image-min/max-tokens 1024`, `-ub 1024`, ...) it scored 86.9 there and took longer.
@@ -90,10 +90,10 @@ llama.cpp defaults, no image-token cap) and sends the eight real documents throu
 `repody.extraction.pipeline.extract` in Markdown mode (`via_repody.py`). The LightOnOCR row was
 measured when Repody still offered it as a Markdown option; that option has since been removed:
 
-| Path | Mean | Asia Home | Babani | C&A | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan |
-|---|---|---|---|---|---|---|---|---|---|
-| Repody, NuExtract3 | **96.9** | 89 | 98 | 100 | 99 | 100 | 97 | 100 | 92 |
-| Repody, LightOnOCR-3 (option removed) | **92.8** | 88 | 67 | 100 | 97 | 99 | 100 | 100 | 92 |
+| Path                                  | Mean     | Asia Home | Babani | C&A | Espace Transit | Payslip | Rent 1968 | Retouche | Vigan |
+| ------------------------------------- | -------- | --------- | ------ | --- | -------------- | ------- | --------- | -------- | ----- |
+| Repody, NuExtract3                    | **96.9** | 89        | 98     | 100 | 99             | 100     | 97        | 100      | 92    |
+| Repody, LightOnOCR-3 (option removed) | **92.8** | 88        | 67     | 100 | 97             | 99      | 100       | 100      | 92    |
 
 NuExtract3's output is byte-for-byte the benchmark run's. LightOnOCR samples (temperature 0.2), so a
 run differs slightly: here it misread `CASOI21005079` as `CASO1…` on the customs invoice.

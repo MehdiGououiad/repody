@@ -16,7 +16,7 @@ export function DocumentMarkdownPreview({ text, className }: { text: string; cla
         "prose-headings:text-ink prose-p:text-ink prose-strong:text-ink",
         "prose-a:text-ink prose-li:marker:text-ink prose-th:text-ink",
         "prose-table:block prose-table:overflow-x-auto prose-pre:bg-raised",
-        className
+        className,
       )}
     >
       <ReactMarkdown remarkPlugins={[remarkGfm]} disallowedElements={["img"]}>

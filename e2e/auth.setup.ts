@@ -19,7 +19,7 @@ setup.setTimeout(240_000);
 async function answers(request: APIRequestContext, url: string): Promise<boolean> {
   return request.get(url).then(
     (response) => response.ok(),
-    () => false
+    () => false,
   );
 }
 

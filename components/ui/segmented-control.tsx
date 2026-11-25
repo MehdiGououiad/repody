@@ -20,7 +20,7 @@ function SegmentedControl({
     <SegmentedControlPrimitive
       className={partClass(
         "relative isolate inline-flex h-7 items-center rounded-md bg-selected p-0.5",
-        className
+        className,
       )}
       {...props}
     >
@@ -38,7 +38,7 @@ function SegmentedControlOption({
     <SegmentedControlItem
       className={partClass(
         "inline-flex h-6 cursor-pointer items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-medium text-ink-3 outline-none transition-colors duration-150 hover:text-ink focus-visible:shadow-[0_0_0_2px_var(--focus)] data-checked:text-ink [&_svg]:size-3.5",
-        className
+        className,
       )}
       {...props}
     />

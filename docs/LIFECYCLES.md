@@ -8,14 +8,14 @@ the persisted states, enforces them with a transition table and Postgres CHECK c
 publishes them as enums in the OpenAPI schema (`lib/api/generated/schema.d.ts`). The frontend
 holds each async flow as one discriminated union, so a contradictory state cannot be built.
 
-| State machine | States | Owner | Enforced by |
-|---|---|---|---|
-| [Run](#run) | queued · running · done · failed | `backend/src/repody/app/lifecycle.py` (`move_run`) | `RUN_TRANSITIONS`, `ck_runs_status`, `ck_runs_outcome` |
-| [Workflow](#workflow) | draft · active · archived | `backend/src/repody/app/workflows.py` (`deploy_workflow`, `archive_workflows`) | `ck_workflows_status`; not writable by clients |
-| [Rule result](#rule-result) | passed · failed · skipped | `backend/src/repody/rules/evaluate.py` | `ck_rule_results_status` |
-| [Run progress step](#run-progress-step) | pending · active · done | `backend/src/repody/app/progress.py` (`Tracker`) | `ProgressStep.status` enum |
-| [Builder test run](#builder-test-run) | idle · running · done · failed | `lib/api/runs.ts` (`RunView`) | TypeScript union |
-| [Builder sync](#builder-sync) | idle · saving · deploying | `components/workflow/builder/use-builder-workflow.ts` (`BuilderSync`) | TypeScript union |
+| State machine                           | States                           | Owner                                                                          | Enforced by                                            |
+| --------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| [Run](#run)                             | queued · running · done · failed | `backend/src/repody/app/lifecycle.py` (`move_run`)                             | `RUN_TRANSITIONS`, `ck_runs_status`, `ck_runs_outcome` |
+| [Workflow](#workflow)                   | draft · active · archived        | `backend/src/repody/app/workflows.py` (`deploy_workflow`, `archive_workflows`) | `ck_workflows_status`; not writable by clients         |
+| [Rule result](#rule-result)             | passed · failed · skipped        | `backend/src/repody/rules/evaluate.py`                                         | `ck_rule_results_status`                               |
+| [Run progress step](#run-progress-step) | pending · active · done          | `backend/src/repody/app/progress.py` (`Tracker`)                               | `ProgressStep.status` enum                             |
+| [Builder test run](#builder-test-run)   | idle · running · done · failed   | `lib/api/runs.ts` (`RunView`)                                                  | TypeScript union                                       |
+| [Builder sync](#builder-sync)           | idle · saving · deploying        | `components/workflow/builder/use-builder-workflow.ts` (`BuilderSync`)          | TypeScript union                                       |
 
 ## Run
 
@@ -129,6 +129,6 @@ races a save.
    it only through the owner above.
 2. Write an Alembic migration that moves existing rows and updates the CHECK constraint (and the
    matching `CheckConstraint` in `infra/models.py`).
-3. `pnpm codegen:api`, then let `pnpm typecheck` show every `Record<Status, …>` and union that
+3. `bun run codegen:api`, then let `bun check` show every `Record<Status, …>` and union that
    needs the new case.
 4. Update this page and the tests in `backend/tests/integration/test_lifecycle.py`.

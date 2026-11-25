@@ -4,37 +4,37 @@ Deploy follows **official upstream docs** - see [LOCAL.md](./LOCAL.md) (laptop) 
 
 ## Develop (daily) - vendors / contributors (git checkout)
 
-Build the images from this checkout (`repody-*:dev`, cached), start the platform, and (by default) **host NuExtract** (`repody:vlm`). To run a published release instead: `REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… pnpm platform`.
+Build the images from this checkout (`repody-*:dev`, cached), start the platform, and (by default) **host NuExtract** (`repody:vlm`). To run a published release instead: `REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… bun run platform`.
 
-| Command | When |
-|---------|------|
-| `pnpm platform setup` | **Once** - env files + build the images |
-| `pnpm platform doctor` | **Preflight** - Node/pnpm, Docker, images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
-| `pnpm platform` | **Daily** - preflight + start stack + NuExtract on host |
-| `pnpm platform -- --platform-only` | Containers only (no host models) |
-| `pnpm platform -- --no-nuextract` | Skip NuExtract |
-| `pnpm platform -- --no-build` | Start the images already built (skip the rebuild) |
-| `pnpm platform status` | Health probes |
-| `pnpm platform stop` | Tear down |
-| `pnpm platform help` | Flags |
-| `pnpm doctor` | Toolchain only (Node/pnpm) - prefer `pnpm platform doctor` |
-| `pnpm db:migrate` | Apply Alembic migrations |
+| Command                               | When                                                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bun run platform setup`              | **Once** - env files + build the images                                                                                                                            |
+| `bun run platform doctor`             | **Preflight** - Node/Bun, Docker, images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
+| `bun run platform`                    | **Daily** - preflight + start stack + NuExtract on host                                                                                                            |
+| `bun run platform -- --platform-only` | Containers only (no host models)                                                                                                                                   |
+| `bun run platform -- --no-nuextract`  | Skip NuExtract                                                                                                                                                     |
+| `bun run platform -- --no-build`      | Start the images already built (skip the rebuild)                                                                                                                  |
+| `bun run platform status`             | Health probes                                                                                                                                                      |
+| `bun run platform stop`               | Tear down                                                                                                                                                          |
+| `bun run platform help`               | Flags                                                                                                                                                              |
+| `bun run doctor`                      | Toolchain only (Node/Bun) - prefer `bun run platform doctor`                                                                                                       |
+| `bun run db:migrate`                  | Apply Alembic migrations                                                                                                                                           |
 
 Guides: [LOCAL.md](./LOCAL.md) · [README.md](./README.md) (docs hub).
 
 ### Document models
 
-| Catalog id | Process | Port | Notes |
-|---|---|---|---|
-| `repody:vlm` | NuExtract | `:8081` | **Default** with `pnpm platform` |
+| Catalog id   | Process   | Port    | Notes                               |
+| ------------ | --------- | ------- | ----------------------------------- |
+| `repody:vlm` | NuExtract | `:8081` | **Default** with `bun run platform` |
 
 ```bash
-pnpm install
-pnpm doctor
-pnpm platform setup
-pnpm platform                 # images from this checkout + host NuExtract
-pnpm platform status
-pnpm platform stop
+bun install
+bun run doctor
+bun run platform setup
+bun run platform                 # images from this checkout + host NuExtract
+bun run platform status
+bun run platform stop
 ```
 
 > **Auth tip:** After Keycloak recreate, sign out and sign in again (or clear `localhost` cookies). Use **localhost**, not `127.0.0.1`.
@@ -43,26 +43,27 @@ pnpm platform stop
 
 Hub path above is the product runtime. For hacking API/UI from source:
 
-| Command | When |
-|---------|------|
-| `pnpm platform dev` | Data plane + workers built from source; API (uvicorn) and UI (next dev) on the host with reload |
-| `pnpm platform stop` | Stop host NuExtract and every container |
-| `pnpm ui` | Next.js only (API already running) |
+| Command                 | When                                                                                            |
+| ----------------------- | ----------------------------------------------------------------------------------------------- |
+| `bun run platform dev`  | Data plane + workers built from source; API (uvicorn) and UI (next dev) on the host with reload |
+| `bun run platform stop` | Stop host NuExtract and every container                                                         |
+| `bun run ui`            | Next.js only (API already running)                                                              |
 
 ### Code quality
 
 One gate covers both languages. See [CODE-QUALITY.md](./CODE-QUALITY.md) for
 which tool owns which concern.
 
-| Command | When |
-|---------|------|
-| `pnpm verify` | **Before pushing** - lint, format, types and dead code, both languages |
-| `pnpm format` | Reformat everything in place (Biome + ruff) |
-| `pnpm lint:fix` / `pnpm lint:py:fix` | Apply the safe lint fixes |
-| `pnpm lint` / `pnpm lint:py` | Lint and format check only |
-| `pnpm typecheck` / `pnpm typecheck:py` | `tsc --noEmit` / pyright |
-| `pnpm deadcode` | Unused files, exports and dependencies (knip; CI runs it). In a OneDrive folder it reports false positives: OneDrive turns folders into reparse points its file walker skips |
-| `pnpm review:check` | `verify` + backend tests + deploy checks |
+| Command                                    | When                                                                                                                                                                         |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun run verify`                           | **Before pushing** - lint, format, types and dead code, both languages                                                                                                       |
+| `bun run format`                           | Reformat everything in place (oxfmt + ruff); `bun fmt` is the frontend part                                                                                                  |
+| `bun run lint:fix` / `bun run lint:py:fix` | Apply the safe lint fixes                                                                                                                                                    |
+| `bun lint` / `bun run lint:py`             | Lint and format check only (oxlint + oxfmt / ruff)                                                                                                                           |
+| `bun check` / `bun run typecheck:py`       | TypeScript 7 `tsc --noEmit` / pyright                                                                                                                                        |
+| `bun test`                                 | Frontend unit tests (`lib/`, `i18n/`)                                                                                                                                        |
+| `bun run deadcode`                         | Unused files, exports and dependencies (knip; CI runs it). In a OneDrive folder it reports false positives: OneDrive turns folders into reparse points its file walker skips |
+| `bun run review:check`                     | `verify` + backend tests + deploy checks                                                                                                                                     |
 
 ---
 
@@ -70,18 +71,18 @@ which tool owns which concern.
 
 Deploy guide: [CLUSTER.md](./CLUSTER.md).
 
-| Command | When |
-|---------|------|
-| `pnpm helm:lint` / `helm:template` | Chart checks |
-| `pnpm deploy:check` | helm lint, helm template + kubeconform, kustomize, bake --print, docs links |
-| `pnpm security:scan` | Trivy repository scan (lockfiles, secrets, misconfig) |
+| Command                               | When                                                                        |
+| ------------------------------------- | --------------------------------------------------------------------------- |
+| `bun run helm:lint` / `helm:template` | Chart checks                                                                |
+| `bun run deploy:check`                | helm lint, helm template + kubeconform, kustomize, bake --print, docs links |
+| `bun run security:scan`               | Trivy repository scan (lockfiles, secrets, misconfig)                       |
 
 ## Release / images
 
-| Command | When |
-|---------|------|
-| `pnpm images:build` | Build locally (`docker buildx bake -f docker-bake.hcl --load`) |
-| `pnpm images:release` | Build + push (`docker buildx bake -f docker-bake.hcl --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
+| Command                  | When                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `bun run images:build`   | Build locally (`docker buildx bake -f docker-bake.hcl --load`)                                         |
+| `bun run images:release` | Build + push (`docker buildx bake -f docker-bake.hcl --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
 
 Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 
@@ -90,23 +91,22 @@ Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
 A separate project in `site/` (own lockfile), a static export served by Cloudflare Workers.
 Plan and structure: [docs/site/plan.md](site/plan.md).
 
-| Command | When |
-|---------|------|
-| `pnpm --dir site install` | Once |
-| `pnpm --dir site dev` | Local preview on http://localhost:3200 |
-| `pnpm --dir site build` | Static export to `site/out/` |
-| `pnpm --dir site run deploy` | Build and deploy by hand with Wrangler |
+| Command                         | When                                   |
+| ------------------------------- | -------------------------------------- |
+| `bun run --cwd site install`    | Once                                   |
+| `bun run --cwd site dev`        | Local preview on http://localhost:3200 |
+| `bun run --cwd site build`      | Static export to `site/out/`           |
+| `bun run --cwd site run deploy` | Build and deploy by hand with Wrangler |
 
 Pushes to `master` that touch the site deploy it through Cloudflare Workers Builds
 (Worker `repody-site` > Settings > Builds); `.github/workflows/site.yml` only checks the build.
 
 ## Model serve (advanced / standalone)
 
-Usually started by `pnpm platform`. Manual:
+Usually started by `bun run platform`. Manual:
 
-| Command | Port |
-|---------|------|
-| `pnpm llamacpp:serve` | `:8081` |
+| Command                  | Port    |
+| ------------------------ | ------- |
+| `bun run llamacpp:serve` | `:8081` |
 
-Stop: `pnpm llamacpp:stop`.
-
+Stop: `bun run llamacpp:stop`.

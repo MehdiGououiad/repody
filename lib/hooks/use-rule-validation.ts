@@ -13,12 +13,12 @@ const DEBOUNCE_MS = 400;
  * The query key is the draft itself, so an unchanged draft is never checked twice. */
 export function useRuleValidation(
   documents: DocumentDef[],
-  rules: WorkflowRule[]
+  rules: WorkflowRule[],
 ): Record<string, RuleCheck> {
   const [body] = useDebounce(
     useMemo(() => ({ documents, rules }), [documents, rules]),
     DEBOUNCE_MS,
-    { equalityFn: dequal }
+    { equalityFn: dequal },
   );
   const { data } = $api.useQuery(
     "post",
@@ -29,10 +29,10 @@ export function useRuleValidation(
       placeholderData: keepPreviousData,
       staleTime: Number.POSITIVE_INFINITY,
       retry: false,
-    }
+    },
   );
   return useMemo(
     () => (rules.length && data ? Object.fromEntries(data.rules.map((r) => [r.ruleId, r])) : {}),
-    [data, rules.length]
+    [data, rules.length],
   );
 }

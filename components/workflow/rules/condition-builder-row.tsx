@@ -123,6 +123,7 @@ export function ConditionRow({
       </div>
       {textNumberField ? (
         <div
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
           role="status"
           className="flex flex-wrap items-center gap-2 rounded-md bg-warn-wash/60 px-2.5 py-1.5 text-xs text-warn-ink"
         >

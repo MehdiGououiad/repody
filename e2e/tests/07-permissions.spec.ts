@@ -37,7 +37,7 @@ test("a viewer reads workflows and runs, and the app offers nothing they cannot 
     await expect(page.getByRole("button", { name: "Save draft" })).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "Workflow name" })).toHaveAttribute(
       "readonly",
-      ""
+      "",
     );
     await page
       .getByRole("toolbar", { name: "Steps" })

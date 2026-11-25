@@ -20,18 +20,18 @@ what a workflow engine does:
 
 Runs go through Hatchet ([`repody/worker.py`](../../backend/src/repody/worker.py)):
 
-| Need | Before | Now (Hatchet) |
-|---|---|---|
-| Queue a run | Taskiq on Redis Streams | `process-run` workflow, triggered with the run id after the commit |
-| Trigger failed | Run stayed `queued`; maintenance re-sent it | The run fails at once; the API answers 503 |
-| Run too long / worker lost | Maintenance sweep; recover endpoint | `execution_timeout` (`AUDIT_RUN_TIMEOUT_MINUTES`) and the failure task |
-| Waited too long for a worker | Maintenance sweep (1 h) | `schedule_timeout` (1 h) and the failure task |
-| Per-client rate limit | `limits` on Redis, 429 | Dynamic rate limit keyed by client: extra runs wait |
-| Fairness between clients | None | Round-robin concurrency per client (`AUDIT_RUNS_IN_PROGRESS_PER_CLIENT`) |
-| Stop a run | Mark it failed | Mark it failed and cancel its Hatchet run (`runs.task_run_id`) |
-| Periodic maintenance | Taskiq scheduler process | A Hatchet cron (every minute) |
-| Worker concurrency | `--max-async-tasks` | Worker slots (`AUDIT_WORKER_CONCURRENCY`) |
-| Queue visibility | Logs | Hatchet's dashboard |
+| Need                         | Before                                      | Now (Hatchet)                                                            |
+| ---------------------------- | ------------------------------------------- | ------------------------------------------------------------------------ |
+| Queue a run                  | Taskiq on Redis Streams                     | `process-run` workflow, triggered with the run id after the commit       |
+| Trigger failed               | Run stayed `queued`; maintenance re-sent it | The run fails at once; the API answers 503                               |
+| Run too long / worker lost   | Maintenance sweep; recover endpoint         | `execution_timeout` (`AUDIT_RUN_TIMEOUT_MINUTES`) and the failure task   |
+| Waited too long for a worker | Maintenance sweep (1 h)                     | `schedule_timeout` (1 h) and the failure task                            |
+| Per-client rate limit        | `limits` on Redis, 429                      | Dynamic rate limit keyed by client: extra runs wait                      |
+| Fairness between clients     | None                                        | Round-robin concurrency per client (`AUDIT_RUNS_IN_PROGRESS_PER_CLIENT`) |
+| Stop a run                   | Mark it failed                              | Mark it failed and cancel its Hatchet run (`runs.task_run_id`)           |
+| Periodic maintenance         | Taskiq scheduler process                    | A Hatchet cron (every minute)                                            |
+| Worker concurrency           | `--max-async-tasks`                         | Worker slots (`AUDIT_WORKER_CONCURRENCY`)                                |
+| Queue visibility             | Logs                                        | Hatchet's dashboard                                                      |
 
 Removed: Redis, Taskiq, taskiq-redis, `limits`, the scheduler process, the extraction cache (audit
 documents are rarely sent twice), `runs.dispatched_at`, the stuck-run sweep, `POST
@@ -65,7 +65,7 @@ the UI polls it).
 - A client over its per-minute limit no longer gets 429: its runs wait their turn.
 - One fewer data store and one fewer process. Hatchet keeps 7 days of its own run history on the VPS
   (`SERVER_LIMITS_DEFAULT_TENANT_RETENTION_PERIOD`); our runs table is the record.
-- The API and workers need a Hatchet API token: `pnpm platform` creates it locally, and the
+- The API and workers need a Hatchet API token: `bun run platform` creates it locally, and the
   `hatchet-token` service on the VPS. On Kubernetes it goes in the runtime Secret.
 - Tests run each run inline, without Hatchet. A real engine is exercised by the local stack.
 - Started clean: the 1.0 schema migration was edited in place (`runs.task_run_id`), so an

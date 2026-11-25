@@ -36,7 +36,7 @@ const toOklch = (color: string): Oklch => {
 
 const css = (l: number, c: number, h: number, alpha?: number): string =>
   formatCss(
-    clampChroma({ mode: "oklch", l: Math.min(Math.max(l, 0), 1), c, h, alpha }, "oklch") as Oklch
+    clampChroma({ mode: "oklch", l: Math.min(Math.max(l, 0), 1), c, h, alpha }, "oklch") as Oklch,
   );
 
 /** The colour moved in lightness (darker or lighter) until it reaches `ratio` against `bg`. */
@@ -95,7 +95,7 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
       { mode: "oklch", l: fill.l, c: fill.c, h: hue },
       panelHex,
       4.5,
-      light ? -1 : 1
+      light ? -1 : 1,
     );
     return {
       fill: css(fill.l, fill.c, hue),
@@ -115,7 +115,7 @@ export function generateTheme(input: ThemeInput, mode: Mode): ThemeTokens {
       [`--doc-${i + 1}`, d.fill],
       [`--doc-${i + 1}-ink`, d.ink],
       [`--doc-${i + 1}-wash`, d.wash],
-    ])
+    ]),
   );
 
   return {

@@ -2,8 +2,8 @@
 # Postgres: the official Docker Library pin. Hatchet Lite: the engine's release image.
 # Docs: docs/LOCAL.md
 #
-#   pnpm platform          # images built from this checkout + compose.portable.yaml (deploy/scripts/platform-dev.mjs)
-#   pnpm platform dev      # source lane: data plane here, API/UI/worker from source
+#   bun run platform          # images built from this checkout + compose.portable.yaml (deploy/scripts/platform-dev.mjs)
+#   bun run platform dev      # source lane: data plane here, API/UI/worker from source
 
 name: repody
 
@@ -18,8 +18,8 @@ services:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
       POSTGRES_DB: repody
-      # Hatchet's role, as on the VPS; the value is in backend/.env (`pnpm platform` writes it).
-      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}
+      # Hatchet's role, as on the VPS; the value is in backend/.env (`bun run platform` writes it).
+      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?set it in backend/.env (bun run platform setup)}
     ports:
       - "5432:5432"
     configs:
@@ -36,7 +36,7 @@ services:
 
   # The run queue and its cron: Hatchet Lite (engine, API and dashboard in one container) on its
   # own database in the Postgres above. Dashboard http://localhost:8888, admin@example.com /
-  # Admin123!! (local only). `pnpm platform` creates the API token the API and workers use.
+  # Admin123!! (local only). `bun run platform` creates the API token the API and workers use.
   # https://docs.hatchet.run/self-hosting/hatchet-lite
   hatchet-lite:
     image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
@@ -44,7 +44,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}@postgres:5432/hatchet?sslmode=disable
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?set it in backend/.env (bun run platform setup)}@postgres:5432/hatchet?sslmode=disable
       # Postgres is the queue too (no RabbitMQ). Lite's generated config says rabbitmq, so it is
       # set here rather than left to the image's default.
       SERVER_MSGQUEUE_KIND: postgres
@@ -70,6 +70,9 @@ services:
       timeout: 3s
       retries: 24
       start_period: 20s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   # S3-compatible object storage for uploads (SeaweedFS: master, volume, filer and S3 gateway in
   # one process). The API creates its bucket on startup. https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
@@ -87,6 +90,9 @@ services:
       timeout: 3s
       retries: 24
       start_period: 10s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
@@ -117,8 +123,11 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
-  # The Hatchet worker: the backend image (built here for `pnpm platform dev`; `pnpm platform`
+  # The Hatchet worker: the backend image (built here for `bun run platform dev`; `bun run platform`
   # builds or pulls REPODY_BACKEND_IMAGE and runs the API from it too, compose.portable.yaml).
   # One run at a time: the host llama-server answers one request at a time.
   # Scale with `--scale worker=N`.
@@ -172,10 +181,13 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
     restart: unless-stopped
 
   # Observability (optional: docker compose --env-file backend/.env --profile observability up -d)
-  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
+  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · bun run dev:src:observability
   bugsink-db:
     profiles: [observability]
     image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
@@ -261,7 +273,13 @@ services:
   alloy:
     profiles: [observability]
     image: grafana/alloy:v1.22.0@sha256:9acc2529bc1edb7f5b2bd801dd8334ebc80c158e3a9e5526ecd7c9a273d43189
-    command: ["run", "--storage.path=/var/lib/alloy/data", "--disable-reporting", "/etc/alloy/config.alloy"]
+    command:
+      [
+        "run",
+        "--storage.path=/var/lib/alloy/data",
+        "--disable-reporting",
+        "/etc/alloy/config.alloy",
+      ]
     volumes:
       - ./deploy/observability/alloy-config.alloy:/etc/alloy/config.alloy:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

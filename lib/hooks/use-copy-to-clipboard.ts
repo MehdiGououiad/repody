@@ -22,7 +22,7 @@ export function useCopyToClipboard(resetMs = 2000) {
       timer.current = window.setTimeout(() => setCopied(false), resetMs);
       return true;
     },
-    [resetMs]
+    [resetMs],
   );
 
   return { copied, copy };

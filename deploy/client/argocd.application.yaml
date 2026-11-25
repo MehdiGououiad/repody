@@ -17,7 +17,7 @@ spec:
       helm:
         releaseName: repody
         valueFiles:
-          - $values/values.yaml        # from values-production.yaml.example
+          - $values/values.yaml # from values-production.yaml.example
           # - $values/helm-images.yaml # optional digest pins from the release
     - repoURL: CHANGE_ME_CLIENT_GITOPS_REPO_URL
       targetRevision: CHANGE_ME_CLIENT_GITOPS_BRANCH

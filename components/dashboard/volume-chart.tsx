@@ -61,7 +61,7 @@ export function VolumeChart({ series }: { series: Dashboard["performanceSeries"]
                 <motion.span
                   className={cn(
                     "flex w-full flex-col-reverse overflow-hidden rounded-[3px] transition-opacity duration-150 group-hover:opacity-100",
-                    thisWeek ? "opacity-100" : "opacity-45"
+                    thisWeek ? "opacity-100" : "opacity-45",
                   )}
                   initial={{ height: 0 }}
                   animate={{ height: `calc((100% - 1.25rem) * ${day.runs / max})` }}
@@ -74,7 +74,7 @@ export function VolumeChart({ series }: { series: Dashboard["performanceSeries"]
                         className={part.color}
                         style={{ flexGrow: day[part.key] }}
                       />
-                    ) : null
+                    ) : null,
                   )}
                   {day.runs > day.passed + day.warning + day.failed ? (
                     <span
@@ -89,7 +89,7 @@ export function VolumeChart({ series }: { series: Dashboard["performanceSeries"]
                 <span
                   className={cn(
                     "h-4 text-center text-2xs tabular-nums",
-                    today ? "font-semibold text-ink" : "text-ink-4 group-hover:text-ink-2"
+                    today ? "font-semibold text-ink" : "text-ink-4 group-hover:text-ink-2",
                   )}
                 >
                   {format.dateTime(date, { day: "numeric", timeZone: "UTC" })}

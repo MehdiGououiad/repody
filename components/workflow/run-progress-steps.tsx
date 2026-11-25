@@ -43,7 +43,7 @@ function useElapsed(activeStepId: string | undefined): number {
     const started = Date.now();
     const timer = window.setInterval(
       () => setElapsed({ id: activeStepId, ms: Date.now() - started }),
-      250
+      250,
     );
     return () => window.clearInterval(timer);
   }, [activeStepId]);
@@ -67,7 +67,7 @@ function Node({ step }: { step: Step }) {
           step.status === "pending" && "border-line bg-panel",
           step.status === "active" && "border-accent bg-accent/10",
           step.status === "done" && !failed && "border-pass bg-pass",
-          failed && "border-fail bg-fail"
+          failed && "border-fail bg-fail",
         )}
         animate={{ scale: step.status === "active" ? 1.08 : 1 }}
         transition={spring}
@@ -286,7 +286,7 @@ export function RunProgressSteps({
                 <div
                   className={cn(
                     "min-w-0 flex-1 rounded-lg border px-2.5 py-1.5 transition-colors duration-300",
-                    active ? "border-accent/25 bg-accent/5" : "border-transparent"
+                    active ? "border-accent/25 bg-accent/5" : "border-transparent",
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -295,13 +295,13 @@ export function RunProgressSteps({
                         "flex items-center gap-1.5 text-xs leading-snug",
                         active && "font-semibold text-ink",
                         step.status === "done" && "text-ink",
-                        step.status === "pending" && "text-ink-3/70"
+                        step.status === "pending" && "text-ink-3/70",
                       )}
                     >
                       <Icon
                         className={cn(
                           "size-3.5 shrink-0",
-                          active ? "text-accent-ink" : "text-ink-3"
+                          active ? "text-accent-ink" : "text-ink-3",
                         )}
                       />
                       {stepTitle}
@@ -339,7 +339,7 @@ export function RunProgressSteps({
                     <p
                       className={cn(
                         "mt-0.5 flex items-center gap-1 text-2xs leading-relaxed",
-                        failed ? "text-fail-ink" : "text-ink-3/90"
+                        failed ? "text-fail-ink" : "text-ink-3/90",
                       )}
                     >
                       {failed

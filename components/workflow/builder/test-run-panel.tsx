@@ -134,7 +134,7 @@ export function TestDeployStep({
           <span
             className={cn(
               "inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium",
-              deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3"
+              deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3",
             )}
           >
             <StatusGlyph status={deployed ? "live" : "draft"} className="size-3" />
@@ -144,6 +144,7 @@ export function TestDeployStep({
 
         {!hasPassingTest ? (
           <div
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
             role="status"
             className="flex items-start gap-2.5 rounded-lg bg-warn-wash/70 px-3 py-2.5 text-xs text-warn-ink"
           >

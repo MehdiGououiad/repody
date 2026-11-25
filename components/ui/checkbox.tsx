@@ -13,7 +13,7 @@ function Checkbox({
     <CheckboxPrimitive
       className={partClass(
         "inline-flex size-3.5 shrink-0 cursor-pointer items-center justify-center rounded-[4px] bg-field text-on-accent shadow-[inset_0_0_0_1px_var(--line-strong)] outline-none transition-[background-color,box-shadow] duration-100 hover:shadow-[inset_0_0_0_1px_var(--ink-4)] focus-visible:shadow-[0_0_0_2px_var(--focus)] data-checked:bg-accent data-checked:shadow-none data-indeterminate:bg-accent data-indeterminate:shadow-none data-disabled:opacity-45",
-        className
+        className,
       )}
       {...props}
     >

@@ -26,47 +26,47 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 
 ## Two laptop paths
 
-| Who | What | Start |
-|-----|------|--------|
-| **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
+| Who                              | What                           | Start                                    |
+| -------------------------------- | ------------------------------ | ---------------------------------------- |
+| **Vendors / contributors (git)** | Full repo + `bun run platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
 
 ### Git path (Windows · Linux)
 
-Prerequisites: Docker Desktop, Node 26 (LTS), pnpm 12.16.1 (`npm install --global pnpm@12.16.1`),
+Prerequisites: Docker Desktop, Node 26 (LTS), Bun 1.4.4 (`npm install --global bun@1.4.4`),
 `llama-server` on PATH (`winget install ggml.llamacpp`).
 
 ```bash
 git clone https://github.com/MehdiGououiad/repody.git
 cd repody
-npm install --global pnpm@12.16.1
-pnpm install
-pnpm doctor
-pnpm platform setup    # once: env files + build the images
+npm install --global bun@1.4.4
+bun install
+bun run doctor
+bun run platform setup    # once: env files + build the images
 # edit deploy/llamacpp/paths.local.env with NuExtract GGUF paths
-pnpm platform          # start API/UI/workers + host NuExtract (repody:vlm)
-pnpm platform status
+bun run platform          # start API/UI/workers + host NuExtract (repody:vlm)
+bun run platform status
 ```
 
 Images: Docker Hub `mehdigououiad/repody-*` (multi-arch).  
 Sign in: http://localhost:3000 · `operator@repody.local` / `repody-dev` (use **localhost**, not `127.0.0.1`).
 
-Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS.md](./docs/COMMANDS.md)
+Daily: `bun run platform` · stop: `bun run platform stop` · commands: [docs/COMMANDS.md](./docs/COMMANDS.md)
 
 ### OpenShift / Kubernetes
 
-[docs/CLUSTER.md](./docs/CLUSTER.md) · release: `pnpm images:release`
+[docs/CLUSTER.md](./docs/CLUSTER.md) · release: `bun run images:release`
 
 ## Documentation
 
 **Hub:** [docs/README.md](./docs/README.md)
 
-| Need | Read |
-|------|------|
-| Laptop | [docs/LOCAL.md](./docs/LOCAL.md) |
-| Commands | [docs/COMMANDS.md](./docs/COMMANDS.md) |
-| Cluster | [docs/CLUSTER.md](./docs/CLUSTER.md) |
-| Architecture | [CONTEXT.md](./CONTEXT.md) |
-| Extraction | [docs/EXTRACTION.md](./docs/EXTRACTION.md) |
+| Need         | Read                                           |
+| ------------ | ---------------------------------------------- |
+| Laptop       | [docs/LOCAL.md](./docs/LOCAL.md)               |
+| Commands     | [docs/COMMANDS.md](./docs/COMMANDS.md)         |
+| Cluster      | [docs/CLUSTER.md](./docs/CLUSTER.md)           |
+| Architecture | [CONTEXT.md](./CONTEXT.md)                     |
+| Extraction   | [docs/EXTRACTION.md](./docs/EXTRACTION.md)     |
 | Code quality | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
 
 ## Stack
@@ -74,7 +74,7 @@ Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS
 - Frontend: Next.js 16, React 19, Tailwind
 - Backend: FastAPI, SQLAlchemy 2, Alembic, Pydantic v2
 - Jobs: [Hatchet](https://hatchet.run) (Hatchet Lite on Postgres in Compose): queue, timeouts, per-client limits, cron
-- Local: Docker Compose, images built from the checkout (`pnpm platform`)
+- Local: Docker Compose, images built from the checkout (`bun run platform`)
 - Storage: any S3-compatible object storage (SeaweedFS in Compose)
 
 ## License

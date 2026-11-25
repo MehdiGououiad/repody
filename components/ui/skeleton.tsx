@@ -14,6 +14,7 @@ function SkeletonRoot({ className, ...props }: React.ComponentProps<"div">) {
 /** Rows of a list. */
 function Lines({ count = 5, className }: { count?: number; className?: string }) {
   return (
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
     <div className={cn("flex flex-col gap-3", className)} role="status" aria-busy="true">
       {Array.from({ length: count }, (_, i) => i).map((i) => (
         <SkeletonRoot key={i} className="h-9" style={{ opacity: 1 - i * 0.12 }} />

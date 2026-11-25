@@ -18,21 +18,22 @@ backend source inventory.
 One tool owns each concern, so a given problem is reported exactly once and no
 rule is a matter of opinion in review.
 
-| Concern | TypeScript / JavaScript | Python |
-|---------|-------------------------|--------|
-| Formatting | Biome (`biome.json`) | ruff format (`[tool.ruff.format]`) |
-| Linting | Biome | ruff (`[tool.ruff.lint]`) |
-| Framework rules | ESLint, narrowed to Next.js-specific rules and React Hooks | - |
-| Types | `tsc --noEmit` | pyright |
-| Dead code | knip | ruff `F401`/`ARG`, plus review |
+| Concern    | TypeScript / JavaScript                                           | Python                             |
+| ---------- | ----------------------------------------------------------------- | ---------------------------------- |
+| Formatting | oxfmt (`.oxfmtrc.json`)                                           | ruff format (`[tool.ruff.format]`) |
+| Linting    | oxlint (`.oxlintrc.json`), Next.js and React Hooks rules included | ruff (`[tool.ruff.lint]`)          |
+| Types      | TypeScript 7, `tsc --noEmit` (`bun check`)                        | pyright                            |
+| Unit tests | `bun test` (`lib/`, `i18n/`)                                      | pytest                             |
+| Dead code  | knip                                                              | ruff `F401`/`ARG`, plus review     |
 
 Shared conventions: 100-column lines, LF endings, two-space indentation in
 TS/JS and four in Python, double quotes, sorted imports, absolute imports only
 (`ban-relative-imports = "all"` on the backend, `@/` aliases on the frontend).
 `.editorconfig` and `.gitattributes` keep editors and Git in agreement.
 
-`eslint.config.mjs` programmatically disables every rule belonging to a plugin
-Biome already covers, so the two linters never disagree about the same line.
+One linter covers every rule: `.oxlintrc.json` names each rule set on purpose and
+why, and a rule that flags code the earlier gate accepted is a warning until it
+is made an error on purpose.
 
 ### Style Rules Worth Knowing
 
@@ -58,26 +59,27 @@ Biome already covers, so the two linters never disagree about the same line.
 
 ## Backend Layers
 
-Dependencies point inward. `pnpm architecture:check` fails the build when they do not.
+Dependencies point inward. `bun run architecture:check` fails the build when they do not.
 
-| Package | May import | Must not import |
-|---------|------------|-----------------|
-| `api/` (routes, caller dependencies) | everything below | - |
-| `app/` (use cases) | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api` |
-| `extraction/`, `rules/` (domain) | `schemas`, `settings` (extraction only) | `app`, `api`; `rules` also no DB, Hatchet or settings |
-- **Suppressions must explain themselves.** Every `biome-ignore`,
+| Package                              | May import                                                                 | Must not import                                       |
+| ------------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `api/` (routes, caller dependencies) | everything below                                                           | -                                                     |
+| `app/` (use cases)                   | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api`                         |
+| `extraction/`, `rules/` (domain)     | `schemas`, `settings` (extraction only)                                    | `app`, `api`; `rules` also no DB, Hatchet or settings |
+
+- **Suppressions must explain themselves.** Every `oxlint-disable-next-line`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 
 ## Architecture Checklist
 
-| Area | Expected shape | Review signal |
-|------|----------------|---------------|
-| Run state | Conditional UPDATEs, all in `app/lifecycle.py` (`move_runs`, `fail_run`) | A transition that does not match the current status changes nothing |
-| Rules | Typed `Condition` models evaluated directly (`rules/evaluate.py`) | No generated expression text, no `dict` rules |
-| HTTP layer | `api/` validates auth, request/response shape, and delegates | Routers should not contain business rules |
-| Worker layer | `infra/queue.py` / `worker.py` deliver; `app/execute.py` processes | Worker claims the run, processes it, records terminal failure |
-| Deployment | `deploy/helm/` and `compose.yaml` express runtime modules | Docs and env examples name the same variables as settings |
-| Frontend | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
+| Area         | Expected shape                                                                           | Review signal                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Run state    | Conditional UPDATEs, all in `app/lifecycle.py` (`move_runs`, `fail_run`)                 | A transition that does not match the current status changes nothing             |
+| Rules        | Typed `Condition` models evaluated directly (`rules/evaluate.py`)                        | No generated expression text, no `dict` rules                                   |
+| HTTP layer   | `api/` validates auth, request/response shape, and delegates                             | Routers should not contain business rules                                       |
+| Worker layer | `infra/queue.py` / `worker.py` deliver; `app/execute.py` processes                       | Worker claims the run, processes it, records terminal failure                   |
+| Deployment   | `deploy/helm/` and `compose.yaml` express runtime modules                                | Docs and env examples name the same variables as settings                       |
+| Frontend     | `app/` pages stay thin; reusable UI lives in `components/`; API calls live in `lib/api/` | UI code does not duplicate backend contracts by hand when generated types exist |
 
 ## Current Strong Modules
 
@@ -100,28 +102,28 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 Before an external review, run the full gate:
 
 ```powershell
-pnpm review:check
+bun run review:check
 ```
 
-That is `pnpm verify` (lint, format, types and dead code for both languages)
+That is `bun run verify` (lint, format, types and dead code for both languages)
 followed by the backend test suite and the deployment checks. CI runs the same
 commands, so a green local `verify` predicts a green pipeline.
 
-Reformat everything in place with `pnpm format`; apply the safe lint fixes with
-`pnpm lint:fix` and `pnpm lint:py:fix`.
+Reformat everything in place with `bun run format`; apply the safe lint fixes with
+`bun run lint:fix` and `bun run lint:py:fix`.
 
 During day-to-day work, run the smallest command that covers the change:
 
-| Change type | Command |
-|-------------|---------|
-| Anything, before pushing | `pnpm verify` |
-| Backend logic | `pnpm test:api` |
-| Run lifecycle or queue behavior | `pnpm test:unit` then `pnpm test:integration` |
-| Architecture dependency rules | `pnpm architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
-| Frontend code | `pnpm lint` and `pnpm typecheck` |
-| Unused files, exports or dependencies | `pnpm deadcode` |
-| API contract changes | `pnpm codegen:api` then `pnpm typecheck` |
-| Helm, Compose or images | `pnpm deploy:check` |
+| Change type                           | Command                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Anything, before pushing              | `bun run verify`                                                                   |
+| Backend logic                         | `bun run test:api`                                                                 |
+| Run lifecycle or queue behavior       | `bun run test:unit` then `bun run test:integration`                                |
+| Architecture dependency rules         | `bun run architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
+| Frontend code                         | `bun lint`, `bun check` and `bun test`                                             |
+| Unused files, exports or dependencies | `bun run deadcode`                                                                 |
+| API contract changes                  | `bun run codegen:api` then `bun check`                                             |
+| Helm, Compose or images               | `bun run deploy:check`                                                             |
 
 ## Documentation Rules
 

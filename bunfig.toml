@@ -1,0 +1,14 @@
+# `bun test` runs the unit tests (*.test.ts). The e2e/ specs are Playwright's (bun run test:e2e).
+[test]
+pathIgnorePatterns = ["e2e/**"]
+
+# Supply chain: a version must be three days old before it is installed (Dependabot's cooldown
+# too), so a release pulled soon after publication, as compromised ones are, never lands here.
+# https://bun.com/docs/runtime/bunfig#install-minimumreleaseage
+[install]
+minimumReleaseAge = 259200
+# No dependency's install script runs (Bun runs only a vetted list by default): nothing here
+# needs one; prebuilt binaries arrive as optional dependencies, and Sentry's source-map upload,
+# the one script that downloads a binary, is off. CI and the image also pass --ignore-scripts.
+# https://bun.com/docs/runtime/bunfig#install-ignorescripts
+ignoreScripts = true

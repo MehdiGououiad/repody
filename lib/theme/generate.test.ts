@@ -1,5 +1,5 @@
 import { formatHex, parse, wcagContrast } from "culori";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { generateTheme, themeStylesheet } from "@/lib/theme/generate";
 
 const hex = (css: string) => {
@@ -33,7 +33,7 @@ describe("theme generation", () => {
         }
         // Text on the accent fill picks white or near-black, whichever reads.
         expect(
-          wcagContrast(hex(theme["--on-accent"]), hex(theme["--accent"]))
+          wcagContrast(hex(theme["--on-accent"]), hex(theme["--accent"])),
         ).toBeGreaterThanOrEqual(4.5);
       });
     }

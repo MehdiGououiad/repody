@@ -80,7 +80,7 @@ export function AuditList() {
     "get",
     "/v1/audits",
     { params: { query: auditsQuery(search) } },
-    { refetchInterval: search.page === 1 ? LIVE_MS : false }
+    { refetchInterval: search.page === 1 ? LIVE_MS : false },
   ).data;
   const { workflows } = $api.useSuspenseQuery("get", "/v1/workflows").data;
   const filter = (patch: Partial<typeof search>) => void setSearch({ ...patch, page: 1 });
@@ -174,6 +174,7 @@ export function AuditList() {
               variant="ghost"
               size="icon-sm"
               aria-label={t("exportCsv")}
+              // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the label is on the Button that renders this element.
               render={<a href={auditsExportHref(search)} download />}
             >
               <Download />

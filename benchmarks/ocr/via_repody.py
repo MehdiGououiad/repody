@@ -3,7 +3,7 @@
     cd backend && uv run python ../benchmarks/ocr/via_repody.py
 
 Uses repody.extraction.pipeline.extract (NuExtract3's Markdown mode) against the server started by
-`pnpm llamacpp:serve` (:8081). Writes outputs/repody-nuextract/<page>.txt and timings.json, like the
+`bun run llamacpp:serve` (:8081). Writes outputs/repody-nuextract/<page>.txt and timings.json, like the
 runners.
 """
 

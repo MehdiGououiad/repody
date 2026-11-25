@@ -6,4 +6,3 @@ resources:
   - postgres-pooler.yaml
   - postgres-scheduled-backup.yaml
   - networkpolicy.yaml
-

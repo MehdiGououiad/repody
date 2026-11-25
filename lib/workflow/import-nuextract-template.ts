@@ -32,7 +32,7 @@ const choices = (values: string[]) => values.map((v) => v.trim()).filter(Boolean
 
 export function importNuextractTemplate(
   raw: string,
-  catalog: Catalog
+  catalog: Catalog,
 ): ImportNuextractTemplateResult {
   /** A leaf type the API accepts; anything else falls back to the default type. */
   const leaf = (value: string): string => {

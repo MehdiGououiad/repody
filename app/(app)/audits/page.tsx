@@ -25,7 +25,7 @@ export default async function AuditsPage({
   const queryClient = getQueryClient();
   // Started, not awaited: the list streams in when the API answers.
   void queryClient.prefetchQuery(
-    $server.queryOptions("get", "/v1/audits", { params: { query: auditsQuery(search) } })
+    $server.queryOptions("get", "/v1/audits", { params: { query: auditsQuery(search) } }),
   );
   void queryClient.prefetchQuery($server.queryOptions("get", "/v1/workflows"));
 

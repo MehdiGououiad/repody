@@ -22,7 +22,7 @@ export function Sparkline({
   const span = max - min || 1;
   const step = width / (values.length - 1);
   const points = values.map(
-    (v, i) => [i * step, height - 2 - ((v - min) / span) * (height - 4)] as const
+    (v, i) => [i * step, height - 2 - ((v - min) / span) * (height - 4)] as const,
   );
   const line = points
     .map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`)

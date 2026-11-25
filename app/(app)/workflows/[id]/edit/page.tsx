@@ -8,7 +8,7 @@ const EditWorkflowBuilder = dynamic(
     import("@/components/workflow/builder-shell").then((m) => ({
       default: m.EditWorkflowBuilder,
     })),
-  { loading: () => <BuilderShellLoader /> }
+  { loading: () => <BuilderShellLoader /> },
 );
 
 export default async function WorkflowBuilderPage({ params }: { params: Promise<{ id: string }> }) {

@@ -17,6 +17,7 @@ function usePhase(active: boolean, still: boolean) {
   const [phase, setPhase] = useState(0);
   useEffect(() => {
     if (still) {
+      // oxlint-disable-next-line react/set-state-in-effect -- the reduced-motion choice is known only after hydration; the first render matches the server.
       setPhase(PHASES.length);
       return;
     }
@@ -70,6 +71,7 @@ export function RunReplay({ t }: { t: Replay }) {
     <MotionConfig reducedMotion="user">
       <div
         ref={ref}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- one picture drawn from many elements, labelled as a whole.
         role="img"
         aria-label={`${t.label}: ${t.verdict}. ${t.verdictFacts}`}
         className="overflow-hidden rounded-xl bg-panel shadow-frame"

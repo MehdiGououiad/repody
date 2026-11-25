@@ -1,4 +1,4 @@
-"""Write what the frontend generates from the API: its OpenAPI schema (``pnpm
+"""Write what the frontend generates from the API: its OpenAPI schema (``bun run
 codegen:api:types``), and the field-type catalog, which never changes while the API runs, so the
 app and the site import it instead of asking for it. CI fails when either is out of date.
 

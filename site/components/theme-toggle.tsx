@@ -23,7 +23,7 @@ export function ThemeToggle({ toLight, toDark }: { toLight: string; toDark: stri
   const mounted = useSyncExternalStore(
     noop,
     () => true,
-    () => false
+    () => false,
   );
   const dark = mounted && resolvedTheme === "dark";
   const label = dark ? toLight : toDark;

@@ -34,9 +34,9 @@ function MenuItem({
         cn(
           popupItem,
           danger &&
-            "text-fail-ink data-highlighted:bg-fail-wash data-highlighted:text-fail-ink [&_svg]:text-fail-ink"
+            "text-fail-ink data-highlighted:bg-fail-wash data-highlighted:text-fail-ink [&_svg]:text-fail-ink",
         ),
-        className
+        className,
       )}
       {...props}
     />

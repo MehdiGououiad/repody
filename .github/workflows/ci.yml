@@ -5,10 +5,14 @@ name: CI
 # (v1.2.3-rc.1), then publishes its signed images and runs on staging (publish, deploy-staging
 # below). A release tag (v1.2.3) is release.yml's: it promotes those images to production.
 #
-# Minutes count against the account's free quota (private repository), so the costly job (the
-# platform: building every image and starting the stack) runs on a pull request only when it
-# changes how the images are built or deployed; every master commit still runs it before it
-# publishes.
+# Each check is its own job, so lint, typecheck, tests and the build run side by side and CI
+# takes as long as the slowest one, not their sum (the repository is public: standard runners
+# cost no minutes). `ci` at the end is the one check that sums them up: a job that failed or was
+# cancelled fails it, a job skipped for unchanged files does not.
+#
+# The costly job (the platform: building every image and starting the stack) runs on a pull
+# request only when it changes how the images are built or deployed; every master commit still
+# runs it before it publishes.
 on:
   push:
     branches: [master]
@@ -38,11 +42,13 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
+      # A push or a manual run compares with git history: full history keeps the base commit
+      # local, so it needs no credentials to fetch it. A pull request asks the API and needs no
+      # checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: github.event_name != 'pull_request' && github.ref_type != 'tag'
         with:
           persist-credentials: false
-          # The filter compares a push with the previous head: full history keeps that commit
-          # local, so it needs no credentials to fetch it.
           fetch-depth: 0
       # A tag has no previous commit to compare with: it runs every job.
       - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
@@ -64,16 +70,17 @@ jobs:
               - 'proxy.ts'
               - 'next.config.ts'
               - 'package.json'
-              - 'pnpm-lock.yaml'
+              - 'bun.lock'
               - 'tsconfig.json'
-              - 'eslint.config.mjs'
-              - 'biome.json'
+              - '.oxlintrc.json'
+              - '.oxfmtrc.json'
+              - 'bunfig.toml'
               - 'knip.json'
               - 'e2e/**'
               - 'scripts/**'
               - '**/*.md' # the link check
-              # Everything Biome checks (`biome ci .` lints the whole repository, deploy scripts
-              # and the site included).
+              # Everything oxlint and oxfmt check (the whole repository, deploy scripts and the
+              # site included).
               - '**/*.{js,mjs,cjs,ts,tsx,json,jsonc,css}'
               - '.github/workflows/ci.yml'
             deploy:
@@ -83,27 +90,16 @@ jobs:
               - 'Dockerfile*'
               - 'backend/Dockerfile'
               - 'e2e/**'
+              - '.github/workflows/ci.yml'
 
-  backend:
+  # ── Backend (FastAPI, backend/) ────────────────────────────────────────────────────────────
+
+  # Ruff, pyright, the layer contracts and the OpenAPI drift check: no database needed.
+  backend-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     needs: changes
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true'
-    services:
-      # The same images as compose.yaml.
-      postgres:
-        image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
-        env:
-          POSTGRES_USER: audit
-          POSTGRES_PASSWORD: audit
-          POSTGRES_DB: repody_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U audit -d repody_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     defaults:
       run:
         working-directory: backend
@@ -114,6 +110,8 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           enable-cache: true
+          # Pull requests read the cache master saved; uploading it again is time on the PR.
+          save-cache: ${{ github.event_name == 'push' }}
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
@@ -125,61 +123,188 @@ jobs:
         run: uv run --locked pyright
       - name: Layer contracts (import-linter)
         run: uv run --locked lint-imports
-      - name: Pytest (unit + integration, Postgres + Alembic)
-        run: uv run --locked pytest -q --tb=short
-        env:
-          AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit@localhost:5432/repody_test
-          AUDIT_SEED_ON_STARTUP: "false"
       - name: Export OpenAPI
         run: uv run --locked python scripts/export_openapi.py
       - name: OpenAPI drift check
         working-directory: ${{ github.workspace }}
         run: git diff --exit-code lib/api/openapi.json lib/api/catalog.json
 
-  frontend:
+  backend-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.backend == 'true'
+    services:
+      # The same image as compose.yaml.
+      postgres:
+        image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015
+        env:
+          POSTGRES_USER: audit
+          POSTGRES_PASSWORD: audit
+          POSTGRES_DB: repody_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U audit -d repody_test"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          enable-cache: true
+          save-cache: ${{ github.event_name == 'push' }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.14"
+      - name: Install backend
+        run: uv sync --locked
+      - name: Pytest (unit + integration, Postgres + Alembic)
+        run: uv run --locked pytest -q --tb=short
+        env:
+          AUDIT_DATABASE_URL: postgresql+asyncpg://audit:audit@localhost:5432/repody_test
+          AUDIT_SEED_ON_STARTUP: "false"
+
+  # ── Frontend (Next.js, repository root) ────────────────────────────────────────────────────
+  # The frontend jobs also run for a backend change: the generated API types follow the backend.
+
+  frontend-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: changes
     if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
       - name: Install
-        run: pnpm install --frozen-lockfile
-      - name: Generate OpenAPI types
-        run: pnpm codegen:api:types
-      - name: Lint and format check (Biome + ESLint)
-        run: pnpm lint
-      - name: Typecheck
-        run: pnpm typecheck
-      - name: Unit tests (Vitest)
-        run: pnpm test:web
-      - name: Dead code check
-        run: pnpm deadcode
-      - name: OpenAPI type drift check
-        run: git diff --exit-code lib/api/generated/schema.d.ts
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Lint and format check (oxlint + oxfmt)
+        run: bun lint
       - name: Markdown links and anchors
         uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
         with:
           args: --offline --include-fragments --no-progress "*.md" "docs/**/*.md" "deploy/**/*.md" "e2e/**/*.md"
           fail: true
+
+  frontend-typecheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Generate OpenAPI types
+        run: bun run codegen:api:types
+      - name: OpenAPI type drift check
+        run: git diff --exit-code lib/api/generated/schema.d.ts
+      - name: Typecheck (TypeScript 7, the check script)
+        run: bun check
+      - name: Dead code check
+        run: bun run deadcode
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Unit tests (bun test)
+        run: bun test
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: changes
+    if: github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.backend == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Install
+        run: bun install --frozen-lockfile --ignore-scripts
+      # Turbopack's build cache (.next/cache, Next.js docs: guides/ci-build-caching). Every run
+      # restores the newest one master saved; only master saves, so a pull request spends no
+      # time uploading it.
+      - name: Restore the Next.js build cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
       - name: Build
-        run: pnpm build
+        run: bun run build
         env:
           BACKEND_URL: http://127.0.0.1:8000
+      - name: Save the Next.js build cache
+        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
+
+  # ── Deploy and platform ────────────────────────────────────────────────────────────────────
+
+  # Helm lint, kubeconform and the Compose files. Its own job, beside the platform: the script
+  # needs Node only, no packages.
+  deploy-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: changes
+    if: |
+      github.ref_type == 'tag' ||
+      github.event_name == 'workflow_dispatch' ||
+      needs.changes.outputs.deploy == 'true' ||
+      (github.event_name == 'push' &&
+        (needs.changes.outputs.backend == 'true' || needs.changes.outputs.frontend == 'true'))
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "26"
+      - name: Deploy checks (Helm lint, kubeconform, Compose)
+        run: node deploy/scripts/deploy-check.mjs
 
   # The images built from this commit (docker-bake.hcl) start as a Compose platform and every
-  # container turns healthy (host models off). Browser tests run locally (pnpm test:e2e).
-  # Beside backend and frontend, not after them: CI takes as long as its slowest job. A failure
-  # anywhere still fails the run, and a release needs the whole run green (images-ghcr.yml).
+  # container turns healthy (host models off). Browser tests run locally (bun run test:e2e).
   platform:
     runs-on: ubuntu-latest
     needs: changes
@@ -194,24 +319,26 @@ jobs:
       REPODY_IMAGE_TAG: ci-${{ github.sha }}
       REPODY_BACKEND_IMAGE: repody-backend:ci-${{ github.sha }}
       REPODY_WEB_IMAGE: repody-web:ci-${{ github.sha }}
+      # No build summary or build record artifact: they are uploaded after the build, on this
+      # job's clock, and nobody reads them for a CI image.
+      DOCKER_BUILD_SUMMARY: "false"
+      DOCKER_BUILD_RECORD_UPLOAD: "false"
+      SAVE_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # deploy/scripts/platform-dev.mjs uses Node's own modules only: no package install. Bun
+      # starts it (bun run platform) and its preflight checks Bun's version.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
-      - name: Install frontend deps
-        run: pnpm install --frozen-lockfile
-      # Here, not in frontend: this job also runs for a push that changes only deploy files.
-      - name: Deploy checks (Helm lint, kubeconform, Compose)
-        run: pnpm deploy:check
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          # The runner is thrown away after the job: removing the builder only adds time.
+          cleanup: false
       - name: Build images (docker-bake.hcl)
         uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
@@ -220,31 +347,66 @@ jobs:
           load: true
           # One cache per image: with a shared scope each export replaced the others, and every
           # build missed its dependency layers. The release build reads these (images-ghcr.yml).
+          # Only master writes them: a pull request reads master's layers (GitHub lets it) and
+          # exports nothing, so it spends no time uploading and its own copy (200-800 MB a pull
+          # request) never pushes master's out of the repository's 10 GB cache.
           set: |
             backend.cache-from=type=gha,scope=backend
-            backend.cache-to=type=gha,scope=backend,mode=max
             web.cache-from=type=gha,scope=web
-            web.cache-to=type=gha,scope=web,mode=max
             keycloak.cache-from=type=gha,scope=keycloak
-            keycloak.cache-to=type=gha,scope=keycloak,mode=max
+            ${{ env.SAVE_CACHE == 'true' && 'backend.cache-to=type=gha,scope=backend,mode=max' || '' }}
+            ${{ env.SAVE_CACHE == 'true' && 'web.cache-to=type=gha,scope=web,mode=max' || '' }}
+            ${{ env.SAVE_CACHE == 'true' && 'keycloak.cache-to=type=gha,scope=keycloak,mode=max' || '' }}
       # Waits for every container's healthcheck (compose up --wait); fails on an unhealthy one.
+      # No tear-down: the runner and its containers are discarded with the job.
       - name: Start platform (containers only)
-        run: pnpm platform -- --platform-only --no-obs --no-pull
+        run: bun run platform -- --platform-only --no-obs --no-pull
       - name: Container logs
         if: failure()
         run: docker compose -p repody logs --no-color --tail 200
-      - name: Tear down stack
-        if: always()
-        run: pnpm platform stop
 
-  # A master commit or a pre-release tag whose tests passed (a job skipped for unchanged files
-  # counts as passed) publishes its signed images, tagged with the commit...
+  # ── The result ─────────────────────────────────────────────────────────────────────────────
+
+  # One check for the whole run: green when every job that ran passed. A job skipped for
+  # unchanged files counts as passed; a failed or cancelled one fails it. It runs even when the
+  # run is cancelled (always()): a skipped check counts as passing, so a cancelled run must leave
+  # this one red, never skipped. It checks the results before anything else, so it needs no
+  # checkout or toolchain.
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      [
+        changes,
+        backend-checks,
+        backend-tests,
+        frontend-lint,
+        frontend-typecheck,
+        frontend-tests,
+        frontend-build,
+        deploy-checks,
+        platform,
+      ]
+    if: always()
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+        run: |
+          echo "job results: ${RESULTS}"
+          if jq -e 'any(.[]; . == "failure" or . == "cancelled")' <<<"${RESULTS}" >/dev/null; then
+            echo "::error::a CI job failed or was cancelled"
+            exit 1
+          fi
+
+  # A master commit or a pre-release tag whose checks passed publishes its signed images,
+  # tagged with the commit...
   publish:
-    needs: [changes, backend, frontend, platform]
+    needs: ci
     if: |
       always() && github.event_name == 'push' &&
       (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')) &&
-      !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
+      needs.ci.result == 'success'
     permissions:
       contents: read
       packages: write
@@ -254,8 +416,7 @@ jobs:
   # ...and runs on staging, with its checks and smoke test (deploy.yml).
   deploy-staging:
     needs: publish
-    # Explicit: a job after a skipped one (tests skipped for unchanged files) is skipped too
-    # unless its condition says otherwise.
+    # Explicit: a job after a skipped one is skipped too unless its condition says otherwise.
     if: always() && needs.publish.result == 'success'
     permissions:
       contents: read

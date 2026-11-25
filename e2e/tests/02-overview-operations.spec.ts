@@ -41,7 +41,7 @@ test.describe("Overview", () => {
     await expect(page).toHaveURL(/\/audits\?outcome=review$/);
     await expect(page.getByRole("button", { name: /To review/ })).toBeVisible();
     await expect(
-      page.getByRole("radiogroup", { name: "Status" }).getByRole("radio", { checked: true })
+      page.getByRole("radiogroup", { name: "Status" }).getByRole("radio", { checked: true }),
     ).toHaveCount(0);
     await page.getByRole("button", { name: /To review/ }).click();
     await expect(page).not.toHaveURL(/outcome=/);
@@ -93,7 +93,7 @@ test.describe("Control room", () => {
         if (
           await row.waitFor({ timeout: 8_000 }).then(
             () => true,
-            () => false
+            () => false,
           )
         )
           return row;
@@ -126,7 +126,7 @@ test.describe("Control room", () => {
         page
           .getByRole("listitem")
           .filter({ hasText: workflow.name })
-          .filter({ hasText: "Cancelled by" })
+          .filter({ hasText: "Cancelled by" }),
       ).toBeVisible();
     }
     watch.expectNoErrors();

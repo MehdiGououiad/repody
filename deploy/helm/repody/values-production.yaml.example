@@ -15,7 +15,7 @@ images:
   backend:
     repository: registry.example.com/repody/repody-backend
     tag: "1.0.0"
-    digest: ""          # sha256:… from `pnpm images:release`
+    digest: ""          # sha256:… from `bun run images:release`
   web:
     repository: registry.example.com/repody/repody-web
     tag: "1.0.0"

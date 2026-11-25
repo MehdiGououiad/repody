@@ -17,7 +17,7 @@ import type { Account } from "@/lib/auth/account";
 const keycloak = {
   issuer: (process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? process.env.AUTH_KEYCLOAK_ISSUER)?.replace(
     /\/$/,
-    ""
+    "",
   ),
   clientId: process.env.AUTH_KEYCLOAK_ID,
   clientSecret: process.env.AUTH_KEYCLOAK_SECRET,
@@ -26,9 +26,9 @@ const keycloak = {
 /** Sign-in is on when Keycloak and the session secret are set, unless the API runs without it. */
 export const oidcEnabled = Boolean(
   process.env.AUDIT_OIDC_ENABLED !== "false" &&
-    keycloak.issuer &&
-    keycloak.clientId &&
-    process.env.BETTER_AUTH_SECRET
+  keycloak.issuer &&
+  keycloak.clientId &&
+  process.env.BETTER_AUTH_SECRET,
 );
 
 const SESSION_SECONDS = 7 * 24 * 60 * 60;
@@ -79,7 +79,7 @@ export async function session(headers: Headers) {
  * Null without a usable session.
  */
 export async function accessToken(
-  headers: Headers
+  headers: Headers,
 ): Promise<{ token: string; setCookies: string[] } | null> {
   if (!oidcEnabled) return null;
   try {

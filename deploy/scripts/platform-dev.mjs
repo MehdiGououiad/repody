@@ -2,10 +2,10 @@
 /**
  * Repody local platform CLI (Windows and Linux).
  *
- *   pnpm platform setup     # once
- *   pnpm platform           # build images from this checkout + start stack + host NuExtract
- *   pnpm platform dev       # contributors: API + UI from source with reload
- *   pnpm platform status | stop | doctor | logs | help
+ *   bun run platform setup     # once
+ *   bun run platform           # build images from this checkout + start stack + host NuExtract
+ *   bun run platform dev       # contributors: API + UI from source with reload
+ *   bun run platform status | stop | doctor | logs | help
  *
  * up:  images built from this checkout (docker-bake.hcl, tag "dev"), or the published images
  *      named by REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE; compose.yaml + compose.portable.yaml
@@ -45,7 +45,7 @@ const FROM_SOURCE = !process.env.REPODY_BACKEND_IMAGE && !process.env.REPODY_WEB
 const BACKEND_IMAGE = process.env.REPODY_BACKEND_IMAGE || "repody-backend:dev";
 const WEB_IMAGE = process.env.REPODY_WEB_IMAGE || "repody-web:dev";
 
-// `pnpm platform -- --flag` may forward the `--` separator itself; it is not an argument here.
+// `bun run platform -- --flag` may forward the `--` separator itself; it is not an argument here.
 const { values: flags, positionals } = parseArgs({
   args: process.argv.slice(2).filter((arg) => arg !== "--"),
   allowPositionals: true,
@@ -75,25 +75,25 @@ function printHelp() {
 Repody platform CLI (same on Windows and Linux)
 
 Flow (new PC):
-  1) pnpm install && pnpm doctor
+  1) bun install && bun run doctor
   2) Download NuExtract GGUFs → set deploy/llamacpp/paths.local.env
-  3) pnpm platform setup     # once — env files + build the images
-  4) pnpm platform           # start platform + host NuExtract
-  5) pnpm platform status    # health
-  6) pnpm platform stop      # tear down
+  3) bun run platform setup     # once — env files + build the images
+  4) bun run platform           # start platform + host NuExtract
+  5) bun run platform status    # health
+  6) bun run platform stop      # tear down
 
 Commands:
   up         Build images from this checkout, start the platform + host NuExtract   [default]
   dev        Contributors: data plane + workers from source, API + UI on the host (reload)
   setup      Once: env / paths + build the images
-  bootstrap  setup + up (new machine after git clone / pnpm install)
+  bootstrap  setup + up (new machine after git clone / bun install)
   doctor     Check everything needed before start (Node, Docker, llama-server, GGUFs, env)
   status     Probe services + observability URLs
   logs       Tail API/web/worker Docker logs
   stop       Stop host NuExtract + Compose
   help       This help
 
-Options (pnpm platform -- … / pnpm platform setup -- …):
+Options (bun run platform -- … / bun run platform setup -- …):
   --no-nuextract     Skip host NuExtract (:8081)
   --no-obs           Skip Grafana/Loki/Tempo/Bugsink (on by default)
   --platform-only    Containers only (no host model)
@@ -101,7 +101,7 @@ Options (pnpm platform -- … / pnpm platform setup -- …):
   --no-pull          Published images only: do not docker pull
 
 Images: ${FROM_SOURCE ? "built from this checkout" : "published"} — ${BACKEND_IMAGE} · ${WEB_IMAGE}
-  Published images: REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… pnpm platform
+  Published images: REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… bun run platform
 Guide: docs/LOCAL.md
 `);
 }
@@ -161,9 +161,9 @@ function startHatchet(files, env) {
       "--pull",
       "missing",
       "postgres",
-      "hatchet-lite"
+      "hatchet-lite",
     ),
-    { inherit: true, env }
+    { inherit: true, env },
   );
   const created = run(
     "docker",
@@ -180,9 +180,9 @@ function startHatchet(files, env) {
       "--tenant-id",
       HATCHET_TENANT,
       "--name",
-      "repody-local"
+      "repody-local",
     ),
-    { env }
+    { env },
   );
   const token = created.stdout.trim().split(/\s+/).pop() ?? "";
   if (!token.startsWith("ey")) {
@@ -213,35 +213,19 @@ function nuextractConfigured() {
 }
 
 function checkToolchain() {
-  const pnpmBin = isWin ? "pnpm.cmd" : "pnpm";
   const result = spawnSync(process.execPath, [path.join(ROOT, "scripts/check-toolchain.mjs")], {
     cwd: ROOT,
     encoding: "utf8",
     shell: false,
-    env: {
-      ...process.env,
-      // So plain `node … doctor` still sees pnpm on PATH.
-      npm_config_user_agent:
-        process.env.npm_config_user_agent ||
-        (() => {
-          const v = spawnSync(pnpmBin, ["--version"], {
-            cwd: ROOT,
-            encoding: "utf8",
-            shell: isWin,
-          });
-          const ver = (v.stdout || "").trim();
-          return ver ? `pnpm/${ver} node/${process.versions.node}` : undefined;
-        })(),
-    },
   });
   if (result.status === 0) return { ok: true, detail: (result.stdout || "").trim() || "ok" };
-  const detail = (result.stderr || result.stdout || "Node/pnpm mismatch").trim().split(/\r?\n/)[0];
+  const detail = (result.stderr || result.stdout || "Node/Bun mismatch").trim().split(/\r?\n/)[0];
   return { ok: false, detail };
 }
 
 function imagesPresent() {
   const missing = [BACKEND_IMAGE, WEB_IMAGE].filter(
-    (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0
+    (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0,
   );
   if (missing.length === 0) {
     return {
@@ -250,7 +234,7 @@ function imagesPresent() {
     };
   }
   if (FROM_SOURCE) return { ok: true, detail: "built from this checkout on start" };
-  return { ok: false, detail: `missing ${missing.join(", ")} — run: pnpm platform setup` };
+  return { ok: false, detail: `missing ${missing.join(", ")} — run: bun run platform setup` };
 }
 
 /** docker-bake.hcl targets backend + web, loaded into Docker as repody-*:dev. */
@@ -273,7 +257,7 @@ function llamaServerVersion(exe) {
 
 /**
  * Single preflight for everything needed before starting the platform.
- * Used by `pnpm platform doctor` and automatically by `pnpm platform` / bootstrap.
+ * Used by `bun run platform doctor` and automatically by `bun run platform` / bootstrap.
  * Checks prerequisites (tools, files, images, ports), not that NuExtract loads in VRAM.
  */
 function preflight({ quietOk = false } = {}) {
@@ -282,11 +266,11 @@ function preflight({ quietOk = false } = {}) {
   const rows = [];
   const toolchain = checkToolchain();
   rows.push({
-    name: "Node / pnpm",
+    name: "Node / Bun",
     ok: toolchain.ok,
     state: toolchain.detail.replace(/^ok:\s*/i, ""),
     required: true,
-    fix: "Install Node 26 (LTS) + npm install --global pnpm@12.16.1",
+    fix: "Install Node 26 (LTS) + npm install --global bun@1.4.4",
   });
 
   const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
@@ -304,7 +288,7 @@ function preflight({ quietOk = false } = {}) {
     ok: images.ok,
     state: images.detail,
     required: true,
-    fix: "pnpm platform setup",
+    fix: "bun run platform setup",
   });
 
   const llama = findExecutable("llama-server");
@@ -323,7 +307,7 @@ function preflight({ quietOk = false } = {}) {
     ok: nue.ok,
     state: nue.reason,
     required: opts.withNuextract,
-    fix: "Download NuExtract3 + mmproj (pnpm llamacpp:download or https://huggingface.co/numind/NuExtract3-GGUF), then set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env",
+    fix: "Download NuExtract3 + mmproj (bun run llamacpp:download or https://huggingface.co/numind/NuExtract3-GGUF), then set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env",
   });
 
   for (const [name, file] of [
@@ -336,7 +320,7 @@ function preflight({ quietOk = false } = {}) {
       ok,
       state: ok ? "ok" : "missing",
       required: true,
-      fix: "pnpm platform setup",
+      fix: "bun run platform setup",
     });
   }
 
@@ -345,14 +329,16 @@ function preflight({ quietOk = false } = {}) {
     console.log(`  [${mark}] ${row.name.padEnd(18)} ${row.state}`);
   }
   console.log(
-    "\nScope: tools, images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
+    "\nScope: tools, images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n",
   );
 
   const failed = rows.filter((row) => !row.ok && row.required);
   if (failed.length) {
     console.log("Fix required items, then re-run:\n");
     for (const row of failed) console.log(`  • ${row.name}: ${row.fix}`);
-    console.log("\nOr: pnpm platform -- --platform-only   # containers only (skip host model)\n");
+    console.log(
+      "\nOr: bun run platform -- --platform-only   # containers only (skip host model)\n",
+    );
     process.exit(1);
   }
   if (!quietOk) console.log("Preflight OK — ready to start.\n");
@@ -365,11 +351,11 @@ function setup() {
   const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
   console.log(`Docker:       ${dockerOk ? "ok" : "NOT RUNNING — start Docker Desktop"}`);
   console.log(
-    `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`
+    `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`,
   );
 
   if (!dockerOk) {
-    console.warn("\nwarn: skipped the images — start Docker Desktop, then: pnpm platform setup");
+    console.warn("\nwarn: skipped the images — start Docker Desktop, then: bun run platform setup");
   } else if (FROM_SOURCE) {
     buildImages();
   } else if (opts.skipPull) {
@@ -382,9 +368,9 @@ function setup() {
 
   console.log(`
 Setup done. Next:
-  # Download NuExtract GGUFs (pnpm llamacpp:download) — see deploy/llamacpp/README.md
+  # Download NuExtract GGUFs (bun run llamacpp:download) — see deploy/llamacpp/README.md
   # Set LLAMACPP_MODEL + LLAMACPP_MMPROJ in deploy/llamacpp/paths.local.env
-  pnpm platform
+  bun run platform
 `);
 }
 
@@ -392,7 +378,7 @@ async function up() {
   preflight({ quietOk: true });
   patchBackendEnv();
   console.log(
-    `Plan: images=${FROM_SOURCE ? "from this checkout" : "published"}  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`
+    `Plan: images=${FROM_SOURCE ? "from this checkout" : "published"}  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`,
   );
 
   if (FROM_SOURCE && !opts.skipBuild) buildImages();
@@ -439,9 +425,9 @@ async function up() {
       "keycloak",
       "api",
       "web",
-      "worker"
+      "worker",
     ),
-    { inherit: true, env: composeEnv }
+    { inherit: true, env: composeEnv },
   );
 
   await status();
@@ -467,9 +453,9 @@ ${
 }
   Use localhost (not 127.0.0.1) in the browser for auth.
 
-  pnpm platform status
-  pnpm platform logs      # tail API / web / workers
-  pnpm platform stop
+  bun run platform status
+  bun run platform logs      # tail API / web / workers
+  bun run platform stop
 `);
 }
 
@@ -509,9 +495,9 @@ async function dev() {
       "hatchet-lite",
       "seaweedfs",
       "keycloak",
-      "worker"
+      "worker",
     ),
-    { inherit: true }
+    { inherit: true },
   );
   run(...uvBackend(["alembic", "upgrade", "head"]), { inherit: true });
 
@@ -541,14 +527,14 @@ async function dev() {
       "ui",
       process.execPath,
       [path.join(ROOT, "node_modules/next/dist/bin/next"), "dev"],
-      { cwd: ROOT, env: runtimeEnv(path.join(ROOT, ".env"), AUTH_ENV) }
+      { cwd: ROOT, env: runtimeEnv(path.join(ROOT, ".env"), AUTH_ENV) },
     ),
   ];
   console.log(`
   UI   http://localhost:3000   (operator@repody.local / repody-dev)
   API  http://localhost:8000/docs
 
-  Ctrl+C stops API + UI; \`pnpm platform stop\` stops the containers.
+  Ctrl+C stops API + UI; \`bun run platform stop\` stops the containers.
 `);
   const stopChildren = () => {
     for (const child of children) child.kill("SIGTERM");
@@ -556,7 +542,7 @@ async function dev() {
   process.on("SIGINT", stopChildren);
   process.on("SIGTERM", stopChildren);
   const code = await Promise.race(
-    children.map((child) => new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0))))
+    children.map((child) => new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0)))),
   );
   stopChildren();
   process.exit(code);
@@ -577,7 +563,7 @@ async function status() {
     const { ok } = await fetchProbe(url, 2500);
     console.log(`  [${ok ? "ok" : "--"}] ${name.padEnd(10)} ${url}`);
   }
-  console.log("\n  Logs:  pnpm platform logs");
+  console.log("\n  Logs:  bun run platform logs");
   console.log('  Grafana Explore → Loki {container=~"repody-.*"}\n');
 }
 
@@ -586,7 +572,7 @@ function logs() {
   run(
     "docker",
     composeArgs("--profile", "workers", "logs", "-f", "--tail", "200", "api", "web", "worker"),
-    { inherit: true, allowFail: true }
+    { inherit: true, allowFail: true },
   );
 }
 
@@ -596,9 +582,9 @@ function stop() {
   run(
     "docker",
     composeArgs("--profile", "workers", "--profile", "observability", "down", "--remove-orphans"),
-    { inherit: true, allowFail: true }
+    { inherit: true, allowFail: true },
   );
-  console.log("Stopped. Start again with: pnpm platform");
+  console.log("Stopped. Start again with: bun run platform");
 }
 
 const commands = {
