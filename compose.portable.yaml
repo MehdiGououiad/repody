@@ -76,6 +76,9 @@ services:
       timeout: 5s
       retries: 18
       start_period: 90s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   web:
     image: ${REPODY_WEB_IMAGE:-repody-web:dev}
@@ -104,4 +107,7 @@ services:
       timeout: 3s
       retries: 24
       start_period: 10s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
     restart: unless-stopped
