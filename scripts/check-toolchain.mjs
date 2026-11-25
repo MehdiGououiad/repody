@@ -22,7 +22,9 @@ if (!expectedBun) {
   // `bun run doctor` runs this under Node and says which Bun started it; plain `node` asks bun.
   let actualBun = process.env.npm_config_user_agent?.match(/\bbun\/([^\s]+)/)?.[1];
   if (!actualBun) {
-    const result = spawnSync("bun", ["--version"], { cwd: root, encoding: "utf8", shell: false });
+    // Through a shell: on Windows an npm-installed bun is a bun.cmd shim, which only a shell
+    // runs. One constant command string, so nothing is passed as arguments to a shell.
+    const result = spawnSync("bun --version", { cwd: root, encoding: "utf8", shell: true });
     actualBun = result.stdout?.trim();
   }
   if (!actualBun) {

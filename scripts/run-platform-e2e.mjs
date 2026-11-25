@@ -63,6 +63,7 @@ run(
   sharedEnv,
 );
 
-run("bun", ["x", "playwright", "test"], root, sharedEnv);
+// Through a shell: on Windows an npm-installed bun is a bun.cmd shim, which only a shell runs.
+run("bun x playwright test", [], root, sharedEnv, { shell: true });
 
 console.log("\n[platform-e2e] All platform tests passed.\n");
