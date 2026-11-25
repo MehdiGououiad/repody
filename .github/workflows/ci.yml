@@ -327,8 +327,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # deploy/scripts/platform-dev.mjs uses Node's own modules only: no package install. Its
-      # preflight still checks that the pinned Bun is on the path.
+      # deploy/scripts/platform-dev.mjs uses Node's own modules only: no package install. Bun
+      # starts it (bun run platform) and its preflight checks Bun's version.
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -356,7 +356,7 @@ jobs:
       # Waits for every container's healthcheck (compose up --wait); fails on an unhealthy one.
       # No tear-down: the runner and its containers are discarded with the job.
       - name: Start platform (containers only)
-        run: node deploy/scripts/platform-dev.mjs --platform-only --no-obs --no-pull
+        run: bun run platform -- --platform-only --no-obs --no-pull
       - name: Container logs
         if: failure()
         run: docker compose -p repody logs --no-color --tail 200

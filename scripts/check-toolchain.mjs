@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,16 +18,12 @@ if (expectedNodeMajor && process.versions.node.split(".")[0] !== expectedNodeMaj
 if (!expectedBun) {
   failures.push('package.json must pin "packageManager": "bun@<version>".');
 } else {
-  // `bun run doctor` runs this under Node and says which Bun started it; plain `node` asks bun.
-  let actualBun = process.env.npm_config_user_agent?.match(/\bbun\/([^\s]+)/)?.[1];
+  // Bun says which version started this (`bun run doctor`, `bun run platform`): no lookup on PATH.
+  const actualBun = process.env.npm_config_user_agent?.match(/\bbun\/([^\s]+)/)?.[1];
   if (!actualBun) {
-    // Through a shell: on Windows an npm-installed bun is a bun.cmd shim, which only a shell
-    // runs. One constant command string, so nothing is passed as arguments to a shell.
-    const result = spawnSync("bun --version", { cwd: root, encoding: "utf8", shell: true });
-    actualBun = result.stdout?.trim();
-  }
-  if (!actualBun) {
-    failures.push(`Bun ${expectedBun} is required. Run: npm install --global bun@${expectedBun}`);
+    failures.push(
+      `Run this through Bun (bun run doctor). Bun ${expectedBun}: npm install --global bun@${expectedBun}`,
+    );
   } else if (actualBun !== expectedBun) {
     failures.push(
       `Bun ${actualBun} does not match pinned ${expectedBun}. Run: npm install --global bun@${expectedBun}`,
