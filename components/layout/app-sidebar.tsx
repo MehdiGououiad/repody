@@ -27,7 +27,7 @@ const LIVE_MS = 15_000;
 export function BrandMark() {
   const brand = useBrand();
   if (brand.logoUrl) {
-    // biome-ignore lint/performance/noImgElement: a client's logo comes from any URL.
+    // oxlint-disable-next-line nextjs/no-img-element -- a client's logo comes from any URL.
     return <img src={brand.logoUrl} alt={brand.name} className="h-5 w-auto max-w-[140px]" />;
   }
   return (

@@ -264,6 +264,7 @@ function UserRow({
           {user.enabled ? t("active") : t("disabled")}
         </span>
       </td>
+      {/* oxlint-disable-next-line jsx-a11y/control-has-associated-label -- a cell, not a control; its menu button has its own aria-label. */}
       <td className={cn(td, "text-end")}>
         <Menu>
           <MenuTrigger

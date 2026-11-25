@@ -32,6 +32,7 @@ export function CreditsDialog({ contact }: Readonly<{ contact: CreditsContact }>
           <Button
             variant="primary"
             className="justify-between"
+            // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the label is on the Button that renders this element.
             render={<a href={contact.contactUrl} target="_blank" rel="noopener" />}
           >
             {t("contactForm")}
@@ -42,6 +43,7 @@ export function CreditsDialog({ contact }: Readonly<{ contact: CreditsContact }>
               variant="secondary"
               className="justify-between"
               render={
+                // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the label is on the Button that renders this element.
                 <a href={`https://wa.me/${contact.whatsapp}`} target="_blank" rel="noopener" />
               }
             >

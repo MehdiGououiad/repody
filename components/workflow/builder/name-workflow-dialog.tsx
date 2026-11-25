@@ -55,6 +55,7 @@ export function NameWorkflowDialog({
               </FieldLabel>
               <Input
                 required
+                // oxlint-disable-next-line jsx-a11y/no-autofocus -- a dialog moves focus to its first field when it opens.
                 autoFocus
                 autoComplete="off"
                 placeholder={t("workflowPlaceholder")}

@@ -39,7 +39,7 @@ export default async function LoginPage({
     <main className="flex min-h-dvh items-center justify-center bg-canvas px-4">
       <div className="mb-[10vh] flex w-full max-w-sm flex-col gap-6 rounded-2xl bg-panel p-8 shadow-pop">
         {brand.logoUrl ? (
-          // biome-ignore lint/performance/noImgElement: a client's logo comes from any URL.
+          // oxlint-disable-next-line nextjs/no-img-element -- a client's logo comes from any URL.
           <img src={brand.logoUrl} alt={brand.name} className="h-7 w-auto self-start" />
         ) : (
           <span

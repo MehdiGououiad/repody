@@ -31,7 +31,7 @@ export function Screenshot({
       </div>
       {/* Both themes, the one the page shows displayed (an image display:none is not fetched). */}
       {(["light", "dark"] as const).map((theme) => (
-        // biome-ignore lint/performance/noImgElement: a static export serves these WebP files as is.
+        // oxlint-disable-next-line nextjs/no-img-element -- a static export serves these WebP files as is.
         <img
           key={theme}
           src={`${base}-${theme}.webp`}

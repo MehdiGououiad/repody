@@ -20,10 +20,10 @@ rule is a matter of opinion in review.
 
 | Concern | TypeScript / JavaScript | Python |
 |---------|-------------------------|--------|
-| Formatting | Biome (`biome.json`) | ruff format (`[tool.ruff.format]`) |
-| Linting | Biome | ruff (`[tool.ruff.lint]`) |
-| Framework rules | ESLint, narrowed to Next.js-specific rules and React Hooks | - |
-| Types | `tsc --noEmit` | pyright |
+| Formatting | oxfmt (`.oxfmtrc.json`) | ruff format (`[tool.ruff.format]`) |
+| Linting | oxlint (`.oxlintrc.json`), Next.js and React Hooks rules included | ruff (`[tool.ruff.lint]`) |
+| Types | TypeScript 7, `tsc --noEmit` (`bun check`) | pyright |
+| Unit tests | `bun test` (`lib/`, `i18n/`) | pytest |
 | Dead code | knip | ruff `F401`/`ARG`, plus review |
 
 Shared conventions: 100-column lines, LF endings, two-space indentation in
@@ -31,8 +31,9 @@ TS/JS and four in Python, double quotes, sorted imports, absolute imports only
 (`ban-relative-imports = "all"` on the backend, `@/` aliases on the frontend).
 `.editorconfig` and `.gitattributes` keep editors and Git in agreement.
 
-`eslint.config.mjs` programmatically disables every rule belonging to a plugin
-Biome already covers, so the two linters never disagree about the same line.
+One linter covers every rule: `.oxlintrc.json` names each rule set on purpose and
+why, and a rule that flags code the earlier gate accepted is a warning until it
+is made an error on purpose.
 
 ### Style Rules Worth Knowing
 
@@ -65,7 +66,7 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 | `api/` (routes, caller dependencies) | everything below | - |
 | `app/` (use cases) | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api` |
 | `extraction/`, `rules/` (domain) | `schemas`, `settings` (extraction only) | `app`, `api`; `rules` also no DB, Hatchet or settings |
-- **Suppressions must explain themselves.** Every `biome-ignore`,
+- **Suppressions must explain themselves.** Every `oxlint-disable-next-line`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
 
 ## Architecture Checklist
@@ -118,9 +119,9 @@ During day-to-day work, run the smallest command that covers the change:
 | Backend logic | `pnpm test:api` |
 | Run lifecycle or queue behavior | `pnpm test:unit` then `pnpm test:integration` |
 | Architecture dependency rules | `pnpm architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
-| Frontend code | `pnpm lint` and `pnpm typecheck` |
+| Frontend code | `bun lint`, `bun check` and `bun test` |
 | Unused files, exports or dependencies | `pnpm deadcode` |
-| API contract changes | `pnpm codegen:api` then `pnpm typecheck` |
+| API contract changes | `pnpm codegen:api` then `bun check` |
 | Helm, Compose or images | `pnpm deploy:check` |
 
 ## Documentation Rules

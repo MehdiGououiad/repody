@@ -1,5 +1,5 @@
 import { formatHex, parse, wcagContrast } from "culori";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { generateTheme, themeStylesheet } from "@/lib/theme/generate";
 
 const hex = (css: string) => {

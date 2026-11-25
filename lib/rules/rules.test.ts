@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { conditionFields, isTouched } from "@/lib/rules/conditions";
 import { fieldOptions, tableOptions, typeOf } from "@/lib/rules/document-fields";
 import { fieldKey } from "@/lib/rules/field-key";

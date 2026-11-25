@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { buildWorkflowRunSnippets, runStateEndpoint } from "@/lib/api/workflow-run-snippets";
 import type { DocumentDef } from "@/lib/types";
 

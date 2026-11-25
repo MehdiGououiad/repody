@@ -98,6 +98,7 @@ function SchemaFieldRow({
           onChange={(e) => onUpdate({ name: e.target.value })}
           placeholder={t("namePlaceholder")}
           aria-label={t("name")}
+          // oxlint-disable-next-line jsx-a11y/no-autofocus -- a field just added is named first.
           autoFocus={focusName}
           aria-invalid={duplicate}
           className={cn(CELL_INPUT, "font-medium", duplicate && "text-fail-ink")}

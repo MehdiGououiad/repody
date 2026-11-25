@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": [
+    ".claude/skills/**",
+    "lib/api/generated/**",
+    "lib/api/openapi.json",
+    "lib/api/catalog.json",
+    "deploy/helm/**/templates/**",
+    "e2e/fixtures/**"
+  ]
+}

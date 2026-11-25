@@ -25,7 +25,7 @@ function PageImage({ src, label }: { src: string; label: string }) {
             {t("noPreview")}
           </p>
         ) : (
-          // biome-ignore lint/performance/noImgElement: pages come from the API as rendered WebP.
+          // oxlint-disable-next-line nextjs/no-img-element -- pages come from the API as rendered WebP.
           <img
             src={src}
             alt={label}

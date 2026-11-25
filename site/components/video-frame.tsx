@@ -12,7 +12,7 @@ export function VideoFrame({ locale, t }: { locale: Locale; t: Dict["home"]["vid
     <figure className="flex flex-col gap-4">
       <div className="relative aspect-video overflow-hidden rounded-xl bg-canvas shadow-frame">
         {SITE.videoUrl ? (
-          // biome-ignore lint/a11y/useMediaCaption: captions ship with the video file.
+          // oxlint-disable-next-line jsx-a11y/media-has-caption -- captions ship with the video file.
           <video
             src={SITE.videoUrl}
             poster={poster}
@@ -22,7 +22,7 @@ export function VideoFrame({ locale, t }: { locale: Locale; t: Dict["home"]["vid
           />
         ) : (
           <>
-            {/* biome-ignore lint/performance/noImgElement: a static export serves pre-sized WebP files. */}
+            {/* oxlint-disable-next-line nextjs/no-img-element -- a static export serves pre-sized WebP files. */}
             <img
               src={poster}
               alt=""

@@ -66,6 +66,7 @@ export function RunAuditReport({ audit }: { audit: RunAuditDetail }) {
               size="icon-sm"
               aria-label={t("exportCsv")}
               render={
+                // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the label is on the Button that renders this element.
                 <a href={`/api/v1/audits/${encodeURIComponent(audit.id)}/export.csv`} download />
               }
             >

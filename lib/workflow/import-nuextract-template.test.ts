@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { Catalog } from "@/lib/types";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 

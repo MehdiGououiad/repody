@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { useReviewReason, When } from "@/components/audit/run-row";
 import { DocChip } from "@/components/shared/doc-chip";
 import { StatusGlyph } from "@/components/ui/status-glyph";
@@ -49,7 +49,7 @@ const DAY_MS = 86_400_000;
 export function HourHeatmap({ hourly }: { hourly: Dashboard["hourly"] }) {
   const t = useTranslations("dashboard.hours");
   const format = useFormatter();
-  const now = new Date();
+  const [now] = useState(() => new Date());
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const days = Array.from({ length: 7 }, (_, i) => new Date(today.getTime() - (6 - i) * DAY_MS));
   const grid = days.map(() => Array.from({ length: 24 }, () => 0));
@@ -94,7 +94,7 @@ export function HourHeatmap({ hourly }: { hourly: Dashboard["hourly"] }) {
               <span className="text-2xs leading-[14px] text-ink-4">{dayName(day)}</span>
               {grid[row].map((runs, hour) => (
                 <motion.span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: the hour is the cell's identity.
+                  // oxlint-disable-next-line react/no-array-index-key -- the hour is the cell's identity.
                   key={hour}
                   title={t("cell", { day: dayName(day), hour, runs })}
                   initial={{ opacity: 0, scale: 0.6 }}
@@ -108,7 +108,6 @@ export function HourHeatmap({ hourly }: { hourly: Dashboard["hourly"] }) {
           ))}
           <span />
           {Array.from({ length: 24 }, (_, hour) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: the hour is the label's identity.
             <span key={hour} className="text-center text-2xs tabular-nums text-ink-4">
               {hour % 6 === 0 ? hour : ""}
             </span>

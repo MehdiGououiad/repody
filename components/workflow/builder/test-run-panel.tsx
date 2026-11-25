@@ -144,6 +144,7 @@ export function TestDeployStep({
 
         {!hasPassingTest ? (
           <div
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
             role="status"
             className="flex items-start gap-2.5 rounded-lg bg-warn-wash/70 px-3 py-2.5 text-xs text-warn-ink"
           >

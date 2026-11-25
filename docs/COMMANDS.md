@@ -57,10 +57,11 @@ which tool owns which concern.
 | Command | When |
 |---------|------|
 | `pnpm verify` | **Before pushing** - lint, format, types and dead code, both languages |
-| `pnpm format` | Reformat everything in place (Biome + ruff) |
+| `pnpm format` | Reformat everything in place (oxfmt + ruff); `bun fmt` is the frontend part |
 | `pnpm lint:fix` / `pnpm lint:py:fix` | Apply the safe lint fixes |
-| `pnpm lint` / `pnpm lint:py` | Lint and format check only |
-| `pnpm typecheck` / `pnpm typecheck:py` | `tsc --noEmit` / pyright |
+| `bun lint` / `pnpm lint:py` | Lint and format check only (oxlint + oxfmt / ruff) |
+| `bun check` / `pnpm typecheck:py` | TypeScript 7 `tsc --noEmit` / pyright |
+| `bun test` | Frontend unit tests (`lib/`, `i18n/`) |
 | `pnpm deadcode` | Unused files, exports and dependencies (knip; CI runs it). In a OneDrive folder it reports false positives: OneDrive turns folders into reparse points its file walker skips |
 | `pnpm review:check` | `verify` + backend tests + deploy checks |
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { auditsExportHref, auditsQuery, PAGE_SIZE } from "@/lib/audits/search-params";
 
 const search = { q: "", outcome: null, workflow: null, day: null, page: 1 };

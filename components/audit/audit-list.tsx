@@ -174,6 +174,7 @@ export function AuditList() {
               variant="ghost"
               size="icon-sm"
               aria-label={t("exportCsv")}
+              // oxlint-disable-next-line jsx-a11y/control-has-associated-label -- the label is on the Button that renders this element.
               render={<a href={auditsExportHref(search)} download />}
             >
               <Download />

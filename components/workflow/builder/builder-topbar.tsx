@@ -111,6 +111,7 @@ export function BuilderTopbar({
         readOnly={!canEdit}
         placeholder={t("namePlaceholder")}
         aria-label={t("nameLabel")}
+        // oxlint-disable-next-line jsx-a11y/no-autofocus -- a new workflow (no name yet) starts with its name field.
         autoFocus={!name}
         className={cn(
           inlineFieldClass,

@@ -82,7 +82,7 @@ function SamplePane({
               />
             ) : (
               <div className="min-h-0 flex-1 overflow-auto p-4">
-                {/* biome-ignore lint/performance/noImgElement: a local sample, shown as dropped. */}
+                {/* oxlint-disable-next-line nextjs/no-img-element -- a local sample, shown as dropped. */}
                 <img
                   src={url}
                   alt={file.name}

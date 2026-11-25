@@ -9,7 +9,7 @@
     "dev": "next dev -p 3200",
     "prebuild": "node scripts/sync-shared.mjs",
     "build": "next build",
-    "typecheck": "node scripts/sync-shared.mjs && tsc --noEmit",
+    "check": "node scripts/sync-shared.mjs && tsc --noEmit",
     "deadcode": "knip",
     "deploy": "pnpm build && wrangler deploy"
   },

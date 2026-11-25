@@ -9,6 +9,7 @@ export async function CreditsBanner({ access }: { access: Access }) {
   const t = await getTranslations("credits");
   return (
     <div
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
       role="status"
       className="flex h-9 shrink-0 items-center gap-2 border-b border-line bg-warn-wash px-4 text-[13px] text-warn-ink"
     >

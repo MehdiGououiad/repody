@@ -23,6 +23,7 @@ export function BackendStatus() {
   });
   if (live !== false && !isError) return null;
   return (
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live region (ARIA status), not the result of a calculation (<output>).
     <p role="status" className="flex items-center gap-2 px-2 py-1 text-xs text-fail-ink">
       <span className="size-1.5 shrink-0 rounded-full bg-fail" aria-hidden />
       {t("backendOffline")}
