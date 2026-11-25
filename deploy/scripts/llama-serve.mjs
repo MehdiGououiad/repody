@@ -66,11 +66,21 @@ function weightArgs() {
 function buildArgs() {
   const args = [
     ...weightArgs(),
-    ...["--host", "0.0.0.0", "--port", String(port), "-a", alias, "--jinja"],
-    ...["-c", get("CONTEXT", spec.context), "-np", get("PARALLEL", "1")],
+    "--host",
+    "0.0.0.0",
+    "--port",
+    String(port),
+    "-a",
+    alias,
+    "--jinja",
+    "-c",
+    get("CONTEXT", spec.context),
+    "-np",
+    get("PARALLEL", "1"),
     // llama.cpp's own advice for this vision model ("if you encounter problems with accuracy, try
     // adding --image-min-tokens 1024"): small images get enough tokens to read their text.
-    ...["--image-min-tokens", "1024"],
+    "--image-min-tokens",
+    "1024",
   ];
   if (get("GPU_LAYERS")) args.push("-ngl", get("GPU_LAYERS"));
   if (get("DEVICE")) args.push("--device", get("DEVICE"));

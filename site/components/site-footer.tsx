@@ -4,6 +4,9 @@ import { href, type Locale, type PageKey, SITE } from "@/lib/site";
 import { Logo } from "./site-header";
 import { Container } from "./ui";
 
+/** The year the static site was built. */
+const YEAR = new Date().getFullYear();
+
 export function SiteFooter({ locale, t }: { locale: Locale; t: Dict["common"] }) {
   const columns: { title: string; links: { key: PageKey; label: string }[] }[] = [
     {
@@ -61,7 +64,7 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dict["common"] })
       </Container>
       <Container className="flex flex-wrap justify-between gap-2 border-t border-line py-6 text-xs text-ink-4">
         <span>
-          © {new Date().getFullYear()} Repody. {t.footer.rights}
+          © {YEAR} Repody. {t.footer.rights}
         </span>
         <span>{t.footer.madeIn}</span>
       </Container>
