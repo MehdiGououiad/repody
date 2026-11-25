@@ -9,6 +9,7 @@ import { DateTime } from "@/components/shared/date-time";
 import { DocChip } from "@/components/shared/doc-chip";
 import { StatusGlyph } from "@/components/ui/status-glyph";
 import { DocumentExtractionOutput } from "@/components/workflow/extraction-output-panel";
+import { MAX_DIFFERENCES, readDifferences } from "@/lib/audits/second-read";
 import { EASE_OUT } from "@/lib/motion";
 import type { RunAuditDetail, RunAuditDocument, RunAuditRule } from "@/lib/types";
 import { cn, formatDurationMs, formatExtractedFieldValue } from "@/lib/utils";
@@ -24,7 +25,13 @@ export function ReportVerdict({ audit, className }: { audit: RunAuditDetail; cla
   const t = useTranslations("audits.report");
   const { glyph, key, tone } = VERDICT[audit.status];
   const { summary, metadata } = audit;
+  // Fields a second read did not confirm: why a run whose rules all passed needs review.
+  const toCheck = audit.documents.reduce(
+    (count, doc) => count + Object.keys(doc.extraction?.unconfirmed ?? {}).length,
+    0
+  );
   const facts = [
+    toCheck ? t("fieldsToCheck", { count: toCheck }) : null,
     summary.total ? t("rulesPassed", { passed: summary.passed, total: summary.total }) : null,
     t("fieldsExtracted", { count: summary.fieldsExtracted }),
     metadata?.durationMs ? formatDurationMs(metadata.durationMs) : null,
@@ -168,12 +175,39 @@ function DocumentFields({
   const unconfirmed = doc.extraction?.unconfirmed ?? {};
   const failedBy = (key: string) =>
     rules.filter((r) => r.status === "failed" && r.affectedFields.includes(key)).map((r) => r.name);
-  /** Why a field is flagged: the rules it failed, and a second read that gave another value. */
-  const notesFor = (key: string) => [
+  /** What the second read saw differently, briefly: the rows, columns or items of a table or
+   * list that differ, not the whole second read. */
+  const secondRead = (first: unknown, second: unknown) => {
+    const differences = readDifferences(first, second);
+    const said = differences.slice(0, MAX_DIFFERENCES).map((d) => {
+      switch (d.kind) {
+        case "cell":
+          return t("diffCell", {
+            row: d.row,
+            column: d.column,
+            value: formatExtractedFieldValue(d.value, locale),
+          });
+        case "item":
+          return t("diffItem", { item: d.item, value: formatExtractedFieldValue(d.value, locale) });
+        case "rows":
+          return t("diffRows", { first: d.first, second: d.second });
+        case "items":
+          return t("diffItems", { first: d.first, second: d.second });
+        default:
+          return formatExtractedFieldValue(d.value, locale);
+      }
+    });
+    if (differences.length > MAX_DIFFERENCES) {
+      said.push(t("diffMore", { count: differences.length - MAX_DIFFERENCES }));
+    }
+    return t("unconfirmed", {
+      value: said.join(t("diffJoin")) || formatExtractedFieldValue(second, locale),
+    });
+  };
+  /** Why a field is flagged: the rules it failed, and a second read that saw it differently. */
+  const notesFor = (key: string, value: unknown) => [
     ...failedBy(key),
-    ...(key in unconfirmed
-      ? [t("unconfirmed", { value: formatExtractedFieldValue(unconfirmed[key], locale) })]
-      : []),
+    ...(key in unconfirmed ? [secondRead(value, unconfirmed[key])] : []),
   ];
   const found = doc.fields.filter((f) => f.extracted).length;
 
@@ -220,7 +254,7 @@ function DocumentFields({
       ) : null}
       <ul className="divide-y divide-line">
         {doc.fields.map((field) => {
-          const notes = field.flagged ? notesFor(field.key) : [];
+          const notes = field.flagged ? notesFor(field.key, field.value) : [];
           // Flagged only because a second read disagreed: a value to check, not a failed rule.
           const toCheck = field.flagged && !failedBy(field.key).length && field.key in unconfirmed;
           const lit = focused.has(field.key) || focused.has(`${doc.documentType}.${field.key}`);
