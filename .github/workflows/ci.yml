@@ -42,11 +42,11 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
       deploy: ${{ steps.filter.outputs.deploy }}
     steps:
-      # A push compares with the previous head, which needs the history: full history keeps
-      # that commit local, so it needs no credentials to fetch it. A pull request asks the API
-      # and needs no checkout.
+      # A push or a manual run compares with git history: full history keeps the base commit
+      # local, so it needs no credentials to fetch it. A pull request asks the API and needs no
+      # checkout.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        if: github.event_name == 'push' && github.ref_type != 'tag'
+        if: github.event_name != 'pull_request' && github.ref_type != 'tag'
         with:
           persist-credentials: false
           fetch-depth: 0
