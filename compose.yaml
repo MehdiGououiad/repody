@@ -70,6 +70,9 @@ services:
       timeout: 3s
       retries: 24
       start_period: 20s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   # S3-compatible object storage for uploads (SeaweedFS: master, volume, filer and S3 gateway in
   # one process). The API creates its bucket on startup. https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
@@ -87,6 +90,9 @@ services:
       timeout: 3s
       retries: 24
       start_period: 10s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   keycloak:
     image: quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
@@ -117,6 +123,9 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
 
   # The Hatchet worker: the backend image (built here for `pnpm platform dev`; `pnpm platform`
   # builds or pulls REPODY_BACKEND_IMAGE and runs the API from it too, compose.portable.yaml).
@@ -172,6 +181,9 @@ services:
       timeout: 5s
       retries: 6
       start_period: 30s
+      # Probed every 2s while starting, so a ready container counts as healthy at once
+      # (Docker: healthcheck start_interval); `interval` applies after that.
+      start_interval: 2s
     restart: unless-stopped
 
   # Observability (optional: docker compose --env-file backend/.env --profile observability up -d)
