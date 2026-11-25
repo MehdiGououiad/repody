@@ -114,11 +114,11 @@ Daily local: Compose ([docs/LOCAL.md](./docs/LOCAL.md)). The hosted demo (app.re
 
 | Lane                           | Command                                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| Run the product locally        | `pnpm platform`                                                                                   |
-| Develop from source            | `pnpm platform dev`                                                                               |
+| Run the product locally        | `bun run platform`                                                                                |
+| Develop from source            | `bun run platform dev`                                                                            |
 | Release the hosted demo        | Merge (staging), then `git tag v1.2.3` ([deploy/vps/README.md](./deploy/vps/README.md#releasing)) |
 | Client Kubernetes installation | [docs/CLUSTER.md](./docs/CLUSTER.md)                                                              |
-| Release to client              | `pnpm images:release`                                                                             |
+| Release to client              | `bun run images:release`                                                                          |
 
 ## Authorization
 
@@ -135,11 +135,11 @@ Roles say what a user may do; their **account** says on what (`app/scope.py`). A
 
 ## Tests
 
-| Layer                                  | Command                        |
-| -------------------------------------- | ------------------------------ |
-| Backend unit/integration               | `pnpm test:api`                |
-| Live stack                             | `pnpm test:live` (needs stack) |
-| Playwright smoke (sign-in, navigation) | `pnpm test:e2e:smoke`          |
+| Layer                                  | Command                           |
+| -------------------------------------- | --------------------------------- |
+| Backend unit/integration               | `bun run test:api`                |
+| Live stack                             | `bun run test:live` (needs stack) |
+| Playwright smoke (sign-in, navigation) | `bun run test:e2e:smoke`          |
 
 Full command list: [docs/COMMANDS.md](./docs/COMMANDS.md). Engineering notes: [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md).
 

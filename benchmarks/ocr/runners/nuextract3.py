@@ -5,7 +5,7 @@
 """NuExtract3 (numind/NuExtract3-GGUF Q8_0) in Markdown mode, as Repody sends it: the page at 170 DPI,
 `chat_template_kwargs={"mode": "markdown", "enable_thinking": False}`, temperature 0.
 
-Needs the llama-server from `pnpm llamacpp:serve` (http://127.0.0.1:8081).
+Needs the llama-server from `bun run llamacpp:serve` (http://127.0.0.1:8081).
     uv run runners/nuextract3.py
 """
 

@@ -25,7 +25,7 @@ Dockerfile* text eol=lf
 *.tgz binary
 
 # Generated artifacts: collapse in diffs and exclude from language stats.
-pnpm-lock.yaml linguist-generated=true -diff
+bun.lock linguist-generated=true -diff
 backend/uv.lock linguist-generated=true -diff
 lib/api/generated/** linguist-generated=true -diff
 lib/api/openapi.json linguist-generated=true -diff

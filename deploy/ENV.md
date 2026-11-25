@@ -10,16 +10,16 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 
 ## Services
 
-| Variable                                                 | Default                     | Purpose                                                                                                                                              |
-| -------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUDIT_DATABASE_URL`                                     | local Postgres              | `postgresql+asyncpg://…` (secret)                                                                                                                    |
-| `AUDIT_DB_POOL_SIZE`                                     | `10`                        | Connections per process                                                                                                                              |
-| `HATCHET_CLIENT_TOKEN`                                   | —                           | Hatchet API token: the run queue and the maintenance cron (secret). Compose: written by `pnpm platform` (local) or the `hatchet-token` service (VPS) |
-| `HATCHET_CLIENT_HOST_PORT` / `HATCHET_CLIENT_SERVER_URL` | from the token              | Hatchet's gRPC address and API URL, when the token's are not reachable from the container                                                            |
-| `HATCHET_CLIENT_TLS_STRATEGY`                            | `tls`                       | `none` for an engine on a private network without TLS (Compose)                                                                                      |
-| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:9000`     | S3-compatible storage for uploaded documents                                                                                                         |
-| `AUDIT_S3_ACCESS_KEY` / `AUDIT_S3_SECRET_KEY`            | Compose: SeaweedFS dev keys | Storage credentials (secret)                                                                                                                         |
-| `AUDIT_S3_BUCKET`                                        | `audit-documents`           | Created at API start when missing                                                                                                                    |
+| Variable                                                 | Default                     | Purpose                                                                                                                                                 |
+| -------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUDIT_DATABASE_URL`                                     | local Postgres              | `postgresql+asyncpg://…` (secret)                                                                                                                       |
+| `AUDIT_DB_POOL_SIZE`                                     | `10`                        | Connections per process                                                                                                                                 |
+| `HATCHET_CLIENT_TOKEN`                                   | —                           | Hatchet API token: the run queue and the maintenance cron (secret). Compose: written by `bun run platform` (local) or the `hatchet-token` service (VPS) |
+| `HATCHET_CLIENT_HOST_PORT` / `HATCHET_CLIENT_SERVER_URL` | from the token              | Hatchet's gRPC address and API URL, when the token's are not reachable from the container                                                               |
+| `HATCHET_CLIENT_TLS_STRATEGY`                            | `tls`                       | `none` for an engine on a private network without TLS (Compose)                                                                                         |
+| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:9000`     | S3-compatible storage for uploaded documents                                                                                                            |
+| `AUDIT_S3_ACCESS_KEY` / `AUDIT_S3_SECRET_KEY`            | Compose: SeaweedFS dev keys | Storage credentials (secret)                                                                                                                            |
+| `AUDIT_S3_BUCKET`                                        | `audit-documents`           | Created at API start when missing                                                                                                                       |
 
 ## Platform
 

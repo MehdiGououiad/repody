@@ -1,3 +1,9 @@
-# `bun test` runs the unit tests (*.test.ts). The e2e/ specs are Playwright's (pnpm test:e2e).
+# `bun test` runs the unit tests (*.test.ts). The e2e/ specs are Playwright's (bun run test:e2e).
 [test]
 pathIgnorePatterns = ["e2e/**"]
+
+# Supply chain: a version must be three days old before it is installed (Dependabot's cooldown
+# too), so a release pulled soon after publication, as compromised ones are, never lands here.
+# https://bun.com/docs/runtime/bunfig#install-minimumreleaseage
+[install]
+minimumReleaseAge = 259200

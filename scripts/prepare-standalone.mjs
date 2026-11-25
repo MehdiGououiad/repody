@@ -11,7 +11,7 @@ const standaloneDir = join(root, ".next", "standalone");
 const serverPath = join(standaloneDir, "server.js");
 
 if (!existsSync(serverPath)) {
-  console.error("Missing .next/standalone/server.js — run `pnpm build` first.");
+  console.error("Missing .next/standalone/server.js — run `bun run build` first.");
   process.exit(1);
 }
 

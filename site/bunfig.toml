@@ -1,0 +1,3 @@
+# The marketing site: its own project and lockfile (bun.lock), so Next treats site/ as the root.
+[install]
+minimumReleaseAge = 259200

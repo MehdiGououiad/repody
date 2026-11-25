@@ -15,7 +15,7 @@
     "platform": "node deploy/scripts/platform-dev.mjs",
     "ui": "next dev",
     "build": "next build",
-    "codegen:api": "pnpm codegen:api:export && pnpm codegen:api:types",
+    "codegen:api": "bun run codegen:api:export && bun run codegen:api:types",
     "codegen:api:export": "uv run --directory backend python scripts/export_openapi.py",
     "codegen:api:types": "openapi-typescript lib/api/openapi.json -o lib/api/generated/schema.d.ts",
     "start": "node scripts/prepare-standalone.mjs && node .next/standalone/server.js",
@@ -28,9 +28,9 @@
     "check": "tsc --noEmit",
     "typecheck:py": "uv run --directory backend --extra otel pyright",
     "deadcode": "knip",
-    "verify": "pnpm lint && pnpm check && pnpm test:web && pnpm deadcode && pnpm lint:py && pnpm typecheck:py",
-    "review:check": "pnpm verify && pnpm test:api && pnpm deploy:check",
-    "review:check:fast": "pnpm lint && pnpm check && pnpm test:api",
+    "verify": "bun lint && bun check && bun test && bun run deadcode && bun run lint:py && bun run typecheck:py",
+    "review:check": "bun run verify && bun run test:api && bun run deploy:check",
+    "review:check:fast": "bun lint && bun check && bun run test:api",
     "architecture:check": "uv run --directory backend lint-imports",
     "test:unit": "uv run --directory backend pytest tests/unit -q",
     "test:integration": "uv run --directory backend pytest tests/integration -q",
@@ -52,8 +52,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
     "test:platform": "node scripts/run-platform-e2e.mjs",
-    "security:scan": "trivy fs --config deploy/security/trivy.yaml --scanners vuln,secret,misconfig .",
-    "test:web": "bun test"
+    "security:scan": "trivy fs --config deploy/security/trivy.yaml --scanners vuln,secret,misconfig ."
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.10.1",
@@ -101,10 +100,22 @@
     "tailwindcss": "^4.3.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
-  "engines": {
-    "bun": "1.4.4",
-    "node": ">=26 <27",
-    "pnpm": "12.16.1"
+  "overrides": {
+    "@opentelemetry/core": "^2.8.0",
+    "js-yaml": "^4.3.2",
+    "postcss": "^8.5.15",
+    "postcss-selector-parser": "^6.1.5"
   },
-  "packageManager": "pnpm@12.16.1"
+  "engines": {
+    "node": ">=26 <27"
+  },
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "@sentry/cli",
+    "@swc/core",
+    "protobufjs",
+    "sharp",
+    "unrs-resolver"
+  ]
 }

@@ -2,8 +2,8 @@
 # Postgres: the official Docker Library pin. Hatchet Lite: the engine's release image.
 # Docs: docs/LOCAL.md
 #
-#   pnpm platform          # images built from this checkout + compose.portable.yaml (deploy/scripts/platform-dev.mjs)
-#   pnpm platform dev      # source lane: data plane here, API/UI/worker from source
+#   bun run platform          # images built from this checkout + compose.portable.yaml (deploy/scripts/platform-dev.mjs)
+#   bun run platform dev      # source lane: data plane here, API/UI/worker from source
 
 name: repody
 
@@ -18,8 +18,8 @@ services:
       POSTGRES_USER: audit
       POSTGRES_PASSWORD: audit-local-dev
       POSTGRES_DB: repody
-      # Hatchet's role, as on the VPS; the value is in backend/.env (`pnpm platform` writes it).
-      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}
+      # Hatchet's role, as on the VPS; the value is in backend/.env (`bun run platform` writes it).
+      HATCHET_DB_PASSWORD: ${HATCHET_DB_PASSWORD:?set it in backend/.env (bun run platform setup)}
     ports:
       - "5432:5432"
     configs:
@@ -36,7 +36,7 @@ services:
 
   # The run queue and its cron: Hatchet Lite (engine, API and dashboard in one container) on its
   # own database in the Postgres above. Dashboard http://localhost:8888, admin@example.com /
-  # Admin123!! (local only). `pnpm platform` creates the API token the API and workers use.
+  # Admin123!! (local only). `bun run platform` creates the API token the API and workers use.
   # https://docs.hatchet.run/self-hosting/hatchet-lite
   hatchet-lite:
     image: ghcr.io/hatchet-dev/hatchet/hatchet-lite:v0.114.2@sha256:a205018e4ec2c35af4df9c86cf1e36d4b74b36ebbc849c3b33ca18815cf22d6b
@@ -44,7 +44,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?set it in backend/.env (pnpm platform setup)}@postgres:5432/hatchet?sslmode=disable
+      DATABASE_URL: postgresql://hatchet:${HATCHET_DB_PASSWORD:?set it in backend/.env (bun run platform setup)}@postgres:5432/hatchet?sslmode=disable
       # Postgres is the queue too (no RabbitMQ). Lite's generated config says rabbitmq, so it is
       # set here rather than left to the image's default.
       SERVER_MSGQUEUE_KIND: postgres
@@ -127,7 +127,7 @@ services:
       # (Docker: healthcheck start_interval); `interval` applies after that.
       start_interval: 2s
 
-  # The Hatchet worker: the backend image (built here for `pnpm platform dev`; `pnpm platform`
+  # The Hatchet worker: the backend image (built here for `bun run platform dev`; `bun run platform`
   # builds or pulls REPODY_BACKEND_IMAGE and runs the API from it too, compose.portable.yaml).
   # One run at a time: the host llama-server answers one request at a time.
   # Scale with `--scale worker=N`.
@@ -187,7 +187,7 @@ services:
     restart: unless-stopped
 
   # Observability (optional: docker compose --env-file backend/.env --profile observability up -d)
-  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · pnpm dev:src:observability
+  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · bun run dev:src:observability
   bugsink-db:
     profiles: [observability]
     image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015

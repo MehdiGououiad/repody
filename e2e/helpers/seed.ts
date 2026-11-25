@@ -19,7 +19,7 @@ async def main() -> None:
 asyncio.run(main())
 `;
 
-/** `compose` for the local platform (`pnpm platform`), `kubectl` for a cluster. */
+/** `compose` for the local platform (`bun run platform`), `kubectl` for a cluster. */
 function seedTarget(): "compose" | "kubectl" {
   const explicit = process.env.E2E_SEED_VIA;
   if (explicit === "compose" || explicit === "kubectl") return explicit;

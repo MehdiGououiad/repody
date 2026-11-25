@@ -2,7 +2,7 @@
 
 > **Status: a reference, tested by hand.** Repody's own hosted demo runs on one VPS with Docker
 > Compose ([deploy/vps/README.md](../deploy/vps/README.md)), not on this chart. CI lints the chart
-> and validates its manifests (`pnpm deploy:check`) but does not install it: before a client
+> and validates its manifests (`bun run deploy:check`) but does not install it: before a client
 > installation, install it on a local cluster ([Test it locally](#test-it-locally)) and check
 > the settings against [deploy/ENV.md](../deploy/ENV.md).
 
@@ -32,7 +32,7 @@ without a custom SCC.
 ### Test it locally
 
 With [kind](https://kind.sigs.k8s.io/) and Helm. The services the chart points at can be the
-local Compose stack's (`pnpm platform dev`), reached from the cluster at `host.docker.internal`:
+local Compose stack's (`bun run platform dev`), reached from the cluster at `host.docker.internal`:
 
 ```bash
 kind create cluster --name repody
@@ -137,7 +137,7 @@ Then sign in on the app host and run a test extraction from the workflow builder
 ## Images and releases
 
 ```bash
-REPODY_IMAGE_REGISTRY=ghcr.io/yourorg REPODY_IMAGE_TAG=1.2.3 pnpm images:release
+REPODY_IMAGE_REGISTRY=ghcr.io/yourorg REPODY_IMAGE_TAG=1.2.3 bun run images:release
 ```
 
 Tags must be immutable (`docker-bake.hcl` rejects empty and `latest`). In CI, each master

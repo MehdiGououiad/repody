@@ -1,14 +1,14 @@
 # Version updates for every dependency source, so pinned versions and image digests stay current.
 # A release is proposed only once it is a few days old (cooldown), so a version that is pulled
-# soon after it is published, as compromised packages are, never reaches a pull request; pnpm
-# itself refuses versions under a day old (minimumReleaseAge, its default). Registries publish
+# soon after it is published, as compromised packages are, never reaches a pull request; Bun
+# itself refuses versions under three days old (bunfig.toml, install.minimumReleaseAge). Registries publish
 # no date for an image, so Docker updates get no cooldown (Dependabot says so on each PR).
 # The Python runtime and Hatchet (the queue engine, with its own migrations) are never grouped:
 # each comes as a pull request of its own, to be tested by itself.
 # https://docs.github.com/code-security/dependabot/working-with-dependabot/dependabot-options-reference
 version: 2
 updates:
-  - package-ecosystem: npm # the app (package.json + pnpm-lock.yaml)
+  - package-ecosystem: bun # the app (package.json + bun.lock)
     directory: /
     schedule: { interval: weekly }
     cooldown: { default-days: 3, semver-major-days: 7 }
@@ -21,7 +21,7 @@ updates:
         update-types: [minor, patch]
         exclude-patterns: ["@ui-sdk/*"]
 
-  - package-ecosystem: npm # the marketing site, its own project and lockfile
+  - package-ecosystem: bun # the marketing site, its own project and lockfile
     directory: /site
     schedule: { interval: weekly }
     cooldown: { default-days: 3, semver-major-days: 7 }

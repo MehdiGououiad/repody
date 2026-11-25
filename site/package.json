@@ -10,7 +10,7 @@
     "build": "next build",
     "check": "node scripts/sync-shared.mjs && tsc --noEmit",
     "deadcode": "knip",
-    "deploy": "pnpm build && wrangler deploy"
+    "deploy": "bun run build && wrangler deploy"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "1.6.3",
@@ -33,5 +33,12 @@
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "wrangler": "^4.162.0"
   },
-  "packageManager": "pnpm@12.16.1"
+  "packageManager": "bun@1.4.4",
+  "trustedDependencies": [
+    "@parcel/watcher",
+    "@tailwindcss/oxide",
+    "esbuild",
+    "sharp",
+    "workerd"
+  ]
 }

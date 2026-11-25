@@ -2,7 +2,7 @@
 /**
  * Run full platform E2E: the live API journey (pytest -m live: the demo workflow on a real
  * document, through Hatchet and the model) and the browser tests (Playwright).
- * Prerequisites: local platform (pnpm platform) or Kubernetes lab with hosts entries.
+ * Prerequisites: local platform (bun run platform) or Kubernetes lab with hosts entries.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -30,8 +30,8 @@ async function waitForOk(url, label, attempts = 90) {
   }
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
-      `  Start the stack: pnpm platform setup && pnpm platform\n` +
-      `  Check status: pnpm platform status`,
+      `  Start the stack: bun run platform setup && bun run platform\n` +
+      `  Check status: bun run platform status`,
   );
   process.exit(1);
 }
@@ -63,8 +63,6 @@ run(
   sharedEnv,
 );
 
-run("pnpm", ["exec", "playwright", "test"], root, sharedEnv, {
-  shell: process.platform === "win32",
-});
+run("bun", ["x", "playwright", "test"], root, sharedEnv);
 
 console.log("\n[platform-e2e] All platform tests passed.\n");

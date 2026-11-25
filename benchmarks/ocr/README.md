@@ -34,7 +34,7 @@ Not run: OXR-1.0, Unlimited-OCR-2 and Nemotron 3.5 Parse (official paths are NVI
 LightOnOCR-3-4B and Xiaomi-OCR-0 (official path here is CPU Transformers; dropped as too slow).
 
     uv run make_docs.py && uv run real_docs.py
-    pnpm llamacpp:serve && uv run runners/nuextract3.py      # then pnpm llamacpp:stop
+    bun run llamacpp:serve && uv run runners/nuextract3.py      # then bun run llamacpp:stop
     uv run score.py
 
 ## Results (2026-11-04, llama.cpp b12098)

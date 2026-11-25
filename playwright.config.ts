@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 import { API_URL, AUTH_STORAGE_PATH, WEB_URL } from "./e2e/helpers/env";
 
-// Defaults target the local Compose stack (pnpm platform); set E2E_* for a cluster.
+// Defaults target the local Compose stack (bun run platform); set E2E_* for a cluster.
 const ignoreHTTPSErrors = process.env.E2E_IGNORE_TLS === "1" || WEB_URL.startsWith("https://");
 
 export default defineConfig({
