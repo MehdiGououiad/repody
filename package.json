@@ -21,7 +21,7 @@
     "start": "node scripts/prepare-standalone.mjs && node .next/standalone/server.js",
     "fmt": "oxfmt",
     "format": "oxfmt && uv run --directory backend --extra otel ruff format src tests scripts alembic",
-    "lint": "oxlint --report-unused-disable-directives && oxfmt --check",
+    "lint": "oxlint --report-unused-disable-directives-severity=error && oxfmt --check",
     "lint:fix": "oxlint --fix && oxfmt",
     "lint:py": "uv run --directory backend --extra otel ruff format --check src tests scripts alembic && uv run --directory backend --extra otel ruff check src tests scripts alembic && uv run --directory backend lint-imports",
     "lint:py:fix": "uv run --directory backend --extra otel ruff check --fix src tests scripts alembic && uv run --directory backend --extra otel ruff format src tests scripts alembic",
