@@ -59,7 +59,7 @@ is made an error on purpose.
 
 ## Backend Layers
 
-Dependencies point inward. `pnpm architecture:check` fails the build when they do not.
+Dependencies point inward. `bun run architecture:check` fails the build when they do not.
 
 | Package                              | May import                                                                 | Must not import                                       |
 | ------------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------- |
@@ -102,28 +102,28 @@ Dependencies point inward. `pnpm architecture:check` fails the build when they d
 Before an external review, run the full gate:
 
 ```powershell
-pnpm review:check
+bun run review:check
 ```
 
-That is `pnpm verify` (lint, format, types and dead code for both languages)
+That is `bun run verify` (lint, format, types and dead code for both languages)
 followed by the backend test suite and the deployment checks. CI runs the same
 commands, so a green local `verify` predicts a green pipeline.
 
-Reformat everything in place with `pnpm format`; apply the safe lint fixes with
-`pnpm lint:fix` and `pnpm lint:py:fix`.
+Reformat everything in place with `bun run format`; apply the safe lint fixes with
+`bun run lint:fix` and `bun run lint:py:fix`.
 
 During day-to-day work, run the smallest command that covers the change:
 
-| Change type                           | Command                                                                         |
-| ------------------------------------- | ------------------------------------------------------------------------------- |
-| Anything, before pushing              | `pnpm verify`                                                                   |
-| Backend logic                         | `pnpm test:api`                                                                 |
-| Run lifecycle or queue behavior       | `pnpm test:unit` then `pnpm test:integration`                                   |
-| Architecture dependency rules         | `pnpm architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
-| Frontend code                         | `bun lint`, `bun check` and `bun test`                                          |
-| Unused files, exports or dependencies | `pnpm deadcode`                                                                 |
-| API contract changes                  | `pnpm codegen:api` then `bun check`                                             |
-| Helm, Compose or images               | `pnpm deploy:check`                                                             |
+| Change type                           | Command                                                                            |
+| ------------------------------------- | ---------------------------------------------------------------------------------- |
+| Anything, before pushing              | `bun run verify`                                                                   |
+| Backend logic                         | `bun run test:api`                                                                 |
+| Run lifecycle or queue behavior       | `bun run test:unit` then `bun run test:integration`                                |
+| Architecture dependency rules         | `bun run architecture:check` (import-linter contracts in `backend/pyproject.toml`) |
+| Frontend code                         | `bun lint`, `bun check` and `bun test`                                             |
+| Unused files, exports or dependencies | `bun run deadcode`                                                                 |
+| API contract changes                  | `bun run codegen:api` then `bun check`                                             |
+| Helm, Compose or images               | `bun run deploy:check`                                                             |
 
 ## Documentation Rules
 

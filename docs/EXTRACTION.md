@@ -30,8 +30,8 @@ AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
 ```powershell
 winget install llama.cpp
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
-pnpm llamacpp:serve
-pnpm llamacpp:verify
+bun run llamacpp:serve
+bun run llamacpp:verify
 ```
 
 Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md).
@@ -63,7 +63,7 @@ Put `AUDIT_INFERENCE_API_KEY` in the runtime secret when the endpoint requires a
 
 ```bash
 curl -s "$AUDIT_INFERENCE_BASE_URL/models"
-pnpm llamacpp:verify
+bun run llamacpp:verify
 ```
 
 ### Extraction accuracy (NuExtract contract)

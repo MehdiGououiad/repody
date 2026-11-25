@@ -70,7 +70,7 @@ jobs:
               - 'proxy.ts'
               - 'next.config.ts'
               - 'package.json'
-              - 'pnpm-lock.yaml'
+              - 'bun.lock'
               - 'tsconfig.json'
               - '.oxlintrc.json'
               - '.oxfmtrc.json'
@@ -183,19 +183,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
       - name: Install
-        run: pnpm install --frozen-lockfile
-      # Bun runs the unit tests (bun test) and the package scripts (bun lint, bun check).
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.4"
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Lint and format check (oxlint + oxfmt)
         run: bun lint
       - name: Markdown links and anchors
@@ -213,27 +207,21 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
       - name: Install
-        run: pnpm install --frozen-lockfile
-      # Bun runs the unit tests (bun test) and the package scripts (bun lint, bun check).
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.4"
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Generate OpenAPI types
-        run: pnpm codegen:api:types
+        run: bun run codegen:api:types
       - name: OpenAPI type drift check
         run: git diff --exit-code lib/api/generated/schema.d.ts
       - name: Typecheck (TypeScript 7, the check script)
         run: bun check
       - name: Dead code check
-        run: pnpm deadcode
+        run: bun run deadcode
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -244,19 +232,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
       - name: Install
-        run: pnpm install --frozen-lockfile
-      # Bun runs the unit tests (bun test) and the package scripts (bun lint, bun check).
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: "1.4.4"
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Unit tests (bun test)
         run: bun test
 
@@ -269,15 +251,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # Bun: the version package.json pins (packageManager). Node 26 runs Next.js and the tools.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
-          cache: pnpm
       - name: Install
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       # Turbopack's build cache (.next/cache, Next.js docs: guides/ci-build-caching). Every run
       # restores the newest one master saved; only master saves, so a pull request spends no
       # time uploading it.
@@ -285,11 +265,11 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-
       - name: Build
-        run: pnpm build
+        run: bun run build
         env:
           BACKEND_URL: http://127.0.0.1:8000
       - name: Save the Next.js build cache
@@ -297,7 +277,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles('bun.lock') }}-${{ github.sha }}
 
   # ── Deploy and platform ────────────────────────────────────────────────────────────────────
 
@@ -324,7 +304,7 @@ jobs:
         run: node deploy/scripts/deploy-check.mjs
 
   # The images built from this commit (docker-bake.hcl) start as a Compose platform and every
-  # container turns healthy (host models off). Browser tests run locally (pnpm test:e2e).
+  # container turns healthy (host models off). Browser tests run locally (bun run test:e2e).
   platform:
     runs-on: ubuntu-latest
     needs: changes
@@ -347,11 +327,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # deploy/scripts/platform-dev.mjs uses Node's own modules only: no package install. Its
-      # preflight still checks that the pinned pnpm is on the path.
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
-        with:
-          version: 12.16.1
+      # deploy/scripts/platform-dev.mjs uses Node's own modules only: no package install. Bun
+      # starts it (bun run platform) and its preflight checks Bun's version.
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "26"
@@ -378,7 +356,7 @@ jobs:
       # Waits for every container's healthcheck (compose up --wait); fails on an unhealthy one.
       # No tear-down: the runner and its containers are discarded with the job.
       - name: Start platform (containers only)
-        run: node deploy/scripts/platform-dev.mjs --platform-only --no-obs --no-pull
+        run: bun run platform -- --platform-only --no-obs --no-pull
       - name: Container logs
         if: failure()
         run: docker compose -p repody logs --no-color --tail 200

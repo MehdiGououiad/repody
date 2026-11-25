@@ -1,6 +1,6 @@
 name: Security
 
-# Trivy only: the repository scan covers both lockfiles (pnpm-lock.yaml, backend/uv.lock),
+# Trivy only: the repository scan covers the lockfiles (bun.lock, site/bun.lock, backend/uv.lock),
 # secrets, and IaC (Dockerfiles, Compose, Helm); the image scan covers the three images' OS and
 # language packages.
 # CRITICAL/HIGH fixable findings fail the job. The SARIF results are uploaded to GitHub code
@@ -54,7 +54,8 @@ jobs:
               - 'backend/pyproject.toml'
               - 'backend/uv.lock'
               - 'package.json'
-              - 'pnpm-lock.yaml'
+              - 'bun.lock'
+              - 'bunfig.toml'
               - 'deploy/keycloak/**'
               - 'deploy/security/**'
               - '.github/workflows/security.yml'

@@ -65,7 +65,7 @@ the UI polls it).
 - A client over its per-minute limit no longer gets 429: its runs wait their turn.
 - One fewer data store and one fewer process. Hatchet keeps 7 days of its own run history on the VPS
   (`SERVER_LIMITS_DEFAULT_TENANT_RETENTION_PERIOD`); our runs table is the record.
-- The API and workers need a Hatchet API token: `pnpm platform` creates it locally, and the
+- The API and workers need a Hatchet API token: `bun run platform` creates it locally, and the
   `hatchet-token` service on the VPS. On Kubernetes it goes in the runtime Secret.
 - Tests run each run inline, without Hatchet. A real engine is exercised by the local stack.
 - Started clean: the 1.0 schema migration was edited in place (`runs.task_run_id`), so an

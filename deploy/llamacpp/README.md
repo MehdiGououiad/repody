@@ -35,8 +35,8 @@ On the Repody OCR benchmark (`benchmarks/ocr`), Q8_0 is the most accurate.
 
 ```powershell
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
-pnpm llamacpp:serve
-pnpm llamacpp:verify
+bun run llamacpp:serve
+bun run llamacpp:verify
 ```
 
 ### Server flags
@@ -77,7 +77,7 @@ Each slot gets its own context window. Match `LLAMACPP_PARALLEL` to the worker c
 (`AUDIT_WORKER_CONCURRENCY`, Helm `worker.concurrency`): runs beyond it wait in the queue.
 
 ```powershell
-pnpm llamacpp:restart
+bun run llamacpp:restart
 docker compose --env-file backend/.env --profile workers restart worker
 ```
 

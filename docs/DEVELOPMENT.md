@@ -32,16 +32,16 @@ backend/tests/unit|integration|live/
 e2e/tests/                 # Playwright (defaults to the local stack on localhost)
 ```
 
-| Command                               | What                                             |
-| ------------------------------------- | ------------------------------------------------ |
-| `pnpm test:unit` / `test:integration` | Fast layers                                      |
-| `pnpm test:api`                       | Unit + integration (CI default)                  |
-| `pnpm test:live`                      | Needs running stack                              |
-| `pnpm test:e2e:smoke`                 | Playwright smoke: sign-in and navigation         |
-| `pnpm test:e2e`                       | All Playwright specs against `pnpm platform`     |
-| `pnpm review:check`                   | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
+| Command                                  | What                                             |
+| ---------------------------------------- | ------------------------------------------------ |
+| `bun run test:unit` / `test:integration` | Fast layers                                      |
+| `bun run test:api`                       | Unit + integration (CI default)                  |
+| `bun run test:live`                      | Needs running stack                              |
+| `bun run test:e2e:smoke`                 | Playwright smoke: sign-in and navigation         |
+| `bun run test:e2e`                       | All Playwright specs against `bun run platform`  |
+| `bun run review:check`                   | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
 
-Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH_URL`, then `pnpm test:platform`. Use **localhost** for the web URL (OIDC cookies). Tests sign in as `E2E_KEYCLOAK_USER` / `E2E_KEYCLOAK_PASSWORD` in the browser and call the API with the `repody-e2e` service account (client credentials: `E2E_KEYCLOAK_CLIENT_ID` / `E2E_KEYCLOAK_CLIENT_SECRET`); a cluster realm needs that client with the operator role.
+Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH_URL`, then `bun run test:platform`. Use **localhost** for the web URL (OIDC cookies). Tests sign in as `E2E_KEYCLOAK_USER` / `E2E_KEYCLOAK_PASSWORD` in the browser and call the API with the `repody-e2e` service account (client credentials: `E2E_KEYCLOAK_CLIENT_ID` / `E2E_KEYCLOAK_CLIENT_SECRET`); a cluster realm needs that client with the operator role.
 
 ## Scripts map
 
@@ -53,4 +53,4 @@ Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH
 
 ## Pinned versions
 
-Local image pins live in [`compose.yaml`](../compose.yaml); Kubernetes pins in the Helm `values.yaml` files. Runtimes: Python 3.14 · Node 26 (LTS) · pnpm 12.16.1. Production never uses `latest`.
+Local image pins live in [`compose.yaml`](../compose.yaml); Kubernetes pins in the Helm `values.yaml` files. Runtimes: Python 3.14 · Node 26 (LTS) · Bun 1.4.4. Production never uses `latest`.

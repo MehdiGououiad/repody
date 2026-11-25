@@ -129,6 +129,6 @@ races a save.
    it only through the owner above.
 2. Write an Alembic migration that moves existing rows and updates the CHECK constraint (and the
    matching `CheckConstraint` in `infra/models.py`).
-3. `pnpm codegen:api`, then let `bun check` show every `Record<Status, …>` and union that
+3. `bun run codegen:api`, then let `bun check` show every `Record<Status, …>` and union that
    needs the new case.
 4. Update this page and the tests in `backend/tests/integration/test_lifecycle.py`.

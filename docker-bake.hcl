@@ -1,7 +1,7 @@
 # Repody images - Docker Buildx Bake (https://docs.docker.com/build/bake/).
 #
-#   pnpm images:build                      # docker buildx bake -f docker-bake.hcl --load
-#   pnpm images:release                    # docker buildx bake -f docker-bake.hcl --push
+#   bun run images:build                      # docker buildx bake -f docker-bake.hcl --load
+#   bun run images:release                    # docker buildx bake -f docker-bake.hcl --push
 #   docker buildx bake -f docker-bake.hcl --print           # resolved config
 #   docker buildx bake -f docker-bake.hcl backend --load    # one target
 #
@@ -10,7 +10,7 @@
 #
 # Every variable can be set from the environment of the same name:
 #   REPODY_IMAGE_REGISTRY=ghcr.io/org REPODY_IMAGE_TAG=v1.2.3 \
-#   REPODY_IMAGE_PLATFORMS=linux/amd64,linux/arm64 pnpm images:release
+#   REPODY_IMAGE_PLATFORMS=linux/amd64,linux/arm64 bun run images:release
 
 variable "REPODY_IMAGE_REGISTRY" {
   default = ""
