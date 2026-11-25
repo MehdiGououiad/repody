@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import type { Catalog } from "@/lib/types";
 import { importNuextractTemplate } from "@/lib/workflow/import-nuextract-template";
 
@@ -31,7 +31,7 @@ describe("NuExtract template import", () => {
         region: "region:FR",
         typo: "numbr",
       }),
-      CATALOG
+      CATALOG,
     );
     if (!result.ok) throw new Error(result.error);
     const types = Object.fromEntries(result.fields.map((f) => [f.name, f.templateType]));

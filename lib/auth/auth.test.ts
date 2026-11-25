@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 import { initials } from "@/lib/auth/account";
 import { acceptsWorkflowKey, safeCallbackUrl } from "@/lib/auth/public-paths";
 

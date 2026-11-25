@@ -26,8 +26,8 @@ Production inference is external. Point Repody at llama-server, vLLM, or a manag
 
 ## Two laptop paths
 
-| Who | What | Start |
-|-----|------|--------|
+| Who                              | What                        | Start                                    |
+| -------------------------------- | --------------------------- | ---------------------------------------- |
 | **Vendors / contributors (git)** | Full repo + `pnpm platform` | Below · [docs/LOCAL.md](./docs/LOCAL.md) |
 
 ### Git path (Windows · Linux)
@@ -60,13 +60,13 @@ Daily: `pnpm platform` · stop: `pnpm platform stop` · commands: [docs/COMMANDS
 
 **Hub:** [docs/README.md](./docs/README.md)
 
-| Need | Read |
-|------|------|
-| Laptop | [docs/LOCAL.md](./docs/LOCAL.md) |
-| Commands | [docs/COMMANDS.md](./docs/COMMANDS.md) |
-| Cluster | [docs/CLUSTER.md](./docs/CLUSTER.md) |
-| Architecture | [CONTEXT.md](./CONTEXT.md) |
-| Extraction | [docs/EXTRACTION.md](./docs/EXTRACTION.md) |
+| Need         | Read                                           |
+| ------------ | ---------------------------------------------- |
+| Laptop       | [docs/LOCAL.md](./docs/LOCAL.md)               |
+| Commands     | [docs/COMMANDS.md](./docs/COMMANDS.md)         |
+| Cluster      | [docs/CLUSTER.md](./docs/CLUSTER.md)           |
+| Architecture | [CONTEXT.md](./CONTEXT.md)                     |
+| Extraction   | [docs/EXTRACTION.md](./docs/EXTRACTION.md)     |
 | Code quality | [docs/CODE-QUALITY.md](./docs/CODE-QUALITY.md) |
 
 ## Stack

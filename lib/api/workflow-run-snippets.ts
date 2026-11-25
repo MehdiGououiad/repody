@@ -74,7 +74,7 @@ export function buildWorkflowRunSnippets({
     `    data={"documents": ${JSON.stringify(documentTypes)}},`,
     "    files=[",
     ...slots.map(
-      (s) => `        ("files", ("${s.file}", open("${s.file}", "rb"), "application/pdf")),`
+      (s) => `        ("files", ("${s.file}", open("${s.file}", "rb"), "application/pdf")),`,
     ),
     "    ],",
     ")",

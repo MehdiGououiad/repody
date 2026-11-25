@@ -193,7 +193,7 @@ function WorkflowRow({
   const assign = $api.useMutation("put", "/v1/admin/workflows/{workflow_id}/account", {
     onSuccess: (wf) => {
       toast.success(
-        wf.account ? t("assigned", { name: wf.name, account: wf.account }) : t("unassigned")
+        wf.account ? t("assigned", { name: wf.name, account: wf.account }) : t("unassigned"),
       );
       void refresh();
     },

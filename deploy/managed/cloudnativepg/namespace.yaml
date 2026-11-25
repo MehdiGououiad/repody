@@ -5,4 +5,3 @@ metadata:
   labels:
     app.kubernetes.io/part-of: repody
     repody.io/plane: data
-

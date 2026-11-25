@@ -13,7 +13,7 @@ export function llmsIndex(): string {
     locale: Locale,
     page: Parameters<typeof absolute>[1],
     title: string,
-    description: string
+    description: string,
   ) => `- [${title}](${absolute(locale, page)}): ${description}`;
   return [
     `# ${SITE.name}`,
@@ -34,7 +34,7 @@ export function llmsIndex(): string {
       "en",
       "insurance",
       en.solutions.insurance.meta.title,
-      en.solutions.insurance.meta.description
+      en.solutions.insurance.meta.description,
     ),
     link("en", "telecom", en.solutions.telecom.meta.title, en.solutions.telecom.meta.description),
     link("en", "contact", en.contact.meta.title, en.contact.meta.description),
@@ -74,7 +74,7 @@ export function llmsFull(): string {
     t.platform.listNote,
     ...fieldTypeGroups("en").map(
       (g) =>
-        `### ${g.title}\n${g.types.map((ty) => `- \`${ty.value}\` ${ty.label}: ${ty.description}`).join("\n")}`
+        `### ${g.title}\n${g.types.map((ty) => `- \`${ty.value}\` ${ty.label}: ${ty.description}`).join("\n")}`,
     ),
     `## ${t.platform.operatorsTitle}`,
     [...t.platform.operators, ...t.platform.compute]

@@ -12,4 +12,3 @@ spec:
   immediate: true
   cluster:
     name: repody-postgres
-

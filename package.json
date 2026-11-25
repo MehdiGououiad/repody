@@ -1,17 +1,15 @@
 {
   "name": "repody",
   "version": "1.0.0",
-  "license": "Apache-2.0",
   "private": false,
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/MehdiGououiad/repody.git"
   },
-  "engines": {
-    "node": ">=26 <27",
-    "pnpm": "12.16.1"
-  },
-  "packageManager": "pnpm@12.16.1",
+  "workspaces": [
+    "."
+  ],
   "scripts": {
     "doctor": "node scripts/check-toolchain.mjs",
     "platform": "node deploy/scripts/platform-dev.mjs",
@@ -21,17 +19,18 @@
     "codegen:api:export": "uv run --directory backend python scripts/export_openapi.py",
     "codegen:api:types": "openapi-typescript lib/api/openapi.json -o lib/api/generated/schema.d.ts",
     "start": "node scripts/prepare-standalone.mjs && node .next/standalone/server.js",
-    "format": "biome check --write . && uv run --directory backend --extra otel ruff format src tests scripts alembic",
-    "lint": "biome ci . && eslint app components lib proxy.ts",
-    "lint:fix": "biome check --write . && eslint --fix app components lib proxy.ts",
+    "fmt": "oxfmt",
+    "format": "oxfmt && uv run --directory backend --extra otel ruff format src tests scripts alembic",
+    "lint": "oxlint --report-unused-disable-directives-severity=error && oxfmt --check",
+    "lint:fix": "oxlint --fix && oxfmt",
     "lint:py": "uv run --directory backend --extra otel ruff format --check src tests scripts alembic && uv run --directory backend --extra otel ruff check src tests scripts alembic && uv run --directory backend lint-imports",
     "lint:py:fix": "uv run --directory backend --extra otel ruff check --fix src tests scripts alembic && uv run --directory backend --extra otel ruff format src tests scripts alembic",
-    "typecheck": "tsc --noEmit",
+    "check": "tsc --noEmit",
     "typecheck:py": "uv run --directory backend --extra otel pyright",
     "deadcode": "knip",
-    "verify": "pnpm lint && pnpm typecheck && pnpm test:web && pnpm deadcode && pnpm lint:py && pnpm typecheck:py",
+    "verify": "pnpm lint && pnpm check && pnpm test:web && pnpm deadcode && pnpm lint:py && pnpm typecheck:py",
     "review:check": "pnpm verify && pnpm test:api && pnpm deploy:check",
-    "review:check:fast": "pnpm lint && pnpm typecheck && pnpm test:api",
+    "review:check:fast": "pnpm lint && pnpm check && pnpm test:api",
     "architecture:check": "uv run --directory backend lint-imports",
     "test:unit": "uv run --directory backend pytest tests/unit -q",
     "test:integration": "uv run --directory backend pytest tests/integration -q",
@@ -54,7 +53,7 @@
     "test:e2e:headed": "playwright test --headed",
     "test:platform": "node scripts/run-platform-e2e.mjs",
     "security:scan": "trivy fs --config deploy/security/trivy.yaml --scanners vuln,secret,misconfig .",
-    "test:web": "vitest run"
+    "test:web": "bun test"
   },
   "dependencies": {
     "@formatjs/intl-localematcher": "^0.10.1",
@@ -85,7 +84,6 @@
     "use-debounce": "^10.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.8",
     "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4.3.5",
     "@tailwindcss/typography": "^0.5.20",
@@ -95,12 +93,18 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@typescript/native": "npm:typescript@^7.0.2",
-    "eslint": "^10.15.0",
-    "eslint-config-next": "16.4.6",
+    "bun-types": "1.4.4",
     "knip": "6.45.1",
     "openapi-typescript": "^7.13.0",
+    "oxfmt": "0.78.0",
+    "oxlint": "1.93.0",
     "tailwindcss": "^4.3.5",
-    "typescript": "npm:@typescript/typescript6@^6.0.2",
-    "vitest": "^5.1.0"
-  }
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
+  },
+  "engines": {
+    "bun": "1.4.4",
+    "node": ">=26 <27",
+    "pnpm": "12.16.1"
+  },
+  "packageManager": "pnpm@12.16.1"
 }

@@ -90,7 +90,7 @@ export function useRun(runId: string | null): RunView {
         if (query.state.error || status === "done" || status === "failed") return false;
         return POLL_MS;
       },
-    }
+    },
   );
   if (runId === null) return { phase: "idle" };
   if (error)

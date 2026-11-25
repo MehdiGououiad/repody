@@ -5,7 +5,7 @@ import { absolute, LOCALES, type Locale, type PageKey, SITE } from "@/lib/site";
 export function pageMetadata(
   locale: Locale,
   page: PageKey,
-  meta: { title: string; description: string }
+  meta: { title: string; description: string },
 ): Metadata {
   const url = absolute(locale, page);
   return {

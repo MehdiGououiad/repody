@@ -36,7 +36,7 @@ function seedInApiContainer(): void {
   const result = spawnSync(cmd, args, { input: SEED_CODE, encoding: "utf8", shell: false });
   if (result.status !== 0) {
     throw new Error(
-      `[e2e] Database seed (${via}) failed\n${result.stdout}\n${result.stderr}`.trim()
+      `[e2e] Database seed (${via}) failed\n${result.stdout}\n${result.stderr}`.trim(),
     );
   }
 }

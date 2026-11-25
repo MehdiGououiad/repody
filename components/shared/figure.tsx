@@ -22,7 +22,7 @@ export function Figure({
         <span
           className={cn(
             "flex items-center gap-2 text-[26px] font-semibold leading-tight tracking-[-0.025em] text-ink tabular-nums",
-            tone
+            tone,
           )}
         >
           {value}

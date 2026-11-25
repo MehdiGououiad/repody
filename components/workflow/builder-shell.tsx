@@ -79,7 +79,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
           }
           return field;
         }),
-      }))
+      })),
     );
   };
 
@@ -91,7 +91,7 @@ function BuilderShellCore({ workflow, mode }: { workflow: Workflow; mode: Builde
         onStart={(names) => {
           setName(names.workflow);
           setDocuments(
-            documents.map((doc, i) => (i === 0 ? { ...doc, documentType: names.document } : doc))
+            documents.map((doc, i) => (i === 0 ? { ...doc, documentType: names.document } : doc)),
           );
           setNaming(false);
         }}

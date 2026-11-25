@@ -109,7 +109,7 @@ test.describe("Builder", () => {
     await added.getByRole("button", { name: "List" }).click();
     await expect(added.getByRole("button", { name: "List" })).toHaveAttribute(
       "aria-pressed",
-      "true"
+      "true",
     );
 
     // A second field with the same name is refused.
@@ -123,8 +123,8 @@ test.describe("Builder", () => {
     await expect
       .poll(async () =>
         (await fetchWorkflow(page, workflow.id)).documents[0].schema.find(
-          (f: { name: string }) => f.name === "due_date"
-        )
+          (f: { name: string }) => f.name === "due_date",
+        ),
       )
       .toMatchObject({ description: "Payment due date", templateType: "date-list" });
     watch.expectNoErrors();
@@ -208,8 +208,8 @@ test.describe("Builder", () => {
     await expect
       .poll(async () =>
         (await fetchWorkflow(page, workflow.id)).rules.find(
-          (r: { name: string }) => r.name === "QA rule"
-        )
+          (r: { name: string }) => r.name === "QA rule",
+        ),
       )
       .toMatchObject({ severity: "flag" });
 

@@ -99,7 +99,7 @@ function StatStrip({ data }: { data: Dashboard }) {
   const integer = useCallback((v: number) => format.number(Math.round(v)), [format]);
   const percent = useCallback(
     (v: number) => format.number(v, { style: "percent", maximumFractionDigits: 1 }),
-    [format]
+    [format],
   );
   const duration = useCallback((v: number) => formatDurationMs(Math.round(v)), []);
 
@@ -107,7 +107,7 @@ function StatStrip({ data }: { data: Dashboard }) {
     <div
       className={cn(
         card,
-        "grid grid-cols-2 divide-line md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line max-md:[&>*:nth-child(odd)]:border-e md:[&>*:not(:nth-child(3n))]:border-e xl:[&>*]:border-e xl:[&>*:last-child]:border-e-0 [&>*]:border-b xl:[&>*]:border-b-0"
+        "grid grid-cols-2 divide-line md:grid-cols-3 xl:grid-cols-5 [&>*]:border-line max-md:[&>*:nth-child(odd)]:border-e md:[&>*:not(:nth-child(3n))]:border-e xl:[&>*]:border-e xl:[&>*:last-child]:border-e-0 [&>*]:border-b xl:[&>*]:border-b-0",
       )}
     >
       {runs ? (
@@ -220,7 +220,7 @@ function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
                   data-row
                   className={cn(
                     "grid grid-cols-[14px_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2 outline-none transition-colors duration-100 hover:bg-hover focus-visible:bg-selected",
-                    audit.status === "failed" ? "bg-fail-wash/30" : "bg-warn-wash/30"
+                    audit.status === "failed" ? "bg-fail-wash/30" : "bg-warn-wash/30",
                   )}
                 >
                   <StatusGlyph status={audit.status} label={tAudits(`status.${audit.status}`)} />
@@ -231,7 +231,7 @@ function ReviewQueue({ audits }: { audits: Dashboard["failedAudits"] }) {
                     <span
                       className={cn(
                         "block truncate text-xs",
-                        audit.status === "failed" ? "text-fail-ink" : "text-warn-ink"
+                        audit.status === "failed" ? "text-fail-ink" : "text-warn-ink",
                       )}
                     >
                       {reason(audit) ?? tAudits("row.noFields")}
@@ -280,7 +280,7 @@ function WorkflowTable({ data }: { data: Dashboard }) {
       <div
         className={cn(
           "hidden h-7 border-b border-line bg-raised px-4 text-xs text-ink-4 md:grid",
-          grid
+          grid,
         )}
       >
         <span />

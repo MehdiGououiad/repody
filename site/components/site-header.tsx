@@ -3,7 +3,7 @@
 import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import type { Dict } from "@/content";
 import { href, type Locale, type PageKey } from "@/lib/site";
@@ -30,7 +30,13 @@ export function SiteHeader({ locale, t }: { locale: Locale; t: Dict["common"] })
   const label = (key: PageKey) => t.nav[key as keyof typeof t.nav];
   const current = (key: PageKey) => pathname === href(locale, key);
 
-  useEffect(() => setOpen(false), [pathname]);
+  // A new page closes the menu: state adjusted while rendering, not in an effect
+  // (react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+  const [shownPath, setShownPath] = useState(pathname);
+  if (shownPath !== pathname) {
+    setShownPath(pathname);
+    setOpen(false);
+  }
 
   const link =
     "rounded-md px-2.5 py-1.5 text-sm text-ink-2 transition-colors duration-100 hover:bg-hover hover:text-ink aria-[current=page]:text-ink";

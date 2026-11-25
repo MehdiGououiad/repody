@@ -2,14 +2,13 @@
   "name": "repody-site",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.16.1",
   "scripts": {
     "sync": "node scripts/sync-shared.mjs",
     "predev": "node scripts/sync-shared.mjs",
     "dev": "next dev -p 3200",
     "prebuild": "node scripts/sync-shared.mjs",
     "build": "next build",
-    "typecheck": "node scripts/sync-shared.mjs && tsc --noEmit",
+    "check": "node scripts/sync-shared.mjs && tsc --noEmit",
     "deadcode": "knip",
     "deploy": "pnpm build && wrangler deploy"
   },
@@ -33,5 +32,6 @@
     "tailwindcss": "^4.3.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "wrangler": "^4.162.0"
-  }
+  },
+  "packageManager": "pnpm@12.16.1"
 }

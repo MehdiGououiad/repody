@@ -111,7 +111,7 @@ export function OutputPre({ children, muted = false }: { children: ReactNode; mu
     <pre
       className={cn(
         "max-h-[480px] overflow-auto overscroll-contain whitespace-pre-wrap break-words bg-field p-3 font-mono text-xs leading-relaxed",
-        muted ? "text-ink-3" : "text-ink-2"
+        muted ? "text-ink-3" : "text-ink-2",
       )}
     >
       {children}

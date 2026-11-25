@@ -90,7 +90,8 @@
   --font-weight-medium: 510;
   --font-weight-semibold: 590;
 
-  --shadow-pop: 0 0 0 1px var(--line), 0 4px 12px -2px var(--shadow-color), 0 12px 32px -8px var(--shadow-color);
+  --shadow-pop:
+    0 0 0 1px var(--line), 0 4px 12px -2px var(--shadow-color), 0 12px 32px -8px var(--shadow-color);
   --shadow-panel: 0 0 0 1px var(--line), 0 1px 3px var(--shadow-color);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);

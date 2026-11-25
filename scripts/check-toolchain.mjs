@@ -12,7 +12,7 @@ const failures = [];
 
 if (expectedNodeMajor && process.versions.node.split(".")[0] !== expectedNodeMajor) {
   failures.push(
-    `Node ${process.versions.node} does not match required major ${expectedNodeMajor}.x`
+    `Node ${process.versions.node} does not match required major ${expectedNodeMajor}.x`,
   );
 }
 
@@ -33,11 +33,11 @@ if (!expectedPnpm) {
 
   if (!actualPnpm) {
     failures.push(
-      `pnpm ${expectedPnpm} is required. Run: npm install --global pnpm@${expectedPnpm}`
+      `pnpm ${expectedPnpm} is required. Run: npm install --global pnpm@${expectedPnpm}`,
     );
   } else if (actualPnpm !== expectedPnpm) {
     failures.push(
-      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: npm install --global pnpm@${expectedPnpm}`
+      `pnpm ${actualPnpm || "(unknown)"} does not match pinned ${expectedPnpm}. Run: npm install --global pnpm@${expectedPnpm}`,
     );
   }
 }

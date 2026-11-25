@@ -38,7 +38,7 @@ const json = { "content-type": "application/json" };
 /** A throwaway copy of the seeded invoice workflow (same documents and rules); remove it with `dropWorkflow`. */
 export async function createWorkflow(
   request: APIRequestContext,
-  name = `QA ${Date.now()}`
+  name = `QA ${Date.now()}`,
 ): Promise<TempWorkflow> {
   const source = await request.get(`${API}/v1/workflows/wf-invoice-audit`, {
     headers: apiAuthHeaders(),

@@ -1,0 +1,3 @@
+# `bun test` runs the unit tests (*.test.ts). The e2e/ specs are Playwright's (pnpm test:e2e).
+[test]
+pathIgnorePatterns = ["e2e/**"]

@@ -57,7 +57,7 @@ export function TemplateTypeSelect({
         aria-label={t("type")}
         className={cn(
           "w-full bg-transparent shadow-none hover:bg-hover hover:shadow-none data-open:bg-hover",
-          className
+          className,
         )}
       >
         <span className="truncate">
@@ -117,7 +117,7 @@ export function ListToggle({
       title={t("listModeHint")}
       className={cn(
         "inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-ink-4 transition-colors duration-100 hover:bg-hover hover:text-ink-2 data-pressed:bg-accent-wash data-pressed:text-accent-ink [&_svg]:size-3.5",
-        className
+        className,
       )}
     >
       <List aria-hidden />

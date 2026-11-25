@@ -66,11 +66,21 @@ function weightArgs() {
 function buildArgs() {
   const args = [
     ...weightArgs(),
-    ...["--host", "0.0.0.0", "--port", String(port), "-a", alias, "--jinja"],
-    ...["-c", get("CONTEXT", spec.context), "-np", get("PARALLEL", "1")],
+    "--host",
+    "0.0.0.0",
+    "--port",
+    String(port),
+    "-a",
+    alias,
+    "--jinja",
+    "-c",
+    get("CONTEXT", spec.context),
+    "-np",
+    get("PARALLEL", "1"),
     // llama.cpp's own advice for this vision model ("if you encounter problems with accuracy, try
     // adding --image-min-tokens 1024"): small images get enough tokens to read their text.
-    ...["--image-min-tokens", "1024"],
+    "--image-min-tokens",
+    "1024",
   ];
   if (get("GPU_LAYERS")) args.push("-ngl", get("GPU_LAYERS"));
   if (get("DEVICE")) args.push("--device", get("DEVICE"));
@@ -185,7 +195,7 @@ function stop() {
 function download() {
   if (!spec.hfRepo) {
     console.log(
-      `${spec.title} is downloaded by llama-server itself on first start (-hf ${spec.hf}).`
+      `${spec.title} is downloaded by llama-server itself on first start (-hf ${spec.hf}).`,
     );
     return;
   }
@@ -198,16 +208,16 @@ function download() {
     {
       stdio: "inherit",
       shell: false,
-    }
+    },
   );
   if (result.status !== 0) {
     console.error(
-      "hf download failed. Install the Hugging Face CLI (`pip install huggingface_hub`)."
+      "hf download failed. Install the Hugging Face CLI (`pip install huggingface_hub`).",
     );
     process.exit(result.status || 1);
   }
   console.log(
-    `Done. Point ${spec.prefix}_MODEL / ${spec.prefix}_MMPROJ at the .gguf files under ${dest}`
+    `Done. Point ${spec.prefix}_MODEL / ${spec.prefix}_MMPROJ at the .gguf files under ${dest}`,
   );
 }
 
@@ -225,7 +235,7 @@ else if (cmd === "restart") {
 else if (cmd === "download") download();
 else {
   console.error(
-    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract]"
+    "Usage: node deploy/scripts/llama-serve.mjs serve|stop|restart|verify|download [nuextract]",
   );
   process.exit(2);
 }

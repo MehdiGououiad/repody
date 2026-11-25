@@ -21,7 +21,7 @@ export function DocChip({
           "inline-flex h-5 max-w-full items-center gap-1.5 rounded-sm px-1.5 text-xs font-medium",
           color.wash,
           color.ink,
-          className
+          className,
         )}
       >
         <span className={cn("size-1.5 shrink-0 rounded-full", color.dot)} aria-hidden />

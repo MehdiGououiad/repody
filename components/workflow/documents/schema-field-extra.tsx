@@ -45,7 +45,7 @@ function EnumValuesEditor({
       <ul className="flex flex-col">
         {rows.map((value, index) => (
           // Choices are edited in place and never reordered: the position is their identity.
-          // biome-ignore lint/suspicious/noArrayIndexKey: index is the row identity
+          // oxlint-disable-next-line react/no-array-index-key -- index is the row identity
           <li key={`enum-${index}`} className="group flex max-w-sm items-center gap-1">
             <BareInput
               value={value}

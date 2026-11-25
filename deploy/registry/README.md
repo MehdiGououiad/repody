@@ -4,10 +4,10 @@ Git stores desired Kubernetes state; the **registry** stores built images.
 
 ## Vendor To Client Model
 
-| Role | Responsibility |
-|------|----------------|
-| **You (vendor)** | `pnpm images:release` to **your** GHCR or client registry |
-| **Client** | Pull from your registry; deploy with **their** Argo CD or Helm |
+| Role             | Responsibility                                                 |
+| ---------------- | -------------------------------------------------------------- |
+| **You (vendor)** | `pnpm images:release` to **your** GHCR or client registry      |
+| **Client**       | Pull from your registry; deploy with **their** Argo CD or Helm |
 
 Repody does not ship Argo CD for client production.
 

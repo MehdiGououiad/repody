@@ -10,16 +10,16 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 
 ## Decisions
 
-| Area | Decision | Rationale |
-|------|----------|-----------|
-| **Orchestrator** | Kubernetes, Helm-first | Portable across clouds; HPA, ingress, secrets native |
-| **Local dev** | Docker Compose (`pnpm platform`) | Fast daily iteration |
-| **Production cluster** | Helm (+ optional Argo CD) on OpenShift / K8s | Same charts clients receive - [CLUSTER.md](../CLUSTER.md) |
-| **Data plane** | External or operator-managed Postgres, Hatchet, and object storage by default | Enterprise installs need independent lifecycle, backups, upgrades, and ownership |
-| **Queue** | Hatchet (its Helm chart or Hatchet Cloud), [ADR 011](./011-hatchet.md) | Timeouts, failure handling, per-client limits and cron in one engine |
-| **Service split** | Two release images: `repody-backend`, `repody-web`; backend runs API and worker roles via Kubernetes commands | Control / worker / edge scale independently without rebuilding duplicate Python images |
-| **Inference** | External vLLM (out of chart) | GPU workloads on separate node pool or managed inference |
-| **Observability** | Client-managed collectors; Bugsink via env DSN | Production observability is client-owned |
+| Area                   | Decision                                                                                                      | Rationale                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Orchestrator**       | Kubernetes, Helm-first                                                                                        | Portable across clouds; HPA, ingress, secrets native                                   |
+| **Local dev**          | Docker Compose (`pnpm platform`)                                                                              | Fast daily iteration                                                                   |
+| **Production cluster** | Helm (+ optional Argo CD) on OpenShift / K8s                                                                  | Same charts clients receive - [CLUSTER.md](../CLUSTER.md)                              |
+| **Data plane**         | External or operator-managed Postgres, Hatchet, and object storage by default                                 | Enterprise installs need independent lifecycle, backups, upgrades, and ownership       |
+| **Queue**              | Hatchet (its Helm chart or Hatchet Cloud), [ADR 011](./011-hatchet.md)                                        | Timeouts, failure handling, per-client limits and cron in one engine                   |
+| **Service split**      | Two release images: `repody-backend`, `repody-web`; backend runs API and worker roles via Kubernetes commands | Control / worker / edge scale independently without rebuilding duplicate Python images |
+| **Inference**          | External vLLM (out of chart)                                                                                  | GPU workloads on separate node pool or managed inference                               |
+| **Observability**      | Client-managed collectors; Bugsink via env DSN                                                                | Production observability is client-owned                                               |
 
 ## Escape hatches
 

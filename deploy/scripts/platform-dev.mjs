@@ -161,9 +161,9 @@ function startHatchet(files, env) {
       "--pull",
       "missing",
       "postgres",
-      "hatchet-lite"
+      "hatchet-lite",
     ),
-    { inherit: true, env }
+    { inherit: true, env },
   );
   const created = run(
     "docker",
@@ -180,9 +180,9 @@ function startHatchet(files, env) {
       "--tenant-id",
       HATCHET_TENANT,
       "--name",
-      "repody-local"
+      "repody-local",
     ),
-    { env }
+    { env },
   );
   const token = created.stdout.trim().split(/\s+/).pop() ?? "";
   if (!token.startsWith("ey")) {
@@ -241,7 +241,7 @@ function checkToolchain() {
 
 function imagesPresent() {
   const missing = [BACKEND_IMAGE, WEB_IMAGE].filter(
-    (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0
+    (ref) => spawnSync("docker", ["image", "inspect", ref], { stdio: "ignore" }).status !== 0,
   );
   if (missing.length === 0) {
     return {
@@ -345,7 +345,7 @@ function preflight({ quietOk = false } = {}) {
     console.log(`  [${mark}] ${row.name.padEnd(18)} ${row.state}`);
   }
   console.log(
-    "\nScope: tools, images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n"
+    "\nScope: tools, images, NuExtract GGUF files, env. Not checked: VRAM/load success, Keycloak login, extraction E2E.\n",
   );
 
   const failed = rows.filter((row) => !row.ok && row.required);
@@ -365,7 +365,7 @@ function setup() {
   const dockerOk = spawnSync("docker", ["info"], { stdio: "ignore" }).status === 0;
   console.log(`Docker:       ${dockerOk ? "ok" : "NOT RUNNING — start Docker Desktop"}`);
   console.log(
-    `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`
+    `llama-server: ${findExecutable("llama-server") || `missing — ${llamaInstallHint()}`}`,
   );
 
   if (!dockerOk) {
@@ -392,7 +392,7 @@ async function up() {
   preflight({ quietOk: true });
   patchBackendEnv();
   console.log(
-    `Plan: images=${FROM_SOURCE ? "from this checkout" : "published"}  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`
+    `Plan: images=${FROM_SOURCE ? "from this checkout" : "published"}  NuExtract=${opts.withNuextract ? "on (host)" : "off"}  Observability=${opts.withObs ? "on" : "off"}`,
   );
 
   if (FROM_SOURCE && !opts.skipBuild) buildImages();
@@ -439,9 +439,9 @@ async function up() {
       "keycloak",
       "api",
       "web",
-      "worker"
+      "worker",
     ),
-    { inherit: true, env: composeEnv }
+    { inherit: true, env: composeEnv },
   );
 
   await status();
@@ -509,9 +509,9 @@ async function dev() {
       "hatchet-lite",
       "seaweedfs",
       "keycloak",
-      "worker"
+      "worker",
     ),
-    { inherit: true }
+    { inherit: true },
   );
   run(...uvBackend(["alembic", "upgrade", "head"]), { inherit: true });
 
@@ -541,7 +541,7 @@ async function dev() {
       "ui",
       process.execPath,
       [path.join(ROOT, "node_modules/next/dist/bin/next"), "dev"],
-      { cwd: ROOT, env: runtimeEnv(path.join(ROOT, ".env"), AUTH_ENV) }
+      { cwd: ROOT, env: runtimeEnv(path.join(ROOT, ".env"), AUTH_ENV) },
     ),
   ];
   console.log(`
@@ -556,7 +556,7 @@ async function dev() {
   process.on("SIGINT", stopChildren);
   process.on("SIGTERM", stopChildren);
   const code = await Promise.race(
-    children.map((child) => new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0))))
+    children.map((child) => new Promise((resolve) => child.on("exit", (c) => resolve(c ?? 0)))),
   );
   stopChildren();
   process.exit(code);
@@ -586,7 +586,7 @@ function logs() {
   run(
     "docker",
     composeArgs("--profile", "workers", "logs", "-f", "--tail", "200", "api", "web", "worker"),
-    { inherit: true, allowFail: true }
+    { inherit: true, allowFail: true },
   );
 }
 
@@ -596,7 +596,7 @@ function stop() {
   run(
     "docker",
     composeArgs("--profile", "workers", "--profile", "observability", "down", "--remove-orphans"),
-    { inherit: true, allowFail: true }
+    { inherit: true, allowFail: true },
   );
   console.log("Stopped. Start again with: pnpm platform");
 }

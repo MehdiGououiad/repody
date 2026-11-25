@@ -8,7 +8,7 @@ const NewWorkflowBuilder = dynamic(
     import("@/components/workflow/builder-shell").then((m) => ({
       default: m.NewWorkflowBuilder,
     })),
-  { loading: () => <BuilderShellLoader /> }
+  { loading: () => <BuilderShellLoader /> },
 );
 
 export default async function NewWorkflowPage() {
