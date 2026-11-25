@@ -51,7 +51,8 @@ const skipDirs = new Set([
 ]);
 
 const missing = [];
-const commandPattern = /\bbun\s+(run\s+)?([A-Za-z][A-Za-z0-9:_-]*)/g;
+// Single spaces, as the docs write commands: no backtracking between optional groups.
+const commandPattern = /\bbun (run )?([A-Za-z][\w:-]*)/g;
 const forbiddenText = [
   { pattern: /�/, label: "Unicode replacement character" },
   { pattern: /[ÂÃ]/, label: "mojibake marker" },
