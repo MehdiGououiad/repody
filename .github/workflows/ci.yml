@@ -323,6 +323,7 @@ jobs:
       # job's clock, and nobody reads them for a CI image.
       DOCKER_BUILD_SUMMARY: "false"
       DOCKER_BUILD_RECORD_UPLOAD: "false"
+      SAVE_CACHE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -346,13 +347,16 @@ jobs:
           load: true
           # One cache per image: with a shared scope each export replaced the others, and every
           # build missed its dependency layers. The release build reads these (images-ghcr.yml).
+          # Only master writes them: a pull request reads master's layers (GitHub lets it) and
+          # exports nothing, so it spends no time uploading and its own copy (200-800 MB a pull
+          # request) never pushes master's out of the repository's 10 GB cache.
           set: |
             backend.cache-from=type=gha,scope=backend
-            backend.cache-to=type=gha,scope=backend,mode=max
             web.cache-from=type=gha,scope=web
-            web.cache-to=type=gha,scope=web,mode=max
             keycloak.cache-from=type=gha,scope=keycloak
-            keycloak.cache-to=type=gha,scope=keycloak,mode=max
+            ${{ env.SAVE_CACHE == 'true' && 'backend.cache-to=type=gha,scope=backend,mode=max' || '' }}
+            ${{ env.SAVE_CACHE == 'true' && 'web.cache-to=type=gha,scope=web,mode=max' || '' }}
+            ${{ env.SAVE_CACHE == 'true' && 'keycloak.cache-to=type=gha,scope=keycloak,mode=max' || '' }}
       # Waits for every container's healthcheck (compose up --wait); fails on an unhealthy one.
       # No tear-down: the runner and its containers are discarded with the job.
       - name: Start platform (containers only)
