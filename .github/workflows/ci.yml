@@ -373,8 +373,10 @@ jobs:
   # ── The result ─────────────────────────────────────────────────────────────────────────────
 
   # One check for the whole run: green when every job that ran passed. A job skipped for
-  # unchanged files counts as passed; a failed or cancelled one fails it. It checks the results
-  # before anything else, so it needs no checkout or toolchain.
+  # unchanged files counts as passed; a failed or cancelled one fails it. It runs even when the
+  # run is cancelled (always()): a skipped check counts as passing, so a cancelled run must leave
+  # this one red, never skipped. It checks the results before anything else, so it needs no
+  # checkout or toolchain.
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -390,7 +392,7 @@ jobs:
         deploy-checks,
         platform,
       ]
-    if: ${{ !cancelled() }}
+    if: always()
     steps:
       - name: Every job passed or was skipped
         env:
