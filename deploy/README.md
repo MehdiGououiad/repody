@@ -6,9 +6,9 @@ The hosted demo's stack, the Helm chart for client installations, and scripts. *
 
 | Goal                         | Guide                                                | Command                      |
 | ---------------------------- | ---------------------------------------------------- | ---------------------------- |
-| Local laptop                 | [LOCAL.md](../docs/LOCAL.md)                         | `pnpm platform`              |
+| Local laptop                 | [LOCAL.md](../docs/LOCAL.md)                         | `bun run platform`           |
 | Release the hosted demo      | [vps/README.md](./vps/README.md#releasing)           | merge, then `git tag v1.2.3` |
-| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#images-and-releases) | `pnpm images:release`        |
+| Push images / vendor handoff | [CLUSTER.md](../docs/CLUSTER.md#images-and-releases) | `bun run images:release`     |
 | OpenShift / client install   | [CLUSTER.md](../docs/CLUSTER.md)                     | Helm / Argo CD               |
 
 ## Layout
@@ -29,7 +29,7 @@ The hosted demo's stack, the Helm chart for client installations, and scripts. *
 ```powershell
 $env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"   # host + project path
 $env:REPODY_IMAGE_TAG="1.0.0"
-pnpm images:release
+bun run images:release
 ```
 
 Helm `images.*.repository` = `{registry}/repody-backend` (not `{registry}/repody/repody-backend` when registry already includes the project).

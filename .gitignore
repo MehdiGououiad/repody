@@ -37,7 +37,6 @@ __pycache__/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
 *.log
 /logs/
 /.logs/
@@ -77,8 +76,6 @@ backend/.venv/
 /benchmark-reports/
 # Real documents supplied for the OCR benchmark (benchmarks/ocr/real_docs.py): never committed.
 /e2e/fixtures/documents/espace-transit-facture.*
-# pnpm audit output
-/dist-security-pnpm.*
 
 # repody.com: its own project (dependencies, build, synced files)
 /site/node_modules/

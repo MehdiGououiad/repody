@@ -20,6 +20,6 @@ gitignored `private/` folder at the repo root.
 
 ## Prerequisites
 
-**Compose (default):** `pnpm platform`, then `pnpm test:platform` (use `E2E_WEB_URL=http://localhost:3000`).
+**Compose (default):** `bun run platform`, then `bun run test:platform` (use `E2E_WEB_URL=http://localhost:3000`).
 
-**Deployed cluster:** [docs/CLUSTER.md](../../../docs/CLUSTER.md), then `pnpm test:platform` with Ingress URLs (see [DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing)).
+**Deployed cluster:** [docs/CLUSTER.md](../../../docs/CLUSTER.md), then `bun run test:platform` with Ingress URLs (see [DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing)).

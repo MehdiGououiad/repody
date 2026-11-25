@@ -5,7 +5,7 @@
 | Goal                                                           | Start here                                                                                                              |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **Laptop with git** (vendor / contributor)                     | [LOCAL.md](./LOCAL.md)                                                                                                  |
-| See every `pnpm` command                                       | [COMMANDS.md](./COMMANDS.md)                                                                                            |
+| See every `bun` command                                        | [COMMANDS.md](./COMMANDS.md)                                                                                            |
 | Deploy to Kubernetes                                           | [CLUSTER.md](./CLUSTER.md)                                                                                              |
 | Deploy to a VPS (Docker Compose, Tailscale, Cloudflare Tunnel) | [../deploy/vps/README.md](../deploy/vps/README.md)                                                                      |
 | NuExtract3 on a serverless GPU (vLLM on Modal, free tier)      | [../deploy/modal/README.md](../deploy/modal/README.md)                                                                  |

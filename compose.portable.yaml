@@ -1,11 +1,11 @@
 # Portable overlay - prebuilt images, no build at start.
 #
-#   pnpm platform          # builds repody-backend:dev + repody-web:dev from this checkout first
+#   bun run platform          # builds repody-backend:dev + repody-web:dev from this checkout first
 #   docker compose -f compose.yaml -f compose.portable.yaml --env-file backend/.env --profile workers up -d --no-build
 #
 # This file adds the API and the UI; the worker is in compose.yaml (the same backend image).
 #
-# Images: REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE, default repody-*:dev (pnpm images:build);
+# Images: REPODY_BACKEND_IMAGE / REPODY_WEB_IMAGE, default repody-*:dev (bun run images:build);
 # set them to a registry tag to run a published release.
 # Inference stays on the host (llama-server for NuExtract).
 # See docs/LOCAL.md

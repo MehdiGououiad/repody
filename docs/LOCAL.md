@@ -7,7 +7,7 @@ Cluster / OpenShift: [CLUSTER.md](./CLUSTER.md). Commands: [COMMANDS.md](./COMMA
 
 ## Contributor path
 
-Full checkout for daily work on **Windows · Linux** (`pnpm platform`).
+Full checkout for daily work on **Windows · Linux** (`bun run platform`).
 
 ### What you get
 
@@ -24,9 +24,9 @@ Images pull as public multi-arch - no Hub login required.
 ## Prerequisites (once)
 
 1. **Docker Desktop** running.
-2. **Node 26 (LTS)** + **pnpm 12.16.1**:
+2. **Node 26 (LTS)** + **Bun 1.4.4**:
    ```bash
-   npm install --global pnpm@12.16.1   # Node 25+ no longer bundles corepack
+   npm install --global bun@1.4.4   # the pinned Bun (package.json, packageManager)
    ```
 3. **llama-server** on PATH (NuExtract): `winget install ggml.llamacpp` on Windows, or
    [llama.cpp's build](https://github.com/ggml-org/llama.cpp) on Linux. Or skip it and use the
@@ -41,16 +41,16 @@ Images pull as public multi-arch - no Hub login required.
 ```bash
 git clone https://github.com/MehdiGououiad/repody.git
 cd repody
-pnpm install
-pnpm doctor
-pnpm platform setup             # once: env files + build the images
+bun install
+bun run doctor
+bun run platform setup             # once: env files + build the images
 # edit deploy/llamacpp/paths.local.env with NuExtract GGUF paths
-pnpm platform doctor            # preflight
-pnpm platform                   # same preflight, then start
-pnpm platform status
+bun run platform doctor            # preflight
+bun run platform                   # same preflight, then start
+bun run platform status
 ```
 
-One-shot after clone/install: `pnpm platform bootstrap`.
+One-shot after clone/install: `bun run platform bootstrap`.
 
 ### What `setup` creates (no hand-written secrets)
 
@@ -65,12 +65,12 @@ Trusted laptop / localhost defaults only - do not expose Compose ports to a LAN 
 ### Preflight
 
 ```bash
-pnpm platform doctor
+bun run platform doctor
 ```
 
-Same checks run at the start of `pnpm platform`. Required for the default path:
+Same checks run at the start of `bun run platform`. Required for the default path:
 
-- Node 26 / pnpm 12
+- Node 26 / Bun 1.4
 - Docker Desktop running
 - `llama-server` on PATH
 - NuExtract3 `.gguf` + mmproj on disk
@@ -106,19 +106,19 @@ Observability is **on by default** (`--no-obs` to skip):
 
 JSON logs go to Loki; traces to Tempo (`trace_id` links them in Grafana). Config: `deploy/observability/`.
 
-**Bugsink (optional):** create a project -> set `SENTRY_DSN` in `backend/.env` (the API and worker report through the Sentry SDK) and `NEXT_PUBLIC_BUGSINK_DSN` in `.env.local`. Compose passes `BUGSINK_DSN` from the repo-root `.env` to the containers as `SENTRY_DSN`; recreate `api` and `worker` after changing it. Observability starts with `pnpm platform` and `pnpm platform dev` unless you pass `--no-obs`.
+**Bugsink (optional):** create a project -> set `SENTRY_DSN` in `backend/.env` (the API and worker report through the Sentry SDK) and `NEXT_PUBLIC_BUGSINK_DSN` in `.env.local`. Compose passes `BUGSINK_DSN` from the repo-root `.env` to the containers as `SENTRY_DSN`; recreate `api` and `worker` after changing it. Observability starts with `bun run platform` and `bun run platform dev` unless you pass `--no-obs`.
 
 ---
 
 ## Daily commands
 
 ```bash
-pnpm platform doctor
-pnpm platform
-pnpm platform status
-pnpm platform logs
-pnpm platform stop
-pnpm platform help
+bun run platform doctor
+bun run platform
+bun run platform status
+bun run platform logs
+bun run platform stop
+bun run platform help
 ```
 
 ---
@@ -126,10 +126,10 @@ pnpm platform help
 ## Flags
 
 ```bash
-pnpm platform -- --platform-only
-pnpm platform -- --no-nuextract
-pnpm platform -- --no-build
-pnpm platform -- --no-obs
+bun run platform -- --platform-only
+bun run platform -- --no-nuextract
+bun run platform -- --no-build
+bun run platform -- --no-obs
 ```
 
 | Flag              | Effect                                            |
@@ -144,26 +144,26 @@ pnpm platform -- --no-obs
 | ------------ | ---------------------------------------------- |
 | `repody:vlm` | Official NuExtract template JSON (**default**) |
 
-| Command                | Purpose                       |
-| ---------------------- | ----------------------------- |
-| `pnpm platform setup`  | Once - env + build the images |
-| `pnpm platform doctor` | Preflight                     |
-| `pnpm platform`        | Preflight + start             |
-| `pnpm platform status` | Health                        |
-| `pnpm platform stop`   | Tear down                     |
-| `pnpm platform help`   | Flags                         |
+| Command                   | Purpose                       |
+| ------------------------- | ----------------------------- |
+| `bun run platform setup`  | Once - env + build the images |
+| `bun run platform doctor` | Preflight                     |
+| `bun run platform`        | Preflight + start             |
+| `bun run platform status` | Health                        |
+| `bun run platform stop`   | Tear down                     |
+| `bun run platform help`   | Flags                         |
 
 ---
 
 ## Develop from source (contributors)
 
 ```bash
-pnpm platform dev
+bun run platform dev
 ```
 
 Compose runs Postgres, Hatchet Lite, SeaweedFS (S3) and Keycloak and builds the workers from source; the API
 (uvicorn) and UI (next dev) run on the host and reload on edits. Ctrl+C stops API + UI;
-`pnpm platform stop` stops everything. Flags: `--no-nuextract`, `--no-obs`.
+`bun run platform stop` stops everything. Flags: `--no-nuextract`, `--no-obs`.
 
 Engineering reference: [DEVELOPMENT.md](./DEVELOPMENT.md).
 
@@ -171,15 +171,15 @@ Engineering reference: [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Troubleshooting
 
-| Symptom                       | Fix                                                                                    |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `pnpm doctor` fails on Docker | Start Docker Desktop; wait until ready                                                 |
-| `llama-server` missing        | Install llama.cpp; open a new terminal                                                 |
-| Pull slow / timeout           | Retry `pnpm platform setup`; check network                                             |
-| Wrong arch image              | Re-pull; confirm the image's arch matches the machine (`linux/amd64` or `linux/arm64`) |
-| Login / redirect loops        | Open **http://localhost:3000** (not 127.0.0.1)                                         |
-| OCR / NuExtract not ready     | Set GGUF paths; `pnpm llamacpp:serve`; `pnpm platform status`                          |
-| Port in use                   | `pnpm platform stop`                                                                   |
+| Symptom                          | Fix                                                                                    |
+| -------------------------------- | -------------------------------------------------------------------------------------- |
+| `bun run doctor` fails on Docker | Start Docker Desktop; wait until ready                                                 |
+| `llama-server` missing           | Install llama.cpp; open a new terminal                                                 |
+| Pull slow / timeout              | Retry `bun run platform setup`; check network                                          |
+| Wrong arch image                 | Re-pull; confirm the image's arch matches the machine (`linux/amd64` or `linux/arm64`) |
+| Login / redirect loops           | Open **http://localhost:3000** (not 127.0.0.1)                                         |
+| OCR / NuExtract not ready        | Set GGUF paths; `bun run llamacpp:serve`; `bun run platform status`                    |
+| Port in use                      | `bun run platform stop`                                                                |
 
 ---
 

@@ -13,7 +13,7 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 | Area                   | Decision                                                                                                      | Rationale                                                                              |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | **Orchestrator**       | Kubernetes, Helm-first                                                                                        | Portable across clouds; HPA, ingress, secrets native                                   |
-| **Local dev**          | Docker Compose (`pnpm platform`)                                                                              | Fast daily iteration                                                                   |
+| **Local dev**          | Docker Compose (`bun run platform`)                                                                           | Fast daily iteration                                                                   |
 | **Production cluster** | Helm (+ optional Argo CD) on OpenShift / K8s                                                                  | Same charts clients receive - [CLUSTER.md](../CLUSTER.md)                              |
 | **Data plane**         | External or operator-managed Postgres, Hatchet, and object storage by default                                 | Enterprise installs need independent lifecycle, backups, upgrades, and ownership       |
 | **Queue**              | Hatchet (its Helm chart or Hatchet Cloud), [ADR 011](./011-hatchet.md)                                        | Timeouts, failure handling, per-client limits and cron in one engine                   |
@@ -30,7 +30,7 @@ The platform runs on Kubernetes (OpenShift, EKS/GKE/AKS, or generic), with indep
 ## Consequences
 
 - Helm chart under `deploy/helm/repody/` is the production entrypoint.
-- `pnpm images:release` produces and pushes the `repody-backend` and `repody-web` registry tags referenced in client values.
+- `bun run images:release` produces and pushes the `repody-backend` and `repody-web` registry tags referenced in client values.
 - Application code remains a monorepo; microservice boundaries are **deploy** boundaries, not separate repos yet.
 
 ## References

@@ -6,7 +6,7 @@ Git stores desired Kubernetes state; the **registry** stores built images.
 
 | Role             | Responsibility                                                 |
 | ---------------- | -------------------------------------------------------------- |
-| **You (vendor)** | `pnpm images:release` to **your** GHCR or client registry      |
+| **You (vendor)** | `bun run images:release` to **your** GHCR or client registry   |
 | **Client**       | Pull from your registry; deploy with **their** Argo CD or Helm |
 
 Repody does not ship Argo CD for client production.
@@ -20,7 +20,7 @@ docker login
 $env:REPODY_IMAGE_REGISTRY="mehdigououiad"
 $env:REPODY_IMAGE_TAG="1.0.0"
 $env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
-pnpm images:release
+bun run images:release
 ```
 
 Images:
@@ -45,7 +45,7 @@ Verify arches:
 docker buildx imagetools inspect mehdigououiad/repody-backend:1.0.0
 ```
 
-**Run a published release locally:** `REPODY_BACKEND_IMAGE=mehdigououiad/repody-backend:1.0.0 REPODY_WEB_IMAGE=mehdigououiad/repody-web:1.0.0 pnpm platform` (plain `pnpm platform` builds from the checkout) - see [docs/LOCAL.md](../../docs/LOCAL.md).
+**Run a published release locally:** `REPODY_BACKEND_IMAGE=mehdigououiad/repody-backend:1.0.0 REPODY_WEB_IMAGE=mehdigououiad/repody-web:1.0.0 bun run platform` (plain `bun run platform` builds from the checkout) - see [docs/LOCAL.md](../../docs/LOCAL.md).
 
 **Helm:** set `images.backend.repository` / `images.web.repository` to these names in your values.
 
@@ -91,7 +91,7 @@ Vendor push from a workstation:
 $env:REPODY_IMAGE_REGISTRY="ghcr.io/yourorg/repody"
 $env:REPODY_IMAGE_TAG="<release>"
 docker login ghcr.io
-pnpm images:release
+bun run images:release
 ```
 
 ## Harbor (recommended on-prem registry)
@@ -115,7 +115,7 @@ Official docs:
 $env:REPODY_IMAGE_REGISTRY="harbor.example.com/repody"
 $env:REPODY_IMAGE_TAG="1.0.0"
 docker login harbor.example.com -u '<robot$repody+pusher>'
-pnpm images:release
+bun run images:release
 ```
 
 Images:
@@ -154,7 +154,7 @@ ACR, ECR, GCR, GHCR, or self-hosted Distribution work the same way - set
 $env:REPODY_IMAGE_REGISTRY="registry.example.com/repody"
 $env:REPODY_IMAGE_TAG="<release>"
 docker login registry.example.com
-pnpm images:release
+bun run images:release
 ```
 
 Image push commands fail unless `REPODY_IMAGE_REGISTRY` is set, so release images
@@ -179,4 +179,4 @@ docker buildx bake -f docker-bake.hcl backend --load
 docker buildx bake -f docker-bake.hcl web --load
 ```
 
-`pnpm images:release` rebuilds from the build cache and pushes, so there is no separate push-only step.
+`bun run images:release` rebuilds from the build cache and pushes, so there is no separate push-only step.

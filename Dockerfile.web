@@ -1,27 +1,28 @@
 # syntax=docker/dockerfile:1
-# Built by docker-bake.hcl (`pnpm images:build`). Backend origin and Bugsink server DSN are
+# Built by docker-bake.hcl (`bun run images:build`). Backend origin and Bugsink server DSN are
 # runtime env (INTERNAL_API_URL / BACKEND_URL / BUGSINK_DSN), never build args.
+# Bun installs the dependencies and runs the build script; Node runs Next.js, here and in the
+# runner. The pinned Bun binary comes from Bun's own image (musl, for Alpine).
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS bun
+
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS deps
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-# Node 25+ no longer bundles corepack; install the pinned pnpm with npm (pnpm docs).
-RUN npm install --global pnpm@12.16.1
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
+COPY package.json bun.lock bunfig.toml ./
+RUN --mount=type=cache,id=bun-install,target=/root/.bun/install/cache     bun install --frozen-lockfile --ignore-scripts
 
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS builder
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
-# Node 25+ no longer bundles corepack; install the pinned pnpm with npm (pnpm docs).
-RUN npm install --global pnpm@12.16.1
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 # NEXT_PUBLIC_* values are inlined into the client bundle at build time.
 ARG NEXT_PUBLIC_BUGSINK_DSN=
 ENV NEXT_PUBLIC_BUGSINK_DSN=${NEXT_PUBLIC_BUGSINK_DSN}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+RUN bun run build
 
 FROM node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS runner
 WORKDIR /app
