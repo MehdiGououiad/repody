@@ -6,7 +6,7 @@
 # the import is skipped once the realm exists.
 #   docker buildx bake keycloak --load      (see docker-bake.hcl)
 
-FROM quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0 AS builder
+FROM quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3 AS builder
 
 # Build-time options: the database vendor and the health endpoints (management port 9000).
 ENV KC_DB=postgres \
@@ -14,7 +14,7 @@ ENV KC_DB=postgres \
 
 RUN /opt/keycloak/bin/kc.sh build
 
-FROM quay.io/keycloak/keycloak:26.8.2@sha256:c68e286cacd87b942ac1939a0a1481461109d6acd3a57dc496969a319a76bbf0
+FROM quay.io/keycloak/keycloak:26.8.2@sha256:7e66a96e4739239070aeaf72e4c5decf0f7f682cfc725b9f7ea2b336eaba38b3
 
 COPY --from=builder /opt/keycloak/ /opt/keycloak/
 COPY realm-repody.production.json /opt/keycloak/data/import/realm-repody.json
