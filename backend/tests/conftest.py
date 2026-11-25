@@ -31,6 +31,7 @@ from typing import BinaryIO
 
 import asyncpg
 import pytest
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from PIL import Image
 from sqlalchemy import text
@@ -140,9 +141,18 @@ def cancelled() -> list[str]:
     return []
 
 
+@pytest.fixture(scope="session")
+def app() -> FastAPI:
+    """The app, built once per test process (building it takes about 0.15s, and most tests
+    use it). It keeps no state between requests: each test still gets a clean database, a new
+    store and its own fakes (``api``). A test that needs dependency overrides or other settings
+    builds its own with ``create_app()``."""
+    return create_app()
+
+
 @pytest.fixture
 async def api(
-    database, monkeypatch: pytest.MonkeyPatch, model_answer, cancelled: list[str]
+    database, app: FastAPI, monkeypatch: pytest.MonkeyPatch, model_answer, cancelled: list[str]
 ) -> AsyncIterator[AsyncClient]:
     """The app on a clean database, without Hatchet: a run is processed before the request
     returns, and the ``cancelled`` fixture lists the Hatchet runs cancelled."""
@@ -160,9 +170,7 @@ async def api(
     monkeypatch.setattr(queue, "dispatch", run_inline)
     monkeypatch.setattr(queue, "cancel", cancel)
     use_store(MemoryStore())
-    async with AsyncClient(
-        transport=ASGITransport(app=create_app()), base_url="http://test"
-    ) as client:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         yield client
     use_store(None)
 
