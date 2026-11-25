@@ -52,11 +52,6 @@
       },
     },
   },
-  "trustedDependencies": [
-    "sharp",
-    "@swc/core",
-    "@parcel/watcher",
-  ],
   "overrides": {
     "@opentelemetry/core": "^2.8.0",
     "js-yaml": "^4.3.2",

@@ -7,3 +7,8 @@ pathIgnorePatterns = ["e2e/**"]
 # https://bun.com/docs/runtime/bunfig#install-minimumreleaseage
 [install]
 minimumReleaseAge = 259200
+# No dependency's install script runs (Bun runs only a vetted list by default): nothing here
+# needs one; prebuilt binaries arrive as optional dependencies, and Sentry's source-map upload,
+# the one script that downloads a binary, is off. CI and the image also pass --ignore-scripts.
+# https://bun.com/docs/runtime/bunfig#install-ignorescripts
+ignoreScripts = true

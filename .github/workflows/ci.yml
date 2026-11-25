@@ -189,7 +189,7 @@ jobs:
         with:
           node-version: "26"
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Lint and format check (oxlint + oxfmt)
         run: bun lint
       - name: Markdown links and anchors
@@ -213,7 +213,7 @@ jobs:
         with:
           node-version: "26"
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Generate OpenAPI types
         run: bun run codegen:api:types
       - name: OpenAPI type drift check
@@ -238,7 +238,7 @@ jobs:
         with:
           node-version: "26"
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       - name: Unit tests (bun test)
         run: bun test
 
@@ -257,7 +257,7 @@ jobs:
         with:
           node-version: "26"
       - name: Install
-        run: bun install --frozen-lockfile
+        run: bun install --frozen-lockfile --ignore-scripts
       # Turbopack's build cache (.next/cache, Next.js docs: guides/ci-build-caching). Every run
       # restores the newest one master saved; only master saves, so a pull request spends no
       # time uploading it.
