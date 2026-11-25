@@ -113,8 +113,8 @@ describe("operators", () => {
           right: { kind: "literal", value: "20000" },
         },
         fields,
-        CATALOG
-      )
+        CATALOG,
+      ),
     ).toBe("net_a_payer");
     expect(
       textComparedWithNumber(
@@ -125,8 +125,8 @@ describe("operators", () => {
           right: { kind: "field", field: "total" },
         },
         fields,
-        CATALOG
-      )
+        CATALOG,
+      ),
     ).toBe("net_a_payer");
     expect(
       textComparedWithNumber(
@@ -137,8 +137,8 @@ describe("operators", () => {
           right: { kind: "literal", value: "FAC-001" },
         },
         fields,
-        CATALOG
-      )
+        CATALOG,
+      ),
     ).toBeNull();
     expect(
       textComparedWithNumber(
@@ -149,8 +149,8 @@ describe("operators", () => {
           right: { kind: "literal", value: "20000" },
         },
         fields,
-        CATALOG
-      )
+        CATALOG,
+      ),
     ).toBeNull();
   });
 });

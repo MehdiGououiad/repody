@@ -15,14 +15,14 @@ Laptop Compose: [LOCAL.md](./LOCAL.md). Commands: [COMMANDS.md](./COMMANDS.md). 
 
 ## What the cluster provides
 
-| Service | Typical choice | Chart setting |
-|---------|----------------|---------------|
-| PostgreSQL | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/)) | `AUDIT_DATABASE_URL` in the Secret |
-| Hatchet | [Hatchet's Helm chart](https://docs.hatchet.run/self-hosting/kubernetes-quickstart) (on your Postgres), or Hatchet Cloud | `HATCHET_CLIENT_TOKEN` in the Secret; `config.HATCHET_CLIENT_HOST_PORT` when the token's address is not reachable in-cluster |
-| S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret |
-| OIDC provider | Keycloak (operator or managed), configured as in [Keycloak in production](#keycloak-in-production) | `config.AUDIT_OIDC_ISSUER`, `config.AUDIT_OIDC_AUDIENCE`, `web.keycloakClientId` |
-| Document model | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md)) | `config.AUDIT_INFERENCE_BASE_URL` |
-| Secrets | External Secrets Operator + Vault | `existingSecret` |
+| Service           | Typical choice                                                                                                           | Chart setting                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| PostgreSQL        | Managed Postgres, or [CloudNativePG](https://cloudnative-pg.io/) ([examples](../deploy/managed/cloudnativepg/))          | `AUDIT_DATABASE_URL` in the Secret                                                                                           |
+| Hatchet           | [Hatchet's Helm chart](https://docs.hatchet.run/self-hosting/kubernetes-quickstart) (on your Postgres), or Hatchet Cloud | `HATCHET_CLIENT_TOKEN` in the Secret; `config.HATCHET_CLIENT_HOST_PORT` when the token's address is not reachable in-cluster |
+| S3 object storage | AWS S3, SeaweedFS, Ceph RGW / ODF                                                                                        | `config.AUDIT_S3_ENDPOINT_URL`, keys in the Secret                                                                           |
+| OIDC provider     | Keycloak (operator or managed), configured as in [Keycloak in production](#keycloak-in-production)                       | `config.AUDIT_OIDC_ISSUER`, `config.AUDIT_OIDC_AUDIENCE`, `web.keycloakClientId`                                             |
+| Document model    | llama-server / vLLM serving NuExtract3 ([EXTRACTION.md](./EXTRACTION.md))                                                | `config.AUDIT_INFERENCE_BASE_URL`                                                                                            |
+| Secrets           | External Secrets Operator + Vault                                                                                        | `existingSecret`                                                                                                             |
 
 The pods run with the restricted security context (`runAsNonRoot`, `RuntimeDefault` seccomp,
 no capabilities, no pinned UID, read-only root filesystem with `emptyDir` volumes for `/tmp` and
@@ -56,14 +56,14 @@ The migrations Job runs first; then the API, web and workers turn ready. Images 
 password, fixed client secrets and the `repody-e2e` service account. Never import it into a
 production Keycloak. Create the realm with:
 
-| Setting | Value |
-|---------|-------|
-| Realm roles | `viewer`, `operator`, `admin` (and `platform_admin` if used); assign them to users or groups |
-| Client `repody-web` | Confidential; standard flow only (no direct access grants); PKCE `S256`; a generated secret (into the runtime Secret as `AUTH_KEYCLOAK_CLIENT_SECRET`) |
-| Redirect URI | Exactly `https://<app host>/api/auth/callback/keycloak` (no wildcards); web origin `+` |
-| Scopes | Full scope off; map the realm roles above to the client (Client scopes → Dedicated scope → Scope) so access tokens carry them |
-| Audience | An audience mapper adding `repody-api` to access tokens, and `config.AUDIT_OIDC_AUDIENCE: repody-api` (required in production: the API refuses tokens meant for other clients) |
-| Hostname | Keycloak hostname v2 with `KC_HOSTNAME` set to its public URL; when the web pods reach it in-cluster (`web.internalIssuer`), also `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true` |
+| Setting             | Value                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Realm roles         | `viewer`, `operator`, `admin` (and `platform_admin` if used); assign them to users or groups                                                                                   |
+| Client `repody-web` | Confidential; standard flow only (no direct access grants); PKCE `S256`; a generated secret (into the runtime Secret as `AUTH_KEYCLOAK_CLIENT_SECRET`)                         |
+| Redirect URI        | Exactly `https://<app host>/api/auth/callback/keycloak` (no wildcards); web origin `+`                                                                                         |
+| Scopes              | Full scope off; map the realm roles above to the client (Client scopes → Dedicated scope → Scope) so access tokens carry them                                                  |
+| Audience            | An audience mapper adding `repody-api` to access tokens, and `config.AUDIT_OIDC_AUDIENCE: repody-api` (required in production: the API refuses tokens meant for other clients) |
+| Hostname            | Keycloak hostname v2 with `KC_HOSTNAME` set to its public URL; when the web pods reach it in-cluster (`web.internalIssuer`), also `KC_HOSTNAME_BACKCHANNEL_DYNAMIC=true`       |
 
 | Client groups | One group `client-<name>` per client company when several share the installation (their users see only its work); a single-client installation needs none |
 | Groups in tokens | A Group Membership mapper on `repody-web`: token claim `groups`, full group path off, in the access token |
@@ -86,16 +86,16 @@ kubectl apply -f deploy/client/namespace.example.yaml
 Create `repody-runtime-secrets` (the chart's `existingSecret`) from your secret manager - the
 ExternalSecret example is [`deploy/client/secrets/runtime.externalsecret.example.yaml`](../deploy/client/secrets/runtime.externalsecret.example.yaml).
 
-| Key | Used by |
-|-----|---------|
-| `AUDIT_DATABASE_URL` | API, workers, migrations (`postgresql+asyncpg://…`) |
-| `HATCHET_CLIENT_TOKEN` | API, workers (a Hatchet API token: dashboard → Settings → API Tokens) |
-| `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers |
-| `AUTH_SECRET` | web (Better Auth session encryption, as `BETTER_AUTH_SECRET`) |
-| `AUTH_KEYCLOAK_CLIENT_SECRET` | web (Keycloak confidential client) |
-| `AUDIT_INFERENCE_API_KEY` | workers, optional bearer token for the inference endpoint |
-| `BUGSINK_DSN` | optional error tracking |
-| `KEYCLOAK_ADMIN_CLIENT_SECRET` | API, optional: the admin area's Keycloak account (`repody-admin`) |
+| Key                                          | Used by                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------- |
+| `AUDIT_DATABASE_URL`                         | API, workers, migrations (`postgresql+asyncpg://…`)                   |
+| `HATCHET_CLIENT_TOKEN`                       | API, workers (a Hatchet API token: dashboard → Settings → API Tokens) |
+| `AUDIT_S3_ACCESS_KEY`, `AUDIT_S3_SECRET_KEY` | API, workers                                                          |
+| `AUTH_SECRET`                                | web (Better Auth session encryption, as `BETTER_AUTH_SECRET`)         |
+| `AUTH_KEYCLOAK_CLIENT_SECRET`                | web (Keycloak confidential client)                                    |
+| `AUDIT_INFERENCE_API_KEY`                    | workers, optional bearer token for the inference endpoint             |
+| `BUGSINK_DSN`                                | optional error tracking                                               |
+| `KEYCLOAK_ADMIN_CLIENT_SECRET`               | API, optional: the admin area's Keycloak account (`repody-admin`)     |
 
 The image pull secret comes from [`registry-pull.externalsecret.example.yaml`](../deploy/client/secrets/registry-pull.externalsecret.example.yaml).
 
@@ -160,22 +160,22 @@ Registry notes (GHCR, Docker Hub, Harbor): [deploy/registry/README.md](../deploy
 The chart ships no logging stack: Repody speaks the open standards, and the cluster's own tools
 collect them (OpenShift logging, Elastic, Splunk, Datadog, Grafana Loki, …).
 
-| Signal | What Repody emits | How the cluster collects it |
-|---|---|---|
-| Logs | One JSON object per line on stdout (`AUDIT_LOG_JSON=true`): `level`, `event`, `timestamp`, the ids it concerns (`run_id`, `workflow_id`, `account`) and the request's `trace_id`. Never a document's content or an extracted value | The cluster's node agent (Fluent Bit, the OpenTelemetry Collector, Grafana Alloy) reads container stdout like any pod's |
-| Errors | Exceptions with their stack trace, through the Sentry SDK, when `BUGSINK_DSN` is in the Secret (API, workers and web) | Any Sentry-compatible server: [Bugsink](https://www.bugsink.com/) (Repody's own, PolyForm Shield license), [GlitchTip](https://glitchtip.com/) (MIT) or Sentry. Events carry the image tag as their release |
-| Traces | OTLP, when `OTEL_SDK_DISABLED=false` and `OTEL_EXPORTER_OTLP_ENDPOINT` is set | An OpenTelemetry Collector (for example its [Helm chart](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector)) and any trace backend |
+| Signal | What Repody emits                                                                                                                                                                                                                  | How the cluster collects it                                                                                                                                                                                 |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Logs   | One JSON object per line on stdout (`AUDIT_LOG_JSON=true`): `level`, `event`, `timestamp`, the ids it concerns (`run_id`, `workflow_id`, `account`) and the request's `trace_id`. Never a document's content or an extracted value | The cluster's node agent (Fluent Bit, the OpenTelemetry Collector, Grafana Alloy) reads container stdout like any pod's                                                                                     |
+| Errors | Exceptions with their stack trace, through the Sentry SDK, when `BUGSINK_DSN` is in the Secret (API, workers and web)                                                                                                              | Any Sentry-compatible server: [Bugsink](https://www.bugsink.com/) (Repody's own, PolyForm Shield license), [GlitchTip](https://glitchtip.com/) (MIT) or Sentry. Events carry the image tag as their release |
+| Traces | OTLP, when `OTEL_SDK_DISABLED=false` and `OTEL_EXPORTER_OTLP_ENDPOINT` is set                                                                                                                                                      | An OpenTelemetry Collector (for example its [Helm chart](https://github.com/open-telemetry/opentelemetry-helm-charts/tree/main/charts/opentelemetry-collector)) and any trace backend                       |
 
 The Compose profiles of `deploy/vps` (Loki, Alloy, Grafana, Bugsink) are for a single server whose
 containers log to journald; they have no role on Kubernetes.
 
 ### Timeouts (extract pool)
 
-| Env var | Default | Rule |
-|---------|---------|------|
-| `AUDIT_RUN_TIMEOUT_MINUTES` | 5 | Hatchet's execution timeout: a longer run is cancelled and failed |
-| `AUDIT_INFERENCE_TIMEOUT_SECONDS` | 180 | Per model call, ≤ run timeout (checked at start) |
-| `workers.extract.terminationGracePeriodSeconds` | 240 | ≥ worker timeout in seconds |
+| Env var                                         | Default | Rule                                                              |
+| ----------------------------------------------- | ------- | ----------------------------------------------------------------- |
+| `AUDIT_RUN_TIMEOUT_MINUTES`                     | 5       | Hatchet's execution timeout: a longer run is cancelled and failed |
+| `AUDIT_INFERENCE_TIMEOUT_SECONDS`               | 180     | Per model call, ≤ run timeout (checked at start)                  |
+| `workers.extract.terminationGracePeriodSeconds` | 240     | ≥ worker timeout in seconds                                       |
 
 ### Connection budget
 
@@ -192,24 +192,24 @@ Lower the pool settings when Postgres `max_connections` is tight (or put PgBounc
 - `GET /v1/healthz/live` - liveness; `GET /v1/healthz` - readiness (Postgres).
 - Workers: a liveness probe on the Hatchet SDK's `/health` (port 8001). When a worker stops, Hatchet fails its runs through the workflow's failure task. Hatchet's dashboard shows workers, runs and the cron.
 
-| Alert | Log event / signal | Threshold |
-|-------|--------------------|-----------|
-| Run failures | `run_failed` | >5% of runs / 15m |
-| Hatchet unreachable | `run_dispatch_failed` (the run fails; the API answers 503) | any |
-| Queue pressure | dashboard `queue.queuedRuns` vs `AUDIT_MAX_QUEUED_RUNS` | >80% for 10m |
-| Slow model | run metadata `extractionMs` | p99 > 80% of worker timeout |
-| Worker crash loop | `repody-worker` restarts | >3 / 15m |
+| Alert               | Log event / signal                                         | Threshold                   |
+| ------------------- | ---------------------------------------------------------- | --------------------------- |
+| Run failures        | `run_failed`                                               | >5% of runs / 15m           |
+| Hatchet unreachable | `run_dispatch_failed` (the run fails; the API answers 503) | any                         |
+| Queue pressure      | dashboard `queue.queuedRuns` vs `AUDIT_MAX_QUEUED_RUNS`    | >80% for 10m                |
+| Slow model          | run metadata `extractionMs`                                | p99 > 80% of worker timeout |
+| Worker crash loop   | `repody-worker` restarts                                   | >3 / 15m                    |
 
 ## Troubleshooting
 
-| Symptom | Check |
-|---------|-------|
-| Pods `CreateContainerConfigError` | `repody-runtime-secrets` exists and has the keys above |
-| Migrations Job fails | `AUDIT_DATABASE_URL` reachable from the namespace |
-| Workers cannot extract | `AUDIT_INFERENCE_BASE_URL` reachable; 401 means `AUDIT_INFERENCE_API_KEY` |
-| Upload fails | `AUDIT_MAX_UPLOAD_BYTES` and the Ingress body size limit |
-| Sign-in loops / 401 | Issuer and JWKS reachable from API and web pods (`web.internalIssuer`) |
-| `ImagePullBackOff` | Pull secret; repository includes the registry host |
-| Run waits `queued` | Hatchet's dashboard: workers connected, the client's rate limit and round robin (`AUDIT_RUNS_PER_MINUTE_PER_CLIENT`, `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT`); after an hour Hatchet fails it |
-| Run long `running` | Worker logs; model endpoint; Hatchet fails it after `AUDIT_RUN_TIMEOUT_MINUTES` |
-| Progress not updating | The worker is running and reaches Postgres; `GET /api/v1/runs/{id}` answers |
+| Symptom                           | Check                                                                                                                                                                                     |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pods `CreateContainerConfigError` | `repody-runtime-secrets` exists and has the keys above                                                                                                                                    |
+| Migrations Job fails              | `AUDIT_DATABASE_URL` reachable from the namespace                                                                                                                                         |
+| Workers cannot extract            | `AUDIT_INFERENCE_BASE_URL` reachable; 401 means `AUDIT_INFERENCE_API_KEY`                                                                                                                 |
+| Upload fails                      | `AUDIT_MAX_UPLOAD_BYTES` and the Ingress body size limit                                                                                                                                  |
+| Sign-in loops / 401               | Issuer and JWKS reachable from API and web pods (`web.internalIssuer`)                                                                                                                    |
+| `ImagePullBackOff`                | Pull secret; repository includes the registry host                                                                                                                                        |
+| Run waits `queued`                | Hatchet's dashboard: workers connected, the client's rate limit and round robin (`AUDIT_RUNS_PER_MINUTE_PER_CLIENT`, `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT`); after an hour Hatchet fails it |
+| Run long `running`                | Worker logs; model endpoint; Hatchet fails it after `AUDIT_RUN_TIMEOUT_MINUTES`                                                                                                           |
+| Progress not updating             | The worker is running and reaches Postgres; `GET /api/v1/runs/{id}` answers                                                                                                               |

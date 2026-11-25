@@ -47,7 +47,7 @@ function FieldValue({ result, stale }: { result: FieldResult | undefined; stale:
           !stale &&
             (result.extracted
               ? "animate-[wash-pass_0.8s_ease-out]"
-              : "animate-[wash-warn_0.8s_ease-out]")
+              : "animate-[wash-warn_0.8s_ease-out]"),
         )}
       >
         {text}
@@ -136,7 +136,7 @@ function SchemaFieldRow({
           className={cn(
             CELL_INPUT,
             "h-6 text-xs text-ink-3",
-            missing && "placeholder:text-warn-ink"
+            missing && "placeholder:text-warn-ink",
           )}
         />
         {duplicate ? <p className="px-2 text-xs text-fail-ink">{t("duplicateName")}</p> : null}
@@ -184,7 +184,7 @@ export function SchemaTable({
       <div
         className={cn(
           "h-7 border-b border-line px-2 text-xs font-medium text-ink-4",
-          showResults ? ROW_WITH_RESULTS : ROW_BASE
+          showResults ? ROW_WITH_RESULTS : ROW_BASE,
         )}
       >
         {showResults ? <span /> : null}

@@ -32,23 +32,23 @@ backend/tests/unit|integration|live/
 e2e/tests/                 # Playwright (defaults to the local stack on localhost)
 ```
 
-| Command | What |
-|---------|------|
-| `pnpm test:unit` / `test:integration` | Fast layers |
-| `pnpm test:api` | Unit + integration (CI default) |
-| `pnpm test:live` | Needs running stack |
-| `pnpm test:e2e:smoke` | Playwright smoke: sign-in and navigation |
-| `pnpm test:e2e` | All Playwright specs against `pnpm platform` |
-| `pnpm review:check` | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
+| Command                               | What                                             |
+| ------------------------------------- | ------------------------------------------------ |
+| `pnpm test:unit` / `test:integration` | Fast layers                                      |
+| `pnpm test:api`                       | Unit + integration (CI default)                  |
+| `pnpm test:live`                      | Needs running stack                              |
+| `pnpm test:e2e:smoke`                 | Playwright smoke: sign-in and navigation         |
+| `pnpm test:e2e`                       | All Playwright specs against `pnpm platform`     |
+| `pnpm review:check`                   | Full gate - [CODE-QUALITY.md](./CODE-QUALITY.md) |
 
 Compose E2E: set `E2E_API_URL` / `E2E_WEB_URL=http://localhost:3000` / `E2E_AUTH_URL`, then `pnpm test:platform`. Use **localhost** for the web URL (OIDC cookies). Tests sign in as `E2E_KEYCLOAK_USER` / `E2E_KEYCLOAK_PASSWORD` in the browser and call the API with the `repody-e2e` service account (client credentials: `E2E_KEYCLOAK_CLIENT_ID` / `E2E_KEYCLOAK_CLIENT_SECRET`); a cluster realm needs that client with the operator role.
 
 ## Scripts map
 
-| Location | Owns |
-|----------|------|
-| `scripts/` | Cross-cutting Node from `package.json` |
-| `deploy/scripts/` | Platform, model serve, images, release |
+| Location           | Owns                                          |
+| ------------------ | --------------------------------------------- |
+| `scripts/`         | Cross-cutting Node from `package.json`        |
+| `deploy/scripts/`  | Platform, model serve, images, release        |
 | `backend/scripts/` | Python ops via `uv run --directory backend …` |
 
 ## Pinned versions

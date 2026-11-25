@@ -31,7 +31,7 @@ async function waitForOk(url, label, attempts = 90) {
   console.error(
     `[platform-e2e] Timed out waiting for ${label} at ${url}\n` +
       `  Start the stack: pnpm platform setup && pnpm platform\n` +
-      `  Check status: pnpm platform status`
+      `  Check status: pnpm platform status`,
   );
   process.exit(1);
 }
@@ -60,7 +60,7 @@ const sharedEnv = { E2E_API_URL: apiURL, E2E_WEB_URL: webURL, E2E_AUTH_URL: auth
 run(
   ...uvBackend(["python", "-m", "pytest", "tests/live", "-v", "-m", "live"], { dev: true }),
   root,
-  sharedEnv
+  sharedEnv,
 );
 
 run("pnpm", ["exec", "playwright", "test"], root, sharedEnv, {

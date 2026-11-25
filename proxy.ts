@@ -54,7 +54,7 @@ function withCookies(response: NextResponse, token: Token): NextResponse {
 function toBackend(request: NextRequest, headers?: Headers): NextResponse {
   const target = new URL(
     `${request.nextUrl.pathname.replace(/^\/api/, "")}${request.nextUrl.search}`,
-    backendOrigin()
+    backendOrigin(),
   );
   return NextResponse.rewrite(target, headers ? { request: { headers } } : undefined);
 }
@@ -113,7 +113,7 @@ export default async function proxy(request: NextRequest) {
         event: "cross_site_request_refused",
         path: request.nextUrl.pathname,
         origin: request.headers.get("origin"),
-      })
+      }),
     );
     return NextResponse.json({ detail: "Cross-site request refused." }, { status: 403 });
   }

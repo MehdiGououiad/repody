@@ -33,7 +33,7 @@ describe("theme generation", () => {
         }
         // Text on the accent fill picks white or near-black, whichever reads.
         expect(
-          wcagContrast(hex(theme["--on-accent"]), hex(theme["--accent"]))
+          wcagContrast(hex(theme["--on-accent"]), hex(theme["--accent"])),
         ).toBeGreaterThanOrEqual(4.5);
       });
     }

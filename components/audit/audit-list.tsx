@@ -80,7 +80,7 @@ export function AuditList() {
     "get",
     "/v1/audits",
     { params: { query: auditsQuery(search) } },
-    { refetchInterval: search.page === 1 ? LIVE_MS : false }
+    { refetchInterval: search.page === 1 ? LIVE_MS : false },
   ).data;
   const { workflows } = $api.useSuspenseQuery("get", "/v1/workflows").data;
   const filter = (patch: Partial<typeof search>) => void setSearch({ ...patch, page: 1 });

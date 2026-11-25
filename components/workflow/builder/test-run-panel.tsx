@@ -134,7 +134,7 @@ export function TestDeployStep({
           <span
             className={cn(
               "inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium",
-              deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3"
+              deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3",
             )}
           >
             <StatusGlyph status={deployed ? "live" : "draft"} className="size-3" />

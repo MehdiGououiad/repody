@@ -55,7 +55,7 @@ function SearchInput({
         autoComplete="off"
         className={partClass(
           "h-full min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-ink-4 [&::-webkit-search-cancel-button]:hidden",
-          className
+          className,
         )}
         {...props}
       />

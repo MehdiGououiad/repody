@@ -15,7 +15,7 @@ export function SiteFooter({ locale, t }: { locale: Locale; t: Dict["common"] })
         (key) => ({
           key,
           label: t.nav[key],
-        })
+        }),
       ),
     },
     {

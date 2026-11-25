@@ -20,7 +20,7 @@ test.describe("Navigation and shell", () => {
       await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       await expect(nav.getByRole("link", { name: new RegExp(`^${heading}`) })).toHaveAttribute(
         "aria-current",
-        "page"
+        "page",
       );
     }
     watch.expectNoErrors();

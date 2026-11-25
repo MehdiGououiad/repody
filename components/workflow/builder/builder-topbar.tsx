@@ -41,7 +41,7 @@ function RunStatusChip({ test, onOpenTest }: { test: TestRun; onOpenTest: () => 
           "inline-flex h-6 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 text-xs font-medium transition-opacity hover:opacity-85 focus-visible:outline-2 focus-visible:outline-focus",
           status === "passed" && "bg-pass-wash text-pass-ink",
           status === "warning" && "bg-warn-wash text-warn-ink",
-          status === "failed" && "bg-fail-wash text-fail-ink"
+          status === "failed" && "bg-fail-wash text-fail-ink",
         )}
       >
         <StatusGlyph status={status} className="size-3" />
@@ -115,13 +115,13 @@ export function BuilderTopbar({
         autoFocus={!name}
         className={cn(
           inlineFieldClass,
-          "h-7 w-auto min-w-24 max-w-64 font-semibold [field-sizing:content]"
+          "h-7 w-auto min-w-24 max-w-64 font-semibold [field-sizing:content]",
         )}
       />
       <span
         className={cn(
           "hidden h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium sm:inline-flex",
-          deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3"
+          deployed ? "bg-pass-wash text-pass-ink" : "bg-selected text-ink-3",
         )}
       >
         <span
@@ -144,7 +144,7 @@ export function BuilderTopbar({
             transition={{ duration: 0.15 }}
             className={cn(
               "hidden items-center gap-1 text-xs lg:flex",
-              saveState.kind === "failed" ? "text-warn-ink" : "text-ink-4"
+              saveState.kind === "failed" ? "text-warn-ink" : "text-ink-4",
             )}
             title={saveState.kind === "failed" ? saveState.reason : undefined}
             aria-live="polite"

@@ -53,7 +53,8 @@
   --text-lead: 1.1875rem;
   --text-lead--line-height: 1.6;
 
-  --shadow-pop: 0 0 0 1px var(--line), 0 4px 12px -2px var(--shadow-color), 0 12px 32px -8px var(--shadow-color);
+  --shadow-pop:
+    0 0 0 1px var(--line), 0 4px 12px -2px var(--shadow-color), 0 12px 32px -8px var(--shadow-color);
   --shadow-frame: 0 0 0 1px var(--line-strong), 0 24px 64px -24px var(--shadow-color);
 
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);

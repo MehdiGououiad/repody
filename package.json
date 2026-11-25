@@ -1,18 +1,15 @@
 {
   "name": "repody",
   "version": "1.0.0",
-  "license": "Apache-2.0",
   "private": false,
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/MehdiGououiad/repody.git"
   },
-  "engines": {
-    "node": ">=26 <27",
-    "pnpm": "12.16.1",
-    "bun": "1.4.4"
-  },
-  "packageManager": "pnpm@12.16.1",
+  "workspaces": [
+    "."
+  ],
   "scripts": {
     "doctor": "node scripts/check-toolchain.mjs",
     "platform": "node deploy/scripts/platform-dev.mjs",
@@ -104,7 +101,10 @@
     "tailwindcss": "^4.3.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2"
   },
-  "workspaces": [
-    "."
-  ]
+  "engines": {
+    "bun": "1.4.4",
+    "node": ">=26 <27",
+    "pnpm": "12.16.1"
+  },
+  "packageManager": "pnpm@12.16.1"
 }

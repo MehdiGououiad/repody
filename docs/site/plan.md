@@ -6,13 +6,13 @@ end to end, because the buyers (and their engineering and security teams) decide
 
 ## Who reads it, and what they must leave with
 
-| Reader | Arrives with | Leaves knowing |
-|---|---|---|
-| Head of operations, back office (bank, insurer, telco) | Teams retype invoices, statements, claims, contracts | Repody reads them, checks them against their rules, and shows what to review |
-| CIO, CTO, architect | "Can we run it ourselves, and will it scale?" | One server or Kubernetes/OpenShift, their GPU or a managed one, documented, observable |
-| CISO, compliance (CNDP, Bank Al-Maghrib, ACAPS, ANRT expectations) | "Where does the data go, who can see it?" | Nowhere outside their infrastructure; SSO, roles, two-factor for administrators, hardened and signed images |
-| Procurement, partner, integrator | "Can we resell it under our name?" | White label from six settings; licence, not subscription |
-| An engineer evaluating the build | "Is this real engineering?" | Every gate, scan, signature and runbook, with specifics |
+| Reader                                                             | Arrives with                                         | Leaves knowing                                                                                              |
+| ------------------------------------------------------------------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Head of operations, back office (bank, insurer, telco)             | Teams retype invoices, statements, claims, contracts | Repody reads them, checks them against their rules, and shows what to review                                |
+| CIO, CTO, architect                                                | "Can we run it ourselves, and will it scale?"        | One server or Kubernetes/OpenShift, their GPU or a managed one, documented, observable                      |
+| CISO, compliance (CNDP, Bank Al-Maghrib, ACAPS, ANRT expectations) | "Where does the data go, who can see it?"            | Nowhere outside their infrastructure; SSO, roles, two-factor for administrators, hardened and signed images |
+| Procurement, partner, integrator                                   | "Can we resell it under our name?"                   | White label from six settings; licence, not subscription                                                    |
+| An engineer evaluating the build                                   | "Is this real engineering?"                          | Every gate, scan, signature and runbook, with specifics                                                     |
 
 Market: Morocco first. French is the default language, English second. Arabic is a later addition
 (needs RTL review of every layout, not a translation pass).
@@ -31,19 +31,19 @@ Three claims carry the site, each proven on a page:
 
 ## Site map
 
-| Path (under `/fr/` and `/en/`) | Page | Job |
-|---|---|---|
-| `/fr/`, `/en/` | Home | The story in one scroll; routes each reader to their page |
-| `platform/` | Platform | Every product capability, screen by screen |
-| `security/` | Security | Identity, data sovereignty, application, supply chain, infrastructure |
-| `architecture/` | Architecture | Components, data flow, model serving, scale, resilience, observability |
-| `deployment/` | Deployment and white label | Topologies, what is in the box, branding, the install path |
-| `engineering/` | Engineering (DevSecOps) | CI/CD, quality gates, signing, release, operations |
-| `solutions/banks/` | Banks | Use cases, documents, rules, compliance posture |
-| `solutions/insurance/` | Insurance | idem |
-| `solutions/telecom/` | Telecom | idem |
-| `contact/` | Demo request | One form, what happens next |
-| `legal/`, `privacy/` | Legal | Required, short |
+| Path (under `/fr/` and `/en/`) | Page                       | Job                                                                    |
+| ------------------------------ | -------------------------- | ---------------------------------------------------------------------- |
+| `/fr/`, `/en/`                 | Home                       | The story in one scroll; routes each reader to their page              |
+| `platform/`                    | Platform                   | Every product capability, screen by screen                             |
+| `security/`                    | Security                   | Identity, data sovereignty, application, supply chain, infrastructure  |
+| `architecture/`                | Architecture               | Components, data flow, model serving, scale, resilience, observability |
+| `deployment/`                  | Deployment and white label | Topologies, what is in the box, branding, the install path             |
+| `engineering/`                 | Engineering (DevSecOps)    | CI/CD, quality gates, signing, release, operations                     |
+| `solutions/banks/`             | Banks                      | Use cases, documents, rules, compliance posture                        |
+| `solutions/insurance/`         | Insurance                  | idem                                                                   |
+| `solutions/telecom/`           | Telecom                    | idem                                                                   |
+| `contact/`                     | Demo request               | One form, what happens next                                            |
+| `legal/`, `privacy/`           | Legal                      | Required, short                                                        |
 
 The same paths in both languages keep the language switch a one-segment swap; `/` sends readers to `/fr/`.
 
@@ -115,13 +115,13 @@ hero band that frames the product. Light by default, dark mode followed.
 
 **Motion inventory, and nothing else moves:**
 
-| Where | What | Why |
-|---|---|---|
-| Hero | The run replays: steps tick, GPU card wakes, verdict appears (loops, pauses off-screen) | Shows the product's real moment |
-| How it works | The connecting line draws as the section enters, steps light in order (once) | Shows sequence |
-| White label | Screenshot frame re-themes when a brand is picked | Proves the claim |
-| Engineering | Pipeline gates tick in order as the section enters (once) | Shows the gate sequence |
-| Everywhere | Reduced motion: no movement, cross-fades only | Accessibility |
+| Where        | What                                                                                    | Why                             |
+| ------------ | --------------------------------------------------------------------------------------- | ------------------------------- |
+| Hero         | The run replays: steps tick, GPU card wakes, verdict appears (loops, pauses off-screen) | Shows the product's real moment |
+| How it works | The connecting line draws as the section enters, steps light in order (once)            | Shows sequence                  |
+| White label  | Screenshot frame re-themes when a brand is picked                                       | Proves the claim                |
+| Engineering  | Pipeline gates tick in order as the section enters (once)                               | Shows the gate sequence         |
+| Everywhere   | Reduced motion: no movement, cross-fades only                                           | Accessibility                   |
 
 No entrance animation on every section, no parallax, no hover lifts.
 
@@ -139,15 +139,15 @@ No entrance animation on every section, no parallax, no hover lifts.
 
 ## Critique of this plan, and the changes made
 
-- *Risk: a feature dump.* A list of 150 items convinces no one. Change: each page leads with what it
+- _Risk: a feature dump._ A list of 150 items convinces no one. Change: each page leads with what it
   changes for the reader, then the specifics grouped under it; the specifics stay (the user wants the
   depth), but as evidence under a claim.
-- *Risk: compliance claims.* Repody is not certified by CNDP, BAM, ACAPS or ANRT. Change: the site
+- _Risk: compliance claims._ Repody is not certified by CNDP, BAM, ACAPS or ANRT. Change: the site
   says what the architecture enables (data stays on your servers, access is audited by your IdP),
   never "compliant" or "certified".
-- *Risk: fake proof.* No client logos, no invented accuracy percentages. Change: the proof strip
+- _Risk: fake proof._ No client logos, no invented accuracy percentages. Change: the proof strip
   uses facts of the product only; accuracy is described as measured on your documents during a pilot.
-- *Risk: the presentation's outdated facts* (quantised GGUF, MinIO, Vault-only secrets, LLM rules,
+- _Risk: the presentation's outdated facts_ (quantised GGUF, MinIO, Vault-only secrets, LLM rules,
   Casbin, SSE). Change: everything is taken from the current code and docs; the deck is context only.
-- *Risk: screenshots with test data.* Change: screenshots are captured from a clean demo dataset.
-- *Risk: Arabic expected in Morocco.* Change: noted as phase 2 with a proper RTL pass.
+- _Risk: screenshots with test data._ Change: screenshots are captured from a clean demo dataset.
+- _Risk: Arabic expected in Morocco._ Change: noted as phase 2 with a proper RTL pass.

@@ -56,12 +56,12 @@ async function orNotFound<T>(request: Promise<T>): Promise<T | null> {
 
 export const fetchWorkflow = cache((id: string) =>
   orNotFound(
-    data(serverFetch.GET("/v1/workflows/{workflow_id}", { params: { path: { workflow_id: id } } }))
-  )
+    data(serverFetch.GET("/v1/workflows/{workflow_id}", { params: { path: { workflow_id: id } } })),
+  ),
 );
 
 export const fetchAudit = cache((id: string) =>
-  orNotFound(data(serverFetch.GET("/v1/audits/{run_id}", { params: { path: { run_id: id } } })))
+  orNotFound(data(serverFetch.GET("/v1/audits/{run_id}", { params: { path: { run_id: id } } }))),
 );
 
 export const fetchPlatformConfig = cache(() => data(serverFetch.GET("/v1/platform/config")));

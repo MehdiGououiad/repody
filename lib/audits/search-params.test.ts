@@ -20,7 +20,7 @@ describe("audit search params", () => {
   it("export every matching audit (filters, no paging)", () => {
     expect(auditsExportHref(search)).toBe("/api/v1/audits/export.csv");
     expect(auditsExportHref({ ...search, workflow: "wf-1", page: 4 })).toBe(
-      "/api/v1/audits/export.csv?workflowId=wf-1"
+      "/api/v1/audits/export.csv?workflowId=wf-1",
     );
   });
 });

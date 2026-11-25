@@ -67,7 +67,7 @@ const steps = [
         "docker",
         ["compose", "-f", "deploy/vps/compose.yaml", "config", "-q"],
         undefined,
-        stackEnv()
+        stackEnv(),
       ),
   ],
   ["docs links and commands", () => run("node", ["deploy/scripts/check-command-docs.mjs"])],
@@ -78,7 +78,7 @@ const steps = [
 function samePostgres() {
   const stack = readFileSync("deploy/vps/compose.yaml", "utf8").match(/image: (postgres:\S+)/)?.[1];
   const backup = readFileSync("deploy/vps/backup.sh", "utf8").match(
-    /POSTGRES_IMAGE="([^"]+)"/
+    /POSTGRES_IMAGE="([^"]+)"/,
   )?.[1];
   return stack && stack === backup
     ? { status: 0 }

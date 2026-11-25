@@ -73,30 +73,30 @@ docstring-code-format = true
 
 [tool.ruff.lint]
 select = [
-  "E",     # pycodestyle errors
-  "F",     # pyflakes
-  "I",     # isort
-  "B",     # bugbear
-  "UP",    # pyupgrade
-  "N",     # pep8-naming
+  "E", # pycodestyle errors
+  "F", # pyflakes
+  "I", # isort
+  "B", # bugbear
+  "UP", # pyupgrade
+  "N", # pep8-naming
   "ASYNC", # async correctness
-  "C4",    # comprehensions
-  "SIM",   # simplify
-  "RET",   # early returns
-  "PIE",   # misc lints
-  "ARG",   # unused arguments
-  "DTZ",   # timezone-aware datetimes
-  "LOG",   # logging correctness
-  "G",     # logging format
-  "T20",   # no stray print()
-  "TID",   # tidy imports
-  "FAST",  # FastAPI idioms
-  "PT",    # pytest style
-  "S",     # security (bandit)
-  "RUF",   # ruff-specific
+  "C4", # comprehensions
+  "SIM", # simplify
+  "RET", # early returns
+  "PIE", # misc lints
+  "ARG", # unused arguments
+  "DTZ", # timezone-aware datetimes
+  "LOG", # logging correctness
+  "G", # logging format
+  "T20", # no stray print()
+  "TID", # tidy imports
+  "FAST", # FastAPI idioms
+  "PT", # pytest style
+  "S", # security (bandit)
+  "RUF", # ruff-specific
 ]
 ignore = [
-  "E501",  # the formatter wraps code; long strings and URLs stay readable
+  "E501", # the formatter wraps code; long strings and URLs stay readable
 ]
 
 [tool.ruff.lint.flake8-tidy-imports]
@@ -127,7 +127,13 @@ layers = [
 [[tool.importlinter.contracts]]
 name = "Use cases and domain are framework-free"
 type = "forbidden"
-source_modules = ["repody.app", "repody.extraction", "repody.rules", "repody.schemas", "repody.infra"]
+source_modules = [
+  "repody.app",
+  "repody.extraction",
+  "repody.rules",
+  "repody.schemas",
+  "repody.infra",
+]
 forbidden_modules = ["fastapi", "starlette"]
 
 [[tool.importlinter.contracts]]
@@ -146,7 +152,7 @@ venv = ".venv"
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
-extraPaths = ["."]  # tests import shared helpers as `tests.*` (pytest pythonpath)
+extraPaths = ["."] # tests import shared helpers as `tests.*` (pytest pythonpath)
 
 [tool.pytest]
 # strict: unknown config keys and markers, and xfail tests that pass, are errors.

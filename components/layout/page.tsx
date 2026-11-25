@@ -54,7 +54,7 @@ export function Page({
         className={cn(
           "flex-1",
           !bleed && "mx-auto w-full max-w-[1160px] px-4 py-7 md:px-8",
-          className
+          className,
         )}
       >
         {children}

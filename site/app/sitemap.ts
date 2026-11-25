@@ -18,6 +18,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
           "x-default": absolute("fr", page),
         },
       },
-    }))
+    })),
   );
 }

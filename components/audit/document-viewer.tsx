@@ -17,7 +17,7 @@ function PageImage({ src, label }: { src: string; label: string }) {
       <div
         className={cn(
           "relative overflow-hidden rounded-md bg-panel shadow-[0_0_0_1px_var(--line),0_8px_24px_-12px_var(--shadow-color)]",
-          !loaded && "aspect-[1/1.414] animate-pulse bg-selected [animation-duration:1.6s]"
+          !loaded && "aspect-[1/1.414] animate-pulse bg-selected [animation-duration:1.6s]",
         )}
       >
         {failed ? (
@@ -35,7 +35,7 @@ function PageImage({ src, label }: { src: string; label: string }) {
             onError={() => setFailed(true)}
             className={cn(
               "block h-auto w-full transition-opacity duration-300",
-              loaded ? "opacity-100" : "opacity-0"
+              loaded ? "opacity-100" : "opacity-0",
             )}
           />
         )}

@@ -20,7 +20,7 @@ export function SectionNav({
           .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (visible[0]) setActive(visible[0].target.id);
       },
-      { rootMargin: "-120px 0px -60% 0px" }
+      { rootMargin: "-120px 0px -60% 0px" },
     );
     for (const item of items) {
       const el = document.getElementById(item.id);

@@ -56,7 +56,7 @@ export function GlobalShortcuts() {
     () => {
       goPending.current = Date.now();
     },
-    { description: `G ${t("then")} O, C, W, R, S` }
+    { description: `G ${t("then")} O, C, W, R, S` },
   );
   const go = (key: keyof typeof GO_KEYS) => ({
     run: () => {
@@ -80,7 +80,7 @@ export function GlobalShortcuts() {
       setListed(shortcuts.list());
       void help.open();
     },
-    { description: t("shortcuts") }
+    { description: t("shortcuts") },
   );
 
   return (
@@ -110,7 +110,7 @@ export function GlobalShortcuts() {
                         ))}
                       </span>
                     </li>
-                  )
+                  ),
                 )}
               </ul>
             ) : (

@@ -54,7 +54,7 @@ const NUMERIC_LITERAL = /^-?\d+(?:[.,]\d+)?$/;
 export function textComparedWithNumber(
   condition: RuleCondition,
   fields: FieldOption[],
-  catalog: Catalog
+  catalog: Catalog,
 ): string | null {
   if (!condition.right || isPresenceOp(condition.operator, catalog)) return null;
   const leftField = condition.left.kind === "field" ? condition.left.field : null;

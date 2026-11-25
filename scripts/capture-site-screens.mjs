@@ -24,7 +24,7 @@ const SAMPLE = path.join(
   "e2e",
   "fixtures",
   "documents",
-  "Facture RETOUCHE remplie AVEC TVA.png"
+  "Facture RETOUCHE remplie AVEC TVA.png",
 );
 const REPORT = process.env.REPORT_RUN ?? "run-01a1d593bab7772bb61bb237aac64f03";
 const RAW = mkdtempSync(path.join(tmpdir(), "repody-screens-"));
@@ -120,5 +120,5 @@ for png in sorted(raw.glob("*.png")):
     RAW,
     OUT,
   ]),
-  { stdio: "inherit" }
+  { stdio: "inherit" },
 );

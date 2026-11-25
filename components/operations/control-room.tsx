@@ -34,7 +34,7 @@ function Pulse({ tone = "accent" }: { tone?: "accent" | "pass" | "fail" | "idle"
         <span
           className={cn(
             "absolute inset-0 animate-ping rounded-full opacity-60 motion-reduce:hidden",
-            color
+            color,
           )}
         />
       ) : null}
@@ -157,7 +157,7 @@ function InFlight({ runs }: { runs: ActiveRun[] }) {
                             "rounded-sm px-1 text-2xs font-medium",
                             run.source === "api"
                               ? "bg-accent-wash text-accent-ink"
-                              : "bg-selected text-ink-3"
+                              : "bg-selected text-ink-3",
                           )}
                         >
                           {tAudits(`row.source.${run.source}`)}

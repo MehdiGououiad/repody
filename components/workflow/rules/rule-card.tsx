@@ -98,7 +98,7 @@ export function RuleCard({
               "inline-flex h-5 shrink-0 items-center gap-1.5 rounded-full px-2 text-xs font-medium",
               result.status === "passed" && "bg-pass-wash text-pass-ink",
               result.status === "failed" && "bg-fail-wash text-fail-ink",
-              result.status === "skipped" && "bg-selected text-ink-3"
+              result.status === "skipped" && "bg-selected text-ink-3",
             )}
           >
             <StatusGlyph
@@ -155,7 +155,7 @@ export function RuleCard({
                       "flex h-7 cursor-pointer items-center gap-1.5 rounded-md px-2 text-[13px] transition-colors duration-100",
                       selected
                         ? cn(docColor(idx).wash, docColor(idx).ink, "font-medium")
-                        : "text-ink-3 shadow-[inset_0_0_0_1px_var(--line-strong)] hover:text-ink"
+                        : "text-ink-3 shadow-[inset_0_0_0_1px_var(--line-strong)] hover:text-ink",
                     )}
                   >
                     <span className={cn("size-1.5 rounded-full", docColor(idx).dot)} aria-hidden />

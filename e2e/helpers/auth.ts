@@ -91,7 +91,7 @@ export function writeAuthArtifacts(token: string, storageStateJson: string): voi
 export async function loginViaKeycloak(
   page: Page,
   callbackPath = "/dashboard",
-  user = { name: KEYCLOAK_USER, password: KEYCLOAK_PASSWORD }
+  user = { name: KEYCLOAK_USER, password: KEYCLOAK_PASSWORD },
 ): Promise<void> {
   const signIn = await page.request.post("/api/auth/sign-in/social", {
     data: { provider: "keycloak", callbackURL: callbackPath },

@@ -130,14 +130,14 @@ export function ExtractionWorkbench({
     if (test.run.phase !== "done") return byDoc;
     for (const doc of documents) {
       const found = test.run.result.documents.find(
-        (d) => d.documentType.trim() === doc.documentType.trim()
+        (d) => d.documentType.trim() === doc.documentType.trim(),
       );
       if (!found) continue;
       byDoc.set(
         doc.id,
         new Map(
-          found.fields.map((f) => [fieldKey(f.key), { extracted: f.extracted, value: f.value }])
-        )
+          found.fields.map((f) => [fieldKey(f.key), { extracted: f.extracted, value: f.value }]),
+        ),
       );
     }
     return byDoc;

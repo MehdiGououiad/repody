@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const login = new URL("/login", request.url);
   login.searchParams.set(
     "callbackUrl",
-    safeCallbackUrl(request.nextUrl.searchParams.get("callbackUrl"))
+    safeCallbackUrl(request.nextUrl.searchParams.get("callbackUrl")),
   );
   const response = NextResponse.redirect(login);
   if (!oidcEnabled) return response;

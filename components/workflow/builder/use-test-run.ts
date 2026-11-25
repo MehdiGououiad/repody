@@ -34,7 +34,7 @@ export function useTestRun({
       startRun({ workflowId: await saveForTestRun(), documents, rules, files: session.files }),
     onMutate: () => {
       setSnapshot(
-        new Map(documents.flatMap((d) => d.schema.map((f) => [f.id, signature(f)] as const)))
+        new Map(documents.flatMap((d) => d.schema.map((f) => [f.id, signature(f)] as const))),
       );
       setStartedAt(Date.now());
       setElapsedMs(0);

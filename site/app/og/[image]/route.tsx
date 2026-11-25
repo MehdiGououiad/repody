@@ -80,6 +80,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ima
         ))}
       </div>
     </div>,
-    { width: 1200, height: 630 }
+    { width: 1200, height: 630 },
   );
 }

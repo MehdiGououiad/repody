@@ -36,7 +36,7 @@ export function ApiPanel({
     setShowReport(true);
     start.mutate(
       { workflowId, documents, files, apiKey },
-      { onSuccess: ({ runId: id }) => setRunId(id) }
+      { onSuccess: ({ runId: id }) => setRunId(id) },
     );
   };
 

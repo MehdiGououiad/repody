@@ -56,7 +56,7 @@ function Count({ value, tone = "neutral" }: { value: number; tone?: "neutral" | 
         transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         className={cn(
           "ms-auto inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums",
-          tone === "fail" ? "bg-fail-wash text-fail-ink" : "bg-selected text-ink-2"
+          tone === "fail" ? "bg-fail-wash text-fail-ink" : "bg-selected text-ink-2",
         )}
       >
         {value}
@@ -82,7 +82,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
     "get",
     "/v1/dashboard",
     {},
-    { refetchInterval: LIVE_MS, enabled: useCan("metrics:read") }
+    { refetchInterval: LIVE_MS, enabled: useCan("metrics:read") },
   ).data;
   const toReview = dashboard ? reviewCount(dashboard.performanceSeries) : 0;
   const running = (dashboard?.queue.runningRuns ?? 0) + (dashboard?.queue.queuedRuns ?? 0);
@@ -127,7 +127,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
               aria-current={active ? "page" : undefined}
               className={cn(
                 navRow,
-                active ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
+                active ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
               )}
             >
               <Icon
@@ -168,7 +168,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                 className={cn(
                   navRow,
                   "font-normal",
-                  active ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"
+                  active ? "bg-selected text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
                 )}
               >
                 <StatusGlyph status={workflow.status === "active" ? "live" : "draft"} />

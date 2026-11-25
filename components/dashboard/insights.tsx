@@ -58,7 +58,7 @@ export function HourHeatmap({ hourly }: { hourly: Dashboard["hourly"] }) {
     const row = Math.round(
       (new Date(local.getFullYear(), local.getMonth(), local.getDate()).getTime() -
         days[0].getTime()) /
-        DAY_MS
+        DAY_MS,
     );
     if (row >= 0 && row < 7) grid[row][local.getHours()] += cell.runs;
   }
@@ -213,7 +213,7 @@ export function Activity({ audits }: { audits: Audit[] }) {
                         "block truncate text-xs",
                         !reason(audit) && "text-ink-4",
                         reason(audit) &&
-                          (audit.status === "failed" ? "text-fail-ink" : "text-warn-ink")
+                          (audit.status === "failed" ? "text-fail-ink" : "text-warn-ink"),
                       )}
                     >
                       {reason(audit) ??

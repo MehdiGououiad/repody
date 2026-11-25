@@ -38,7 +38,7 @@ const AGGREGATES = [
 function switchKind(
   left: ConditionExpression,
   kind: ConditionExpression["kind"],
-  tables: TableOption[]
+  tables: TableOption[],
 ) {
   const field =
     left.kind === "field" ? left.field : left.kind === "arithmetic" ? left.left.field : "";
@@ -134,7 +134,7 @@ export function ConditionLeft({
     (kind) =>
       kind === "field" ||
       kind === value.kind ||
-      (kind === "arithmetic" ? numbers.length > 0 : tables.length > 0)
+      (kind === "arithmetic" ? numbers.length > 0 : tables.length > 0),
   );
 
   return (

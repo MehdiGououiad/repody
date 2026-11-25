@@ -46,7 +46,7 @@ export function FieldSelect({
         className={cn(
           "w-40 font-mono text-xs",
           stale && "text-fail-ink shadow-[inset_0_0_0_1px_var(--fail)]",
-          className
+          className,
         )}
       >
         <SelectValue placeholder={placeholder} />

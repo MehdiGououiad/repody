@@ -36,9 +36,9 @@ function DialogContent({
         cn(
           dialogSurface,
           size === "sm" && "w-[min(420px,calc(100vw-2rem))]",
-          size === "lg" && "w-[min(760px,calc(100vw-2rem))]"
+          size === "lg" && "w-[min(760px,calc(100vw-2rem))]",
         ),
-        className
+        className,
       )}
       {...props}
     />
@@ -80,7 +80,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       className={cn(
         "flex items-center justify-end gap-2 border-t border-line bg-raised px-5 py-3",
-        className
+        className,
       )}
       {...props}
     />

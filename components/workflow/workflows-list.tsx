@@ -50,7 +50,7 @@ function WorkflowRow({
       className={cn(
         "group relative h-10 px-4 transition-colors duration-100 hover:bg-hover md:px-5",
         GRID,
-        selected && "bg-accent-wash hover:bg-accent-wash"
+        selected && "bg-accent-wash hover:bg-accent-wash",
       )}
     >
       <Checkbox
@@ -59,7 +59,7 @@ function WorkflowRow({
         aria-label={t("delete.selectWorkflow", { name: workflow.name })}
         className={cn(
           "relative z-10 transition-opacity duration-100 pointer-fine:opacity-0 pointer-fine:focus-visible:opacity-100 pointer-fine:group-hover:opacity-100",
-          (selected || selecting) && "pointer-fine:opacity-100"
+          (selected || selecting) && "pointer-fine:opacity-100",
         )}
       />
       <StatusGlyph status={live ? "live" : "draft"} label={t(`status.${workflow.status}`)} />
@@ -133,7 +133,7 @@ export function WorkflowsList() {
         .workflow;
       if (id) toggle(id, !selection.has(id));
     },
-    { description: t("delete.selectAll") }
+    { description: t("delete.selectAll") },
   );
   useShortcut("escape", () => setSelection(new Set()), {
     when: () => selection.size > 0,
@@ -186,7 +186,7 @@ export function WorkflowsList() {
       <div
         className={cn(
           "sticky top-[41px] z-10 h-8 border-b border-line bg-raised/95 px-4 text-xs text-ink-3 backdrop-blur-sm md:px-5",
-          GRID
+          GRID,
         )}
       >
         <Checkbox
