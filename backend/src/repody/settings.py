@@ -116,10 +116,6 @@ class Settings(BaseSettings):
     # JSON request bodies (workflow definitions); file uploads have their own limits.
     max_json_bytes: PositiveInt = 2 * 1024 * 1024
 
-    # Credits (repody.app.credits): every run is metered, 1 credit = 1 page sent to the model,
-    # plus credit_run_fee per run (the model's start-up and idle time a run causes). Enforced:
-    # a run is refused (402) when its account cannot pay its estimate. Accounts are the client
-    # companies (Keycloak groups client-<name>); callers outside any client are not charged.
     # Access requests from the site (repody.app.access): off unless set, so an installation never
     # opens a public form it does not use (Repody's own site: the VPS turns it on). Cloudflare
     # Turnstile's secret (no check when unset), and how many requests one network sends an hour.
@@ -129,6 +125,10 @@ class Settings(BaseSettings):
     # Declined requests are deleted after this (their details were kept only for the request).
     access_request_retention_days: PositiveInt = 90
 
+    # Credits (repody.app.credits): every run is metered, 1 credit = 1 page sent to the model,
+    # plus credit_run_fee per run (the model's start-up and idle time a run causes). Enforced:
+    # a run is refused (402) when its account cannot pay its estimate. Accounts are the client
+    # companies (Keycloak groups client-<name>); callers outside any client are not charged.
     credits_enforced: bool = False
     credit_run_fee: NonNegativeInt = 0
     # The admin area flags a client below this balance; its users see a warning too.

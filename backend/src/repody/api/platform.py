@@ -1,7 +1,8 @@
+"""Health, the caller's access, platform settings, the dashboard and the control room."""
+
 import asyncio
 import time
 from collections.abc import Awaitable, Callable
-from typing import Annotated
 
 import structlog
 from fastapi import APIRouter, Response
@@ -10,10 +11,9 @@ from sqlalchemy import text
 from repody.api.deps import AccountScope, OptionalUser, SessionDep, require
 from repody.app.credits import credits_of, run_cost
 from repody.app.dashboard import get_dashboard
-from repody.app.operations import cancel_run, get_operations
+from repody.app.operations import get_operations
 from repody.extraction import client as inference
 from repody.infra import db
-from repody.infra.auth import User
 from repody.schemas.catalog import Catalog, catalog
 from repody.schemas.platform import Access, Dashboard, Health, Operations, PlatformConfig
 from repody.settings import get_settings
@@ -103,14 +103,6 @@ async def operations(session: SessionDep, account: AccountScope) -> Operations:
     return await get_operations(session, account=account)
 
 
-@router.post("/runs/{run_id}/cancel", status_code=204)
-async def cancel(
-    run_id: str, session: SessionDep, user: Annotated[User, require("run:execute")]
-) -> None:
-    """Stop a queued or running run of the caller's account. 409 when it has already finished."""
-    await cancel_run(session, run_id, user.subject, account=user.account)
-
-
 @router.get("/catalog", dependencies=[require("workflow:read")])
 async def get_catalog() -> Catalog:
     """Field types the builder offers, and which of them rules compare in order or add up."""
@@ -126,16 +118,14 @@ async def wake_model(user: OptionalUser, session: SessionDep) -> None:
         credits = await credits_of(session, user.account)
         if credits.enforced and credits.balance < run_cost(1):
             return
-    try:
-        now = time.monotonic()
-        if _last_wake is not None and now - _last_wake < WAKE_COOLDOWN_SECONDS:
-            return
-        _last_wake = now
-        task = asyncio.create_task(_wake_in_background())
-        _wake_tasks.add(task)
-        task.add_done_callback(_wake_tasks.discard)
-    except Exception as exc:
-        log.warning("model_wake_schedule_failed", error=repr(exc))
+    now = time.monotonic()
+    if _last_wake is not None and now - _last_wake < WAKE_COOLDOWN_SECONDS:
+        return
+    _last_wake = now
+    # Keep a reference until it finishes (asyncio docs, create_task: the loop keeps weak ones).
+    task = asyncio.create_task(_wake_in_background())
+    _wake_tasks.add(task)
+    task.add_done_callback(_wake_tasks.discard)
 
 
 @router.get("/dashboard", dependencies=[require("metrics:read")])

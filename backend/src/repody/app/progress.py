@@ -83,12 +83,8 @@ class Tracker:
         await self._save()
 
     async def finish(self, step_id: str, **values: Any) -> None:
-        """Mark ``step_id`` done, setting ``values`` (duration, cache hit, …) on it."""
-        if step := self._step(step_id):
-            for name, value in values.items():
-                setattr(step, name, value)
-            step.status = "done"
-        await self._save()
+        """Mark ``step_id`` done, setting ``values`` (duration, cold start, …) on it."""
+        await self.update(step_id, **values, status="done")
 
     def complete(self) -> dict[str, Any]:
         """Every step done: the final progress, saved by the caller with the report."""
