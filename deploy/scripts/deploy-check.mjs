@@ -3,8 +3,9 @@
  * Deploy assets check with the standard tools:
  *   helm lint, helm template | kubeconform (Kubernetes schemas), kubectl kustomize,
  *   docker buildx bake --print (bake variable validation), docker compose config for the
- *   VPS stack (every required variable from deploy/vps/env.example), the docs link check, and
- *   that backup.sh restores into the stack's own Postgres image.
+ *   VPS stack (every required variable from deploy/vps/env.example), the deploy's own gate on it
+ *   (deploy/vps/check_compose.py, here at review time too), the docs link check, and that
+ *   backup.sh restores into the stack's own Postgres image.
  *
  * kubeconform runs from its official image when the binary is not installed.
  */
@@ -42,6 +43,36 @@ function kubeconform(manifests) {
     : run("docker", ["run", "--rm", "-i", "ghcr.io/yannh/kubeconform:v0.7.0", ...args], manifests);
 }
 
+const PYTHON = process.platform === "win32" ? "python" : "python3";
+
+/** The stack as the deploy renders it, through the gate deploy.yml runs before starting it. */
+function stackGate() {
+  const config = run(
+    "docker",
+    ["compose", "-f", "deploy/vps/compose.yaml", "config", "--format", "json"],
+    undefined,
+    stackEnv(),
+  );
+  return config.status === 0 ? run(PYTHON, ["deploy/vps/check_compose.py"], config.stdout) : config;
+}
+
+/** The gate itself refuses a stack that reaches outside (a privileged service, the host's paths). */
+function gateRefuses() {
+  const escaping = JSON.stringify({
+    services: {
+      web: { privileged: true, volumes: [{ type: "bind", source: "/var/run/docker.sock" }] },
+    },
+  });
+  const result = run(PYTHON, ["deploy/vps/check_compose.py"], escaping);
+  return result.status === 1 && result.stderr.includes("docker.sock")
+    ? { status: 0 }
+    : {
+        status: 1,
+        stderr: `check_compose.py let an escaping stack through:
+${result.stderr}`,
+      };
+}
+
 const steps = [
   ["helm lint", () => run("helm", ["lint", CHART, "-f", PRODUCTION_VALUES])],
   [
@@ -70,6 +101,8 @@ const steps = [
         stackEnv(),
       ),
   ],
+  ["the deploy's gate passes the VPS stack (check_compose.py)", stackGate],
+  ["the deploy's gate refuses an escaping stack", gateRefuses],
   ["docs links and commands", () => run("node", ["deploy/scripts/check-command-docs.mjs"])],
   ["backup restore test uses the stack's Postgres", samePostgres],
 ];
