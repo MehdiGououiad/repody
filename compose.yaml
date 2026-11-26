@@ -187,7 +187,8 @@ services:
     restart: unless-stopped
 
   # Observability (optional: docker compose --env-file backend/.env --profile observability up -d)
-  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · bun run dev:src:observability
+  # Grafana :3030 · Loki :3100 · Bugsink :8090 · OTLP :4318 · started by `bun run platform` and
+  # `bun run platform dev` unless --no-obs
   bugsink-db:
     profiles: [observability]
     image: postgres:18.7-alpine@sha256:b6972e1115a4ff8eba5d7f7d19184926d1e16d7d1136ae1e1a7ebf286da0f015

@@ -38,8 +38,17 @@ const bunCommands = new Set([
   "dedupe",
   "prune",
 ]);
-const rootDocs = new Set(["CONTEXT.md", "README.md"]);
-const docRoots = ["deploy", "docs", "e2e"];
+// Docs, and the scripts and config files whose comments and messages name commands too.
+const rootDocs = new Set([
+  "CONTEXT.md",
+  "README.md",
+  "compose.yaml",
+  "compose.portable.yaml",
+  "docker-bake.hcl",
+  "Dockerfile.web",
+]);
+const docRoots = ["deploy", "docs", "e2e", "scripts"];
+const checkedExtensions = [".md", ".mjs", ".yaml", ".yml", ".sh"];
 const skipDirs = new Set([
   ".git",
   ".next",
@@ -59,7 +68,7 @@ const forbiddenText = [
   { pattern: /â(?:€|†|„|…|œ|�)/, label: "mojibake marker" },
 ];
 
-function discoverMarkdownDocs() {
+function discoverFiles() {
   const docs = [];
   for (const name of rootDocs) {
     const abs = resolve(root, name);
@@ -92,13 +101,15 @@ function walk(dir, docs) {
       }
       continue;
     }
-    if (entry.isFile() && entry.name.endsWith(".md")) {
+    if (entry.isFile() && checkedExtensions.some((ext) => entry.name.endsWith(ext))) {
       docs.push(abs);
     }
   }
 }
 
-for (const abs of discoverMarkdownDocs()) {
+const self = fileURLToPath(import.meta.url);
+
+for (const abs of discoverFiles().filter((file) => resolve(file) !== resolve(self))) {
   const text = readFileSync(abs, "utf8");
   for (const { pattern, label } of forbiddenText) {
     const match = pattern.exec(text);
@@ -129,4 +140,6 @@ if (missing.length) {
   process.exit(1);
 }
 
-console.log("ok: documented bun commands and doc hygiene (links: lychee in CI)");
+console.log(
+  "ok: bun commands named in docs, scripts and config, and doc hygiene (links: lychee in CI)",
+);

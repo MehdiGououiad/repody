@@ -47,6 +47,7 @@
     "llamacpp:stop": "node deploy/scripts/llama-serve.mjs stop",
     "llamacpp:restart": "node deploy/scripts/llama-serve.mjs restart",
     "llamacpp:verify": "node deploy/scripts/llama-serve.mjs verify",
+    "llamacpp:download": "node deploy/scripts/llama-serve.mjs download",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test e2e/tests/00-auth.spec.ts e2e/tests/01-navigation.spec.ts",
     "test:e2e:ui": "playwright test --ui",

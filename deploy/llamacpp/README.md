@@ -1,6 +1,6 @@
 # llama-server for Repody: NuExtract3
 
-NuExtract3 runs locally on the official **llama-server** binary (`winget install llama.cpp`), on an
+NuExtract3 runs locally on the official **llama-server** binary (`winget install ggml.llamacpp`), on an
 OpenAI-compatible port. Platform wiring: `docs/EXTRACTION.md`.
 
 No GPU on the server? Run the full NuExtract3 on vLLM on Modal, scaling to zero, inside the free tier:
@@ -13,7 +13,7 @@ No GPU on the server? Run the full NuExtract3 on vLLM on Modal, scaling to zero,
 ## 1. Install llama.cpp
 
 ```powershell
-winget install llama.cpp
+winget install ggml.llamacpp
 # later: winget upgrade ggml.llamacpp   # latest GitHub Vulkan release
 ```
 
@@ -28,7 +28,8 @@ winget install llama.cpp
 | `NuExtract3-Q4_K_M.gguf`      | ~2.7 GB                     |
 | `mmproj-NuExtract3-BF16.gguf` | vision projector (required) |
 
-`node deploy/scripts/llama-serve.mjs download` fetches the repository into `deploy/llamacpp/models`.
+`bun run llamacpp:download` fetches the repository into `deploy/llamacpp/models` (it needs the
+Hugging Face CLI, `hf`).
 On the Repody OCR benchmark (`benchmarks/ocr`), Q8_0 is the most accurate.
 
 ## 3. Configure and start
