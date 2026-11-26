@@ -56,7 +56,7 @@ hourly rate, and left out the employee block).
 official llama.cpp guide. On this machine's Vulkan backend llama-server aborts on the first request
 (`ggml-vulkan.cpp:5779: GGML_ASSERT(allow_misalign || misalign_bytes == 0)`) with both b12098 and
 b12119, so there is no DSpark result yet. The guide was verified on Metal; CUDA is also documented.
-Rerun the script (`LLAMA_SERVER=<path>` picks a build) once llama.cpp fixes it.
+The script is on the `benchmarks-2026-11` tag with the other removed runners.
 
 ## Real French documents, all on the Arc GPU (2026-11-05)
 
