@@ -62,11 +62,15 @@ is made an error on purpose.
 
 Dependencies point inward. `bun run architecture:check` fails the build when they do not.
 
-| Package                              | May import                                                                 | Must not import                                       |
-| ------------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `api/` (routes, caller dependencies) | everything below                                                           | -                                                     |
-| `app/` (use cases)                   | `extraction`, `rules`, `schemas`, `models`, `queue`, `storage`, `settings` | `fastapi`, `starlette`, `api`                         |
-| `extraction/`, `rules/` (domain)     | `schemas`, `settings` (extraction only)                                    | `app`, `api`; `rules` also no DB, Hatchet or settings |
+| Package                                          | May import                                               | Must not import                                           |
+| ------------------------------------------------ | -------------------------------------------------------- | --------------------------------------------------------- |
+| `main.py`, `worker.py`                           | everything below                                         | -                                                         |
+| `api/` (routes, caller deps)                     | `app` and everything below                               | `main`, `worker`                                          |
+| `app/` (use cases)                               | `extraction`, `rules`, `infra`, `schemas`, `settings`    | `fastapi`, `starlette`, `api`                             |
+| `extraction/`, `rules/` (domain)                 | `infra`, `schemas`, `settings` (`rules`: `schemas` only) | `app`, `api`; `rules` also no database, Hatchet, settings |
+| `infra/` (Postgres, S3, Hatchet, Keycloak, logs) | `schemas`, `settings`                                    | everything above                                          |
+| `schemas/` (Pydantic models)                     | `settings`                                               | everything above                                          |
+| `settings.py`                                    | nothing of Repody                                        | everything above                                          |
 
 - **Suppressions must explain themselves.** Every `oxlint-disable-next-line`,
   `# noqa` and `# pyright:` comment states why the rule does not apply.
