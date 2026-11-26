@@ -100,6 +100,7 @@ def download() -> None:
     max_containers=1,
     # Idle time before the container stops: ten minutes, so a person testing in the builder (run,
     # adjust, run again) keeps a warm model. Up to ~$0.13 of idle L4 time after the last request.
+    # Staging's is 2 minutes, set after each deploy by prewarm.py (it serves only tests).
     scaledown_window=10 * MINUTES,
     timeout=10 * MINUTES,  # per request
     # The container's start (@modal.enter) gets its own limit: without one, `timeout` bounds it

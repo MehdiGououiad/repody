@@ -55,6 +55,9 @@ The Starter plan includes [$30 of compute a month](https://modal.com/pricing): a
 the 15 s start, the extractions, and ten idle minutes before the container stops
 (`scaledown_window=10 * MINUTES`). The ten minutes keep the model warm while someone tests in the
 builder (run, adjust, run again), for up to ~$0.13 of idle time after the last request.
+Staging's model stops after 2 minutes instead: it serves only tests, and in November its idle
+time after each merge's smoke test was most of its cost (two-thirds of the month's spend was
+staging). `prewarm.py` sets it after each deploy, which resets it.
 
 | Usage (L4; A10 about 1.4×)                                   | GPU time    | Cost        |
 | ------------------------------------------------------------ | ----------- | ----------- |
