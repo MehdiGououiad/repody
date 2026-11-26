@@ -68,7 +68,8 @@ backend/src/repody/
 └── settings.py        Every AUDIT_* setting, in one place
 ```
 
-Dependencies point one way: entry points → `api` → `app` → `extraction` / `rules` → `infra`.
+Dependencies point one way: entry points → `api` → `app` → `extraction` / `rules` → `infra` →
+`schemas` → `settings`.
 `app`, `extraction`, `rules`, `schemas` and `infra` never import FastAPI. import-linter checks both
 (`backend/pyproject.toml`, `bun run architecture:check`). The API and the worker are the same image
 with two commands, so they already deploy and scale apart; the model is an HTTP endpoint and

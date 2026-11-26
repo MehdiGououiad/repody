@@ -11,7 +11,6 @@ import {
   MenuRadioGroup,
   MenuRadioItem,
   MenuSeparator as MenuSeparatorPrimitive,
-  MenuShortcut as MenuShortcutPrimitive,
   MenuTrigger,
 } from "@ui-sdk/react/menu";
 import { Check } from "lucide-react";
@@ -89,15 +88,6 @@ function MenuSeparator({
   return <MenuSeparatorPrimitive className={partClass(popupSeparator, className)} {...props} />;
 }
 
-function MenuShortcut({ className, ...props }: React.ComponentProps<typeof MenuShortcutPrimitive>) {
-  return (
-    <MenuShortcutPrimitive
-      className={partClass("ms-auto ps-4 text-xs tabular-nums text-ink-4", className)}
-      {...props}
-    />
-  );
-}
-
 export {
   Menu,
   MenuCheck,
@@ -108,6 +98,5 @@ export {
   MenuRadio,
   MenuRadioGroup,
   MenuSeparator,
-  MenuShortcut,
   MenuTrigger,
 };

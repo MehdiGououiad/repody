@@ -7,7 +7,6 @@ import {
   DialogContent as DialogContentPrimitive,
   DialogDescription as DialogDescriptionPrimitive,
   DialogTitle as DialogTitlePrimitive,
-  DialogTrigger,
 } from "@ui-sdk/react/dialog";
 import type * as React from "react";
 import { cn, partClass } from "@/lib/utils";
@@ -97,5 +96,4 @@ export {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 };

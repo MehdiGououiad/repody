@@ -7,14 +7,13 @@ import {
   SelectGroupLabel as SelectGroupLabelPrimitive,
   SelectItemIndicator,
   SelectItem as SelectItemPrimitive,
-  SelectSeparator as SelectSeparatorPrimitive,
   SelectTrigger as SelectTriggerPrimitive,
   SelectValue,
 } from "@ui-sdk/react/select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import type * as React from "react";
 import { cn, partClass } from "@/lib/utils";
-import { popupItem, popupLabel, popupSeparator, popupSurface } from "./popup";
+import { popupItem, popupLabel, popupSurface } from "./popup";
 
 export const triggerClass =
   "inline-flex h-7 min-w-0 cursor-pointer items-center gap-1.5 rounded-md bg-field px-2 text-[13px] text-ink shadow-[inset_0_0_0_1px_var(--line-strong)] outline-none transition-[box-shadow,background-color] duration-150 hover:bg-hover focus-visible:shadow-[inset_0_0_0_1px_var(--accent),0_0_0_3px_var(--accent-wash)] data-open:bg-hover data-disabled:opacity-45 data-invalid:shadow-[inset_0_0_0_1px_var(--fail)]";
@@ -70,20 +69,12 @@ function SelectGroupLabel({
   return <SelectGroupLabelPrimitive className={partClass(popupLabel, className)} {...props} />;
 }
 
-function SelectSeparator({
-  className,
-  ...props
-}: React.ComponentProps<typeof SelectSeparatorPrimitive>) {
-  return <SelectSeparatorPrimitive className={partClass(popupSeparator, className)} {...props} />;
-}
-
 export {
   Select,
   SelectContent,
   SelectGroup,
   SelectGroupLabel,
   SelectItem,
-  SelectSeparator,
   SelectTrigger,
   SelectValue,
 };
