@@ -1059,22 +1059,6 @@ export interface components {
             filterContains: string;
         };
         /**
-         * ApiStats
-         * @description Runs started with the workflow's API key.
-         */
-        ApiStats: {
-            /** Apicallstoday */
-            apiCallsToday: number;
-            /** Apicallstotal */
-            apiCallsTotal: number;
-            /** Avglatencyms */
-            avgLatencyMs: number;
-            /** Callseries */
-            callSeries: components["schemas"]["CallsPerDay"][];
-            /** Topfailingrules */
-            topFailingRules: components["schemas"]["FailingRule"][];
-        };
-        /**
          * Arithmetic
          * @description ``left op right`` on two number fields.
          */
@@ -1278,17 +1262,6 @@ export interface components {
             /** Ids */
             ids: string[];
         };
-        /** CallsPerDay */
-        CallsPerDay: {
-            /**
-             * Day
-             * Format: date
-             * @description UTC day; clients name it in their locale.
-             */
-            day: string;
-            /** Calls */
-            calls: number;
-        };
         /**
          * Catalog
          * @description What the builder offers: field types, and which of them rules can order or add.
@@ -1491,8 +1464,6 @@ export interface components {
             documents: components["schemas"]["DocumentStats"];
             /** Workflowactivity */
             workflowActivity: components["schemas"]["WorkflowActivity"][];
-            /** Failuresbyseverity */
-            failuresBySeverity: components["schemas"]["SeverityShare"][];
             queue: components["schemas"]["QueueCounts"];
             /** Recentaudits */
             recentAudits: components["schemas"]["AuditListItem"][];
@@ -1671,18 +1642,6 @@ export interface components {
              * Format: date-time
              */
             createdAt: string;
-        };
-        /** FailingRule */
-        FailingRule: {
-            /** Name */
-            name: string;
-            /** Count */
-            count: number;
-            /**
-             * Severity
-             * @enum {string}
-             */
-            severity: "reject" | "flag";
         };
         /**
          * FieldRef
@@ -2156,16 +2115,6 @@ export interface components {
             /** Children */
             children: components["schemas"]["SchemaField-Output"][];
         };
-        /** SeverityShare */
-        SeverityShare: {
-            /**
-             * Severity
-             * @enum {string}
-             */
-            severity: "reject" | "flag";
-            /** Share */
-            share: number;
-        };
         /** SharedWorkflow */
         SharedWorkflow: {
             /** Id */
@@ -2409,7 +2358,6 @@ export interface components {
             successRate: number;
             /** Lastrun */
             lastRun: string | null;
-            apiStats: components["schemas"]["ApiStats"] | null;
             /**
              * Readonly
              * @description Shared (no account): duplicate it to edit or run it.

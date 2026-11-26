@@ -26,7 +26,6 @@ from repody.schemas.platform import (
     KpiId,
     KpiPoint,
     QueueCounts,
-    SeverityShare,
     SourceCounts,
     WorkflowActivity,
 )
@@ -216,18 +215,6 @@ async def get_dashboard(session: AsyncSession, *, account: str | None = None) ->
     daily = await daily_counts(session, both_weeks[0], mine)
     this_week = [daily.get(d, DayCounts()) for d in week]
     last_week = [daily.get(d, DayCounts()) for d in previous_week]
-
-    failures = dict(
-        (
-            await session.execute(
-                select(RuleResult.severity, func.count())
-                .join(Run, Run.id == RuleResult.run_id)
-                .where(RuleResult.status == "failed", Run.created_at >= midnight(week[0]), mine)
-                .group_by(RuleResult.severity)
-            )
-        ).all()
-    )
-    total_failures = sum(failures.values())
     since = midnight(week[0])
     workflows = await list_workflows(session, limit=WORKFLOWS, account=account)
     return Dashboard(
@@ -263,10 +250,6 @@ async def get_dashboard(session: AsyncSession, *, account: str | None = None) ->
         hourly=await _hourly(session, since, mine),
         documents=await _documents(session, since, mine),
         workflow_activity=await _workflow_activity(session, week, [w.id for w in workflows], mine),
-        failures_by_severity=[
-            SeverityShare(severity=severity, share=count / total_failures)
-            for severity, count in failures.items()
-        ],
         queue=await queue_counts(session),
         recent_audits=await _audits(session, mine, failed=False, limit=RECENT_AUDITS),
         failed_audits=await _audits(session, mine, failed=True, limit=FAILED_AUDITS),

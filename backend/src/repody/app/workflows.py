@@ -1,5 +1,4 @@
-"""Workflow use cases: list, read, create, save, duplicate, archive, deploy, and run
-statistics.
+"""Workflow use cases: list, read, create, save, duplicate, archive, deploy, and run counts.
 
 ``account`` is the caller's (repody.app.scope): they see their account's workflows and the shared
 ones (no account, read-only), and change only their own. None: everything."""
@@ -14,18 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody.app.errors import AppError
 from repody.app.scope import own_workflow, sees_workflow, visible_workflows
-from repody.app.stats import daily_counts, last_days, midnight, pass_rate, today
+from repody.app.stats import pass_rate
 from repody.extraction.fields import leaves
 from repody.infra.auth import api_key_hint, hash_api_key, new_api_key
-from repody.infra.models import RuleResult, Run, Workflow, new_id
+from repody.infra.models import Run, Workflow, new_id
 from repody.rules.evaluate import SchemaTypes, condition_issue, describe, rule_issues
 from repody.schemas.catalog import TABLE_TYPE, field_key
 from repody.schemas.workflow import (
-    ApiStats,
-    CallsPerDay,
     CreateWorkflow,
     DocumentDef,
-    FailingRule,
     RuleCheck,
     WorkflowDefinition,
     WorkflowIn,
@@ -57,47 +53,11 @@ async def _run_stats(session: AsyncSession, workflow_ids: list[str]) -> dict[str
     }
 
 
-async def _api_stats(session: AsyncSession, workflow_id: str) -> ApiStats:
-    api_runs = (Run.workflow_id == workflow_id) & (Run.source == "api")
-    week = last_days(7)
-    total, today_count, avg_ms = (
-        await session.execute(
-            select(
-                func.count(),
-                func.count().filter(Run.created_at >= midnight(today())),
-                func.avg(func.extract("epoch", Run.finished_at - Run.started_at) * 1000),
-            ).where(api_runs)
-        )
-    ).one()
-    per_day = await daily_counts(session, week[0], api_runs)
-    failing = await session.execute(
-        select(RuleResult.name, RuleResult.severity, func.count())
-        .join(Run, Run.id == RuleResult.run_id)
-        .where(api_runs, RuleResult.status == "failed")
-        .group_by(RuleResult.name, RuleResult.severity)
-        .order_by(func.count().desc())
-        .limit(5)
-    )
-    return ApiStats(
-        api_calls_today=today_count,
-        api_calls_total=total,
-        avg_latency_ms=int(avg_ms or 0),
-        call_series=[
-            CallsPerDay(day=d, calls=per_day[d].runs if d in per_day else 0) for d in week
-        ],
-        top_failing_rules=[
-            FailingRule(name=name, severity=severity, count=count)
-            for name, severity, count in failing
-        ],
-    )
-
-
 def _out(
     wf: Workflow,
     definition: WorkflowDefinition,
     stats: RunStats,
     *,
-    api_stats: ApiStats | None = None,
     api_key: str | None = None,
     account: str | None = None,
 ) -> WorkflowOut:
@@ -115,7 +75,6 @@ def _out(
         total_runs=stats.total,
         success_rate=stats.success_rate,
         last_run=stats.last_run,
-        api_stats=api_stats,
         read_only=account is not None and wf.account_id != account,
     )
 
@@ -175,9 +134,8 @@ async def get_workflow(
 ) -> WorkflowOut:
     wf = await load(session, workflow_id, account=account)
     stats = (await _run_stats(session, [wf.id])).get(wf.id, RunStats())
-    api_stats = await _api_stats(session, wf.id) if wf.deployed_at else None
     definition = WorkflowDefinition.model_validate(wf.definition)
-    return _out(wf, definition, stats, api_stats=api_stats, api_key=api_key, account=account)
+    return _out(wf, definition, stats, api_key=api_key, account=account)
 
 
 async def create_workflow(

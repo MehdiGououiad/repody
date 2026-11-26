@@ -61,7 +61,6 @@ export function newWorkflow(): Workflow {
     totalRuns: 0,
     successRate: 0,
     lastRun: null,
-    apiStats: null,
     readOnly: false,
   };
 }

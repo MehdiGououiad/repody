@@ -1,14 +1,14 @@
 """A workflow: documents to extract (NuExtract schema) and rules to check."""
 
 from collections import Counter
-from datetime import date, datetime
+from datetime import datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import Field, StringConstraints, model_validator
 
 from repody.schemas.catalog import DEFAULT_TYPE, TemplateType, field_key
 from repody.schemas.common import CamelModel, Id, Name, Text
-from repody.schemas.rule import Rule, Severity
+from repody.schemas.rule import Rule
 
 # The workflow lifecycle (repody.app.lifecycle). Archived workflows are never returned, so the
 # API's status is draft or active; deploying makes a workflow active.
@@ -106,27 +106,6 @@ class WorkflowDefinition(CamelModel):
         return self
 
 
-class CallsPerDay(CamelModel):
-    day: date = Field(description="UTC day; clients name it in their locale.")
-    calls: int
-
-
-class FailingRule(CamelModel):
-    name: str
-    count: int
-    severity: Severity
-
-
-class ApiStats(CamelModel):
-    """Runs started with the workflow's API key."""
-
-    api_calls_today: int
-    api_calls_total: int
-    avg_latency_ms: int
-    call_series: list[CallsPerDay]
-    top_failing_rules: list[FailingRule]
-
-
 class CreateWorkflow(CamelModel):
     name: Name = "Untitled workflow"
     description: Text = ""
@@ -146,7 +125,6 @@ class WorkflowOut(WorkflowIn):
     total_runs: int = 0
     success_rate: float = 0.0
     last_run: datetime | None = None
-    api_stats: ApiStats | None = None
     read_only: bool = Field(
         default=False, description="Shared (no account): duplicate it to edit or run it."
     )

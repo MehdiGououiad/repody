@@ -51,7 +51,6 @@ async def test_deploy_and_archive(api):
     deployed = (await api.post("/v1/workflows/wf-d/deploy")).json()
     assert deployed["status"] == "active"
     assert deployed["apiKey"].startswith("wbk_live_")
-    assert deployed["apiStats"]["apiCallsTotal"] == 0
     assert (await api.get("/v1/workflows/wf-d")).json()["apiKey"] is None
 
     assert (await api.post("/v1/workflows/bulk-delete", json={"ids": ["wf-d"]})).status_code == 204
