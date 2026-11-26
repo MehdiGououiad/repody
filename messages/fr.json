@@ -104,9 +104,6 @@
       "neverRun": "Pas encore exécuté"
     },
     "kpi": {
-      "auditsWeek": "Exécutions cette semaine",
-      "passRate": "Taux de réussite",
-      "failures": "Échecs de règles",
       "deltaPoints": "{delta} pts",
       "vsLastWeek": "par rapport à la semaine dernière",
       "same": "Comme la semaine dernière"

@@ -70,7 +70,7 @@ function Delta({ metric }: { metric: Kpi }) {
   const format = useFormatter();
   const change = metric.value - metric.previous;
   if (change === 0) return <span className="text-xs text-ink-4">{t("same")}</span>;
-  const good = metric.id === "failures" ? change < 0 : change > 0;
+  const good = change > 0; // more runs and a higher pass rate are both better
   const delta =
     metric.id === "passRate"
       ? t("deltaPoints", {

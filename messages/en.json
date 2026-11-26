@@ -104,9 +104,6 @@
       "neverRun": "Not run yet"
     },
     "kpi": {
-      "auditsWeek": "Runs this week",
-      "passRate": "Pass rate",
-      "failures": "Rule failures",
       "deltaPoints": "{delta} pts",
       "vsLastWeek": "vs last week",
       "same": "Same as last week"

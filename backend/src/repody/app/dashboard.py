@@ -233,13 +233,6 @@ async def get_dashboard(session: AsyncSession, *, account: str | None = None) ->
                 _rate(last_week),
                 [_rate([d]) for d in this_week],
             ),
-            _kpi(
-                "failures",
-                week,
-                sum(d.failed for d in this_week),
-                sum(d.failed for d in last_week),
-                [d.failed for d in this_week],
-            ),
         ],
         performance_series=[
             DayRuns(day=d, runs=c.runs, passed=c.passed, warning=c.warning, failed=c.failed)

@@ -1743,7 +1743,7 @@ export interface components {
              * Id
              * @enum {string}
              */
-            id: "auditsWeek" | "passRate" | "failures";
+            id: "auditsWeek" | "passRate";
             /** Value */
             value: number;
             /** Previous */
