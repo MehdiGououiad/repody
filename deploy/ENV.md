@@ -172,6 +172,25 @@ is stored, never the address).
 | `AUDIT_ACCESS_REQUEST_RETENTION_DAYS` | `90`    | Declined requests are deleted after this (the maintenance cron); the site's privacy page says so                                                                                  |
 | `AUDIT_CORS_ORIGINS`                  | —       | Must list the site's origin (`https://repody.com`), or browsers refuse the form's request                                                                                         |
 
+## Web app
+
+The web container's own environment (Next.js). Locally it comes from `.env.local`
+(`deploy/env.auth.example`); on the VPS, from `deploy/vps/compose.yaml`.
+
+| Variable                                                                     | Purpose                                                                                         |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`                                                            | The app's public URL (sign-in callbacks; requests from another origin are refused)              |
+| `BETTER_AUTH_SECRET`                                                         | Encrypts the session cookie (secret, at least 32 characters)                                    |
+| `AUTH_KEYCLOAK_ID` / `AUTH_KEYCLOAK_SECRET`                                  | The web app's Keycloak client (`repody-web`)                                                    |
+| `AUTH_KEYCLOAK_ISSUER`                                                       | The realm as the browser reaches it                                                             |
+| `AUTH_KEYCLOAK_INTERNAL_ISSUER`                                              | The realm as the web container reaches it (Compose: `http://keycloak:8080/realms/repody`)       |
+| `AUDIT_OIDC_ENABLED`                                                         | `false`: no sign-in, the API's dev user (local only)                                            |
+| `INTERNAL_API_URL` (or `BACKEND_URL`)                                        | Where `/api/v1/*` goes (Compose: `http://api:8000`); `BACKEND_URL` for `bun run ui` on a laptop |
+| `BUGSINK_DSN` / `BUGSINK_ENVIRONMENT`                                        | Server-side errors to Bugsink, and the environment they are tagged with                         |
+| `NEXT_PUBLIC_BUGSINK_DSN`                                                    | Browser errors to Bugsink; read when the image is built (a build argument)                      |
+| `REPODY_BRAND_NAME`, `_LOGO_URL`, `_ACCENT`, `_BASE`, `_CONTRAST`, `_RADIUS` | White-label name, logo and theme (`lib/theme/brand.ts`); unset keeps Repody's                   |
+| `REPODY_CONTACT_URL` / `REPODY_CONTACT_WHATSAPP`                             | Where a client asks for credits ([Credits](#credits))                                           |
+
 ## Observability
 
 | Variable                  | Purpose                                                                        |
