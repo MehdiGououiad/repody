@@ -88,16 +88,19 @@ def download() -> None:
 
 @app.cls(
     image=image,
-    # Tried in order: L4 (24 GB, $0.80/h), else A10 (24 GB, $1.10/h). A T4 has no BF16. Not L4
-    # alone: on 19 November staging waited 3-11 minutes for a free L4, past the 10-minute run
-    # timeout. The fallback costs a second set of snapshots after each deploy (README).
-    gpu=["L4", "A10"],
+    # Tried in order: L4 (24 GB, $0.80/h), else A10 (24 GB, $1.10/h), else L40S (48 GB, $1.95/h; the
+    # same Ada architecture as the L4). A T4 has no BF16. Not L4 alone: on 19 November staging
+    # waited 3-11 minutes for a free L4; and on 26 November, with neither an L4 nor an A10 free,
+    # one start waited 52 minutes. L40S is billed only when both are taken. Each GPU type has its
+    # own memory snapshots, built after a deploy (README).
+    gpu=["L4", "A10", "L40S"],
     volumes={HF_CACHE: hf_cache, VLLM_CACHE: vllm_cache},
     # Scale to zero, and one container at most: a second GPU would double the cost.
     min_containers=0,
     max_containers=1,
     # Idle time before the container stops: ten minutes, so a person testing in the builder (run,
     # adjust, run again) keeps a warm model. Up to ~$0.13 of idle L4 time after the last request.
+    # Staging's is 2 minutes, set after each deploy by prewarm.py (it serves only tests).
     scaledown_window=10 * MINUTES,
     timeout=10 * MINUTES,  # per request
     # The container's start (@modal.enter) gets its own limit: without one, `timeout` bounds it

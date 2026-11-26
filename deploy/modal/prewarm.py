@@ -7,6 +7,11 @@ It calls the *deployed* app (snapshots are only made for deployed apps, never fo
 then stops its container, so each call is a fresh start. Each line says how long a start took:
 minutes while a snapshot is built, seconds once one is restored.
 
+Then it sets the environment's idle time (IDLE_SECONDS), which a deploy resets to the app's own
+10 minutes (Modal: `update_autoscaler`). Staging's model serves only tests (a smoke test after
+each merge): it stops after 2 minutes idle instead of 10, the idle GPU time that was most of its
+cost. Production keeps 10, so a person testing in the builder keeps a warm model.
+
     uv run --no-project --no-build --with-requirements deploy/modal/requirements.txt \
         python deploy/modal/prewarm.py --env staging
 """
@@ -22,6 +27,8 @@ import modal
 APP = "repody-nuextract"
 ENVIRONMENTS = ("main", "staging")
 CONTAINER_ID = re.compile(r"ta-[A-Za-z0-9]+")
+# Idle seconds before the model's container stops, per environment; None keeps the app's own.
+IDLE_SECONDS: dict[str, int | None] = {"main": None, "staging": 2 * 60}
 
 
 def modal_cli(*args: str) -> str:
@@ -69,6 +76,9 @@ def main() -> None:
         vllm().ping.remote()
         print(f"start {start}: ready in {time.monotonic() - began:.0f} s", flush=True)
         stop_containers(args.env, app_id)
+    if (idle := IDLE_SECONDS[args.env]) is not None:
+        settings = vllm().update_autoscaler(scaledown_window=idle)
+        print(f"{args.env}: the model stops after {settings.scaledown_window} s idle", flush=True)
 
 
 if __name__ == "__main__":
