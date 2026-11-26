@@ -115,7 +115,7 @@ root_package = "repody"
 include_external_packages = true
 
 [[tool.importlinter.contracts]]
-name = "Layers: entry points -> HTTP routes -> use cases -> domain -> infrastructure"
+name = "Layers: entry points -> HTTP routes -> use cases -> domain -> infrastructure -> models, settings"
 type = "layers"
 layers = [
   "repody.main | repody.worker",
@@ -123,6 +123,8 @@ layers = [
   "repody.app",
   "repody.extraction | repody.rules",
   "repody.infra",
+  "repody.schemas",
+  "repody.settings",
 ]
 
 [[tool.importlinter.contracts]]
