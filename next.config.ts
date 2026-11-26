@@ -67,4 +67,13 @@ const nextConfig: NextConfig = {
 export default withSentryConfig(withNextIntl(nextConfig), {
   silent: true,
   sourcemaps: { disable: true },
+  // Errors only (Bugsink keeps no traces or replays): the SDK's tree-shaking flags drop the rest
+  // from the bundle, for Turbopack too (@sentry/nextjs `bundleSizeOptimizations`).
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeTracing: true,
+    excludeReplayIframe: true,
+    excludeReplayShadowDom: true,
+    excludeReplayWorker: true,
+  },
 });

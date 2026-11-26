@@ -1,6 +1,6 @@
 /**
- * The platform's spelling of NuExtract template types. The types themselves come from the API
- * (`GET /v1/catalog`); a list of a leaf type is spelled `<type>-list` (`["number"]` in NuExtract).
+ * The platform's spelling of NuExtract template types. The types themselves come from the API's
+ * catalog (`lib/catalog.ts`); a list of a leaf type is spelled `<type>-list` (`["number"]` in NuExtract).
  */
 import type { Catalog } from "@/lib/types";
 
