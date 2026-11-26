@@ -100,6 +100,10 @@ def download() -> None:
     # adjust, run again) keeps a warm model. Up to ~$0.13 of idle L4 time after the last request.
     scaledown_window=10 * MINUTES,
     timeout=10 * MINUTES,  # per request
+    # The container's start (@modal.enter) gets its own limit: without one, `timeout` bounds it
+    # too (modal.com/docs/guide/timeouts), and a start that builds a snapshot measured 507 s
+    # against those 600 s. Restoring a snapshot takes seconds.
+    startup_timeout=15 * MINUTES,
     enable_memory_snapshot=True,
     experimental_options={"enable_gpu_snapshot": True},  # alpha
 )
