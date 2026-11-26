@@ -1,4 +1,6 @@
+import re
 import time
+from pathlib import Path
 
 import jwt
 import pytest
@@ -7,6 +9,15 @@ from pydantic import SecretStr, ValidationError
 
 from repody.infra import auth
 from repody.settings import Settings, get_settings
+
+ENV_DOC = Path(__file__).resolve().parents[3] / "deploy" / "ENV.md"
+
+
+def test_every_setting_is_documented():
+    """deploy/ENV.md is the operators' reference: each AUDIT_* setting has a row there."""
+    documented = set(re.findall(r"`(AUDIT_[A-Z0-9_]+)`", ENV_DOC.read_text(encoding="utf-8")))
+    missing = {f"AUDIT_{name.upper()}" for name in Settings.model_fields} - documented
+    assert not missing, f"Add these to deploy/ENV.md: {sorted(missing)}"
 
 
 @pytest.mark.parametrize("environment", ["production", "staging"])

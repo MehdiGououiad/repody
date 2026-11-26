@@ -59,6 +59,10 @@ config:
   # it if it is up ("false" for one that scales to zero and would start, and bill, on the question).
   # AUDIT_INFERENCE_CONCURRENCY: "1"
   # AUDIT_INFERENCE_PROBE: "true"
+  # The model's context (vLLM --max-model-len): a document that would not fit is refused when the
+  # run starts (422), not on the GPU. And the second read: "all" (default), "images" or "off".
+  # AUDIT_INFERENCE_CONTEXT_TOKENS: "131072"
+  # AUDIT_SECOND_READ: "all"
   # Limits: pages per document, runs a minute per client, a whole upload request (keep the web
   # app's 100 MiB proxy limit in mind), and days runs are kept (0: forever).
   # AUDIT_MAX_PAGES_PER_DOCUMENT: "99"

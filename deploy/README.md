@@ -22,7 +22,7 @@ The hosted demo's stack, the Helm chart for client installations, and scripts. *
 | `client/`     | Values templates, ExternalSecrets - [client/README.md](./client/README.md)                                  |
 | `managed/`    | CNPG, External Secrets examples                                                                             |
 | `registry/`   | GHCR and on-prem registry notes                                                                             |
-| `scripts/`    | Image build, release, readiness checks                                                                      |
+| `scripts/`    | The local platform CLI, llama-server, deploy and command checks - [scripts/README.md](./scripts/README.md)  |
 
 ## Image registry convention
 

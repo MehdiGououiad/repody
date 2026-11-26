@@ -153,7 +153,7 @@ signed them:
 cosign verify ghcr.io/yourorg/repody-backend:1.2.3 --certificate-oidc-issuer https://token.actions.githubusercontent.com --certificate-identity 'https://github.com/yourorg/repody/.github/workflows/images-ghcr.yml@refs/heads/master'
 ```
 
-Registry notes (GHCR, Docker Hub, Harbor): [deploy/registry/README.md](../deploy/registry/README.md).
+Registry notes (GHCR, Harbor, other OCI registries): [deploy/registry/README.md](../deploy/registry/README.md).
 
 ## Observability
 

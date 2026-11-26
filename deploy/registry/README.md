@@ -11,63 +11,30 @@ Git stores desired Kubernetes state; the **registry** stores built images.
 
 Repody does not ship Argo CD for client production.
 
-## Docker Hub (portable multi-arch)
+## Where Repody's own images are
 
-Publish `linux/amd64` + `linux/arm64` images:
+CI publishes three images to GHCR, `ghcr.io/mehdigououiad/repody-{backend,web,keycloak}`, and
+signs each digest with cosign:
 
-```powershell
-docker login
-$env:REPODY_IMAGE_REGISTRY="mehdigououiad"
-$env:REPODY_IMAGE_TAG="1.0.0"
-$env:REPODY_IMAGE_PLATFORMS="linux/amd64,linux/arm64"
-bun run images:release
-```
+- every master commit whose tests pass, tagged with the commit (12 characters), which staging
+  runs;
+- every release tag `v1.2.3`, which promotes that commit's images by digest as `1.2.3`
+  (`release.yml`): a release is never rebuilt.
 
-Images:
+The packages are private. Pull them after `docker login ghcr.io` with a token that has
+`read:packages`. To run a release on a laptop:
+`REPODY_BACKEND_IMAGE=ghcr.io/mehdigououiad/repody-backend:1.2.3 REPODY_WEB_IMAGE=ghcr.io/mehdigououiad/repody-web:1.2.3 bun run platform`
+(plain `bun run platform` builds from the checkout, [docs/LOCAL.md](../../docs/LOCAL.md)).
 
-- `mehdigououiad/repody-backend:1.0.0` (immutable tag; prefer digest in production GitOps)
-- `mehdigououiad/repody-web:1.0.0` (immutable tag; prefer digest in production GitOps)
-
-### Pull (any machine)
-
-Public Hub images - no login required to pull:
-
-```bash
-docker pull mehdigououiad/repody-backend:1.0.0
-docker pull mehdigououiad/repody-web:1.0.0
-```
-
-Docker picks `linux/arm64` or `linux/amd64` for the machine automatically.
-
-Verify arches:
-
-```bash
-docker buildx imagetools inspect mehdigououiad/repody-backend:1.0.0
-```
-
-**Run a published release locally:** `REPODY_BACKEND_IMAGE=mehdigououiad/repody-backend:1.0.0 REPODY_WEB_IMAGE=mehdigououiad/repody-web:1.0.0 bun run platform` (plain `bun run platform` builds from the checkout) - see [docs/LOCAL.md](../../docs/LOCAL.md).
-
-**Helm:** set `images.backend.repository` / `images.web.repository` to these names in your values.
-
-**Portability boundary:** these images cover API, UI, and workers. Document-model
-inference (NuExtract on llama-server) is **external** by design
-([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)): any machine
-runs these images and points at an inference endpoint, such as the Modal one
+The images hold the API, the worker (the same backend image), the web app and Keycloak. The
+model is not in them: inference is an external endpoint by design
+([ADR 005](../../docs/adr/005-kubernetes-only-external-inference.md)), such as the Modal app
 ([deploy/modal/README.md](../modal/README.md)).
 
 ## GHCR
 
-The `Publish images to GHCR` GitHub Actions workflow publishes:
-
-- `ghcr.io/<owner>/repody-backend:<tag>` (API and worker roles)
-- `ghcr.io/<owner>/repody-web:<tag>`
-
-CI runs it on every master commit whose tests pass (images tagged with the commit). A `v*` tag
-then promotes that commit's images, by digest, as `<version>` (`release.yml`): a release is never
-rebuilt. Both use the repository `GITHUB_TOKEN` and upload a Helm values artifact with the image
-coordinates and digests.
-
-For private GHCR packages, create a pull secret in the target namespace:
+Both workflows use the repository `GITHUB_TOKEN` and upload a Helm values artifact with the
+image coordinates and digests. For private GHCR packages, create a pull secret in the target namespace:
 
 ```bash
 kubectl -n repody create secret docker-registry ghcr-pull-secret \
@@ -169,6 +136,7 @@ Default release images are intentionally small in number:
 
 - `repody-backend` runs the API and worker roles.
 - `repody-web` runs Next.js.
+- `repody-keycloak` is Keycloak with Repody's realm built in.
 
 The backend image includes `otel` extras by default.
 

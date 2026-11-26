@@ -17,9 +17,10 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `HATCHET_CLIENT_TOKEN`                                   | —                           | Hatchet API token: the run queue and the maintenance cron (secret). Compose: written by `bun run platform` (local) or the `hatchet-token` service (VPS) |
 | `HATCHET_CLIENT_HOST_PORT` / `HATCHET_CLIENT_SERVER_URL` | from the token              | Hatchet's gRPC address and API URL, when the token's are not reachable from the container                                                               |
 | `HATCHET_CLIENT_TLS_STRATEGY`                            | `tls`                       | `none` for an engine on a private network without TLS (Compose)                                                                                         |
-| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:9000`     | S3-compatible storage for uploaded documents                                                                                                            |
+| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:8333`     | S3-compatible storage for uploaded documents                                                                                                            |
 | `AUDIT_S3_ACCESS_KEY` / `AUDIT_S3_SECRET_KEY`            | Compose: SeaweedFS dev keys | Storage credentials (secret)                                                                                                                            |
 | `AUDIT_S3_BUCKET`                                        | `audit-documents`           | Created at API start when missing                                                                                                                       |
+| `AUDIT_S3_REGION`                                        | `us-east-1`                 | The storage's region (SeaweedFS ignores it)                                                                                                             |
 
 ## Platform
 
@@ -73,6 +74,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_RUNS_PER_MINUTE_PER_CLIENT`  | `600`   | Runs one API key or user starts a minute; more wait their turn in Hatchet (`0` = no limit)                              |
 | `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT` | `2`     | Runs one API key or user has in progress at once; clients take turns (Hatchet round robin)                              |
 | `AUDIT_RUN_RETENTION_DAYS`          | `0`     | Delete finished runs (and their uploaded files) older than this (`0` = keep); the maintenance cron runs every minute    |
+| `AUDIT_HEALTH_TIMEOUT_SECONDS`      | `2`     | `GET /v1/healthz` reports the database down when it does not answer within this                                         |
 
 ## Credits
 
@@ -169,6 +171,25 @@ is stored, never the address).
 | `AUDIT_ACCESS_REQUESTS_PER_HOUR`      | `5`     | Requests one network may send an hour (429 beyond). The network is Cloudflare's `CF-Connecting-IP`: meaningful only behind Cloudflare, since anyone can set that header elsewhere |
 | `AUDIT_ACCESS_REQUEST_RETENTION_DAYS` | `90`    | Declined requests are deleted after this (the maintenance cron); the site's privacy page says so                                                                                  |
 | `AUDIT_CORS_ORIGINS`                  | —       | Must list the site's origin (`https://repody.com`), or browsers refuse the form's request                                                                                         |
+
+## Web app
+
+The web container's own environment (Next.js). Locally it comes from `.env.local`
+(`deploy/env.auth.example`); on the VPS, from `deploy/vps/compose.yaml`.
+
+| Variable                                                                     | Purpose                                                                                         |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `BETTER_AUTH_URL`                                                            | The app's public URL (sign-in callbacks; requests from another origin are refused)              |
+| `BETTER_AUTH_SECRET`                                                         | Encrypts the session cookie (secret, at least 32 characters)                                    |
+| `AUTH_KEYCLOAK_ID` / `AUTH_KEYCLOAK_SECRET`                                  | The web app's Keycloak client (`repody-web`)                                                    |
+| `AUTH_KEYCLOAK_ISSUER`                                                       | The realm as the browser reaches it                                                             |
+| `AUTH_KEYCLOAK_INTERNAL_ISSUER`                                              | The realm as the web container reaches it (Compose: `http://keycloak:8080/realms/repody`)       |
+| `AUDIT_OIDC_ENABLED`                                                         | `false`: no sign-in, the API's dev user (local only)                                            |
+| `INTERNAL_API_URL` (or `BACKEND_URL`)                                        | Where `/api/v1/*` goes (Compose: `http://api:8000`); `BACKEND_URL` for `bun run ui` on a laptop |
+| `BUGSINK_DSN` / `BUGSINK_ENVIRONMENT`                                        | Server-side errors to Bugsink, and the environment they are tagged with                         |
+| `NEXT_PUBLIC_BUGSINK_DSN`                                                    | Browser errors to Bugsink; read when the image is built (a build argument)                      |
+| `REPODY_BRAND_NAME`, `_LOGO_URL`, `_ACCENT`, `_BASE`, `_CONTRAST`, `_RADIUS` | White-label name, logo and theme (`lib/theme/brand.ts`); unset keeps Repody's                   |
+| `REPODY_CONTACT_URL` / `REPODY_CONTACT_WHATSAPP`                             | Where a client asks for credits ([Credits](#credits))                                           |
 
 ## Observability
 
