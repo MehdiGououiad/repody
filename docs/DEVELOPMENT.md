@@ -34,7 +34,7 @@ bun run codegen:api
 ```
 
 It writes `lib/api/openapi.json`, `lib/api/generated/schema.d.ts` and `lib/api/catalog.json`.
-CI fails when the OpenAPI document or the catalog differ from the code (OpenAPI drift).
+CI fails when any of the three differs from the code (OpenAPI drift).
 
 A schema change needs a new Alembic revision (`backend/alembic/versions/`); never edit one that
 has shipped.
