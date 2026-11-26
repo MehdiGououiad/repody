@@ -899,12 +899,12 @@ export const en: Dict = {
             body: "OpenAI-compatible API, speculative decoding, full weights; the model server stays outside the product, on your GPU or a managed one.",
           },
           {
-            title: "Pages at 170 DPI",
-            body: "Each page is rendered at the resolution the model expects. A document is read in one request, about 40 A4 pages at most; a longer one is refused, with the reason, before it runs.",
+            title: "Every page sharp enough, read twice",
+            body: "Each page reaches the model at the resolution it expects, and small pages and photos at 3 megapixels at least. Each document is read a second time at another size: a value the two reads disagree on goes to review instead of passing. A document is read in one request, about 40 A4 pages at most; a longer one is refused, with the reason, before it runs.",
           },
           {
             title: "GPU on demand",
-            body: "In managed mode, the GPU switches off after a minute without requests and resumes from a memory snapshot in seconds; one container at most.",
+            body: "In managed mode, the GPU switches off after ten minutes without requests and resumes from a memory snapshot in seconds; one container at most.",
           },
           {
             title: "Start-up announced",
@@ -995,7 +995,7 @@ export const en: Dict = {
         },
         {
           title: "Extraction",
-          body: "Each page becomes an image at 170 DPI; the documents go to the model in parallel, each with its JSON template.",
+          body: "Each page becomes an image at 170 DPI, or 3 megapixels for small pages and photos; the documents go to the model in parallel, each with its JSON template, and each is read a second time at another size.",
         },
         {
           title: "Rules",

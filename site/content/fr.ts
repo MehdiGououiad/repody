@@ -898,12 +898,12 @@ export const fr = {
             body: "API compatible OpenAI, décodage spéculatif, poids complets ; le serveur de modèle reste hors du produit, sur votre GPU ou un GPU managé.",
           },
           {
-            title: "Pages en 170 DPI",
-            body: "Chaque page est rendue à la résolution attendue par le modèle. Un document est lu en une requête, une quarantaine de pages A4 au plus ; un document plus long est refusé, avec la raison, avant de partir.",
+            title: "Chaque page assez nette, lue deux fois",
+            body: "Chaque page arrive au modèle à la résolution qu'il attend, et les petites pages et les photos à 3 mégapixels au moins. Chaque document est relu une seconde fois à une autre taille : une valeur sur laquelle les deux lectures divergent part en revue au lieu de passer. Un document est lu en une requête, une quarantaine de pages A4 au plus ; un document plus long est refusé, avec la raison, avant de partir.",
           },
           {
             title: "GPU à la demande",
-            body: "En mode managé, le GPU s'éteint après une minute sans requête et repart d'un instantané mémoire en quelques secondes ; un seul conteneur au plus.",
+            body: "En mode managé, le GPU s'éteint après dix minutes sans requête et repart d'un instantané mémoire en quelques secondes ; un seul conteneur au plus.",
           },
           {
             title: "Démarrage annoncé",
@@ -994,7 +994,7 @@ export const fr = {
         },
         {
           title: "Extraction",
-          body: "Chaque page devient une image à 170 DPI ; les documents partent en parallèle au modèle avec leur modèle JSON.",
+          body: "Chaque page devient une image à 170 DPI, ou 3 mégapixels pour les petites pages et les photos ; les documents partent en parallèle au modèle avec leur modèle JSON, et chacun est relu une seconde fois à une autre taille.",
         },
         {
           title: "Règles",
