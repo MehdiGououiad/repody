@@ -23,9 +23,11 @@ and Linux. Every command: [COMMANDS.md](./COMMANDS.md).
    download them from [numind/NuExtract3-GGUF](https://huggingface.co/numind/NuExtract3-GGUF).
    Then set `LLAMACPP_MODEL` and `LLAMACPP_MMPROJ` in `deploy/llamacpp/paths.local.env`.
 
-No GPU, or no wish to run the model locally? Point `AUDIT_INFERENCE_BASE_URL` in
-`backend/.env` at any OpenAI-compatible NuExtract3 server, for example one on Modal
-([deploy/modal/README.md](../deploy/modal/README.md)), and start with `--no-nuextract`.
+`bun run platform` always sends extraction to `:8081` on the host: it rewrites
+`AUDIT_INFERENCE_BASE_URL` in `backend/.env` at each start, and the containers reach the host at
+`host.docker.internal:8081`. No GPU here? Run llama-server on another machine and forward its
+port to the host's `:8081` (for example `ssh -L 8081:localhost:8081 gpu-box`), then start with
+`--no-nuextract`. Without a model, everything but extraction works.
 
 ## Start
 
