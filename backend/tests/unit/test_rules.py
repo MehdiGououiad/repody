@@ -284,6 +284,19 @@ def test_dates_and_times_compare_as_dates_not_text():
     assert condition_issue(cond(field("d"), ">", text("banana")), SchemaTypes(fields={"d": "date"}))
 
 
+def test_an_ordering_between_fields_of_different_types_is_refused():
+    # Saved, it always failed: Python cannot order a date against a date-time.
+    schema = SchemaTypes(
+        fields={"due": "date", "printed": "date-time", "n": "integer", "x": "number"}
+    )
+    issue = condition_issue(cond(field("due"), ">", field("printed")), schema)
+    assert issue is not None
+    assert "date-time" in issue
+    assert condition_issue(cond(field("due"), ">", field("n")), schema)
+    assert condition_issue(cond(field("n"), "<", field("x")), schema) is None  # both numbers
+    assert condition_issue(cond(field("due"), "==", field("due")), schema) is None
+
+
 def test_list_fields_only_take_presence_checks():
     schema = SchemaTypes(fields={"tags": "verbatim-string-list", "kinds": "multi-enum"})
     for name in ("tags", "kinds"):

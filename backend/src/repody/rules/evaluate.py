@@ -13,7 +13,13 @@ from typing import Any
 
 from repody.rules.tables import count_rows, sum_rows
 from repody.rules.values import field_key, is_number, literal, typed
-from repody.schemas.catalog import NUMBER_TYPES, TABLE_TYPE, is_list_type, operators_for
+from repody.schemas.catalog import (
+    NUMBER_TYPES,
+    ORDERING_OPERATORS,
+    TABLE_TYPE,
+    is_list_type,
+    operators_for,
+)
 from repody.schemas.rule import (
     UNARY_OPERATORS,
     Aggregate,
@@ -153,6 +159,12 @@ def _left_type(condition: Condition, type_of: Callable[[str], str | None]) -> st
 # --- Validation (what keeps a rule from being saved) ---
 
 
+def _kind(template_type: str) -> str:
+    """What a value of this type is ordered as: integers and numbers together, each date type
+    on its own (Python cannot order a date against a date-time)."""
+    return "number" if template_type in NUMBER_TYPES else template_type
+
+
 def _incomplete(condition: Condition) -> str | None:
     """A part of the condition the builder left empty."""
     match condition.left:
@@ -204,6 +216,14 @@ def _mistyped(condition: Condition, schema: SchemaTypes) -> str | None:
             return f"{left_type} fields are lists: check them with EXISTS or IS_EMPTY."
         return f"{condition.operator} compares numbers or dates; the left side is {left_type}."
     right = condition.right
+    if isinstance(right, FieldRef) and condition.operator in ORDERING_OPERATORS:
+        # A date cannot be ordered against a date-time or a number: the check would always fail.
+        right_type = schema.fields.get(field_key(right.field))
+        if left_type and right_type and _kind(right_type) != _kind(left_type):
+            return (
+                f"{condition.operator} compares two values of one type; the left side is"
+                f" {left_type} and {right.field} is {right_type}."
+            )
     if isinstance(right, LiteralValue) and condition.operator not in UNARY_OPERATORS:
         parts = right.value.split(",") if condition.operator in LIST_OPERATORS else [right.value]
         try:
