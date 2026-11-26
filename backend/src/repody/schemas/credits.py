@@ -9,9 +9,6 @@ from repody.schemas.common import CamelModel
 
 CreditKind = Literal["grant", "run"]
 
-# Accounts a grant may name: a client company (its Keycloak group), or the deployment's own.
-ACCOUNT_PATTERN = r"^(client-[a-z0-9][a-z0-9_.-]{0,62}|deployment)$"
-
 
 class Credits(CamelModel):
     """The caller's account and balance; ``enforced`` says whether runs are refused at zero."""

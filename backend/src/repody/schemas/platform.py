@@ -7,7 +7,6 @@ from pydantic import Field
 
 from repody.schemas.common import CamelModel
 from repody.schemas.credits import Credits
-from repody.schemas.rule import Severity
 from repody.schemas.run import AuditListItem, RunProgress, RunStatus, Source
 from repody.schemas.workflow import WorkflowOut
 
@@ -113,11 +112,6 @@ class WorkflowActivity(CamelModel):
     median_ms: int
 
 
-class SeverityShare(CamelModel):
-    severity: Severity
-    share: float
-
-
 class QueueCounts(CamelModel):
     queued_runs: int
     running_runs: int
@@ -133,7 +127,6 @@ class Dashboard(CamelModel):
     )
     documents: DocumentStats
     workflow_activity: list[WorkflowActivity]
-    failures_by_severity: list[SeverityShare]
     queue: QueueCounts
     recent_audits: list[AuditListItem]
     failed_audits: list[AuditListItem]

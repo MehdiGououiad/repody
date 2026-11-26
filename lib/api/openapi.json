@@ -2820,46 +2820,6 @@
         "title": "Aggregate",
         "description": "Sum or count the rows of an object-array field, optionally filtered by a column.\n\n``column`` and ``filter_column`` are child field names as written in the schema."
       },
-      "ApiStats": {
-        "properties": {
-          "apiCallsToday": {
-            "type": "integer",
-            "title": "Apicallstoday"
-          },
-          "apiCallsTotal": {
-            "type": "integer",
-            "title": "Apicallstotal"
-          },
-          "avgLatencyMs": {
-            "type": "integer",
-            "title": "Avglatencyms"
-          },
-          "callSeries": {
-            "items": {
-              "$ref": "#/components/schemas/CallsPerDay"
-            },
-            "type": "array",
-            "title": "Callseries"
-          },
-          "topFailingRules": {
-            "items": {
-              "$ref": "#/components/schemas/FailingRule"
-            },
-            "type": "array",
-            "title": "Topfailingrules"
-          }
-        },
-        "type": "object",
-        "required": [
-          "apiCallsToday",
-          "apiCallsTotal",
-          "avgLatencyMs",
-          "callSeries",
-          "topFailingRules"
-        ],
-        "title": "ApiStats",
-        "description": "Runs started with the workflow's API key."
-      },
       "Arithmetic-Input": {
         "properties": {
           "kind": {
@@ -3305,26 +3265,6 @@
           "ids"
         ],
         "title": "BulkDelete"
-      },
-      "CallsPerDay": {
-        "properties": {
-          "day": {
-            "type": "string",
-            "format": "date",
-            "title": "Day",
-            "description": "UTC day; clients name it in their locale."
-          },
-          "calls": {
-            "type": "integer",
-            "title": "Calls"
-          }
-        },
-        "type": "object",
-        "required": [
-          "day",
-          "calls"
-        ],
-        "title": "CallsPerDay"
       },
       "Catalog": {
         "properties": {
@@ -3887,13 +3827,6 @@
             "type": "array",
             "title": "Workflowactivity"
           },
-          "failuresBySeverity": {
-            "items": {
-              "$ref": "#/components/schemas/SeverityShare"
-            },
-            "type": "array",
-            "title": "Failuresbyseverity"
-          },
           "queue": {
             "$ref": "#/components/schemas/QueueCounts"
           },
@@ -3929,7 +3862,6 @@
           "hourly",
           "documents",
           "workflowActivity",
-          "failuresBySeverity",
           "queue",
           "recentAudits",
           "failedAudits",
@@ -4284,33 +4216,6 @@
           "createdAt"
         ],
         "title": "FailedRun"
-      },
-      "FailingRule": {
-        "properties": {
-          "name": {
-            "type": "string",
-            "title": "Name"
-          },
-          "count": {
-            "type": "integer",
-            "title": "Count"
-          },
-          "severity": {
-            "type": "string",
-            "enum": [
-              "reject",
-              "flag"
-            ],
-            "title": "Severity"
-          }
-        },
-        "type": "object",
-        "required": [
-          "name",
-          "count",
-          "severity"
-        ],
-        "title": "FailingRule"
       },
       "FieldRef-Input": {
         "properties": {
@@ -5298,28 +5203,6 @@
         "title": "SchemaField",
         "description": "One field of the Repody VLM template.\n\n``template_type`` is a leaf type (``verbatim-string``, ``number``, \u2026),\n``<leaf>-list``, ``enum`` / ``multi-enum`` (with ``enum_values``) or ``object`` /\n``object-array`` (with ``children``)."
       },
-      "SeverityShare": {
-        "properties": {
-          "severity": {
-            "type": "string",
-            "enum": [
-              "reject",
-              "flag"
-            ],
-            "title": "Severity"
-          },
-          "share": {
-            "type": "number",
-            "title": "Share"
-          }
-        },
-        "type": "object",
-        "required": [
-          "severity",
-          "share"
-        ],
-        "title": "SeverityShare"
-      },
       "SharedWorkflow": {
         "properties": {
           "id": {
@@ -5891,16 +5774,6 @@
             ],
             "title": "Lastrun"
           },
-          "apiStats": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ApiStats"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "readOnly": {
             "type": "boolean",
             "title": "Readonly",
@@ -5923,7 +5796,6 @@
           "totalRuns",
           "successRate",
           "lastRun",
-          "apiStats",
           "readOnly"
         ],
         "title": "WorkflowOut"
