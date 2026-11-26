@@ -24,7 +24,7 @@ async def test_health_and_config(api):
 async def test_dashboard_and_maintenance(api, seeded):
     dashboard = (await api.get("/v1/dashboard")).json()
     kpis = [k["id"] for k in dashboard["kpis"]]
-    assert kpis == ["auditsWeek", "passRate", "failures"]
+    assert kpis == ["auditsWeek", "passRate"]
     assert dashboard["recentAudits"][0]["id"] == "AUD-2023-8902"
     assert dashboard["failedAudits"][0]["id"] == "AUD-2023-8902"
     assert dashboard["performanceSeries"][-1]["day"] == datetime.now(UTC).date().isoformat()

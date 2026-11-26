@@ -24,7 +24,6 @@
     "forbiddenBody": "Votre compte n'a pas la permission pour cette action. Contactez un administrateur ou changez de compte.",
     "backToDashboard": "Retour au tableau de bord",
     "switchAccount": "Changer de compte",
-    "retry": "Réessayer",
     "errorAccessDenied": "Accès refusé. Vous n'avez peut-être pas le droit d'utiliser cette application.",
     "errorOAuth": "Échec de la connexion Keycloak. Réessayez.",
     "signIn": "Connexion"
@@ -40,7 +39,6 @@
       "runs": "Exécutions récentes"
     },
     "noResults": "Aucun résultat.",
-    "search": "Rechercher",
     "theme": {
       "light": "Clair",
       "dark": "Sombre",
@@ -48,12 +46,10 @@
     }
   },
   "common": {
-    "exportCsv": "Exporter en CSV",
     "saveDraft": "Enregistrer le brouillon",
     "cancel": "Annuler",
     "remove": "Supprimer",
     "edit": "Modifier",
-    "open": "Ouvrir",
     "viewAll": "Tout voir",
     "deployWorkflow": "Déployer",
     "redeployWorkflow": "Redéployer",
@@ -65,14 +61,11 @@
     "saving": "Enregistrement…",
     "deploying": "Déploiement…",
     "saveFailed": "Impossible d'enregistrer le workflow",
-    "confirm": "Confirmer",
     "deleteWarning": "Cette action est irréversible.",
-    "retry": "Réessayer",
     "copyFailed": "Copie impossible",
     "notAllowed": "Votre rôle ne le permet pas."
   },
   "runProgress": {
-    "pagesTruncated": "Seulement {sent} page(s) sur {total} analysée(s)",
     "queueWaiting": "En attente dans la file…",
     "queueOrdered": "Elle démarre dès qu'un worker est libre ; les exécutions de chaque client passent à tour de rôle avec celles des autres.",
     "steps": {
@@ -95,7 +88,6 @@
   },
   "dashboard": {
     "title": "Vue d'ensemble",
-    "description": "Résultats d'audit, tendances de conformité et workflows en un coup d'œil.",
     "offlineTitle": "L'API est injoignable",
     "offlineHint": "Les exécutions et les chiffres s'affichent dès que l'API répond. Les workflows restent modifiables.",
     "offlineCta": "Ouvrir les workflows",
@@ -104,16 +96,12 @@
       "neverRun": "Pas encore exécuté"
     },
     "kpi": {
-      "auditsWeek": "Exécutions cette semaine",
-      "passRate": "Taux de réussite",
-      "failures": "Échecs de règles",
       "deltaPoints": "{delta} pts",
       "vsLastWeek": "par rapport à la semaine dernière",
       "same": "Comme la semaine dernière"
     },
     "getStarted": {
       "title": "Créez votre premier workflow",
-      "description": "Les mêmes trois étapes que dans le builder — champs, règles, puis test et déploiement.",
       "cta": "Créer un workflow"
     },
     "nothingToReview": "Rien à examiner",
@@ -178,13 +166,10 @@
   },
   "audits": {
     "title": "Exécutions",
-    "description": "Parcourir, filtrer et trier chaque exécution.",
     "report": {
       "exportPdf": "Imprimer",
       "exportCsv": "CSV",
-      "language": "Langue",
       "api": "API",
-      "source": "Source",
       "extractedData": "Champs",
       "validationRules": "Règles",
       "passed": "Validée",
@@ -196,14 +181,10 @@
       "allRulesPassed": "Conforme",
       "validationFailed": "Rejeté",
       "reviewRequired": "À examiner",
-      "value": "Valeur extraite",
-      "field": "Champ",
-      "status": "Statut",
       "intra": "Dans un document",
       "cross": "Entre deux documents",
       "reject": "Rejeter",
       "flag": "Signaler",
-      "info": "Info",
       "docExtracted": "{done} sur {total} trouvés",
       "extractionFailed": "Le document n'a pas pu être lu",
       "unconfirmed": "Lu autrement à la seconde lecture : {value}",
@@ -230,7 +211,6 @@
       "copied": "Identifiant copié",
       "noPreview": "Aperçu indisponible",
       "resize": "Redimensionner le document",
-      "next": "Exécution suivante",
       "rawOutput": "Sortie brute du modèle"
     },
     "table": {
@@ -265,8 +245,7 @@
       "source": {
         "api": "API",
         "test": "Test"
-      },
-      "files": "{count, plural, one {# fichier} other {# fichiers}}"
+      }
     },
     "emptyTitle": "Aucune exécution",
     "emptyHint": "Les exécutions apparaissent ici quand un workflow traite des documents, en test ou via l'API.",
@@ -279,8 +258,6 @@
     "live": "Mis à jour en direct"
   },
   "workflows": {
-    "title": "Workflows",
-    "description": "Vos pipelines d'extraction et de validation.",
     "status": {
       "active": "En ligne",
       "draft": "Brouillon"
@@ -342,18 +319,14 @@
         "testNotPassedWarning": "Le dernier test n'a pas réussi. Vous pouvez déployer quand même ou corriger les règles avant de réessayer."
       },
       "ingestion": {
-        "severityReject": "Rejeter",
-        "severityFlag": "Signaler",
         "fileHint": "PDF, PNG, JPEG, WebP",
         "noDocsHint": "Nommez d'abord un document à l'étape Champs.",
-        "unnamedDoc": "Document",
         "fieldCount": "{count, plural, one {# champ} other {# champs}}",
         "fileRejected": "Choisissez un fichier PDF, PNG, JPEG ou WebP dans la limite d'envoi.",
         "dropPrompt": "Déposez un fichier ou cliquez pour choisir"
       },
       "docSource": {
         "title": "Documents",
-        "hint": "Nommez chaque document reçu et les champs à y lire.",
         "documentTypeLabel": "Nom du document",
         "addDocument": "Ajouter un document",
         "unnamedDoc": "Document",
@@ -366,7 +339,6 @@
         "hideInstructions": "Masquer les instructions"
       },
       "schema": {
-        "title": "Quoi extraire",
         "description": "Décrivez chaque information à extraire du document et choisissez le format de sortie attendu.",
         "addField": "Ajouter un champ",
         "importTemplate": "Importer un modèle",
@@ -594,7 +566,6 @@
           }
         },
         "empty": "Chaque champ est une valeur à lire dans le document, comme un total ou une date.",
-        "fieldCount": "{count, plural, one {# champ} other {# champs}}",
         "addDescription": "Ajouter une description : où trouver la valeur ?",
         "valueColumn": "Valeur extraite",
         "notFound": "Introuvable",
@@ -605,7 +576,6 @@
       },
       "rules": {
         "title": "Règles",
-        "active": "Actives",
         "addLogic": "Ajouter une règle",
         "severityReject": "Rejeter l'exécution",
         "severityFlag": "Signaler pour examen",
@@ -679,7 +649,6 @@
         }
       },
       "api": {
-        "live": "En ligne",
         "keyLabel": "Clé",
         "showKey": "Afficher la clé API",
         "hideKey": "Masquer la clé API",
@@ -765,8 +734,6 @@
     "count": "{count, plural, one {# workflow} other {# workflows}}"
   },
   "settings": {
-    "title": "Paramètres",
-    "description": "Configuration d'exécution et état du modèle de document.",
     "model": "Modèle de document",
     "ready": "Prêt",
     "unavailable": "Indisponible",
@@ -835,7 +802,6 @@
     "reported": "L'erreur a été signalée. Vous pouvez réessayer ou recharger la page."
   },
   "shell": {
-    "toReview": "À examiner",
     "running": "{count, plural, one {# en cours} other {# en cours}}",
     "recentWorkflows": "Workflows récents",
     "collapse": "Réduire la barre latérale",
@@ -854,7 +820,6 @@
     }
   },
   "operations": {
-    "title": "Salle de contrôle",
     "live": "En direct",
     "inFlight": "En cours",
     "inFlightHint": "Exécutions en file ou en traitement, avec leur étape.",
@@ -868,13 +833,11 @@
     "modelAwake": "Éveillé",
     "modelAsleep": "En veille, démarre à la demande",
     "modelDown": "Injoignable",
-    "queue": "File",
     "running": "En traitement",
     "queued": "En attente",
     "median": "Durée médiane",
     "p95": "p95",
     "waiting": "En attente depuis",
-    "open": "Ouvrir",
     "done": "Terminées",
     "failed": "En erreur",
     "cancel": "Arrêter",

@@ -53,7 +53,7 @@ class KpiPoint(CamelModel):
     value: float
 
 
-KpiId = Literal["auditsWeek", "passRate", "failures"]
+KpiId = Literal["auditsWeek", "passRate"]
 
 
 class Kpi(CamelModel):
