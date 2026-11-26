@@ -28,7 +28,8 @@ AUDIT_MAX_PAGES_PER_DOCUMENT=              # default: every page
 ### Local development
 
 ```powershell
-winget install llama.cpp
+winget install ggml.llamacpp
+bun run llamacpp:download
 copy deploy\llamacpp\paths.local.env.example deploy\llamacpp\paths.local.env
 bun run llamacpp:serve
 bun run llamacpp:verify
@@ -50,14 +51,31 @@ Put `AUDIT_INFERENCE_API_KEY` in the runtime secret when the endpoint requires a
 
 ### NuExtract3 requests ([model card](https://huggingface.co/numind/NuExtract3), vLLM examples)
 
-| Input               | Behaviour                                                                                                                                                                                                                                                                                                                 |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PDF                 | Every page as PNG at **170 DPI** (the card's PDF example), all pages in one request                                                                                                                                                                                                                                       |
-| Image               | The uploaded PNG/JPEG/WebP, turned upright by its EXIF orientation and sent as PNG (the same pixels). The server gives small images at least ~1024 vision tokens (vLLM `--mm-processor-kwargs` minimum of 1 MP; llama.cpp `--image-min-tokens 1024`): at the processor's default a 515x321 ID card misread its name lines |
-| Structured          | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples                                                                                                                       |
-| `instructions`      | The document's notes, then a `Field guidance:` list built from the field descriptions                                                                                                                                                                                                                                     |
-| In-context examples | `developer` messages, input then expected output                                                                                                                                                                                                                                                                          |
-| Markdown            | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **0.2** (the card's non-thinking mode; its Markdown code example uses 1, which on staging scored 96.1 against 98.4 on 11 hard pages, and 73.9 against 93.8 on a handwritten invoice)                                                       |
+| Input               | Behaviour                                                                                                                                                                                                                                                           |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| PDF                 | Every page as PNG at **170 DPI** (the card's PDF example), or larger for a page under 3 MP (A5, receipts): drawn at the size that gives 3 MP, so small text stays sharp. All pages in one request                                                                   |
+| Image               | The uploaded PNG/JPEG/WebP, turned upright by its EXIF orientation, enlarged (bicubic) to at least 3 MP when smaller, and sent as PNG. At the model server's own 1 MP floor, six small staging documents read 89.5 % of values right; at 3 MP, 99.0 % (24 November) |
+| Structured          | `chat_template_kwargs`: `template` (`json.dumps(..., indent=4)`), `instructions`, `enable_thinking: false`; temperature **0.2** (the card's non-thinking mode), with or without in-context examples                                                                 |
+| `instructions`      | The document's notes, then a `Field guidance:` list built from the field descriptions                                                                                                                                                                               |
+| In-context examples | `developer` messages, input then expected output                                                                                                                                                                                                                    |
+| Markdown            | `chat_template_kwargs.mode: "markdown"`, `enable_thinking: false`, temperature **0.2** (the card's non-thinking mode; its Markdown code example uses 1, which on staging scored 96.1 against 98.4 on 11 hard pages, and 73.9 against 93.8 on a handwritten invoice) |
+
+### Second read (`AUDIT_SECOND_READ`)
+
+The model's misreads depend on the size of the page it sees, and repeat at that size. So each
+document with fields is read twice, at once: as above, and at half those pixels
+(`extraction/pipeline.py`). A field the two reads disagree on is reported as unconfirmed: it is
+flagged with the second value ("Read differently a second time"), and the run needs review
+instead of passing. A second read that fails also sends the run to review.
+
+| Value           | Reads twice                             | Cost                                    |
+| --------------- | --------------------------------------- | --------------------------------------- |
+| `all` (default) | Every document with fields              | About twice the model time per document |
+| `images`        | Photos and scans only (PNG, JPEG, WebP) | About half that extra time              |
+| `off`           | Nothing                                 | A misread can pass                      |
+
+Credits count the first read only. On six small staging documents (24 November), the second
+read caught 45 of 45 wrong values and sent 2.4 % of right values to review.
 
 ### Endpoint check
 

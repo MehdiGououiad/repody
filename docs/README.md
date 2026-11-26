@@ -14,7 +14,8 @@
 | Run, workflow and builder states (state machines)              | [LIFECYCLES.md](./LIFECYCLES.md)                                                                                        |
 | Backend, tests, scripts                                        | [DEVELOPMENT.md](./DEVELOPMENT.md)                                                                                      |
 | Code quality review gate                                       | [CODE-QUALITY.md](./CODE-QUALITY.md)                                                                                    |
-| Publish images (Hub / GHCR)                                    | [../deploy/registry/README.md](../deploy/registry/README.md) · [CLUSTER.md - Release](./CLUSTER.md#images-and-releases) |
+| Publish or pull images (GHCR, client registries)               | [../deploy/registry/README.md](../deploy/registry/README.md) · [CLUSTER.md - Release](./CLUSTER.md#images-and-releases) |
+| Configure (every `AUDIT_*` setting)                            | [../deploy/ENV.md](../deploy/ENV.md)                                                                                    |
 | Architecture decisions                                         | [adr/](./adr/README.md)                                                                                                 |
 
 Root: [../README.md](../README.md) · architecture: [../CONTEXT.md](../CONTEXT.md)

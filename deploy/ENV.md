@@ -17,9 +17,10 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `HATCHET_CLIENT_TOKEN`                                   | —                           | Hatchet API token: the run queue and the maintenance cron (secret). Compose: written by `bun run platform` (local) or the `hatchet-token` service (VPS) |
 | `HATCHET_CLIENT_HOST_PORT` / `HATCHET_CLIENT_SERVER_URL` | from the token              | Hatchet's gRPC address and API URL, when the token's are not reachable from the container                                                               |
 | `HATCHET_CLIENT_TLS_STRATEGY`                            | `tls`                       | `none` for an engine on a private network without TLS (Compose)                                                                                         |
-| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:9000`     | S3-compatible storage for uploaded documents                                                                                                            |
+| `AUDIT_S3_ENDPOINT_URL`                                  | `http://localhost:8333`     | S3-compatible storage for uploaded documents                                                                                                            |
 | `AUDIT_S3_ACCESS_KEY` / `AUDIT_S3_SECRET_KEY`            | Compose: SeaweedFS dev keys | Storage credentials (secret)                                                                                                                            |
 | `AUDIT_S3_BUCKET`                                        | `audit-documents`           | Created at API start when missing                                                                                                                       |
+| `AUDIT_S3_REGION`                                        | `us-east-1`                 | The storage's region (SeaweedFS ignores it)                                                                                                             |
 
 ## Platform
 
@@ -73,6 +74,7 @@ default there. Locally, copy `deploy/env/compose.env.example` to `backend/.env` 
 | `AUDIT_RUNS_PER_MINUTE_PER_CLIENT`  | `600`   | Runs one API key or user starts a minute; more wait their turn in Hatchet (`0` = no limit)                              |
 | `AUDIT_RUNS_IN_PROGRESS_PER_CLIENT` | `2`     | Runs one API key or user has in progress at once; clients take turns (Hatchet round robin)                              |
 | `AUDIT_RUN_RETENTION_DAYS`          | `0`     | Delete finished runs (and their uploaded files) older than this (`0` = keep); the maintenance cron runs every minute    |
+| `AUDIT_HEALTH_TIMEOUT_SECONDS`      | `2`     | `GET /v1/healthz` reports the database down when it does not answer within this                                         |
 
 ## Credits
 

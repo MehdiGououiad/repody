@@ -1,112 +1,96 @@
 # Commands
 
-Deploy follows **official upstream docs** - see [LOCAL.md](./LOCAL.md) (laptop) and [CLUSTER.md](./CLUSTER.md) (production).
+Every command runs from the repository root. CI's `deploy:check` fails when a `bun run`
+command named in a doc, a script or a Compose file does not exist.
 
-## Develop (daily) - vendors / contributors (git checkout)
+## Local platform
 
-Build the images from this checkout (`repody-*:dev`, cached), start the platform, and (by default) **host NuExtract** (`repody:vlm`). To run a published release instead: `REPODY_BACKEND_IMAGE=… REPODY_WEB_IMAGE=… bun run platform`.
+Guide: [LOCAL.md](./LOCAL.md).
 
-| Command                               | When                                                                                                                                                               |
-| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `bun run platform setup`              | **Once** - env files + build the images                                                                                                                            |
-| `bun run platform doctor`             | **Preflight** - Node/Bun, Docker, images, llama-server, NuExtract3 GGUFs, env, ports (also runs before start). Does **not** prove VRAM load or a full extract job. |
-| `bun run platform`                    | **Daily** - preflight + start stack + NuExtract on host                                                                                                            |
-| `bun run platform -- --platform-only` | Containers only (no host models)                                                                                                                                   |
-| `bun run platform -- --no-nuextract`  | Skip NuExtract                                                                                                                                                     |
-| `bun run platform -- --no-build`      | Start the images already built (skip the rebuild)                                                                                                                  |
-| `bun run platform status`             | Health probes                                                                                                                                                      |
-| `bun run platform stop`               | Tear down                                                                                                                                                          |
-| `bun run platform help`               | Flags                                                                                                                                                              |
-| `bun run doctor`                      | Toolchain only (Node/Bun) - prefer `bun run platform doctor`                                                                                                       |
-| `bun run db:migrate`                  | Apply Alembic migrations                                                                                                                                           |
+| Command                   | What it does                                                                         |
+| ------------------------- | ------------------------------------------------------------------------------------ |
+| `bun run platform setup`  | Once: write the env files and build the images                                       |
+| `bun run platform`        | Check the machine, build the images, start the stack and the host model              |
+| `bun run platform dev`    | Data services in Compose; API and web app on the host, reloading on edits            |
+| `bun run platform doctor` | Check Node, Bun, Docker, llama-server, the GGUF files, env files and ports           |
+| `bun run platform status` | Health of each service                                                               |
+| `bun run platform logs`   | Follow the API, web and worker logs                                                  |
+| `bun run platform stop`   | Stop the host model and every container                                              |
+| `bun run platform help`   | Commands and options (`--no-nuextract`, `--platform-only`, `--no-obs`, `--no-build`) |
+| `bun run doctor`          | Check Node and Bun only                                                              |
+| `bun run ui`              | The web app alone (`next dev`), with an API already running                          |
+| `bun run db:migrate`      | Apply the Alembic migrations                                                         |
+| `bun run db:reset`        | Drop every table, migrate and load the demo data (local only)                        |
 
-Guides: [LOCAL.md](./LOCAL.md) · [README.md](./README.md) (docs hub).
+## The local model (llama-server)
 
-### Document models
+Guide: [deploy/llamacpp/README.md](../deploy/llamacpp/README.md). `bun run platform` starts and
+stops it for you.
 
-| Catalog id   | Process   | Port    | Notes                               |
-| ------------ | --------- | ------- | ----------------------------------- |
-| `repody:vlm` | NuExtract | `:8081` | **Default** with `bun run platform` |
+| Command                     | What it does                                  |
+| --------------------------- | --------------------------------------------- |
+| `bun run llamacpp:download` | Download the NuExtract3 GGUF files (`hf` CLI) |
+| `bun run llamacpp:serve`    | Start llama-server on `:8081`                 |
+| `bun run llamacpp:verify`   | Check it answers                              |
+| `bun run llamacpp:stop`     | Stop it                                       |
 
-```bash
-bun install
-bun run doctor
-bun run platform setup
-bun run platform                 # images from this checkout + host NuExtract
-bun run platform status
-bun run platform stop
-```
+## Before you push
 
-> **Auth tip:** After Keycloak recreate, sign out and sign in again (or clear `localhost` cookies). Use **localhost**, not `127.0.0.1`.
+Which tool owns which rule: [CODE-QUALITY.md](./CODE-QUALITY.md).
 
-### Contribute from source
+| Command                                    | What it does                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------- |
+| `bun run verify`                           | Lint, format, types and dead code, both languages (what CI checks)    |
+| `bun run review:check`                     | `verify`, the backend tests and the deploy checks                     |
+| `bun lint` / `bun run lint:py`             | oxlint and oxfmt / ruff and import-linter                             |
+| `bun run lint:fix` / `bun run lint:py:fix` | Apply the safe fixes                                                  |
+| `bun run format`                           | Reformat everything (oxfmt and ruff); `bun fmt` is the frontend part  |
+| `bun check` / `bun run typecheck:py`       | TypeScript (`tsc --noEmit`) / pyright                                 |
+| `bun run deadcode`                         | Unused files, exports and dependencies (knip)                         |
+| `bun run architecture:check`               | The backend's import layers (import-linter)                           |
+| `bun run codegen:api`                      | Regenerate the OpenAPI document, its TypeScript types and the catalog |
 
-Hub path above is the product runtime. For hacking API/UI from source:
+In a OneDrive folder, `knip` can report false positives: OneDrive turns folders into reparse
+points that its file walker skips.
 
-| Command                 | When                                                                                            |
-| ----------------------- | ----------------------------------------------------------------------------------------------- |
-| `bun run platform dev`  | Data plane + workers built from source; API (uvicorn) and UI (next dev) on the host with reload |
-| `bun run platform stop` | Stop host NuExtract and every container                                                         |
-| `bun run ui`            | Next.js only (API already running)                                                              |
+## Tests
 
-### Code quality
+Details: [DEVELOPMENT.md](./DEVELOPMENT.md#tests).
 
-One gate covers both languages. See [CODE-QUALITY.md](./CODE-QUALITY.md) for
-which tool owns which concern.
+| Command                    | What it runs                                             |
+| -------------------------- | -------------------------------------------------------- |
+| `bun test`                 | Frontend unit tests                                      |
+| `bun run test:api`         | Backend unit and integration tests (needs Postgres)      |
+| `bun run test:unit`        | Backend unit tests only                                  |
+| `bun run test:integration` | Backend integration tests only                           |
+| `bun run test:live`        | Backend tests against a running stack                    |
+| `bun run test:e2e`         | Every Playwright spec against `bun run platform`         |
+| `bun run test:e2e:smoke`   | Playwright: sign-in and navigation                       |
+| `bun run test:platform`    | Playwright against a Compose stack (CI's `platform` job) |
 
-| Command                                    | When                                                                                                                                                                         |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run verify`                           | **Before pushing** - lint, format, types and dead code, both languages                                                                                                       |
-| `bun run format`                           | Reformat everything in place (oxfmt + ruff); `bun fmt` is the frontend part                                                                                                  |
-| `bun run lint:fix` / `bun run lint:py:fix` | Apply the safe lint fixes                                                                                                                                                    |
-| `bun lint` / `bun run lint:py`             | Lint and format check only (oxlint + oxfmt / ruff)                                                                                                                           |
-| `bun check` / `bun run typecheck:py`       | TypeScript 7 `tsc --noEmit` / pyright                                                                                                                                        |
-| `bun test`                                 | Frontend unit tests (`lib/`, `i18n/`)                                                                                                                                        |
-| `bun run deadcode`                         | Unused files, exports and dependencies (knip; CI runs it). In a OneDrive folder it reports false positives: OneDrive turns folders into reparse points its file walker skips |
-| `bun run review:check`                     | `verify` + backend tests + deploy checks                                                                                                                                     |
+## Images, deploy and security
 
----
+| Command                                       | What it does                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------- |
+| `bun run images:build`                        | Build the images locally (`docker buildx bake -f docker-bake.hcl --load`) |
+| `bun run images:release`                      | Build and push them (`REPODY_IMAGE_REGISTRY` and `REPODY_IMAGE_TAG`)      |
+| `bun run deploy:check`                        | helm lint, kubeconform, Compose config, bake, the command checker         |
+| `bun run helm:lint` / `bun run helm:template` | The Helm chart alone                                                      |
+| `bun run security:scan`                       | Trivy on the repository (dependencies, secrets, misconfiguration)         |
 
-## OpenShift / client production
+The hosted demo is released with a git tag, not a command:
+[deploy/vps/README.md](../deploy/vps/README.md#releasing).
 
-Deploy guide: [CLUSTER.md](./CLUSTER.md).
+## The marketing site
 
-| Command                               | When                                                                        |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| `bun run helm:lint` / `helm:template` | Chart checks                                                                |
-| `bun run deploy:check`                | helm lint, helm template + kubeconform, kustomize, bake --print, docs links |
-| `bun run security:scan`               | Trivy repository scan (lockfiles, secrets, misconfig)                       |
+A separate project in `site/` with its own lockfile. Plan: [site/plan.md](./site/plan.md).
 
-## Release / images
+| Command                     | What it does                           |
+| --------------------------- | -------------------------------------- |
+| `bun install --cwd site`    | Once                                   |
+| `bun run --cwd site dev`    | Preview on http://localhost:3200       |
+| `bun run --cwd site build`  | Build                                  |
+| `bun run --cwd site deploy` | Build and deploy by hand with Wrangler |
 
-| Command                  | When                                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `bun run images:build`   | Build locally (`docker buildx bake -f docker-bake.hcl --load`)                                         |
-| `bun run images:release` | Build + push (`docker buildx bake -f docker-bake.hcl --push`; multi-arch via `REPODY_IMAGE_PLATFORMS`) |
-
-Registry notes: [deploy/registry/README.md](../deploy/registry/README.md).
-
-## Marketing site (repody.com)
-
-A separate project in `site/` (own lockfile), a static export served by Cloudflare Workers.
-Plan and structure: [docs/site/plan.md](site/plan.md).
-
-| Command                         | When                                   |
-| ------------------------------- | -------------------------------------- |
-| `bun run --cwd site install`    | Once                                   |
-| `bun run --cwd site dev`        | Local preview on http://localhost:3200 |
-| `bun run --cwd site build`      | Static export to `site/out/`           |
-| `bun run --cwd site run deploy` | Build and deploy by hand with Wrangler |
-
-Pushes to `master` that touch the site deploy it through Cloudflare Workers Builds
-(Worker `repody-site` > Settings > Builds); `.github/workflows/site.yml` only checks the build.
-
-## Model serve (advanced / standalone)
-
-Usually started by `bun run platform`. Manual:
-
-| Command                  | Port    |
-| ------------------------ | ------- |
-| `bun run llamacpp:serve` | `:8081` |
-
-Stop: `bun run llamacpp:stop`.
+Pushes to `master` that touch `site/` deploy it through Cloudflare Workers Builds (Worker
+`repody-site`); `.github/workflows/site.yml` checks the build.

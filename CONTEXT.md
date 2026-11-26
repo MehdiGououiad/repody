@@ -12,18 +12,19 @@ Single-page map for tech leads and new contributors. How-tos: [docs/README.md](.
 | **Next.js `app/`** | Repo root `app/`                                  | App Router routes (thin pages) - not Python     |
 | **`repody.app`**   | `backend/src/repody/app/`                         | Python application use cases (Workflow, Run, …) |
 
-Default document extraction: NuExtract via OpenAI-compatible llama-server (`repody:vlm`).
+Document extraction: NuExtract3 on an OpenAI-compatible server: vLLM on Modal for the hosted demo,
+llama-server on a laptop ([docs/EXTRACTION.md](./docs/EXTRACTION.md)).
 
 ## Domain glossary
 
-| Term               | Meaning                                                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Workflow**       | Configured audit template: documents, field schema, validation rules                                                                          |
-| **Run**            | One execution of a workflow against uploaded files (test or production)                                                                       |
-| **Document model** | `repody:vlm` — NuExtract3 on an OpenAI-compatible server: vLLM on Modal, or a local llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
-| **Logic rule**     | Typed conditions on extracted fields (`rules/`); passed, failed or skipped                                                                    |
-| **Audit**          | A done run: its report, with an outcome of passed, warning or failed                                                                          |
-| **Lifecycle**      | The states of a run, workflow or builder flow, and their one owner: [docs/LIFECYCLES.md](./docs/LIFECYCLES.md)                                |
+| Term               | Meaning                                                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Workflow**       | Configured audit template: documents, field schema, validation rules                                                           |
+| **Run**            | One execution of a workflow against uploaded files (test or production)                                                        |
+| **Document model** | NuExtract3 on an OpenAI-compatible server: vLLM on Modal, or a local llama-server ([docs/EXTRACTION.md](./docs/EXTRACTION.md)) |
+| **Logic rule**     | Typed conditions on extracted fields (`rules/`); passed, failed or skipped                                                     |
+| **Audit**          | A done run: its report, with an outcome of passed, warning or failed                                                           |
+| **Lifecycle**      | The states of a run, workflow or builder flow, and their one owner: [docs/LIFECYCLES.md](./docs/LIFECYCLES.md)                 |
 
 ## Request lifecycle
 
@@ -54,16 +55,24 @@ sequenceDiagram
 ```
 backend/src/repody/
 ├── main.py · worker.py  FastAPI app; Hatchet worker (process-run workflow, maintenance cron)
-├── api/               HTTP routes (workflows, runs, platform) and caller dependencies
-├── app/               Use cases: workflows, runs, execute (worker), progress, maintenance,
-│                      lifecycle (the only code that changes a run's status)
+├── api/               HTTP routes (workflows, runs, platform, credits, admin, access requests)
+│                      and caller dependencies (deps.py)
+├── app/               Use cases: workflows, runs, execute (worker), progress, lifecycle (the only
+│                      code that changes a run's status), credits, admin, access, dashboard,
+│                      operations, scope (who sees what), maintenance, seed
 ├── extraction/        NuExtract requests, page rendering, model client, field values
-├── rules/             Typed conditions and their evaluation
-├── schemas/           Pydantic models (API and stored workflow definition)
-├── infra/             auth (Keycloak JWT, roles, API keys), queue (Hatchet client), models,
-│                      db, storage (S3), observability (logs, errors)
-└── settings.py        AUDIT_* settings
+├── rules/             Typed conditions and their evaluation (no database, no settings)
+├── schemas/           Pydantic models: the API, and the stored workflow definition
+├── infra/             auth (Keycloak JWT, roles, API keys), queue (Hatchet client), models, db,
+│                      storage (S3), keycloak_admin, turnstile, observability (logs, errors)
+└── settings.py        Every AUDIT_* setting, in one place
 ```
+
+Dependencies point one way: entry points → `api` → `app` → `extraction` / `rules` → `infra`.
+`app`, `extraction`, `rules`, `schemas` and `infra` never import FastAPI. import-linter checks both
+(`backend/pyproject.toml`, `bun run architecture:check`). The API and the worker are the same image
+with two commands, so they already deploy and scale apart; the model is an HTTP endpoint and
+storage is S3.
 
 **Hot path:** `app/execute.py` `process_run`: claim (conditional UPDATE) -> extract each document -> check rules -> save the report ([ADR 009](./docs/adr/009-simple-backend.md)).
 
@@ -74,22 +83,25 @@ backend/src/repody/
 | **Workflow configuration** | Definition (documents + rules), deployment, API keys | `app/workflows.py`, `schemas/workflow.py`                      |
 | **Run execution**          | Start, queue, process, progress, upkeep              | `app/runs.py`, `app/execute.py`, `app/progress.py`, `queue.py` |
 | **Rules**                  | Typed conditions and their evaluation                | `rules/`                                                       |
+| **Clients and credits**    | Client companies, users, credits, access requests    | `app/admin.py`, `app/credits.py`, `app/access.py`              |
 
 ### Run pipeline
 
-One Hatchet workflow, `process-run`, with one task (`process_run`). The API triggers it after the commit and keeps the Hatchet run id (`runs.task_run_id`, to cancel it); when Hatchet cannot take it, the run fails at once and the API answers 503. Hatchet enforces the timeouts (an hour to reach a worker, `AUDIT_RUN_TIMEOUT_MINUTES` to finish), the per-client rate limit and round robin, and calls the workflow's failure task when it gives up (a timeout, a lost worker), which fails the run. A Hatchet cron runs maintenance every minute: it purges runs past their retention. [ADR 011](./docs/adr/011-hatchet.md). Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
+One Hatchet workflow, `process-run`, with one task (`process_run`). The API triggers it after the commit and keeps the Hatchet run id (`runs.task_run_id`, to cancel it); when Hatchet cannot take it, the run fails at once and the API answers 503. Hatchet enforces the timeouts (an hour to reach a worker, `AUDIT_RUN_TIMEOUT_MINUTES` to finish), the per-client rate limit and round robin, and calls the workflow's failure task when it gives up (a timeout, a lost worker), which fails the run. A Hatchet cron runs maintenance every minute: it fails the runs the queue lost, and deletes runs past their retention and declined access requests past theirs. [ADR 011](./docs/adr/011-hatchet.md). Every status change is a conditional UPDATE through `app/lifecycle.py`, so a duplicate delivery does nothing and a final run is never overwritten ([LIFECYCLES.md](./docs/LIFECYCLES.md)). Each run keeps its own copy of the workflow definition. Decision: [ADR 009](./docs/adr/009-simple-backend.md).
 
 ## Extraction
 
-`extraction/pipeline.py` `extract` is the one entry point: NuExtract on the
-llama-server (`extraction/client.py`). Model availability is `GET /v1/models` on the llama-server,
-shown by `GET /v1/platform/config`.
+`extraction/pipeline.py` `extract` is the one entry point: it renders the pages
+(`extraction/render.py`, at least 3 MP each), sends one request per document to the model
+(`extraction/client.py`, the openai SDK) and turns the answer into one value per field
+(`extraction/fields.py`). With `AUDIT_SECOND_READ` (default `all`), a document with fields is
+read a second time at half the pixels; a field the two reads disagree on is flagged and the run
+needs review. Details: [docs/EXTRACTION.md](./docs/EXTRACTION.md).
 
-## Inference
-
-| Concern             | Configuration                                       |
-| ------------------- | --------------------------------------------------- |
-| Document extraction | `AUDIT_INFERENCE_BASE_URL`, `AUDIT_INFERENCE_MODEL` |
+| Concern             | Configuration                                                                  |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Document extraction | `AUDIT_INFERENCE_BASE_URL`, `AUDIT_INFERENCE_MODEL`, `AUDIT_INFERENCE_API_KEY` |
+| Second read         | `AUDIT_SECOND_READ` (`all`, `images` or `off`)                                 |
 
 ## Frontend layout
 
