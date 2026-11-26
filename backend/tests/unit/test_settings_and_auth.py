@@ -10,7 +10,6 @@ from pydantic import SecretStr, ValidationError
 from repody.infra import auth
 from repody.settings import Settings, get_settings
 
-
 ENV_DOC = Path(__file__).resolve().parents[3] / "deploy" / "ENV.md"
 
 

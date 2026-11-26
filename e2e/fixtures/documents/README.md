@@ -1,6 +1,6 @@
 # E2E sample documents
 
-Place test files here. Platform tests: [docs/DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing) · commands: [docs/COMMANDS.md](../../../docs/COMMANDS.md).
+Place test files here. Platform tests: [docs/DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#tests) · commands: [docs/COMMANDS.md](../../../docs/COMMANDS.md).
 
 ## Fixtures
 
@@ -22,4 +22,4 @@ gitignored `private/` folder at the repo root.
 
 **Compose (default):** `bun run platform`, then `bun run test:platform` (use `E2E_WEB_URL=http://localhost:3000`).
 
-**Deployed cluster:** [docs/CLUSTER.md](../../../docs/CLUSTER.md), then `bun run test:platform` with Ingress URLs (see [DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#testing)).
+**Deployed cluster:** [docs/CLUSTER.md](../../../docs/CLUSTER.md), then `bun run test:platform` with Ingress URLs (see [DEVELOPMENT.md](../../../docs/DEVELOPMENT.md#tests)).
