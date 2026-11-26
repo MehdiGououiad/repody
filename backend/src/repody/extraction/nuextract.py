@@ -16,15 +16,17 @@ from repody.schemas.workflow import DocumentDef, SchemaField
 # The card's non-thinking mode, "for fast and deterministic extraction or Markdown conversion"
 # ("temperature = 0.2"). Its document-to-Markdown code example uses 1, which measured worse on
 # staging's vLLM (18 November, 11 hard pages: 96.1 at 1, 98.4 at 0.2; a handwritten invoice 73.9
-# and 93.8). Structured answers were the same at 0.2 and 0 (16 documents, 234 fields).
+# and 93.8). 0 is not better for structured answers: it only makes a misread repeat (24 November,
+# a small phone photo: right 5 of 5 times with one schema, wrong 5 of 5 with another); the second
+# read (repody.extraction.pipeline) is what catches misreads.
 TEMPERATURE = 0.2
 
 
 def page_parts(
     data: bytes, mime: str, *, max_pages: int | None, area: float = 1.0
 ) -> tuple[list[dict[str, Any]], int]:
-    """``(image parts, page count)``: PDF pages at 170 DPI and images as PNG (as the model
-    card sends them; images upright, see ``render.open_image``), each at least
+    """``(image parts, page count)``: PDF pages and images as PNG (as the model card sends
+    them; images upright, see ``render.open_image``), each at the card's 170 DPI or at least
     ``render.MIN_MODEL_PIXELS``, then times ``area`` (a second read, repody.extraction.pipeline).
 
     All pages go in one request, as the model card sends a multi-page PDF.

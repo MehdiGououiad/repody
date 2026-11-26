@@ -150,13 +150,11 @@ def model_image(image: Image.Image, area: float = 1.0) -> Image.Image:
     return image if size == image.size else image.resize(size, Image.Resampling.BICUBIC)
 
 
-def image_part(image: Image.Image | bytes, mime: str = "image/png") -> dict[str, Any]:
-    """A content part for a Pillow image (sent as PNG) or encoded image bytes of ``mime``."""
-    if isinstance(image, Image.Image):
-        buffer = io.BytesIO()
-        image.save(buffer, format="PNG")
-        image, mime = buffer.getvalue(), "image/png"
-    url = f"data:{mime};base64,{base64.b64encode(image).decode()}"
+def image_part(image: Image.Image) -> dict[str, Any]:
+    """A content part for a Pillow image, sent as a PNG data URL."""
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    url = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
     return {"type": "image_url", "image_url": {"url": url}}
 
 

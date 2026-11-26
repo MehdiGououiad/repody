@@ -11,7 +11,8 @@ from repody.rules.evaluate import (
     rule_issues,
 )
 from repody.rules.tables import sum_rows
-from repody.rules.values import field_key, literal, typed
+from repody.rules.values import literal, typed
+from repody.schemas.catalog import field_key
 from repody.schemas.rule import (
     Aggregate,
     Arithmetic,

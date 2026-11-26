@@ -8,7 +8,8 @@ matches text case-insensitively. A table that was not extracted is handled by th
 
 from typing import Any
 
-from repody.rules.values import field_key, is_number
+from repody.rules.values import is_number
+from repody.schemas.catalog import field_key
 
 
 def _rows(table: list[Any]) -> list[dict[str, Any]]:

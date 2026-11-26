@@ -573,6 +573,47 @@
         }
       }
     },
+    "/v1/runs/{run_id}/cancel": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Cancel",
+        "description": "Stop a queued or running run of the caller's account. 409 when it has already finished.",
+        "operationId": "cancel_v1_runs__run_id__cancel_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/audits": {
       "get": {
         "tags": [
@@ -1088,47 +1129,6 @@
             "HTTPBearer": []
           }
         ]
-      }
-    },
-    "/v1/runs/{run_id}/cancel": {
-      "post": {
-        "tags": [
-          "platform"
-        ],
-        "summary": "Cancel",
-        "description": "Stop a queued or running run of the caller's account. 409 when it has already finished.",
-        "operationId": "cancel_v1_runs__run_id__cancel_post",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Successful Response"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/catalog": {

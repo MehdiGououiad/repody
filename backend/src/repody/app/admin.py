@@ -279,25 +279,8 @@ async def client_detail(session: AsyncSession, account: str) -> ClientDetail:
             in_keycloak=group is not None,
         ),
         users=users,
-        ledger=[
-            LedgerEntry(
-                id=e.id,
-                kind=e.kind,
-                amount=e.amount,
-                pending=e.pending,
-                run_id=e.run_id,
-                pages=e.pages,
-                model_ms=e.model_ms,
-                note=e.note,
-                actor=e.actor,
-                created_at=e.created_at,
-            )
-            for e in ledger
-        ],
-        workflows=[
-            ClientWorkflow(id=w.id, name=w.name, status=w.status, updated_at=w.updated_at)
-            for w in workflows
-        ],
+        ledger=[LedgerEntry.model_validate(entry) for entry in ledger],
+        workflows=[ClientWorkflow.model_validate(wf) for wf in workflows],
     )
 
 
@@ -397,16 +380,17 @@ async def grant(session: AsyncSession, account: str, body: AdminGrant, actor: st
     return balance
 
 
+def _shared(wf: Workflow) -> SharedWorkflow:
+    return SharedWorkflow(
+        id=wf.id, name=wf.name, account=wf.account_id, status=wf.status, updated_at=wf.updated_at
+    )
+
+
 async def workflows(session: AsyncSession) -> list[SharedWorkflow]:
     rows = await session.scalars(
         select(Workflow).where(Workflow.status != "archived").order_by(Workflow.updated_at.desc())
     )
-    return [
-        SharedWorkflow(
-            id=w.id, name=w.name, account=w.account_id, status=w.status, updated_at=w.updated_at
-        )
-        for w in rows
-    ]
+    return [_shared(w) for w in rows]
 
 
 async def assign_workflow(
@@ -426,9 +410,7 @@ async def assign_workflow(
     )
     await session.commit()
     await session.refresh(wf)
-    return SharedWorkflow(
-        id=wf.id, name=wf.name, account=wf.account_id, status=wf.status, updated_at=wf.updated_at
-    )
+    return _shared(wf)
 
 
 # --- Audit log ---

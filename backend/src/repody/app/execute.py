@@ -9,6 +9,7 @@ skipped); any other error fails the run, and so does running past AUDIT_RUN_TIME
 import asyncio
 import time
 from datetime import UTC, datetime, timedelta
+from functools import cache
 
 import structlog
 from sqlalchemy import select
@@ -204,15 +205,9 @@ def _pages_sent(documents: list[RunDocument]) -> int:
 # Documents read and rendered at once in this process, all runs together: a document's file and
 # its page images are in memory from its download to the model's answer, so this bounds a
 # worker's memory, not only the model's requests (AUDIT_INFERENCE_CONCURRENCY).
-_documents: dict[asyncio.AbstractEventLoop, asyncio.Semaphore] = {}
-
-
+@cache
 def _document_slots() -> asyncio.Semaphore:
-    loop = asyncio.get_running_loop()
-    if loop not in _documents:
-        _documents.clear()  # a new event loop (tests): the old semaphore belongs to the old one
-        _documents[loop] = asyncio.Semaphore(get_settings().inference_concurrency)
-    return _documents[loop]
+    return asyncio.Semaphore(get_settings().inference_concurrency)
 
 
 async def _extract_document(run_doc: RunDocument, doc: DocumentDef, tracker: Tracker) -> int:

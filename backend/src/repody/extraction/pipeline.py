@@ -18,6 +18,7 @@ import json
 import math
 import time
 from collections.abc import AsyncIterator, Sequence
+from functools import cache
 from typing import Any
 
 import openai
@@ -159,15 +160,10 @@ class _PageBudget:
             self._wake()
 
 
-_budgets: dict[asyncio.AbstractEventLoop, _PageBudget] = {}
-
-
+@cache
 def _page_budget() -> _PageBudget:
-    loop = asyncio.get_running_loop()
-    if loop not in _budgets:
-        _budgets.clear()  # a new event loop (tests): the old budget belongs to the old one
-        _budgets[loop] = _PageBudget(PAGES_IN_FLIGHT)
-    return _budgets[loop]
+    """The process's page budget (one event loop: the API's or the worker's)."""
+    return _PageBudget(PAGES_IN_FLIGHT)
 
 
 def _pages_to_send(data: bytes, mime: str, max_pages: int | None) -> int:
@@ -265,7 +261,6 @@ async def extract(
     log.info(
         "document_extracted",
         document_type=doc.document_type,
-        model="nuextract",
         ms=elapsed,
         fields=meta.fields_extracted,
         pages=answer.pages_sent,

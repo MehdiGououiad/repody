@@ -12,8 +12,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from repody.rules.tables import count_rows, sum_rows
-from repody.rules.values import field_key, is_number, literal, typed
-from repody.schemas.catalog import NUMBER_TYPES, TABLE_TYPE, is_list_type, operators_for
+from repody.rules.values import is_number, literal, typed
+from repody.schemas.catalog import (
+    NUMBER_TYPES,
+    TABLE_TYPE,
+    field_key,
+    is_list_type,
+    operators_for,
+)
 from repody.schemas.rule import (
     UNARY_OPERATORS,
     Aggregate,

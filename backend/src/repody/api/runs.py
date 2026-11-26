@@ -1,4 +1,4 @@
-"""Runs and audits: start a run, poll it, list, read and export finished runs."""
+"""Runs and audits: start a run, poll or cancel it, list, read and export finished runs."""
 
 from typing import Annotated
 
@@ -18,6 +18,7 @@ from starlette.datastructures import UploadFile
 
 from repody.api.deps import AccountScope, OptionalUser, SessionDep, TokenDep, require
 from repody.app import runs, workflows
+from repody.app.operations import cancel_run
 from repody.app.scope import own_workflow, sees_workflow
 from repody.infra.auth import User, api_key_matches, hash_api_key
 from repody.infra.models import Workflow
@@ -173,6 +174,14 @@ RunReaderScope = Annotated[str | None, Depends(require_run_reader)]
 async def get_run(run_id: str, session: SessionDep, account: RunReaderScope) -> RunState:
     """Status and live progress; the audit report once the run is done."""
     return await runs.run_state(session, run_id, account=account)
+
+
+@router.post("/runs/{run_id}/cancel", status_code=204)
+async def cancel(
+    run_id: str, session: SessionDep, user: Annotated[User, require("run:execute")]
+) -> None:
+    """Stop a queued or running run of the caller's account. 409 when it has already finished."""
+    await cancel_run(session, run_id, user.subject, account=user.account)
 
 
 @router.get("/audits", dependencies=[require("run:read")])

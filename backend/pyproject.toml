@@ -17,8 +17,9 @@ dependencies = [
   # Runs: Hatchet (queue, workers, cron, timeouts, retries, cancellation, rate limits).
   # The 1.x line, written against what V2 keeps (docs.hatchet.run/v1/migration-guide-python-v2).
   "hatchet-sdk>=1.46.0,<2",
-  # Extraction: llama-server (OpenAI-compatible); PDFium and Pillow render pages and also check
-  # that an upload is the PDF or image it claims to be.
+  # Extraction: an OpenAI-compatible model server (vLLM on Modal, or a local llama-server);
+  # PDFium and Pillow render pages and also check that an upload is the PDF or image it claims
+  # to be.
   "openai>=3.49.0",
   "pypdfium2>=5.15.2",
   "pillow>=13.0.0",
