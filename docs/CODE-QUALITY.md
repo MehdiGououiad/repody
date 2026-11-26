@@ -50,12 +50,13 @@ is made an error on purpose.
   `AppError(status, message, retry_after=...)` (`backend/src/repody/app/errors.py`, plain Python
   so the use cases stay framework-free); one handler in `backend/src/repody/main.py` answers
   it with the status, `detail` and `Retry-After`. Inside `except`, raise `... from exc`.
-- **Shared helpers have one home.** Display formatting (durations, bytes,
-  percentages) lives in `lib/utils.ts`; dates render through
+- **Shared helpers have one home.** Display formatting (durations, bytes) lives in
+  `lib/utils.ts`, numbers and percentages go through next-intl's formatter; dates render through
   `components/shared/date-time.tsx`; clipboard copy in `lib/hooks/use-copy-to-clipboard.ts`.
 - **One source per contract.** Status values are Python `Literal`s; the database CHECKs, the
   OpenAPI schema and the generated TypeScript types all come from them. The rule operators each
-  field type takes come from `GET /v1/catalog`, not a frontend copy.
+  field type takes come from the API's catalog, generated into `lib/api/catalog.json` with the
+  OpenAPI schema (`bun run codegen:api`), not a hand-written frontend copy.
 
 ## Backend Layers
 

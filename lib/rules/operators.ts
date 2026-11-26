@@ -15,8 +15,8 @@ export const COMPARISON_OPS = [
   { value: "IS_EMPTY", key: "opIsEmpty" },
 ] as const satisfies readonly { value: ComparisonOp; key: string }[];
 
-/** Operators that fit a left side of `type`, as the API serves them (`GET /v1/catalog`, the
- * same rule it applies on save); a type it does not list (`region:FR`) takes the default's. */
+/** Operators that fit a left side of `type`, as the API's catalog lists them (`lib/catalog.ts`,
+ * the same rule it applies on save); a type it does not list (`region:FR`) takes the default's. */
 export function operatorsFor(type: string | undefined, catalog: Catalog) {
   if (!type) return [...COMPARISON_OPS];
   const allowed =

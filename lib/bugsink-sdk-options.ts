@@ -12,7 +12,7 @@ export function bugsinkSdkOptions(dsn?: string): BrowserOptions | NodeOptions {
     environment: process.env.BUGSINK_ENVIRONMENT ?? process.env.NODE_ENV ?? "development",
     // Bugsink stores error events only and recommends PII on a self-hosted server
     // (https://www.bugsink.com/docs/sdk-recommendations/); SDK v11 collects it by default.
-    tracesSampleRate: 0,
+    // No tracesSampleRate: any value, even 0, turns tracing on (the backend leaves it unset too).
     sendClientReports: false,
   };
 }

@@ -1,7 +1,8 @@
 """The NuExtract template types a schema field can have, and what rules can do with each.
 
 The single source of this taxonomy: the API validates fields with it, the rules engine
-compares values by it, and the builder reads it from ``GET /v1/catalog``.
+compares values by it, and the web app builds with a copy generated next to the OpenAPI
+document (``lib/api/catalog.json``, ``bun run codegen:api``); API clients read ``GET /v1/catalog``.
 https://huggingface.co/numind/NuExtract3/blob/main/TYPES.md
 """
 
