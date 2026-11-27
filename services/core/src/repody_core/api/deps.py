@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from repody_common.ports import EntitlementProvider
-from repody_core.app.ports import CoreStore, EventPublisher
+from repody_core.app.ports import CoreStore, EventPublisher, PipelineDispatcher
 from repody_core.infra import db
 from repody_core.infra.auth import DEV_USER, CoreUser, InvalidTokenError, user_from_token
 from repody_core.infra.entitlements import EnvEntitlementProvider
@@ -42,6 +42,14 @@ def get_publisher() -> EventPublisher:
 
 
 PublisherDep = Annotated[EventPublisher, Depends(get_publisher)]
+
+
+def get_dispatcher() -> PipelineDispatcher:
+    """Return the Hatchet durable pipeline dispatcher."""
+    return HatchetEventPublisher()
+
+
+DispatcherDep = Annotated[PipelineDispatcher, Depends(get_dispatcher)]
 
 
 def get_entitlement_provider() -> EntitlementProvider:

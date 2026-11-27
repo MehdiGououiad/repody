@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from repody_core.api import approvals, audit, cases, platform
+from repody_core.api import approvals, audit, cases, pipelines, platform
 from repody_core.infra import db
 from repody_core.schemas.errors import CoreError
 
@@ -24,7 +24,13 @@ def create_app() -> FastAPI:
     async def core_error(_request: Request, exc: CoreError) -> JSONResponse:
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
-    for router in (platform.router, cases.router, approvals.router, audit.router):
+    for router in (
+        platform.router,
+        cases.router,
+        pipelines.router,
+        approvals.router,
+        audit.router,
+    ):
         app.include_router(router, prefix="/v1")
     return app
 
