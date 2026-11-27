@@ -1,0 +1,104 @@
+[project]
+name = "repody-fraud"
+version = "0.1.0"
+description = "Repody Fraud Shield — zero-training sovereign document integrity and forensics service"
+requires-python = ">=3.14"
+dependencies = [
+  "repody-common",
+  "fastapi>=0.162.3",
+  "uvicorn[standard]>=0.54.0",
+  "python-multipart>=0.0.33",
+  "pydantic>=2.14.3",
+  "pydantic-settings>=2.16.2",
+  "sqlalchemy[asyncio]>=2.1.8",
+  "asyncpg>=0.32.0",
+  "alembic>=1.20.1",
+  "pgvector>=0.5.1",
+  "hatchet-sdk>=1.46.0,<2",
+  "boto3>=1.43.127",
+  "pyjwt[crypto]>=2.15.1",
+  "structlog>=26.1.0",
+  "httpx>=0.28.1",
+  "pyhanko>=0.38.2",
+  "pikepdf>=10.18.3",
+  "pypdfium2>=5.15.2",
+  "pillow>=13.0.0",
+  "c2pa-python>=0.39.0",
+  "imagehash>=4.3.2",
+  "schwifty>=2026.11.4",
+  "phonenumbers>=9.0.44",
+  "numpy>=2.4.0",
+  "opencv-python-headless>=5.1.0.95",
+  "scikit-image>=0.26.0",
+  "onnxruntime>=1.32.0",
+]
+
+[tool.uv.sources]
+repody-common = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/repody_fraud"]
+
+[tool.importlinter]
+root_package = "repody_fraud"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Fraud layers: entry points -> HTTP routes -> use cases -> detectors -> infra -> schemas, settings"
+type = "layers"
+layers = [
+  "repody_fraud.main | repody_fraud.worker",
+  "repody_fraud.api",
+  "repody_fraud.app",
+  "repody_fraud.detectors",
+  "repody_fraud.infra",
+  "repody_fraud.schemas",
+  "repody_fraud.settings",
+]
+
+[[tool.importlinter.contracts]]
+name = "Fraud use cases, detectors, infra, and schemas stay FastAPI-free"
+type = "forbidden"
+source_modules = [
+  "repody_fraud.app",
+  "repody_fraud.detectors",
+  "repody_fraud.infra",
+  "repody_fraud.schemas",
+]
+forbidden_modules = ["fastapi", "starlette"]
+
+[[tool.importlinter.contracts]]
+name = "Fraud detectors stay pure"
+type = "forbidden"
+source_modules = ["repody_fraud.detectors"]
+forbidden_modules = [
+  "sqlalchemy",
+  "hatchet_sdk",
+  "boto3",
+  "repody_fraud.infra",
+  "repody_fraud.settings",
+]
+
+[tool.pyright]
+include = ["src", "tests", "alembic/env.py"]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+reportMissingTypeStubs = false
+venvPath = "../.."
+venv = ".venv"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+extraPaths = ["."]
+
+[tool.pytest]
+strict = true
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+pythonpath = ["."]
+testpaths = ["tests"]
