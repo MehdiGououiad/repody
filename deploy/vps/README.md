@@ -42,8 +42,8 @@ Secrets never leave the server.
 
 ## What you need
 
-- A VPS: Ubuntu 24.04 LTS, 4 vCPU, 8 GB RAM, 80 GB disk. The stack uses about 1.5 GB (measured,
-  below).
+- A VPS: Ubuntu 24.04 LTS, 4 vCPU, 8 GB RAM, 80 GB disk. One stack uses about 1.7 GB, or about
+  2.5 GB with the `logs` and `errors` profiles (measured, below).
 - A domain on Cloudflare (free plan), and free Cloudflare Zero Trust and Tailscale accounts.
 - Published images. Every master commit whose CI passes publishes `repody-backend`,
   `repody-web` and `repody-keycloak`, signed, tagged with the commit (`ci.yml` and
@@ -508,6 +508,11 @@ Cloudflare Access. In Grafana, **Drilldown → Logs** or **Explore** with the Lo
 Each line has the labels `service` (compose service), `container`, `environment` and, for the
 API and worker's JSON, `level`. Traces, metrics and their tools (Tempo, Prometheus) are for local
 development only (docs/LOCAL.md): tracing is off in production.
+
+Grafana also provisions two alert rules from `compose.yaml`: **No good backup in 26 hours** (set
+`BACKUP_ALERT_PAUSED=true` in `.env` on stacks without off-site backups, such as staging) and
+**Error-level log lines** (any `error` or `critical` line in the last 5 minutes). Both notify
+Grafana's default contact point (**Alerting → Contact points**).
 
 Setting it up (once per stack):
 
