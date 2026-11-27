@@ -16,6 +16,7 @@ log = structlog.get_logger(__name__)
 
 RUN_WORKFLOW = "process-run"
 MAINTENANCE_WORKFLOW = "maintenance"
+IDP_STAGE_WORKFLOW = "idp.extract_and_validate"
 
 
 @cache

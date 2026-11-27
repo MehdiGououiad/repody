@@ -22,6 +22,7 @@ from hatchet_sdk import (
     ConcurrencyExpression,
     ConcurrencyLimitStrategy,
     Context,
+    DesiredWorkerLabel,
     EmptyModel,
     RateLimit,
     RateLimitDuration,
@@ -31,9 +32,11 @@ from pydantic import BaseModel
 from repody.app import maintenance
 from repody.app.execute import fail_unfinished, process_run
 from repody.app.lifecycle import QUEUE_TIMEOUT
+from repody.app.stage import execute_idp_stage
 from repody.extraction import client
 from repody.infra import db, observability
-from repody.infra.queue import MAINTENANCE_WORKFLOW, RUN_WORKFLOW, hatchet
+from repody.infra.queue import IDP_STAGE_WORKFLOW, MAINTENANCE_WORKFLOW, RUN_WORKFLOW, hatchet
+from repody.schemas.stage import IdpStageInput, IdpStageOutput
 from repody.settings import get_settings
 
 
@@ -103,6 +106,21 @@ async def maintain(_input: EmptyModel, _ctx: Context) -> None:
     await maintenance.upkeep()
 
 
+@hatchet().task(
+    name=IDP_STAGE_WORKFLOW,
+    input_validator=IdpStageInput,
+    execution_timeout=timedelta(minutes=settings.run_timeout_minutes),
+    schedule_timeout=QUEUE_TIMEOUT,
+    retries=3,
+    backoff_factor=3.0,
+    backoff_max_seconds=60,
+    desired_worker_labels=[DesiredWorkerLabel(key="pool", value="idp", required=True)],
+)
+async def extract_and_validate(input: IdpStageInput, _ctx: Context) -> IdpStageOutput:
+    """Process an IDP stage invoked by ``repody-core`` over Hatchet."""
+    return await execute_idp_stage(input)
+
+
 async def lifespan() -> AsyncGenerator[None]:
     """Logging and error reporting at start; the model client and database pool at stop."""
     observability.setup()
@@ -115,7 +133,8 @@ def main() -> None:
     worker = hatchet().worker(
         "repody-worker",
         slots=settings.worker_concurrency,
-        workflows=[runs, upkeep],
+        labels={"pool": "idp"},
+        workflows=[runs, upkeep, extract_and_validate],
         lifespan=lifespan,
     )
     worker.start()

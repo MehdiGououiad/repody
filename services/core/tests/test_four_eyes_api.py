@@ -27,6 +27,7 @@ from repody_core.schemas.approvals import (
 from repody_core.schemas.audit import AuditEventResponse
 from repody_core.schemas.cases import CaseResponse, CaseStatus, CreateCaseRequest
 from repody_core.schemas.hashing import GENESIS_HASH, compute_event_hash
+from repody_core.schemas.pipelines import PipelineRunResponse
 
 
 class InMemoryCoreStore:
@@ -34,6 +35,7 @@ class InMemoryCoreStore:
 
     def __init__(self) -> None:
         self.cases: dict[str, CaseResponse] = {}
+        self.pipelines: dict[str, PipelineRunResponse] = {}
         self.approvals: dict[str, ApprovalTaskResponse] = {}
         self.events: list[AuditEventResponse] = []
 
@@ -114,6 +116,61 @@ class InMemoryCoreStore:
         if account is not None and case.account_id != account:
             return None
         return case
+
+    async def create_pipeline_run(
+        self,
+        *,
+        pipeline_id: str,
+        case_id: str,
+        stages: list[dict[str, Any]],
+        actor_sub: str,
+        account_id: str | None,
+    ) -> PipelineRunResponse:
+        now = datetime.now(UTC)
+        run = PipelineRunResponse(
+            id=pipeline_id,
+            case_id=case_id,
+            stages=deepcopy(stages),
+            status="queued",
+            hatchet_run_id=None,
+            created_at=now,
+            finished_at=None,
+        )
+        self.pipelines[pipeline_id] = run
+        self._append(
+            actor_sub=actor_sub,
+            account_id=account_id,
+            module="core",
+            action="pipeline.started",
+            resource_id=pipeline_id,
+            detail={"case_id": case_id, "stage_count": len(stages)},
+        )
+        return run
+
+    async def set_pipeline_hatchet_run(
+        self,
+        *,
+        pipeline_id: str,
+        hatchet_run_id: str,
+    ) -> PipelineRunResponse:
+        run = self.pipelines[pipeline_id]
+        updated = run.model_copy(update={"hatchet_run_id": hatchet_run_id})
+        self.pipelines[pipeline_id] = updated
+        return updated
+
+    async def get_pipeline_run(
+        self,
+        pipeline_id: str,
+        *,
+        account: str | None,
+    ) -> PipelineRunResponse | None:
+        run = self.pipelines.get(pipeline_id)
+        if run is None:
+            return None
+        case = self.cases.get(run.case_id)
+        if account is not None and (case is None or case.account_id != account):
+            return None
+        return run
 
     async def create_approval(
         self,

@@ -171,7 +171,7 @@ async def _started(session: AsyncSession, client_key: str, idempotency_key: str)
     )
 
 
-async def start_run(
+async def create_run(
     session: AsyncSession,
     wf: Workflow,
     *,
@@ -181,19 +181,16 @@ async def start_run(
     client_key: str,
     definition: WorkflowDefinition | None = None,
     idempotency_key: str | None = None,
-) -> RunCreated:
-    """Store the files, queue the run with a copy of the definition, and send it to a worker.
+) -> tuple[str, bool]:
+    """Validate uploads, persist S3 copies and the ``Run``, and hold credits.
 
-    ``definition`` (a builder draft) is only honoured for test runs; API runs use the
-    deployed workflow. The run holds its estimate on its account's credits (402 when it cannot
-    pay, repody.app.credits). The files are stored before the transaction that saves the run
-    (no database connection waits on S3), and deleted again when the run cannot be saved. A
-    retry with the same ``idempotency_key`` returns the run it started.
+    Returns ``(run_id, created)`` where ``created`` is False when an existing run matches
+    ``idempotency_key``. Does not queue or execute the run.
     """
     settings = get_settings()
     if idempotency_key and (started := await _started(session, client_key, idempotency_key)):
         log.info("run_start_replayed", run_id=started)
-        return RunCreated(run_id=started)
+        return started, False
     if source == "api" and not wf.deployed_at:
         raise AppError(409, "Workflow is not deployed.")
     if len(uploads) > settings.max_upload_files:
@@ -225,14 +222,14 @@ async def start_run(
         client_key=client_key,
         idempotency_key=idempotency_key,
     )
-    stored: list[str] = []
+    stored_keys: list[str] = []
     try:
         for position, (upload, document_id, info) in enumerate(
             zip(uploads, document_ids, files, strict=True)
         ):
             key = f"runs/{run.id}/{position}"
             await get_store().put(key, upload.file, info.mime)
-            stored.append(key)
+            stored_keys.append(key)
             run.documents.append(
                 RunDocument(
                     id=new_id("rdoc"),
@@ -251,13 +248,48 @@ async def start_run(
     except IntegrityError:
         # The same Idempotency-Key at the same time: the other request saved its run.
         await session.rollback()
-        await get_store().delete(stored)
+        await get_store().delete(stored_keys)
         if idempotency_key and (started := await _started(session, client_key, idempotency_key)):
-            return RunCreated(run_id=started)
+            return started, False
         raise
     except BaseException:
-        await get_store().delete(stored)
+        await get_store().delete(stored_keys)
         raise
+    return run.id, True
+
+
+async def start_run(
+    session: AsyncSession,
+    wf: Workflow,
+    *,
+    source: Source,
+    uploads: list[Upload],
+    slots: list[str],
+    client_key: str,
+    definition: WorkflowDefinition | None = None,
+    idempotency_key: str | None = None,
+) -> RunCreated:
+    """Store the files, queue the run with a copy of the definition, and send it to a worker.
+
+    ``definition`` (a builder draft) is only honoured for test runs; API runs use the
+    deployed workflow. The run holds its estimate on its account's credits (402 when it cannot
+    pay, repody.app.credits). The files are stored before the transaction that saves the run
+    (no database connection waits on S3), and deleted again when the run cannot be saved. A
+    retry with the same ``idempotency_key`` returns the run it started.
+    """
+    run_id, created = await create_run(
+        session,
+        wf,
+        source=source,
+        uploads=uploads,
+        slots=slots,
+        client_key=client_key,
+        definition=definition,
+        idempotency_key=idempotency_key,
+    )
+    if not created:
+        return RunCreated(run_id=run_id)
+    run = await session.get_one(Run, run_id)
     try:
         run.task_run_id = await queue.dispatch(run.id, client_key)
     except Exception as exc:

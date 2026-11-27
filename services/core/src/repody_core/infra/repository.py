@@ -16,6 +16,7 @@ from repody_core.infra.models import (
     AuditEvent,
     Case,
     FieldOverride,
+    PipelineRun,
 )
 from repody_core.schemas.approvals import (
     ApprovalStatus,
@@ -32,6 +33,7 @@ from repody_core.schemas.cases import (
 )
 from repody_core.schemas.errors import ConflictError, FourEyesViolationError, NotFoundError
 from repody_core.schemas.hashing import GENESIS_HASH, compute_event_hash
+from repody_core.schemas.pipelines import PipelineRunResponse
 
 
 def _case_to_schema(case: Case) -> CaseResponse:
@@ -58,6 +60,18 @@ def _case_to_schema(case: Case) -> CaseResponse:
             )
             for a in case.artifacts
         ],
+    )
+
+
+def _pipeline_to_schema(run: PipelineRun) -> PipelineRunResponse:
+    return PipelineRunResponse(
+        id=run.id,
+        case_id=run.case_id,
+        stages=run.stages,
+        status=run.status,
+        hatchet_run_id=run.hatchet_run_id,
+        created_at=run.created_at,
+        finished_at=run.finished_at,
     )
 
 
@@ -200,6 +214,62 @@ class SqlCoreStore:
             stmt = stmt.where(Case.account_id == account)
         case = await self._session.scalar(stmt)
         return _case_to_schema(case) if case else None
+
+    async def create_pipeline_run(
+        self,
+        *,
+        pipeline_id: str,
+        case_id: str,
+        stages: list[dict[str, Any]],
+        actor_sub: str,
+        account_id: str | None,
+    ) -> PipelineRunResponse:
+        now = datetime.now(UTC)
+        run = PipelineRun(
+            id=pipeline_id,
+            case_id=case_id,
+            stages=stages,
+            status="queued",
+            hatchet_run_id=None,
+            created_at=now,
+            finished_at=None,
+        )
+        self._session.add(run)
+        await self._append_audit(
+            actor_sub=actor_sub,
+            account_id=account_id,
+            module="core",
+            action="pipeline.started",
+            resource_id=pipeline_id,
+            detail={"case_id": case_id, "stage_count": len(stages)},
+        )
+        await self._session.commit()
+        return _pipeline_to_schema(run)
+
+    async def set_pipeline_hatchet_run(
+        self,
+        *,
+        pipeline_id: str,
+        hatchet_run_id: str,
+    ) -> PipelineRunResponse:
+        run = await self._session.get(PipelineRun, pipeline_id)
+        if run is None:
+            raise NotFoundError(f"Pipeline {pipeline_id} was not found.")
+        run.hatchet_run_id = hatchet_run_id
+        await self._session.commit()
+        return _pipeline_to_schema(run)
+
+    async def get_pipeline_run(
+        self,
+        pipeline_id: str,
+        *,
+        account: str | None,
+    ) -> PipelineRunResponse | None:
+        stmt = select(PipelineRun).where(PipelineRun.id == pipeline_id)
+        if account is not None:
+            stmt = stmt.join(Case, Case.id == PipelineRun.case_id).where(Case.account_id == account)
+        run = await self._session.scalar(stmt)
+        return _pipeline_to_schema(run) if run else None
 
     async def create_approval(
         self,

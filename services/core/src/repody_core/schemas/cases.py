@@ -67,30 +67,3 @@ class CaseResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     artifacts: list[ArtifactResponse] = Field(default_factory=list)
-
-
-class PipelineStageSpec(BaseModel):
-    """One declarative stage in a cross-module pipeline."""
-
-    stage: str = Field(min_length=1)
-    module: ModuleSource
-    requires_four_eyes: bool = False
-    config: dict[str, Any] = Field(default_factory=dict)
-
-
-class StartPipelineRequest(BaseModel):
-    """Start a Hatchet durable pipeline for an existing case."""
-
-    stages: list[PipelineStageSpec] = Field(min_length=1)
-
-
-class PipelineRunResponse(BaseModel):
-    """Pipeline execution state."""
-
-    id: str
-    case_id: str
-    stages: list[PipelineStageSpec]
-    status: PipelineStatus
-    hatchet_run_id: str | None
-    created_at: datetime
-    finished_at: datetime | None

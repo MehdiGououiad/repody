@@ -24,6 +24,13 @@ class ConflictError(CoreError):
         super().__init__(409, detail)
 
 
+class ForbiddenError(CoreError):
+    """Caller or installation lacks license entitlement or permission."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(403, detail)
+
+
 class FourEyesViolationError(CoreError):
     """Raised when Maker and Checker are the same actor."""
 
