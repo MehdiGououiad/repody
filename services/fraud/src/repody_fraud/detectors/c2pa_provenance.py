@@ -13,6 +13,41 @@ AI_SOURCE_MARKERS = (
     "compositewithtrainedalgorithmicmedia",
     "c2pa.ai_generated",
 )
+_EDIT_ACTIONS = frozenset({"c2pa.edited", "c2pa.cropped", "c2pa.drawn", "c2pa.filtered"})
+
+
+def _extract_active_assertions(manifest_store: dict[str, Any]) -> list[dict[str, Any]]:
+    active_id = manifest_store.get("active_manifest")
+    manifests = manifest_store.get("manifests")
+    if not isinstance(manifests, dict) or not active_id:
+        return []
+    active = manifests.get(active_id)
+    if not isinstance(active, dict):
+        return []
+    assertions = active.get("assertions")
+    if not isinstance(assertions, list):
+        return []
+    return [item for item in assertions if isinstance(item, dict)]
+
+
+def _scan_assertions_for_provenance(assertions: list[dict[str, Any]]) -> tuple[bool, list[str]]:
+    ai_detected = False
+    edited_actions: list[str] = []
+    for assertion in assertions:
+        blob = json.dumps(assertion).lower()
+        if any(marker in blob for marker in AI_SOURCE_MARKERS):
+            ai_detected = True
+        if not str(assertion.get("label", "")).startswith("c2pa.actions"):
+            continue
+        data_obj = assertion.get("data")
+        actions = data_obj.get("actions") if isinstance(data_obj, dict) else None
+        if not isinstance(actions, list):
+            continue
+        for act in actions:
+            action_name = str(act.get("action", "")) if isinstance(act, dict) else ""
+            if action_name in _EDIT_ACTIONS:
+                edited_actions.append(action_name)
+    return ai_detected, edited_actions
 
 
 def evaluate_c2pa_manifest(manifest_store: dict[str, Any]) -> list[FraudFinding]:
@@ -20,7 +55,7 @@ def evaluate_c2pa_manifest(manifest_store: dict[str, Any]) -> list[FraudFinding]
     findings: list[FraudFinding] = []
     validation_status = manifest_store.get("validation_status") or []
     failed_codes = [
-        str(entry.get("code", "unknown"))
+        str(entry["code"])
         for entry in validation_status
         if isinstance(entry, dict) and entry.get("code")
     ]
@@ -36,32 +71,8 @@ def evaluate_c2pa_manifest(manifest_store: dict[str, Any]) -> list[FraudFinding]
             )
         )
 
-    active_id = manifest_store.get("active_manifest")
-    manifests = manifest_store.get("manifests") or {}
-    active = manifests.get(active_id) if isinstance(manifests, dict) and active_id else None
-    assertions = (active or {}).get("assertions") or []
-
-    ai_detected = False
-    edited_actions: list[str] = []
-    for assertion in assertions:
-        if not isinstance(assertion, dict):
-            continue
-        blob = json.dumps(assertion).lower()
-        if any(marker in blob for marker in AI_SOURCE_MARKERS):
-            ai_detected = True
-        if assertion.get("label", "").startswith("c2pa.actions"):
-            actions = (assertion.get("data") or {}).get("actions") or []
-            for act in actions:
-                if isinstance(act, dict):
-                    action_name = str(act.get("action", ""))
-                    if action_name in (
-                        "c2pa.edited",
-                        "c2pa.cropped",
-                        "c2pa.drawn",
-                        "c2pa.filtered",
-                    ):
-                        edited_actions.append(action_name)
-
+    assertions = _extract_active_assertions(manifest_store)
+    ai_detected, edited_actions = _scan_assertions_for_provenance(assertions)
     if ai_detected:
         findings.append(
             FraudFinding(

@@ -16,9 +16,7 @@ class FraudSettings(BaseSettings):
     )
 
     deployment_environment: str = "development"
-    database_url: SecretStr = SecretStr(
-        "postgresql+asyncpg://repody:repody@localhost:5432/repody_fraud"
-    )
+    database_url: SecretStr = SecretStr("postgresql+asyncpg://localhost:5432/repody_fraud")
     db_pool_size: PositiveInt = 10
     health_timeout_seconds: PositiveFloat = 2.0
 
@@ -26,7 +24,7 @@ class FraudSettings(BaseSettings):
     s3_endpoint_url: str = "http://localhost:8333"
     s3_region: str = "us-east-1"
     s3_access_key: str = "repody"
-    s3_secret_key: SecretStr = SecretStr("s3-local-dev")
+    s3_secret_key: SecretStr = SecretStr("")
     s3_bucket: str = "fraud-artifacts"
 
     # Auth (Keycloak OIDC)

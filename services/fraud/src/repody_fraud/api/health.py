@@ -16,7 +16,10 @@ async def live() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/healthz")
+@router.get(
+    "/healthz",
+    responses={503: {"description": "Fraud database unavailable."}},
+)
 async def ready(store: StoreDep) -> dict[str, object]:
     """Readiness probe checking Postgres/pgvector connectivity."""
     timeout = get_settings().health_timeout_seconds

@@ -1,5 +1,6 @@
 """Tier-3 swappable ONNX neural tampering localization (MIT Mesorch / IML-ViT)."""
 
+import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -134,4 +135,10 @@ class OnnxTamperingDetector:
         context: dict[str, Any],
     ) -> list[FraudFinding]:
         max_pages = int(context.get("max_pages", 5))
-        return self.analyze_sync(artifact, data, max_pages=max_pages).findings
+        result = await asyncio.to_thread(
+            self.analyze_sync,
+            artifact,
+            data,
+            max_pages=max_pages,
+        )
+        return result.findings

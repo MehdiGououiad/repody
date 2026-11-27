@@ -12,8 +12,10 @@ from repody_fraud.schemas.errors import FraudError
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    yield
-    await db.get_engine().dispose()
+    try:
+        yield
+    finally:
+        await db.get_engine().dispose()
 
 
 def create_app() -> FastAPI:

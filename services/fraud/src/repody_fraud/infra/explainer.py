@@ -11,17 +11,6 @@ from repody_fraud.settings import get_settings
 log = structlog.get_logger(__name__)
 
 
-class NullVisualExplainer:
-    """Default zero-VLM explainer when selective region commentary is disabled."""
-
-    async def explain_region(
-        self,
-        image_png: bytes,  # noqa: ARG002
-        findings: list[FraudFinding],  # noqa: ARG002
-    ) -> str | None:
-        return None
-
-
 class OpenAIVisualExplainer:
     """Optional Qwen3-VL Apache-2.0 explainer over an OpenAI-compatible on-prem server."""
 
@@ -72,16 +61,14 @@ class OpenAIVisualExplainer:
             return None
 
 
-def build_explainer() -> NullVisualExplainer | OpenAIVisualExplainer:
-    """Instantiate configured explainer from settings."""
+def build_explainer() -> OpenAIVisualExplainer | None:
+    """Instantiate configured explainer from settings, or None when disabled."""
     settings = get_settings()
-    if settings.explainer_base_url:
-        key = (
-            settings.explainer_api_key.get_secret_value() if settings.explainer_api_key else "local"
-        )
-        return OpenAIVisualExplainer(
-            base_url=settings.explainer_base_url,
-            api_key=key,
-            model=settings.explainer_model,
-        )
-    return NullVisualExplainer()
+    if not settings.explainer_base_url:
+        return None
+    key = settings.explainer_api_key.get_secret_value() if settings.explainer_api_key else "local"
+    return OpenAIVisualExplainer(
+        base_url=settings.explainer_base_url,
+        api_key=key,
+        model=settings.explainer_model,
+    )

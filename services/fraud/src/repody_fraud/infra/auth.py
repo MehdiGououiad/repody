@@ -7,12 +7,15 @@ import jwt
 
 from repody_fraud.settings import get_settings
 
+PERM_READ = "fraud:read"
+PERM_WRITE = "fraud:write"
+
 FRAUD_PERMISSIONS: dict[str, frozenset[str]] = {
-    "viewer": frozenset({"fraud:read"}),
-    "operator": frozenset({"fraud:read", "fraud:write"}),
-    "checker": frozenset({"fraud:read"}),
-    "admin": frozenset({"fraud:read", "fraud:write"}),
-    "platform_admin": frozenset({"fraud:read", "fraud:write"}),
+    "viewer": frozenset({PERM_READ}),
+    "operator": frozenset({PERM_READ, PERM_WRITE}),
+    "checker": frozenset({PERM_READ}),
+    "admin": frozenset({PERM_READ, PERM_WRITE}),
+    "platform_admin": frozenset({PERM_READ, PERM_WRITE}),
 }
 
 CLIENT_GROUP_PREFIX = "client-"

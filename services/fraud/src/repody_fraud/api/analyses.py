@@ -3,7 +3,7 @@
 import json
 from typing import Annotated, Any
 
-from fastapi import APIRouter, File, Form, HTTPException, Response, UploadFile
+from fastapi import APIRouter, File, Form, Response, UploadFile
 
 from repody_fraud.api.deps import ServiceDep, require
 from repody_fraud.infra.auth import FraudUser
@@ -13,7 +13,11 @@ from repody_fraud.schemas.errors import ValidationError
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 
 
-@router.post("", status_code=201)
+@router.post(
+    "",
+    status_code=201,
+    responses={422: {"description": "Invalid upload or JSON payload."}},
+)
 async def create_analysis(
     service: ServiceDep,
     user: Annotated[FraudUser, require("fraud:write")],
@@ -27,7 +31,7 @@ async def create_analysis(
         try:
             loaded = json.loads(extracted_data)
         except json.JSONDecodeError as exc:
-            raise HTTPException(422, f"extracted_data must be valid JSON: {exc}") from None
+            raise ValidationError(f"extracted_data must be valid JSON: {exc}") from None
         if not isinstance(loaded, dict):
             raise ValidationError("extracted_data JSON must be an object.")
         parsed_data = loaded
