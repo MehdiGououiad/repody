@@ -1,7 +1,7 @@
 import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { backendOrigin } from "@/lib/api/backend-origin";
+import { backendOrigin, coreOrigin, fraudOrigin } from "@/lib/api/backend-origin";
 import {
   acceptsWorkflowKey,
   isPublicApi,
@@ -47,15 +47,38 @@ function withCookies(response: NextResponse, token: Token): NextResponse {
   return response;
 }
 
+type UpstreamTarget = { origin: string; upstreamPath: string } | "unconfigured" | null;
+
+function resolveUpstream(path: string): UpstreamTarget {
+  if (path.startsWith("/api/core/v1/")) {
+    const origin = coreOrigin();
+    return origin ? { origin, upstreamPath: path.replace(/^\/api\/core/, "") } : "unconfigured";
+  }
+  if (path.startsWith("/api/fraud/v1/")) {
+    const origin = fraudOrigin();
+    return origin ? { origin, upstreamPath: path.replace(/^\/api\/fraud/, "") } : "unconfigured";
+  }
+  if (path.startsWith("/api/idp/v1/")) {
+    return { origin: backendOrigin(), upstreamPath: path.replace(/^\/api\/idp/, "") };
+  }
+  if (path.startsWith("/api/v1/")) {
+    return { origin: backendOrigin(), upstreamPath: path.replace(/^\/api/, "") };
+  }
+  return null;
+}
+
 /**
- * Browser `/api/v1/*` -> FastAPI `/v1/*`. A proxy rewrite to the runtime backend origin
- * (INTERNAL_API_URL), so the same web image works on Compose and Kubernetes.
+ * Multi-service runtime BFF proxy:
+ * - `/api/core/v1/*` -> `repody-core` (`INTERNAL_CORE_API_URL`)
+ * - `/api/fraud/v1/*` -> `repody-fraud` (`INTERNAL_FRAUD_API_URL`)
+ * - `/api/idp/v1/*` and `/api/v1/*` -> `repody-idp` (`INTERNAL_API_URL`)
  */
 function toBackend(request: NextRequest, headers?: Headers): NextResponse {
-  const target = new URL(
-    `${request.nextUrl.pathname.replace(/^\/api/, "")}${request.nextUrl.search}`,
-    backendOrigin(),
-  );
+  const upstream = resolveUpstream(request.nextUrl.pathname);
+  if (upstream === "unconfigured" || upstream === null) {
+    return NextResponse.json({ detail: "Module service is not enabled." }, { status: 404 });
+  }
+  const target = new URL(`${upstream.upstreamPath}${request.nextUrl.search}`, upstream.origin);
   return NextResponse.rewrite(target, headers ? { request: { headers } } : undefined);
 }
 
@@ -83,11 +106,12 @@ function redirectToLogin(request: NextRequest): NextResponse {
 
 export default async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  const isProxiedApi = resolveUpstream(path) !== null;
   if (!oidcEnabled) {
-    return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
+    return isProxiedApi ? toBackend(request) : NextResponse.next();
   }
   if (isPublicApi(path)) {
-    return path.startsWith("/api/v1/") ? toBackend(request) : NextResponse.next();
+    return isProxiedApi ? toBackend(request) : NextResponse.next();
   }
   if (acceptsWorkflowKey(request.method, path) && request.headers.get("authorization")?.trim()) {
     return toBackend(request); // the caller's workflow API key, checked by the API
