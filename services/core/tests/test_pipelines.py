@@ -1,17 +1,12 @@
 """Tests for durable pipeline API gating, orchestration, and Hatchet child stubs."""
 
-from copy import deepcopy
-from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from hatchet_sdk import DesiredWorkerLabel
 from httpx import ASGITransport, AsyncClient
 
 from repody_common.contracts import (
     CaseRef,
-    FourEyesDecision,
     FraudPostVerifyInput,
     FraudPostVerifyOutput,
     FraudPreCheckInput,
@@ -19,14 +14,6 @@ from repody_common.contracts import (
     IdpStageInput,
     IdpStageOutput,
 )
-from repody_common.entitlements import (
-    EntitlementState,
-    LicenseClaims,
-    ModuleId,
-    sign_license_token,
-    verify_license_token,
-)
-from repody_common.ids import new_id
 from repody_core.api.deps import get_dispatcher, get_entitlement_provider, get_store
 from repody_core.app.pipelines import execute_pipeline_stages
 from repody_core.infra.queue import (
@@ -36,264 +23,25 @@ from repody_core.infra.queue import (
     HatchetStageInvoker,
 )
 from repody_core.main import create_app
-from repody_core.schemas.approvals import ApprovalStatus, ApprovalTaskResponse, FieldOverrideInput
-from repody_core.schemas.audit import AuditEventResponse
-from repody_core.schemas.cases import CaseResponse, CaseStatus, CreateCaseRequest
-from repody_core.schemas.hashing import GENESIS_HASH, compute_event_hash
 from repody_core.schemas.pipelines import (
     FourEyesGateStage,
     FraudPostVerifyStage,
     FraudPreCheckStage,
     IdpPipelineStage,
-    PipelineRunResponse,
     PipelineTaskInput,
 )
 
 
-class _PipelineTestStore:
-    """Minimal self-contained in-memory ``CoreStore`` for pipeline API tests."""
-
-    def __init__(self) -> None:
-        self.cases: dict[str, CaseResponse] = {}
-        self.pipelines: dict[str, PipelineRunResponse] = {}
-        self.events: list[AuditEventResponse] = []
-
-    def _append(
-        self,
-        *,
-        actor_sub: str,
-        account_id: str | None,
-        module: str,
-        action: str,
-        resource_id: str,
-        detail: dict[str, Any],
-    ) -> None:
-        prev_hash = self.events[-1].event_hash if self.events else GENESIS_HASH
-        event_id = new_id("evt")
-        now = datetime.now(UTC)
-        event_hash = compute_event_hash(
-            prev_hash,
-            event_id=event_id,
-            actor_sub=actor_sub,
-            account_id=account_id,
-            module=module,
-            action=action,
-            resource_id=resource_id,
-            detail=detail,
-            created_at_iso=now.isoformat(),
-        )
-        self.events.append(
-            AuditEventResponse(
-                seq=len(self.events) + 1,
-                id=event_id,
-                actor_sub=actor_sub,
-                account_id=account_id,
-                module=module,
-                action=action,
-                resource_id=resource_id,
-                detail=detail,
-                prev_hash=prev_hash,
-                event_hash=event_hash,
-                created_at=now,
-            )
-        )
-
-    async def create_case(
-        self,
-        *,
-        case_id: str,
-        actor_sub: str,
-        request: CreateCaseRequest,
-    ) -> CaseResponse:
-        now = datetime.now(UTC)
-        case = CaseResponse(
-            id=case_id,
-            account_id=request.account_id,
-            external_ref=request.external_ref,
-            input_payload=deepcopy(request.input_payload),
-            status="open",
-            created_by=actor_sub,
-            created_at=now,
-            updated_at=now,
-            artifacts=[],
-        )
-        self.cases[case_id] = case
-        self._append(
-            actor_sub=actor_sub,
-            account_id=request.account_id,
-            module="core",
-            action="case.created",
-            resource_id=case_id,
-            detail={"artifact_count": len(request.artifacts)},
-        )
-        return case
-
-    async def get_case(self, case_id: str, *, account: str | None) -> CaseResponse | None:
-        case = self.cases.get(case_id)
-        if case is None or (account is not None and case.account_id != account):
-            return None
-        return case
-
-    async def create_pipeline_run(
-        self,
-        *,
-        pipeline_id: str,
-        case_id: str,
-        stages: list[dict[str, Any]],
-        actor_sub: str,
-        account_id: str | None,
-    ) -> PipelineRunResponse:
-        now = datetime.now(UTC)
-        run = PipelineRunResponse(
-            id=pipeline_id,
-            case_id=case_id,
-            stages=deepcopy(stages),
-            status="queued",
-            hatchet_run_id=None,
-            created_at=now,
-            finished_at=None,
-        )
-        self.pipelines[pipeline_id] = run
-        self._append(
-            actor_sub=actor_sub,
-            account_id=account_id,
-            module="core",
-            action="pipeline.started",
-            resource_id=pipeline_id,
-            detail={"case_id": case_id, "stage_count": len(stages)},
-        )
-        return run
-
-    async def set_pipeline_hatchet_run(
-        self,
-        *,
-        pipeline_id: str,
-        hatchet_run_id: str,
-    ) -> PipelineRunResponse:
-        updated = self.pipelines[pipeline_id].model_copy(update={"hatchet_run_id": hatchet_run_id})
-        self.pipelines[pipeline_id] = updated
-        return updated
-
-    async def get_pipeline_run(
-        self,
-        pipeline_id: str,
-        *,
-        account: str | None,
-    ) -> PipelineRunResponse | None:
-        run = self.pipelines.get(pipeline_id)
-        if run is None:
-            return None
-        case = self.cases.get(run.case_id)
-        if account is not None and (case is None or case.account_id != account):
-            return None
-        return run
-
-    async def create_approval(
-        self,
-        *,
-        approval_id: str,
-        case_id: str,
-        stage_name: str,
-        payload_snapshot: dict[str, Any],
-        payload_sha256: str,
-        actor_sub: str,
-        account_id: str | None,
-    ) -> ApprovalTaskResponse:
-        raise NotImplementedError
-
-    async def get_approval(self, approval_id: str) -> ApprovalTaskResponse | None:
-        return None
-
-    async def apply_maker_review(
-        self,
-        *,
-        approval_id: str,
-        maker_sub: str,
-        next_status: ApprovalStatus,
-        case_status: CaseStatus,
-        updated_snapshot: dict[str, Any],
-        payload_sha256: str,
-        overrides: list[tuple[FieldOverrideInput, Any]],
-        note: str,
-        account_id: str | None,
-    ) -> ApprovalTaskResponse:
-        raise NotImplementedError
-
-    async def apply_checker_decision(
-        self,
-        *,
-        approval_id: str,
-        checker_sub: str,
-        decision: FourEyesDecision,
-        next_status: ApprovalStatus,
-        case_status: CaseStatus,
-        note: str,
-        account_id: str | None,
-    ) -> ApprovalTaskResponse:
-        raise NotImplementedError
-
-    async def list_audit_events(
-        self,
-        *,
-        account_id: str | None = None,
-        limit: int = 200,
-    ) -> list[AuditEventResponse]:
-        items = [e for e in self.events if account_id is None or e.account_id == account_id]
-        return items[:limit]
-
-
-class _ConfigurableEntitlementProvider:
-    """Offline Ed25519 entitlement provider parameterized by licensed modules."""
-
-    def __init__(self, modules: tuple[ModuleId, ...]) -> None:
-        key = Ed25519PrivateKey.generate()
-        private_pem = key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode()
-        self._public_pem = (
-            key.public_key()
-            .public_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PublicFormat.SubjectPublicKeyInfo,
-            )
-            .decode()
-        )
-        now = datetime.now(UTC)
-        self._token = sign_license_token(
-            LicenseClaims(
-                customer_id="bank-atlas",
-                modules=modules,
-                issued_at=now - timedelta(hours=1),
-                expires_at=now + timedelta(days=90),
-            ),
-            private_pem,
-        )
-
-    def current(self) -> EntitlementState:
-        return verify_license_token(self._token, self._public_pem)
-
-
-class _FakePipelineDispatcher:
-    """Captures dispatched pipeline inputs without requiring a live Hatchet engine."""
-
-    def __init__(self) -> None:
-        self.dispatched: list[PipelineTaskInput] = []
-
-    async def dispatch_pipeline(self, task_input: PipelineTaskInput) -> str | None:
-        self.dispatched.append(task_input)
-        return f"hatchet-{len(self.dispatched)}"
-
-
-async def test_pipeline_api_enforces_entitlements_and_audits() -> None:
-    store = _PipelineTestStore()
-    dispatcher = _FakePipelineDispatcher()
-    idp_only = _ConfigurableEntitlementProvider(("idp",))
+async def test_pipeline_api_enforces_entitlements_and_audits(
+    core_store: Any,
+    core_gateway: Any,
+    entitlement_factory: Any,
+) -> None:
+    idp_only = entitlement_factory(("idp",))
 
     app = create_app()
-    app.dependency_overrides[get_store] = lambda: store
-    app.dependency_overrides[get_dispatcher] = lambda: dispatcher
+    app.dependency_overrides[get_store] = lambda: core_store
+    app.dependency_overrides[get_dispatcher] = lambda: core_gateway
     app.dependency_overrides[get_entitlement_provider] = lambda: idp_only
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -313,7 +61,7 @@ async def test_pipeline_api_enforces_entitlements_and_audits() -> None:
         )
         assert denied.status_code == 403
         assert "fraud" in denied.json()["detail"].lower()
-        assert dispatcher.dispatched == []
+        assert core_gateway.dispatched == []
 
         # Licensed IDP stage dispatches cleanly and records hash-chained audit event.
         started = await client.post(
@@ -325,15 +73,15 @@ async def test_pipeline_api_enforces_entitlements_and_audits() -> None:
         body = started.json()
         assert body["case_id"] == case_id
         assert body["hatchet_run_id"] == "hatchet-1"
-        assert len(dispatcher.dispatched) == 1
-        assert dispatcher.dispatched[0].pipeline_run_id == body["id"]
+        assert len(core_gateway.dispatched) == 1
+        assert core_gateway.dispatched[0].pipeline_run_id == body["id"]
 
         fetched = await client.get(f"/v1/pipelines/{body['id']}")
         assert fetched.status_code == 200
         assert fetched.json()["id"] == body["id"]
 
         # Account scoping prevents cross-tenant pipeline reads.
-        scoped_missing = await store.get_pipeline_run(body["id"], account="acc-other")
+        scoped_missing = await core_store.get_pipeline_run(body["id"], account="acc-other")
         assert scoped_missing is None
 
         verify_res = await client.get("/v1/audit-events/verify")
