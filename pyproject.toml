@@ -13,7 +13,8 @@ dev = [
 
 [tool.ruff]
 line-length = 100
-src = ["packages/repody-common/src"]
+src = ["packages/repody-common/src", "services/core/src"]
+extend-exclude = ["services/core/alembic/versions"]
 
 [tool.ruff.format]
 line-ending = "lf"
