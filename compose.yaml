@@ -77,7 +77,7 @@ services:
   # S3-compatible object storage for uploads (SeaweedFS: master, volume, filer and S3 gateway in
   # one process). The API creates its bucket on startup. https://github.com/seaweedfs/seaweedfs/wiki/Amazon-S3-API
   seaweedfs:
-    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    image: chrislusf/seaweedfs:4.54@sha256:4b42c212543a0acd4c0e675215ecdcaf62a186ef98def76c7e12701871222d15
     command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     ports:
       - "8333:8333"
