@@ -9,6 +9,10 @@ from pydantic import BaseModel, Field, TypeAdapter, ValidationError, model_valid
 ModuleId = Literal["idp", "fraud", "operator"]
 LicenseStatus = Literal["active", "grace", "expired", "invalid", "unconfigured"]
 
+LICENSE_ISSUER = "repody-licensing"
+LICENSE_AUDIENCE = "repody-platform"
+CLOCK_SKEW_LEEWAY = timedelta(seconds=60)
+
 _MODULES_ADAPTER: TypeAdapter[tuple[ModuleId, ...]] = TypeAdapter(tuple[ModuleId, ...])
 
 
@@ -54,9 +58,13 @@ class EntitlementState(BaseModel):
 
 def sign_license_token(claims: LicenseClaims, private_key_pem: str) -> str:
     """Sign an offline Ed25519 (``EdDSA``) license JWT."""
+    iat = int(claims.issued_at.timestamp())
     payload = {
+        "iss": LICENSE_ISSUER,
+        "aud": LICENSE_AUDIENCE,
         "sub": claims.customer_id,
-        "iat": int(claims.issued_at.timestamp()),
+        "iat": iat,
+        "nbf": iat,
         "exp": int(claims.expires_at.timestamp()),
         "modules": list(claims.modules),
         "seats": claims.seats,
@@ -91,7 +99,14 @@ def verify_license_token(
             clean_token,
             clean_key,
             algorithms=["EdDSA"],
-            options={"verify_exp": False, "require": ["sub", "iat", "exp", "modules"]},
+            issuer=LICENSE_ISSUER,
+            audience=LICENSE_AUDIENCE,
+            leeway=CLOCK_SKEW_LEEWAY,
+            options={
+                "verify_exp": False,
+                "verify_nbf": False,
+                "require": ["iss", "aud", "sub", "iat", "nbf", "exp", "modules"],
+            },
         )
         customer_id = str(decoded["sub"]).strip()
         if not customer_id:
@@ -100,6 +115,7 @@ def verify_license_token(
         if not modules:
             raise ValueError("License grants no modules.")
         issued_at = datetime.fromtimestamp(float(decoded["iat"]), tz=UTC)
+        not_before = datetime.fromtimestamp(float(decoded["nbf"]), tz=UTC)
         expires_at = datetime.fromtimestamp(float(decoded["exp"]), tz=UTC)
         raw_grace = decoded.get("grace_days", 30)
         if not isinstance(raw_grace, int) or isinstance(raw_grace, bool) or raw_grace < 0:
@@ -109,10 +125,10 @@ def verify_license_token(
         return EntitlementState(status="invalid", warning=f"Invalid license: {exc}")
 
     current = (now or datetime.now(UTC)).astimezone(UTC)
-    if current < issued_at:
+    if current + CLOCK_SKEW_LEEWAY < max(issued_at, not_before):
         return EntitlementState(
             status="invalid",
-            warning="License issued_at timestamp is in the future.",
+            warning="License is not yet valid.",
         )
 
     grace_ends_at = expires_at + timedelta(days=grace_days)

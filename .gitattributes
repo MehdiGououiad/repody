@@ -26,6 +26,7 @@ Dockerfile* text eol=lf
 
 # Generated artifacts: collapse in diffs and exclude from language stats.
 bun.lock linguist-generated=true -diff
+uv.lock linguist-generated=true -diff
 backend/uv.lock linguist-generated=true -diff
 lib/api/generated/** linguist-generated=true -diff
 lib/api/openapi.json linguist-generated=true -diff

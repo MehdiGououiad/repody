@@ -49,10 +49,22 @@
             "patterns": [
               {
                 "group": [
+                  "@/modules/idp",
                   "@/modules/idp/**",
+                  "../idp",
+                  "../idp/**",
+                  "@/modules/fraud",
                   "@/modules/fraud/**",
+                  "../fraud",
+                  "../fraud/**",
+                  "@/modules/pipelines",
                   "@/modules/pipelines/**",
-                  "@/modules/operator/**"
+                  "../pipelines",
+                  "../pipelines/**",
+                  "@/modules/operator",
+                  "@/modules/operator/**",
+                  "../operator",
+                  "../operator/**"
                 ],
                 "message": "modules/core cannot import feature modules."
               }
@@ -69,7 +81,20 @@
           {
             "patterns": [
               {
-                "group": ["@/modules/fraud/**", "@/modules/pipelines/**", "@/modules/operator/**"],
+                "group": [
+                  "@/modules/fraud",
+                  "@/modules/fraud/**",
+                  "../fraud",
+                  "../fraud/**",
+                  "@/modules/pipelines",
+                  "@/modules/pipelines/**",
+                  "../pipelines",
+                  "../pipelines/**",
+                  "@/modules/operator",
+                  "@/modules/operator/**",
+                  "../operator",
+                  "../operator/**"
+                ],
                 "message": "modules/idp must stay isolated from other feature modules."
               }
             ]
@@ -85,7 +110,20 @@
           {
             "patterns": [
               {
-                "group": ["@/modules/idp/**", "@/modules/pipelines/**", "@/modules/operator/**"],
+                "group": [
+                  "@/modules/idp",
+                  "@/modules/idp/**",
+                  "../idp",
+                  "../idp/**",
+                  "@/modules/pipelines",
+                  "@/modules/pipelines/**",
+                  "../pipelines",
+                  "../pipelines/**",
+                  "@/modules/operator",
+                  "@/modules/operator/**",
+                  "../operator",
+                  "../operator/**"
+                ],
                 "message": "modules/fraud must stay isolated from other feature modules."
               }
             ]
@@ -101,7 +139,20 @@
           {
             "patterns": [
               {
-                "group": ["@/modules/idp/**", "@/modules/fraud/**", "@/modules/pipelines/**"],
+                "group": [
+                  "@/modules/idp",
+                  "@/modules/idp/**",
+                  "../idp",
+                  "../idp/**",
+                  "@/modules/fraud",
+                  "@/modules/fraud/**",
+                  "../fraud",
+                  "../fraud/**",
+                  "@/modules/pipelines",
+                  "@/modules/pipelines/**",
+                  "../pipelines",
+                  "../pipelines/**"
+                ],
                 "message": "modules/operator must stay isolated from other feature modules."
               }
             ]

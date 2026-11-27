@@ -8,6 +8,7 @@ htmlcov
 **/__pycache__
 *.pyc
 .pytest_cache
+.venv
 backend/.venv
 *.tsbuildinfo
 
@@ -20,6 +21,10 @@ backend/.venv
 
 # Backend and deploy assets are not needed for the web image
 backend/
+packages/
+services/
+pyproject.toml
+uv.lock
 deploy/
 docs/
 scripts/
