@@ -46,6 +46,7 @@ next-env.d.ts
 deploy/llamacpp/paths.local.env
 deploy/llamacpp/models/
 deploy/llamacpp/logs/
+/.venv/
 backend/.venv/
 *.tgz
 
