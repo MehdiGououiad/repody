@@ -1,0 +1,52 @@
+[tool.uv.workspace]
+members = ["packages/*", "services/*"]
+exclude = ["backend"]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.17.4",
+  "pyright>=1.1.414",
+  "pytest>=9.2.0",
+  "pytest-asyncio>=1.4.1.post1",
+  "import-linter>=2.16",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["packages/repody-common/src"]
+
+[tool.ruff.format]
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "B",
+  "UP",
+  "N",
+  "ASYNC",
+  "C4",
+  "SIM",
+  "RET",
+  "PIE",
+  "ARG",
+  "DTZ",
+  "LOG",
+  "G",
+  "T20",
+  "TID",
+  "PT",
+  "S",
+  "RUF",
+]
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.per-file-ignores]
+"packages/*/tests/**" = ["ARG001", "ARG002", "S101", "S105", "S106"]
+"services/*/tests/**" = ["ARG001", "ARG002", "S101", "S105", "S106"]

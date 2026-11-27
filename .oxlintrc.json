@@ -39,6 +39,75 @@
       // Scripts print to the terminal.
       "files": ["deploy/scripts/**", "scripts/**", "e2e/**", "*.config.*"],
       "rules": { "no-console": "off" }
+    },
+    {
+      "files": ["modules/core/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/modules/idp/**",
+                  "@/modules/fraud/**",
+                  "@/modules/pipelines/**",
+                  "@/modules/operator/**"
+                ],
+                "message": "modules/core cannot import feature modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["modules/idp/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/modules/fraud/**", "@/modules/pipelines/**", "@/modules/operator/**"],
+                "message": "modules/idp must stay isolated from other feature modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["modules/fraud/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/modules/idp/**", "@/modules/pipelines/**", "@/modules/operator/**"],
+                "message": "modules/fraud must stay isolated from other feature modules."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["modules/operator/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/modules/idp/**", "@/modules/fraud/**", "@/modules/pipelines/**"],
+                "message": "modules/operator must stay isolated from other feature modules."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
