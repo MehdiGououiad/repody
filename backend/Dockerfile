@@ -2,7 +2,7 @@
 # One backend image for api + workers (role chosen by the container command).
 #   docker buildx bake -f docker-bake.hcl backend --load      (see docker-bake.hcl)
 
-FROM python:3.14.10-slim@sha256:22eafb370920ad8b429e0aec3fff433e0669968519f5d60469d83729c138b28b AS runtime-base
+FROM python:3.15.1-slim@sha256:533b0b2f9b5d46fd097091cf826f27902f1d6c3bca714b6dc74551356aa97a51 AS runtime-base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
