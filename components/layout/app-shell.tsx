@@ -6,10 +6,16 @@ import { Overlays } from "@/components/ui/overlays";
 import { fetchAccess } from "@/lib/api/server";
 import type { Account } from "@/lib/auth/account";
 import { creditsContact } from "@/lib/credits/contact";
+import type { Access } from "@/lib/types";
+import { EntitlementProvider } from "@/modules/core/entitlement-context";
+import { hasModule } from "@/modules/core/entitlements";
+import { fetchEntitlements } from "@/modules/core/server-entitlements";
 import { AppSidebar } from "./app-sidebar";
 import { CreditsBanner } from "./credits-banner";
 import { GlobalShortcuts } from "./global-shortcuts";
 import { MobileNav } from "./mobile-nav";
+
+const NO_IDP_ACCESS: Access = { roles: [], permissions: [], credits: null };
 
 /**
  * The inverted L: the sidebar sits on the canvas and recedes; the page sits on its own panel,
@@ -22,33 +28,38 @@ export async function AppShell({
   account: Promise<Account | null>;
   children: React.ReactNode;
 }) {
-  const [t, access] = await Promise.all([getTranslations("common"), fetchAccess()]);
+  const [t, entitlements] = await Promise.all([getTranslations("common"), fetchEntitlements()]);
+  const hasIdp = hasModule(entitlements, "idp");
+  const access = hasIdp ? await fetchAccess() : NO_IDP_ACCESS;
+
   return (
     <AccountProvider value={account}>
-      <AccessProvider value={access}>
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:start-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-overlay focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop"
-        >
-          {t("skipToContent")}
-        </a>
-        <div className="flex h-dvh overflow-hidden bg-canvas">
-          <AppSidebar />
-          <div className="flex min-w-0 flex-1 flex-col md:py-1.5 md:pe-1.5">
-            <MobileNav />
-            <CreditsBanner access={access} />
-            <main
-              id="main-content"
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-panel md:rounded-lg md:shadow-panel"
-            >
-              {children}
-            </main>
+      <EntitlementProvider value={entitlements}>
+        <AccessProvider value={access}>
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:start-3 focus:top-3 focus:z-[100] focus:rounded-md focus:bg-overlay focus:px-3 focus:py-2 focus:text-sm focus:shadow-pop"
+          >
+            {t("skipToContent")}
+          </a>
+          <div className="flex h-dvh overflow-hidden bg-canvas">
+            <AppSidebar />
+            <div className="flex min-w-0 flex-1 flex-col md:py-1.5 md:pe-1.5">
+              <MobileNav />
+              {hasIdp ? <CreditsBanner access={access} /> : null}
+              <main
+                id="main-content"
+                className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain bg-panel md:rounded-lg md:shadow-panel"
+              >
+                {children}
+              </main>
+            </div>
           </div>
-        </div>
-        <GlobalShortcuts />
-        <Overlays />
-        <CreditsDialog contact={creditsContact()} />
-      </AccessProvider>
+          <GlobalShortcuts />
+          <Overlays />
+          {hasIdp ? <CreditsDialog contact={creditsContact()} /> : null}
+        </AccessProvider>
+      </EntitlementProvider>
     </AccountProvider>
   );
 }

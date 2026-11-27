@@ -51,15 +51,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/dashboard",
-        permanent: false,
-      },
-    ];
-  },
 };
 
 // Official @sentry/nextjs build wrapper. Source-map upload disabled - Bugsink

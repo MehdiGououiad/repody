@@ -20,7 +20,14 @@ import { Dialog, DialogBackdrop, DialogContent, DialogTitle } from "@/components
 import { popupItem, popupLabel } from "@/components/ui/popup";
 import { StatusGlyph } from "@/components/ui/status-glyph";
 import { $api } from "@/lib/api/browser";
+import {
+  CASES_NAV_ITEMS,
+  FRAUD_NAV_ITEMS,
+  HUB_NAV_ITEMS,
+  type MainNavItem,
+} from "@/lib/navigation";
 import { cn } from "@/lib/utils";
+import { useHasModule, useShowModuleSwitcher } from "@/modules/core/entitlement-context";
 
 const palette = createDialogController();
 
@@ -38,12 +45,40 @@ export function CommandPalette() {
   const tBar = useTranslations("topbar");
   const tAudits = useTranslations("audits");
   const { setTheme } = useTheme();
-  const navItems = useNavItems();
-  const canCreate = useCan("workflow:write");
-  const workflows = $api.useQuery("get", "/v1/workflows").data?.workflows ?? [];
+  const idpNavItems = useNavItems();
+  const hasIdp = useHasModule("idp");
+  const hasFraud = useHasModule("fraud");
+  const showSwitcher = useShowModuleSwitcher();
+  const canWriteWorkflow = useCan("workflow:write");
+  const canCreate = hasIdp && canWriteWorkflow;
+
+  const extraItems: MainNavItem[] = [
+    ...(showSwitcher ? HUB_NAV_ITEMS.filter((x) => x.href !== "/settings") : []),
+    ...(hasFraud ? FRAUD_NAV_ITEMS.filter((x) => x.href !== "/settings") : []),
+    ...(showSwitcher ? CASES_NAV_ITEMS.filter((x) => x.href === "/cases") : []),
+  ];
+  const seenHrefs = new Set<string>();
+  const navItems: MainNavItem[] = [...(hasIdp ? idpNavItems : []), ...extraItems].filter(
+    (entry) => {
+      if (seenHrefs.has(entry.href)) return false;
+      seenHrefs.add(entry.href);
+      return true;
+    },
+  );
+  if (!seenHrefs.has("/settings")) {
+    const settingsItem = FRAUD_NAV_ITEMS.find((x) => x.href === "/settings");
+    if (settingsItem) navItems.push(settingsItem);
+  }
+
+  const workflows =
+    $api.useQuery("get", "/v1/workflows", {}, { enabled: hasIdp }).data?.workflows ?? [];
   const runs =
-    $api.useQuery("get", "/v1/audits", { params: { query: { limit: 8, offset: 0 } } }).data
-      ?.audits ?? [];
+    $api.useQuery(
+      "get",
+      "/v1/audits",
+      { params: { query: { limit: 8, offset: 0 } } },
+      { enabled: hasIdp },
+    ).data?.audits ?? [];
 
   const actions: Record<string, () => void> = {
     "new-workflow": () => router.push("/workflows/new"),

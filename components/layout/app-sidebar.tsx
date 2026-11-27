@@ -15,9 +15,12 @@ import { StatusGlyph } from "@/components/ui/status-glyph";
 import { Tooltip } from "@/components/ui/tooltip";
 import { $api } from "@/lib/api/browser";
 import { reviewCount } from "@/lib/audits/review";
-import { isNavActive } from "@/lib/navigation";
+import { CASES_NAV_ITEMS, FRAUD_NAV_ITEMS, HUB_NAV_ITEMS, isNavActive } from "@/lib/navigation";
 import { useBrand } from "@/lib/theme/brand-context";
 import { cn } from "@/lib/utils";
+import { useEntitlements, useHasModule } from "@/modules/core/entitlement-context";
+import { resolveActiveWorkspace } from "@/modules/core/manifests";
+import { WorkspaceSwitcher } from "@/modules/core/workspace-switcher";
 import { BackendStatus } from "./backend-status";
 import { openCommandPalette } from "./command-palette";
 
@@ -73,20 +76,35 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations("nav");
   const tShell = useTranslations("shell");
   const searchHint = useShortcutHint("mod+k");
+  const entitlements = useEntitlements();
+  const hasIdp = useHasModule("idp");
+  const activeWorkspace = resolveActiveWorkspace(pathname, entitlements);
+
   // Its own cache entry (`{}`, not the page's `undefined`): the layout renders before the
   // dashboard page's HydrationBoundary, and a shared entry created here would keep the page's
   // streamed prefetch from hydrating (its Suspense query then fails on the server).
-  const navItems = useNavItems();
-  const canCreate = useCan("workflow:write");
+  const idpNavItems = useNavItems();
+  const navItems =
+    activeWorkspace === "fraud"
+      ? FRAUD_NAV_ITEMS
+      : activeWorkspace === "cases"
+        ? CASES_NAV_ITEMS
+        : activeWorkspace === "hub"
+          ? HUB_NAV_ITEMS
+          : idpNavItems;
+
+  const canReadMetrics = useCan("metrics:read");
+  const canWriteWorkflow = useCan("workflow:write");
+  const canCreate = activeWorkspace === "idp" && hasIdp && canWriteWorkflow;
   const dashboard = $api.useQuery(
     "get",
     "/v1/dashboard",
     {},
-    { refetchInterval: LIVE_MS, enabled: useCan("metrics:read") },
+    { refetchInterval: LIVE_MS, enabled: hasIdp && activeWorkspace === "idp" && canReadMetrics },
   ).data;
   const toReview = dashboard ? reviewCount(dashboard.performanceSeries) : 0;
   const running = (dashboard?.queue.runningRuns ?? 0) + (dashboard?.queue.queuedRuns ?? 0);
-  const recent = (dashboard?.workflows ?? []).slice(0, 5);
+  const recent = activeWorkspace === "idp" ? (dashboard?.workflows ?? []).slice(0, 5) : [];
 
   return (
     <div className="flex h-full flex-col gap-3 px-2 py-2.5">
@@ -105,6 +123,8 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </Tooltip>
         ) : null}
       </div>
+
+      <WorkspaceSwitcher onNavigate={onNavigate} />
 
       <Button
         variant="ghost"
